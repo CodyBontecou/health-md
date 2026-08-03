@@ -1,5 +1,7 @@
 package com.healthmd.data.scheduler
 
+import android.content.Context
+import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
@@ -9,6 +11,7 @@ import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
@@ -27,9 +30,12 @@ import java.nio.charset.StandardCharsets
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
+import timber.log.Timber
 
 @Singleton
 class ScheduledExportRecoveryManager @Inject constructor(
+    @ApplicationContext private val applicationContext: Context,
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
@@ -156,6 +162,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         require(snapshot.scheduledExportTarget == target)
                         snapshot.restoreOnto(settings)
                     }
+                }.onFailure { error ->
+                    Timber.e(error, "Scheduled recovery settings snapshot is invalid")
                 }.getOrNull()
                 // Inject the exact persisted pin only after restoring the immutable settings.
                 val targetSettings = (restoredOutputSettings ?: settings).copy(
@@ -219,10 +227,14 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         ) ?: ExportResult(
                             successCount = 0,
                             totalCount = 1,
-                            failedDateDetails = listOf(FailedDateDetail(targetDates.first(), ExportFailureReason.UNKNOWN, "Raw snapshot service unavailable")),
+                            failedDateDetails = listOf(
+                                FailedDateDetail(targetDates.first(), ExportFailureReason.UNKNOWN),
+                            ),
                             target = target,
                             exportMode = ExportMode.RAW_SNAPSHOT,
-                        )
+                        ).also {
+                            Timber.w("Raw snapshot service unavailable during scheduled recovery")
+                        }
                     } else when (target) {
                         ExportTarget.DEVICE_FOLDER -> {
                             val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
@@ -249,17 +261,20 @@ class ScheduledExportRecoveryManager @Inject constructor(
                                 successCount = 0,
                                 totalCount = targetDates.size,
                                 failedDateDetails = targetDates.map {
-                                    FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                                    FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
                                 },
                                 target = ExportTarget.API_ENDPOINT,
-                            )
+                            ).also {
+                                Timber.w("API export service unavailable during scheduled recovery")
+                            }
                     }
                 } catch (error: Exception) {
+                    Timber.e(error, "Scheduled export recovery failed")
                     ExportResult(
                         successCount = 0,
                         totalCount = targetDates.size,
                         failedDateDetails = targetDates.map {
-                            FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message)
+                            FailedDateDetail(it, ExportFailureReason.UNKNOWN)
                         },
                         target = target,
                     )
@@ -286,7 +301,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 val currentSettings = settingsRepository.getExportSettings()
                 val retryDetails = if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && !targetResult.isFullSuccess) {
                     val failure = targetResult.failedDateDetails.firstOrNull() ?: FailedDateDetail(
-                        targetDates.first(), ExportFailureReason.RAW_PARTIAL, "One or more raw provider artifacts are incomplete.",
+                        targetDates.first(),
+                        ExportFailureReason.RAW_PARTIAL,
                     )
                     targetDates.map { failure.copy(date = it) }
                 } else {
@@ -395,7 +411,6 @@ class ScheduledExportRecoveryManager @Inject constructor(
             FailedDateDetail(
                 date = date,
                 reason = ExportFailureReason.UNKNOWN,
-                errorDetails = "Scheduled export settings snapshot is invalid.",
             )
         },
         target = target,
@@ -561,12 +576,13 @@ class ScheduledExportRecoveryManager @Inject constructor(
             APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
         } else buildString {
             val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
-            append(subfolder ?: "Export folder")
+            append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)
             settings.formatFolderPath(LocalDate.now().minusDays(1))?.takeIf { it.isNotBlank() }?.let {
                 append("/").append(it.trim('/'))
             }
         }
 
+    /** History is also returned through the automation broadcast API, so keep this invariant. */
     private fun ExportResult.warningSummary(): String? = when {
         isPartialSuccess -> "Recovery finished with ${failedDateDetails.size} failed date(s) still pending"
         wasCancelled -> "Recovery cancelled; unfinished dates remain pending"

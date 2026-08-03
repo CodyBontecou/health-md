@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 import com.healthmd.R
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Radii
@@ -48,7 +49,7 @@ fun PaywallScreen(
     isPurchasing: Boolean = false,
     isRestoring: Boolean = false,
     priceText: String? = null,
-    errorMessage: String? = null,
+    purchaseError: BillingError? = null,
     onClearError: () -> Unit = {},
     subtitle: String? = null,
     // Debug props
@@ -59,6 +60,14 @@ fun PaywallScreen(
 ) {
     val isLoading = isPurchasing || isRestoring
     val scrollState = rememberScrollState()
+    val errorMessage = when (purchaseError) {
+        BillingError.PRODUCT_UNAVAILABLE -> stringResource(R.string.billing_error_product_unavailable)
+        BillingError.SERVICE_UNAVAILABLE -> stringResource(R.string.billing_error_service_unavailable)
+        BillingError.PURCHASE_FAILED -> stringResource(R.string.billing_error_purchase_failed)
+        BillingError.NO_PREVIOUS_PURCHASE -> stringResource(R.string.billing_error_no_previous_purchase)
+        BillingError.RESTORE_FAILED -> stringResource(R.string.billing_error_restore_failed)
+        null -> null
+    }
 
     // Clear error when user starts a new action
     LaunchedEffect(isPurchasing, isRestoring) {

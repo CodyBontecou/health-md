@@ -20,6 +20,51 @@ data class APIExportRequestConfiguration(
     val destinationFingerprint: String,
 )
 
+enum class APIExportAuthorizationValidationReason {
+    EMPTY,
+    UNSUPPORTED_CHARACTERS,
+}
+
+sealed interface APIExportAuthorizationValidationResult {
+    data class Valid(val normalizedValue: String) : APIExportAuthorizationValidationResult
+    data class Invalid(
+        val reason: APIExportAuthorizationValidationReason,
+    ) : APIExportAuthorizationValidationResult
+}
+
+/**
+ * Retains the existing [IllegalArgumentException] contract without requiring UI callers to expose
+ * its compatibility message. The rejected credential is deliberately not retained by this error.
+ */
+class APIExportAuthorizationValidationException(
+    val reason: APIExportAuthorizationValidationReason,
+) : IllegalArgumentException("Enter a valid bearer token or Authorization value.")
+
+object APIExportAuthorization {
+    fun validate(value: String): APIExportAuthorizationValidationResult {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) {
+            return APIExportAuthorizationValidationResult.Invalid(
+                APIExportAuthorizationValidationReason.EMPTY,
+            )
+        }
+        if (trimmed.any { it < ' ' || it >= '\u007f' }) {
+            return APIExportAuthorizationValidationResult.Invalid(
+                APIExportAuthorizationValidationReason.UNSUPPORTED_CHARACTERS,
+            )
+        }
+
+        val explicit = Regex("^(Bearer|Basic)\\s+.+$", RegexOption.IGNORE_CASE)
+        val normalized = if (explicit.matches(trimmed)) trimmed else "Bearer $trimmed"
+        return APIExportAuthorizationValidationResult.Valid(normalized)
+    }
+
+    fun normalizeOrNull(value: String): String? = when (val result = validate(value)) {
+        is APIExportAuthorizationValidationResult.Valid -> result.normalizedValue
+        is APIExportAuthorizationValidationResult.Invalid -> null
+    }
+}
+
 interface APIExportCredentialStore {
     suspend fun authorizationHeader(): String?
     suspend fun hasAuthorization(): Boolean
@@ -69,8 +114,11 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
     override suspend fun hasAuthorization(): Boolean = authorizationHeader() != null
 
     override suspend fun saveAuthorization(value: String) = withContext(Dispatchers.IO) {
-        val normalized = normalizeAuthorization(value)
-            ?: throw IllegalArgumentException("Enter a valid bearer token or Authorization value.")
+        val normalized = when (val result = APIExportAuthorization.validate(value)) {
+            is APIExportAuthorizationValidationResult.Valid -> result.normalizedValue
+            is APIExportAuthorizationValidationResult.Invalid ->
+                throw APIExportAuthorizationValidationException(result.reason)
+        }
         synchronized(credentialLock) {
             val retainedHeaders = preferences.getString(REQUEST_HEADERS_KEY, null)
                 ?.let { stored -> runCatching { APIExportHeaders.parse(stored) }.getOrDefault(emptyList()) }
@@ -171,12 +219,7 @@ class EncryptedAPIExportCredentialStore @Inject constructor(
         private const val REQUEST_HEADERS_KEY = "request_headers"
         private const val FINGERPRINT_SALT_KEY = "destination_fingerprint_salt"
 
-        fun normalizeAuthorization(value: String): String? {
-            val trimmed = value.trim()
-            if (trimmed.isEmpty() || trimmed.any { it < ' ' || it >= '\u007f' }) return null
-
-            val explicit = Regex("^(Bearer|Basic)\\s+.+$", RegexOption.IGNORE_CASE)
-            return if (explicit.matches(trimmed)) trimmed else "Bearer $trimmed"
-        }
+        fun normalizeAuthorization(value: String): String? =
+            APIExportAuthorization.normalizeOrNull(value)
     }
 }

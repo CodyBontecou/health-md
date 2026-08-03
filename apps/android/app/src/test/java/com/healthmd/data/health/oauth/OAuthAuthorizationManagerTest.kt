@@ -141,9 +141,51 @@ class OAuthAuthorizationManagerTest {
             manager.handleCallback("healthmd://oauth2redirect?code=auth-code&state=missing")
         }.exceptionOrNull()
 
-        assertThat(failure).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(failure).isInstanceOf(OAuthAuthorizationException::class.java)
+        assertThat((failure as OAuthAuthorizationException).reason).isEqualTo(OAuthFailureReason.INVALID_STATE)
         assertThat(failure).hasMessageThat().contains("state was not recognized")
         assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun handleCallback_classifiesProviderDenialWithoutTokenExchange() = runTest {
+        val manager = manager(store = InMemoryOAuthTokenStore())
+
+        val failure = runCatching {
+            manager.handleCallback(
+                "healthmd://oauth2redirect?error=access_denied&error_description=User%20declined",
+            )
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(OAuthAuthorizationException::class.java)
+        assertThat((failure as OAuthAuthorizationException).reason).isEqualTo(OAuthFailureReason.PROVIDER_DENIED)
+        assertThat(failure).hasMessageThat().contains("access_denied")
+        assertThat(failure).hasMessageThat().contains("User declined")
+        assertThat(server.requestCount).isEqualTo(0)
+    }
+
+    @Test
+    fun handleCallback_classifiesTokenEndpointDetailForSafeUiMapping() = runTest {
+        val store = InMemoryOAuthTokenStore()
+        val manager = manager(store = store)
+        val authorizationUrl = requireNotNull(manager.buildAuthorizationUrl("oura"))
+        val state = queryParameters(authorizationUrl).getValue("state")
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(401)
+                .setBody("invalid client credentials"),
+        )
+
+        val failure = runCatching {
+            manager.handleCallback("healthmd://oauth2redirect?code=auth-code&state=$state")
+        }.exceptionOrNull()
+
+        assertThat(failure).isInstanceOf(OAuthAuthorizationException::class.java)
+        assertThat((failure as OAuthAuthorizationException).reason)
+            .isEqualTo(OAuthFailureReason.TOKEN_EXCHANGE_FAILED)
+        assertThat(failure).hasMessageThat().contains("401")
+        assertThat(failure).hasMessageThat().contains("invalid client credentials")
+        assertThat(server.requestCount).isEqualTo(1)
     }
 
     private fun manager(

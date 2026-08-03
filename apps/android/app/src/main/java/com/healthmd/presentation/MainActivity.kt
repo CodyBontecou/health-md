@@ -17,6 +17,7 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.theme.HealthMdTheme
 import com.healthmd.presentation.navigation.HealthMdNavigation
+import com.healthmd.widget.refresh.HealthWidgetLifecycleCoordinator
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -39,6 +40,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var exportScheduler: ExportScheduler
 
+    @Inject
+    lateinit var widgetLifecycle: HealthWidgetLifecycleCoordinator
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleLaunchIntent(intent)
@@ -59,6 +63,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         lifecycleScope.launch {
             runCatching { exportScheduler.reconcile() }
+            runCatching { widgetLifecycle.refreshFromForeground() }
         }
     }
 

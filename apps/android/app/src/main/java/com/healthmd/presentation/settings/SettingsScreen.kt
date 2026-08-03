@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -28,6 +29,7 @@ import com.healthmd.data.health.providers.HealthProviderState
 import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import com.healthmd.widget.setup.WidgetSettingsCard
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,7 +104,7 @@ fun SettingsScreen(
                     )
                 }
                 Icon(
-                    Icons.Outlined.ChevronRight,
+                    Icons.AutoMirrored.Outlined.ArrowForwardIos,
                     contentDescription = null,
                     tint = AppColors.textMuted,
                 )
@@ -110,6 +112,8 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(Spacing.sm))
+
+        WidgetSettingsCard()
 
         // Health source configuration is intentionally hidden until the integrations are ready.
 
@@ -123,19 +127,19 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.width(Spacing.sm))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Direct CLI",
+                    stringResource(R.string.direct_cli_title),
                     style = MaterialTheme.typography.bodyLarge,
                     color = AppColors.textPrimary,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "Pair with the desktop CLI for encrypted iOS- or Android-compatible exports.",
+                    stringResource(R.string.settings_direct_cli_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textMuted,
                 )
             }
             Icon(
-                Icons.Outlined.ChevronRight,
+                Icons.AutoMirrored.Outlined.ArrowForwardIos,
                 contentDescription = null,
                 tint = AppColors.textMuted,
             )
@@ -369,7 +373,7 @@ private fun HealthProviderRow(
                         providerState.isConnected -> stringResource(R.string.status_connected)
                         provider.isInstalled -> stringResource(R.string.health_provider_status_installed)
                         providerState.isOAuthConfigured -> stringResource(R.string.health_provider_status_ready_to_connect)
-                        else -> definition.directExportStatus.label
+                        else -> stringResource(definition.directExportStatus.labelRes)
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = if (providerState.isSelected || providerState.isConnected || provider.isInstalled) AppColors.success else AppColors.textMuted,
@@ -377,7 +381,7 @@ private fun HealthProviderRow(
                 )
             }
             Text(
-                text = definition.summary,
+                text = stringResource(definition.summaryRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
                 maxLines = 2,
@@ -387,8 +391,8 @@ private fun HealthProviderRow(
             Text(
                 text = stringResource(
                     R.string.health_provider_integration_details,
-                    definition.integrationKind.label,
-                    definition.setupDescription,
+                    stringResource(definition.integrationKind.labelRes),
+                    stringResource(definition.setupDescriptionRes),
                 ),
                 style = MaterialTheme.typography.labelSmall,
                 color = AppColors.textSecondary,
@@ -399,7 +403,7 @@ private fun HealthProviderRow(
         Spacer(modifier = Modifier.width(Spacing.xs))
         Icon(
             Icons.Outlined.ArrowOutward,
-            contentDescription = null,
+            contentDescription = stringResource(provider.actionLabelRes),
             tint = AppColors.textMuted,
             modifier = Modifier.size(16.dp),
         )

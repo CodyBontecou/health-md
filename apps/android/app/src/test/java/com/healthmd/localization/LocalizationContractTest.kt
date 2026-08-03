@@ -29,21 +29,46 @@ class LocalizationContractTest {
             val localized = parseResources(resourceFile("values-$locale"))
             assertWithMessage("resource keys in values-$locale/strings.xml")
                 .that(localized.keys)
-                .containsAtLeastElementsIn(expectedNames)
+                .containsExactlyElementsIn(expectedNames)
         }
     }
 
     @Test
-    fun complexPluralLocalesIncludeRequiredQuantities() {
+    fun generatedLocaleConfigUsesTheDeclaredSupportedLocales() {
+        val resourceRoot = resourceRoot()
+        val declaredLocales = resourceRoot.listFiles().orEmpty()
+            .filter { it.isDirectory && it.name.startsWith("values-") }
+            .filter { File(it, "strings.xml").isFile }
+            .map { it.name.removePrefix("values-") }
+
+        assertThat(declaredLocales).containsExactlyElementsIn(supportedLocales)
+        assertThat(File(resourceRoot, "resources.properties").readText().trim())
+            .isEqualTo("unqualifiedResLocale=en-US")
+        assertThat(File(appModuleRoot(), "build.gradle.kts").readText())
+            .contains("generateLocaleConfig = true")
+    }
+
+    @Test
+    fun everyLocaleUsesItsRequiredPluralQuantities() {
         val requiredQuantities = mapOf(
             "ar" to setOf("zero", "one", "two", "few", "many", "other"),
+            "bn" to setOf("one", "other"),
+            "de" to setOf("one", "other"),
             "es" to setOf("one", "many", "other"),
             "fr" to setOf("one", "many", "other"),
+            "hi" to setOf("one", "other"),
+            "ja" to setOf("other"),
+            "kk" to setOf("one", "other"),
+            "nl" to setOf("one", "other"),
+            "pa" to setOf("one", "other"),
+            "pt-rBR" to setOf("one", "many", "other"),
             "ro" to setOf("one", "few", "other"),
             "ru" to setOf("one", "few", "many", "other"),
             "uk" to setOf("one", "few", "many", "other"),
+            "b+zh+Hans" to setOf("other"),
         )
 
+        assertThat(requiredQuantities.keys).containsExactlyElementsIn(supportedLocales)
         requiredQuantities.forEach { (locale, quantities) ->
             parseResources(resourceFile("values-$locale")).values
                 .filter { it.kind == "plurals" }
@@ -51,7 +76,7 @@ class LocalizationContractTest {
                     assertWithMessage(
                         "plural quantities for ${plural.name} in values-$locale"
                     ).that(plural.values.keys.filterNotNull())
-                        .containsAtLeastElementsIn(quantities)
+                        .containsExactlyElementsIn(quantities)
                 }
         }
     }
@@ -71,6 +96,16 @@ class LocalizationContractTest {
             "privacy_category_mindfulness_permissions",
             "daily_notes_folder_hint",
             "entries_folder_hint",
+            "api_export_endpoint_example",
+            "api_export_headers_example",
+            "api_export_header_line_syntax",
+            "api_export_literal_authorization",
+            "api_export_literal_bearer",
+            "api_export_literal_basic",
+            "api_export_literal_json",
+            "api_export_literal_post",
+            "api_export_literal_http",
+            "api_export_literal_https",
         )
 
         supportedLocales.forEach { locale ->
@@ -209,6 +244,9 @@ class LocalizationContractTest {
             check(it.isFile) { "Missing localization file: ${it.path}" }
         }
 
+    private fun appModuleRoot(): File =
+        File(resourceRoot(), "../../..").canonicalFile
+
     private fun resourceRoot(): File {
         var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
         while (directory != null) {
@@ -232,10 +270,12 @@ class LocalizationContractTest {
     private companion object {
         val supportedLocales = listOf(
             "ar", "bn", "de", "es", "fr", "hi", "ja", "kk",
-            "nl", "pa", "pt", "ro", "ru", "uk", "zh",
+            "nl", "pa", "pt-rBR", "ro", "ru", "uk", "b+zh+Hans",
         )
         val formatArgumentRegex = Regex("%(?:\\d+\\$)?[a-zA-Z]")
-        val templateTokenRegex = Regex("\\{\\{[#/]?[a-z_]+}}")
+        val templateTokenRegex = Regex(
+            "\\{\\{[#/]?[A-Za-z_]+}}|\\{[A-Za-z][A-Za-z0-9_]*}",
+        )
         val literalLineBreakRegex = Regex("\\\\n")
     }
 }

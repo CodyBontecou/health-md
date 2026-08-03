@@ -65,6 +65,28 @@ healthmd export --yesterday --destination "$HOME/Documents/HealthVault"
 - No health values, credentials, provider payloads, or desktop paths are logged or placed in
   notifications.
 
+## Automated UI and transport gate
+
+`DirectCliScreenTest` provides hermetic Compose coverage for unpaired validation, paired endpoint
+controls, connect/disconnect/forget actions, and health-free progress/error states. It runs as part
+of `:app:connectedDebugAndroidTest`.
+
+The opt-in live gate uses a separate `com.healthmd.android.e2e` build so Android Keystore trust,
+DataStore, jobs, and spools cannot collide with the installed app. From the repository root:
+
+```bash
+ANDROID_SERIAL=2C061FDH200CJN \
+HEALTHMD_ANDROID_E2E_HOST=<reachable-computer-address> \
+  apps/android/scripts/run-direct-cli-ui-e2e.sh
+```
+
+The script runs the ignored Rust listener
+`accepts_android_ui_pair_reconnect_disconnect_status_and_repair` concurrently with
+`DirectCliLiveE2ETest`. It verifies Settings navigation, wrong-code rejection, pairing, trusted
+reconnect, the foreground notification and its Disconnect action, v2 status, forget, and code-based
+re-pair. No export request or health payload is created. The isolated APK is uninstalled in cleanup
+even when the test fails.
+
 ## Destination matrix
 
 | Destination | Android status |

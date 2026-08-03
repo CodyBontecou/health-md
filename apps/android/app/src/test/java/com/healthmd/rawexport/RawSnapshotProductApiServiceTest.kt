@@ -101,7 +101,7 @@ class RawSnapshotProductApiServiceTest {
             assertThat(result.successCount).isEqualTo(1)
             assertThat(result.totalCount).isEqualTo(2)
             assertThat(result.isPartialSuccess).isTrue()
-            assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("provider")
+            assertThat(result.failedDateDetails.single().errorDetails).isNull()
             assertThat(server.requestCount).isEqualTo(1)
             assertThat(fixture.credentialStore.requestConfigurationCalls).isEqualTo(1)
             assertThat(server.takeRequest().getHeader(RawSnapshotExportRunner.HEADER_PROVIDER)).isEqualTo("health_connect")

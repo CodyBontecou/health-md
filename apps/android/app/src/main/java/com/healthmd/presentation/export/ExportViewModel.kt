@@ -34,6 +34,12 @@ import java.net.URI
 import java.time.LocalDate
 import javax.inject.Inject
 
+enum class APIConfigurationIssue {
+    INVALID_ENDPOINT,
+    INVALID_HEADERS,
+    SECURE_SAVE_FAILED,
+}
+
 private val RAW_SNAPSHOT_PROVIDER_IDS = setOf(
     "health_connect",
     "fitbit",
@@ -54,7 +60,7 @@ data class ExportUiState(
     val isPreviewing: Boolean = false,
     val exportProgress: Int = 0,
     val exportTotal: Int = 0,
-    val exportProgressDate: String = "",
+    val exportProgressDate: LocalDate? = null,
     val lastResult: ExportResult? = null,
     val preview: ExportPreview? = null,
     val exportedFolderUri: String? = null,
@@ -69,7 +75,7 @@ data class ExportUiState(
     val isPurchased: Boolean = false,
     val apiAuthorizationConfigured: Boolean = false,
     val apiRequestHeadersConfigured: Boolean = false,
-    val apiConfigurationError: String? = null,
+    val apiConfigurationError: APIConfigurationIssue? = null,
     val selectedHealthProviderId: String = "health_connect",
 ) {
     val requiresHistoricalReadPermission: Boolean
@@ -272,14 +278,15 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             val normalized = APIExportEndpoint.normalizedOrNull(endpointUrl)
             if (normalized == null) {
-                _uiState.update { it.copy(apiConfigurationError = "Enter a valid HTTP or HTTPS URL without a fragment or embedded username/password.") }
+                _uiState.update { it.copy(apiConfigurationError = APIConfigurationIssue.INVALID_ENDPOINT) }
                 return@launch
             }
-            val headerError = requestHeaders
+            val headersInvalid = requestHeaders
                 ?.takeIf { it.isNotBlank() }
-                ?.let { raw -> runCatching { APIExportHeaders.parse(raw) }.exceptionOrNull()?.message }
-            if (headerError != null) {
-                _uiState.update { it.copy(apiConfigurationError = headerError) }
+                ?.let { raw -> runCatching { APIExportHeaders.parse(raw) }.isFailure }
+                ?: false
+            if (headersInvalid) {
+                _uiState.update { it.copy(apiConfigurationError = APIConfigurationIssue.INVALID_HEADERS) }
                 return@launch
             }
             try {
@@ -292,10 +299,10 @@ class ExportViewModel @Inject constructor(
                 _uiState.update { it.copy(apiConfigurationError = null) }
                 refreshAPIAuthorizationStatus()
                 rescheduleAPIExportIfNeeded()
-            } catch (error: IllegalArgumentException) {
-                _uiState.update { it.copy(apiConfigurationError = error.message) }
+            } catch (_: IllegalArgumentException) {
+                _uiState.update { it.copy(apiConfigurationError = APIConfigurationIssue.INVALID_HEADERS) }
             } catch (_: Exception) {
-                _uiState.update { it.copy(apiConfigurationError = "Could not securely save API request settings.") }
+                _uiState.update { it.copy(apiConfigurationError = APIConfigurationIssue.SECURE_SAVE_FAILED) }
             }
         }
     }
@@ -387,11 +394,15 @@ class ExportViewModel @Inject constructor(
 
             val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                 _uiState.update {
-                    it.copy(exportProgress = current, exportTotal = total, exportProgressDate = dateStr)
+                    it.copy(
+                        exportProgress = current,
+                        exportTotal = total,
+                        exportProgressDate = dateStr.toLocalDateOrNull(),
+                    )
                 }
             }
             val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = "${_uiState.value.startDate}…${_uiState.value.endDate}") }
+                _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = _uiState.value.startDate) }
                 (rawSnapshotExportRunner?.exportRange(
                     startDate = _uiState.value.startDate,
                     endDate = _uiState.value.endDate,
@@ -418,6 +429,10 @@ class ExportViewModel @Inject constructor(
                     )
             }
 
+            // UI and local history consume typed failure reasons, never arbitrary producer text.
+            // The original result remains available above for canonical API envelope/accounting work.
+            val presentationResult = result.withoutProducerDiagnostics()
+
             // Record in history
             exportHistoryRepository.insertEntry(
                 ExportHistoryEntry(
@@ -425,20 +440,20 @@ class ExportViewModel @Inject constructor(
                     source = ExportSource.MANUAL,
                     dateRangeStart = _uiState.value.startDate,
                     dateRangeEnd = _uiState.value.endDate,
-                    successCount = result.successCount,
-                    totalCount = result.totalCount,
-                    failureReason = result.primaryFailureReason,
-                    failedDateDetails = result.failedDateDetails,
+                    successCount = presentationResult.successCount,
+                    totalCount = presentationResult.totalCount,
+                    failureReason = presentationResult.primaryFailureReason,
+                    failedDateDetails = presentationResult.failedDateDetails,
                     target = settings.exportTarget,
                     targetLabel = when (settings.exportTarget) {
                         ExportTarget.DEVICE_FOLDER -> _uiState.value.folderName
                         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
                     },
                     fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
-                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else estimatedFileCount(result.successCount, settings)
+                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) presentationResult.artifactCount else estimatedFileCount(presentationResult.successCount, settings)
                     } else 0,
-                    warningSummary = result.warningSummary(),
-                    exportMode = result.exportMode,
+                    warningSummary = null,
+                    exportMode = presentationResult.exportMode,
                 )
             )
 
@@ -464,8 +479,8 @@ class ExportViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isExporting = false,
-                    lastResult = result,
-                    exportedFolderUri = if (result.artifactCount > 0) folderUri else null,
+                    lastResult = presentationResult,
+                    exportedFolderUri = if (presentationResult.artifactCount > 0) folderUri else null,
                 )
             }
 
@@ -511,7 +526,11 @@ class ExportViewModel @Inject constructor(
                 val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
                 val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                     _uiState.update {
-                        it.copy(exportProgress = current, exportTotal = total, exportProgressDate = dateStr)
+                        it.copy(
+                            exportProgress = current,
+                            exportTotal = total,
+                            exportProgressDate = dateStr.toLocalDateOrNull(),
+                        )
                     }
                 }
                 val preview = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
@@ -519,7 +538,7 @@ class ExportViewModel @Inject constructor(
                         it.copy(
                             exportProgress = 0,
                             exportTotal = 1,
-                            exportProgressDate = "${_uiState.value.startDate}…${_uiState.value.endDate}",
+                            exportProgressDate = _uiState.value.startDate,
                         )
                     }
                     (rawSnapshotExportRunner?.previewRange(
@@ -534,7 +553,9 @@ class ExportViewModel @Inject constructor(
                             ExportPreviewDay(
                                 date = _uiState.value.startDate,
                                 failureReason = ExportFailureReason.UNKNOWN,
-                                warning = "Raw snapshot preview service unavailable",
+                                issues = listOf(
+                                    ExportPreviewIssue(ExportPreviewIssueKind.RAW_PREVIEW_SERVICE_UNAVAILABLE),
+                                ),
                                 requestedDates = dates,
                             ),
                         ),
@@ -585,7 +606,7 @@ class ExportViewModel @Inject constructor(
         val cancelled = ExportResult(
             successCount = 0,
             totalCount = total,
-            failedDateDetails = listOf(FailedDateDetail(state.startDate, reason, "Export cancelled")),
+            failedDateDetails = listOf(FailedDateDetail(state.startDate, reason)),
             wasCancelled = true,
             target = state.selectedTarget,
             exportMode = state.settings.exportMode,
@@ -605,7 +626,7 @@ class ExportViewModel @Inject constructor(
                     target = state.selectedTarget,
                     targetLabel = state.destinationLabel,
                     fileCount = 0,
-                    warningSummary = "Export cancelled",
+                    warningSummary = null,
                     exportMode = state.settings.exportMode,
                 ),
             )
@@ -615,11 +636,12 @@ class ExportViewModel @Inject constructor(
     private fun estimatedFileCount(successCount: Int, settings: ExportSettings): Int =
         successCount * settings.selectedExportFormats.size
 
-    private fun ExportResult.warningSummary(): String? = when {
-        isPartialSuccess -> "${failedDateDetails.size} failed date(s)"
-        wasCancelled -> "Export cancelled"
-        else -> null
-    }
+    private fun ExportResult.withoutProducerDiagnostics(): ExportResult = copy(
+        failedDateDetails = failedDateDetails.map { it.copy(errorDetails = null) },
+    )
+
+    private fun String.toLocalDateOrNull(): LocalDate? =
+        runCatching { LocalDate.parse(this) }.getOrNull()
 
     private suspend fun rescheduleAPIExportIfNeeded() {
         val settings = settingsRepository.getExportSettings()

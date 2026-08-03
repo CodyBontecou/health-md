@@ -5,7 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 
@@ -43,7 +45,7 @@ fun AdvancedSettingsScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
                 stringResource(R.string.advanced_settings_title),
@@ -57,7 +59,12 @@ fun AdvancedSettingsScreen(
         SettingsNavRow(
             icon = Icons.Outlined.Checklist,
             title = stringResource(R.string.section_health_metrics),
-            subtitle = stringResource(R.string.metrics_enabled_summary, settings.metricSelection.enabledCount, HealthMetrics.totalCount),
+            subtitle = pluralStringResource(
+                R.plurals.metrics_enabled_summary,
+                settings.metricSelection.enabledCount,
+                settings.metricSelection.enabledCount,
+                HealthMetrics.totalCount,
+            ),
             onClick = onNavigateToMetrics,
         )
 
@@ -71,7 +78,9 @@ fun AdvancedSettingsScreen(
                 if (ExportFormat.CSV in settings.selectedExportFormats) add(stringResource(R.string.format_display_csv))
             }
             Text(
-                selectedFormatNames.joinToString(", ").ifBlank { "No formats selected" },
+                selectedFormatNames.joinToString(", ").ifBlank {
+                    stringResource(R.string.advanced_settings_no_formats_selected)
+                },
                 style = MaterialTheme.typography.bodyLarge,
                 color = AppColors.textPrimary,
             )
@@ -102,7 +111,15 @@ fun AdvancedSettingsScreen(
         SettingsNavRow(
             icon = Icons.Outlined.FormatListNumbered,
             title = stringResource(R.string.section_individual_tracking),
-            subtitle = if (settings.individualTracking.globalEnabled) stringResource(R.string.individual_tracking_enabled_summary, settings.individualTracking.trackedMetricCount) else stringResource(R.string.daily_note_disabled),
+            subtitle = if (settings.individualTracking.globalEnabled) {
+                pluralStringResource(
+                    R.plurals.individual_tracking_enabled_summary,
+                    settings.individualTracking.trackedMetricCount,
+                    settings.individualTracking.trackedMetricCount,
+                )
+            } else {
+                stringResource(R.string.daily_note_disabled)
+            },
             onClick = onNavigateToIndividualTracking,
         )
 
@@ -158,6 +175,6 @@ private fun SettingsNavRow(
             Text(title, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary, fontWeight = FontWeight.Medium)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = AppColors.textMuted)
         }
-        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = AppColors.textMuted)
+        Icon(Icons.AutoMirrored.Outlined.ArrowForwardIos, contentDescription = null, tint = AppColors.textMuted)
     }
 }

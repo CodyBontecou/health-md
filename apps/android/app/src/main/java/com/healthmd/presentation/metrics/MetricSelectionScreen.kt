@@ -9,7 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.IndeterminateCheckBox
@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 import com.healthmd.presentation.i18n.displayNameRes
 import com.healthmd.presentation.i18n.localizedDisplayName
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +49,10 @@ fun MetricSelectionScreen(
         mutableStateOf(HealthMetrics.categories.toSet())
     }
     val context = LocalContext.current
+    val locale = context.resources.configuration.locales[0]
+    val integerFormat = remember(locale) {
+        NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -61,7 +66,7 @@ fun MetricSelectionScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
                 stringResource(R.string.metric_selection_title),
@@ -71,7 +76,7 @@ fun MetricSelectionScreen(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                "${metricSelection.enabledCount}/${HealthMetrics.totalCount}",
+                "${integerFormat.format(metricSelection.enabledCount)}/${integerFormat.format(HealthMetrics.totalCount)}",
                 style = MaterialTheme.typography.labelLarge,
                 color = AppColors.accent,
             )

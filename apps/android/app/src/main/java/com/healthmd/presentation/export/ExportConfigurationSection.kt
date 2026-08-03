@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -334,7 +334,7 @@ fun ExportConfigurationSection(
             )
         }
         Icon(
-            Icons.Outlined.ChevronRight,
+            Icons.AutoMirrored.Outlined.ArrowForwardIos,
             contentDescription = null,
             tint = AppColors.textMuted,
         )
@@ -515,15 +515,19 @@ private fun ExportFormatSelectionButton(
     }
 }
 
-private fun FolderOrganization.displayLabel(): String = when (this) {
-    FolderOrganization.FLAT -> "Flat"
-    FolderOrganization.BY_YEAR -> "By year"
-    FolderOrganization.BY_MONTH -> "By month"
-    FolderOrganization.BY_YEAR_MONTH -> "By year/month"
-}
+@Composable
+private fun FolderOrganization.displayLabel(): String = stringResource(
+    when (this) {
+        FolderOrganization.FLAT -> R.string.folder_organization_flat_label
+        FolderOrganization.BY_YEAR -> R.string.folder_organization_by_year_label
+        FolderOrganization.BY_MONTH -> R.string.folder_organization_by_month_label
+        FolderOrganization.BY_YEAR_MONTH -> R.string.folder_organization_by_year_month_label
+    },
+)
 
+@Composable
 private fun FolderOrganization.previewTemplate(): String = when (this) {
-    FolderOrganization.FLAT -> "No automatic date folders"
+    FolderOrganization.FLAT -> stringResource(R.string.folder_organization_flat_preview)
     FolderOrganization.BY_YEAR -> "{year}"
     FolderOrganization.BY_MONTH -> "{month}"
     FolderOrganization.BY_YEAR_MONTH -> "{year}/{month}"

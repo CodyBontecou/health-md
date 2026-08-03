@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The isolated Direct CLI E2E variant must not register widget hosts or react to widget
+         broadcasts while instrumentation owns the foreground activity. -->
+    <application>
+        <activity
+            android:name=".widget.setup.WidgetSetupActivity"
+            tools:node="remove" />
+        <receiver
+            android:name=".widget.glance.HealthSummaryWidgetReceiver"
+            tools:node="remove" />
+        <receiver
+            android:name=".widget.glance.ActivityWidgetReceiver"
+            tools:node="remove" />
+        <receiver
+            android:name=".widget.glance.HeartRangeWidgetReceiver"
+            tools:node="remove" />
+        <receiver
+            android:name=".widget.glance.SleepWidgetReceiver"
+            tools:node="remove" />
+    </application>
+</manifest>

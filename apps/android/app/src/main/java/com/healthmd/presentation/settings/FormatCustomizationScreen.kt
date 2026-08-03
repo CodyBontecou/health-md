@@ -8,8 +8,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.Dataset
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,7 +49,7 @@ fun FormatCustomizationScreen(
         // Top bar
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
             }
             Text(
                 stringResource(R.string.format_customization_title),
@@ -182,7 +182,7 @@ fun FormatCustomizationScreen(
                     color = AppColors.textMuted,
                 )
             }
-            Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = AppColors.textMuted)
+            Icon(Icons.AutoMirrored.Outlined.ArrowForwardIos, contentDescription = null, tint = AppColors.textMuted)
         }
 
         // Markdown Template
@@ -405,14 +405,17 @@ private fun CustomTemplateEditor(
     GeistCard(padding = Spacing.md) {
         SectionLabel(stringResource(R.string.custom_markdown_template_preview))
         Text(
-            text = renderCustomTemplatePreview(template),
+            text = renderCustomTemplatePreview(
+                template = template,
+                emptyPreview = stringResource(R.string.custom_markdown_template_empty_preview),
+            ),
             color = AppColors.textSecondary,
             style = MaterialTheme.typography.bodySmall.copy(fontFamily = GeistMono),
         )
     }
 }
 
-private fun renderCustomTemplatePreview(template: String): String {
+private fun renderCustomTemplatePreview(template: String, emptyPreview: String): String {
     var rendered = template
     val sampleSections = setOf("sleep", "activity", "heart", "workouts")
     val allSections = listOf(
@@ -458,7 +461,7 @@ private fun renderCustomTemplatePreview(template: String): String {
     for ((key, value) in replacements) {
         rendered = rendered.replace("{{$key}}", value)
     }
-    return rendered.trim().ifBlank { "(empty preview)" }.take(1_500)
+    return rendered.trim().ifBlank { emptyPreview }.take(1_500)
 }
 
 @Composable

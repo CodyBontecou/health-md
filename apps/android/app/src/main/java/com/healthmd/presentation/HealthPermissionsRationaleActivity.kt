@@ -174,13 +174,13 @@ private fun CategoryCard(category: PermissionCategory) {
             )
 
             LabeledRow(
-                label = "Permissions:",
+                label = stringResource(R.string.privacy_permissions_label),
                 value = stringResource(category.permissionsRes),
                 monospace = true,
             )
 
             LabeledRow(
-                label = "Export:",
+                label = stringResource(R.string.privacy_export_label),
                 value = stringResource(category.exportsRes),
             )
         }

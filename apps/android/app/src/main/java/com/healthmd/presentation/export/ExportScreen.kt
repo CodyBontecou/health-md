@@ -16,6 +16,7 @@ import androidx.compose.foundation.Image
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.text.format.Formatter
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -24,16 +25,16 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.outlined.Launch
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.Launch
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.*
@@ -44,8 +45,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.healthmd.R
 import androidx.compose.ui.platform.LocalContext
@@ -69,6 +72,9 @@ import com.healthmd.data.health.tryLaunchHealthConnectPermissions
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportPreview
+import com.healthmd.domain.model.ExportPreviewIssue
+import com.healthmd.domain.model.ExportPreviewIssueKind
+import com.healthmd.domain.model.ExportPreviewSideEffectAction
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.presentation.common.*
@@ -86,7 +92,8 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.time.format.FormatStyle
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,6 +105,7 @@ fun ExportScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val apiConfigurationErrorText = uiState.apiConfigurationError?.localizedText()
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
@@ -320,6 +328,8 @@ fun ExportScreen(
             current = uiState.exportProgress,
             total = uiState.exportTotal,
             currentDate = uiState.exportProgressDate,
+            rangeStart = uiState.startDate,
+            rangeEnd = uiState.endDate,
             exportMode = uiState.settings.exportMode,
             onCancel = { viewModel.cancelExport() },
         )
@@ -588,14 +598,32 @@ fun ExportScreen(
             },
         )
 
+        val apiFormatLabel = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+            stringResource(
+                if (uiState.settings.rawSnapshot.format == com.healthmd.rawexport.RawExportFormat.JSON) {
+                    R.string.raw_snapshot_format_json
+                } else {
+                    R.string.raw_snapshot_format_ndjson
+                }
+            )
+        } else {
+            stringResource(R.string.format_display_json)
+        }
         ExportTargetSelector(
             selectedTarget = uiState.selectedTarget,
-            folderSubtitle = uiState.folderName?.let { "Write files to $it" }
-                ?: "Choose a local or provider-backed folder",
+            folderSubtitle = uiState.folderName?.let {
+                stringResource(R.string.export_target_folder_selected_subtitle, it)
+            } ?: stringResource(R.string.export_target_folder_unselected_subtitle),
             apiSubtitle = if (uiState.apiEndpointConfigured) {
-                "POST ${if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) uiState.settings.rawSnapshot.format.name else "JSON"} to ${APIExportEndpoint.displayName(uiState.settings.apiEndpointUrl)}"
+                stringResource(
+                    R.string.export_target_api_configured_subtitle,
+                    apiFormatLabel,
+                    APIExportEndpoint.displayName(uiState.settings.apiEndpointUrl),
+                )
+            } else if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                stringResource(R.string.export_target_api_raw_unconfigured_subtitle)
             } else {
-                if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) "Stream a raw snapshot to an HTTPS endpoint" else "Send JSON to your API endpoint"
+                stringResource(R.string.export_target_api_json_unconfigured_subtitle)
             },
             onTargetSelected = { target ->
                 viewModel.setExportTarget(target)
@@ -665,34 +693,37 @@ fun ExportScreen(
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "API Endpoint",
+                        stringResource(R.string.export_preview_api_destination),
                         style = MaterialTheme.typography.labelSmall,
                         color = AppColors.textMuted,
                     )
                     Text(
                         if (uiState.apiEndpointConfigured) {
-                            "POST ${APIExportEndpoint.redactedDescription(uiState.settings.apiEndpointUrl)}"
+                            stringResource(
+                                R.string.export_api_post_endpoint,
+                                APIExportEndpoint.redactedDescription(uiState.settings.apiEndpointUrl),
+                            )
                         } else {
-                            "Configure an API endpoint"
+                            stringResource(R.string.export_api_configure_endpoint)
                         },
                         style = MaterialTheme.typography.bodyLarge,
                         color = AppColors.textPrimary,
                     )
                     if (uiState.apiAuthorizationConfigured) {
                         Text(
-                            "Authorization stored securely",
+                            stringResource(R.string.export_api_authorization_secure),
                             style = MaterialTheme.typography.bodySmall,
                             color = AppColors.success,
                         )
                     }
                     if (uiState.apiRequestHeadersConfigured) {
                         Text(
-                            "Custom request headers stored securely",
+                            stringResource(R.string.export_api_headers_secure),
                             style = MaterialTheme.typography.bodySmall,
                             color = AppColors.success,
                         )
                     }
-                    uiState.apiConfigurationError?.let { error ->
+                    apiConfigurationErrorText?.let { error ->
                         Text(
                             error,
                             style = MaterialTheme.typography.bodySmall,
@@ -702,19 +733,25 @@ fun ExportScreen(
                     Text(
                         if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                             if (uiState.rawApiEndpointConfigured) {
-                                "Raw snapshots stream the completed artifact with schema, export ID, and checksum headers."
+                                stringResource(R.string.export_api_raw_mode_description)
                             } else {
                                 stringResource(R.string.raw_snapshot_https_required)
                             }
                         } else {
-                            "API exports always send JSON. Metric and time-series settings apply; file paths and write modes do not."
+                            stringResource(R.string.export_api_compatibility_mode_description)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = AppColors.textMuted,
                     )
                 }
                 Text(
-                    if (uiState.apiEndpointConfigured) "Edit" else "Configure",
+                    stringResource(
+                        if (uiState.apiEndpointConfigured) {
+                            R.string.export_api_action_edit
+                        } else {
+                            R.string.action_configure_endpoint
+                        }
+                    ),
                     color = AppColors.accent,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Medium,
@@ -806,7 +843,7 @@ fun ExportScreen(
                 val debugPermissions = permissionPlan.foregroundPermissions +
                     permissionPlan.historicalReadPermissions
                 val grantedCount = if (debugLoaded) {
-                    "${debugGranted.intersect(debugPermissions).size}/${debugPermissions.size}"
+                    "${localizedInteger(debugGranted.intersect(debugPermissions).size)}/${localizedInteger(debugPermissions.size)}"
                 } else {
                     stringResource(R.string.debug_loading)
                 }
@@ -817,7 +854,7 @@ fun ExportScreen(
                     stringResource(R.string.debug_has_permissions) to "${uiState.hasPermissions}",
                     stringResource(R.string.debug_has_history_permission) to "${uiState.hasHistoricalReadPermission}",
                     stringResource(R.string.debug_requires_history_permission) to "${uiState.requiresHistoricalReadPermission}",
-                    stringResource(R.string.debug_first_permission_grant) to (uiState.firstHealthPermissionGrantDate?.toString() ?: "—"),
+                    stringResource(R.string.debug_first_permission_grant) to (uiState.firstHealthPermissionGrantDate?.let { formatPreviewDate(it) } ?: "—"),
                     stringResource(R.string.debug_granted) to grantedCount,
                 )
 
@@ -928,7 +965,7 @@ fun ExportScreen(
             initialEndpointUrl = uiState.settings.apiEndpointUrl,
             authorizationConfigured = uiState.apiAuthorizationConfigured,
             requestHeadersConfigured = uiState.apiRequestHeadersConfigured,
-            configurationError = uiState.apiConfigurationError,
+            configurationError = apiConfigurationErrorText,
             onDismiss = {
                 showAPISettings = false
                 viewModel.clearAPIConfigurationError()
@@ -966,7 +1003,7 @@ fun ExportScreen(
                     SecondaryButton(
                         text = stringResource(R.string.open_with_obsidian),
                         modifier = Modifier.fillMaxWidth(),
-                        icon = Icons.Outlined.Launch,
+                        icon = Icons.AutoMirrored.Outlined.Launch,
                         onClick = {
                             showOpenDialog = false
                             openInObsidian(uiState.folderName)
@@ -1053,7 +1090,7 @@ private fun FloatingExportActionBar(
         ) {
             if (!hasSelectedFormat) {
                 Text(
-                    "Select at least one export format to continue.",
+                    stringResource(R.string.export_no_format_selected),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.error,
                     textAlign = TextAlign.Center,
@@ -1073,7 +1110,11 @@ private fun FloatingExportActionBar(
 
             if (!isPurchased) {
                 Text(
-                    text = stringResource(R.string.free_exports_remaining, freeExportsRemaining),
+                    text = pluralStringResource(
+                        R.plurals.free_exports_remaining,
+                        freeExportsRemaining,
+                        freeExportsRemaining,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textMuted,
                 )
@@ -1309,10 +1350,19 @@ private fun ExportResultBadge(
                     if (result.target == ExportTarget.API_ENDPOINT) R.string.raw_snapshot_result_uploaded else R.string.raw_snapshot_result_created,
                 ) + (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
             } else if (result.target == ExportTarget.API_ENDPOINT) {
-                "${result.successCount}/${result.totalCount} days uploaded" +
-                    (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
+                pluralStringResource(
+                    R.plurals.export_result_uploaded_days,
+                    result.totalCount,
+                    result.successCount,
+                    result.totalCount,
+                ) + (result.httpStatusCode?.let { " · HTTP $it" } ?: "")
             } else {
-                stringResource(R.string.export_result_days, result.successCount, result.totalCount)
+                pluralStringResource(
+                    R.plurals.export_result_exported_days,
+                    result.totalCount,
+                    result.successCount,
+                    result.totalCount,
+                )
             },
             color = AppColors.textPrimary,
             style = MaterialTheme.typography.labelMedium,
@@ -1384,9 +1434,19 @@ private fun ExportDiagnosticsPanel(
                 )
                 Text(
                     if (result.exportMode == ExportMode.RAW_SNAPSHOT) {
-                        stringResource(R.string.raw_snapshot_result_count, summary.successCount, summary.totalCount)
+                        pluralStringResource(
+                            R.plurals.raw_snapshot_result_actions,
+                            summary.totalCount,
+                            summary.successCount,
+                            summary.totalCount,
+                        )
                     } else {
-                        stringResource(R.string.export_result_days, summary.successCount, summary.totalCount)
+                        pluralStringResource(
+                            R.plurals.export_result_exported_days,
+                            summary.totalCount,
+                            summary.successCount,
+                            summary.totalCount,
+                        )
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = AppColors.textSecondary,
@@ -1408,10 +1468,19 @@ private fun ExportDiagnosticsPanel(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         Text(
-            stringResource(
-                if (isRawSnapshot) R.string.raw_snapshot_diagnostics_failed_count else R.string.export_diagnostics_failed_count,
-                summary.failedDayCount,
-            ),
+            if (isRawSnapshot) {
+                pluralStringResource(
+                    R.plurals.raw_snapshot_diagnostics_failed_actions,
+                    summary.failedDayCount,
+                    summary.failedDayCount,
+                )
+            } else {
+                pluralStringResource(
+                    R.plurals.export_diagnostics_failed_days,
+                    summary.failedDayCount,
+                    summary.failedDayCount,
+                )
+            },
             style = MaterialTheme.typography.bodyMedium,
             color = statusColor,
             fontWeight = FontWeight.Medium,
@@ -1513,11 +1582,21 @@ private fun ExportFailureGroup(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
-            stringResource(
-                if (isRawSnapshot) R.string.raw_snapshot_diagnostics_reason_count else R.string.export_diagnostics_reason_count,
-                group.failureReasonLabel(),
-                group.count,
-            ),
+            if (isRawSnapshot) {
+                pluralStringResource(
+                    R.plurals.raw_snapshot_diagnostics_reason_actions,
+                    group.count,
+                    group.failureReasonLabel(),
+                    group.count,
+                )
+            } else {
+                pluralStringResource(
+                    R.plurals.export_diagnostics_reason_days,
+                    group.count,
+                    group.failureReasonLabel(),
+                    group.count,
+                )
+            },
             style = MaterialTheme.typography.labelLarge,
             color = AppColors.textPrimary,
             fontWeight = FontWeight.SemiBold,
@@ -1538,8 +1617,11 @@ private fun ExportFailureGroup(
 }
 
 @Composable
-fun ExportFailureDiagnosticGroup.failureReasonLabel(): String =
-    when (reason) {
+fun ExportFailureDiagnosticGroup.failureReasonLabel(): String = reason.localizedFailureLabel()
+
+@Composable
+private fun ExportFailureReason.localizedFailureLabel(): String =
+    when (this) {
         ExportFailureReason.NO_FOLDER_SELECTED -> stringResource(R.string.export_failure_no_folder_label)
         ExportFailureReason.NO_HEALTH_DATA -> stringResource(R.string.export_failure_no_data_label)
         ExportFailureReason.ACCESS_DENIED -> stringResource(R.string.export_failure_access_denied_label)
@@ -1580,9 +1662,15 @@ fun ExportFailureDiagnosticGroup.guidanceText(): String =
 
 @Composable
 fun ExportFailureDiagnosticGroup.dateSampleText(): String {
-    val dates = sampleDates.joinToString(", ") { it.toString() }
+    val formatter = localizedMediumDateFormatter()
+    val dates = sampleDates.joinToString(", ") { it.format(formatter) }
     return if (remainingDateCount > 0) {
-        stringResource(R.string.export_diagnostics_date_list_more, dates, remainingDateCount)
+        pluralStringResource(
+            R.plurals.export_diagnostics_date_list_more_count,
+            remainingDateCount,
+            dates,
+            remainingDateCount,
+        )
     } else {
         stringResource(R.string.export_diagnostics_date_list, dates)
     }
@@ -1619,7 +1707,7 @@ private fun ExportPreviewDialog(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Back to export preview",
+                            contentDescription = stringResource(R.string.export_preview_back_description),
                             tint = AppColors.textPrimary,
                         )
                     }
@@ -1732,21 +1820,30 @@ private fun ExportPreviewFileList(
 
         Text(
             if (preview.isRangeArtifact) {
-                val artifactLabel = if (preview.totalFileCount == 1) "1 artifact" else "${preview.totalFileCount} artifacts"
-                "${dayCountLabel(preview.requestedDateCount)} • $artifactLabel • ${formatBytes(preview.totalByteCount)}"
+                stringResource(
+                    R.string.export_preview_summary,
+                    dayCountLabel(preview.requestedDateCount),
+                    artifactCountLabel(preview.totalFileCount),
+                    formatBytes(preview.totalByteCount),
+                )
             } else {
-                "${preview.previewedDateCount}/${preview.requestedDateCount} days • ${preview.totalFileCount} files • ${formatBytes(preview.totalByteCount)}"
+                stringResource(
+                    R.string.export_preview_summary,
+                    previewedDayCountLabel(preview.previewedDateCount, preview.requestedDateCount),
+                    fileCountLabel(preview.totalFileCount),
+                    formatBytes(preview.totalByteCount),
+                )
             },
             style = MaterialTheme.typography.bodyMedium,
             color = AppColors.textSecondary,
         )
         if (!preview.isRangeArtifact && preview.isTruncated && preview.previewedDateCount > 0) {
             Text(
-                if (preview.previewedDateCount == 1) {
-                    stringResource(R.string.export_preview_limited_one)
-                } else {
-                    stringResource(R.string.export_preview_limited_other, preview.previewedDateCount)
-                },
+                pluralStringResource(
+                    R.plurals.export_preview_limited_days,
+                    preview.previewedDateCount,
+                    preview.previewedDateCount,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
@@ -1770,15 +1867,18 @@ private fun ExportPreviewFileList(
 
             day.failureReason?.let { reason ->
                 PreviewStatusCard(
-                    title = reason.name,
-                    message = day.warning ?: "No exportable file for this date.",
+                    title = reason.localizedFailureLabel(),
+                    message = day.issues.takeIf { it.isNotEmpty() }
+                        ?.map { it.localizedMessage() }
+                        ?.joinToString("\n")
+                        ?: stringResource(R.string.export_preview_no_exportable_file),
                     color = AppColors.error,
                 )
             }
-            day.warning?.takeIf { day.failureReason == null }?.let { warning ->
+            if (day.failureReason == null && day.issues.isNotEmpty()) {
                 PreviewStatusCard(
-                    title = "Warning",
-                    message = warning,
+                    title = stringResource(R.string.export_preview_warning_title),
+                    message = day.issues.map { it.localizedMessage() }.joinToString("\n"),
                     color = AppColors.warning,
                 )
             }
@@ -1791,6 +1891,7 @@ private fun ExportPreviewFileList(
                     byteCount = file.byteCount,
                     content = file.content,
                     previewOmittedByteCount = file.previewOmittedByteCount,
+                    previewTailContent = file.previewTailContent,
                     isWritable = true,
                 )
                 PreviewFileRow(
@@ -1803,11 +1904,12 @@ private fun ExportPreviewFileList(
             day.sideEffects.forEach { effect ->
                 val details = PreviewFileDetails(
                     title = effect.relativePath.substringAfterLast('/'),
-                    subtitle = effect.action + if (effect.wouldWrite) " · ${formatBytes(effect.byteCount)}" else "",
+                    subtitle = effect.action.localizedAction() + if (effect.wouldWrite) " · ${formatBytes(effect.byteCount)}" else "",
                     relativePath = effect.relativePath,
                     byteCount = effect.byteCount,
                     content = effect.content.orEmpty(),
                     previewOmittedByteCount = 0,
+                    previewTailContent = "",
                     isWritable = effect.wouldWrite,
                 )
                 PreviewFileRow(
@@ -1838,12 +1940,21 @@ private fun PreviewSummaryCard(
             .padding(Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        PreviewSummaryRow("Date range", dayCountLabel(requestedDayCount))
+        PreviewSummaryRow(stringResource(R.string.section_date_range), dayCountLabel(requestedDayCount))
         PreviewSummaryRow(
-            if (isRangeArtifact) "Artifacts per range" else "Formats per day",
-            if (isRangeArtifact) artifactCount.toString() else formatsPerDay.toString(),
+            stringResource(
+                if (isRangeArtifact) {
+                    R.string.export_preview_artifacts_per_range
+                } else {
+                    R.string.export_preview_formats_per_day
+                }
+            ),
+            localizedInteger(if (isRangeArtifact) artifactCount else formatsPerDay),
         )
-        PreviewSummaryRow("Destination", destinationLabel ?: "Selected folder")
+        PreviewSummaryRow(
+            stringResource(R.string.export_preview_destination_label),
+            destinationLabel ?: stringResource(R.string.export_preview_selected_folder),
+        )
     }
 }
 
@@ -1947,7 +2058,7 @@ private fun PreviewFileRow(
             }
             if (enabled) {
                 Icon(
-                    Icons.Outlined.ChevronRight,
+                    Icons.AutoMirrored.Outlined.ArrowForwardIos,
                     contentDescription = null,
                     tint = AppColors.textMuted,
                 )
@@ -1968,10 +2079,16 @@ private fun PreviewFileRow(
 
 @Composable
 private fun PreviewFileContent(file: PreviewFileDetails) {
-    val displayContent = remember(file.content, file.byteCount, file.previewOmittedByteCount) {
+    val displayContent = remember(
+        file.content,
+        file.previewTailContent,
+        file.byteCount,
+        file.previewOmittedByteCount,
+    ) {
         if (file.previewOmittedByteCount > 0) {
             ExportPreviewDisplayContent(
                 text = file.content,
+                tailText = file.previewTailContent,
                 originalByteCount = file.byteCount,
                 omittedByteCount = file.previewOmittedByteCount,
             )
@@ -1979,6 +2096,14 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
             ExportPreviewDisplayContent.make(file.content)
         }
     }
+    val renderedContent = displayContent.render(
+        emptyFileLabel = stringResource(R.string.export_preview_empty_file),
+        truncationMarker = stringResource(
+            R.string.export_preview_truncation_marker,
+            formatBytes(displayContent.omittedByteCount),
+            formatBytes(displayContent.originalByteCount),
+        ),
+    )
 
     Column(
         modifier = Modifier
@@ -2014,7 +2139,7 @@ private fun PreviewFileContent(file: PreviewFileDetails) {
                 .padding(Spacing.sm),
         ) {
             Text(
-                displayContent.text,
+                renderedContent,
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textPrimary,
                 fontFamily = GeistMono,
@@ -2030,22 +2155,67 @@ private data class PreviewFileDetails(
     val byteCount: Int,
     val content: String,
     val previewOmittedByteCount: Int,
+    val previewTailContent: String,
     val isWritable: Boolean,
 )
 
-private fun dayCountLabel(days: Int): String = if (days == 1) "1 day" else "$days days"
+@Composable
+private fun dayCountLabel(days: Int): String = pluralStringResource(
+    R.plurals.export_preview_day_count,
+    days,
+    days,
+)
 
-private fun formatPreviewDate(date: LocalDate): String =
-    date.format(DateTimeFormatter.ofPattern("EEE, MMM d, yyyy", Locale.getDefault()))
+@Composable
+private fun previewedDayCountLabel(previewed: Int, requested: Int): String = pluralStringResource(
+    R.plurals.export_preview_days_previewed,
+    requested,
+    previewed,
+    requested,
+)
 
+@Composable
+private fun artifactCountLabel(artifacts: Int): String = pluralStringResource(
+    R.plurals.export_preview_artifact_count,
+    artifacts,
+    artifacts,
+)
+
+@Composable
+private fun fileCountLabel(files: Int): String = pluralStringResource(
+    R.plurals.export_preview_file_count,
+    files,
+    files,
+)
+
+@Composable
+private fun localizedInteger(value: Int): String =
+    NumberFormat.getIntegerInstance(LocalConfiguration.current.locales[0]).format(value)
+
+@Composable
+private fun localizedMediumDateFormatter(): DateTimeFormatter =
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+        .withLocale(LocalConfiguration.current.locales[0])
+
+@Composable
+private fun formatPreviewDate(date: LocalDate): String = date.format(localizedMediumDateFormatter())
+
+@Composable
 private fun formatPreviewDateRange(dates: List<LocalDate>): String = when {
-    dates.isEmpty() -> "Selected range"
+    dates.isEmpty() -> stringResource(R.string.export_preview_selected_range)
     dates.size == 1 -> formatPreviewDate(dates.single())
-    else -> "${formatPreviewDate(dates.first())} – ${formatPreviewDate(dates.last())}"
+    else -> stringResource(
+        R.string.export_selected_range,
+        formatPreviewDate(dates.first()),
+        formatPreviewDate(dates.last()),
+    )
 }
 
-private fun formatCompactDate(date: LocalDate): String =
-    date.format(DateTimeFormatter.ofPattern("M/d/yy", Locale.getDefault()))
+@Composable
+private fun formatCompactDate(date: LocalDate): String = date.format(
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
+        .withLocale(LocalConfiguration.current.locales[0]),
+)
 
 private fun LocalDate.toDatePickerMillis(): Long =
     atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
@@ -2057,11 +2227,76 @@ private fun parentPathLabel(relativePath: String, destinationLabel: String?): St
         .joinToString("/") + "/"
 }
 
-private fun formatBytes(bytes: Int): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> {
-        val kb = bytes / 1024.0
-        if (kb < 10) String.format(Locale.US, "%.1f KB", kb) else String.format(Locale.US, "%.0f KB", kb)
+@Composable
+private fun formatBytes(bytes: Int): String =
+    Formatter.formatFileSize(LocalContext.current, bytes.coerceAtLeast(0).toLong())
+
+@Composable
+private fun APIConfigurationIssue.localizedText(): String = stringResource(
+    when (this) {
+        APIConfigurationIssue.INVALID_ENDPOINT -> R.string.export_api_error_invalid_endpoint
+        APIConfigurationIssue.INVALID_HEADERS -> R.string.export_api_error_invalid_headers
+        APIConfigurationIssue.SECURE_SAVE_FAILED -> R.string.export_api_error_secure_save
     }
-    else -> String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
+)
+
+@Composable
+private fun localizedProviderName(providerId: String?): String = stringResource(
+    when (providerId) {
+        "health_connect" -> R.string.health_provider_label_health_connect
+        "all_connected" -> R.string.health_provider_label_all_connected
+        "fitbit" -> R.string.health_provider_label_fitbit
+        "withings" -> R.string.health_provider_label_withings
+        "oura" -> R.string.health_provider_label_oura
+        "polar" -> R.string.health_provider_label_polar
+        "whoop" -> R.string.health_provider_label_whoop
+        else -> R.string.health_provider_label_generic
+    },
+)
+
+@Composable
+private fun ExportPreviewIssue.localizedMessage(): String = when (kind) {
+    ExportPreviewIssueKind.NO_FORMATS_SELECTED -> stringResource(R.string.export_no_format_selected)
+    ExportPreviewIssueKind.NO_FILES_WRITTEN -> stringResource(R.string.export_preview_no_files_written)
+    ExportPreviewIssueKind.PLANNING_FAILED -> stringResource(R.string.export_preview_planning_failed)
+    ExportPreviewIssueKind.API_PREPARATION_FAILED -> stringResource(R.string.export_preview_api_preparation_failed)
+    ExportPreviewIssueKind.RAW_PREVIEW_SERVICE_UNAVAILABLE -> stringResource(R.string.export_preview_raw_service_unavailable)
+    ExportPreviewIssueKind.RAW_INVALID_DATE_RANGE -> stringResource(R.string.export_preview_raw_invalid_range)
+    ExportPreviewIssueKind.RAW_SELECTION_REQUIRED -> stringResource(R.string.raw_snapshot_selection_required)
+    ExportPreviewIssueKind.RAW_PROVIDER_UNAVAILABLE -> stringResource(R.string.export_preview_raw_provider_unavailable)
+    ExportPreviewIssueKind.RAW_PROVIDER_UNREGISTERED -> stringResource(
+        R.string.export_preview_raw_provider_unregistered,
+        localizedProviderName(providerId),
+    )
+    ExportPreviewIssueKind.RAW_PARTIAL -> stringResource(
+        R.string.export_preview_raw_partial,
+        localizedProviderName(providerId),
+    )
+    ExportPreviewIssueKind.RAW_FAILED_MANIFEST -> stringResource(
+        R.string.export_preview_raw_failed_manifest,
+        localizedProviderName(providerId),
+    )
+    ExportPreviewIssueKind.RAW_NO_FINAL_STATUS -> stringResource(
+        R.string.export_preview_raw_no_final_status,
+        localizedProviderName(providerId),
+    )
+    ExportPreviewIssueKind.RAW_ACCESS_DENIED -> stringResource(
+        R.string.export_preview_raw_access_denied,
+        localizedProviderName(providerId),
+    )
+    ExportPreviewIssueKind.RAW_PREVIEW_FAILED -> stringResource(
+        R.string.export_preview_raw_failed,
+        localizedProviderName(providerId),
+    )
 }
+
+@Composable
+private fun ExportPreviewSideEffectAction.localizedAction(): String = stringResource(
+    when (this) {
+        ExportPreviewSideEffectAction.UPDATE_DAILY_NOTE -> R.string.export_preview_action_update_daily_note
+        ExportPreviewSideEffectAction.CREATE_DAILY_NOTE -> R.string.export_preview_action_create_daily_note
+        ExportPreviewSideEffectAction.SKIP_DAILY_NOTE -> R.string.export_preview_action_skip_daily_note
+        ExportPreviewSideEffectAction.DAILY_NOTE_FAILED -> R.string.export_preview_action_daily_note_failed
+        ExportPreviewSideEffectAction.WRITE_INDIVIDUAL_ENTRY -> R.string.export_preview_action_write_individual_entry
+    }
+)

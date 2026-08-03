@@ -2,6 +2,7 @@ package com.healthmd.export
 
 import android.app.Activity
 import com.android.billingclient.api.ProductDetails
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSettings
@@ -258,7 +259,7 @@ class FakeBillingRepository(initialUnlocked: Boolean = false) : BillingRepositor
     override val isUnlocked = MutableStateFlow(initialUnlocked)
     override val isPurchasing = MutableStateFlow(false)
     override val isRestoring = MutableStateFlow(false)
-    override val purchaseError = MutableStateFlow<String?>(null)
+    override val purchaseError = MutableStateFlow<BillingError?>(null)
     override val productDetails = MutableStateFlow<ProductDetails?>(null)
 
     var startConnectionCalls: Int = 0

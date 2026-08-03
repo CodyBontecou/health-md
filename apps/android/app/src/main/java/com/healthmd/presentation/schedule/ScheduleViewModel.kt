@@ -1,7 +1,7 @@
 package com.healthmd.presentation.schedule
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.annotation.StringRes
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.R
 import com.healthmd.data.export.APIExportCredentialStore
@@ -21,21 +21,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import javax.inject.Inject
+import timber.log.Timber
 
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
-    application: Application,
     private val exportScheduler: ExportScheduler,
     private val settingsRepository: SettingsRepository,
     private val billingRepository: BillingRepository,
     private val apiCredentialStore: APIExportCredentialStore? = null,
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
     val uiState: StateFlow<ScheduleUiState> = _uiState.asStateFlow()
@@ -119,11 +116,21 @@ class ScheduleViewModel @Inject constructor(
             return
         }
         if (enabled && state.selectedTarget == ExportTarget.DEVICE_FOLDER && !state.hasExportFolder) {
-            _uiState.update { it.copy(isEnabled = false, configurationError = "Choose an export folder on the Export screen first.") }
+            _uiState.update {
+                it.copy(
+                    isEnabled = false,
+                    configurationError = ScheduleUiMessage.Text(R.string.schedule_error_folder_required),
+                )
+            }
             return
         }
         if (enabled && state.selectedTarget == ExportTarget.API_ENDPOINT && !state.apiEndpointConfigured) {
-            _uiState.update { it.copy(isEnabled = false, configurationError = "Configure an API endpoint before enabling the schedule.") }
+            _uiState.update {
+                it.copy(
+                    isEnabled = false,
+                    configurationError = ScheduleUiMessage.Text(R.string.schedule_error_api_required),
+                )
+            }
             return
         }
         _uiState.update { it.copy(isEnabled = enabled, configurationError = null) }
@@ -157,14 +164,19 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             val normalized = APIExportEndpoint.normalizedOrNull(endpointUrl)
             if (normalized == null) {
-                _uiState.update { it.copy(configurationError = "Enter a valid HTTP or HTTPS URL without a fragment or embedded username/password.") }
+                _uiState.update {
+                    it.copy(configurationError = ScheduleUiMessage.Text(R.string.schedule_error_invalid_api_url))
+                }
                 return@launch
             }
             val headerError = requestHeaders
                 ?.takeIf { it.isNotBlank() }
-                ?.let { raw -> runCatching { APIExportHeaders.parse(raw) }.exceptionOrNull()?.message }
+                ?.let { raw -> runCatching { APIExportHeaders.parse(raw) }.exceptionOrNull() }
             if (headerError != null) {
-                _uiState.update { it.copy(configurationError = headerError) }
+                Timber.w(headerError, "Invalid API request headers in schedule configuration")
+                _uiState.update {
+                    it.copy(configurationError = ScheduleUiMessage.Text(R.string.schedule_error_invalid_headers))
+                }
                 return@launch
             }
             try {
@@ -188,9 +200,15 @@ class ScheduleViewModel @Inject constructor(
                 refreshAPIAuthorizationStatus()
                 persistAndRescheduleIfNeeded()
             } catch (error: IllegalArgumentException) {
-                _uiState.update { it.copy(configurationError = error.message) }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(configurationError = "Could not securely save API request settings.") }
+                Timber.w(error, "Invalid API schedule configuration")
+                _uiState.update {
+                    it.copy(configurationError = ScheduleUiMessage.Text(R.string.schedule_error_invalid_api_settings))
+                }
+            } catch (error: Exception) {
+                Timber.e(error, "Could not securely save API schedule configuration")
+                _uiState.update {
+                    it.copy(configurationError = ScheduleUiMessage.Text(R.string.schedule_error_save_api_settings))
+                }
             }
         }
     }
@@ -321,20 +339,16 @@ class ScheduleViewModel @Inject constructor(
     private fun updateNextExportDescription() {
         val state = _uiState.value
         if (!state.isEnabled) {
-            _uiState.update { it.copy(nextExportDescription = "") }
+            _uiState.update { it.copy(nextExportAtMillis = null) }
             return
         }
 
-        val nextExport = exportScheduler.nextScheduledAtMillis()
-            ?.let { millis -> LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault()) }
+        val nextExportAtMillis = exportScheduler.nextScheduledAtMillis()
             ?: nextExportDateTime(state)
-        val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a", Locale.getDefault())
-        val description = getApplication<Application>().getString(
-            R.string.schedule_next_export_at_datetime,
-            nextExport.format(formatter),
-        )
-
-        _uiState.update { it.copy(nextExportDescription = description) }
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        _uiState.update { it.copy(nextExportAtMillis = nextExportAtMillis) }
     }
 
     private fun nextExportDateTime(state: ScheduleUiState): LocalDateTime {
@@ -382,6 +396,13 @@ internal fun requiresHealthConnectBackgroundAccess(
 ): Boolean = selectedProviderId == "health_connect" ||
     (selectedProviderId == "all_connected" && "health_connect" in connectedProviderIds)
 
+sealed interface ScheduleUiMessage {
+    data class Text(
+        @StringRes val resourceId: Int,
+        val arguments: List<Any> = emptyList(),
+    ) : ScheduleUiMessage
+}
+
 data class ScheduleUiState(
     val isEnabled: Boolean = false,
     val cadenceValue: Int = 1,
@@ -390,7 +411,7 @@ data class ScheduleUiState(
     val minute: Int = 0,
     val lookbackDays: Int = 1,
     val dateWindow: ScheduleDateWindow = ScheduleDateWindow.PAST_COMPLETE_DAYS,
-    val nextExportDescription: String = "",
+    val nextExportAtMillis: Long? = null,
     val isPurchased: Boolean = false,
     val requiresUpgrade: Boolean = false,
     val selectedTarget: ExportTarget = ExportTarget.DEVICE_FOLDER,
@@ -399,7 +420,7 @@ data class ScheduleUiState(
     val apiAuthorizationConfigured: Boolean = false,
     val apiRequestHeadersConfigured: Boolean = false,
     val hasExportFolder: Boolean = false,
-    val configurationError: String? = null,
+    val configurationError: ScheduleUiMessage? = null,
     val exactTimingAvailable: Boolean = true,
     val requiresHealthConnectBackgroundAccess: Boolean = true,
     val healthProviderSelectionLoaded: Boolean = false,

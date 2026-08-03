@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:description="@string/widget_sleep_description"
+    android:previewImage="@drawable/widget_sleep_preview"
+    android:configure="com.healthmd.widget.setup.WidgetSetupActivity"
+    android:widgetFeatures="reconfigurable"
+    android:widgetCategory="home_screen" />

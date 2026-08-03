@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
@@ -50,15 +50,20 @@
     <string name="export_preview_done">Готово</string>
     <string name="export_preview_building">Створення передперегляду…</string>
     <string name="export_preview_device_destination">Папка на пристрої</string>
-    <string name="export_preview_complete_file">Показано повний файл розміром %1$s, який буде експортовано.</string>
-    <string name="export_preview_truncated_file">Показано скорочений передперегляд цього файлу розміром %1$s. Повний експорт і надалі міститиме всі дані.</string>
+    <string name="export_preview_complete_file">Показано повний файл %1$s, який буде експортовано.</string>
+    <string name="export_preview_truncated_file">Показано скорочений передперегляд файла %1$s. Повний експорт і надалі міститиме всі дані.</string>
     <string name="export_preview_limited_one">Передперегляд останнього дня з даними. Повний експорт буде виконано для кожної вибраної дати.</string>
     <string name="export_preview_limited_other">Передперегляд останніх %1$d днів із даними. Повний експорт буде виконано для кожної вибраної дати.</string>
     <string name="export_preview_no_data_title">Немає даних для передперегляду</string>
     <string name="export_preview_no_data_message">Для вибраних дат немає даних про здоров\'я або не вибрано жодного формату.</string>
-    <string name="free_exports_remaining">Залишилось %d безплатних експортів</string>
+    <plurals name="free_exports_remaining">
+        <item quantity="one">Залишився %1$d безплатний експорт</item>
+        <item quantity="few">Залишилося %1$d безплатні експорти</item>
+        <item quantity="many">Залишилося %1$d безплатних експортів</item>
+        <item quantity="other">Залишилося %1$d безплатного експорту</item>
+    </plurals>
     <string name="unlock_button">Розблокувати Health.md</string>
-    <string name="export_result_days">%1$d/%2$d днів експортовано</string>
+    <string name="export_result_days">Експортовано днів: %1$d/%2$d</string>
     <string name="open_folder">Відкрити папку</string>
     <string name="open_with_files">Файли</string>
     <string name="open_with_obsidian">Obsidian</string>
@@ -99,26 +104,36 @@
     <string name="toggle_emoji_headers">Емодзі в заголовках</string>
     <string name="label_units">Одиниці</string>
     <string name="advanced_settings_nav_title">Розширені параметри експорту</string>
-    <string name="advanced_settings_nav_subtitle">Метрики, щоденні замітки, окремо відстежувані, налаштування формату</string>
-    <string name="section_feedback">Зворотній зв\'язок</string>
+    <string name="advanced_settings_nav_subtitle">Показники, щоденні нотатки, відстеження окремих записів, налаштування формату</string>
+    <string name="section_feedback">Зворотний зв’язок</string>
     <string name="feedback_send_title">Надіслати зворотний зв\'язок</string>
     <string name="feedback_send_subtitle">Відкриває ваш поштовий клієнт</string>
     <string name="feedback_github_title">Повідомити про помилку на GitHub</string>
-    <string name="feedback_github_subtitle">Відкриває заповнений шаблон завдання</string>
+    <string name="feedback_github_subtitle">Відкриває попередньо заповнений шаблон звернення</string>
     <string name="reset_to_defaults">Скинути до стандартних значень</string>
 
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">Параметри експорту</string>
     <string name="section_health_metrics">Метрики здоров\'я</string>
-    <string name="metrics_enabled_summary">%1$d/%2$d метрик увімкнено</string>
+    <plurals name="metrics_enabled_summary">
+        <item quantity="one">Увімкнено %1$d/%2$d показник</item>
+        <item quantity="few">Увімкнено %1$d/%2$d показники</item>
+        <item quantity="many">Увімкнено %1$d/%2$d показників</item>
+        <item quantity="other">Увімкнено %1$d/%2$d показника</item>
+    </plurals>
     <string name="section_current_format">Поточний формат</string>
     <string name="write_mode_summary">Режим запису: %s</string>
     <string name="section_format_customization">Налаштування формату</string>
-    <string name="section_daily_note_injection">Введення щоденної замітки</string>
+    <string name="section_daily_note_injection">Додавання даних до щоденних нотаток</string>
     <string name="daily_note_enabled_summary">Увімкнено • %s</string>
     <string name="daily_note_disabled">Вимкнено</string>
     <string name="section_individual_tracking">Окреме відстежування записів</string>
-    <string name="individual_tracking_enabled_summary">Увімкнено • %d метрик</string>
+    <plurals name="individual_tracking_enabled_summary">
+        <item quantity="one">Увімкнено • %1$d показник</item>
+        <item quantity="few">Увімкнено • %1$d показники</item>
+        <item quantity="many">Увімкнено • %1$d показників</item>
+        <item quantity="other">Увімкнено • %1$d показника</item>
+    </plurals>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Метрики здоров\'я</string>
@@ -173,9 +188,9 @@
     <string name="metric_name_skin_temperature">Різниця температури шкіри</string>
     <string name="metric_name_weight">Вага</string>
     <string name="metric_name_height">Зріст</string>
-    <string name="metric_name_bmi">ІМТ</string>
+    <string name="metric_name_bmi">BMI</string>
     <string name="metric_name_body_fat">Жир тіла</string>
-    <string name="metric_name_lean_mass">Маса м\'язів</string>
+    <string name="metric_name_lean_mass">Безжирова маса тіла</string>
     <string name="metric_name_body_water_mass">Маса води тіла</string>
     <string name="metric_name_bone_mass">Маса кісток</string>
     <string name="metric_name_dietary_energy">Дієтична енергія</string>
@@ -198,8 +213,8 @@
     <string name="metric_name_audio_exposure">Експозиція звуку</string>
     <string name="metric_name_mindful_minutes">Хвилини усвідомленості</string>
     <string name="metric_name_mindful_sessions">Сеанси усвідомленості</string>
-    <string name="metric_name_menstrual_flow">Менструальна кількість</string>
-    <string name="metric_name_cervical_mucus">Якість шийкової слизи</string>
+    <string name="metric_name_menstrual_flow">Інтенсивність менструальних виділень</string>
+    <string name="metric_name_cervical_mucus">Якість цервікального слизу</string>
     <string name="metric_name_ovulation_test">Тест на овуляцію</string>
     <string name="metric_name_sexual_activity">Сексуальна активність</string>
     <string name="metric_name_intermenstrual_bleeding">Міжменструальні кровотечі</string>
@@ -207,16 +222,16 @@
     <string name="metric_name_unknown">Невідома метрика</string>
 
     <!-- Daily note injection screen -->
-    <string name="daily_note_description">Введіть метрики здоров\'я у YAML frontmatter ваших існуючих щоденних примісток Obsidian.</string>
-    <string name="daily_note_enable_title">Увімкнути введення</string>
-    <string name="daily_note_enable_subtitle">Введіть дані про здоров\'я в щоденні замітки</string>
-    <string name="section_daily_notes_folder">Папка щоденних заміток</string>
+    <string name="daily_note_description">Додавайте показники здоров’я до frontmatter YAML наявних щоденних нотаток Obsidian.</string>
+    <string name="daily_note_enable_title">Увімкнути додавання</string>
+    <string name="daily_note_enable_subtitle">Додавати дані про здоров’я до щоденних нотаток</string>
+    <string name="section_daily_notes_folder">Папка щоденних нотаток</string>
     <string name="daily_notes_folder_hint">Daily</string>
     <string name="daily_notes_folder_help">Відносно до папки експорту (наприклад, "Daily" або "Journal/Daily")</string>
     <string name="section_filename_pattern">Шаблон імені файлу</string>
     <string name="section_preview_path">Шлях передпереглядання</string>
-    <string name="create_note_if_missing_title">Створити замітку, якщо вона відсутня</string>
-    <string name="create_note_if_missing_subtitle">Створіть щоденну замітку, якщо вона не існує</string>
+    <string name="create_note_if_missing_title">Створити нотатку, якщо її немає</string>
+    <string name="create_note_if_missing_subtitle">Створювати щоденну нотатку, якщо її немає</string>
 
     <!-- Format customization screen -->
     <string name="format_customization_title">Налаштування формату</string>
@@ -233,7 +248,12 @@
     <string name="individual_tracking_title">Окреме відстежування записів</string>
     <string name="individual_tracking_description">Експортуйте окремі записи здоров\'я з часовою міткою як окремі файли. Корисно для тренувань, вимірів артеріального тиску та інших дискретних вимірювань.</string>
     <string name="individual_tracking_enable_title">Увімкнути окреме відстежування</string>
-    <string name="individual_tracking_metrics_count">%d метрик вибрано</string>
+    <plurals name="individual_tracking_metrics_count">
+        <item quantity="one">Вибрано %1$d показник</item>
+        <item quantity="few">Вибрано %1$d показники</item>
+        <item quantity="many">Вибрано %1$d показників</item>
+        <item quantity="other">Вибрано %1$d показника</item>
+    </plurals>
     <string name="section_quick_actions">Швидкі дії</string>
     <string name="action_suggested">Рекомендовано</string>
     <string name="action_all">Усе</string>
@@ -249,7 +269,7 @@
     <string name="individual_tracking_filename_tokens">Токени: {date}, {time}, {metric}, {category}</string>
     <string name="individual_tracking_suggested_badge">Рекомендовано</string>
     <string name="organize_by_category_title">Організувати за категоріями</string>
-    <string name="organize_by_category_subtitle">Групуйте записи у вложені папки категорій</string>
+    <string name="organize_by_category_subtitle">Групувати записи у вкладені папки категорій</string>
 
     <!-- History screen -->
     <string name="no_history_title">Немає Історії\nЕкспорту</string>
@@ -258,7 +278,12 @@
     <string name="history_status_success">\u2713 Успіх</string>
     <string name="history_status_partial">! Частковий</string>
     <string name="history_status_failed">\u2717 Помилка</string>
-    <string name="history_entry_days">%1$d/%2$d днів \u2022 з %3$s по %4$s</string>
+    <plurals name="history_entry_days">
+        <item quantity="one">%1$d/%2$d день \u2022 з %3$s до %4$s</item>
+        <item quantity="few">%1$d/%2$d дні \u2022 з %3$s до %4$s</item>
+        <item quantity="many">%1$d/%2$d днів \u2022 з %3$s до %4$s</item>
+        <item quantity="other">%1$d/%2$d дня \u2022 з %3$s до %4$s</item>
+    </plurals>
     <string name="history_timestamp_format">%1$s о %2$s</string>
     <string name="export_source_manual">Ручне</string>
     <string name="export_source_scheduled">Заплановане</string>
@@ -273,12 +298,12 @@
     <string name="exact_timing_needed_title">Точний час вимкнено</string>
     <string name="exact_timing_needed_body">Дозвольте «Будильники й нагадування», щоб запускати експорт у вибраний час. Без цього доступу Android використовує WorkManager як резервний варіант із затримкою.</string>
     <string name="exact_timing_enable_button">Дозволити точний час</string>
-    <string name="section_cadence">Каденс</string>
+    <string name="section_cadence">Періодичність</string>
     <string name="cadence_unit_minutes">Хвилини</string>
     <string name="cadence_unit_hours">Години</string>
     <string name="cadence_unit_days">Дні</string>
     <string name="cadence_unit_weeks">Тижні</string>
-    <string name="cadence_minutes_minimum">Мінімальний каденс — 15 хвилин.</string>
+    <string name="cadence_minutes_minimum">Мінімальний інтервал — 15 хвилин.</string>
     <string name="section_export_time">Час експорту</string>
     <string name="label_hour">Година</string>
     <string name="label_minute">Хвилина</string>
@@ -320,13 +345,13 @@
     <string name="export_notification_title_complete">Експорт завершено</string>
     <string name="export_notification_title_partial">Експорт частковий</string>
     <string name="export_notification_title_failed">Експорт не вдався</string>
-    <string name="export_notification_message_days_exported">%1$d/%2$d днів експортовано для %3$s</string>
+    <string name="export_notification_message_days_exported">За %3$s експортовано днів: %1$d/%2$d</string>
     <string name="export_notification_unknown_error">Невідома помилка</string>
 
     <!-- Paywall screen -->
     <string name="paywall_title">Розблокувати Health.md</string>
     <string name="paywall_subtitle">Ви використали 10 безплатних експортів</string>
-    <string name="paywall_unlimited_exports">Безліміті експорти на завжди</string>
+    <string name="paywall_unlimited_exports">Необмежені експорти назавжди</string>
     <string name="paywall_scheduled_exports">Автоматизовані заплановані експорти</string>
     <string name="paywall_future_features">Усі майбутні функції включені</string>
     <string name="paywall_one_time">Одноразовий платіж — без підписки</string>
@@ -335,7 +360,7 @@
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Експортування даних про здоров\'я</string>
-    <string name="export_progress_days">%1$d / %2$d днів</string>
+    <string name="export_progress_days">Дні: %1$d / %2$d</string>
 
     <!-- Navigation labels -->
     <string name="nav_export">Експорт</string>
@@ -373,11 +398,11 @@
     <!-- DateFormatPreference display names -->
     <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">Короткий формат США (01/13/2026)</string>
-    <string name="date_format_display_us_long">Довгий формат США (January 13, 2026)</string>
+    <string name="date_format_display_us_long">Довгий формат США (січень 13, 2026)</string>
     <string name="date_format_display_eu_short">Короткий формат ЄС (13/01/2026)</string>
-    <string name="date_format_display_eu_long">Довгий формат ЄС (13 January 2026)</string>
+    <string name="date_format_display_eu_long">Довгий формат ЄС (13 січня 2026)</string>
     <string name="date_format_display_compact">Компактний (20260113)</string>
-    <string name="date_format_display_friendly">Зручний (Mon, Jan 13, 2026)</string>
+    <string name="date_format_display_friendly">Зручний (пн, січ. 13, 2026)</string>
 
     <!-- TimeFormatPreference display names -->
     <string name="time_format_display_24h">24-годинний (14:30)</string>
@@ -429,10 +454,96 @@
     <string name="health_connect_error_settings_launch">Не вдалося відкрити налаштування Health Connect на цьому пристрої.</string>
     <string name="health_connect_error_install_launch">Сторінку Health Connect Play Store не вдалося відкрити на цьому пристрої.</string>
     <string name="health_connect_error_history_unavailable">Ця версія Health Connect не може надати повний доступ до історії. Оновіть Health Connect або виберіть дати за останні 30 днів.</string>
-    <string name="health_connect_error_background_unavailable">Цей провайдер Health Connect не може читати дані у фоновому режимі. Оновіть Health Connect, перш ніж увімкнути запланований експорт.</string>
+    <string name="health_connect_error_background_unavailable">Цей провайдер Health Connect не може читати дані у фоновому режимі. Оновіть Health Connect, перш ніж увімкнути запланований експорт або фонове оновлення віджетів.</string>
     <string name="history_permission_required_title">Потрібен доступ до історії Health Connect</string>
     <string name="history_permission_required_message">Health Connect дозволяє читати дані лише приблизно за 30 днів, що передували першому наданню дозволу цьому застосунку. Надайте доступ до історії, щоб давніші вибрані дати було експортовано, а не непомітно пропущено.</string>
     <string name="history_permission_grant_button">Надати доступ до історії</string>
+
+    <!-- Android home-screen widgets -->
+    <string name="widget_health_summary_name">Огляд здоров’я</string>
+    <string name="widget_health_summary_description">Сьогоднішня активність, сон, показники серця й відновлення з Health.md.</string>
+    <string name="widget_activity_name">Активність</string>
+    <string name="widget_activity_description">Кроки, активні калорії та прогрес вправ із Health.md.</string>
+    <string name="widget_heart_range_name">Діапазон пульсу</string>
+    <string name="widget_heart_range_description">Мінімальний, середній і максимальний пульс за сім днів із Health.md.</string>
+    <string name="widget_sleep_name">Сон</string>
+    <string name="widget_sleep_description">Сон минулої ночі та графік сну за сім днів із Health.md.</string>
+    <string name="widget_label_today">Сьогодні</string>
+    <string name="widget_label_move">Рух</string>
+    <string name="widget_label_exercise">Вправи</string>
+    <string name="widget_label_sleep">Сон</string>
+    <string name="widget_label_resting">У спокої</string>
+    <string name="widget_label_heart_range">Діапазон пульсу</string>
+    <string name="widget_label_average">Середнє</string>
+    <string name="widget_label_minimum">Мін. %1$s</string>
+    <string name="widget_label_maximum">Макс. %1$s</string>
+    <string name="widget_label_last_night">Минулої ночі</string>
+    <string name="widget_label_seven_day_sleep">Сон за 7 днів</string>
+    <string name="widget_label_seven_day_average">Середнє за 7 днів</string>
+    <string name="widget_label_bedtime">Час сну</string>
+    <string name="widget_label_wake">Пробудження</string>
+    <string name="widget_unit_steps">%1$s крок.</string>
+    <string name="widget_unit_kilocalories">%1$s ккал</string>
+    <string name="widget_unit_minutes">%1$s хв</string>
+    <string name="widget_unit_hours">%1$s год</string>
+    <string name="widget_unit_bpm">%1$s уд/хв</string>
+    <string name="widget_unit_milliseconds">%1$s мс</string>
+    <string name="widget_goal_eight_hours">Ціль: %1$s годин</string>
+    <string name="widget_state_loading">Завантаження даних про здоров’я…</string>
+    <string name="widget_state_open_for_access">Відкрийте Health.md, щоб дозволити доступ до Health Connect.</string>
+    <string name="widget_state_background_access">Відкрийте Health.md, щоб оновити цей віджет.</string>
+    <string name="widget_state_health_connect_unavailable">Налаштуйте Health Connect, а потім відкрийте Health.md.</string>
+    <string name="widget_state_unlock">Розблокуйте телефон, щоб оновити Health.md.</string>
+    <string name="widget_state_no_summary_data">Немає даних для огляду здоров’я</string>
+    <string name="widget_state_no_activity_data">Немає даних про активність</string>
+    <string name="widget_state_no_heart_data">Немає даних про серце</string>
+    <string name="widget_state_no_sleep_data">Немає даних про сон</string>
+    <plurals name="widget_state_updated_minutes">
+        <item quantity="one">Оновлено %1$s хвилину тому</item>
+        <item quantity="few">Оновлено %1$s хвилини тому</item>
+        <item quantity="many">Оновлено %1$s хвилин тому</item>
+        <item quantity="other">Оновлено %1$s хвилини тому</item>
+    </plurals>
+    <plurals name="widget_state_updated_hours">
+        <item quantity="one">Оновлено %1$s годину тому</item>
+        <item quantity="few">Оновлено %1$s години тому</item>
+        <item quantity="many">Оновлено %1$s годин тому</item>
+        <item quantity="other">Оновлено %1$s години тому</item>
+    </plurals>
+    <string name="widget_setup_title">Налаштування: %1$s</string>
+    <string name="widget_setup_body">Health.md читає лише показники активності, сну або серця, які показує цей віджет. Вимірювання залишаються на цьому пристрої.</string>
+    <string name="widget_setup_foreground_access">Дозволити віджету доступ до даних про здоров’я</string>
+    <string name="widget_setup_background_access">Дозволити фонове оновлення</string>
+    <string name="widget_setup_background_body">Фоновий доступ підтримує актуальність віджетів, коли Health.md не відкрито. Віджет можна додати й без нього.</string>
+    <string name="widget_setup_add">Додати віджет</string>
+    <string name="widget_setup_adding">Додавання віджета…</string>
+    <string name="widget_setup_access_ready">Доступ до Health Connect готовий.</string>
+    <string name="widget_setup_partial_access">Віджет показуватиме показники, якими ви вирішили поділитися.</string>
+    <string name="widget_setup_error">Не вдалося налаштувати віджет. Перевірте Health Connect і повторіть спробу.</string>
+    <string name="widget_preview_summary_value">8 742 кроки</string>
+    <string name="widget_preview_summary_detail">7,5 год сну · 58 уд/хв</string>
+    <string name="widget_preview_activity_value">421 ккал · 37 хв</string>
+    <string name="widget_preview_activity_detail">8 742 / 10 000 кроків</string>
+    <string name="widget_preview_heart_value">Середнє 72 уд/хв</string>
+    <string name="widget_preview_heart_detail">мін. 47 · макс. 151 · 46 мс RMSSD</string>
+    <string name="widget_preview_sleep_value">7,5 год минулої ночі</string>
+    <string name="widget_preview_sleep_detail">22:30 – 06:30</string>
+    <string name="widget_settings_title">Віджети головного екрана</string>
+    <string name="widget_settings_none">Немає встановлених віджетів</string>
+    <string name="widget_settings_add_from_home">Додайте Health.md через меню вибору віджетів на головному екрані.</string>
+    <string name="widget_settings_current">Віджети актуальні й можуть оновлюватися у фоновому режимі.</string>
+    <string name="widget_settings_foreground_only">Віджети оновлюються, коли відкрито Health.md.</string>
+    <string name="widget_settings_stale">Кешовані значення застаріли. Оновіть їх, перш ніж покладатися на вимірювання.</string>
+    <string name="widget_settings_access_required">Потрібен доступ до Health Connect.</string>
+    <string name="widget_settings_no_data">Дані для віджетів поки недоступні.</string>
+    <string name="widget_settings_refresh">Оновити віджети</string>
+    <string name="widget_settings_manage_access">Керувати доступом віджетів</string>
+    <plurals name="widget_settings_count">
+        <item quantity="one">Установлено %1$s віджет</item>
+        <item quantity="few">Установлено %1$s віджети</item>
+        <item quantity="many">Установлено %1$s віджетів</item>
+        <item quantity="other">Установлено %1$s віджета</item>
+    </plurals>
     <string name="date_option_today">Сьогодні</string>
     <string name="date_option_yesterday">Учора</string>
     <string name="date_option_all_time">За весь час</string>
@@ -443,10 +554,20 @@
     <string name="export_diagnostics_title_partial">Частковий експорт</string>
     <string name="export_diagnostics_title_failed">Помилка експорту</string>
     <string name="export_diagnostics_title_cancelled">Експорт скасовано</string>
-    <string name="export_diagnostics_failed_count">%d днів не експортовано</string>
+    <plurals name="export_diagnostics_failed_count">
+        <item quantity="one">Не експортовано %1$d день</item>
+        <item quantity="few">Не експортовано %1$d дні</item>
+        <item quantity="many">Не експортовано %1$d днів</item>
+        <item quantity="other">Не експортовано %1$d дня</item>
+    </plurals>
     <string name="export_diagnostics_cancelled_message">Експорт зупинено, перш ніж кожен день можна було обробити.</string>
     <string name="export_diagnostics_reasons_title">діагностика</string>
-    <string name="export_diagnostics_reason_count">%1$s: %2$d днів</string>
+    <plurals name="export_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d день</item>
+        <item quantity="few">%1$s: %2$d дні</item>
+        <item quantity="many">%1$s: %2$d днів</item>
+        <item quantity="other">%1$s: %2$d дня</item>
+    </plurals>
     <string name="export_diagnostics_date_list">Невдалі дати: %s</string>
     <string name="export_diagnostics_date_list_more">Невдалі дати: %1$s, ще +%2$d</string>
     <string name="export_diagnostics_no_details">Деталі за день не записувалися. Спробуйте менший діапазон і перевірте дозволи Health Connect.</string>
@@ -570,9 +691,9 @@
     <string name="schedule_frequency_hourly">Щогодини</string>
     <string name="schedule_frequency_every_hours">Кожні %1$d год</string>
     <string name="schedule_frequency_daily">Щодня</string>
-    <string name="schedule_frequency_every_days">Кожні %1$d днів</string>
+    <string name="schedule_frequency_every_days">Інтервал: %1$d дн.</string>
     <string name="schedule_frequency_weekly">Щотижня</string>
-    <string name="schedule_frequency_every_weeks">Кожні %1$d тижнів</string>
+    <string name="schedule_frequency_every_weeks">Інтервал: %1$d тиж.</string>
     <string name="schedule_time">Час</string>
     <string name="schedule_time_period_am">AM</string>
     <string name="schedule_time_period_pm">PM</string>
@@ -580,15 +701,20 @@
     <string name="schedule_date_window_past_complete_days">Повні минулі дні</string>
     <string name="schedule_date_window_today">Сьогодні</string>
     <string name="schedule_export_past_days">Експортувати минулі дні</string>
-    <string name="schedule_lookback_ios_single">Кожен запуск експортує останній 1 день, закінчуючи вчорашнім днем.</string>
-    <string name="schedule_lookback_ios_plural">Кожен запуск експортує останні %1$d повних днів, до вчорашнього дня.</string>
+    <string name="schedule_lookback_ios_single">Кожен запуск експортує дані за вчора.</string>
+    <string name="schedule_lookback_ios_plural">Кожен запуск експортує дані за %1$d дн. до вчорашнього дня включно.</string>
     <string name="schedule_today_summary">Кожен запуск експортує сьогоднішні дані, щоб ваш поточний щоденний файл залишався актуальним. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту того ж дня.</string>
     <string name="schedule_next_export_at_datetime">Наступний експорт: %1$s</string>
     <string name="background_health_permission_needed_title">Health Connect потрібен фоновий доступ</string>
     <string name="background_health_permission_needed_body">Для запланованого експорту потрібен дозвіл Health Connect «Доступ до даних у фоновому режимі», щоб WorkManager міг читати дані про здоров’я, коли додаток закрито.</string>
     <string name="background_health_permission_enable_button">Увімкнути фоновий доступ</string>
     <string name="scheduled_recovery_title">Відновити пропущений запланований експорт?</string>
-    <string name="scheduled_recovery_body">Health.md знайшов %1$d запланованих дат, що очікують на експорт: %2$s. Якщо експорт не відбувся через блокування телефону після перезавантаження, відсутність фонового доступу або недоступність Health Connect, Health.md може повторити експорт цих дат зараз, поки застосунок відкритий і розблокований. Надайте фоновий доступ, щоб уникнути таких пропусків надалі.</string>
+    <plurals name="scheduled_recovery_body">
+        <item quantity="one">Health.md знайшов %1$d заплановану дату, що очікує на експорт: %2$s. Якщо експорт було пропущено через блокування телефону після перезавантаження, відсутність фонового доступу або недоступність Health Connect, Health.md може повторити експорт цієї дати зараз, поки застосунок відкритий і телефон розблокований. Надайте фоновий доступ, щоб уникнути пропусків надалі.</item>
+        <item quantity="few">Health.md знайшов %1$d заплановані дати, що очікують на експорт: %2$s. Якщо експорт було пропущено через блокування телефону після перезавантаження, відсутність фонового доступу або недоступність Health Connect, Health.md може повторити експорт цих дат зараз, поки застосунок відкритий і телефон розблокований. Надайте фоновий доступ, щоб уникнути пропусків надалі.</item>
+        <item quantity="many">Health.md знайшов %1$d запланованих дат, що очікують на експорт: %2$s. Якщо експорт було пропущено через блокування телефону після перезавантаження, відсутність фонового доступу або недоступність Health Connect, Health.md може повторити експорт цих дат зараз, поки застосунок відкритий і телефон розблокований. Надайте фоновий доступ, щоб уникнути пропусків надалі.</item>
+        <item quantity="other">Health.md знайшов %1$d запланованої дати, що очікує на експорт: %2$s. Якщо експорт було пропущено через блокування телефону після перезавантаження, відсутність фонового доступу або недоступність Health Connect, Health.md може повторити експорт цих дат зараз, поки застосунок відкритий і телефон розблокований. Надайте фоновий доступ, щоб уникнути пропусків надалі.</item>
+    </plurals>
     <string name="scheduled_recovery_retry_button">Повторити очікувані дати</string>
     <string name="scheduled_recovery_running_button">Відновлення…</string>
     <string name="scheduled_recovery_blocked_paywall">Розблокуйте Health.md перед відновленням запланованого експорту.</string>
@@ -600,16 +726,16 @@
     <string name="scheduled_recovery_blocked_running">Запланований експорт відновлення вже запущено.</string>
     <string name="scheduled_recovery_no_pending">Немає запланованих дат експорту, які очікують відновлення.</string>
     <string name="scheduled_recovery_result_complete">Заплановане відновлення завершено.</string>
-    <string name="scheduled_recovery_result_partial">Відновлено експорт для %1$d/%2$d дат. Ще %3$d дат очікують на експорт.</string>
+    <string name="scheduled_recovery_result_partial">Відновлення експорту: %1$d/%2$d. Ще очікують дати: %3$d.</string>
     <string name="scheduled_recovery_result_blocked">Планове відновлення ще не готове.</string>
     <string name="not_now">Не зараз</string>
     <string name="release_notes_title">Що нового в %s</string>
     <string name="release_notes_settings_hint">Ви можете налаштувати формати експорту, власний Markdown і показники в налаштуваннях.</string>
     <string name="release_notes_open_settings">Відкрийте налаштування</string>
     <string name="release_notes_got_it">Зрозуміло</string>
-    <string name="release_notes_highlight_feedback">Розширене покриття Health Connect додає більше показників активності, тіла, харчування, мобільності, уважності, репродуктивного здоров’я та медичних ресурсів.</string>
-    <string name="release_notes_highlight_export_parity">Нові відомості лише про Android включають інтенсивність активності, харчування, менструації, заплановані тренування та гранульовані зразки, якщо вони доступні.</string>
-    <string name="release_notes_highlight_templates">Експортовані файли Markdown, JSON, CSV і Obsidian тепер містять більші значення показників у великому каталозі.</string>
+    <string name="release_notes_highlight_feedback">Розширене покриття Health Connect додає більше показників активності, тіла, харчування, мобільності, усвідомленості, репродуктивного здоров’я та медичних ресурсів.</string>
+    <string name="release_notes_highlight_export_parity">Нові дані, доступні лише в Android, включають інтенсивність активності, прийоми їжі, менструальні періоди, заплановані тренування та детальні зразки, коли вони доступні.</string>
+    <string name="release_notes_highlight_templates">Експортовані файли Markdown, JSON, CSV та Obsidian тепер містять повніші значення показників у розширеному каталозі.</string>
     <string name="release_notes_highlight_workouts">Обґрунтування дозволів Health Connect було оновлено, щоб пояснити розширені дозволи на експорт лише для читання.</string>
     <string name="release_notes_highlight_accessibility">Мітки та об’єкти дотику TalkBack покращено в потоках експорту, розкладу та налаштувань.</string>
     <string name="export_notification_background_permission_required">Для запланованого експорту потрібен фоновий доступ Health Connect. Відкрийте Health.md &gt; Розклад, щоб увімкнути його.</string>
@@ -644,7 +770,7 @@
     <string name="privacy_category_vitals_exports">Експортовані поля: частота дихання, вміст кисню в крові, температура тіла, артеріальний тиск (систолічний/діастолічний), рівень глюкози в крові, базальна температура тіла, температура шкіри</string>
     <string name="privacy_category_body">Тіло</string>
     <string name="privacy_category_body_permissions">Weight, Height, BodyFat, LeanBodyMass, BodyWaterMass, BoneMass</string>
-    <string name="privacy_category_body_exports">Експортовані поля: вага, зріст, ІМТ, % жиру в організмі, безжирова маса тіла, маса води в організмі, кісткова маса</string>
+    <string name="privacy_category_body_exports">Експортовані поля: вага, зріст, BMI, % жиру в організмі, безжирова маса тіла, маса води в організмі, кісткова маса</string>
     <string name="privacy_category_nutrition">Харчування</string>
     <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
     <string name="privacy_category_nutrition_exports">Експортовані поля: харчові калорії, макроелементи, підтипи жирів, клітковина, цукор, натрій, холестерин, вода, кофеїн, вітаміни та мінерали</string>
@@ -654,7 +780,7 @@
     <string name="privacy_category_reproductive">Репродуктивне здоров\'я</string>
     <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
     <string name="privacy_category_reproductive_exports">Експортовані поля: менструальні виділення, кількість менструацій/днів, вигляд/відчуття цервікального слизу, результат тесту на овуляцію, міжменструальна кровотеча, статева активність</string>
-    <string name="privacy_category_mindfulness">Уважність</string>
+    <string name="privacy_category_mindfulness">Усвідомленість</string>
     <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
     <string name="privacy_category_mindfulness_exports">Експортовані поля: хвилини усвідомленості та кількість сеансів</string>
     <string name="privacy_category_medical">Медичні ресурси</string>
@@ -666,9 +792,9 @@
     <string name="privacy_category_history">Доступ до історичних даних про здоров’я</string>
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Використовується лише для великих ручних експортів, наприклад за 90 днів або за весь час, щоб Health.md міг читати дані Health Connect, старші за стандартний 30-денний період.</string>
-    <string name="privacy_policy_direct_cli">Прямий експорт через CLI відбувається лише після того, як ви явно створите пару з комп’ютером і підключитеся до нього. Медичні записи надсилаються через автентифіковане зашифроване з’єднання, конфіденційно зберігаються не довше семи днів для відновлюваного передавання та видаляються раніше, якщо ви скасуєте або забудете це сполучення.</string>
+    <string name="privacy_policy_direct_cli">Експорт Direct CLI відбувається лише після того, як ви явно створите пару з комп’ютером і підключитеся до нього. Медичні записи надсилаються через автентифіковане зашифроване з’єднання, конфіденційно зберігаються не довше семи днів для відновлюваного передавання та видаляються раніше, якщо ви скасуєте або забудете це сполучення.</string>
     <string name="privacy_policy_footer">Health.md не керує хмарним сховищем даних про здоров’я. Власна атрибуція кампаній Health.md може надсилати випадкові UUID установлень або подій, згенеровані застосунком, і перевірені метадані кампанії, але ніколи не надсилає дані про здоров’я, необроблені дані джерела переходу, ідентифікатори пристрою, експортовані дані, дані облікового запису чи шляхи.</string>
-    <string name="privacy_policy_body">Health.md зчитує дані Health Connect лише для створення запитаних вами експортів. Експорт у папку зберігається у вибраному сховищі, експорт до кінцевої точки API надсилається безпосередньо налаштованій вами службі, а явно підключений прямий експорт через CLI передається з автентифікованим шифруванням на спарений комп’ютер. Окремо власна атрибуція кампаній Health.md може пов’язати встановлення з Play із кампанією за допомогою випадкових UUID, згенерованих застосунком, і очищених метаданих кампанії. Дані про здоров’я, необроблені дані джерела переходу, ідентифікатор пристрою, експортований вміст, дані облікового запису та шлях до файлу не передаються.</string>
+    <string name="privacy_policy_body">Health.md зчитує дані Health Connect лише для створення запитаних вами експортів. Експорт у папку зберігається у вибраному сховищі, експорт до кінцевої точки API надсилається безпосередньо налаштованій вами службі, а явно підключений експорт Direct CLI передається з автентифікованим шифруванням на спарений комп’ютер. Окремо власна атрибуція кампаній Health.md може пов’язати встановлення з Play із кампанією за допомогою випадкових UUID, згенерованих застосунком, і очищених метаданих кампанії. Дані про здоров’я, необроблені дані джерела переходу, ідентифікатор пристрою, експортований вміст, дані облікового запису та шлях до файлу не передаються.</string>
     <string name="section_export_type">Тип експорту</string>
     <string name="export_type_compatibility">Експорт сумісності</string>
     <string name="export_type_compatibility_description">Щоденні файли Markdown, Bases, JSON або CSV для існуючих робочих процесів Health.md</string>
@@ -686,7 +812,7 @@
     <string name="raw_snapshot_scope_selected">Вибрані типи записів</string>
     <string name="raw_snapshot_scope_selected_description">Використовуйте типи записів, представлені вибраними показниками Health.md</string>
     <string name="raw_snapshot_scope_all">Усі авторизовані підтримувані дані</string>
-    <string name="raw_snapshot_scope_all_description">Включіть кожен підтримуваний тип рідного запису, для якого Health Connect надає доступ</string>
+    <string name="raw_snapshot_scope_all_description">Додати кожен підтримуваний нативний тип запису, до якого Health Connect надає доступ</string>
     <string name="raw_snapshot_routes_title">Точні маршрути вправ</string>
     <string name="raw_snapshot_routes_control">Додайте точні маршрути</string>
     <string name="raw_snapshot_routes_description">Маршрути тренувань можуть показувати точні місця дому, роботи та подорожі. Для Health Connect може знадобитися окрема згода на маршрут.</string>
@@ -701,7 +827,12 @@
     <string name="raw_snapshot_result_count">Виконані дії зі знімком: %1$d/%2$d</string>
     <string name="raw_snapshot_progress_count">Дії знімка: %1$d / %2$d</string>
     <string name="raw_snapshot_diagnostics_failed_count">Незавершені дії знімка: %d</string>
-    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
+    <plurals name="raw_snapshot_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d дія</item>
+        <item quantity="few">%1$s: %2$d дії</item>
+        <item quantity="many">%1$s: %2$d дій</item>
+        <item quantity="other">%1$s: %2$d дії</item>
+    </plurals>
     <string name="raw_snapshot_diagnostics_cancelled_message">Створення необробленого знімка зупинено до завершення читання нативного джерела та публікації артефакту.</string>
     <string name="raw_snapshot_diagnostics_no_details">Діагностику знімка не записано. Перевірте доступ постачальника та повторіть експорт діапазону.</string>
     <string name="raw_snapshot_guidance_provider">Перед повторною спробою перевірте доступ вибраного постачальника та маніфест необробленого артефакту.</string>
@@ -710,7 +841,7 @@
     <string name="raw_snapshot_history_detail_diagnostics">Діагностика знімка</string>
     <string name="raw_snapshot_notification_message">Необроблений знімок за діапазон до %1$s: %2$s</string>
     <string name="raw_snapshot_status_complete">повний</string>
-    <string name="raw_snapshot_status_failed">не вдалося</string>
+    <string name="raw_snapshot_status_failed">помилка</string>
     <string name="onboarding_welcome_title">Ласкаво просимо до\nHealth.md</string>
     <string name="onboarding_welcome_subtitle">Експортуйте дані про самопочуття як зручні й портативні файли Markdown</string>
     <string name="onboarding_welcome_feature_1">Працює з Obsidian, Notion і будь-яким застосунком із підтримкою Markdown</string>
@@ -740,19 +871,24 @@
     <string name="onboarding_back">Назад</string>
     <string name="export_failure_paywall_label">Потрібно розблокувати</string>
     <string name="export_guidance_paywall">Для запланованого експорту потрібне довічне розблокування. Відкрийте систему оплати, щоб розблокувати необмежений експорт і планування.</string>
-    <string name="export_source_retry">Повторіть спробу</string>
+    <string name="export_source_retry">Повторна спроба</string>
     <string name="export_source_shortcut">Ярлик</string>
-    <string name="export_source_remote">Віддалено</string>
+    <string name="export_source_remote">Віддалений запуск</string>
     <string name="schedule_unlock_required_title">Розблокувати запланований експорт</string>
     <string name="schedule_unlock_required_body">Ручний експорт включає 10 безкоштовних запусків. Автоматичний запланований експорт включено в одноразове довічне розблокування.</string>
     <string name="schedule_unlock_required_short">Розблокуйте Health.md, щоб увімкнути запланований експорт.</string>
     <string name="section_schedule_lookback">Період запланованого експорту</string>
-    <string name="schedule_lookback_summary">Кожен запланований запуск експортує останні %1$d повних днів до вчорашнього дня, а також усі невдалі дати, що очікують на повторний експорт.</string>
+    <string name="schedule_lookback_summary">Кожен запланований запуск експортує дані за %1$d дн. до вчорашнього дня включно, а також усі невдалі дати, що очікують повторного експорту.</string>
     <string name="export_folder_root_label">Папка експорту</string>
     <string name="history_clear_title">Очистити історію експорту?</string>
     <string name="history_clear_body">Це видаляє всі локальні записи історії експорту. Експортовані файли не видаляються.</string>
     <string name="history_target_label">Ціль: %1$s</string>
-    <string name="history_file_count">Файли: %1$d</string>
+    <plurals name="history_file_count">
+        <item quantity="one">Файл: %1$d</item>
+        <item quantity="few">Файли: %1$d</item>
+        <item quantity="many">Файлів: %1$d</item>
+        <item quantity="other">Файла: %1$d</item>
+    </plurals>
     <string name="history_detail_title">Деталі експорту</string>
     <string name="history_detail_source">Джерело</string>
     <string name="history_detail_when">Коли</string>
@@ -769,9 +905,9 @@
     <string name="retrying">Повторна спроба…</string>
     <string name="delete">Видалити</string>
     <string name="section_file_organization">Організація файлів</string>
-    <string name="health_subfolder_label">Підпапка Health</string>
+    <string name="health_subfolder_label">Підпапка даних про здоров’я</string>
     <string name="folder_organization_label">Автоматичні папки</string>
-    <string name="folder_structure_template_label">Шаблон спеціальної папки</string>
+    <string name="folder_structure_template_label">Власний шаблон структури папок</string>
     <string name="path_preview_label">Попередній перегляд шляху</string>
     <string name="frontmatter_customization_title">Поля Frontmatter</string>
     <string name="frontmatter_customization_subtitle">Перейменуйте поля, додайте значення YAML і виберіть, які показники відображатимуться.</string>
@@ -784,7 +920,7 @@
     <string name="frontmatter_type_value">Значення поля «тип»</string>
     <string name="frontmatter_custom_fields_section">Статичні власні поля</string>
     <string name="frontmatter_placeholder_fields_section">Поля-заповнювачі</string>
-    <string name="frontmatter_metric_fields_section">Метричні поля</string>
+    <string name="frontmatter_metric_fields_section">Поля показників</string>
     <string name="frontmatter_field_key">Ключ</string>
     <string name="frontmatter_field_value">Значення</string>
     <string name="frontmatter_placeholder_value">Пустий заповнювач</string>
@@ -792,4 +928,479 @@
     <string name="search">Пошук</string>
     <string name="enabled">Увімкнено</string>
     <string name="disabled">Вимкнено</string>
+
+    <!-- Direct CLI, API export, providers, billing, history, and accessibility -->
+    <string name="release_notes_highlight_widgets">Додайте на головний екран віджети «Огляд здоров’я», «Активність», «Діапазон пульсу» та «Сон» із необов’язковим фоновим оновленням.</string>
+    <string name="direct_cli_title">Direct CLI</string>
+    <string name="direct_cli_intro_title">Зашифрований експорт на комп’ютер</string>
+    <string name="direct_cli_intro_body">CLI очікує підключення на вашому комп’ютері. Health.md підключається безпосередньо й передає експорт без хмарного посередника.</string>
+    <string name="direct_cli_pair_step_run">1. Виконайте на комп’ютері:</string>
+    <string name="direct_cli_pair_step_enter">2. Введіть адресу комп’ютера та 20-значний код Android, показаний у CLI.</string>
+    <string name="direct_cli_computer_address">Адреса комп’ютера</string>
+    <string name="direct_cli_port">Порт</string>
+    <string name="direct_cli_pairing_code">Код сполучення</string>
+    <string name="direct_cli_pair_button">Створити пару з CLI</string>
+    <string name="direct_cli_paired_listener">Створено пару з %1$s</string>
+    <string name="direct_cli_save_address">Зберегти адресу</string>
+    <string name="direct_cli_export_instruction">Виконайте команду експорту на комп’ютері, а потім натисніть «Підключитися»:</string>
+    <string name="direct_cli_connect">Підключитися</string>
+    <string name="direct_cli_disconnect">Відключитися</string>
+    <string name="direct_cli_forget">Забути спарений CLI</string>
+    <string name="direct_cli_status_title">Стан</string>
+    <string name="direct_cli_status_not_connected">Не підключено</string>
+    <string name="direct_cli_status_pairing">Створення пари…</string>
+    <string name="direct_cli_status_connecting">Підключення…</string>
+    <string name="direct_cli_status_connected">Підключено до %1$s</string>
+    <string name="direct_cli_status_transferring">Передано %1$s із %2$s</string>
+    <string name="direct_cli_status_paired">Створено пару з %1$s.</string>
+    <string name="direct_cli_status_session_finished">Сеанс Direct CLI завершено.</string>
+    <string name="direct_cli_status_export_completed">Експорт Android завершено.</string>
+    <string name="direct_cli_status_export_cancelled">Експорт Android скасовано.</string>
+    <string name="direct_cli_failure_connection">Не вдалося підключитися до Health.md CLI. Переконайтеся, що CLI очікує підключення, і повторіть спробу.</string>
+    <string name="direct_cli_failure_timeout">Сеанс Direct CLI досяг обмеження часу Android.</string>
+    <string name="direct_cli_failure_quota">Ліміт безплатних експортів вичерпано.</string>
+    <string name="direct_cli_failure_fitbit_range">Для необробленого експорту Fitbit потрібно явно вказати діапазон не більше 366 днів.</string>
+    <string name="direct_cli_failure_source_unavailable">Запитаний постачальник даних про здоров’я недоступний на цьому пристрої.</string>
+    <string name="direct_cli_failure_health_access">На пристрої Android потрібен доступ до даних про здоров’я.</string>
+    <string name="direct_cli_failure_device_locked">Розблокуйте пристрій Android перед експортом даних про здоров’я.</string>
+    <string name="direct_cli_failure_historical_access">Для запитаних дат потрібен доступ до історії здоров’я.</string>
+    <string name="direct_cli_failure_file_limit">Створений експорт містить понад 4 096 файлів. Виберіть менше дат або вимкніть відстеження окремих записів.</string>
+    <string name="direct_cli_failure_spool_missing">Збережений експорт відсутній, тому експорт потрібно запустити знову.</string>
+    <string name="direct_cli_failure_export">Не вдалося безпечно завершити експорт Android.</string>
+    <string name="direct_cli_notification_waiting">Очікування Health.md CLI</string>
+    <string name="direct_cli_notification_idle">Direct CLI неактивний</string>
+    <string name="direct_cli_notification_pairing">Створення пари з Health.md CLI</string>
+    <string name="direct_cli_notification_connecting">Підключення до Health.md CLI</string>
+    <string name="direct_cli_notification_transferring">Передавання експорту здоров’я Android</string>
+    <string name="direct_cli_notification_title">Health.md Direct CLI</string>
+    <string name="direct_cli_notification_channel_name">Експорт Direct CLI</string>
+    <string name="direct_cli_notification_channel_description">Зашифроване пряме підключення для експорту та перебіг передавання</string>
+
+    <string name="api_export_target_title">Призначення експорту</string>
+    <string name="api_export_section_endpoint">Кінцева точка</string>
+    <string name="api_export_endpoint_url_label">URL кінцевої точки</string>
+    <string name="api_export_endpoint_help">Обов’язково. Не додавайте ключі API та інші секрети до URL.</string>
+    <string name="api_export_authorization_saved">%1$s збережено</string>
+    <string name="api_export_remove_credential">Видалити облікові дані</string>
+    <string name="api_export_new_authorization_label">Нові дані %1$s</string>
+    <string name="api_export_authorization_label">Токен %1$s або облікові дані %2$s</string>
+    <string name="api_export_authorization_replacement_placeholder">Введіть значення для заміни збереженого</string>
+    <string name="api_export_authorization_placeholder">Токен або значення %1$s</string>
+    <string name="api_export_authorization_saved_help">Залиште поле порожнім, щоб зберегти поточне значення. Для звичайних токенів %1$s застосовується автоматично.</string>
+    <string name="api_export_authorization_help">Для звичайних токенів %1$s застосовується автоматично. Приймаються значення %1$s і %2$s.</string>
+    <string name="api_export_custom_headers_title">Власні заголовки</string>
+    <string name="api_export_custom_headers_saved">Власні заголовки збережено</string>
+    <string name="api_export_remove_headers">Видалити заголовки</string>
+    <string name="api_export_replacement_headers_label">Заголовки для заміни</string>
+    <string name="api_export_request_headers_label">Заголовки запиту</string>
+    <string name="api_export_replacement_headers_help">Введіть повний набір для заміни: по одному %1$s у рядку.</string>
+    <string name="api_export_request_headers_help">Використовуйте по одному %1$s у рядку. %2$s залишає транспортні заголовки під керуванням застосунку.</string>
+    <string name="api_export_close_settings">Закрити налаштування</string>
+    <string name="api_export_save_settings">Зберегти налаштування</string>
+    <string name="api_export_dialog_title">Експорт API</string>
+    <string name="api_export_dialog_description">Надіслати вибрані записи одним запитом %1$s %2$s до керованої вами кінцевої точки %3$s або %4$s.</string>
+    <string name="api_export_close_content_description">Закрити налаштування експорту API</string>
+    <string name="api_export_optional_label">Необов’язково</string>
+    <string name="api_export_manage_request_headers">Керувати заголовками запиту</string>
+    <string name="api_export_add_request_headers">Додати заголовки запиту</string>
+    <string name="api_export_headers_saved_hidden">Надійно збережено · значення приховано</string>
+    <string name="api_export_headers_add_help">Додайте ключі API або значення для конкретного сервісу</string>
+    <string name="api_export_collapse_custom_headers">Згорнути власні заголовки</string>
+    <string name="api_export_expand_custom_headers">Розгорнути власні заголовки</string>
+    <string name="api_export_error_invalid_endpoint">Введіть дійсну URL-адресу %1$s або %2$s без фрагмента та вбудованого імені користувача чи пароля.</string>
+    <string name="api_export_error_authorization_empty">Введіть дійсний токен %1$s або значення %2$s.</string>
+    <string name="api_export_error_authorization_characters">Значення %1$s не можуть містити керівні символи або символи поза ASCII.</string>
+    <string name="api_export_error_headers_total_size">Заголовки запиту мають містити не більше %1$d символів.</string>
+    <string name="api_export_error_headers_line_break">Заголовки запиту містять непідтримуваний розрив рядка.</string>
+    <string name="api_export_error_header_missing_separator">У рядку заголовка %1$d потрібно використати %2$s.</string>
+    <string name="api_export_error_header_invalid_name">Рядок заголовка %1$d має недійсне ім’я. Ім’я може містити не більше %2$d дійсних символів заголовка %3$s.</string>
+    <string name="api_export_error_header_reserved_name">%1$s керується компонентом %2$s і не може бути перевизначено.</string>
+    <string name="api_export_error_header_duplicate_name">Заголовок %1$s налаштовано кілька разів.</string>
+    <string name="api_export_error_header_value_too_long">Значення заголовка %1$s має містити не більше %2$d символів.</string>
+    <string name="api_export_error_header_value_characters">Заголовок %1$s містить непідтримувані символи значення.</string>
+    <string name="api_export_error_save_failed">Не вдалося безпечно зберегти налаштування запиту API.</string>
+    <string name="api_export_endpoint_example">https://api.example.com/healthmd</string>
+    <string name="api_export_headers_example">X-API-Key: secret\nX-Client-ID: healthmd</string>
+    <string name="api_export_header_line_syntax">Name: value</string>
+    <string name="api_export_literal_authorization">Authorization</string>
+    <string name="api_export_literal_bearer">Bearer</string>
+    <string name="api_export_literal_basic">Basic</string>
+    <string name="api_export_literal_json">JSON</string>
+    <string name="api_export_literal_post">POST</string>
+    <string name="api_export_literal_http">HTTP</string>
+    <string name="api_export_literal_https">HTTPS</string>
+    <plurals name="api_export_error_header_count">
+        <item quantity="one">Налаштуйте не більше %1$d заголовка запиту.</item>
+        <item quantity="few">Налаштуйте не більше %1$d заголовків запиту.</item>
+        <item quantity="many">Налаштуйте не більше %1$d заголовків запиту.</item>
+        <item quantity="other">Налаштуйте не більше %1$d заголовка запиту.</item>
+    </plurals>
+
+    <string name="settings_direct_cli_subtitle">Створіть пару з настільним CLI для зашифрованого експорту, сумісного з iOS або Android.</string>
+    <string name="health_provider_health_connect_summary">Стандартний центр здоров’я Android для конфіденційного експорту на пристрої.</string>
+    <string name="health_provider_health_connect_setup_description">Надайте дозволи Health Connect на екрані «Експорт». Health.md читає записи локально та записує їх безпосередньо до вашої папки.</string>
+    <string name="health_provider_samsung_health_summary">Телефони Samsung, Galaxy Watch, сон, кроки, тренування та життєві показники.</string>
+    <string name="health_provider_samsung_health_setup_description">Відкрийте Samsung Health і дозвольте обмін із Health Connect. Прямий Health Data SDK від Samsung можна додати пізніше, якщо поза Health Connect знадобляться дані, схвалені партнером.</string>
+    <string name="health_provider_huawei_health_summary">Пристрої Huawei та ринки HMS/AppGallery.</string>
+    <string name="health_provider_huawei_health_setup_description">Для підтримки Huawei потрібна реєстрація застосунку HMS Health Kit і збірка з HMS. Цей каталог залишає Huawei видимим, не додаючи залежностей HMS до збірки Play.</string>
+    <string name="health_provider_fitbit_summary">Трекери Fitbit, дані Fitbit із Pixel Watch, сон, активність і серце.</string>
+    <string name="health_provider_fitbit_setup_description">Прямий імпорт Fitbit використовує Fitbit Web API з областями OAuth і токенами оновлення. Поки облікові дані застосунку не налаштовано, експортуйте дані Fitbit через Health Connect, де це доступно.</string>
+    <string name="health_provider_garmin_summary">Годинники Garmin, тренування, активність, сон і показники рівня енергії організму.</string>
+    <string name="health_provider_garmin_setup_description">Для робочого імпорту Garmin потрібне схвалення партнера Garmin Health API і зазвичай серверна синхронізація або webhook. Health.md навмисно не використовує резервні варіанти Google Fit.</string>
+    <string name="health_provider_withings_summary">Ваги й годинники Withings, артеріальний тиск і килимки для відстеження сну.</string>
+    <string name="health_provider_withings_setup_description">Прямий імпорт Withings використовує OAuth 2.0 і публічний API Withings. Налаштуйте облікові дані клієнта перед увімкненням читання з хмари.</string>
+    <string name="health_provider_oura_summary">Сон, готовність, активність, пульс і HRV з Oura Ring.</string>
+    <string name="health_provider_oura_setup_description">Прямий імпорт Oura використовує Oura Cloud API з OAuth 2.0. Налаштуйте облікові дані клієнта перед увімкненням читання з хмари.</string>
+    <string name="health_provider_polar_summary">Тренування Polar, пристрої вимірювання пульсу, сон і активність через AccessLink.</string>
+    <string name="health_provider_polar_setup_description">Для імпорту історії Polar слід використовувати Polar AccessLink OAuth. Підтримка датчиків BLE — окрема майбутня функція сеансів наживо, а не заміна експорту історії.</string>
+    <string name="health_provider_whoop_summary">Відновлення, навантаження, сон, тренування та фізіологія WHOOP.</string>
+    <string name="health_provider_whoop_setup_description">Прямий імпорт WHOOP використовує WHOOP API з областями OAuth для циклів, відновлення, сну, тренувань і даних профілю.</string>
+    <string name="health_provider_integration_android_system">Система Android</string>
+    <string name="health_provider_integration_health_connect_source">Джерело Health Connect</string>
+    <string name="health_provider_integration_vendor_sdk">SDK постачальника</string>
+    <string name="health_provider_integration_cloud_api">Хмарний API</string>
+    <string name="health_provider_integration_partner_api">Партнерський API</string>
+    <string name="health_provider_direct_export_available">Готово до експорту</string>
+    <string name="health_provider_direct_export_requires_oauth_credentials">Потрібні облікові дані OAuth</string>
+    <string name="health_provider_direct_export_requires_vendor_approval">Потрібне схвалення постачальника</string>
+    <string name="health_provider_direct_export_requires_partner_approval">Потрібне схвалення партнера</string>
+    <string name="health_provider_direct_export_requires_app_configuration">Потрібне налаштування застосунку</string>
+    <string name="health_provider_action_open">Відкрити</string>
+    <string name="health_provider_action_install_setup">Установити / налаштувати</string>
+    <string name="privacy_permissions_label">Дозволи:</string>
+    <string name="privacy_export_label">Експорт:</string>
+    <string name="onboarding_storage_selected_folder_fallback">Вибрана папка</string>
+    <string name="advanced_settings_no_formats_selected">Формати не вибрано</string>
+    <string name="custom_markdown_template_empty_preview">(порожній передперегляд)</string>
+
+    <string name="billing_error_product_unavailable">Не вдалося завантажити інформацію про продукт. Повторіть спробу.</string>
+    <string name="billing_error_service_unavailable">Сервіс оплати недоступний. Повторіть спробу.</string>
+    <string name="billing_error_purchase_failed">Не вдалося завершити покупку. Повторіть спробу.</string>
+    <string name="billing_error_no_previous_purchase">Попередньої покупки не знайдено.</string>
+    <string name="billing_error_restore_failed">Не вдалося відновити покупки. Повторіть спробу.</string>
+    <string name="health_provider_label_health_connect">Health Connect</string>
+    <string name="health_provider_label_all_connected">Усі підключені джерела</string>
+    <string name="health_provider_label_fitbit">Fitbit</string>
+    <string name="health_provider_label_withings">Withings</string>
+    <string name="health_provider_label_oura">Oura</string>
+    <string name="health_provider_label_polar">Polar Flow</string>
+    <string name="health_provider_label_whoop">WHOOP</string>
+    <string name="health_provider_label_generic">Джерело даних про здоров’я</string>
+    <string name="health_provider_sign_in_denied">Вхід до джерела даних про здоров’я не схвалено.</string>
+    <string name="health_provider_sign_in_invalid_callback">Не вдалося перевірити вхід до джерела даних про здоров’я. Повторіть спробу.</string>
+    <string name="health_provider_sign_in_connection_failed">Не вдалося підключити джерело даних про здоров’я. Повторіть спробу.</string>
+    <string name="feedback_diagnostic_app">Застосунок: Health.md %1$s (%2$d)</string>
+    <string name="feedback_diagnostic_platform">Платформа: Android %1$s (API %2$d)</string>
+    <string name="feedback_diagnostic_device">Пристрій: %1$s</string>
+    <string name="feedback_issue_describe_heading">Опишіть проблему</string>
+    <string name="feedback_issue_describe_hint">Чіткий опис того, що сталося</string>
+    <string name="feedback_issue_steps_heading">Кроки для відтворення</string>
+    <string name="feedback_issue_expected_heading">Очікувана поведінка</string>
+    <string name="feedback_issue_expected_hint">Що мало статися</string>
+    <string name="automation_history_permissions_missing">Відсутні дозволи Health Connect</string>
+    <plurals name="automation_history_failed_dates">
+        <item quantity="one">%1$d невдала дата</item>
+        <item quantity="few">%1$d невдалі дати</item>
+        <item quantity="many">%1$d невдалих дат</item>
+        <item quantity="other">%1$d невдалої дати</item>
+    </plurals>
+
+    <string name="action_edit_endpoint">Змінити кінцеву точку API</string>
+    <string name="history_date_range">%1$s – %2$s</string>
+    <string name="history_failed_date_reason">%1$s: %2$s</string>
+    <string name="history_retry_api_required">Налаштуйте кінцеву точку API перед повторною спробою.</string>
+    <string name="history_retry_complete">Повторну спробу завершено.</string>
+    <string name="history_retry_failed">Повторна спроба не вдалася. Перегляньте подробиці в історії експорту.</string>
+    <string name="history_retry_folder_required">Виберіть папку експорту перед повторною спробою.</string>
+    <string name="history_retry_permissions_required">Надайте дозволи Health Connect перед повторною спробою.</string>
+    <string name="history_retry_raw_failed">Не вдалося повторити необроблений знімок. Перегляньте подробиці в історії експорту.</string>
+    <string name="history_warning_details_unavailable">Подробиці попередження недоступні.</string>
+    <string name="schedule_decrease_hour">Зменшити годину</string>
+    <string name="schedule_decrease_lookback_days">Зменшити кількість минулих днів</string>
+    <string name="schedule_decrease_minute">Зменшити хвилину</string>
+    <string name="schedule_destination_not_ready_title">Призначення експорту не готове</string>
+    <string name="schedule_error_api_required">Налаштуйте кінцеву точку API перед увімкненням розкладу.</string>
+    <string name="schedule_error_folder_required">Спочатку виберіть папку експорту на екрані «Експорт».</string>
+    <string name="schedule_error_invalid_api_settings">Перевірте кінцеву точку API та налаштування запиту, а потім повторіть спробу.</string>
+    <string name="schedule_error_invalid_api_url">Введіть дійсну URL-адресу HTTP або HTTPS без фрагмента та вбудованого імені користувача чи пароля.</string>
+    <string name="schedule_error_invalid_headers">Введіть дійсні заголовки запиту: по одному імені та значенню в рядку.</string>
+    <string name="schedule_error_save_api_settings">Не вдалося безпечно зберегти налаштування запиту API.</string>
+    <string name="schedule_increase_hour">Збільшити годину</string>
+    <string name="schedule_increase_lookback_days">Збільшити кількість минулих днів</string>
+    <string name="schedule_increase_minute">Збільшити хвилину</string>
+    <string name="schedule_next_export_datetime">%1$s о %2$s</string>
+    <string name="schedule_target_api_configured">POST JSON до %1$s</string>
+    <string name="schedule_target_api_unconfigured">Надсилати запланований JSON до кінцевої точки API</string>
+    <string name="schedule_target_folder_choose">Виберіть папку на екрані «Експорт»</string>
+    <string name="schedule_target_folder_ready">Записувати заплановані файли до вибраної папки пристрою</string>
+    <string name="schedule_toggle_time_period">Перемкнути AM або PM</string>
+    <string name="scheduled_recovery_history_cancelled">Відновлення скасовано; незавершені дати залишаються в очікуванні.</string>
+    <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
+    <plurals name="export_history_failed_dates_pending_retry">
+        <item quantity="one">%1$d невдала дата очікує повторної спроби</item>
+        <item quantity="few">%1$d невдалі дати очікують повторної спроби</item>
+        <item quantity="many">%1$d невдалих дат очікують повторної спроби</item>
+        <item quantity="other">%1$d невдалої дати очікують повторної спроби</item>
+    </plurals>
+    <plurals name="export_notification_days_exported">
+        <item quantity="one">Для %3$s експортовано %1$d/%2$d день</item>
+        <item quantity="few">Для %3$s експортовано %1$d/%2$d дні</item>
+        <item quantity="many">Для %3$s експортовано %1$d/%2$d днів</item>
+        <item quantity="other">Для %3$s експортовано %1$d/%2$d дня</item>
+    </plurals>
+    <plurals name="history_detail_exported_days">
+        <item quantity="one">%1$d/%2$d день</item>
+        <item quantity="few">%1$d/%2$d дні</item>
+        <item quantity="many">%1$d/%2$d днів</item>
+        <item quantity="other">%1$d/%2$d дня</item>
+    </plurals>
+    <plurals name="history_detail_file_count">
+        <item quantity="one">%1$d файл</item>
+        <item quantity="few">%1$d файли</item>
+        <item quantity="many">%1$d файлів</item>
+        <item quantity="other">%1$d файла</item>
+    </plurals>
+    <plurals name="history_failed_date_sample_more">
+        <item quantity="one">Невдалі дати: %1$s, ще +%2$d</item>
+        <item quantity="few">Невдалі дати: %1$s, ще +%2$d</item>
+        <item quantity="many">Невдалі дати: %1$s, ще +%2$d</item>
+        <item quantity="other">Невдалі дати: %1$s, ще +%2$d</item>
+    </plurals>
+    <plurals name="history_more_items">
+        <item quantity="one">ще +%1$d</item>
+        <item quantity="few">ще +%1$d</item>
+        <item quantity="many">ще +%1$d</item>
+        <item quantity="other">ще +%1$d</item>
+    </plurals>
+    <plurals name="history_retry_failed_dates">
+        <item quantity="one">Повторну спробу завершено з %1$d невдалою датою.</item>
+        <item quantity="few">Повторну спробу завершено з %1$d невдалими датами.</item>
+        <item quantity="many">Повторну спробу завершено з %1$d невдалими датами.</item>
+        <item quantity="other">Повторну спробу завершено з %1$d невдалої дати.</item>
+    </plurals>
+    <plurals name="history_warning_failed_dates">
+        <item quantity="one">%1$d невдала дата</item>
+        <item quantity="few">%1$d невдалі дати</item>
+        <item quantity="many">%1$d невдалих дат</item>
+        <item quantity="other">%1$d невдалої дати</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_incomplete_count">
+        <item quantity="one">%1$d незавершена дія зі знімком</item>
+        <item quantity="few">%1$d незавершені дії зі знімком</item>
+        <item quantity="many">%1$d незавершених дій зі знімком</item>
+        <item quantity="other">%1$d незавершеної дії зі знімком</item>
+    </plurals>
+    <plurals name="raw_snapshot_history_entry_actions">
+        <item quantity="one">Дії зі знімком: %1$d/%2$d дія • з %3$s до %4$s</item>
+        <item quantity="few">Дії зі знімком: %1$d/%2$d дії • з %3$s до %4$s</item>
+        <item quantity="many">Дії зі знімком: %1$d/%2$d дій • з %3$s до %4$s</item>
+        <item quantity="other">Дії зі знімком: %1$d/%2$d дії • з %3$s до %4$s</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
+        <item quantity="one">день</item>
+        <item quantity="few">дні</item>
+        <item quantity="many">днів</item>
+        <item quantity="other">дня</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_hours" tools:ignore="ImpliedQuantity">
+        <item quantity="one">година</item>
+        <item quantity="few">години</item>
+        <item quantity="many">годин</item>
+        <item quantity="other">години</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_minutes" tools:ignore="ImpliedQuantity">
+        <item quantity="one">хвилина</item>
+        <item quantity="few">хвилини</item>
+        <item quantity="many">хвилин</item>
+        <item quantity="other">хвилини</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_weeks" tools:ignore="ImpliedQuantity">
+        <item quantity="one">тиждень</item>
+        <item quantity="few">тижні</item>
+        <item quantity="many">тижнів</item>
+        <item quantity="other">тижня</item>
+    </plurals>
+    <plurals name="schedule_lookback_days_summary">
+        <item quantity="one">Кожен запуск експортує останній %1$d день до вчорашнього дня.</item>
+        <item quantity="few">Кожен запуск експортує останні %1$d дні до вчорашнього дня.</item>
+        <item quantity="many">Кожен запуск експортує останні %1$d днів до вчорашнього дня.</item>
+        <item quantity="other">Кожен запуск експортує останні %1$d дня до вчорашнього дня.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_history_failed_dates">
+        <item quantity="one">Відновлення завершено; %1$d невдала дата досі очікує обробки.</item>
+        <item quantity="few">Відновлення завершено; %1$d невдалі дати досі очікують обробки.</item>
+        <item quantity="many">Відновлення завершено; %1$d невдалих дат досі очікують обробки.</item>
+        <item quantity="other">Відновлення завершено; %1$d невдалої дати досі очікує обробки.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_exported_dates">
+        <item quantity="one">Під час відновлення експортовано %1$d/%2$d дату.</item>
+        <item quantity="few">Під час відновлення експортовано %1$d/%2$d дати.</item>
+        <item quantity="many">Під час відновлення експортовано %1$d/%2$d дат.</item>
+        <item quantity="other">Під час відновлення експортовано %1$d/%2$d дати.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_pending_dates">
+        <item quantity="one">%1$d дата залишається в очікуванні.</item>
+        <item quantity="few">%1$d дати залишаються в очікуванні.</item>
+        <item quantity="many">%1$d дат залишаються в очікуванні.</item>
+        <item quantity="other">В очікуванні залишилося %1$d дати.</item>
+    </plurals>
+
+    <string name="export_api_action_edit">Змінити</string>
+    <string name="export_api_authorization_secure">Дані Authorization надійно збережено</string>
+    <string name="export_api_compatibility_mode_description">Експорт API завжди надсилає JSON. Налаштування показників і часових рядів застосовуються, а шляхи до файлів і режими запису — ні.</string>
+    <string name="export_api_configure_endpoint">Налаштувати кінцеву точку API</string>
+    <string name="export_api_error_invalid_endpoint">Введіть дійсну URL-адресу HTTP або HTTPS без фрагмента та вбудованого імені користувача чи пароля.</string>
+    <string name="export_api_error_invalid_headers">Введіть дійсні заголовки запиту: по одному імені та значенню в рядку.</string>
+    <string name="export_api_error_secure_save">Не вдалося безпечно зберегти налаштування запиту API.</string>
+    <string name="export_api_headers_secure">Власні заголовки запиту надійно збережено</string>
+    <string name="export_api_post_endpoint">POST %1$s</string>
+    <string name="export_api_raw_mode_description">Необроблені знімки передають готовий артефакт потоком разом із заголовками схеми, ID експорту та контрольної суми.</string>
+    <string name="export_no_format_selected">Щоб продовжити, виберіть принаймні один формат експорту.</string>
+    <string name="export_preview_action_create_daily_note">Створити щоденну нотатку</string>
+    <string name="export_preview_action_daily_note_failed">Не вдалося обробити щоденну нотатку</string>
+    <string name="export_preview_action_skip_daily_note">Пропустити щоденну нотатку</string>
+    <string name="export_preview_action_update_daily_note">Оновити щоденну нотатку</string>
+    <string name="export_preview_action_write_individual_entry">Записати окремий запис</string>
+    <string name="export_preview_api_preparation_failed">Не вдалося підготувати експорт API.</string>
+    <string name="export_preview_artifacts_per_range">Артефактів на діапазон</string>
+    <string name="export_preview_back_description">Назад до передперегляду експорту</string>
+    <string name="export_preview_destination_label">Призначення</string>
+    <string name="export_preview_empty_file">(порожній файл)</string>
+    <string name="export_preview_formats_per_day">Форматів на день</string>
+    <string name="export_preview_no_exportable_file">Для цієї дати немає файла, доступного для експорту.</string>
+    <string name="export_preview_no_files_written">Файли не буде записано.</string>
+    <string name="export_preview_planning_failed">Не вдалося спланувати експорт.</string>
+    <string name="export_preview_raw_access_denied">Доступ до передперегляду необробленого знімка %1$s заборонено. Перевірте дозволи постачальника.</string>
+    <string name="export_preview_raw_failed">Не вдалося завершити передперегляд необробленого знімка %1$s до готовності артефакту.</string>
+    <string name="export_preview_raw_failed_manifest">%1$s створив маніфест невдалого необробленого знімка. Перевірте доступ постачальника.</string>
+    <string name="export_preview_raw_invalid_range">Дата завершення необробленого знімка передує даті початку.</string>
+    <string name="export_preview_raw_no_final_status">Передперегляд %1$s завершився без остаточного стану необробленого знімка.</string>
+    <string name="export_preview_raw_partial">%1$s створив частковий передперегляд необробленого знімка. Перевірте маніфест артефакту.</string>
+    <string name="export_preview_raw_provider_unavailable">Для передперегляду необробленого знімка немає підключеного постачальника.</string>
+    <string name="export_preview_raw_provider_unregistered">%1$s не зареєстровано для нативних необроблених знімків постачальника; резервний варіант Health Connect не використовувався.</string>
+    <string name="export_preview_raw_service_unavailable">Сервіс передперегляду необроблених знімків недоступний.</string>
+    <string name="export_preview_selected_folder">Вибрана папка</string>
+    <string name="export_preview_selected_range">Вибраний діапазон</string>
+    <string name="export_preview_summary">%1$s • %2$s • %3$s</string>
+    <string name="export_preview_truncation_marker">\n\n… Передперегляд скорочено: %1$s пропущено із середини цього файла %2$s. …\n\n</string>
+    <string name="export_preview_warning_title">Попередження</string>
+    <string name="export_selected_range">%1$s – %2$s</string>
+    <string name="export_target_api_configured_subtitle">POST %1$s до %2$s</string>
+    <string name="export_target_api_json_unconfigured_subtitle">Надіслати JSON до кінцевої точки API</string>
+    <string name="export_target_api_raw_unconfigured_subtitle">Передати необроблений знімок потоком до кінцевої точки HTTPS</string>
+    <string name="export_target_folder_selected_subtitle">Записати файли до %1$s</string>
+    <string name="export_target_folder_unselected_subtitle">Виберіть локальну папку або папку постачальника</string>
+    <string name="folder_organization_flat_label">Без вкладеності</string>
+    <string name="folder_organization_by_year_label">За роками</string>
+    <string name="folder_organization_by_month_label">За місяцями</string>
+    <string name="folder_organization_by_year_month_label">За роками й місяцями</string>
+    <string name="folder_organization_flat_preview">Без автоматичних папок дат</string>
+    <plurals name="export_progress_state_days">
+        <item quantity="one">Експортовано %1$d із %2$d дня</item>
+        <item quantity="few">Експортовано %1$d із %2$d днів</item>
+        <item quantity="many">Експортовано %1$d із %2$d днів</item>
+        <item quantity="other">Експортовано %1$d із %2$d дня</item>
+    </plurals>
+    <plurals name="export_progress_state_days_with_date">
+        <item quantity="one">Експортовано %1$d із %2$d дня. Поточна дата: %3$s</item>
+        <item quantity="few">Експортовано %1$d із %2$d днів. Поточна дата: %3$s</item>
+        <item quantity="many">Експортовано %1$d із %2$d днів. Поточна дата: %3$s</item>
+        <item quantity="other">Експортовано %1$d із %2$d дня. Поточна дата: %3$s</item>
+    </plurals>
+    <plurals name="export_progress_state_raw">
+        <item quantity="one">Виконано %1$d із %2$d дії необробленого знімка за період із %3$s до %4$s</item>
+        <item quantity="few">Виконано %1$d із %2$d дій необробленого знімка за період із %3$s до %4$s</item>
+        <item quantity="many">Виконано %1$d із %2$d дій необробленого знімка за період із %3$s до %4$s</item>
+        <item quantity="other">Виконано %1$d із %2$d дії необробленого знімка за період із %3$s до %4$s</item>
+    </plurals>
+    <plurals name="export_diagnostics_date_list_more_count">
+        <item quantity="one">Невдалі дати: %1$s, ще +%2$d дата</item>
+        <item quantity="few">Невдалі дати: %1$s, ще +%2$d дати</item>
+        <item quantity="many">Невдалі дати: %1$s, ще +%2$d дат</item>
+        <item quantity="other">Невдалі дати: %1$s, ще +%2$d дати</item>
+    </plurals>
+    <plurals name="export_diagnostics_failed_days">
+        <item quantity="one">Не експортовано %1$d день</item>
+        <item quantity="few">Не експортовано %1$d дні</item>
+        <item quantity="many">Не експортовано %1$d днів</item>
+        <item quantity="other">Не експортовано %1$d дня</item>
+    </plurals>
+    <plurals name="export_diagnostics_reason_days">
+        <item quantity="one">%1$s: %2$d день</item>
+        <item quantity="few">%1$s: %2$d дні</item>
+        <item quantity="many">%1$s: %2$d днів</item>
+        <item quantity="other">%1$s: %2$d дня</item>
+    </plurals>
+    <plurals name="export_preview_artifact_count">
+        <item quantity="one">%1$d артефакт</item>
+        <item quantity="few">%1$d артефакти</item>
+        <item quantity="many">%1$d артефактів</item>
+        <item quantity="other">%1$d артефакта</item>
+    </plurals>
+    <plurals name="export_preview_day_count">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дні</item>
+        <item quantity="many">%1$d днів</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <plurals name="export_preview_days_previewed">
+        <item quantity="one">%1$d/%2$d день</item>
+        <item quantity="few">%1$d/%2$d дні</item>
+        <item quantity="many">%1$d/%2$d днів</item>
+        <item quantity="other">%1$d/%2$d дня</item>
+    </plurals>
+    <plurals name="export_preview_file_count">
+        <item quantity="one">%1$d файл</item>
+        <item quantity="few">%1$d файли</item>
+        <item quantity="many">%1$d файлів</item>
+        <item quantity="other">%1$d файла</item>
+    </plurals>
+    <plurals name="export_preview_limited_days">
+        <item quantity="one">Передперегляд останнього %1$d дня з даними. Повний експорт буде виконано для кожної вибраної дати.</item>
+        <item quantity="few">Передперегляд останніх %1$d днів із даними. Повний експорт буде виконано для кожної вибраної дати.</item>
+        <item quantity="many">Передперегляд останніх %1$d днів із даними. Повний експорт буде виконано для кожної вибраної дати.</item>
+        <item quantity="other">Передперегляд останніх %1$d дня з даними. Повний експорт буде виконано для кожної вибраної дати.</item>
+    </plurals>
+    <plurals name="export_progress_days_count">
+        <item quantity="one">%1$d / %2$d день</item>
+        <item quantity="few">%1$d / %2$d дні</item>
+        <item quantity="many">%1$d / %2$d днів</item>
+        <item quantity="other">%1$d / %2$d дня</item>
+    </plurals>
+    <plurals name="export_result_exported_days">
+        <item quantity="one">Експортовано %1$d/%2$d день</item>
+        <item quantity="few">Експортовано %1$d/%2$d дні</item>
+        <item quantity="many">Експортовано %1$d/%2$d днів</item>
+        <item quantity="other">Експортовано %1$d/%2$d дня</item>
+    </plurals>
+    <plurals name="export_result_uploaded_days">
+        <item quantity="one">Завантажено %1$d/%2$d день</item>
+        <item quantity="few">Завантажено %1$d/%2$d дні</item>
+        <item quantity="many">Завантажено %1$d/%2$d днів</item>
+        <item quantity="other">Завантажено %1$d/%2$d дня</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_failed_actions">
+        <item quantity="one">Незавершена дія зі знімком: %1$d</item>
+        <item quantity="few">Незавершені дії зі знімком: %1$d</item>
+        <item quantity="many">Незавершених дій зі знімком: %1$d</item>
+        <item quantity="other">Незавершеної дії зі знімком: %1$d</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_reason_actions">
+        <item quantity="one">%1$s: %2$d дія</item>
+        <item quantity="few">%1$s: %2$d дії</item>
+        <item quantity="many">%1$s: %2$d дій</item>
+        <item quantity="other">%1$s: %2$d дії</item>
+    </plurals>
+    <plurals name="raw_snapshot_progress_actions">
+        <item quantity="one">Дії зі знімком: %1$d / %2$d дія</item>
+        <item quantity="few">Дії зі знімком: %1$d / %2$d дії</item>
+        <item quantity="many">Дії зі знімком: %1$d / %2$d дій</item>
+        <item quantity="other">Дії зі знімком: %1$d / %2$d дії</item>
+    </plurals>
+    <plurals name="raw_snapshot_result_actions">
+        <item quantity="one">Виконано дію зі знімком: %1$d/%2$d</item>
+        <item quantity="few">Виконано дії зі знімком: %1$d/%2$d</item>
+        <item quantity="many">Виконано дій зі знімком: %1$d/%2$d</item>
+        <item quantity="other">Виконано дії зі знімком: %1$d/%2$d</item>
+    </plurals>
 </resources>

@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.BuildConfig
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -40,14 +41,14 @@ class PaywallViewModel @Inject constructor(
     val isRestoring: StateFlow<Boolean> = billingRepository.isRestoring
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    /** Current purchase error message, if any */
-    val purchaseError: StateFlow<String?> = billingRepository.purchaseError
+    /** Current typed purchase failure, if any */
+    val purchaseError: StateFlow<BillingError?> = billingRepository.purchaseError
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    /** Formatted price string from Google Play, falling back to the planned $9.99 lifetime price. */
+    /** Region-correct price supplied by Google Play; null until product details are available. */
     val priceText: StateFlow<String?> = billingRepository.productDetails
-        .map { it?.oneTimePurchaseOfferDetails?.formattedPrice ?: FALLBACK_PRICE_TEXT }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FALLBACK_PRICE_TEXT)
+        .map { it?.oneTimePurchaseOfferDetails?.formattedPrice }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /** Whether this is a debug build (for showing debug controls) */
     val isDebugBuild: Boolean = BuildConfig.DEBUG
@@ -55,10 +56,6 @@ class PaywallViewModel @Inject constructor(
     // Debug state for simulating unlock
     private val _debugUnlockOverride = MutableStateFlow<Boolean?>(null)
     val debugUnlockOverride: StateFlow<Boolean?> = _debugUnlockOverride.asStateFlow()
-
-    private companion object {
-        const val FALLBACK_PRICE_TEXT = "\$9.99"
-    }
 
     init {
         // Connect to billing service and query product when ViewModel is created

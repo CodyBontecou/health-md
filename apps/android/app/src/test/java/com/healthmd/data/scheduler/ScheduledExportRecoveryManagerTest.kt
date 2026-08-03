@@ -1,5 +1,6 @@
 package com.healthmd.data.scheduler
 
+import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.RawSnapshotService
@@ -24,6 +25,8 @@ import com.healthmd.export.FakeSettingsRepository
 import com.healthmd.testing.syntheticExportEnginePin
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -487,6 +490,9 @@ class ScheduledExportRecoveryManagerTest {
         rawSnapshotService: RawSnapshotService? = null,
         apiCredentialStore: APIExportCredentialStore? = null,
     ): ScheduledExportRecoveryManager = ScheduledExportRecoveryManager(
+        applicationContext = mockk<Context>(relaxed = true) {
+            every { resources } returns mockk(relaxed = true)
+        },
         healthRepository = healthRepository,
         exportRepository = exportRepository,
         settingsRepository = settingsRepository,

@@ -2,6 +2,7 @@ package com.healthmd.data.health.providers
 
 import android.content.Context
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.R
 import io.mockk.mockk
 import org.junit.Test
 
@@ -30,5 +31,39 @@ class HealthProviderCatalogTest {
         }
         assertThat(knownPackageNames).doesNotContain("com.google.android.apps.fitness")
         assertThat(knownPackageNames).doesNotContain("com.google.android.gms")
+    }
+
+    @Test
+    fun providerCatalog_usesResourceBackedPresentationMetadata() {
+        val definitions = HealthProviderCatalog(context = mockk<Context>(relaxed = true)).definitions
+
+        assertThat(definitions.map { it.summaryRes }).doesNotContain(0)
+        assertThat(definitions.map { it.setupDescriptionRes }).doesNotContain(0)
+        assertThat(HealthProviderIntegrationKind.entries.map { it.labelRes }).doesNotContain(0)
+        assertThat(HealthProviderDirectExportStatus.entries.map { it.labelRes }).doesNotContain(0)
+    }
+
+    @Test
+    fun providerState_actionLabelDependsOnlyOnInstalledState() {
+        val definition = HealthProviderCatalog(context = mockk<Context>(relaxed = true))
+            .definitions
+            .first()
+
+        assertThat(
+            HealthProviderState(
+                definition = definition,
+                installedPackageName = definition.setupPackageName,
+                isInstalled = true,
+                setupIntent = null,
+            ).actionLabelRes
+        ).isEqualTo(R.string.health_provider_action_open)
+        assertThat(
+            HealthProviderState(
+                definition = definition,
+                installedPackageName = null,
+                isInstalled = false,
+                setupIntent = null,
+            ).actionLabelRes
+        ).isEqualTo(R.string.health_provider_action_install_setup)
     }
 }

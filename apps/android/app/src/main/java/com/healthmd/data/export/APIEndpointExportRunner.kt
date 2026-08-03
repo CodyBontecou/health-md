@@ -35,6 +35,8 @@ import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
+import com.healthmd.domain.model.ExportPreviewIssue
+import com.healthmd.domain.model.ExportPreviewIssueKind
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
@@ -211,36 +213,20 @@ class APIEndpointExportRunner private constructor(
         }
         val frozenSettings = settings.frozenForAPIAction()
         if (frozenSettings.selectedExportFormats.isEmpty()) {
-            return configurationFailure(
-                normalizedDates,
-                ExportFailureReason.UNKNOWN,
-                "Select at least one export format before exporting to an API endpoint.",
-            )
+            return configurationFailure(normalizedDates, ExportFailureReason.UNKNOWN)
         }
         val endpoint = APIExportEndpoint.normalizedOrNull(frozenSettings.apiEndpointUrl)
-            ?: return configurationFailure(
-                normalizedDates,
-                ExportFailureReason.INVALID_API_ENDPOINT,
-                "Configure a valid HTTP or HTTPS API endpoint before exporting.",
-            )
+            ?: return configurationFailure(normalizedDates, ExportFailureReason.INVALID_API_ENDPOINT)
 
         // Resolve exactly once, before the first provider call. A malformed/wrong-profile answer
         // fails closed to the byte-compatible legacy implementation.
         val resolvedMode = resolveModeOnce(normalizedDates, frozenSettings)
         val requestConfiguration = credentialStore.requestConfiguration(endpoint)?.frozenCopy()
-            ?: return configurationFailure(
-                normalizedDates,
-                ExportFailureReason.INVALID_API_ENDPOINT,
-                "API endpoint request configuration is unavailable.",
-            )
+            ?: return configurationFailure(normalizedDates, ExportFailureReason.INVALID_API_ENDPOINT)
         if (expectedDestinationFingerprint != null &&
             requestConfiguration.destinationFingerprint != expectedDestinationFingerprint
         ) {
-            return configurationFailure(
-                normalizedDates,
-                ExportFailureReason.INVALID_API_ENDPOINT,
-                "API endpoint or request headers changed before export started.",
-            )
+            return configurationFailure(normalizedDates, ExportFailureReason.INVALID_API_ENDPOINT)
         }
 
         val enginePinJson = frozenSettings.executionEnginePin?.let(ExportEnginePinCodec::encodeCanonical)
@@ -407,7 +393,7 @@ class APIEndpointExportRunner private constructor(
                 isTruncated = normalizedDates.size > capture.attemptedDates.size,
                 days = capture.failedDateDetails
                     .filter { it.reason != ExportFailureReason.NO_HEALTH_DATA }
-                    .map { ExportPreviewDay(it.date, failureReason = it.reason, warning = it.errorDetails) },
+                    .map { ExportPreviewDay(it.date, failureReason = it.reason) },
             )
         }
         val request = try {
@@ -660,17 +646,12 @@ class APIEndpointExportRunner private constructor(
                 frontier = frontier,
                 invocationDates = invocationDates,
                 unresolvedReason = ExportFailureReason.NETWORK_ERROR,
-                unresolvedDetails = "Connection failed",
+                unresolvedDetails = null,
                 lastStatusCode = lastStatusCode,
                 wasCancelled = true,
             )
         } catch (error: APIExportClientException) {
             val safeDetails = error.statusCode?.let { "HTTP $it" }
-                ?: when (error.failureReason) {
-                    ExportFailureReason.NETWORK_ERROR -> "Connection failed"
-                    ExportFailureReason.INVALID_API_ENDPOINT -> "Invalid API endpoint"
-                    else -> null
-                }
             return durableResult(
                 operation = operation,
                 frontier = frontier,
@@ -686,7 +667,7 @@ class APIEndpointExportRunner private constructor(
                 frontier = frontier,
                 invocationDates = invocationDates,
                 unresolvedReason = ExportFailureReason.NETWORK_ERROR,
-                unresolvedDetails = "Connection failed",
+                unresolvedDetails = null,
                 lastStatusCode = lastStatusCode,
             )
         }
@@ -710,7 +691,7 @@ class APIEndpointExportRunner private constructor(
             .filterTo(linkedSetOf()) { it in invocationSet }
         val acknowledgedCaptureFailures = operation.captureFailures.filter {
             it.date in acknowledgedDates
-        }
+        }.map { it.copy(errorDetails = null) }
         val unresolvedFailures = unresolvedDates.map {
             FailedDateDetail(it, unresolvedReason, unresolvedDetails)
         }
@@ -758,7 +739,7 @@ class APIEndpointExportRunner private constructor(
             return ExportResult(
                 successCount = records.size,
                 totalCount = requestedDates.size,
-                failedDateDetails = failedDateDetails,
+                failedDateDetails = failedDateDetails.map { it.copy(errorDetails = null) },
                 target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
                 httpStatusCode = lastStatusCode,
             )
@@ -768,11 +749,6 @@ class APIEndpointExportRunner private constructor(
         } catch (error: APIExportClientException) {
             barrier.failIfOpen()
             val safeDetails = error.statusCode?.let { "HTTP $it" }
-                ?: when (error.failureReason) {
-                    ExportFailureReason.NETWORK_ERROR -> "Connection failed"
-                    ExportFailureReason.INVALID_API_ENDPOINT -> "Invalid API endpoint"
-                    else -> null
-                }
             return uploadFailure(
                 requestedDates,
                 error.failureReason,
@@ -785,7 +761,7 @@ class APIEndpointExportRunner private constructor(
             return uploadFailure(
                 requestedDates,
                 ExportFailureReason.NETWORK_ERROR,
-                "Connection failed",
+                null,
             )
         }
     }
@@ -935,18 +911,16 @@ class APIEndpointExportRunner private constructor(
     private fun configurationFailure(
         dates: List<LocalDate>,
         reason: ExportFailureReason,
-        message: String,
     ): ExportResult = ExportResult(
         successCount = 0,
         totalCount = dates.size,
-        failedDateDetails = dates.map { FailedDateDetail(it, reason, message) },
+        failedDateDetails = dates.map { FailedDateDetail(it, reason) },
         target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
     )
 
     private fun preparationFailure(dates: List<LocalDate>): ExportResult = configurationFailure(
         dates = dates,
         reason = ExportFailureReason.UNKNOWN,
-        message = "API export preparation failed.",
     )
 
     private fun preparationFailurePreview(
@@ -960,7 +934,7 @@ class APIEndpointExportRunner private constructor(
             ExportPreviewDay(
                 date = failureDate,
                 failureReason = ExportFailureReason.UNKNOWN,
-                warning = "API export preparation failed.",
+                issues = listOf(ExportPreviewIssue(ExportPreviewIssueKind.API_PREPARATION_FAILED)),
             ),
         ),
     )
@@ -971,7 +945,7 @@ class APIEndpointExportRunner private constructor(
     ): ExportResult = ExportResult(
         successCount = 0,
         totalCount = normalizedDates.size,
-        failedDateDetails = failures.ifEmpty {
+        failedDateDetails = failures.map { it.copy(errorDetails = null) }.ifEmpty {
             listOf(FailedDateDetail(normalizedDates.first(), ExportFailureReason.NO_HEALTH_DATA))
         },
         target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
@@ -983,7 +957,7 @@ class APIEndpointExportRunner private constructor(
     ): ExportResult = ExportResult(
         successCount = 0,
         totalCount = dates.size,
-        failedDateDetails = failures,
+        failedDateDetails = failures.map { it.copy(errorDetails = null) },
         wasCancelled = true,
         target = com.healthmd.domain.model.ExportTarget.API_ENDPOINT,
     )

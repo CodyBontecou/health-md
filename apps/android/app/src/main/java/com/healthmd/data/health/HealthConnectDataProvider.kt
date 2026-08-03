@@ -19,6 +19,14 @@ class HealthConnectDataProvider(
     ): List<HealthData> =
         healthConnectManager.fetchHealthDataRange(dates, dataTypes, includeGranularData)
 
+    suspend fun fetchWidgetHealthDataRange(
+        dates: List<LocalDate>,
+        selection: HealthConnectWidgetReadSelection,
+    ): List<HealthData> = healthConnectManager.fetchWidgetHealthDataRange(
+        dates = dates,
+        selection = selection,
+    )
+
     override suspend fun isAvailable(): Boolean =
         healthConnectManager.isAvailable()
 

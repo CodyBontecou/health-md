@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.content.res.Configuration
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -31,39 +32,56 @@ class DirectCliForegroundService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
+    @Volatile private var stopRequested = false
 
     override fun onCreate() {
         super.onCreate()
         coordinator.resetSession()
-        createNotificationChannel()
-        startDirectForeground(notification("Waiting for Health.md CLI", indeterminate = true))
+        createNotificationChannel(this)
+        startDirectForeground(
+            notification(
+                getString(R.string.direct_cli_notification_waiting),
+                indeterminate = true,
+            ),
+        )
         scope.launch {
-            coordinator.state.collectLatest { state ->
-                updateNotification(state)
-                if (state is DirectCliConnectionState.Completed || state is DirectCliConnectionState.Failed) {
-                    stopSelf()
-                }
-            }
+            coordinator.state.collectLatest(::updateNotification)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            stopRequested = true
             coordinator.cancelActive()
             operation?.cancel()
-            stopSelf()
+            coordinator.reportDisconnected()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+            stopSelf(startId)
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_FORGET) {
+            stopRequested = true
             coordinator.cancelActive()
             operation?.cancel()
             operation = scope.launch {
-                coordinator.forget()
-                stopSelf()
+                try {
+                    coordinator.forget()
+                } finally {
+                    stopSelf(startId)
+                }
             }
             return START_NOT_STICKY
         }
-        if (operation?.isActive == true) return START_NOT_STICKY
+        if (operation?.isActive == true) {
+            val state = coordinator.state.value
+            if (state is DirectCliConnectionState.Completed || state is DirectCliConnectionState.Failed) {
+                operation?.cancel()
+            } else {
+                return START_NOT_STICKY
+            }
+        }
+        stopRequested = false
         operation = scope.launch {
             try {
                 when (intent?.action) {
@@ -73,15 +91,24 @@ class DirectCliForegroundService : Service() {
                         pairingCode = intent.getStringExtra(EXTRA_PAIRING_CODE).orEmpty(),
                     )
                     ACTION_CONNECT -> coordinator.connectAndServe()
-                    else -> stopSelf()
                 }
-            } catch (_: CancellationException) {
-                throw CancellationException()
+            } catch (error: CancellationException) {
+                if (!stopRequested) throw error
+                coordinator.reportDisconnected()
             } catch (_: Throwable) {
-                val message = "Could not connect to the Health.md CLI. Confirm it is listening and try again."
-                coordinator.reportFailure(message)
-                updateNotification(DirectCliConnectionState.Failed(message))
-                stopSelf()
+                if (stopRequested) {
+                    coordinator.reportDisconnected()
+                } else {
+                    val failure = if (intent?.action == ACTION_PAIR) {
+                        DirectCliFailure.PAIRING_FAILED
+                    } else {
+                        DirectCliFailure.CONNECTION_FAILED
+                    }
+                    coordinator.reportFailure(failure)
+                    updateNotification(DirectCliConnectionState.Failed(failure))
+                }
+            } finally {
+                stopSelf(startId)
             }
         }
         return START_NOT_STICKY
@@ -97,31 +124,56 @@ class DirectCliForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        createNotificationChannel(this)
+        updateNotification(coordinator.state.value)
+    }
+
     override fun onTimeout(startId: Int, fgsType: Int) {
         coordinator.cancelActive()
         operation?.cancel()
-        coordinator.reportFailure("The Direct CLI session reached Android's time limit.")
+        coordinator.reportFailure(DirectCliFailure.SESSION_TIMEOUT)
         stopSelf(startId)
     }
 
     private fun updateNotification(state: DirectCliConnectionState) {
+        val manager = getSystemService(NotificationManager::class.java)
+        if (stopRequested && state is DirectCliConnectionState.Idle) {
+            manager.cancel(NOTIFICATION_ID)
+            return
+        }
         val notification = when (state) {
-            DirectCliConnectionState.Idle -> notification("Direct CLI is idle")
-            DirectCliConnectionState.Pairing -> notification("Pairing with Health.md CLI", true)
-            DirectCliConnectionState.WaitingForCli -> notification("Connecting to Health.md CLI", true)
-            is DirectCliConnectionState.Connected -> notification("Connected to ${state.listenerName}", true)
+            DirectCliConnectionState.Idle -> notification(
+                getString(R.string.direct_cli_notification_idle),
+            )
+            DirectCliConnectionState.Pairing -> notification(
+                getString(R.string.direct_cli_notification_pairing),
+                true,
+            )
+            DirectCliConnectionState.WaitingForCli -> notification(
+                getString(R.string.direct_cli_notification_connecting),
+                true,
+            )
+            is DirectCliConnectionState.Connected -> notification(
+                getString(R.string.direct_cli_status_connected, state.listenerName),
+                true,
+            )
             is DirectCliConnectionState.Transferring -> {
                 val progress = if (state.totalBytes > 0) {
                     ((state.completedBytes * 100) / state.totalBytes).toInt().coerceIn(0, 100)
                 } else {
                     0
                 }
-                notification("Transferring Android health export", progress = progress)
+                notification(
+                    getString(R.string.direct_cli_notification_transferring),
+                    progress = progress,
+                )
             }
-            is DirectCliConnectionState.Completed -> notification(state.message)
-            is DirectCliConnectionState.Failed -> notification(state.message)
+            is DirectCliConnectionState.Completed -> notification(completionText(state.outcome))
+            is DirectCliConnectionState.Failed -> notification(failureText(state.reason))
         }
-        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
+        manager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun notification(
@@ -143,12 +195,12 @@ class DirectCliForegroundService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Health.md Direct CLI")
+            .setContentTitle(getString(R.string.direct_cli_notification_title))
             .setContentText(text)
             .setContentIntent(openApp)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(0, "Disconnect", stop)
+            .addAction(0, getString(R.string.direct_cli_disconnect), stop)
             .apply {
                 when {
                     progress != null -> setProgress(100, progress, false)
@@ -156,6 +208,47 @@ class DirectCliForegroundService : Service() {
                 }
             }
             .build()
+    }
+
+    private fun completionText(outcome: DirectCliCompletion): String = when (outcome) {
+        is DirectCliCompletion.Paired -> getString(
+            R.string.direct_cli_status_paired,
+            outcome.listenerName,
+        )
+        DirectCliCompletion.SessionFinished -> getString(
+            R.string.direct_cli_status_session_finished,
+        )
+        DirectCliCompletion.ExportCompleted -> getString(
+            R.string.direct_cli_status_export_completed,
+        )
+        DirectCliCompletion.ExportCancelled -> getString(
+            R.string.direct_cli_status_export_cancelled,
+        )
+    }
+
+    private fun failureText(reason: DirectCliFailure): String = when (reason) {
+        DirectCliFailure.PAIRING_FAILED,
+        DirectCliFailure.CONNECTION_FAILED -> getString(R.string.direct_cli_failure_connection)
+        DirectCliFailure.SESSION_TIMEOUT -> getString(R.string.direct_cli_failure_timeout)
+        DirectCliFailure.QUOTA_EXHAUSTED -> getString(R.string.direct_cli_failure_quota)
+        DirectCliFailure.FITBIT_RANGE_REQUIRED -> getString(
+            R.string.direct_cli_failure_fitbit_range,
+        )
+        DirectCliFailure.SOURCE_UNAVAILABLE -> getString(
+            R.string.direct_cli_failure_source_unavailable,
+        )
+        DirectCliFailure.HEALTH_ACCESS_REQUIRED -> getString(
+            R.string.direct_cli_failure_health_access,
+        )
+        DirectCliFailure.DEVICE_LOCKED -> getString(R.string.direct_cli_failure_device_locked)
+        DirectCliFailure.HISTORICAL_ACCESS_REQUIRED -> getString(
+            R.string.direct_cli_failure_historical_access,
+        )
+        DirectCliFailure.GENERATED_FILE_LIMIT -> getString(
+            R.string.direct_cli_failure_file_limit,
+        )
+        DirectCliFailure.SPOOL_MISSING -> getString(R.string.direct_cli_failure_spool_missing)
+        DirectCliFailure.EXPORT_FAILED -> getString(R.string.direct_cli_failure_export)
     }
 
     private fun startDirectForeground(notification: Notification) {
@@ -171,17 +264,6 @@ class DirectCliForegroundService : Service() {
         )
     }
 
-    private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            "Direct CLI exports",
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = "Encrypted direct export connection and transfer progress"
-        }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-    }
-
     companion object {
         private const val CHANNEL_ID = "healthmd_direct_cli"
         private const val NOTIFICATION_ID = 2_647
@@ -192,6 +274,19 @@ class DirectCliForegroundService : Service() {
         private const val EXTRA_HOST = "host"
         private const val EXTRA_PORT = "port"
         private const val EXTRA_PAIRING_CODE = "pairing_code"
+
+        fun createNotificationChannel(context: Context) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.direct_cli_notification_channel_name),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = context.getString(R.string.direct_cli_notification_channel_description)
+            }
+            context.getSystemService(NotificationManager::class.java)
+                .createNotificationChannel(channel)
+        }
 
         fun pair(context: Context, host: String, port: Int, pairingCode: String) {
             val intent = Intent(context, DirectCliForegroundService::class.java)

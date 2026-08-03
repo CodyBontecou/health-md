@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -57,7 +58,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +94,10 @@ import com.healthmd.presentation.theme.Spacing
 import com.healthmd.util.runCatchingCancellable
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.text.DateFormatSymbols
+import java.text.NumberFormat
+import java.text.ParsePosition
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -105,6 +112,7 @@ fun ScheduleScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     val healthConnectManager = remember { HealthConnectManager(context) }
+    val configurationErrorText = uiState.configurationError?.localizedText()
 
     var notificationsGranted by remember {
         mutableStateOf(hasPostNotificationsPermission(context))
@@ -364,9 +372,18 @@ fun ScheduleScreen(
             },
         )
 
-        if (uiState.nextExportDescription.isNotEmpty()) {
+        uiState.nextExportAtMillis?.let { nextExportAtMillis ->
+            val nextExport = Date(nextExportAtMillis)
+            val localizedDateTime = stringResource(
+                R.string.schedule_next_export_datetime,
+                DateFormat.getMediumDateFormat(context).format(nextExport),
+                DateFormat.getTimeFormat(context).format(nextExport),
+            )
             BodyText(
-                text = uiState.nextExportDescription,
+                text = stringResource(
+                    R.string.schedule_next_export_at_datetime,
+                    localizedDateTime,
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -391,14 +408,17 @@ fun ScheduleScreen(
         ExportTargetSelector(
             selectedTarget = uiState.selectedTarget,
             folderSubtitle = if (uiState.hasExportFolder) {
-                "Write scheduled files to the selected device folder"
+                stringResource(R.string.schedule_target_folder_ready)
             } else {
-                "Choose a folder from the Export screen"
+                stringResource(R.string.schedule_target_folder_choose)
             },
             apiSubtitle = if (uiState.apiEndpointConfigured) {
-                "POST JSON to ${APIExportEndpoint.displayName(uiState.apiEndpointUrl)}"
+                stringResource(
+                    R.string.schedule_target_api_configured,
+                    APIExportEndpoint.displayName(uiState.apiEndpointUrl),
+                )
             } else {
-                "Send scheduled JSON to your API endpoint"
+                stringResource(R.string.schedule_target_api_unconfigured)
             },
             onTargetSelected = { target ->
                 viewModel.setScheduledExportTarget(target)
@@ -410,13 +430,21 @@ fun ScheduleScreen(
 
         if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
             TextButton(onClick = { showAPISettings = true }) {
-                Text(if (uiState.apiEndpointConfigured) "Edit API endpoint" else "Configure API endpoint")
+                Text(
+                    stringResource(
+                        if (uiState.apiEndpointConfigured) {
+                            R.string.action_edit_endpoint
+                        } else {
+                            R.string.action_configure_endpoint
+                        },
+                    ),
+                )
             }
         }
 
-        uiState.configurationError?.let { message ->
+        configurationErrorText?.let { message ->
             WarningCard(
-                title = "Export destination not ready",
+                title = stringResource(R.string.schedule_destination_not_ready_title),
                 body = message,
                 action = if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
                     stringResource(R.string.action_configure_endpoint)
@@ -460,11 +488,11 @@ fun ScheduleScreen(
 
             BodyText(
                 text = when (uiState.dateWindow) {
-                    ScheduleDateWindow.PAST_COMPLETE_DAYS -> if (uiState.lookbackDays == 1) {
-                        stringResource(R.string.schedule_lookback_ios_single)
-                    } else {
-                        stringResource(R.string.schedule_lookback_ios_plural, uiState.lookbackDays)
-                    }
+                    ScheduleDateWindow.PAST_COMPLETE_DAYS -> pluralStringResource(
+                        R.plurals.schedule_lookback_days_summary,
+                        uiState.lookbackDays,
+                        uiState.lookbackDays,
+                    )
                     ScheduleDateWindow.TODAY -> stringResource(R.string.schedule_today_summary)
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -549,7 +577,7 @@ fun ScheduleScreen(
             initialEndpointUrl = uiState.apiEndpointUrl,
             authorizationConfigured = uiState.apiAuthorizationConfigured,
             requestHeadersConfigured = uiState.apiRequestHeadersConfigured,
-            configurationError = uiState.configurationError,
+            configurationError = configurationErrorText,
             onDismiss = {
                 showAPISettings = false
                 viewModel.clearConfigurationError()
@@ -706,13 +734,15 @@ private fun ScheduleSettingsCard(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     Text(
-                        text = uiState.lookbackDays.toString(),
+                        text = localizedInteger(uiState.lookbackDays),
                         style = MaterialTheme.typography.titleLarge,
                         color = AppColors.textSecondary,
                     )
                     SegmentedStepper(
                         onDecrease = { onLookbackDelta(-1) },
                         onIncrease = { onLookbackDelta(1) },
+                        decreaseDescription = stringResource(R.string.schedule_decrease_lookback_days),
+                        increaseDescription = stringResource(R.string.schedule_increase_lookback_days),
                     )
                 }
             }
@@ -813,6 +843,7 @@ private fun FrequencyRow(
                     onValueChange = onValueChange,
                 )
                 FrequencyUnitDropdown(
+                    value = value,
                     unit = unit,
                     onUnitSelected = onUnitSelected,
                 )
@@ -838,19 +869,20 @@ private fun FrequencyValueField(
     unit: ScheduleCadenceUnit,
     onValueChange: (Int) -> Unit,
 ) {
-    var text by rememberSaveable { mutableStateOf(value.toString()) }
+    val locale = LocalConfiguration.current.locales[0]
+    var text by rememberSaveable(locale) { mutableStateOf(formatInteger(value, locale)) }
     var isFocused by remember { mutableStateOf(false) }
     val minimumValue = minimumCadenceValue(unit)
 
     LaunchedEffect(value, unit, isFocused) {
         if (!isFocused) {
-            text = value.toString()
+            text = formatInteger(value, locale)
         }
     }
 
     fun commitValue() {
-        val committed = text.toIntOrNull()?.coerceAtLeast(minimumValue) ?: minimumValue
-        text = committed.toString()
+        val committed = parseLocalizedInteger(text, locale)?.coerceAtLeast(minimumValue) ?: minimumValue
+        text = formatInteger(committed, locale)
         onValueChange(committed)
     }
 
@@ -869,7 +901,7 @@ private fun FrequencyValueField(
             onValueChange = { raw ->
                 val digits = raw.filter { it.isDigit() }.take(MAX_FREQUENCY_DIGITS)
                 text = digits
-                digits.toIntOrNull()
+                parseLocalizedInteger(digits, locale)
                     ?.takeIf { it >= minimumValue }
                     ?.let(onValueChange)
             },
@@ -894,15 +926,28 @@ private fun FrequencyValueField(
 
 @Composable
 private fun FrequencyUnitDropdown(
+    value: Int,
     unit: ScheduleCadenceUnit,
     onUnitSelected: (ScheduleCadenceUnit) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val options = listOf(
-        ScheduleCadenceUnit.MINUTES to stringResource(R.string.cadence_unit_minutes),
-        ScheduleCadenceUnit.HOURS to stringResource(R.string.cadence_unit_hours),
-        ScheduleCadenceUnit.DAYS to stringResource(R.string.cadence_unit_days),
-        ScheduleCadenceUnit.WEEKS to stringResource(R.string.cadence_unit_weeks),
+        ScheduleCadenceUnit.MINUTES to pluralStringResource(
+            R.plurals.schedule_cadence_unit_minutes,
+            value,
+        ),
+        ScheduleCadenceUnit.HOURS to pluralStringResource(
+            R.plurals.schedule_cadence_unit_hours,
+            value,
+        ),
+        ScheduleCadenceUnit.DAYS to pluralStringResource(
+            R.plurals.schedule_cadence_unit_days,
+            value,
+        ),
+        ScheduleCadenceUnit.WEEKS to pluralStringResource(
+            R.plurals.schedule_cadence_unit_weeks,
+            value,
+        ),
     )
     val selectedLabel = options.firstOrNull { it.first == unit }?.second.orEmpty()
 
@@ -957,37 +1002,72 @@ private fun TimeRow(
     onMinuteDelta: (Int) -> Unit,
     onTogglePeriod: () -> Unit,
 ) {
-    val displayHour = ((hour + 11) % 12) + 1
-    val period = if (hour < 12) stringResource(R.string.schedule_time_period_am) else stringResource(R.string.schedule_time_period_pm)
+    val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
+    val use24HourTime = DateFormat.is24HourFormat(context)
+    val hourCycle = localizedHourCycle(locale, use24HourTime)
+    val displayHour = localizedDisplayHour(hour, hourCycle)
+    val period = DateFormatSymbols.getInstance(locale).amPmStrings[if (hour < 12) 0 else 1]
+    val periodPrecedesTime = !use24HourTime && localizedDayPeriodPrecedesHour(locale)
+    val hourFormat = remember(locale, use24HourTime) {
+        NumberFormat.getIntegerInstance(locale).apply {
+            isGroupingUsed = false
+            minimumIntegerDigits = localizedHourMinimumDigits(locale, use24HourTime)
+        }
+    }
+    val minuteFormat = remember(locale) {
+        NumberFormat.getIntegerInstance(locale).apply {
+            isGroupingUsed = false
+            minimumIntegerDigits = 2
+        }
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (periodPrecedesTime) {
+            PickerPill(
+                label = period,
+                onIncrement = onTogglePeriod,
+                onDecrement = onTogglePeriod,
+                incrementDescription = stringResource(R.string.schedule_toggle_time_period),
+                decrementDescription = stringResource(R.string.schedule_toggle_time_period),
+                modifier = Modifier.weight(1f),
+            )
+        }
         PickerPill(
-            label = displayHour.toString(),
+            label = hourFormat.format(displayHour),
             onIncrement = { onHourDelta(1) },
             onDecrement = { onHourDelta(-1) },
+            incrementDescription = stringResource(R.string.schedule_increase_hour),
+            decrementDescription = stringResource(R.string.schedule_decrease_hour),
             modifier = Modifier.weight(1f),
         )
         Text(
-            text = ":",
+            text = localizedTimeSeparator(locale, use24HourTime),
             style = MaterialTheme.typography.headlineMedium,
             color = AppColors.textSecondary,
         )
         PickerPill(
-            label = String.format(Locale.getDefault(), "%02d", minute),
+            label = minuteFormat.format(minute),
             onIncrement = { onMinuteDelta(1) },
             onDecrement = { onMinuteDelta(-1) },
+            incrementDescription = stringResource(R.string.schedule_increase_minute),
+            decrementDescription = stringResource(R.string.schedule_decrease_minute),
             modifier = Modifier.weight(1f),
         )
-        PickerPill(
-            label = period,
-            onIncrement = onTogglePeriod,
-            onDecrement = onTogglePeriod,
-            modifier = Modifier.weight(1f),
-        )
+        if (!use24HourTime && !periodPrecedesTime) {
+            PickerPill(
+                label = period,
+                onIncrement = onTogglePeriod,
+                onDecrement = onTogglePeriod,
+                incrementDescription = stringResource(R.string.schedule_toggle_time_period),
+                decrementDescription = stringResource(R.string.schedule_toggle_time_period),
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
@@ -996,6 +1076,8 @@ private fun PickerPill(
     label: String,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
+    incrementDescription: String,
+    decrementDescription: String,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(Radii.card)
@@ -1021,7 +1103,7 @@ private fun PickerPill(
         ) {
             Icon(
                 Icons.Filled.KeyboardArrowUp,
-                contentDescription = stringResource(R.string.increase),
+                contentDescription = incrementDescription,
                 tint = AppColors.accentHover,
                 modifier = Modifier
                     .size(20.dp)
@@ -1029,7 +1111,7 @@ private fun PickerPill(
             )
             Icon(
                 Icons.Filled.KeyboardArrowDown,
-                contentDescription = stringResource(R.string.decrease),
+                contentDescription = decrementDescription,
                 tint = AppColors.accentHover,
                 modifier = Modifier
                     .size(20.dp)
@@ -1043,6 +1125,8 @@ private fun PickerPill(
 private fun SegmentedStepper(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit,
+    decreaseDescription: String,
+    increaseDescription: String,
 ) {
     val shape = RoundedCornerShape(Radii.card)
     Row(
@@ -1053,14 +1137,14 @@ private fun SegmentedStepper(
             .border(1.dp, AppColors.borderDefault, shape),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StepperIcon(Icons.Filled.Remove, stringResource(R.string.decrease), onDecrease)
+        StepperIcon(Icons.Filled.Remove, decreaseDescription, onDecrease)
         Box(
             modifier = Modifier
                 .width(1.dp)
                 .height(32.dp)
                 .background(AppColors.borderDefault),
         )
-        StepperIcon(Icons.Filled.Add, stringResource(R.string.increase), onIncrease)
+        StepperIcon(Icons.Filled.Add, increaseDescription, onIncrease)
     }
 }
 
@@ -1142,6 +1226,114 @@ private fun WarningCard(
             }
         }
     }
+}
+
+@Composable
+private fun ScheduleUiMessage.localizedText(): String = when (this) {
+    is ScheduleUiMessage.Text -> stringResource(resourceId, *arguments.toTypedArray())
+}
+
+@Composable
+private fun localizedInteger(value: Int): String =
+    formatInteger(value, LocalConfiguration.current.locales[0])
+
+internal fun formatInteger(value: Int, locale: Locale): String =
+    NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }.format(value)
+
+internal fun parseLocalizedInteger(value: String, locale: Locale): Int? {
+    if (value.isBlank()) return null
+    val position = ParsePosition(0)
+    val parsed = NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }
+        .parse(value, position)
+    if (position.index != value.length) return null
+    return parsed?.toInt()
+}
+
+internal fun localizedHourCycle(locale: Locale, use24HourTime: Boolean): Char =
+    localizedTimePatternRuns(locale, use24HourTime)
+        .firstOrNull { it.symbol == 'H' || it.symbol == 'h' || it.symbol == 'K' || it.symbol == 'k' }
+        ?.symbol
+        ?: if (use24HourTime) 'H' else 'h'
+
+internal fun localizedDisplayHour(hour: Int, hourCycle: Char): Int {
+    val normalizedHour = Math.floorMod(hour, 24)
+    return when (hourCycle) {
+        'h' -> ((normalizedHour + 11) % 12) + 1
+        'K' -> normalizedHour % 12
+        'k' -> if (normalizedHour == 0) 24 else normalizedHour
+        else -> normalizedHour
+    }
+}
+
+internal fun localizedDayPeriodPrecedesHour(locale: Locale): Boolean {
+    val runs = localizedTimePatternRuns(locale, use24HourTime = false)
+    val periodStart = runs.firstOrNull { it.symbol == 'a' }?.start ?: return false
+    val hourStart = runs.firstOrNull {
+        it.symbol == 'H' || it.symbol == 'h' || it.symbol == 'K' || it.symbol == 'k'
+    }?.start ?: return false
+    return periodStart < hourStart
+}
+
+internal fun localizedHourMinimumDigits(locale: Locale, use24HourTime: Boolean): Int =
+    localizedTimePatternRuns(locale, use24HourTime)
+        .firstOrNull { it.symbol == 'H' || it.symbol == 'h' || it.symbol == 'K' || it.symbol == 'k' }
+        ?.length
+        ?.coerceIn(1, 2)
+        ?: 1
+
+internal fun localizedTimeSeparator(locale: Locale, use24HourTime: Boolean): String {
+    val pattern = localizedTimePattern(locale, use24HourTime)
+    val runs = timePatternRuns(pattern)
+    val hour = runs.firstOrNull {
+        it.symbol == 'H' || it.symbol == 'h' || it.symbol == 'K' || it.symbol == 'k'
+    } ?: return ":"
+    val minute = runs.firstOrNull { it.symbol == 'm' && it.start > hour.endExclusive } ?: return ":"
+    return pattern.substring(hour.endExclusive, minute.start)
+        .replace("'", "")
+        .ifEmpty { ":" }
+}
+
+private fun localizedTimePattern(locale: Locale, use24HourTime: Boolean): String =
+    DateFormat.getBestDateTimePattern(locale, if (use24HourTime) "Hm" else "hm")
+
+private fun localizedTimePatternRuns(
+    locale: Locale,
+    use24HourTime: Boolean,
+): List<TimePatternRun> = timePatternRuns(localizedTimePattern(locale, use24HourTime))
+
+private fun timePatternRuns(pattern: String): List<TimePatternRun> {
+    val runs = mutableListOf<TimePatternRun>()
+    var index = 0
+    var quoted = false
+    while (index < pattern.length) {
+        val symbol = pattern[index]
+        if (symbol == '\'') {
+            if (index + 1 < pattern.length && pattern[index + 1] == '\'') {
+                index += 2
+            } else {
+                quoted = !quoted
+                index++
+            }
+            continue
+        }
+        if (quoted || !symbol.isLetter()) {
+            index++
+            continue
+        }
+        var end = index + 1
+        while (end < pattern.length && pattern[end] == symbol) end++
+        runs += TimePatternRun(symbol, index, end)
+        index = end
+    }
+    return runs
+}
+
+private data class TimePatternRun(
+    val symbol: Char,
+    val start: Int,
+    val endExclusive: Int,
+) {
+    val length: Int get() = endExclusive - start
 }
 
 private const val MAX_FREQUENCY_DIGITS = 5

@@ -1,16 +1,24 @@
 package com.healthmd.presentation.export
 
 /**
- * Bounds the text rendered by Compose. Compatibility previews retain complete generated text in
- * the model; raw snapshot previews arrive pre-bounded from private storage. In both cases, large
- * files show their beginning and end while the actual export still contains every byte.
+ * Bounds the text rendered by Compose without adding presentation copy. Compatibility previews
+ * retain complete generated text in the model; raw snapshot previews arrive pre-bounded from
+ * private storage. Localized empty/truncation text is injected only when [render] is called.
  */
 internal data class ExportPreviewDisplayContent(
     val text: String,
+    val tailText: String = "",
     val originalByteCount: Int,
     val omittedByteCount: Int,
 ) {
+    val isEmpty: Boolean get() = originalByteCount == 0
     val isTruncated: Boolean get() = omittedByteCount > 0
+
+    fun render(emptyFileLabel: String, truncationMarker: String): String = when {
+        isEmpty -> emptyFileLabel
+        isTruncated -> text + truncationMarker + tailText
+        else -> text
+    }
 
     companion object {
         const val DEFAULT_MAXIMUM_RENDERED_BYTES = 64 * 1024
@@ -23,14 +31,6 @@ internal data class ExportPreviewDisplayContent(
             headBytes: Int = DEFAULT_HEAD_BYTES,
             tailBytes: Int = DEFAULT_TAIL_BYTES,
         ): ExportPreviewDisplayContent {
-            if (content.isEmpty()) {
-                return ExportPreviewDisplayContent(
-                    text = "(empty file)",
-                    originalByteCount = 0,
-                    omittedByteCount = 0,
-                )
-            }
-
             val originalByteCount = content.utf8ByteCount()
             if (originalByteCount <= maximumRenderedBytes) {
                 return ExportPreviewDisplayContent(
@@ -47,11 +47,10 @@ internal data class ExportPreviewDisplayContent(
             val tail = content.utf8Suffix(safeTailBytes)
             val renderedByteCount = head.utf8ByteCount() + tail.utf8ByteCount()
             val omittedByteCount = (originalByteCount - renderedByteCount).coerceAtLeast(0)
-            val marker = "\n\n… Preview truncated: ${formatPreviewBytes(omittedByteCount)} " +
-                "omitted from the middle of this ${formatPreviewBytes(originalByteCount)} file. …\n\n"
 
             return ExportPreviewDisplayContent(
-                text = head + marker + tail,
+                text = head,
+                tailText = tail,
                 originalByteCount = originalByteCount,
                 omittedByteCount = omittedByteCount,
             )
@@ -94,10 +93,4 @@ private fun Int.utf8ByteCount(): Int = when {
     this <= 0x7FF -> 2
     this <= 0xFFFF -> 3
     else -> 4
-}
-
-private fun formatPreviewBytes(bytes: Int): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> String.format(java.util.Locale.US, "%.1f KB", bytes / 1024.0)
-    else -> String.format(java.util.Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
 }

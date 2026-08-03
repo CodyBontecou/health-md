@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_preview_background">#FF000000</color>
+    <color name="widget_preview_surface">#FF1A1A1A</color>
+    <color name="widget_preview_primary">#FFEDEDED</color>
+    <color name="widget_preview_secondary">#FFA0A0A0</color>
+    <color name="widget_preview_brand">#FFC5ADD9</color>
+    <color name="widget_preview_activity">#FFFF9300</color>
+    <color name="widget_preview_heart">#FFFF565F</color>
+    <color name="widget_preview_sleep">#FFC472FB</color>
+</resources>

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.android.billingclient.api.*
 import com.healthmd.BuildConfig
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.repository.BillingRepository
 import kotlinx.coroutines.CoroutineScope
@@ -69,8 +70,8 @@ class BillingRepositoryImpl(
     private val _isRestoring = MutableStateFlow(false)
     override val isRestoring: StateFlow<Boolean> = _isRestoring.asStateFlow()
 
-    private val _purchaseError = MutableStateFlow<String?>(null)
-    override val purchaseError: StateFlow<String?> = _purchaseError.asStateFlow()
+    private val _purchaseError = MutableStateFlow<BillingError?>(null)
+    override val purchaseError: StateFlow<BillingError?> = _purchaseError.asStateFlow()
 
     private val _productDetails = MutableStateFlow<ProductDetails?>(null)
     override val productDetails: StateFlow<ProductDetails?> = _productDetails.asStateFlow()
@@ -209,13 +210,13 @@ class BillingRepositoryImpl(
             // Try to query product first
             queryProduct()
             if (_productDetails.value == null) {
-                _purchaseError.value = "Unable to load product information. Please try again."
+                _purchaseError.value = BillingError.PRODUCT_UNAVAILABLE
                 return false
             }
         }
 
         if (!billingClient.isReady) {
-            _purchaseError.value = "Billing service unavailable. Please try again."
+            _purchaseError.value = BillingError.SERVICE_UNAVAILABLE
             return false
         }
 
@@ -234,8 +235,12 @@ class BillingRepositoryImpl(
         
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             _isPurchasing.value = false
-            _purchaseError.value = "Failed to start purchase: ${result.debugMessage}"
-            Timber.e("Launch billing flow failed: ${result.debugMessage}")
+            _purchaseError.value = BillingError.PURCHASE_FAILED
+            Timber.e(
+                "Launch billing flow failed: responseCode=%d, debugMessage=%s",
+                result.responseCode,
+                result.debugMessage,
+            )
             return false
         }
 
@@ -269,7 +274,7 @@ class BillingRepositoryImpl(
         }
 
         if (!billingClient.isReady) {
-            _purchaseError.value = "Billing service unavailable. Please try again."
+            _purchaseError.value = BillingError.SERVICE_UNAVAILABLE
             continuation.resume(false)
             return@suspendCancellableCoroutine
         }
@@ -305,13 +310,17 @@ class BillingRepositoryImpl(
                     Timber.d("Purchase restored successfully")
                     continuation.resume(true)
                 } else {
-                    _purchaseError.value = "No previous purchase found"
+                    _purchaseError.value = BillingError.NO_PREVIOUS_PURCHASE
                     Timber.d("No purchases to restore")
                     continuation.resume(false)
                 }
             } else {
-                _purchaseError.value = "Failed to restore: ${billingResult.debugMessage}"
-                Timber.e("Restore failed: ${billingResult.debugMessage}")
+                _purchaseError.value = BillingError.RESTORE_FAILED
+                Timber.e(
+                    "Restore failed: responseCode=%d, debugMessage=%s",
+                    billingResult.responseCode,
+                    billingResult.debugMessage,
+                )
                 continuation.resume(false)
             }
         }
@@ -363,8 +372,12 @@ class BillingRepositoryImpl(
                 saveUnlockState(true)
             }
             else -> {
-                _purchaseError.value = "Purchase failed: ${billingResult.debugMessage}"
-                Timber.e("Purchase error: ${billingResult.responseCode} - ${billingResult.debugMessage}")
+                _purchaseError.value = BillingError.PURCHASE_FAILED
+                Timber.e(
+                    "Purchase error: responseCode=%d, debugMessage=%s",
+                    billingResult.responseCode,
+                    billingResult.debugMessage,
+                )
             }
         }
     }

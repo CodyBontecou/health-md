@@ -1,7 +1,10 @@
 package com.healthmd.presentation.history
 
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
@@ -29,6 +32,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
+import timber.log.Timber
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
@@ -78,15 +82,21 @@ class HistoryViewModel @Inject constructor(
             try {
                 val settings = settingsRepository.getExportSettings().copy(exportMode = entry.exportMode)
                 if (entry.target == ExportTarget.DEVICE_FOLDER && settingsRepository.getExportFolderUri() == null) {
-                    _uiState.update { it.copy(retryMessage = "Select an export folder before retrying.") }
+                    _uiState.update {
+                        it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_folder_required))
+                    }
                     return@launch
                 }
                 if (entry.target == ExportTarget.API_ENDPOINT && !APIExportEndpoint.isConfigured(settings.apiEndpointUrl)) {
-                    _uiState.update { it.copy(retryMessage = "Configure an API endpoint before retrying.") }
+                    _uiState.update {
+                        it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_api_required))
+                    }
                     return@launch
                 }
                 if (!healthRepository.hasPermissions()) {
-                    _uiState.update { it.copy(retryMessage = "Grant Health Connect permissions before retrying.") }
+                    _uiState.update {
+                        it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_permissions_required))
+                    }
                     return@launch
                 }
 
@@ -104,10 +114,14 @@ class HistoryViewModel @Inject constructor(
                     ) ?: ExportResult(
                         successCount = 0,
                         totalCount = 1,
-                        failedDateDetails = listOf(FailedDateDetail(retryDates.first(), ExportFailureReason.UNKNOWN, "Raw snapshot service unavailable")),
+                        failedDateDetails = listOf(
+                            FailedDateDetail(retryDates.first(), ExportFailureReason.UNKNOWN),
+                        ),
                         target = entry.target,
                         exportMode = ExportMode.RAW_SNAPSHOT,
-                    )
+                    ).also {
+                        Timber.w("Raw snapshot service unavailable while retrying export history")
+                    }
                 } else when (entry.target) {
                     ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
                         .exportDates(retryDates, settings)
@@ -119,10 +133,12 @@ class HistoryViewModel @Inject constructor(
                         successCount = 0,
                         totalCount = retryDates.size,
                         failedDateDetails = retryDates.map {
-                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
                         },
                         target = ExportTarget.API_ENDPOINT,
-                    )
+                    ).also {
+                        Timber.w("API export service unavailable while retrying export history")
+                    }
                 }
 
                 exportHistoryRepository.insertEntry(
@@ -142,7 +158,8 @@ class HistoryViewModel @Inject constructor(
                         fileCount = if (entry.target == ExportTarget.DEVICE_FOLDER) {
                             if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else estimatedFileCount(result.successCount, settings)
                         } else 0,
-                        warningSummary = result.warningSummary(),
+                        // The UI derives a localized warning from the typed result fields.
+                        warningSummary = null,
                         exportMode = result.exportMode,
                     )
                 )
@@ -150,16 +167,23 @@ class HistoryViewModel @Inject constructor(
                     it.copy(
                         selectedEntry = null,
                         retryMessage = if (result.isFullSuccess) {
-                            "Retry completed."
+                            HistoryUiMessage.Text(R.string.history_retry_complete)
                         } else if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                            "Raw snapshot retry failed. Review export history for details."
+                            HistoryUiMessage.Text(R.string.history_retry_raw_failed)
                         } else {
-                            "Retry finished with ${result.failedDateDetails.size} failed date(s)."
+                            HistoryUiMessage.Plural(
+                                resourceId = R.plurals.history_retry_failed_dates,
+                                quantity = result.failedDateDetails.size,
+                                arguments = listOf(result.failedDateDetails.size),
+                            )
                         },
                     )
                 }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(retryMessage = e.message ?: "Retry failed.") }
+            } catch (error: Exception) {
+                Timber.e(error, "Export history retry failed")
+                _uiState.update {
+                    it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_failed))
+                }
             } finally {
                 ExportAwakeCoordinator.shared.endActivity(awakeActivityId)
                 _uiState.update { it.copy(isRetrying = false) }
@@ -175,17 +199,24 @@ class HistoryViewModel @Inject constructor(
 
     private fun estimatedFileCount(successCount: Int, settings: ExportSettings): Int =
         successCount * settings.selectedExportFormats.size
+}
 
-    private fun ExportResult.warningSummary(): String? = when {
-        isPartialSuccess -> "${failedDateDetails.size} failed date(s)"
-        wasCancelled -> "Export cancelled"
-        else -> null
-    }
+sealed interface HistoryUiMessage {
+    data class Text(
+        @StringRes val resourceId: Int,
+        val arguments: List<Any> = emptyList(),
+    ) : HistoryUiMessage
+
+    data class Plural(
+        @PluralsRes val resourceId: Int,
+        val quantity: Int,
+        val arguments: List<Any> = emptyList(),
+    ) : HistoryUiMessage
 }
 
 data class HistoryUiState(
     val selectedEntry: ExportHistoryEntry? = null,
     val showClearConfirmation: Boolean = false,
     val isRetrying: Boolean = false,
-    val retryMessage: String? = null,
+    val retryMessage: HistoryUiMessage? = null,
 )

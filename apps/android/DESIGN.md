@@ -511,3 +511,15 @@ Copy is part of the design; keep it precise and free of filler.
 - Don’t use `background-200` as a general fill; it is for subtle separation only.
 - Don’t mix rounded and sharp corners, or more than two font weights, in one view.
 - Don’t swap `gray-*` for `background-*`; they are separate scales.
+
+## Android App Widgets
+
+Home-screen widgets use Jetpack Glance and remain part of this design system even though they are rendered through Android `RemoteViews` rather than the app’s Compose tree.
+
+- Use the light and dark values from the named Geist color tokens through day/night `ColorProvider` values. Do not adopt launcher wallpaper colors or Material dynamic color.
+- Use the existing 4px spacing scale, `rounded.md` outer surfaces, and the semantic accent scales for activity, heart, and sleep charts. Bitmap chart artwork must receive token colors rather than define its own palette.
+- Glance cannot reliably load bundled app font resources in a remote host. Widget text may therefore use Android’s platform sans-serif and monospace families as a scoped platform exception; keep the documented Geist type sizes, weights, hierarchy, and tabular-number intent.
+- Treat compact, wide, medium, and tall-large widget layouts as responsive compositions, not fixed phone breakpoints. Content must tolerate launcher padding, OEM cell geometry, and user resizing without clipping.
+- Small widget captions use the named `gray-900` token rather than the lower-contrast disabled token, preserving at least 4.5:1 contrast in light and dark themes.
+- Picker previews use synthetic data. Health measurements never appear in preview assets.
+- Health widgets are home-screen-only while Android lacks an equivalent to WidgetKit sensitive-content redaction. Do not expose measurement-bearing providers to keyguard hosts.

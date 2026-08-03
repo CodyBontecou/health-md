@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -52,6 +53,9 @@ import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 
 @Composable
 fun HealthMdNavigation(
@@ -258,7 +262,7 @@ fun HealthMdNavigation(
                     isPurchasing = isPurchasing,
                     isRestoring = isRestoring,
                     priceText = priceText,
-                    errorMessage = purchaseError,
+                    purchaseError = purchaseError,
                     onClearError = { paywallViewModel.clearError() },
                     isDebugBuild = paywallViewModel.isDebugBuild,
                     debugUnlockOverride = debugUnlockOverride,
@@ -399,11 +403,16 @@ private fun ScheduledRecoveryDialog(
 private fun scheduledRecoveryDialogText(state: ScheduledRecoveryUiState): String {
     val dateSummary = when (state.pendingDates.size) {
         0 -> ""
-        1 -> state.pendingDates.first().toString()
-        else -> "${state.pendingDates.first()} — ${state.pendingDates.last()}"
+        1 -> localizedRecoveryDate(state.pendingDates.first())
+        else -> stringResource(
+            R.string.history_date_range,
+            localizedRecoveryDate(state.pendingDates.first()),
+            localizedRecoveryDate(state.pendingDates.last()),
+        )
     }
-    val body = stringResource(
-        R.string.scheduled_recovery_body,
+    val body = pluralStringResource(
+        R.plurals.scheduled_recovery_body,
+        state.pendingDates.size,
         state.pendingDates.size,
         dateSummary,
     )
@@ -427,10 +436,18 @@ private fun scheduledRecoveryDialogText(state: ScheduledRecoveryUiState): String
                     exportResult == null -> null
                     exportResult.isFullSuccess -> stringResource(R.string.scheduled_recovery_result_complete)
                     else -> stringResource(
-                        R.string.scheduled_recovery_result_partial,
-                        exportResult.successCount,
-                        exportResult.totalCount,
-                        exportResult.failedDateDetails.size,
+                        R.string.scheduled_recovery_result_summary,
+                        pluralStringResource(
+                            R.plurals.scheduled_recovery_result_exported_dates,
+                            exportResult.totalCount,
+                            exportResult.successCount,
+                            exportResult.totalCount,
+                        ),
+                        pluralStringResource(
+                            R.plurals.scheduled_recovery_result_pending_dates,
+                            exportResult.failedDateDetails.size,
+                            exportResult.failedDateDetails.size,
+                        ),
                     )
                 }
             }
@@ -440,6 +457,13 @@ private fun scheduledRecoveryDialogText(state: ScheduledRecoveryUiState): String
     }
 
     return listOfNotNull(body, blocker, result).joinToString("\n\n")
+}
+
+@Composable
+private fun localizedRecoveryDate(date: LocalDate): String {
+    val instant = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+    return android.text.format.DateFormat.getMediumDateFormat(LocalContext.current)
+        .format(Date.from(instant))
 }
 
 @Composable

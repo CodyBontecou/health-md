@@ -55,6 +55,29 @@ class DirectCliReleaseReadinessTest {
     }
 
     @Test
+    fun directCliUiStateUsesTypedOutcomesInsteadOfArbitraryProse() {
+        val paired = DirectCliConnectionState.Completed(
+            DirectCliCompletion.Paired("Test listener"),
+        )
+        val failed = DirectCliConnectionState.Failed(DirectCliFailure.EXPORT_FAILED)
+
+        assertThat(paired.outcome).isEqualTo(DirectCliCompletion.Paired("Test listener"))
+        assertThat(failed.reason).isEqualTo(DirectCliFailure.EXPORT_FAILED)
+
+        val screen = read(
+            "app/src/main/java/com/healthmd/presentation/directcli/DirectCliScreen.kt",
+        )
+        assertThat(screen).contains("Formatter.formatFileSize")
+        assertThat(screen).doesNotContain("state.message")
+
+        val service = read(
+            "app/src/main/java/com/healthmd/direct/DirectCliForegroundService.kt",
+        )
+        assertThat(service).contains("getString(R.string.direct_cli_notification_title)")
+        assertThat(service).doesNotContain("error.message")
+    }
+
+    @Test
     fun sharedInteropFixtureIsConsumedByTheKotlinModule() {
         val fixture = File(
             repoRoot(),

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
     <!-- Common -->
     <string name="ok">ঠিক আছে</string>
@@ -41,13 +41,93 @@
     <string name="health_connect_error_settings_launch">এই ডিভাইসে Health Connect-এর সেটিংস খোলা যায়নি।</string>
     <string name="health_connect_error_install_launch">এই ডিভাইসে Health Connect-এর Play Store পৃষ্ঠা খোলা যায়নি।</string>
     <string name="health_connect_error_history_unavailable">Health Connect-এর এই সংস্করণটি সম্পূর্ণ ইতিহাসে অ্যাক্সেস দিতে পারে না। Health Connect আপডেট করুন অথবা গত ৩০ দিনের মধ্যে তারিখ নির্বাচন করুন।</string>
-    <string name="health_connect_error_background_unavailable">এই Health Connect প্রদানকারী ব্যাকগ্রাউন্ডে ডেটা পড়তে পারে না। নির্ধারিত রপ্তানি চালু করার আগে Health Connect আপডেট করুন।</string>
+    <string name="health_connect_error_background_unavailable">এই Health Connect প্রদানকারী ব্যাকগ্রাউন্ডে ডেটা পড়তে পারে না। নির্ধারিত রপ্তানি বা ব্যাকগ্রাউন্ড উইজেট রিফ্রেশ চালু করার আগে Health Connect আপডেট করুন।</string>
     <string name="permissions_required_title">অনুমতি প্রয়োজন</string>
     <string name="permissions_required_message">আপনার স্বাস্থ্য ডেটা রপ্তানি করতে Health Connect অনুমতি দিন।</string>
     <string name="permissions_grant_button">অনুমতি প্রদান করুন</string>
     <string name="history_permission_required_title">Health Connect ইতিহাস অ্যাক্সেস প্রয়োজন</string>
     <string name="history_permission_required_message">Health Connect এই অ্যাপটি প্রথম অনুমতি পাওয়ার আগের প্রায় ৩০ দিন পর্যন্তই ডেটা পড়তে দেয়। ইতিহাসে অ্যাক্সেস দিন, যাতে নির্বাচিত পুরোনো তারিখগুলো নীরবে বাদ না পড়ে রপ্তানি হয়।</string>
     <string name="history_permission_grant_button">ইতিহাস অ্যাক্সেস মঞ্জুর করুন</string>
+
+    <!-- Android home-screen widgets -->
+    <string name="widget_health_summary_name">স্বাস্থ্য সারাংশ</string>
+    <string name="widget_health_summary_description">Health.md থেকে আজকের কার্যকলাপ, ঘুম, হৃদ্‌যন্ত্র ও পুনরুদ্ধারের মেট্রিক।</string>
+    <string name="widget_activity_name">কার্যকলাপ</string>
+    <string name="widget_activity_description">Health.md থেকে পদক্ষেপ, সক্রিয় ক্যালোরি ও ব্যায়ামের অগ্রগতি।</string>
+    <string name="widget_heart_range_name">হৃদ্‌স্পন্দনের পরিসর</string>
+    <string name="widget_heart_range_description">Health.md থেকে সাত দিনের সর্বনিম্ন, গড় ও সর্বোচ্চ হৃদ্‌স্পন্দন।</string>
+    <string name="widget_sleep_name">ঘুম</string>
+    <string name="widget_sleep_description">Health.md থেকে গত রাতের ঘুম ও সাত দিনের ঘুমের চার্ট।</string>
+    <string name="widget_label_today">আজ</string>
+    <string name="widget_label_move">চলাফেরা</string>
+    <string name="widget_label_exercise">ব্যায়াম</string>
+    <string name="widget_label_sleep">ঘুম</string>
+    <string name="widget_label_resting">বিশ্রামকালীন</string>
+    <string name="widget_label_heart_range">হৃদ্‌স্পন্দনের পরিসর</string>
+    <string name="widget_label_average">গড়</string>
+    <string name="widget_label_minimum">সর্বনিম্ন %1$s</string>
+    <string name="widget_label_maximum">সর্বোচ্চ %1$s</string>
+    <string name="widget_label_last_night">গত রাত</string>
+    <string name="widget_label_seven_day_sleep">৭ দিনের ঘুম</string>
+    <string name="widget_label_seven_day_average">৭ দিনের গড়</string>
+    <string name="widget_label_bedtime">ঘুমানোর সময়</string>
+    <string name="widget_label_wake">জাগার সময়</string>
+    <string name="widget_unit_steps">%1$s পদক্ষেপ</string>
+    <string name="widget_unit_kilocalories">%1$s kcal</string>
+    <string name="widget_unit_minutes">%1$s মিনিট</string>
+    <string name="widget_unit_hours">%1$s ঘণ্টা</string>
+    <string name="widget_unit_bpm">%1$s bpm</string>
+    <string name="widget_unit_milliseconds">%1$s ms</string>
+    <string name="widget_goal_eight_hours">লক্ষ্য: %1$s ঘণ্টা</string>
+    <string name="widget_state_loading">স্বাস্থ্য ডেটা লোড হচ্ছে…</string>
+    <string name="widget_state_open_for_access">Health Connect-এ অ্যাক্সেস দিতে Health.md খুলুন।</string>
+    <string name="widget_state_background_access">এই উইজেট রিফ্রেশ করতে Health.md খুলুন।</string>
+    <string name="widget_state_health_connect_unavailable">Health Connect সেট আপ করে Health.md খুলুন।</string>
+    <string name="widget_state_unlock">Health.md রিফ্রেশ করতে ফোন আনলক করুন।</string>
+    <string name="widget_state_no_summary_data">স্বাস্থ্য সারাংশের কোনো ডেটা নেই</string>
+    <string name="widget_state_no_activity_data">কোনো কার্যকলাপের ডেটা নেই</string>
+    <string name="widget_state_no_heart_data">হৃদ্‌যন্ত্রের কোনো ডেটা নেই</string>
+    <string name="widget_state_no_sleep_data">ঘুমের কোনো ডেটা নেই</string>
+    <plurals name="widget_state_updated_minutes">
+        <item quantity="one">%1$s মিনিট আগে আপডেট হয়েছে</item>
+        <item quantity="other">%1$s মিনিট আগে আপডেট হয়েছে</item>
+    </plurals>
+    <plurals name="widget_state_updated_hours">
+        <item quantity="one">%1$s ঘণ্টা আগে আপডেট হয়েছে</item>
+        <item quantity="other">%1$s ঘণ্টা আগে আপডেট হয়েছে</item>
+    </plurals>
+    <string name="widget_setup_title">%1$s সেট আপ করুন</string>
+    <string name="widget_setup_body">Health.md শুধু এই উইজেটে দেখানো কার্যকলাপ, ঘুম বা হৃদ্‌যন্ত্রের মেট্রিক পড়ে। পরিমাপ এই ডিভাইসেই থাকে।</string>
+    <string name="widget_setup_foreground_access">উইজেটকে স্বাস্থ্য অ্যাক্সেস দিন</string>
+    <string name="widget_setup_background_access">ব্যাকগ্রাউন্ড রিফ্রেশের অনুমতি দিন</string>
+    <string name="widget_setup_background_body">Health.md খোলা না থাকলেও ব্যাকগ্রাউন্ড অ্যাক্সেস উইজেট হালনাগাদ রাখে। এটি ছাড়াও উইজেট যোগ করতে পারবেন।</string>
+    <string name="widget_setup_add">উইজেট যোগ করুন</string>
+    <string name="widget_setup_adding">উইজেট যোগ হচ্ছে…</string>
+    <string name="widget_setup_access_ready">Health Connect অ্যাক্সেস প্রস্তুত।</string>
+    <string name="widget_setup_partial_access">আপনি যে মেট্রিক শেয়ার করেছেন, উইজেট সেগুলো দেখাবে।</string>
+    <string name="widget_setup_error">উইজেট সেট আপ করা যায়নি। Health Connect পরীক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="widget_preview_summary_value">৮,৭৪২ পদক্ষেপ</string>
+    <string name="widget_preview_summary_detail">৭.৫ ঘণ্টা ঘুম · ৫৮ bpm</string>
+    <string name="widget_preview_activity_value">৪২১ kcal · ৩৭ মিনিট</string>
+    <string name="widget_preview_activity_detail">৮,৭৪২ / ১০,০০০ পদক্ষেপ</string>
+    <string name="widget_preview_heart_value">গড় ৭২ bpm</string>
+    <string name="widget_preview_heart_detail">৪৭ মিনিট · সর্বোচ্চ ১৫১ · ৪৬ ms RMSSD</string>
+    <string name="widget_preview_sleep_value">গত রাতে ৭.৫ ঘণ্টা</string>
+    <string name="widget_preview_sleep_detail">রাত ১০:৩০ – সকাল ৬:৩০</string>
+    <string name="widget_settings_title">হোম-স্ক্রিন উইজেট</string>
+    <string name="widget_settings_none">কোনো উইজেট ইনস্টল করা নেই</string>
+    <string name="widget_settings_add_from_home">হোম স্ক্রিনের উইজেট পিকার থেকে Health.md যোগ করুন।</string>
+    <string name="widget_settings_current">উইজেটগুলো হালনাগাদ এবং ব্যাকগ্রাউন্ডে রিফ্রেশ হতে পারে।</string>
+    <string name="widget_settings_foreground_only">Health.md খোলা থাকলে উইজেট রিফ্রেশ হয়।</string>
+    <string name="widget_settings_stale">ক্যাশে রাখা মানগুলো পুরোনো। পরিমাপের ওপর নির্ভর করার আগে রিফ্রেশ করুন।</string>
+    <string name="widget_settings_access_required">Health Connect অ্যাক্সেস প্রয়োজন।</string>
+    <string name="widget_settings_no_data">এখনও কোনো উইজেট ডেটা নেই।</string>
+    <string name="widget_settings_refresh">উইজেট রিফ্রেশ করুন</string>
+    <string name="widget_settings_manage_access">উইজেট অ্যাক্সেস পরিচালনা করুন</string>
+    <plurals name="widget_settings_count">
+        <item quantity="one">%1$sটি উইজেট ইনস্টল করা হয়েছে</item>
+        <item quantity="other">%1$sটি উইজেট ইনস্টল করা হয়েছে</item>
+    </plurals>
     <!-- Date range -->
     <string name="section_date_range">তারিখ পরিসীমা</string>
     <string name="date_shortcut_1d">১ দিন</string>
@@ -75,14 +155,17 @@
     <string name="export_preview_done">সম্পন্ন</string>
     <string name="export_preview_building">প্রিভিউ তৈরি হচ্ছে…</string>
     <string name="export_preview_device_destination">ডিভাইস ফোল্ডার</string>
-    <string name="export_preview_api_destination">API শেষ বিন্দু</string>
+    <string name="export_preview_api_destination">API এন্ডপয়েন্ট</string>
     <string name="export_preview_complete_file">রপ্তানি করা হবে এমন সম্পূর্ণ %1$s ফাইলটি দেখানো হচ্ছে।</string>
     <string name="export_preview_truncated_file">এই %1$s ফাইলের সংক্ষিপ্ত প্রিভিউ দেখানো হচ্ছে। সম্পূর্ণ রপ্তানিতে সব ডেটাই থাকবে।</string>
     <string name="export_preview_limited_one">ডেটাসহ সাম্প্রতিকতম দিনের প্রিভিউ দেখানো হচ্ছে। সম্পূর্ণ রপ্তানি প্রতিটি নির্বাচিত তারিখের জন্য চলবে।</string>
     <string name="export_preview_limited_other">ডেটাসহ সাম্প্রতিকতম %1$d দিনের প্রিভিউ দেখানো হচ্ছে। সম্পূর্ণ রপ্তানি প্রতিটি নির্বাচিত তারিখের জন্য চলবে।</string>
     <string name="export_preview_no_data_title">প্রিভিউ করার মতো কোনো ডেটা নেই</string>
     <string name="export_preview_no_data_message">নির্বাচিত তারিখগুলোর জন্য কোনো স্বাস্থ্য ডেটা নেই, অথবা কোনো ফরম্যাট নির্বাচন করা হয়নি।</string>
-    <string name="free_exports_remaining">%d টি বিনামূল্যে রপ্তানি বাকি</string>
+    <plurals name="free_exports_remaining">
+        <item quantity="one">%1$dটি বিনামূল্যের রপ্তানি বাকি</item>
+        <item quantity="other">%1$dটি বিনামূল্যের রপ্তানি বাকি</item>
+    </plurals>
     <string name="unlock_button">Health.md আনলক করুন</string>
     <string name="export_result_days">%1$d/%2$d দিন রপ্তানি করা হয়েছে</string>
     <string name="open_folder">ফোল্ডার খুলুন</string>
@@ -92,27 +175,33 @@
     <string name="export_diagnostics_title_partial">আংশিক রপ্তানি</string>
     <string name="export_diagnostics_title_failed">রপ্তানি ব্যর্থ হয়েছে৷</string>
     <string name="export_diagnostics_title_cancelled">রপ্তানি বাতিল করা হয়েছে</string>
-    <string name="export_diagnostics_failed_count">%d দিন রপ্তানি হয়নি</string>
+    <plurals name="export_diagnostics_failed_count">
+        <item quantity="one">%1$d দিন রপ্তানি হয়নি</item>
+        <item quantity="other">%1$d দিন রপ্তানি হয়নি</item>
+    </plurals>
     <string name="export_diagnostics_cancelled_message">প্রতিদিন প্রক্রিয়াকরণের আগে রপ্তানি বন্ধ হয়ে গেছে।</string>
     <string name="export_diagnostics_reasons_title">ডায়াগনস্টিকস</string>
-    <string name="export_diagnostics_reason_count">%1$s: %2$d দিন</string>
+    <plurals name="export_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d দিন</item>
+        <item quantity="other">%1$s: %2$d দিন</item>
+    </plurals>
     <string name="export_diagnostics_date_list">ব্যর্থ তারিখ: %s</string>
     <string name="export_diagnostics_date_list_more">ব্যর্থ তারিখ: %1$s, +%2$d আরো</string>
-    <string name="export_diagnostics_no_details">প্রতিদিনের কোনো বিবরণ রেকর্ড করা হয়নি। একটি ছোট পরিসর চেষ্টা করুন এবং Health Connect অনুমতি পরীক্ষা করুন.</string>
+    <string name="export_diagnostics_no_details">প্রতিদিনের কোনো বিবরণ রেকর্ড করা হয়নি। ছোট একটি পরিসর চেষ্টা করে Health Connect-এর অনুমতি পরীক্ষা করুন।</string>
     <string name="export_diagnostics_use_failed_range">ব্যর্থ পরিসর ব্যবহার করুন</string>
     <string name="export_failure_no_folder_label">কোনো ফোল্ডার নির্বাচন করা হয়নি</string>
-    <string name="export_failure_no_data_label">কোন Health Connect ডেটা নেই</string>
+    <string name="export_failure_no_data_label">কোনো Health Connect ডেটা নেই</string>
     <string name="export_failure_access_denied_label">স্বাস্থ্য অ্যাক্সেস অস্বীকৃত</string>
     <string name="export_failure_file_write_label">ফাইল লিখতে ব্যর্থ হয়েছে</string>
-    <string name="export_failure_rate_limited_label">Health Connect হার সীমা</string>
+    <string name="export_failure_rate_limited_label">Health Connect রেট লিমিট</string>
     <string name="export_failure_health_connect_label">Health Connect ত্রুটি</string>
     <string name="export_failure_device_locked_label">রিবুট করার পরে ডিভাইস লক করা হয়েছে</string>
     <string name="export_failure_background_permission_label">পটভূমি অ্যাক্সেস অনুপস্থিত</string>
     <string name="export_failure_invalid_api_endpoint_label">অবৈধ API এন্ডপয়েন্ট</string>
     <string name="export_failure_network_label">API নেটওয়ার্ক ত্রুটি</string>
-    <string name="export_failure_api_rejected_label">API রপ্তানি প্রত্যাখ্যান</string>
+    <string name="export_failure_api_rejected_label">API রপ্তানি প্রত্যাখ্যান করেছে</string>
     <string name="export_failure_unknown_label">অজানা ব্যর্থতা</string>
-    <string name="export_guidance_rate_limit">Health Connect পড়ার সংখ্যা সীমিত। কিছুক্ষণ অপেক্ষা করুন, একটি ছোট তারিখের পরিসর আবার চেষ্টা করুন, বা বাকি তারিখগুলি পরে রপ্তানি করুন৷</string>
+    <string name="export_guidance_rate_limit">Health Connect ডেটা পড়ার সংখ্যা সীমিত করেছে। কিছুক্ষণ অপেক্ষা করুন, ছোট একটি তারিখের পরিসর দিয়ে আবার চেষ্টা করুন অথবা বাকি তারিখগুলো পরে রপ্তানি করুন।</string>
     <string name="export_guidance_historical_permission">Health Connect খুলুন এবং অনুপস্থিত ডেটা/ইতিহাস অনুমতি দিন, তারপর ব্যর্থ পরিসরটি পুনরায় চেষ্টা করুন।</string>
     <string name="export_guidance_file_write">আপনার এক্সপোর্ট ফোল্ডার পুনরায় নির্বাচন করুন যাতে Health.md সেখানে ফাইল লিখতে পারে, তারপরে আবার চেষ্টা করুন।</string>
     <string name="export_guidance_no_data">পঠনযোগ্য Health Connect ডেটা ছাড়া দিনগুলি বাদ দেওয়া হয়৷ যদি এই তারিখগুলিতে ডেটা থাকা উচিত, আপনার ট্র্যাকার অ্যাপটি Health Connect-এ সিঙ্ক হচ্ছে তা নিশ্চিত করুন, ইতিহাসের অ্যাক্সেস মঞ্জুর করুন এবং ব্যর্থ পরিসরটি পুনরায় চেষ্টা করুন৷</string>
@@ -123,16 +212,16 @@
     <string name="export_guidance_api_configuration">API এন্ডপয়েন্ট সেটিংস খুলুন এবং একটি বৈধ HTTP বা HTTPS URL লিখুন।</string>
     <string name="export_guidance_network">আপনার কানেকশন এবং এন্ডপয়েন্টের TLS সার্টিফিকেট চেক করুন, তারপর আবার চেষ্টা করুন।</string>
     <string name="export_guidance_api_rejected">পুনরায় চেষ্টা করার আগে এন্ডপয়েন্ট পাথ, সংরক্ষিত অনুমোদন বা কাস্টম হেডার, অনুরোধের সীমা এবং সার্ভার লগগুলি পরীক্ষা করুন।</string>
-    <string name="export_guidance_unknown">একটি ছোট পরিসর দিয়ে আবার চেষ্টা করুন. এটি ব্যর্থ হলে, এই রপ্তানির ইতিহাস সহ প্রতিক্রিয়া পাঠান।</string>
+    <string name="export_guidance_unknown">ছোট একটি পরিসর দিয়ে আবার চেষ্টা করুন। ব্যর্থ হতে থাকলে এই রপ্তানির ইতিহাসসহ প্রতিক্রিয়া পাঠান।</string>
     <!-- Export failure messages -->
     <string name="error_no_health_data">এই তারিখ পরিসীমার জন্য কোনো স্বাস্থ্য ডেটা পাওয়া যায়নি</string>
-    <string name="error_file_write">ফাইল লেখতে ব্যর্থ \u2014 ফোল্ডার অ্যাক্সেস চেক করুন</string>
+    <string name="error_file_write">ফাইল লিখতে ব্যর্থ \u2014 ফোল্ডার অ্যাক্সেস পরীক্ষা করুন</string>
     <string name="error_access_denied">রপ্তানি ফোল্ডারে অ্যাক্সেস অস্বীকার করা হয়েছে</string>
     <string name="error_no_folder">কোনো রপ্তানি ফোল্ডার নির্বাচিত নয়</string>
     <string name="error_health_connect">Health Connect ত্রুটি \u2014 অনুমতি চেক করুন</string>
-    <string name="error_device_locked">রপ্তানির সময় ডিভাইস লক করা ছিল</string>
-    <string name="error_background_permission_denied">নির্ধারিত রপ্তানি Health Connect ব্যাকগ্রাউন্ড অ্যাক্সেস প্রয়োজন</string>
-    <string name="error_rate_limited">Health Connect হার রপ্তানি সীমিত করছে — একটু অপেক্ষা করুন, তারপর বাকি তারিখগুলি আবার চেষ্টা করুন৷</string>
+    <string name="error_device_locked">শেষবার রিবুট করার পর ফোন আনলক করা হয়নি — ফোন আনলক করে আবার চেষ্টা করুন</string>
+    <string name="error_background_permission_denied">নির্ধারিত রপ্তানির জন্য Health Connect-এর ব্যাকগ্রাউন্ড অ্যাক্সেস প্রয়োজন</string>
+    <string name="error_rate_limited">Health Connect রপ্তানির হার সীমিত করছে — কিছুক্ষণ অপেক্ষা করে বাকি তারিখগুলোর জন্য আবার চেষ্টা করুন</string>
     <string name="error_unknown">একটি অপ্রত্যাশিত ত্রুটি ঘটেছে</string>
     <!-- Debug panel -->
     <string name="debug_panel_title">ডিবাগ তথ্য</string>
@@ -154,7 +243,7 @@
     <string name="settings_title">আপনার অ্যাপ\nকনফিগার করুন</string>
     <string name="settings_subtitle">প্রিমিয়াম ও সহায়তা পরিচালনা করুন</string>
     <string name="section_health_sources">স্বাস্থ্য সূত্র</string>
-    <string name="health_sources_description">Health Connect ডিফল্ট রপ্তানি পথ থাকে। এই সমর্থিত ইকোসিস্টেমগুলি Health.md Health Connect আজকের মাধ্যমে, অথবা প্রত্যক্ষ SDK/OAuth অ্যাডাপ্টারের মাধ্যমে একবার শংসাপত্র বা অংশীদার অ্যাক্সেস কনফিগার করা হয়।</string>
+    <string name="health_sources_description">Health Connect-ই ডিফল্ট রপ্তানি পথ হিসেবে থাকে। সমর্থিত এসব ইকোসিস্টেম এখন Health Connect-এর মাধ্যমে Health.md-তে ডেটা পাঠাতে পারে; অথবা ক্রেডেনশিয়াল বা অংশীদার অ্যাক্সেস কনফিগার করা হলে সরাসরি SDK/OAuth অ্যাডাপ্টারের মাধ্যমে পাঠাতে পারে।</string>
     <string name="health_provider_status_installed">ইনস্টল করা হয়েছে</string>
     <string name="health_provider_status_selected">নির্বাচিত</string>
     <string name="health_provider_status_ready_to_connect">সংযোগ করতে প্রস্তুত</string>
@@ -163,9 +252,9 @@
     <string name="health_provider_connected">সংযুক্ত %s</string>
     <string name="section_health_diagnostics">স্বাস্থ্য ডায়াগনস্টিকস</string>
     <string name="health_diagnostics_description">সংবেদনশীল তথ্য অপসারণ করা একটি প্রদানকারী প্রতিবেদন বিটা পরীক্ষক বা সহায়তা দলের সঙ্গে শেয়ার করুন। এতে প্রদানকারী সেটআপ, অনুমতি, OAuth কনফিগার করা আছে কি না, টোকেন আছে কি না এবং সর্বশেষ রপ্তানি ত্রুটির বিভাগ থাকে; স্বাস্থ্য পরিমাপ বা টোকেনের মান থাকে না।</string>
-    <string name="health_diagnostics_share_title">সংশোধন করা ডায়াগনস্টিক শেয়ার করুন</string>
-    <string name="health_diagnostics_share_subtitle">কোনো টোকেন, প্রদানকারীর গোপন তথ্য, কাঁচা ফাইল পাথ বা স্বাস্থ্য পরিমাপ নেই</string>
-    <string name="health_diagnostics_share_subject">Health.md সংশোধন করা ডায়াগনস্টিকস</string>
+    <string name="health_diagnostics_share_title">সংবেদনশীল তথ্য বাদ দেওয়া ডায়াগনস্টিকস শেয়ার করুন</string>
+    <string name="health_diagnostics_share_subtitle">কোনো টোকেন, প্রদানকারীর গোপন তথ্য, র ফাইল পাথ বা স্বাস্থ্য পরিমাপ নেই</string>
+    <string name="health_diagnostics_share_subject">Health.md সংবেদনশীল তথ্য বাদ দেওয়া ডায়াগনস্টিকস</string>
     <string name="health_diagnostics_share_chooser">ডায়াগনস্টিক শেয়ার করুন</string>
     <string name="section_write_mode">লেখার মোড</string>
     <string name="section_filename_template">ফাইলনাম টেমপ্লেট</string>
@@ -182,35 +271,41 @@
     <string name="settings_upgrade_title">প্রিমিয়ামে আপগ্রেড করুন</string>
     <string name="settings_upgrade_subtitle">সীমাহীন রপ্তানি, নির্ধারিত রপ্তানি এবং আরও অনেক কিছু</string>
     <string name="settings_premium_active">প্রিমিয়াম সক্রিয়</string>
-    <string name="settings_premium_active_subtitle">আপনি সীমাহীন রপ্তানি আছে</string>
+    <string name="settings_premium_active_subtitle">আপনি সীমাহীন রপ্তানি করতে পারবেন</string>
     <string name="section_feedback">প্রতিক্রিয়া</string>
     <string name="feedback_send_title">প্রতিক্রিয়া পাঠান</string>
     <string name="feedback_send_subtitle">আপনার ইমেল ক্লায়েন্ট খুলে</string>
     <string name="feedback_github_title">GitHub এ বাগ রিপোর্ট করুন</string>
     <string name="feedback_github_subtitle">প্রি-ফিলড ইস্যু টেমপ্লেট খুলে</string>
-    <string name="feedback_discord_title">আমাদের Discord যোগদান</string>
+    <string name="feedback_discord_title">আমাদের Discord-এ যোগ দিন</string>
     <string name="feedback_discord_subtitle">Health.md সম্প্রদায়ের সাথে চ্যাট করুন</string>
-    <string name="feedback_no_app_available">এই লিঙ্কটি খোলার জন্য কোন অ্যাপ উপলব্ধ নেই</string>
+    <string name="feedback_no_app_available">এই লিঙ্কটি খোলার জন্য কোনো অ্যাপ উপলভ্য নেই</string>
     <string name="reset_to_defaults">ডিফল্টে রিসেট করুন</string>
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">রপ্তানি সেটিংস</string>
     <string name="section_health_metrics">স্বাস্থ্য মেট্রিক্স</string>
-    <string name="metrics_enabled_summary">%1$d/%2$d মেট্রিক্স সক্ষম</string>
+    <plurals name="metrics_enabled_summary">
+        <item quantity="one">%1$d/%2$d মেট্রিক সক্রিয়</item>
+        <item quantity="other">%1$d/%2$d মেট্রিক সক্রিয়</item>
+    </plurals>
     <string name="section_current_format">বর্তমান ফরম্যাট</string>
     <string name="write_mode_summary">লেখার মোড: %s</string>
     <string name="section_format_customization">ফরম্যাট কাস্টমাইজেশন</string>
-    <string name="section_daily_note_injection">দৈনিক নোট ইনজেকশন</string>
+    <string name="section_daily_note_injection">দৈনিক নোটে সংযোজন</string>
     <string name="daily_note_enabled_summary">সক্ষম \u2022 %s</string>
     <string name="daily_note_disabled">নিষ্ক্রিয়</string>
-    <string name="section_individual_tracking">স্বতন্ত্র প্রবিষ্টি ট্র্যাকিং</string>
-    <string name="individual_tracking_enabled_summary">সক্ষম \u2022 %d মেট্রিক্স</string>
+    <string name="section_individual_tracking">পৃথক এন্ট্রি ট্র্যাকিং</string>
+    <plurals name="individual_tracking_enabled_summary">
+        <item quantity="one">সক্রিয় • %1$d মেট্রিক</item>
+        <item quantity="other">সক্রিয় • %1$d মেট্রিক</item>
+    </plurals>
     <string name="granular_data_title">বিস্তারিত সময়-সিরিজ অন্তর্ভুক্ত করুন</string>
     <string name="granular_data_description">সামঞ্জস্য রপ্তানিতে হার্ট রেট এবং ঘুমের পর্যায়ের মতো টাইমস্ট্যাম্পযুক্ত নমুনাগুলি যোগ করুন। একটি API-সম্পূর্ণ অনুলিপির জন্য, Raw API Snapshot ব্যবহার করুন।</string>
     <!-- Metric selection screen -->
     <string name="metric_selection_title">স্বাস্থ্য মেট্রিক্স</string>
     <string name="search_metrics_hint">মেট্রিক্স অনুসন্ধান করুন...</string>
     <string name="select_all">সব নির্বাচন করুন</string>
-    <string name="deselect_all">সব নির্বাচন অপসারণ করুন</string>
+    <string name="deselect_all">সবগুলোর নির্বাচন বাতিল করুন</string>
     <string name="metrics_enabled_category">%1$d/%2$d সক্ষম</string>
     <!-- Metric categories and labels -->
     <string name="metric_category_sleep">ঘুম</string>
@@ -267,8 +362,8 @@
     <string name="metric_name_height">উচ্চতা</string>
     <string name="metric_name_bmi">BMI</string>
     <string name="metric_name_body_fat">শরীরের চর্বি</string>
-    <string name="metric_name_lean_mass">পেশী ভর</string>
-    <string name="metric_name_body_water_mass">শরীরের জল ভর</string>
+    <string name="metric_name_lean_mass">চর্বিহীন দেহের ভর</string>
+    <string name="metric_name_body_water_mass">দেহে পানির ভর</string>
     <string name="metric_name_bone_mass">হাড়ের ভর</string>
     <string name="metric_name_dietary_energy">খাদ্য শক্তি</string>
     <string name="metric_name_protein">প্রোটিন</string>
@@ -322,14 +417,14 @@
     <string name="metric_name_running_power">রানিং পাওয়ার</string>
     <string name="metric_name_activity_intensity_minutes">অ্যাক্টিভিটির তীব্রতার মিনিট</string>
     <string name="metric_name_energy_from_fat">চর্বি থেকে শক্তি</string>
-    <string name="metric_name_nutrition_meals">পুষ্টিকর খাবার</string>
+    <string name="metric_name_nutrition_meals">পুষ্টি-সংক্রান্ত খাবার</string>
     <string name="metric_name_menstruation_periods">মাসিকের সময়কাল</string>
     <string name="metric_name_menstruation_period_days">মাসিকের দিনগুলি</string>
     <string name="metric_name_planned_workouts">পরিকল্পিত ওয়ার্কআউট</string>
     <string name="metric_name_medical_resources">চিকিৎসা সংক্রান্ত রিসোর্স</string>
     <string name="metric_name_audio_exposure">অডিও এক্সপোজার</string>
     <string name="metric_name_mindful_minutes">মননশীল মিনিট</string>
-    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
+    <string name="metric_name_mindful_sessions">মননশীল সেশন</string>
     <string name="metric_name_menstrual_flow">মাসিক প্রবাহ</string>
     <string name="metric_name_cervical_mucus">জরায়ু গ্রীবা শ্লেষ্মা গুণমান</string>
     <string name="metric_name_ovulation_test">ডিম্বস্ফোটন পরীক্ষা</string>
@@ -338,16 +433,16 @@
     <string name="metric_name_workouts">ওয়ার্কআউট</string>
     <string name="metric_name_unknown">অজানা মেট্রিক</string>
     <!-- Daily note injection screen -->
-    <string name="daily_note_description">আপনার বিদ্যমান Obsidian দৈনিক নোটের YAML ফ্রন্টম্যাটারে স্বাস্থ্য মেট্রিক্স ইনজেক্ট করুন।</string>
-    <string name="daily_note_enable_title">ইনজেকশন সক্ষম করুন</string>
-    <string name="daily_note_enable_subtitle">দৈনিক নোটে স্বাস্থ্য ডেটা ইনজেক্ট করুন</string>
+    <string name="daily_note_description">আপনার বিদ্যমান Obsidian দৈনিক নোটের YAML Frontmatter-এ স্বাস্থ্য মেট্রিক যোগ করুন।</string>
+    <string name="daily_note_enable_title">নোটে সংযোজন চালু করুন</string>
+    <string name="daily_note_enable_subtitle">দৈনিক নোটে স্বাস্থ্য ডেটা যোগ করুন</string>
     <string name="section_daily_notes_folder">দৈনিক নোট ফোল্ডার</string>
     <string name="daily_notes_folder_hint">Daily</string>
     <string name="daily_notes_folder_help">আপনার রপ্তানি ফোল্ডারের সাপেক্ষে (যেমন, "Daily" বা "Journal/Daily")</string>
     <string name="section_filename_pattern">ফাইলনাম প্যাটার্ন</string>
     <string name="section_preview_path">পূর্বরূপ পথ</string>
-    <string name="inject_markdown_sections_title">মেট্রিক বিভাগ ইনজেক্ট করুন</string>
-    <string name="inject_markdown_sections_subtitle">এছাড়াও অ্যাপ-পরিচালিত Markdown বিভাগগুলিকে একত্রিত করুন যেমন ঘুম, কার্যকলাপ, হার্ট এবং ভাইটাল আপনার নোটের পাঠ্য সংরক্ষণ করার সময়।</string>
+    <string name="inject_markdown_sections_title">মেট্রিক বিভাগ যোগ করুন</string>
+    <string name="inject_markdown_sections_subtitle">আপনার নোটের লেখা অপরিবর্তিত রেখে Sleep, Activity, Heart ও Vitals-এর মতো অ্যাপ-পরিচালিত Markdown বিভাগও মার্জ করুন।</string>
     <string name="create_note_if_missing_title">যদি অনুপস্থিত হয় তবে নোট তৈরি করুন</string>
     <string name="create_note_if_missing_subtitle">যদি দৈনিক নোট বিদ্যমান না থাকে তবে তৈরি করুন</string>
     <!-- Format customization screen -->
@@ -355,9 +450,9 @@
     <string name="section_date_format">তারিখের ফরম্যাট</string>
     <string name="section_time_format">সময়ের ফরম্যাট</string>
     <string name="section_unit_system">ইউনিট সিস্টেম</string>
-    <string name="section_markdown_template">মার্কডাউন টেমপ্লেট শৈলী</string>
+    <string name="section_markdown_template">Markdown টেমপ্লেট শৈলী</string>
     <string name="custom_markdown_template_label">কাস্টম টেমপ্লেট</string>
-    <string name="custom_markdown_template_help">আপনার নিজের লেআউট লিখুন. Health.md স্থানধারক প্রতিস্থাপন করে এবং শর্তাধীন বিভাগগুলি সরিয়ে দেয় যখন সেই বিভাগে কোনও ডেটা থাকে না।</string>
+    <string name="custom_markdown_template_help">নিজের Markdown লেআউট লিখুন। Health.md স্থানধারক প্রতিস্থাপন করে এবং কোনো বিভাগে ডেটা না থাকলে শর্তসাপেক্ষ বিভাগটি সরিয়ে দেয়।</string>
     <string name="custom_markdown_template_placeholder"># স্বাস্থ্য তথ্য — {{date}}\n\n{{metrics}}</string>
     <string name="custom_markdown_template_tokens">টোকেন: {{date}}, {{metrics}}, {{sleep_metrics}}, {{activity_metrics}}, {{heart_metrics}}, {{vitals_metrics}}, {{workout_list}}, এবং {{#sleep}}…{{/sleep}} বা {{#activity}}...{{/activity}} এর মত ব্লক।</string>
     <string name="custom_markdown_template_reset">টেমপ্লেট রিসেট করুন</string>
@@ -366,13 +461,16 @@
     <string name="section_header_level">অংশের হেডার স্তর</string>
     <string name="section_options">বিকল্পসমূহ</string>
     <string name="toggle_include_summary">সারাংশ অন্তর্ভুক্ত করুন</string>
-    <string name="toggle_android_native_fields">Android- স্থানীয় স্বাস্থ্য ক্ষেত্র অন্তর্ভুক্ত করুন</string>
+    <string name="toggle_android_native_fields">Android-এর নিজস্ব স্বাস্থ্য ফিল্ড অন্তর্ভুক্ত করুন</string>
     <string name="toggle_legacy_android_aliases">ডুপ্লিকেট লিগ্যাসি Android কী এবং লেবেল</string>
     <!-- Individual tracking screen -->
-    <string name="individual_tracking_title">স্বতন্ত্র প্রবিষ্টি ট্র্যাকিং</string>
-    <string name="individual_tracking_description">স্বতন্ত্র সময়সূচী স্বাস্থ্য প্রবিষ্টি পৃথক ফাইল হিসাবে রপ্তানি করুন। ওয়ার্কআউট, রক্তচাপ পড়া এবং অন্যান্য বিচ্ছিন্ন পরিমাপের জন্য দরকারী।</string>
-    <string name="individual_tracking_enable_title">স্বতন্ত্র ট্র্যাকিং সক্ষম করুন</string>
-    <string name="individual_tracking_metrics_count">%d মেট্রিক্স নির্বাচিত</string>
+    <string name="individual_tracking_title">পৃথক এন্ট্রি ট্র্যাকিং</string>
+    <string name="individual_tracking_description">টাইমস্ট্যাম্পসহ প্রতিটি স্বাস্থ্য এন্ট্রি আলাদা ফাইল হিসেবে রপ্তানি করুন। ওয়ার্কআউট, রক্তচাপের রিডিং ও অন্যান্য পৃথক পরিমাপের জন্য উপযোগী।</string>
+    <string name="individual_tracking_enable_title">পৃথক এন্ট্রি ট্র্যাকিং চালু করুন</string>
+    <plurals name="individual_tracking_metrics_count">
+        <item quantity="one">%1$dটি মেট্রিক নির্বাচিত</item>
+        <item quantity="other">%1$dটি মেট্রিক নির্বাচিত</item>
+    </plurals>
     <string name="section_quick_actions">দ্রুত পদক্ষেপ</string>
     <string name="action_suggested">প্রস্তাবিত</string>
     <string name="action_all">সব</string>
@@ -382,13 +480,13 @@
     <string name="metric_blood_pressure">রক্তচাপ</string>
     <string name="metric_blood_glucose">রক্ত গ্লুকোজ</string>
     <string name="metric_weight">ওজন</string>
-    <string name="section_entries_folder">প্রবিষ্টি ফোল্ডার নাম</string>
+    <string name="section_entries_folder">এন্ট্রি ফোল্ডারের নাম</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
-    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_suggested_badge">Suggested</string>
+    <string name="individual_tracking_filename_tokens">টোকেন: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_suggested_badge">প্রস্তাবিত</string>
     <string name="organize_by_category_title">ক্যাটাগরি দ্বারা সংগঠিত করুন</string>
-    <string name="organize_by_category_subtitle">প্রবিষ্টি ক্যাটাগরি সাবফোল্ডারে গ্রুপ করুন</string>
+    <string name="organize_by_category_subtitle">এন্ট্রিগুলোকে ক্যাটাগরি সাবফোল্ডারে গ্রুপ করুন</string>
     <!-- History screen -->
     <string name="no_history_title">কোনো রপ্তানি\nইতিহাস নেই</string>
     <string name="no_history_subtitle">আপনার রপ্তানি এখানে প্রদর্শিত হবে</string>
@@ -396,7 +494,10 @@
     <string name="history_status_success">\u2713 সফল</string>
     <string name="history_status_partial">! আংশিক</string>
     <string name="history_status_failed">\u2717 ব্যর্থ</string>
-    <string name="history_entry_days">%1$d/%2$d দিন \u2022 %3$s থেকে %4$s</string>
+    <plurals name="history_entry_days">
+        <item quantity="one">%1$d/%2$d দিন • %3$s থেকে %4$s</item>
+        <item quantity="other">%1$d/%2$d দিন • %3$s থেকে %4$s</item>
+    </plurals>
     <string name="history_timestamp_format">%1$s এ %2$s</string>
     <string name="export_source_manual">ম্যানুয়াল</string>
     <string name="export_source_scheduled">নির্ধারিত</string>
@@ -407,18 +508,18 @@
     <string name="automatic_export_title">স্বয়ংক্রিয় রপ্তানি</string>
     <string name="automatic_export_subtitle">আপনার স্বাস্থ্য ডেটা স্বয়ংক্রিয়ভাবে রপ্তানি করুন</string>
     <string name="schedule_enable_scheduled_exports">নির্ধারিত রপ্তানি সক্ষম করুন</string>
-    <string name="schedule_automatic_export_body">নির্ধারিত রপ্তানি আপনার নির্বাচিত Android রপ্তানি ফোল্ডারে লিখুন। ম্যানুয়াল এক্সপোর্ট এক্সপোর্ট ট্যাব থেকে উপলব্ধ থাকে।</string>
+    <string name="schedule_automatic_export_body">নির্ধারিত রপ্তানিগুলো আপনার নির্বাচিত Android রপ্তানি ফোল্ডারে লেখা হয়। রপ্তানি ট্যাব থেকে ম্যানুয়াল রপ্তানিও করা যাবে।</string>
     <string name="schedule_background_note">দ্রষ্টব্য: Android সঠিক ব্যাকগ্রাউন্ড টাইমিং নিয়ন্ত্রণ করে। Health Connect ব্যাকগ্রাউন্ড অ্যাক্সেস চালু রাখুন এবং নির্ভরযোগ্য নির্ধারিত রপ্তানির জন্য ব্যাটারি অপ্টিমাইজেশন থেকে Health.md বাদ দিন।</string>
     <string name="schedule_exact_background_note">নির্ভুল সময়ের জন্য Android-এর অ্যালার্ম ও রিমাইন্ডার অ্যাক্সেস ব্যবহৃত হয়। Health Connect-এর ব্যাকগ্রাউন্ড অ্যাক্সেস এখনও প্রয়োজন, আর নেটওয়ার্ক না থাকলে বা ফোন বন্ধ থাকলে সম্পন্ন হতে দেরি হতে পারে।</string>
     <string name="exact_timing_needed_title">নির্ভুল সময় বন্ধ আছে</string>
     <string name="exact_timing_needed_body">নির্বাচিত সময়ে রপ্তানি চালু করতে অ্যালার্ম ও রিমাইন্ডারের অনুমতি দিন। এই অ্যাক্সেস ছাড়া Android বিলম্বিত বিকল্প হিসেবে WorkManager ব্যবহার করে।</string>
     <string name="exact_timing_enable_button">নির্ভুল সময়ের অনুমতি দিন</string>
-    <string name="section_cadence">ক্যাডেন্স</string>
+    <string name="section_cadence">ব্যবধান</string>
     <string name="cadence_unit_minutes">মিনিট</string>
     <string name="cadence_unit_hours">ঘণ্টা</string>
     <string name="cadence_unit_days">দিন</string>
     <string name="cadence_unit_weeks">সপ্তাহ</string>
-    <string name="cadence_minutes_minimum">ন্যূনতম ক্যাডেন্স ১৫ মিনিট।</string>
+    <string name="cadence_minutes_minimum">ন্যূনতম ব্যবধান ১৫ মিনিট।</string>
     <string name="section_export_time">রপ্তানির সময়</string>
     <string name="label_hour">ঘণ্টা</string>
     <string name="label_minute">মিনিট</string>
@@ -426,21 +527,21 @@
     <string name="schedule_frequency_15_minutes">প্রতি 15 মিনিটে</string>
     <string name="schedule_frequency_every_minutes">প্রতি %1$d মিনিট</string>
     <string name="schedule_frequency_hourly">ঘণ্টায়</string>
-    <string name="schedule_frequency_every_hours">প্রতি %1$d ঘন্টা</string>
+    <string name="schedule_frequency_every_hours">প্রতি %1$d ঘণ্টা</string>
     <string name="schedule_frequency_daily">দৈনিক</string>
     <string name="schedule_frequency_every_days">প্রতি %1$d দিন</string>
     <string name="schedule_frequency_weekly">সাপ্তাহিক</string>
     <string name="schedule_frequency_every_weeks">প্রতি %1$d সপ্তাহে</string>
     <string name="schedule_time">সময়</string>
-    <string name="schedule_time_period_am">AM</string>
-    <string name="schedule_time_period_pm">PM</string>
+    <string name="schedule_time_period_am">পূর্বাহ্ণ</string>
+    <string name="schedule_time_period_pm">অপরাহ্ণ</string>
     <string name="schedule_date_window">তারিখগুলি</string>
     <string name="schedule_date_window_past_complete_days">বিগত সম্পূর্ণ দিনগুলি</string>
     <string name="schedule_date_window_today">আজ</string>
-    <string name="schedule_export_past_days">গত দিন রপ্তানি</string>
-    <string name="schedule_lookback_ios_single">প্রতিটি রান গত 1 দিনের রপ্তানি করে গতকালের সাথে শেষ।</string>
-    <string name="schedule_lookback_ios_plural">প্রতিটি রান গত %1$d গতকালের সাথে শেষ হওয়া দিনের রপ্তানি করে।</string>
-    <string name="schedule_today_summary">প্রতিটি রান আজকের ডেটা রপ্তানি করে যাতে আপনার বর্তমান দৈনিক ফাইল আপ টু ডেট থাকতে পারে। একই দিনের কন্টেন্ট ডুপ্লিকেট এড়াতে ওভাররাইট বা আপডেট লেখার মোড ব্যবহার করুন।</string>
+    <string name="schedule_export_past_days">বিগত দিনগুলো রপ্তানি করুন</string>
+    <string name="schedule_lookback_ios_single">প্রতিবার গতকাল পর্যন্ত আগের ১ দিনের ডেটা রপ্তানি হয়।</string>
+    <string name="schedule_lookback_ios_plural">প্রতিবার গতকাল পর্যন্ত আগের %1$d দিনের ডেটা রপ্তানি হয়।</string>
+    <string name="schedule_today_summary">প্রতিবার আজকের ডেটা রপ্তানি হয়, যাতে বর্তমান দৈনিক ফাইলটি হালনাগাদ থাকে। একই দিনের কনটেন্ট দুবার যোগ হওয়া এড়াতে Overwrite বা Update লেখার মোড ব্যবহার করুন।</string>
     <string name="schedule_next_export_every">পরবর্তী রপ্তানি: প্রতি %1$s</string>
     <string name="schedule_next_export_every_at">পরবর্তী রপ্তানি: প্রতি %1$s এ %2$s</string>
     <string name="schedule_next_export_at_datetime">পরবর্তী রপ্তানি: %1$s</string>
@@ -469,31 +570,34 @@
     <string name="background_health_permission_enable_button">ব্যাকগ্রাউন্ড অ্যাক্সেস সক্ষম করুন</string>
     <string name="schedule_workmanager_notice">রপ্তানি WorkManager ব্যবহার করে ব্যাকগ্রাউন্ডে চলে। নির্ভরযোগ্য সময়সূচির জন্য Health Connect-এর ব্যাকগ্রাউন্ড অ্যাক্সেস দিন এবং Health.md-কে ব্যাটারি অপ্টিমাইজেশন থেকে বাদ দিন।</string>
     <string name="scheduled_recovery_title">বাদ পড়া নির্ধারিত রপ্তানিগুলো পুনরুদ্ধার করবেন?</string>
-    <string name="scheduled_recovery_body">Health.md পাওয়া গেছে %1$d মুলতুবি নির্ধারিত তারিখ(গুলি): %2$s। রিবুট করার পরে ফোনটি লক করার কারণে যদি একটি নির্ধারিত রপ্তানি মিস হয়, ব্যাকগ্রাউন্ড অ্যাক্সেস অনুপস্থিত ছিল বা Health Connect অনুপলব্ধ ছিল, Health.md অ্যাপটি খোলা এবং আনলক থাকা অবস্থায় এখনই সেই সঠিক তারিখগুলি পুনরায় চেষ্টা করতে পারে৷ ভবিষ্যতে মিস এড়াতে ব্যাকগ্রাউন্ড অ্যাক্সেস মঞ্জুর করুন।</string>
+    <plurals name="scheduled_recovery_body">
+        <item quantity="one">Health.md %1$dটি অপেক্ষমাণ নির্ধারিত তারিখ পেয়েছে: %2$s। রিবুটের পর ফোন লক থাকায়, ব্যাকগ্রাউন্ড অ্যাক্সেস না থাকায় বা Health Connect অনুপলভ্য থাকায় কোনো নির্ধারিত রপ্তানি বাদ পড়ে থাকলে, অ্যাপ খোলা ও আনলক থাকা অবস্থায় Health.md এখন সেই নির্দিষ্ট তারিখের জন্য আবার রপ্তানির চেষ্টা করতে পারে। ভবিষ্যতে তারিখ বাদ পড়া এড়াতে ব্যাকগ্রাউন্ড অ্যাক্সেস দিন।</item>
+        <item quantity="other">Health.md %1$dটি অপেক্ষমাণ নির্ধারিত তারিখ পেয়েছে: %2$s। রিবুটের পর ফোন লক থাকায়, ব্যাকগ্রাউন্ড অ্যাক্সেস না থাকায় বা Health Connect অনুপলভ্য থাকায় নির্ধারিত রপ্তানিগুলো বাদ পড়ে থাকলে, অ্যাপ খোলা ও আনলক থাকা অবস্থায় Health.md এখন সেই নির্দিষ্ট তারিখগুলোর জন্য আবার রপ্তানির চেষ্টা করতে পারে। ভবিষ্যতে তারিখ বাদ পড়া এড়াতে ব্যাকগ্রাউন্ড অ্যাক্সেস দিন।</item>
+    </plurals>
     <string name="scheduled_recovery_retry_button">মুলতুবি তারিখ পুনরায় চেষ্টা করুন</string>
     <string name="scheduled_recovery_running_button">পুনরুদ্ধার করা হচ্ছে...</string>
     <string name="scheduled_recovery_blocked_paywall">নির্ধারিত রপ্তানি পুনরুদ্ধার করার আগে Health.md আনলক করুন।</string>
     <string name="scheduled_recovery_blocked_folder">নির্ধারিত রপ্তানি পুনরুদ্ধার করার আগে একটি এক্সপোর্ট ফোল্ডার নির্বাচন করুন।</string>
-    <string name="scheduled_recovery_blocked_api">নির্ধারিত API রপ্তানি পুনরুদ্ধার করার আগে একটি API শেষ পয়েন্ট কনফিগার করুন।</string>
-    <string name="scheduled_recovery_blocked_api_changed">এই রপ্তানি ব্যর্থ হওয়ার পরে API শেষ পয়েন্ট পরিবর্তিত হয়েছে। তাদের পুনরুদ্ধার করতে মূল শেষ পয়েন্ট পুনরুদ্ধার করুন; Health.md তাদের স্বয়ংক্রিয়ভাবে নতুন পরিষেবাতে পাঠাবে না।</string>
+    <string name="scheduled_recovery_blocked_api">নির্ধারিত API রপ্তানি পুনরুদ্ধারের আগে একটি API এন্ডপয়েন্ট কনফিগার করুন।</string>
+    <string name="scheduled_recovery_blocked_api_changed">এসব রপ্তানি ব্যর্থ হওয়ার পরে API এন্ডপয়েন্ট পরিবর্তিত হয়েছে। সেগুলো পুনরুদ্ধার করতে আগের এন্ডপয়েন্ট ফিরিয়ে আনুন; Health.md সেগুলো স্বয়ংক্রিয়ভাবে নতুন পরিষেবায় পাঠাবে না।</string>
     <string name="scheduled_recovery_blocked_locked">রিবুট করার পরে একবার আপনার ফোন আনলক করুন, তারপরে এই তারিখগুলি পুনরুদ্ধার করতে আবার Health.md খুলুন।</string>
     <string name="scheduled_recovery_blocked_permissions">নির্ধারিত রপ্তানি পুনরুদ্ধার করার আগে Health Connect অনুমতি দিন।</string>
     <string name="scheduled_recovery_blocked_running">একটি নির্ধারিত পুনরুদ্ধার রপ্তানি ইতিমধ্যেই চলছে৷</string>
     <string name="scheduled_recovery_no_pending">কোনো নির্ধারিত রপ্তানি তারিখ পুনরুদ্ধারের অপেক্ষায় নেই।</string>
     <string name="scheduled_recovery_result_complete">নির্ধারিত পুনরুদ্ধার সম্পন্ন.</string>
-    <string name="scheduled_recovery_result_partial">পুনরুদ্ধার রপ্তানি %1$d/%2$d তারিখ(গুলি)। %3$d তারিখ(গুলি) বাকি আছে।</string>
+    <string name="scheduled_recovery_result_partial">পুনরুদ্ধারে %2$dটি তারিখের মধ্যে %1$dটি রপ্তানি হয়েছে; %3$dটি এখনও বাকি।</string>
     <string name="scheduled_recovery_result_blocked">নির্ধারিত পুনরুদ্ধার এখনও প্রস্তুত নয়।</string>
     <string name="not_now">এখন না</string>
     <!-- Release notes -->
     <string name="release_notes_title">%s এ নতুন কি আছে</string>
-    <string name="release_notes_settings_hint">আপনি সেটিংস থেকে এক্সপোর্ট ফর্ম্যাট, কাস্টম Markdown এবং মেট্রিক্স টিউন করতে পারেন।</string>
+    <string name="release_notes_settings_hint">সেটিংস থেকে রপ্তানি ফরম্যাট, কাস্টম Markdown ও মেট্রিক সামঞ্জস্য করতে পারবেন।</string>
     <string name="release_notes_open_settings">সেটিংস খুলুন</string>
     <string name="release_notes_got_it">বুঝেছি</string>
     <string name="release_notes_highlight_feedback">প্রসারিত Health Connect কভারেজ আরো কার্যকলাপ, শরীর, পুষ্টি, গতিশীলতা, মননশীলতা, প্রজনন স্বাস্থ্য, এবং চিকিৎসা সম্পদ মেট্রিক্স যোগ করে।</string>
-    <string name="release_notes_highlight_export_parity">নতুন Android-শুধু বিবরণের মধ্যে রয়েছে কার্যকলাপের তীব্রতা, পুষ্টিকর খাবার, ঋতুস্রাবের সময়কাল, পরিকল্পিত ওয়ার্কআউট এবং দানাদার নমুনা পাওয়া গেলে।</string>
-    <string name="release_notes_highlight_templates">Markdown, JSON, CSV, এবং Obsidian রপ্তানি এখন বড় ক্যাটালগ জুড়ে সমৃদ্ধ মেট্রিক মান বহন করে।</string>
+    <string name="release_notes_highlight_export_parity">নতুন Android-নির্দিষ্ট বিবরণে কার্যকলাপের তীব্রতা, খাবারের পুষ্টি তথ্য, মাসিকের সময়কাল, পরিকল্পিত ওয়ার্কআউট এবং উপলভ্য হলে টাইমস্ট্যাম্পসহ বিস্তারিত নমুনা অন্তর্ভুক্ত আছে।</string>
+    <string name="release_notes_highlight_templates">Markdown, JSON, CSV ও Obsidian রপ্তানিতে এখন বড় ক্যাটালগজুড়ে আরও বিস্তারিত মেট্রিক মান থাকে।</string>
     <string name="release_notes_highlight_workouts">বর্ধিত শুধু-পঠন রপ্তানি অনুমতিগুলো ব্যাখ্যা করতে Health Connect-এর অনুমতি-সংক্রান্ত তথ্য হালনাগাদ করা হয়েছে।</string>
-    <string name="release_notes_highlight_accessibility">TalkBack লেবেল এবং স্পর্শ লক্ষ্য রপ্তানি, সময়সূচী, এবং সেটিংস প্রবাহ জুড়ে উন্নত করা হয়েছে।</string>
+    <string name="release_notes_highlight_accessibility">রপ্তানি, সময়সূচি ও সেটিংসের সব ধাপে TalkBack লেবেল ও টাচ টার্গেট উন্নত করা হয়েছে।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">নির্ধারিত রপ্তানি</string>
     <string name="notification_channel_scheduled_exports_description">নির্ধারিত স্বাস্থ্য রপ্তানি সম্পূর্ণ বা ব্যর্থ হলে বিজ্ঞপ্তি</string>
@@ -522,7 +626,7 @@
     <string name="debug_state_locked">লক করা (ডিবাগ)</string>
     <string name="debug_state_normal">সাধারণ (বাস্তব অবস্থা ব্যবহার করে)</string>
     <string name="debug_toggle_unlock">আনলক টগল করুন</string>
-    <string name="debug_reset_state">রাজ্য রিসেট করুন</string>
+    <string name="debug_reset_state">অবস্থা রিসেট করুন</string>
     <!-- Export progress dialog -->
     <string name="export_progress_title">স্বাস্থ্য ডেটা রপ্তানি করা হচ্ছে</string>
     <string name="export_progress_days">%1$d / %2$d দিন</string>
@@ -539,11 +643,11 @@
     <string name="shortcut_history_long">রপ্তানির ইতিহাস খুলুন</string>
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect অনুমতি</string>
-    <string name="privacy_policy_subtitle">Health.md একটি হেলথ ডাটা এক্সপোর্ট অ্যাপ। নীচের প্রতিটি অনুমতি সরাসরি Health Connect থেকে পঠিত ডেটাতে ম্যাপ করে এবং শুধুমাত্র আপনার পছন্দের গন্তব্যে রপ্তানি করা হয়। ফোল্ডার রপ্তানি স্থানীয় বা প্রদানকারী-সমর্থিত সঞ্চয়স্থানে থাকে। আপনি যদি স্পষ্টভাবে API এন্ডপয়েন্ট নির্বাচন করেন, রেকর্ডগুলি সরাসরি HTTP বা HTTPS URL আপনি কনফিগার করেন সেখানে পাঠানো হয়; HTTP ট্রানজিটে এনক্রিপ্ট করা হয় না। আপনি যদি স্পষ্টভাবে একটি জোড়া যুক্ত Direct CLI সংযোগ করেন, তাহলে সেই কম্পিউটারে একটি প্রমাণীকৃত এনক্রিপ্ট করা সংযোগের মাধ্যমে রেকর্ড পাঠানো হয়। Personal Health Record সম্পদ রপ্তানি করা হয় শুধুমাত্র যখন আপনি সেই মেট্রিকটি নির্বাচন করেন এবং সংশ্লিষ্ট অনুমতি প্রদান করেন। ইতিহাস অ্যাক্সেস বড় ম্যানুয়াল রপ্তানি জন্য ব্যবহার করা হয়. আপনি নির্ধারিত রপ্তানি সক্ষম করলেই ব্যাকগ্রাউন্ড অ্যাক্সেস ব্যবহার করা হয়।</string>
+    <string name="privacy_policy_subtitle">Health.md একটি স্বাস্থ্য ডেটা রপ্তানি অ্যাপ। নিচের প্রতিটি অনুমতি Health Connect থেকে পড়া নির্দিষ্ট ডেটার সঙ্গে সরাসরি সম্পর্কিত, এবং সেই ডেটা শুধু আপনার বেছে নেওয়া গন্তব্যেই রপ্তানি হয়। ফোল্ডারে করা রপ্তানি স্থানীয় বা প্রদানকারী-সমর্থিত স্টোরেজে থাকে। আপনি স্পষ্টভাবে API Endpoint বেছে নিলে রেকর্ডগুলো সরাসরি আপনার কনফিগার করা HTTP বা HTTPS URL-এ পাঠানো হয়; HTTP-এর মাধ্যমে পাঠানোর সময় ডেটা এনক্রিপ্ট করা থাকে না। আপনি স্পষ্টভাবে পেয়ার করা Direct CLI সংযুক্ত করলে রেকর্ডগুলো একটি প্রমাণীকৃত, এনক্রিপ্ট করা সংযোগের মাধ্যমে সেই কম্পিউটারে পাঠানো হয়। Personal Health Record রিসোর্স শুধু তখনই রপ্তানি হয়, যখন আপনি সংশ্লিষ্ট মেট্রিক বেছে নিয়ে প্রয়োজনীয় অনুমতি দেন। বড় ম্যানুয়াল রপ্তানির জন্য ইতিহাস অ্যাক্সেস ব্যবহৃত হয়। আপনি নির্ধারিত রপ্তানি চালু করলেই শুধু ব্যাকগ্রাউন্ড অ্যাক্সেস ব্যবহৃত হয়।</string>
     <!-- Per-category permission rationale labels -->
     <string name="privacy_category_sleep">ঘুম</string>
     <string name="privacy_category_sleep_permissions">SleepSession</string>
-    <string name="privacy_category_sleep_exports">রপ্তানি করা ক্ষেত্র: মোট ঘুমের ঘন্টা, গভীর ঘুম, REM ঘুম, হালকা ঘুম, জাগ্রত সময়, বিছানায় সময়</string>
+    <string name="privacy_category_sleep_exports">রপ্তানি করা ক্ষেত্র: মোট ঘুমের ঘণ্টা, গভীর ঘুম, REM ঘুম, হালকা ঘুম, জেগে থাকার সময়, বিছানায় থাকার সময়</string>
     <string name="privacy_category_activity">কার্যকলাপ</string>
     <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, PlannedExerciseSession, ActivityIntensity, BasalMetabolicRate</string>
     <string name="privacy_category_activity_exports">রপ্তানি করা ক্ষেত্র: পদক্ষেপের সংখ্যা, পদক্ষেপের ক্যাডেন্স, সক্রিয় ক্যালোরি, মোট ক্যালোরি, বেসাল ক্যালোরি, ব্যায়ামের মিনিট, পরিকল্পিত ওয়ার্কআউট, কার্যকলাপের তীব্রতার মিনিট, ওঠা তলার সংখ্যা, হাঁটা/দৌড়ের দূরত্ব, সাইক্লিং/সাঁতার/হুইলচেয়ার/স্নো-স্পোর্টস দূরত্ব, অর্জিত উচ্চতা, হুইলচেয়ার পুশ এবং সাঁতারের স্ট্রোক</string>
@@ -555,7 +659,7 @@
     <string name="privacy_category_vitals_exports">রপ্তানি ক্ষেত্র: শ্বাসযন্ত্রের হার, রক্তের অক্সিজেন, শরীরের তাপমাত্রা, রক্তচাপ (সিস্টোলিক/ডায়াস্টোলিক), রক্তের গ্লুকোজ, বেসাল শরীরের তাপমাত্রা, ত্বকের তাপমাত্রা</string>
     <string name="privacy_category_body">শরীর</string>
     <string name="privacy_category_body_permissions">Weight, Height, BodyFat, LeanBodyMass, BodyWaterMass, BoneMass</string>
-    <string name="privacy_category_body_exports">রপ্তানি করা ক্ষেত্র: ওজন, উচ্চতা, BMI, শরীরের চর্বি %, চর্বিযুক্ত শরীরের ভর, শরীরের জল ভর, হাড়ের ভর</string>
+    <string name="privacy_category_body_exports">রপ্তানি করা ক্ষেত্র: ওজন, উচ্চতা, BMI, শরীরের চর্বি %, চর্বিহীন দেহের ভর, দেহে পানির ভর, হাড়ের ভর</string>
     <string name="privacy_category_nutrition">পুষ্টি</string>
     <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
     <string name="privacy_category_nutrition_exports">রপ্তানি করা ক্ষেত্র: খাদ্যতালিকাগত ক্যালোরি, ম্যাক্রোনিউট্রিয়েন্টস, ফ্যাট সাবটাইপ, ফাইবার, চিনি, সোডিয়াম, কোলেস্টেরল, পানি, ক্যাফেইন, ভিটামিন এবং খনিজ</string>
@@ -564,23 +668,23 @@
     <string name="privacy_category_mobility_exports">রপ্তানি করা ক্ষেত্র: হাঁটার গতি, VO2 সর্বোচ্চ, সাইক্লিং ক্যাডেন্স, স্টেপ ক্যাডেন্স, গড় ও সর্বোচ্চ পাওয়ার আউটপুট, দৌড়ের গতি এবং দৌড়ের শক্তি</string>
     <string name="privacy_category_reproductive">প্রজনন স্বাস্থ্য</string>
     <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
-    <string name="privacy_category_reproductive_exports">রপ্তানি করা ক্ষেত্র: মাসিক প্রবাহ, মাসিকের সময়কালের গণনা/দিন, সার্ভিকাল শ্লেষ্মা উপস্থিতি/সংবেদন, ডিম্বস্ফোটন পরীক্ষার ফলাফল, অন্তঃঋতুর রক্তপাত, যৌন কার্যকলাপ</string>
+    <string name="privacy_category_reproductive_exports">রপ্তানি করা ক্ষেত্র: মাসিক প্রবাহ, মাসিকের সময়কালের সংখ্যা/দিন, সার্ভিকাল শ্লেষ্মার চেহারা/অনুভূতি, ডিম্বস্ফোটন পরীক্ষার ফলাফল, মাসিকের মধ্যবর্তী রক্তপাত, যৌন কার্যকলাপ</string>
     <string name="privacy_category_mindfulness">মননশীলতা</string>
     <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
     <string name="privacy_category_mindfulness_exports">রপ্তানি করা ক্ষেত্র: মননশীল মিনিট এবং সেশন গণনা</string>
     <string name="privacy_category_medical">চিকিৎসা সম্পদ</string>
-    <string name="privacy_category_medical_permissions">মেডিকেল এলার্জি/অসহনশীলতা, শর্ত, পরীক্ষাগারের ফলাফল, ওষুধ, ব্যক্তিগত বিবরণ, অনুশীলনকারীর বিবরণ, গর্ভাবস্থা, পদ্ধতি, সামাজিক ইতিহাস, ভ্যাকসিন, পরিদর্শন এবং গুরুত্বপূর্ণ লক্ষণ</string>
-    <string name="privacy_category_medical_exports">রপ্তানি করা ক্ষেত্র: স্থানীয় Personal Health Record সম্পদের সংখ্যা, সম্পদের ধরন, প্রদর্শনের নাম, কোড, টাইমস্ট্যাম্প এবং উৎস মেটাডেটা যখন Health Connect প্রদান করে</string>
+    <string name="privacy_category_medical_permissions">চিকিৎসাসংক্রান্ত অ্যালার্জি/অসহিষ্ণুতা, রোগাবস্থা, ল্যাব ফলাফল, ওষুধ, ব্যক্তিগত তথ্য, চিকিৎসকের তথ্য, গর্ভাবস্থা, চিকিৎসা পদ্ধতি, সামাজিক ইতিহাস, টিকা, চিকিৎসা ভিজিট এবং গুরুত্বপূর্ণ লক্ষণ</string>
+    <string name="privacy_category_medical_exports">Health Connect থেকে পাওয়া গেলে রপ্তানি করা ক্ষেত্র: স্থানীয় Personal Health Record রিসোর্সের সংখ্যা, রিসোর্সের ধরন, প্রদর্শিত নাম, কোড, টাইমস্ট্যাম্প ও উৎস মেটাডেটা</string>
     <string name="privacy_category_background">নির্ধারিত পটভূমি অ্যাক্সেস</string>
     <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
     <string name="privacy_category_background_exports">শুধুমাত্র নির্ধারিত রপ্তানি সক্ষম হলেই ব্যবহৃত হয় যাতে Health.md পটভূমিতে গতকালের Health Connect ডেটা পড়তে পারে এবং আপনার নির্বাচিত স্থানীয় রপ্তানি ফোল্ডারে লিখতে পারে</string>
     <string name="privacy_category_history">ঐতিহাসিক স্বাস্থ্য তথ্য অ্যাক্সেস</string>
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">শুধু বড় ম্যানুয়াল রপ্তানির জন্য ব্যবহৃত হয়, যেমন ৯০ দিন বা সব সময়, যাতে Health.md সাধারণ ৩০ দিনের সীমার চেয়ে পুরোনো Health Connect ডেটা পড়তে পারে</string>
-    <string name="privacy_policy_direct_cli">Direct CLI রপ্তানি শুধুমাত্র আপনি যখন স্পষ্টভাবে জোড়া এবং আপনার কম্পিউটারের সাথে সংযোগ করেন তখনই ঘটে৷ স্বাস্থ্য রেকর্ডগুলি একটি প্রমাণীকৃত এনক্রিপ্ট করা সংযোগের মাধ্যমে পাঠানো হয়, সর্বাধিক সাত দিনের জন্য পুনরায় শুরু করার জন্য ব্যক্তিগতভাবে রাখা হয় এবং আপনি জোড়া বাতিল বা ভুলে গেলে শীঘ্রই মুছে ফেলা হয়।</string>
-    <string name="privacy_policy_footer">Health.md কোনো স্বাস্থ্য-ডেটা ক্লাউড পরিচালনা করে না। প্রথম-পক্ষের ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো ইনস্টল/ইভেন্ট UUIDs এবং যাচাই করা ক্যাম্পেইন মেটাডেটা পাঠাতে পারে; স্বাস্থ্য ডেটা, মূল রেফারার, ডিভাইস IDs, রপ্তানি, অ্যাকাউন্ট বা পাথ কখনো পাঠায় না।</string>
+    <string name="privacy_policy_direct_cli">আপনি স্পষ্টভাবে কম্পিউটারের সঙ্গে পেয়ার ও সংযোগ করার পরেই Direct CLI রপ্তানি হয়। স্বাস্থ্য রেকর্ডগুলো একটি প্রমাণীকৃত, এনক্রিপ্ট করা সংযোগের মাধ্যমে পাঠানো হয়। স্থানান্তর আবার শুরু করা যায়—এ জন্য সেগুলো সর্বোচ্চ সাত দিন ব্যক্তিগতভাবে রাখা হয়; আপনি বাতিল করলে বা পেয়ারিং মুছে দিলে আরও আগেই সেগুলো মুছে যায়।</string>
+    <string name="privacy_policy_footer">Health.md কোনো স্বাস্থ্য-ডেটা ক্লাউড পরিচালনা করে না। ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো ইনস্টল/ইভেন্ট UUIDs এবং যাচাই করা ক্যাম্পেইন মেটাডেটা পাঠাতে পারে। এটি কখনো স্বাস্থ্য ডেটা, অপরিশোধিত রেফারার, ডিভাইস IDs, রপ্তানি, অ্যাকাউন্ট বা পাথ পাঠায় না।</string>
     <!-- Legacy body string kept for locale fallback -->
-    <string name="privacy_policy_body">Health.md শুধু আপনার অনুরোধ করা রপ্তানি তৈরি করতে Health Connect ডেটা পড়ে। ফোল্ডার রপ্তানি নির্বাচিত স্টোরেজে যায়, API Endpoint রপ্তানি সরাসরি আপনার কনফিগার করা পরিষেবায় যায় এবং স্পষ্টভাবে সংযুক্ত Direct CLI রপ্তানি প্রমাণীকৃত এনক্রিপশনের মাধ্যমে আপনার পেয়ার করা কম্পিউটারে যায়। আলাদাভাবে, প্রথম-পক্ষের ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো UUIDs ও পরিশোধিত ক্যাম্পেইন মেটাডেটা ব্যবহার করে Play ইনস্টলকে একটি ক্যাম্পেইনের সঙ্গে যুক্ত করতে পারে। এতে কোনো স্বাস্থ্য ডেটা, মূল রেফারার, ডিভাইস শনাক্তকারী, রপ্তানি সামগ্রী, অ্যাকাউন্ট ডেটা বা ফাইল পাথ থাকে না।</string>
+    <string name="privacy_policy_body">Health.md শুধু আপনার অনুরোধ করা রপ্তানি তৈরি করতে Health Connect ডেটা পড়ে। ফোল্ডার রপ্তানি নির্বাচিত স্টোরেজে যায়, API Endpoint রপ্তানি সরাসরি আপনার কনফিগার করা পরিষেবায় যায় এবং স্পষ্টভাবে সংযুক্ত Direct CLI রপ্তানি প্রমাণীকৃত এনক্রিপশনের মাধ্যমে আপনার পেয়ার করা কম্পিউটারে যায়। আলাদাভাবে, প্রথম-পক্ষের ক্যাম্পেইন অ্যাট্রিবিউশন অ্যাপের তৈরি এলোমেলো UUIDs ও স্যানিটাইজ করা ক্যাম্পেইন মেটাডেটা ব্যবহার করে Play ইনস্টলকে একটি ক্যাম্পেইনের সঙ্গে যুক্ত করতে পারে। এতে কোনো স্বাস্থ্য ডেটা, অপরিশোধিত রেফারার, ডিভাইস শনাক্তকারী, রপ্তানি সামগ্রী, অ্যাকাউন্ট ডেটা বা ফাইল পাথ থাকে না।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md প্রতিক্রিয়া</string>
     <string name="feedback_send_chooser">প্রতিক্রিয়া পাঠান</string>
@@ -591,28 +695,28 @@
     -->
     <!-- Raw snapshot product controls -->
     <string name="section_export_type">রপ্তানি প্রকার</string>
-    <string name="export_type_compatibility">Compatibility Export</string>
+    <string name="export_type_compatibility">সামঞ্জস্যপূর্ণ রপ্তানি</string>
     <string name="export_type_compatibility_description">বিদ্যমান Health.md কর্মপ্রবাহের জন্য দৈনিক Markdown, বেস, JSON, বা CSV ফাইল</string>
-    <string name="export_type_raw_snapshot">Raw API Snapshot</string>
+    <string name="export_type_raw_snapshot">কাঁচা API স্ন্যাপশট</string>
     <string name="export_type_raw_snapshot_description">একটি অপরিবর্তনীয় পরিসরের আর্টিফ্যাক্টে API-সম্পূর্ণ নেটিভ Health Connect রেকর্ড</string>
-    <string name="raw_snapshot_about_title">কাঁচা স্ন্যাপশট শব্দার্থবিদ্যা</string>
-    <string name="raw_snapshot_about_body">নির্বাচিত প্রদানকারীর API-তে প্রকাশিত প্রতিটি ক্ষেত্র ক্যাপচার করে। রিডগুলো লেনদেনভিত্তিক নয়, তাই রপ্তানির সময় ডেটা বদলাতে পারে। স্ন্যাপশটে মুছে ফেলার তথ্য, অ্যাক্সেস-অযোগ্য রেকর্ড, API-তে অনুপলভ্য মূল ইনপুট ইউনিট বা অ্যাপের এই সংস্করণের অজানা ক্ষেত্র অন্তর্ভুক্ত করা যায় না।</string>
+    <string name="raw_snapshot_about_title">কাঁচা স্ন্যাপশটের কার্যপদ্ধতি</string>
+    <string name="raw_snapshot_about_body">নির্বাচিত প্রদানকারীর API-তে উন্মুক্ত প্রতিটি ফিল্ড ক্যাপচার করে। ডেটা পড়ার কাজগুলো ট্রানজ্যাকশনভিত্তিক নয়, তাই রপ্তানির সময় ডেটা বদলাতে পারে। স্ন্যাপশটে মুছে ফেলার তথ্য, অ্যাক্সেস-অযোগ্য রেকর্ড, API-তে অনুপলভ্য মূল ইনপুট ইউনিট বা অ্যাপের এই সংস্করণের অজানা ফিল্ড অন্তর্ভুক্ত করা যায় না।</string>
     <string name="raw_snapshot_format_title">স্ন্যাপশট ফরম্যাট</string>
     <string name="raw_snapshot_format_json">JSON</string>
     <string name="raw_snapshot_format_json_description">হেডার, রেকর্ড, সমস্যা এবং ম্যানিফেস্ট সহ একটি ক্যানোনিকাল JSON ডকুমেন্ট</string>
     <string name="raw_snapshot_format_ndjson">NDJSON</string>
-    <string name="raw_snapshot_format_ndjson_description">বড় স্ন্যাপশটের জন্য একটি স্ট্রিমিং নিউলাইন-ডিলিমিটেড খাম</string>
+    <string name="raw_snapshot_format_ndjson_description">বড় স্ন্যাপশটের জন্য স্ট্রিমিং উপযোগী, নিউলাইন দিয়ে পৃথক করা একটি এনভেলপ</string>
     <string name="raw_snapshot_one_artifact_note">প্রতিটি এক্সপোর্ট অ্যাকশন একটি সোর্স রিড করে এবং নির্বাচিত ফরম্যাটে একটি আর্টিফ্যাক্ট তৈরি করে।</string>
-    <string name="raw_snapshot_scope_title">রেকর্ডের সুযোগ</string>
+    <string name="raw_snapshot_scope_title">রেকর্ডের পরিধি</string>
     <string name="raw_snapshot_scope_selected">নির্বাচিত রেকর্ড প্রকার</string>
     <string name="raw_snapshot_scope_selected_description">আপনার নির্বাচিত Health.md মেট্রিক্স দ্বারা উপস্থাপিত রেকর্ড প্রকারগুলি ব্যবহার করুন৷</string>
     <string name="raw_snapshot_scope_all">সমস্ত অনুমোদিত সমর্থিত ডেটা</string>
     <string name="raw_snapshot_scope_all_description">প্রতিটি সমর্থিত নেটিভ রেকর্ড টাইপ অন্তর্ভুক্ত করুন যার জন্য Health Connect অ্যাক্সেস মঞ্জুর করে৷</string>
     <string name="raw_snapshot_routes_title">সুনির্দিষ্ট ব্যায়াম রুট</string>
     <string name="raw_snapshot_routes_control">সুনির্দিষ্ট রুট অন্তর্ভুক্ত করুন</string>
-    <string name="raw_snapshot_routes_description">ব্যায়ামের রুটগুলি সুনির্দিষ্ট বাড়ি, কাজ এবং ভ্রমণের অবস্থানগুলি প্রকাশ করতে পারে। Health Connect আলাদা রুট সম্মতির প্রয়োজন হতে পারে।</string>
-    <string name="raw_snapshot_immutable_destination_note">কাঁচা স্ন্যাপশট অপরিবর্তনীয়, প্রতি পরিসরে একটি আর্টিফ্যাক্টের রপ্তানি; এগুলো health/raw (অথবা আপনার কনফিগার করা সাবফোল্ডার/raw)-এর অধীনে লেখা হয়। দৈনিক ফাইলনাম টেমপ্লেট এবং যোগ, আপডেট বা ওভাররাইট মোড প্রযোজ্য নয়।</string>
-    <string name="raw_snapshot_provider_unsupported">এই প্রদানকারী একটি নেটিভ কাঁচা API অ্যাডাপ্টার প্রকাশ করে না। Health Connect, Fitbit, Withings, Oura, WHOOP বা Compatibility Export এ স্যুইচ করুন।</string>
+    <string name="raw_snapshot_routes_description">ব্যায়ামের রুট বাড়ি, কর্মস্থল ও ভ্রমণের সুনির্দিষ্ট অবস্থান প্রকাশ করতে পারে। Health Connect রুটের জন্য আলাদা সম্মতি চাইতে পারে।</string>
+    <string name="raw_snapshot_immutable_destination_note">কাঁচা স্ন্যাপশট অপরিবর্তনীয়, প্রতি পরিসরে একটি আর্টিফ্যাক্টের রপ্তানি; এগুলো health/raw (অথবা আপনার কনফিগার করা subfolder/raw)-এর অধীনে লেখা হয়। দৈনিক ফাইলনাম টেমপ্লেট এবং Append, Update বা Overwrite মোড প্রযোজ্য নয়।</string>
+    <string name="raw_snapshot_provider_unsupported">এই প্রদানকারী কোনো নেটিভ কাঁচা API অ্যাডাপ্টার দেয় না। Health Connect, Fitbit, Withings, Oura বা WHOOP বেছে নিন, অথবা Compatibility Export-এ যান।</string>
     <string name="raw_snapshot_selection_required">অন্তত একটি স্বাস্থ্য মেট্রিক নির্বাচন করুন বা সমস্ত অনুমোদিত সমর্থিত ডেটা চয়ন করুন৷</string>
     <string name="raw_snapshot_https_required">কাঁচা API স্ন্যাপশটের জন্য একটি HTTPS এন্ডপয়েন্ট প্রয়োজন।</string>
     <string name="raw_snapshot_partial_label">কাঁচা স্ন্যাপশট আংশিক</string>
@@ -622,19 +726,22 @@
     <string name="raw_snapshot_result_count">স্ন্যাপশট ক্রিয়া সম্পন্ন হয়েছে: %1$d/%2$d</string>
     <string name="raw_snapshot_progress_count">স্ন্যাপশট অ্যাকশন: %1$d / %2$d</string>
     <string name="raw_snapshot_diagnostics_failed_count">অসম্পূর্ণ স্ন্যাপশট কর্ম: %d</string>
-    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
-    <string name="raw_snapshot_diagnostics_cancelled_message">এর নেটিভ সোর্স রিড এবং আর্টিফ্যাক্ট প্রচার সম্পূর্ণ হওয়ার আগেই কাঁচা স্ন্যাপশটটি বন্ধ হয়ে গেছে।</string>
-    <string name="raw_snapshot_diagnostics_no_details">কোন স্ন্যাপশট ডায়গনিস্টিক রেকর্ড করা হয়নি. প্রদানকারীর অ্যাক্সেস পরীক্ষা করুন এবং পরিসীমা পুনরায় চেষ্টা করুন।</string>
+    <plurals name="raw_snapshot_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$dটি ক্রিয়া</item>
+        <item quantity="other">%1$s: %2$dটি ক্রিয়া</item>
+    </plurals>
+    <string name="raw_snapshot_diagnostics_cancelled_message">নেটিভ সোর্স রিড ও আর্টিফ্যাক্ট প্রকাশ সম্পূর্ণ হওয়ার আগেই কাঁচা স্ন্যাপশটটি বন্ধ হয়ে গেছে।</string>
+    <string name="raw_snapshot_diagnostics_no_details">কোনো স্ন্যাপশট ডায়াগনস্টিকস রেকর্ড করা হয়নি। প্রদানকারীর অ্যাক্সেস পরীক্ষা করে পরিসরটি আবার চেষ্টা করুন।</string>
     <string name="raw_snapshot_guidance_provider">আবার চেষ্টা করার আগে নির্বাচিত প্রদানকারীর অ্যাক্সেস এবং কাঁচা আর্টিফ্যাক্ট ম্যানিফেস্ট পর্যালোচনা করুন।</string>
     <string name="raw_snapshot_guidance_cancelled">কোনো কাঁচা আর্টিফ্যাক্ট প্রকাশ করা হয়নি। প্রস্তুত হলে আবার চেষ্টা করুন।</string>
     <string name="raw_snapshot_history_entry">স্ন্যাপশট অ্যাকশন: %1$d/%2$d \u2022 %3$s থেকে %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">স্ন্যাপশট ডায়াগনস্টিকস</string>
-    <string name="raw_snapshot_notification_message">কাঁচা স্ন্যাপশট পরিসর শেষ হচ্ছে %1$s: %2$s</string>
+    <string name="raw_snapshot_notification_message">%1$s-এ শেষ হওয়া কাঁচা স্ন্যাপশট পরিসর: %2$s</string>
     <string name="raw_snapshot_status_complete">সম্পূর্ণ</string>
     <string name="raw_snapshot_status_failed">ব্যর্থ</string>
     <!-- ExportFormat display names -->
-    <string name="format_display_markdown">মার্কডাউন</string>
-    <string name="format_display_obsidian_bases">Obsidian ভিত্তি</string>
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
     <string name="format_display_json">JSON</string>
     <string name="format_display_csv">CSV</string>
     <!-- WriteMode display names and descriptions -->
@@ -643,20 +750,20 @@
     <string name="write_mode_display_append">যোগ করুন</string>
     <string name="write_mode_desc_append">বিদ্যমান ফাইলের শেষে স্বাস্থ্য ডেটা যোগ করুন</string>
     <string name="write_mode_display_update">আপডেট করুন</string>
-    <string name="write_mode_desc_update">অ্যাপ-পরিচালিত বিভাগ আপডেট করুন যখন আপনার কাস্টম সামগ্রী সংরক্ষণ করুন</string>
+    <string name="write_mode_desc_update">কাস্টম কনটেন্ট অপরিবর্তিত রেখে অ্যাপ-পরিচালিত বিভাগগুলো আপডেট করুন</string>
     <!-- DateFormatPreference display names -->
     <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US সংক্ষিপ্ত (01/13/2026)</string>
-    <string name="date_format_display_us_long">US দীর্ঘ (January 13, 2026)</string>
+    <string name="date_format_display_us_long">US দীর্ঘ (জানুয়ারি 13, 2026)</string>
     <string name="date_format_display_eu_short">EU সংক্ষিপ্ত (13/01/2026)</string>
-    <string name="date_format_display_eu_long">EU দীর্ঘ (13 January 2026)</string>
+    <string name="date_format_display_eu_long">EU দীর্ঘ (13 জানুয়ারি 2026)</string>
     <string name="date_format_display_compact">কম্প্যাক্ট (20260113)</string>
-    <string name="date_format_display_friendly">বন্ধুত্বপূর্ণ (Mon, Jan 13, 2026)</string>
+    <string name="date_format_display_friendly">সহজপাঠ্য (সোম, জানু 13, 2026)</string>
     <!-- TimeFormatPreference display names -->
-    <string name="time_format_display_24h">২৪-ঘণ্টা (14:30)</string>
-    <string name="time_format_display_24h_seconds">২৪-ঘণ্টা সেকেন্ড সহ (14:30:45)</string>
-    <string name="time_format_display_12h">১২-ঘণ্টা (2:30 PM)</string>
-    <string name="time_format_display_12h_seconds">১২-ঘণ্টা সেকেন্ড সহ (2:30:45 PM)</string>
+    <string name="time_format_display_24h">২৪ ঘণ্টা (১৪:৩০)</string>
+    <string name="time_format_display_24h_seconds">সেকেন্ডসহ ২৪ ঘণ্টা (১৪:৩০:৪৫)</string>
+    <string name="time_format_display_12h">১২ ঘণ্টা (২:৩০ অপরাহ্ণ)</string>
+    <string name="time_format_display_12h_seconds">সেকেন্ডসহ ১২ ঘণ্টা (২:৩০:৪৫ অপরাহ্ণ)</string>
     <!-- UnitPreference display names and descriptions -->
     <string name="unit_display_metric">মেট্রিক</string>
     <string name="unit_desc_metric">কিলোমিটার, কিলোগ্রাম, সেলসিয়াস</string>
@@ -676,13 +783,13 @@
     <string name="bullet_display_asterisk">তারকা (*)</string>
     <string name="bullet_display_plus">প্লাস (+)</string>
     <!-- Onboarding -->
-    <string name="onboarding_welcome_title">\nHealth.md স্বাগতম</string>
+    <string name="onboarding_welcome_title">Health.md-এ\nস্বাগতম</string>
     <string name="onboarding_welcome_subtitle">সুন্দর, বহনযোগ্য মার্কডাউন ফাইল হিসাবে আপনার সুস্থতার যাত্রা রপ্তানি করুন</string>
     <string name="onboarding_welcome_feature_1">Obsidian, Notion, এবং যেকোনো মার্কডাউন অ্যাপের সাথে কাজ করে</string>
     <string name="onboarding_welcome_feature_2">আপনার স্বাস্থ্য সংক্রান্ত ডেটা শুধুমাত্র আপনার বেছে নেওয়া গন্তব্যে যায়</string>
     <string name="onboarding_welcome_feature_3">স্বয়ংক্রিয় রপ্তানি আপনার নোট আপ টু ডেট রাখে</string>
-    <string name="onboarding_health_title">আপনার স্বাস্থ্য, \n আপনার ডেটা</string>
-    <string name="onboarding_health_subtitle">Health.md Health Connect থেকে আপনার স্বাস্থ্য ডেটা পড়ার জন্য অনুমতির প্রয়োজন — কিন্তু শুধুমাত্র এটি আপনার জন্য রপ্তানি করতে।</string>
+    <string name="onboarding_health_title">আপনার স্বাস্থ্য,\nআপনার ডেটা</string>
+    <string name="onboarding_health_subtitle">Health Connect থেকে আপনার স্বাস্থ্য ডেটা পড়তে Health.md-এর অনুমতি প্রয়োজন—তবে শুধু আপনার জন্য তা রপ্তানি করার উদ্দেশ্যে।</string>
     <string name="onboarding_health_feature_1">শুধুমাত্র-পঠন অ্যাক্সেস — আমরা কখনই আপনার ডেটা পরিবর্তন করি না</string>
     <string name="onboarding_health_feature_2">স্বাস্থ্য রপ্তানি শুধুমাত্র আপনার পছন্দের গন্তব্য ব্যবহার করে</string>
     <string name="onboarding_health_feature_3">Health.md-এর কোনো স্বাস্থ্য-ডেটা ক্লাউড নেই</string>
@@ -696,13 +803,13 @@
     <string name="onboarding_storage_selected">এতে সংরক্ষণ করা হচ্ছে: %s</string>
     <string name="onboarding_ready_title">আপনি সম্পূর্ণ প্রস্তুত!</string>
     <string name="onboarding_ready_subtitle">Health.md আপনার সুস্থতার ডেটা রপ্তানি করতে প্রস্তুত।</string>
-    <string name="onboarding_ready_tip_1">আপনার প্রথম স্বাস্থ্য নোট তৈরি করতে রপ্তানি আলতো চাপুন</string>
+    <string name="onboarding_ready_tip_1">আপনার প্রথম স্বাস্থ্য নোট তৈরি করতে রপ্তানিতে ট্যাপ করুন</string>
     <string name="onboarding_ready_tip_2">সময়সূচী ট্যাবে স্বয়ংক্রিয় রপ্তানি সেট আপ করুন৷</string>
     <string name="onboarding_ready_tip_3">সেটিংসে আপনার এক্সপোর্ট ফর্ম্যাট কাস্টমাইজ করুন</string>
     <string name="onboarding_ready_start_button">রপ্তানি শুরু করুন</string>
     <string name="onboarding_continue">চালিয়ে যান</string>
     <string name="onboarding_skip">এড়িয়ে যান</string>
-    <string name="onboarding_back">ব্যাক</string>
+    <string name="onboarding_back">ফিরে যান</string>
     <!-- P1 parity: billing/schedule/history/settings -->
     <string name="export_failure_paywall_label">আনলক আবশ্যক</string>
     <string name="export_guidance_paywall">নির্ধারিত রপ্তানি আজীবন আনলক প্রয়োজন. সীমাহীন এক্সপোর্ট এবং শিডিউল আনলক করতে পেওয়াল খুলুন।</string>
@@ -710,15 +817,18 @@
     <string name="export_source_shortcut">শর্টকাট</string>
     <string name="export_source_remote">দূরবর্তী</string>
     <string name="schedule_unlock_required_title">নির্ধারিত রপ্তানি আনলক করুন</string>
-    <string name="schedule_unlock_required_body">ম্যানুয়াল রপ্তানিতে ১০টি বিনামূল্যের রান অন্তর্ভুক্ত রয়েছে। স্বয়ংক্রিয় নির্ধারিত রপ্তানি এককালীন লাইফটাইম আনলকের সাথে অন্তর্ভুক্ত।</string>
+    <string name="schedule_unlock_required_body">ম্যানুয়াল রপ্তানি ১০ বার বিনামূল্যে চালানো যায়। এককালীন আজীবন আনলকের সঙ্গে স্বয়ংক্রিয় নির্ধারিত রপ্তানি অন্তর্ভুক্ত।</string>
     <string name="schedule_unlock_required_short">নির্ধারিত রপ্তানি সক্ষম করতে Health.md আনলক করুন।</string>
-    <string name="section_schedule_lookback">নির্ধারিত লুকব্যাক</string>
-    <string name="schedule_lookback_summary">প্রতিটি নির্ধারিত রান শেষ %1$d সম্পূর্ণ দিন(গুলি) রপ্তানি করে, গতকাল শেষ হয়, এবং যেকোনও মুলতুবি ব্যর্থ তারিখগুলি।</string>
-    <string name="export_folder_root_label">ফোল্ডার রপ্তানি করুন</string>
+    <string name="section_schedule_lookback">নির্ধারিত রপ্তানির পূর্ববর্তী সময়সীমা</string>
+    <string name="schedule_lookback_summary">প্রতিটি নির্ধারিত রপ্তানিতে গতকাল পর্যন্ত আগের %1$dটি সম্পূর্ণ দিন এবং অপেক্ষমাণ ব্যর্থ তারিখগুলো রপ্তানি হয়।</string>
+    <string name="export_folder_root_label">রপ্তানি ফোল্ডার</string>
     <string name="history_clear_title">রপ্তানির ইতিহাস সাফ করবেন?</string>
     <string name="history_clear_body">এটি সমস্ত স্থানীয় রপ্তানি ইতিহাস এন্ট্রি মুছে দেয়। রপ্তানি করা ফাইল মুছে ফেলা হয় না.</string>
     <string name="history_target_label">লক্ষ্য: %1$s</string>
-    <string name="history_file_count">ফাইল: %1$d</string>
+    <plurals name="history_file_count">
+        <item quantity="one">ফাইল: %1$d</item>
+        <item quantity="other">ফাইল: %1$d</item>
+    </plurals>
     <string name="history_detail_title">রপ্তানি বিবরণ</string>
     <string name="history_detail_source">উৎস</string>
     <string name="history_detail_when">কখন</string>
@@ -730,11 +840,11 @@
     <string name="history_detail_failure">ব্যর্থতা</string>
     <string name="history_detail_warning">সতর্কতা</string>
     <string name="history_detail_failed_dates">ব্যর্থ তারিখ</string>
-    <string name="clear">পরিষ্কার</string>
+    <string name="clear">সাফ করুন</string>
     <string name="retry">আবার চেষ্টা করুন</string>
     <string name="retrying">আবার চেষ্টা করা হচ্ছে...</string>
     <string name="delete">মুছুন</string>
-    <string name="section_file_organization">ফাইল সংস্থা</string>
+    <string name="section_file_organization">ফাইল বিন্যাস</string>
     <string name="health_subfolder_label">স্বাস্থ্য সাবফোল্ডার</string>
     <string name="folder_organization_label">স্বয়ংক্রিয় ফোল্ডার</string>
     <string name="folder_structure_template_label">কাস্টম ফোল্ডার টেমপ্লেট</string>
@@ -747,7 +857,7 @@
     <string name="frontmatter_date_key">তারিখ কী</string>
     <string name="frontmatter_include_type">প্রকার অন্তর্ভুক্ত করুন</string>
     <string name="frontmatter_type_key">প্রকারের কী</string>
-    <string name="frontmatter_type_value">টাইপ মান</string>
+    <string name="frontmatter_type_value">টাইপের মান</string>
     <string name="frontmatter_custom_fields_section">স্ট্যাটিক কাস্টম ক্ষেত্র</string>
     <string name="frontmatter_placeholder_fields_section">স্থানধারক ক্ষেত্র</string>
     <string name="frontmatter_metric_fields_section">মেট্রিক ক্ষেত্র</string>
@@ -758,4 +868,398 @@
     <string name="search">অনুসন্ধান করুন</string>
     <string name="enabled">সক্রিয়</string>
     <string name="disabled">অক্ষম</string>
+
+    <!-- Canonical localization additions -->
+    <string name="release_notes_highlight_widgets">ঐচ্ছিক ব্যাকগ্রাউন্ড রিফ্রেশসহ হোম স্ক্রিনে স্বাস্থ্য সারাংশ, কার্যকলাপ, হৃদ্‌স্পন্দনের পরিসর ও ঘুমের উইজেট যোগ করুন।</string>
+    <string name="direct_cli_title">Direct CLI</string>
+    <string name="direct_cli_intro_title">এনক্রিপ্টেড ডেস্কটপ এক্সপোর্ট</string>
+    <string name="direct_cli_intro_body">CLI আপনার কম্পিউটারে সংযোগের অপেক্ষায় থাকে। Health.md সরাসরি সংযোগ করে এবং কোনো ক্লাউড রিলে ছাড়াই রপ্তানি পাঠায়।</string>
+    <string name="direct_cli_pair_step_run">1. আপনার কম্পিউটারে চালান:</string>
+    <string name="direct_cli_pair_step_enter">2. CLI-তে দেখানো কম্পিউটার ঠিকানা এবং ২০-সংখ্যার Android কোড লিখুন।</string>
+    <string name="direct_cli_computer_address">কম্পিউটার ঠিকানা</string>
+    <string name="direct_cli_port">পোর্ট</string>
+    <string name="direct_cli_pairing_code">পেয়ারিং কোড</string>
+    <string name="direct_cli_pair_button">CLI-এর সাথে পেয়ার করুন</string>
+    <string name="direct_cli_paired_listener">%1$s-এর সাথে পেয়ার করা হয়েছে</string>
+    <string name="direct_cli_save_address">ঠিকানা সংরক্ষণ করুন</string>
+    <string name="direct_cli_export_instruction">আপনার কম্পিউটারে একটি রপ্তানি কমান্ড চালান, তারপর সংযোগ করুন-এ ট্যাপ করুন:</string>
+    <string name="direct_cli_connect">সংযোগ করুন</string>
+    <string name="direct_cli_disconnect">সংযোগ বিচ্ছিন্ন করুন</string>
+    <string name="direct_cli_forget">পেয়ার করা CLI ভুলে যান</string>
+    <string name="direct_cli_status_title">অবস্থা</string>
+    <string name="direct_cli_status_not_connected">সংযুক্ত নয়</string>
+    <string name="direct_cli_status_pairing">পেয়ার করা হচ্ছে…</string>
+    <string name="direct_cli_status_connecting">সংযোগ করা হচ্ছে…</string>
+    <string name="direct_cli_status_connected">%1$s-এ সংযুক্ত</string>
+    <string name="direct_cli_status_transferring">%2$s-এর মধ্যে %1$s স্থানান্তর করা হচ্ছে</string>
+    <string name="direct_cli_status_paired">%1$s-এর সাথে পেয়ার করা হয়েছে।</string>
+    <string name="direct_cli_status_session_finished">Direct CLI সেশন শেষ হয়েছে।</string>
+    <string name="direct_cli_status_export_completed">Android এক্সপোর্ট সম্পন্ন হয়েছে।</string>
+    <string name="direct_cli_status_export_cancelled">Android এক্সপোর্ট বাতিল করা হয়েছে।</string>
+    <string name="direct_cli_failure_connection">Health.md CLI-তে সংযোগ করা যায়নি। এটি সংযোগের অপেক্ষায় আছে কি না নিশ্চিত করে আবার চেষ্টা করুন।</string>
+    <string name="direct_cli_failure_timeout">Direct CLI সেশন Android-এর সময়সীমায় পৌঁছেছে।</string>
+    <string name="direct_cli_failure_quota">বিনামূল্যের এক্সপোর্ট সীমায় পৌঁছে গেছে।</string>
+    <string name="direct_cli_failure_fitbit_range">Fitbit-এর কাঁচা রপ্তানির জন্য সর্বোচ্চ ৩৬৬ দিনের একটি সুস্পষ্ট পরিসর প্রয়োজন।</string>
+    <string name="direct_cli_failure_source_unavailable">অনুরোধ করা স্বাস্থ্য প্রদানকারীটি এই ডিভাইসে অনুপলভ্য।</string>
+    <string name="direct_cli_failure_health_access">Android ডিভাইসে স্বাস্থ্য অ্যাক্সেস প্রয়োজন।</string>
+    <string name="direct_cli_failure_device_locked">স্বাস্থ্য ডেটা এক্সপোর্ট করার আগে Android ডিভাইস আনলক করুন।</string>
+    <string name="direct_cli_failure_historical_access">অনুরোধ করা তারিখগুলোর জন্য ঐতিহাসিক স্বাস্থ্য অ্যাক্সেস প্রয়োজন।</string>
+    <string name="direct_cli_failure_file_limit">তৈরি করা রপ্তানিতে ৪,০৯৬টির বেশি ফাইল রয়েছে; কম তারিখ ব্যবহার করুন অথবা পৃথক এন্ট্রি ট্র্যাকিং বন্ধ করুন।</string>
+    <string name="direct_cli_failure_spool_missing">সংরক্ষিত এক্সপোর্ট অনুপস্থিত এবং আবার শুরু করতে হবে।</string>
+    <string name="direct_cli_failure_export">Android এক্সপোর্ট নিরাপদভাবে সম্পন্ন করা যায়নি।</string>
+    <string name="direct_cli_notification_waiting">Health.md CLI-এর জন্য অপেক্ষা করা হচ্ছে</string>
+    <string name="direct_cli_notification_idle">Direct CLI নিষ্ক্রিয়</string>
+    <string name="direct_cli_notification_pairing">Health.md CLI-এর সাথে পেয়ার করা হচ্ছে</string>
+    <string name="direct_cli_notification_connecting">Health.md CLI-এর সাথে সংযোগ করা হচ্ছে</string>
+    <string name="direct_cli_notification_transferring">Android স্বাস্থ্য এক্সপোর্ট স্থানান্তর করা হচ্ছে</string>
+    <string name="direct_cli_notification_title">Health.md Direct CLI</string>
+    <string name="direct_cli_notification_channel_name">Direct CLI এক্সপোর্ট</string>
+    <string name="direct_cli_notification_channel_description">এনক্রিপ্টেড সরাসরি এক্সপোর্ট সংযোগ এবং স্থানান্তরের অগ্রগতি</string>
+    <string name="api_export_target_title">এক্সপোর্টের লক্ষ্য</string>
+    <string name="api_export_section_endpoint">এন্ডপয়েন্ট</string>
+    <string name="api_export_endpoint_url_label">এন্ডপয়েন্ট URL</string>
+    <string name="api_export_endpoint_help">আবশ্যক। API কী ও অন্যান্য গোপন তথ্য URL-এর বাইরে রাখুন।</string>
+    <string name="api_export_authorization_saved">%1$s সংরক্ষিত</string>
+    <string name="api_export_remove_credential">ক্রেডেনশিয়াল মুছুন</string>
+    <string name="api_export_new_authorization_label">নতুন %1$s</string>
+    <string name="api_export_authorization_label">%1$s টোকেন বা %2$s ক্রেডেনশিয়াল</string>
+    <string name="api_export_authorization_replacement_placeholder">সংরক্ষিত মানটি প্রতিস্থাপন করতে একটি মান লিখুন</string>
+    <string name="api_export_authorization_placeholder">টোকেন বা %1$s মান</string>
+    <string name="api_export_authorization_saved_help">সংরক্ষিত মান রাখতে ফাঁকা রাখুন। সাধারণ টোকেন স্বয়ংক্রিয়ভাবে %1$s ব্যবহার করে।</string>
+    <string name="api_export_authorization_help">সাধারণ টোকেন স্বয়ংক্রিয়ভাবে %1$s ব্যবহার করে। %1$s ও %2$s মান গ্রহণ করা হয়।</string>
+    <string name="api_export_custom_headers_title">কাস্টম হেডার</string>
+    <string name="api_export_custom_headers_saved">কাস্টম হেডার সংরক্ষিত</string>
+    <string name="api_export_remove_headers">হেডার সরান</string>
+    <string name="api_export_replacement_headers_label">প্রতিস্থাপন হেডার</string>
+    <string name="api_export_request_headers_label">রিকোয়েস্ট হেডার</string>
+    <string name="api_export_replacement_headers_help">সম্পূর্ণ প্রতিস্থাপন সেট লিখুন, প্রতি লাইনে একটি %1$s।</string>
+    <string name="api_export_request_headers_help">প্রতি লাইনে একটি %1$s ব্যবহার করুন। %2$s ট্রান্সপোর্ট হেডারগুলোকে অ্যাপ-পরিচালিত রাখে।</string>
+    <string name="api_export_close_settings">সেটিংস বন্ধ করুন</string>
+    <string name="api_export_save_settings">সেটিংস সংরক্ষণ করুন</string>
+    <string name="api_export_dialog_title">API এক্সপোর্ট</string>
+    <string name="api_export_dialog_description">নির্বাচিত রেকর্ডগুলোকে আপনার নিয়ন্ত্রিত %3$s বা %4$s এন্ডপয়েন্টে একটি %1$s %2$s হিসেবে পাঠান।</string>
+    <string name="api_export_close_content_description">API এক্সপোর্ট সেটিংস বন্ধ করুন</string>
+    <string name="api_export_optional_label">ঐচ্ছিক</string>
+    <string name="api_export_manage_request_headers">রিকোয়েস্ট হেডার পরিচালনা করুন</string>
+    <string name="api_export_add_request_headers">রিকোয়েস্ট হেডার যোগ করুন</string>
+    <string name="api_export_headers_saved_hidden">নিরাপদে সংরক্ষিত · মান লুকানো</string>
+    <string name="api_export_headers_add_help">API কী বা পরিষেবা-নির্দিষ্ট মান যোগ করুন</string>
+    <string name="api_export_collapse_custom_headers">কাস্টম হেডার সংকুচিত করুন</string>
+    <string name="api_export_expand_custom_headers">কাস্টম হেডার প্রসারিত করুন</string>
+    <string name="api_export_error_invalid_endpoint">ফ্র্যাগমেন্ট বা এম্বেড করা ব্যবহারকারীর নাম/পাসওয়ার্ড ছাড়া একটি বৈধ %1$s বা %2$s URL লিখুন।</string>
+    <string name="api_export_error_authorization_empty">একটি বৈধ %1$s টোকেন বা %2$s মান লিখুন।</string>
+    <string name="api_export_error_authorization_characters">%1$s মানে নিয়ন্ত্রণ বা non-ASCII অক্ষর থাকতে পারবে না।</string>
+    <string name="api_export_error_headers_total_size">রিকোয়েস্ট হেডার %1$d অক্ষর বা তার কম হতে হবে।</string>
+    <string name="api_export_error_headers_line_break">রিকোয়েস্ট হেডারে অসমর্থিত লাইন ব্রেক রয়েছে।</string>
+    <string name="api_export_error_header_missing_separator">হেডারের %1$d নম্বর লাইনে %2$s ব্যবহার করতে হবে।</string>
+    <string name="api_export_error_header_invalid_name">হেডারের %1$d নম্বর লাইনে একটি অবৈধ নাম রয়েছে। নামে সর্বোচ্চ %2$dটি বৈধ %3$s হেডার অক্ষর থাকতে পারে।</string>
+    <string name="api_export_error_header_reserved_name">%1$s %2$s দ্বারা পরিচালিত এবং ওভাররাইড করা যায় না।</string>
+    <string name="api_export_error_header_duplicate_name">হেডার %1$s একাধিকবার কনফিগার করা হয়েছে।</string>
+    <string name="api_export_error_header_value_too_long">হেডার %1$s-এর মান সর্বোচ্চ %2$d অক্ষরের হতে হবে।</string>
+    <string name="api_export_error_header_value_characters">হেডার %1$s-এ অসমর্থিত মানের অক্ষর রয়েছে।</string>
+    <string name="api_export_error_save_failed">API অনুরোধের সেটিংস নিরাপদে সংরক্ষণ করা যায়নি।</string>
+    <string name="api_export_endpoint_example">https://api.example.com/healthmd</string>
+    <string name="api_export_headers_example">X-API-Key: secret\nX-Client-ID: healthmd</string>
+    <string name="api_export_header_line_syntax">Name: value</string>
+    <string name="api_export_literal_authorization">Authorization</string>
+    <string name="api_export_literal_bearer">Bearer</string>
+    <string name="api_export_literal_basic">Basic</string>
+    <string name="api_export_literal_json">JSON</string>
+    <string name="api_export_literal_post">POST</string>
+    <string name="api_export_literal_http">HTTP</string>
+    <string name="api_export_literal_https">HTTPS</string>
+    <plurals name="api_export_error_header_count">
+        <item quantity="one">সর্বোচ্চ %1$dটি রিকোয়েস্ট হেডার কনফিগার করুন।</item>
+        <item quantity="other">সর্বোচ্চ %1$dটি রিকোয়েস্ট হেডার কনফিগার করুন।</item>
+    </plurals>
+    <string name="settings_direct_cli_subtitle">এনক্রিপ্টেড iOS- বা Android-সামঞ্জস্যপূর্ণ এক্সপোর্টের জন্য ডেস্কটপ CLI-এর সাথে পেয়ার করুন।</string>
+    <string name="health_provider_health_connect_summary">ব্যক্তিগতভাবে যন্ত্রে রপ্তানির জন্য ব্যবহৃত পূর্বনির্ধারিত Android স্বাস্থ্যকেন্দ্র।</string>
+    <string name="health_provider_health_connect_setup_description">রপ্তানি পর্দা থেকে Health Connect-এর অনুমতি দিন। Health.md নথিগুলো স্থানীয়ভাবে পড়ে এবং সরাসরি আপনার ফোল্ডারে লেখে।</string>
+    <string name="health_provider_samsung_health_summary">Samsung ফোন, Galaxy Watch, ঘুম, পদক্ষেপ, শরীরচর্চা ও গুরুত্বপূর্ণ শারীরিক সূচক।</string>
+    <string name="health_provider_samsung_health_setup_description">Samsung Health খুলে Health Connect-এর সঙ্গে ভাগাভাগি চালু করুন। Health Connect-এর বাইরে অংশীদার-অনুমোদিত উপাত্তের প্রয়োজন হলে Samsung-এর সরাসরি Health Data SDK পরে যোগ করা যাবে।</string>
+    <string name="health_provider_huawei_health_summary">Huawei ডিভাইস এবং HMS/AppGallery বাজার।</string>
+    <string name="health_provider_huawei_health_setup_description">Huawei সমর্থনের জন্য HMS Health Kit অ্যাপ রেজিস্ট্রেশন এবং HMS-সক্ষম বিল্ড প্রয়োজন। এই ক্যাটালগ Play বিল্ডে HMS নির্ভরতা না যোগ করেও Huawei-কে দৃশ্যমান রাখে।</string>
+    <string name="health_provider_fitbit_summary">Fitbit অনুসরণযন্ত্র, Pixel Watch-এর Fitbit উপাত্ত, ঘুম, কার্যকলাপ ও হৃদ্‌স্পন্দন।</string>
+    <string name="health_provider_fitbit_setup_description">সরাসরি Fitbit ইমপোর্টে OAuth স্কোপ ও রিফ্রেশ টোকেনসহ Fitbit Web API ব্যবহৃত হয়। অ্যাপ ক্রেডেনশিয়াল কনফিগার না হওয়া পর্যন্ত যেখানে উপলভ্য, Health Connect-এর মাধ্যমে Fitbit ডেটা রপ্তানি করুন।</string>
+    <string name="health_provider_garmin_summary">Garmin ঘড়ি, প্রশিক্ষণ, কার্যকলাপ, ঘুম ও দেহের ব্যাটারির মতো পরিমাপ।</string>
+    <string name="health_provider_garmin_setup_description">Garmin-এর প্রোডাকশন ইমপোর্টের জন্য Garmin Health API অংশীদার অনুমোদন এবং সাধারণত একটি ব্যাকএন্ড/ওয়েবহুক সিঙ্ক পাথ প্রয়োজন। Health.md নকশা অনুযায়ী Google Fit ফলব্যাক ব্যবহার করে না।</string>
+    <string name="health_provider_withings_summary">Withings-এর ওজন মাপার যন্ত্র, ঘড়ি, রক্তচাপ মাপার যন্ত্র ও ঘুম পর্যবেক্ষক ম্যাট।</string>
+    <string name="health_provider_withings_setup_description">সরাসরি Withings ইমপোর্টে OAuth 2.0 ও Withings public API ব্যবহৃত হয়। লাইভ ক্লাউড রিড চালু করার আগে ক্লায়েন্ট ক্রেডেনশিয়াল কনফিগার করুন।</string>
+    <string name="health_provider_oura_summary">Oura Ring-এর ঘুম, রেডিনেস, কার্যকলাপ, হৃদ্‌স্পন্দন ও HRV।</string>
+    <string name="health_provider_oura_setup_description">সরাসরি Oura ইমপোর্টে OAuth 2.0 সহ Oura Cloud API ব্যবহৃত হয়। লাইভ ক্লাউড রিড চালু করার আগে ক্লায়েন্ট ক্রেডেনশিয়াল কনফিগার করুন।</string>
+    <string name="health_provider_polar_summary">Polar প্রশিক্ষণ, হৃদ্‌স্পন্দন মাপার যন্ত্র এবং AccessLink-এর মাধ্যমে ঘুম ও কার্যকলাপ।</string>
+    <string name="health_provider_polar_setup_description">Polar-এর ঐতিহাসিক ডেটা ইমপোর্টে Polar AccessLink OAuth ব্যবহার করুন। BLE সেন্সর সমর্থন ভবিষ্যতের আলাদা লাইভ-সেশন ফিচার, ইতিহাস রপ্তানির বিকল্প নয়।</string>
+    <string name="health_provider_whoop_summary">WHOOP-এর রিকভারি, Strain, ঘুম, ওয়ার্কআউট ও শারীরবৃত্তীয় ডেটা।</string>
+    <string name="health_provider_whoop_setup_description">সরাসরি WHOOP ইমপোর্টে সাইকেল, রিকভারি, ঘুম, ওয়ার্কআউট ও প্রোফাইল ডেটার OAuth স্কোপসহ WHOOP API ব্যবহৃত হয়।</string>
+    <string name="health_provider_integration_android_system">Android সিস্টেম</string>
+    <string name="health_provider_integration_health_connect_source">Health Connect উৎস</string>
+    <string name="health_provider_integration_vendor_sdk">প্রস্তুতকারকের SDK</string>
+    <string name="health_provider_integration_cloud_api">ক্লাউড API</string>
+    <string name="health_provider_integration_partner_api">অংশীদার API</string>
+    <string name="health_provider_direct_export_available">এক্সপোর্টের জন্য প্রস্তুত</string>
+    <string name="health_provider_direct_export_requires_oauth_credentials">OAuth ক্রেডেনশিয়াল প্রয়োজন</string>
+    <string name="health_provider_direct_export_requires_vendor_approval">বিক্রেতার অনুমোদন প্রয়োজন</string>
+    <string name="health_provider_direct_export_requires_partner_approval">অংশীদারের অনুমোদন প্রয়োজন</string>
+    <string name="health_provider_direct_export_requires_app_configuration">অ্যাপ কনফিগারেশন প্রয়োজন</string>
+    <string name="health_provider_action_open">খুলুন</string>
+    <string name="health_provider_action_install_setup">ইনস্টল / সেটআপ করুন</string>
+    <string name="privacy_permissions_label">অনুমতি:</string>
+    <string name="privacy_export_label">এক্সপোর্ট:</string>
+    <string name="onboarding_storage_selected_folder_fallback">নির্বাচিত ফোল্ডার</string>
+    <string name="advanced_settings_no_formats_selected">কোনো ফরম্যাট নির্বাচিত নয়</string>
+    <string name="custom_markdown_template_empty_preview">(খালি প্রিভিউ)</string>
+    <string name="billing_error_product_unavailable">পণ্যের তথ্য লোড করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="billing_error_service_unavailable">বিলিং পরিষেবা অনুপলব্ধ। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="billing_error_purchase_failed">ক্রয় সম্পন্ন করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="billing_error_no_previous_purchase">কোনো পূর্ববর্তী ক্রয় পাওয়া যায়নি।</string>
+    <string name="billing_error_restore_failed">ক্রয় পুনরুদ্ধার করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="health_provider_label_health_connect">Health Connect</string>
+    <string name="health_provider_label_all_connected">সংযুক্ত সব উৎস</string>
+    <string name="health_provider_label_fitbit">Fitbit</string>
+    <string name="health_provider_label_withings">Withings</string>
+    <string name="health_provider_label_oura">Oura</string>
+    <string name="health_provider_label_polar">Polar Flow</string>
+    <string name="health_provider_label_whoop">WHOOP</string>
+    <string name="health_provider_label_generic">স্বাস্থ্য উৎস</string>
+    <string name="health_provider_sign_in_denied">স্বাস্থ্য উৎসের সাইন-ইন অনুমোদিত হয়নি।</string>
+    <string name="health_provider_sign_in_invalid_callback">স্বাস্থ্য উৎসের সাইন-ইন যাচাই করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="health_provider_sign_in_connection_failed">স্বাস্থ্য উৎসের সাথে সংযোগ করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</string>
+    <string name="feedback_diagnostic_app">অ্যাপ: Health.md %1$s (%2$d)</string>
+    <string name="feedback_diagnostic_platform">প্ল্যাটফর্ম: Android %1$s (API %2$d)</string>
+    <string name="feedback_diagnostic_device">ডিভাইস: %1$s</string>
+    <string name="feedback_issue_describe_heading">সমস্যাটি বর্ণনা করুন</string>
+    <string name="feedback_issue_describe_hint">কি ঘটেছিল তার একটি স্পষ্ট বিবরণ</string>
+    <string name="feedback_issue_steps_heading">সমস্যাটি আবার ঘটানোর ধাপ</string>
+    <string name="feedback_issue_expected_heading">প্রত্যাশিত আচরণ</string>
+    <string name="feedback_issue_expected_hint">আপনি কী ঘটবে বলে আশা করেছিলেন</string>
+    <string name="automation_history_permissions_missing">Health Connect অনুমতি অনুপস্থিত</string>
+    <plurals name="automation_history_failed_dates">
+        <item quantity="one">%1$dটি ব্যর্থ তারিখ</item>
+        <item quantity="other">%1$dটি ব্যর্থ তারিখ</item>
+    </plurals>
+    <string name="action_edit_endpoint">API এন্ডপয়েন্ট সম্পাদনা করুন</string>
+    <string name="history_date_range">%1$s – %2$s</string>
+    <string name="history_failed_date_reason">%1$s: %2$s</string>
+    <string name="history_retry_api_required">আবার চেষ্টা করার আগে একটি API এন্ডপয়েন্ট কনফিগার করুন।</string>
+    <string name="history_retry_complete">পুনরায় চেষ্টা সম্পন্ন হয়েছে।</string>
+    <string name="history_retry_failed">পুনরায় চেষ্টা ব্যর্থ হয়েছে। বিস্তারিত জানতে রপ্তানি ইতিহাস দেখুন।</string>
+    <string name="history_retry_folder_required">পুনরায় চেষ্টা করার আগে একটি রপ্তানি ফোল্ডার নির্বাচন করুন।</string>
+    <string name="history_retry_permissions_required">পুনরায় চেষ্টা করার আগে Health Connect অনুমতি দিন।</string>
+    <string name="history_retry_raw_failed">কাঁচা স্ন্যাপশটের পুনরায় চেষ্টা ব্যর্থ হয়েছে। বিস্তারিত জানতে রপ্তানি ইতিহাস দেখুন।</string>
+    <string name="history_warning_details_unavailable">সতর্কতার বিবরণ অনুপলব্ধ।</string>
+    <string name="schedule_decrease_hour">ঘণ্টা কমান</string>
+    <string name="schedule_decrease_lookback_days">লুকব্যাক দিন কমান</string>
+    <string name="schedule_decrease_minute">মিনিট কমান</string>
+    <string name="schedule_destination_not_ready_title">এক্সপোর্টের গন্তব্য প্রস্তুত নয়</string>
+    <string name="schedule_error_api_required">সময়সূচি চালু করার আগে একটি API এন্ডপয়েন্ট কনফিগার করুন।</string>
+    <string name="schedule_error_folder_required">প্রথমে রপ্তানি পর্দায় একটি রপ্তানি ফোল্ডার বেছে নিন।</string>
+    <string name="schedule_error_invalid_api_settings">API এন্ডপয়েন্ট ও রিকোয়েস্ট সেটিংস পরীক্ষা করে আবার চেষ্টা করুন।</string>
+    <string name="schedule_error_invalid_api_url">ফ্র্যাগমেন্ট বা এম্বেড করা ব্যবহারকারীর নাম/পাসওয়ার্ড ছাড়া একটি বৈধ HTTP বা HTTPS URL লিখুন।</string>
+    <string name="schedule_error_invalid_headers">প্রতি লাইনে একটি নাম ও মান দিয়ে বৈধ রিকোয়েস্ট হেডার লিখুন।</string>
+    <string name="schedule_error_save_api_settings">API অনুরোধের সেটিংস নিরাপদে সংরক্ষণ করা যায়নি।</string>
+    <string name="schedule_increase_hour">ঘণ্টা বাড়ান</string>
+    <string name="schedule_increase_lookback_days">লুকব্যাক দিন বাড়ান</string>
+    <string name="schedule_increase_minute">মিনিট বাড়ান</string>
+    <string name="schedule_next_export_datetime">%1$s, %2$s-এ</string>
+    <string name="schedule_target_api_configured">%1$s-এ POST JSON করুন</string>
+    <string name="schedule_target_api_unconfigured">আপনার API এন্ডপয়েন্টে নির্ধারিত JSON পাঠান</string>
+    <string name="schedule_target_folder_choose">রপ্তানি পর্দা থেকে একটি ফোল্ডার বেছে নিন</string>
+    <string name="schedule_target_folder_ready">নির্বাচিত ডিভাইস ফোল্ডারে নির্ধারিত ফাইল লিখুন</string>
+    <string name="schedule_toggle_time_period">পূর্বাহ্ণ বা অপরাহ্ণ বদলান</string>
+    <string name="scheduled_recovery_history_cancelled">পুনরুদ্ধার বাতিল হয়েছে; অসমাপ্ত তারিখগুলো অপেক্ষমাণ রয়ে গেছে।</string>
+    <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
+    <plurals name="export_history_failed_dates_pending_retry">
+        <item quantity="one">পুনরায় চেষ্টার জন্য অপেক্ষমাণ %1$dটি ব্যর্থ তারিখ</item>
+        <item quantity="other">পুনরায় চেষ্টার জন্য অপেক্ষমাণ %1$dটি ব্যর্থ তারিখ</item>
+    </plurals>
+    <plurals name="export_notification_days_exported">
+        <item quantity="one">%3$s-এর জন্য %1$d/%2$d দিন এক্সপোর্ট হয়েছে</item>
+        <item quantity="other">%3$s-এর জন্য %1$d/%2$d দিন এক্সপোর্ট হয়েছে</item>
+    </plurals>
+    <plurals name="history_detail_exported_days">
+        <item quantity="one">%1$d/%2$d দিন</item>
+        <item quantity="other">%1$d/%2$d দিন</item>
+    </plurals>
+    <plurals name="history_detail_file_count">
+        <item quantity="one">%1$dটি ফাইল</item>
+        <item quantity="other">%1$dটি ফাইল</item>
+    </plurals>
+    <plurals name="history_failed_date_sample_more">
+        <item quantity="one">ব্যর্থ তারিখ: %1$s, আরও +%2$dটি</item>
+        <item quantity="other">ব্যর্থ তারিখ: %1$s, আরও +%2$dটি</item>
+    </plurals>
+    <plurals name="history_more_items">
+        <item quantity="one">+%1$dটি আরও</item>
+        <item quantity="other">+%1$dটি আরও</item>
+    </plurals>
+    <plurals name="history_retry_failed_dates">
+        <item quantity="one">পুনরায় চেষ্টায় %1$dটি ব্যর্থ তারিখ রয়ে গেছে।</item>
+        <item quantity="other">পুনরায় চেষ্টায় %1$dটি ব্যর্থ তারিখ রয়ে গেছে।</item>
+    </plurals>
+    <plurals name="history_warning_failed_dates">
+        <item quantity="one">%1$dটি ব্যর্থ তারিখ</item>
+        <item quantity="other">%1$dটি ব্যর্থ তারিখ</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_incomplete_count">
+        <item quantity="one">%1$dটি অসম্পূর্ণ স্ন্যাপশট ক্রিয়া</item>
+        <item quantity="other">%1$dটি অসম্পূর্ণ স্ন্যাপশট ক্রিয়া</item>
+    </plurals>
+    <plurals name="raw_snapshot_history_entry_actions">
+        <item quantity="one">স্ন্যাপশট ক্রিয়া: %1$d/%2$dটি ক্রিয়া • %3$s থেকে %4$s</item>
+        <item quantity="other">স্ন্যাপশট ক্রিয়া: %1$d/%2$dটি ক্রিয়া • %3$s থেকে %4$s</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
+        <item quantity="one">দিন</item>
+        <item quantity="other">দিন</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_hours" tools:ignore="ImpliedQuantity">
+        <item quantity="one">ঘণ্টা</item>
+        <item quantity="other">ঘণ্টা</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_minutes" tools:ignore="ImpliedQuantity">
+        <item quantity="one">মিনিট</item>
+        <item quantity="other">মিনিট</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_weeks" tools:ignore="ImpliedQuantity">
+        <item quantity="one">সপ্তাহ</item>
+        <item quantity="other">সপ্তাহ</item>
+    </plurals>
+    <plurals name="schedule_lookback_days_summary">
+        <item quantity="one">প্রতিবার গতকাল পর্যন্ত আগের %1$d দিনের ডেটা রপ্তানি হয়।</item>
+        <item quantity="other">প্রতিবার গতকাল পর্যন্ত আগের %1$d দিনের ডেটা রপ্তানি হয়।</item>
+    </plurals>
+    <plurals name="scheduled_recovery_history_failed_dates">
+        <item quantity="one">পুনরুদ্ধার শেষ হয়েছে, কিন্তু এখনও %1$dটি ব্যর্থ তারিখ অপেক্ষমাণ।</item>
+        <item quantity="other">পুনরুদ্ধার শেষ হয়েছে, কিন্তু এখনও %1$dটি ব্যর্থ তারিখ অপেক্ষমাণ।</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_exported_dates">
+        <item quantity="one">পুনরুদ্ধার %1$d/%2$dটি তারিখ এক্সপোর্ট করেছে।</item>
+        <item quantity="other">পুনরুদ্ধার %1$d/%2$dটি তারিখ এক্সপোর্ট করেছে।</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_pending_dates">
+        <item quantity="one">%1$dটি তারিখ এখনও অপেক্ষমাণ।</item>
+        <item quantity="other">%1$dটি তারিখ এখনও অপেক্ষমাণ।</item>
+    </plurals>
+    <string name="export_api_action_edit">সম্পাদনা করুন</string>
+    <string name="export_api_authorization_secure">Authorization নিরাপদে সংরক্ষিত</string>
+    <string name="export_api_compatibility_mode_description">API রপ্তানি সবসময় JSON পাঠায়। পরিমাপ ও সময়-ক্রম সেটিংস প্রযোজ্য; ফাইলের পথ ও লেখার ধরন প্রযোজ্য নয়।</string>
+    <string name="export_api_configure_endpoint">একটি API এন্ডপয়েন্ট কনফিগার করুন</string>
+    <string name="export_api_error_invalid_endpoint">ফ্র্যাগমেন্ট বা এম্বেড করা ব্যবহারকারীর নাম/পাসওয়ার্ড ছাড়া একটি বৈধ HTTP বা HTTPS URL লিখুন।</string>
+    <string name="export_api_error_invalid_headers">প্রতি লাইনে একটি নাম ও মান দিয়ে বৈধ রিকোয়েস্ট হেডার লিখুন।</string>
+    <string name="export_api_error_secure_save">API অনুরোধের সেটিংস নিরাপদে সংরক্ষণ করা যায়নি।</string>
+    <string name="export_api_headers_secure">কাস্টম রিকোয়েস্ট হেডার নিরাপদে সংরক্ষিত</string>
+    <string name="export_api_post_endpoint">POST %1$s</string>
+    <string name="export_api_raw_mode_description">কাঁচা স্ন্যাপশটগুলো সম্পূর্ণ আর্টিফ্যাক্টটি schema, export ID ও checksum হেডারসহ স্ট্রিম করে।</string>
+    <string name="export_no_format_selected">চালিয়ে যেতে অন্তত একটি রপ্তানি বিন্যাস নির্বাচন করুন।</string>
+    <string name="export_preview_action_create_daily_note">দৈনিক নোট তৈরি করুন</string>
+    <string name="export_preview_action_daily_note_failed">দৈনিক নোট ব্যর্থ হয়েছে</string>
+    <string name="export_preview_action_skip_daily_note">দৈনিক নোট এড়িয়ে যান</string>
+    <string name="export_preview_action_update_daily_note">দৈনিক নোট আপডেট করুন</string>
+    <string name="export_preview_action_write_individual_entry">পৃথক এন্ট্রি লিখুন</string>
+    <string name="export_preview_api_preparation_failed">API রপ্তানির প্রস্তুতি ব্যর্থ হয়েছে।</string>
+    <string name="export_preview_artifacts_per_range">প্রতি পরিসরে আর্টিফ্যাক্ট</string>
+    <string name="export_preview_back_description">রপ্তানির পূর্বরূপে ফিরে যান</string>
+    <string name="export_preview_destination_label">গন্তব্য</string>
+    <string name="export_preview_empty_file">(খালি ফাইল)</string>
+    <string name="export_preview_formats_per_day">প্রতি দিনে ফরম্যাট</string>
+    <string name="export_preview_no_exportable_file">এই তারিখের জন্য কোনো এক্সপোর্টযোগ্য ফাইল নেই।</string>
+    <string name="export_preview_no_files_written">কোনো ফাইল লেখা হবে না।</string>
+    <string name="export_preview_planning_failed">এক্সপোর্ট পরিকল্পনা ব্যর্থ হয়েছে।</string>
+    <string name="export_preview_raw_access_denied">%1$s-এর কাঁচা স্ন্যাপশট প্রিভিউতে অ্যাক্সেস প্রত্যাখ্যান করা হয়েছে। প্রদানকারীর অনুমতিগুলো পর্যালোচনা করুন।</string>
+    <string name="export_preview_raw_failed">আর্টিফ্যাক্ট সম্পূর্ণ হওয়ার আগেই %1$s-এর কাঁচা স্ন্যাপশট প্রিভিউ ব্যর্থ হয়েছে।</string>
+    <string name="export_preview_raw_failed_manifest">%1$s একটি ব্যর্থ কাঁচা স্ন্যাপশট ম্যানিফেস্ট তৈরি করেছে। প্রদানকারীর অ্যাক্সেস পর্যালোচনা করুন।</string>
+    <string name="export_preview_raw_invalid_range">কাঁচা স্ন্যাপশটের শেষ তারিখ শুরুর তারিখের আগে।</string>
+    <string name="export_preview_raw_no_final_status">চূড়ান্ত কাঁচা স্ন্যাপশটের অবস্থা ছাড়াই %1$s-এর প্রিভিউ শেষ হয়েছে।</string>
+    <string name="export_preview_raw_partial">%1$s একটি আংশিক কাঁচা স্ন্যাপশট প্রিভিউ তৈরি করেছে। আর্টিফ্যাক্ট ম্যানিফেস্ট পর্যালোচনা করুন।</string>
+    <string name="export_preview_raw_provider_unavailable">কাঁচা স্ন্যাপশট প্রিভিউয়ের জন্য কোনো সংযুক্ত প্রদানকারী উপলভ্য নেই।</string>
+    <string name="export_preview_raw_provider_unregistered">প্রদানকারীর নেটিভ কাঁচা স্ন্যাপশটের জন্য %1$s নিবন্ধিত নয়; Health Connect ফলব্যাক ব্যবহার করা হয়নি।</string>
+    <string name="export_preview_raw_service_unavailable">কাঁচা স্ন্যাপশট প্রিভিউ পরিষেবা অনুপলভ্য।</string>
+    <string name="export_preview_selected_folder">নির্বাচিত ফোল্ডার</string>
+    <string name="export_preview_selected_range">নির্বাচিত পরিসর</string>
+    <string name="export_preview_summary">%1$s • %2$s • %3$s</string>
+    <string name="export_preview_truncation_marker">\n\n… প্রিভিউ সংক্ষিপ্ত করা হয়েছে: এই %2$s ফাইলের মাঝখান থেকে %1$s বাদ দেওয়া হয়েছে। …\n\n</string>
+    <string name="export_preview_warning_title">সতর্কতা</string>
+    <string name="export_selected_range">%1$s – %2$s</string>
+    <string name="export_target_api_configured_subtitle">%1$s কে %2$s-এ POST করুন</string>
+    <string name="export_target_api_json_unconfigured_subtitle">আপনার API এন্ডপয়েন্টে JSON পাঠান</string>
+    <string name="export_target_api_raw_unconfigured_subtitle">একটি HTTPS এন্ডপয়েন্টে কাঁচা স্ন্যাপশট স্ট্রিম করুন</string>
+    <string name="export_target_folder_selected_subtitle">%1$s-এ ফাইল লিখুন</string>
+    <string name="export_target_folder_unselected_subtitle">স্থানীয় বা প্রদানকারী-সমর্থিত ফোল্ডার বেছে নিন</string>
+    <string name="folder_organization_flat_label">ফ্ল্যাট</string>
+    <string name="folder_organization_by_year_label">বছর অনুযায়ী</string>
+    <string name="folder_organization_by_month_label">মাস অনুযায়ী</string>
+    <string name="folder_organization_by_year_month_label">বছর/মাস অনুযায়ী</string>
+    <string name="folder_organization_flat_preview">কোনো স্বয়ংক্রিয় তারিখ ফোল্ডার নেই</string>
+    <plurals name="export_progress_state_days">
+        <item quantity="one">%1$d/%2$d দিন এক্সপোর্ট হয়েছে</item>
+        <item quantity="other">%1$d/%2$d দিন এক্সপোর্ট হয়েছে</item>
+    </plurals>
+    <plurals name="export_progress_state_days_with_date">
+        <item quantity="one">%1$d/%2$d দিন এক্সপোর্ট হয়েছে। বর্তমান তারিখ: %3$s</item>
+        <item quantity="other">%1$d/%2$d দিন এক্সপোর্ট হয়েছে। বর্তমান তারিখ: %3$s</item>
+    </plurals>
+    <plurals name="export_progress_state_raw">
+        <item quantity="one">%3$s থেকে %4$s-এর জন্য %1$d/%2$dটি কাঁচা স্ন্যাপশটের কাজ সম্পন্ন হয়েছে</item>
+        <item quantity="other">%3$s থেকে %4$s-এর জন্য %1$d/%2$dটি কাঁচা স্ন্যাপশটের কাজ সম্পন্ন হয়েছে</item>
+    </plurals>
+    <plurals name="export_diagnostics_date_list_more_count">
+        <item quantity="one">ব্যর্থ তারিখ: %1$s, আরও +%2$dটি তারিখ</item>
+        <item quantity="other">ব্যর্থ তারিখ: %1$s, আরও +%2$dটি তারিখ</item>
+    </plurals>
+    <plurals name="export_diagnostics_failed_days">
+        <item quantity="one">%1$d দিন রপ্তানি হয়নি</item>
+        <item quantity="other">%1$d দিন রপ্তানি হয়নি</item>
+    </plurals>
+    <plurals name="export_diagnostics_reason_days">
+        <item quantity="one">%1$s: %2$d দিন</item>
+        <item quantity="other">%1$s: %2$d দিন</item>
+    </plurals>
+    <plurals name="export_preview_artifact_count">
+        <item quantity="one">%1$dটি আর্টিফ্যাক্ট</item>
+        <item quantity="other">%1$dটি আর্টিফ্যাক্ট</item>
+    </plurals>
+    <plurals name="export_preview_day_count">
+        <item quantity="one">%1$d দিন</item>
+        <item quantity="other">%1$d দিন</item>
+    </plurals>
+    <plurals name="export_preview_days_previewed">
+        <item quantity="one">%1$d/%2$d দিন</item>
+        <item quantity="other">%1$d/%2$d দিন</item>
+    </plurals>
+    <plurals name="export_preview_file_count">
+        <item quantity="one">%1$dটি ফাইল</item>
+        <item quantity="other">%1$dটি ফাইল</item>
+    </plurals>
+    <plurals name="export_preview_limited_days">
+        <item quantity="one">সবচেয়ে সাম্প্রতিক %1$d দিনের ডেটা প্রিভিউ করা হচ্ছে। সম্পূর্ণ এক্সপোর্ট নির্বাচিত প্রতিটি তারিখে চলবে।</item>
+        <item quantity="other">সবচেয়ে সাম্প্রতিক %1$d দিনের ডেটা প্রিভিউ করা হচ্ছে। সম্পূর্ণ এক্সপোর্ট নির্বাচিত প্রতিটি তারিখে চলবে।</item>
+    </plurals>
+    <plurals name="export_progress_days_count">
+        <item quantity="one">%1$d / %2$d দিন</item>
+        <item quantity="other">%1$d / %2$d দিন</item>
+    </plurals>
+    <plurals name="export_result_exported_days">
+        <item quantity="one">%1$d/%2$d দিন এক্সপোর্ট হয়েছে</item>
+        <item quantity="other">%1$d/%2$d দিন এক্সপোর্ট হয়েছে</item>
+    </plurals>
+    <plurals name="export_result_uploaded_days">
+        <item quantity="one">%1$d/%2$d দিন আপলোড হয়েছে</item>
+        <item quantity="other">%1$d/%2$d দিন আপলোড হয়েছে</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_failed_actions">
+        <item quantity="one">অসম্পূর্ণ স্ন্যাপশটের কাজ: %1$d</item>
+        <item quantity="other">অসম্পূর্ণ স্ন্যাপশটের কাজগুলো: %1$d</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_reason_actions">
+        <item quantity="one">%1$s: %2$dটি কাজ</item>
+        <item quantity="other">%1$s: %2$dটি কাজ</item>
+    </plurals>
+    <plurals name="raw_snapshot_progress_actions">
+        <item quantity="one">স্ন্যাপশট ক্রিয়া: %1$d / %2$dটি ক্রিয়া</item>
+        <item quantity="other">স্ন্যাপশট ক্রিয়া: %1$d / %2$dটি ক্রিয়া</item>
+    </plurals>
+    <plurals name="raw_snapshot_result_actions">
+        <item quantity="one">স্ন্যাপশট ক্রিয়া সম্পন্ন হয়েছে: %1$d/%2$d</item>
+        <item quantity="other">স্ন্যাপশট ক্রিয়া সম্পন্ন হয়েছে: %1$d/%2$d</item>
+    </plurals>
 </resources>

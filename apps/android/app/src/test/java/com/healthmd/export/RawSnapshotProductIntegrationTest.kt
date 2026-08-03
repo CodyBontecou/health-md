@@ -192,8 +192,7 @@ class RawSnapshotProductIntegrationTest {
         assertThat(result.isFailure).isTrue()
         assertThat(result.artifactCount).isEqualTo(1)
         assertThat(result.primaryFailureReason).isEqualTo(ExportFailureReason.FILE_WRITE_ERROR)
-        assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("durable")
-        assertThat(result.failedDateDetails.single().errorDetails.orEmpty()).contains("checksum")
+        assertThat(result.failedDateDetails.single().errorDetails).isNull()
     }
 
     @Test
@@ -225,9 +224,8 @@ class RawSnapshotProductIntegrationTest {
             )
 
             assertThat(preview.content).startsWith("HEAD🙂")
-            assertThat(preview.content).endsWith("🙂TAIL")
-            assertThat(preview.content).contains("Preview truncated")
-            assertThat(preview.content).doesNotContain("�")
+            assertThat(preview.tailContent).endsWith("🙂TAIL")
+            assertThat(preview.content + preview.tailContent).doesNotContain("�")
             assertThat(preview.omittedByteCount).isGreaterThan(0)
         } finally {
             file.delete()

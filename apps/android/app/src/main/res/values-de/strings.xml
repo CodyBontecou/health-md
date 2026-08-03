@@ -10,7 +10,7 @@
     <string name="refresh">Aktualisieren</string>
 
     <!-- Export Screen -->
-    <string name="export_subtitle">Konfiguriere und exportiere deine Wellness-Daten</string>
+    <string name="export_subtitle">Konfigurieren und exportieren Sie Ihre Gesundheitsdaten</string>
     <string name="status_connected">Verbunden</string>
     <string name="status_disconnected">Getrennt</string>
     <string name="status_vault_default">Vault</string>
@@ -20,11 +20,91 @@
     <string name="hc_required_message">Installieren Sie Health Connect aus dem Play Store, um Ihre Gesundheitsdaten zu lesen.</string>
     <string name="hc_install_button">Health Connect installieren</string>
     <string name="hc_setup_title">Health Connect-Einrichtung erforderlich</string>
-    <string name="hc_setup_message">Öffnen Sie Health Connect und schließen Sie das anfängliche Setup ab, dann kommen Sie zurück, um Berechtigungen zu erteilen.</string>
+    <string name="hc_setup_message">Öffnen Sie Health Connect, schließen Sie die Ersteinrichtung ab und kehren Sie anschließend zurück, um Berechtigungen zu erteilen.</string>
     <string name="hc_open_button">Health Connect öffnen</string>
     <string name="permissions_required_title">Berechtigungen erforderlich</string>
     <string name="permissions_required_message">Gewähren Sie Health Connect-Berechtigungen, um Ihre Gesundheitsdaten zu exportieren.</string>
     <string name="permissions_grant_button">Berechtigungen erteilen</string>
+
+    <!-- Android home-screen widgets -->
+    <string name="widget_health_summary_name">Gesundheitsübersicht</string>
+    <string name="widget_health_summary_description">Heutige Aktivitäts-, Schlaf-, Herz- und Erholungswerte aus Health.md.</string>
+    <string name="widget_activity_name">Aktivität</string>
+    <string name="widget_activity_description">Schritte, aktive Kalorien und Trainingsfortschritt aus Health.md.</string>
+    <string name="widget_heart_range_name">Herzfrequenzbereich</string>
+    <string name="widget_heart_range_description">Minimum, Durchschnitt und Maximum der Herzfrequenz über sieben Tage aus Health.md.</string>
+    <string name="widget_sleep_name">Schlaf</string>
+    <string name="widget_sleep_description">Der Schlaf der letzten Nacht und ein 7-Tage-Schlafdiagramm aus Health.md.</string>
+    <string name="widget_label_today">Heute</string>
+    <string name="widget_label_move">Bewegung</string>
+    <string name="widget_label_exercise">Training</string>
+    <string name="widget_label_sleep">Schlaf</string>
+    <string name="widget_label_resting">Ruhepuls</string>
+    <string name="widget_label_heart_range">Herzfrequenzbereich</string>
+    <string name="widget_label_average">Durchschnitt</string>
+    <string name="widget_label_minimum">Min. %1$s</string>
+    <string name="widget_label_maximum">Max. %1$s</string>
+    <string name="widget_label_last_night">Letzte Nacht</string>
+    <string name="widget_label_seven_day_sleep">Schlaf (7 Tage)</string>
+    <string name="widget_label_seven_day_average">7-Tage-Durchschnitt</string>
+    <string name="widget_label_bedtime">Schlafenszeit</string>
+    <string name="widget_label_wake">Aufwachzeit</string>
+    <string name="widget_unit_steps">%1$s Schritte</string>
+    <string name="widget_unit_kilocalories">%1$s kcal</string>
+    <string name="widget_unit_minutes">%1$s min</string>
+    <string name="widget_unit_hours">%1$s Std.</string>
+    <string name="widget_unit_bpm">%1$s bpm</string>
+    <string name="widget_unit_milliseconds">%1$s ms</string>
+    <string name="widget_goal_eight_hours">Ziel: %1$s Stunden</string>
+    <string name="widget_state_loading">Gesundheitsdaten werden geladen…</string>
+    <string name="widget_state_open_for_access">Öffnen Sie Health.md, um den Zugriff auf Health Connect zu erlauben.</string>
+    <string name="widget_state_background_access">Öffnen Sie Health.md, um dieses Widget zu aktualisieren.</string>
+    <string name="widget_state_health_connect_unavailable">Richten Sie Health Connect ein und öffnen Sie dann Health.md.</string>
+    <string name="widget_state_unlock">Entsperren Sie Ihr Telefon, um Health.md zu aktualisieren.</string>
+    <string name="widget_state_no_summary_data">Keine Daten für die Gesundheitsübersicht</string>
+    <string name="widget_state_no_activity_data">Keine Aktivitätsdaten</string>
+    <string name="widget_state_no_heart_data">Keine Herzfrequenzdaten</string>
+    <string name="widget_state_no_sleep_data">Keine Schlafdaten</string>
+    <plurals name="widget_state_updated_minutes">
+        <item quantity="one">Vor %1$s Minute aktualisiert</item>
+        <item quantity="other">Vor %1$s Minuten aktualisiert</item>
+    </plurals>
+    <plurals name="widget_state_updated_hours">
+        <item quantity="one">Vor %1$s Stunde aktualisiert</item>
+        <item quantity="other">Vor %1$s Stunden aktualisiert</item>
+    </plurals>
+    <string name="widget_setup_title">%1$s einrichten</string>
+    <string name="widget_setup_body">Health.md liest nur die Aktivitäts-, Schlaf- oder Herzwerte, die dieses Widget anzeigt. Die Messwerte bleiben auf diesem Gerät.</string>
+    <string name="widget_setup_foreground_access">Gesundheitszugriff für Widget erlauben</string>
+    <string name="widget_setup_background_access">Aktualisierung im Hintergrund erlauben</string>
+    <string name="widget_setup_background_body">Der Hintergrundzugriff hält Widgets aktuell, wenn Health.md nicht geöffnet ist. Sie können das Widget auch ohne diesen Zugriff hinzufügen.</string>
+    <string name="widget_setup_add">Widget hinzufügen</string>
+    <string name="widget_setup_adding">Widget wird hinzugefügt…</string>
+    <string name="widget_setup_access_ready">Der Zugriff auf Health Connect ist eingerichtet.</string>
+    <string name="widget_setup_partial_access">Das Widget zeigt die Werte an, die Sie freigegeben haben.</string>
+    <string name="widget_setup_error">Das Widget konnte nicht eingerichtet werden. Prüfen Sie Health Connect und versuchen Sie es erneut.</string>
+    <string name="widget_preview_summary_value">8.742 Schritte</string>
+    <string name="widget_preview_summary_detail">7,5 Std. Schlaf · 58 bpm</string>
+    <string name="widget_preview_activity_value">421 kcal · 37 min</string>
+    <string name="widget_preview_activity_detail">8.742 / 10.000 Schritte</string>
+    <string name="widget_preview_heart_value">Ø 72 bpm</string>
+    <string name="widget_preview_heart_detail">47 min · 151 max. · 46 ms RMSSD</string>
+    <string name="widget_preview_sleep_value">Letzte Nacht: 7,5 Std.</string>
+    <string name="widget_preview_sleep_detail">22:30–06:30 Uhr</string>
+    <string name="widget_settings_title">Startbildschirm-Widgets</string>
+    <string name="widget_settings_none">Keine Widgets installiert</string>
+    <string name="widget_settings_add_from_home">Fügen Sie Health.md über die Widget-Auswahl Ihres Startbildschirms hinzu.</string>
+    <string name="widget_settings_current">Die Widgets sind aktuell und können im Hintergrund aktualisiert werden.</string>
+    <string name="widget_settings_foreground_only">Widgets werden aktualisiert, wenn Health.md geöffnet ist.</string>
+    <string name="widget_settings_stale">Die zwischengespeicherten Werte sind veraltet. Aktualisieren Sie sie, bevor Sie sich auf die Messwerte verlassen.</string>
+    <string name="widget_settings_access_required">Zugriff auf Health Connect erforderlich.</string>
+    <string name="widget_settings_no_data">Noch keine Widget-Daten verfügbar.</string>
+    <string name="widget_settings_refresh">Widgets aktualisieren</string>
+    <string name="widget_settings_manage_access">Widget-Zugriff verwalten</string>
+    <plurals name="widget_settings_count">
+        <item quantity="one">%1$s Widget installiert</item>
+        <item quantity="other">%1$s Widgets installiert</item>
+    </plurals>
 
     <!-- Date range -->
     <string name="section_date_range">Datumsbereich</string>
@@ -50,13 +130,16 @@
     <string name="export_preview_done">Fertig</string>
     <string name="export_preview_building">Vorschau wird erstellt…</string>
     <string name="export_preview_device_destination">Geräteordner</string>
-    <string name="export_preview_complete_file">Die vollständige Datei (%1$s), die exportiert wird, wird angezeigt.</string>
-    <string name="export_preview_truncated_file">Eine kompakte Vorschau dieser %1$s großen Datei wird angezeigt. Der vollständige Export enthält weiterhin alle Daten.</string>
+    <string name="export_preview_complete_file">Hier sehen Sie die vollständige %1$s-Datei, die exportiert wird.</string>
+    <string name="export_preview_truncated_file">Hier sehen Sie eine kompakte Vorschau dieser %1$s-Datei. Der vollständige Export enthält weiterhin alle Daten.</string>
     <string name="export_preview_limited_one">Vorschau des letzten Tages mit Daten. Der vollständige Export wird für jedes ausgewählte Datum ausgeführt.</string>
     <string name="export_preview_limited_other">Vorschau der letzten %1$d Tage mit Daten. Der vollständige Export wird für jedes ausgewählte Datum ausgeführt.</string>
     <string name="export_preview_no_data_title">Keine Daten für die Vorschau</string>
     <string name="export_preview_no_data_message">Für die ausgewählten Tage sind keine Gesundheitsdaten vorhanden oder es wurden keine Formate ausgewählt.</string>
-    <string name="free_exports_remaining">%d kostenlose Exporte verbleibend</string>
+    <plurals name="free_exports_remaining">
+        <item quantity="one">%1$d kostenloser Export verbleibt</item>
+        <item quantity="other">%1$d kostenlose Exporte verbleiben</item>
+    </plurals>
     <string name="unlock_button">Health.md freischalten</string>
     <string name="export_result_days">%1$d/%2$d Tage exportiert</string>
     <string name="open_folder">Ordner öffnen</string>
@@ -78,7 +161,7 @@
     <string name="debug_missing_count">Fehlend (%d):</string>
     <string name="debug_sdk_status">SDK-Status</string>
     <string name="debug_hc_available">HC verfügbar</string>
-    <string name="debug_hc_needs_setup">HC benötigt Setup</string>
+    <string name="debug_hc_needs_setup">HC muss eingerichtet werden</string>
     <string name="debug_has_permissions">Hat Berechtigungen</string>
     <string name="debug_granted">Erteilt</string>
     <string name="debug_sdk_status_available">SDK_AVAILABLE (%1$d)</string>
@@ -87,7 +170,7 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">Konfigurieren\nSie Ihre App</string>
+    <string name="settings_title">App\nkonfigurieren</string>
     <string name="settings_subtitle">Premium und Support verwalten</string>
     <string name="section_write_mode">Schreibmodus</string>
     <string name="section_filename_template">Dateinamenvorlage</string>
@@ -99,7 +182,7 @@
     <string name="toggle_emoji_headers">Emoji in Überschriften</string>
     <string name="label_units">Einheiten</string>
     <string name="advanced_settings_nav_title">Erweiterte Exporteinstellungen</string>
-    <string name="advanced_settings_nav_subtitle">Metriken, Tagesnotizen, einzelne Verfolgung, Formatanpassung</string>
+    <string name="advanced_settings_nav_subtitle">Metriken, Tagesnotizen, Einzeleinträge, Formatanpassung</string>
     <string name="section_feedback">Feedback</string>
     <string name="feedback_send_title">Feedback senden</string>
     <string name="feedback_send_subtitle">Öffnet Ihren E-Mail-Client</string>
@@ -110,15 +193,21 @@
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">Exporteinstellungen</string>
     <string name="section_health_metrics">Gesundheitsmetriken</string>
-    <string name="metrics_enabled_summary">%1$d/%2$d Metriken aktiviert</string>
+    <plurals name="metrics_enabled_summary">
+        <item quantity="one">%1$d/%2$d Metrik aktiviert</item>
+        <item quantity="other">%1$d/%2$d Metriken aktiviert</item>
+    </plurals>
     <string name="section_current_format">Aktuelles Format</string>
     <string name="write_mode_summary">Schreibmodus: %s</string>
     <string name="section_format_customization">Formatanpassung</string>
-    <string name="section_daily_note_injection">Tägliche Notiz-Injektion</string>
+    <string name="section_daily_note_injection">In Tagesnotizen einfügen</string>
     <string name="daily_note_enabled_summary">Aktiviert • %s</string>
     <string name="daily_note_disabled">Deaktiviert</string>
     <string name="section_individual_tracking">Verfolgung einzelner Einträge</string>
-    <string name="individual_tracking_enabled_summary">Aktiviert • %d Metriken</string>
+    <plurals name="individual_tracking_enabled_summary">
+        <item quantity="one">Aktiviert • %1$d Metrik</item>
+        <item quantity="other">Aktiviert • %1$d Metriken</item>
+    </plurals>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Gesundheitsmetriken</string>
@@ -131,7 +220,7 @@
     <string name="metric_category_sleep">Schlaf</string>
     <string name="metric_category_activity">Aktivität</string>
     <string name="metric_category_heart">Herz</string>
-    <string name="metric_category_respiratory">Atemwege</string>
+    <string name="metric_category_respiratory">Atmung</string>
     <string name="metric_category_vitals">Vitalzeichen</string>
     <string name="metric_category_body">Körpermessungen</string>
     <string name="metric_category_nutrition">Ernährung</string>
@@ -147,7 +236,7 @@
     <string name="metric_name_sleep_rem">REM-Schlaf</string>
     <string name="metric_name_sleep_light">Leichtschlaf</string>
     <string name="metric_name_sleep_awake">Wachzeit</string>
-    <string name="metric_name_sleep_in_bed">Im Bett Zeit</string>
+    <string name="metric_name_sleep_in_bed">Zeit im Bett</string>
     <string name="metric_name_steps">Schritte</string>
     <string name="metric_name_active_calories">Aktive Kalorien</string>
     <string name="metric_name_total_calories">Gesamtkalorien</string>
@@ -156,7 +245,7 @@
     <string name="metric_name_flights_climbed">Etagen erklommen</string>
     <string name="metric_name_distance">Distanz</string>
     <string name="metric_name_cycling_distance">Fahrradstrecke</string>
-    <string name="metric_name_elevation_gained">Höhenmeter gewonnen</string>
+    <string name="metric_name_elevation_gained">Höhengewinn</string>
     <string name="metric_name_wheelchair_pushes">Rollstuhlistöße</string>
     <string name="metric_name_resting_hr">Ruheherzfrequenz</string>
     <string name="metric_name_avg_hr">Durchschnittliche Herzfrequenz</string>
@@ -164,10 +253,10 @@
     <string name="metric_name_max_hr">Maximale Herzfrequenz</string>
     <string name="metric_name_hrv">HRV (RMSSD)</string>
     <string name="metric_name_respiratory_rate">Atemfrequenz</string>
-    <string name="metric_name_blood_oxygen">Blutoxygen</string>
+    <string name="metric_name_blood_oxygen">Blutsauerstoff</string>
     <string name="metric_name_body_temp">Körpertemperatur</string>
-    <string name="metric_name_bp_systolic">Blutdruck (Systolisch)</string>
-    <string name="metric_name_bp_diastolic">Blutdruck (Diastolisch)</string>
+    <string name="metric_name_bp_systolic">Blutdruck (systolisch)</string>
+    <string name="metric_name_bp_diastolic">Blutdruck (diastolisch)</string>
     <string name="metric_name_blood_glucose">Blutzucker</string>
     <string name="metric_name_basal_body_temp">Basale Körpertemperatur</string>
     <string name="metric_name_skin_temperature">Hauttemperatur-Delta</string>
@@ -192,13 +281,13 @@
     <string name="metric_name_walking_speed">Gehgeschwindigkeit</string>
     <string name="metric_name_vo2_max">VO2 Max</string>
     <string name="metric_name_cycling_cadence">Fahrradtrittfrequenz</string>
-    <string name="metric_name_steps_cadence">Schritttrittfrequenz</string>
+    <string name="metric_name_steps_cadence">Schrittfrequenz</string>
     <string name="metric_name_power_avg">Durchschnittliche Leistung</string>
     <string name="metric_name_power_max">Maximale Leistung</string>
     <string name="metric_name_audio_exposure">Audioexposition</string>
     <string name="metric_name_mindful_minutes">Achtsamkeitsminuten</string>
-    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
-    <string name="metric_name_menstrual_flow">Menstruationsfluss</string>
+    <string name="metric_name_mindful_sessions">Achtsamkeitssitzungen</string>
+    <string name="metric_name_menstrual_flow">Menstruationsblutung</string>
     <string name="metric_name_cervical_mucus">Zervixschleim-Qualität</string>
     <string name="metric_name_ovulation_test">Ovulationstest</string>
     <string name="metric_name_sexual_activity">Sexuelle Aktivität</string>
@@ -207,15 +296,15 @@
     <string name="metric_name_unknown">Unbekannte Metrik</string>
 
     <!-- Daily note injection screen -->
-    <string name="daily_note_description">Injizieren Sie Gesundheitsmetriken in den YAML-Frontmatter Ihrer vorhandenen Obsidian-Tagesnotizen.</string>
-    <string name="daily_note_enable_title">Injektion aktivieren</string>
-    <string name="daily_note_enable_subtitle">Gesundheitsdaten in Tagesnotizen injizieren</string>
-    <string name="section_daily_notes_folder">Ordner Tagesnotizen</string>
+    <string name="daily_note_description">Fügen Sie Gesundheitsmetriken in das YAML-Frontmatter Ihrer vorhandenen Obsidian-Tagesnotizen ein.</string>
+    <string name="daily_note_enable_title">Einfügen aktivieren</string>
+    <string name="daily_note_enable_subtitle">Gesundheitsdaten in Tagesnotizen einfügen</string>
+    <string name="section_daily_notes_folder">Ordner für Tagesnotizen</string>
     <string name="daily_notes_folder_hint">Daily</string>
     <string name="daily_notes_folder_help">Relativ zu Ihrem Exportordner (z. B. „Daily“ oder „Journal/Daily“)</string>
     <string name="section_filename_pattern">Dateinamenmuster</string>
     <string name="section_preview_path">Vorschau-Pfad</string>
-    <string name="create_note_if_missing_title">Notiz erstellen falls fehlend</string>
+    <string name="create_note_if_missing_title">Notiz erstellen, falls nicht vorhanden</string>
     <string name="create_note_if_missing_subtitle">Tagesnotiz erstellen, falls nicht vorhanden</string>
 
     <!-- Format customization screen -->
@@ -223,17 +312,20 @@
     <string name="section_date_format">Datumsformat</string>
     <string name="section_time_format">Zeitformat</string>
     <string name="section_unit_system">Einheitensystem</string>
-    <string name="section_markdown_template">Markdown-Vorlagen-Stil</string>
+    <string name="section_markdown_template">Stil der Markdown-Vorlage</string>
     <string name="section_bullet_style">Aufzählungsstil</string>
-    <string name="section_header_level">Abschnittskopfzeile-Ebene</string>
+    <string name="section_header_level">Ebene der Abschnittsüberschrift</string>
     <string name="section_options">Optionen</string>
     <string name="toggle_include_summary">Zusammenfassung einschließen</string>
 
     <!-- Individual tracking screen -->
     <string name="individual_tracking_title">Verfolgung einzelner Einträge</string>
-    <string name="individual_tracking_description">Exportieren Sie einzelne zeitgestempelte Gesundheitseinträge als separate Dateien. Nützlich für Trainingseinheiten, Blutdruckmessungen und andere diskrete Messungen.</string>
-    <string name="individual_tracking_enable_title">Einzelne Verfolgung aktivieren</string>
-    <string name="individual_tracking_metrics_count">%d Metriken ausgewählt</string>
+    <string name="individual_tracking_description">Exportieren Sie einzelne Gesundheitseinträge mit Zeitstempel als separate Dateien. Nützlich für Trainingseinheiten, Blutdruckwerte und andere Einzelmessungen.</string>
+    <string name="individual_tracking_enable_title">Einzeleinträge nachverfolgen</string>
+    <plurals name="individual_tracking_metrics_count">
+        <item quantity="one">%1$d Metrik ausgewählt</item>
+        <item quantity="other">%1$d Metriken ausgewählt</item>
+    </plurals>
     <string name="section_quick_actions">Schnellaktionen</string>
     <string name="action_suggested">Empfohlen</string>
     <string name="action_all">Alle</string>
@@ -246,19 +338,22 @@
     <string name="section_entries_folder">Name des Ordners für Einträge</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
-    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_suggested_badge">Suggested</string>
+    <string name="individual_tracking_filename_tokens">Platzhalter: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_suggested_badge">Empfohlen</string>
     <string name="organize_by_category_title">Nach Kategorie organisieren</string>
     <string name="organize_by_category_subtitle">Einträge in Kategorie-Unterordnern gruppieren</string>
 
     <!-- History screen -->
-    <string name="no_history_title">Keine Export\nHistorie</string>
+    <string name="no_history_title">Kein\nExportverlauf</string>
     <string name="no_history_subtitle">Ihre Exporte werden hier angezeigt</string>
-    <string name="section_export_history">Exporthistorie</string>
+    <string name="section_export_history">Exportverlauf</string>
     <string name="history_status_success">✓ Erfolg</string>
     <string name="history_status_partial">! Teilweise</string>
     <string name="history_status_failed">✗ Fehlgeschlagen</string>
-    <string name="history_entry_days">%1$d/%2$d Tage • %3$s bis %4$s</string>
+    <plurals name="history_entry_days">
+        <item quantity="one">%1$d/%2$d Tag • %3$s bis %4$s</item>
+        <item quantity="other">%1$d/%2$d Tage • %3$s bis %4$s</item>
+    </plurals>
     <string name="history_timestamp_format">%1$s um %2$s</string>
     <string name="export_source_manual">Manuell</string>
     <string name="export_source_scheduled">Geplant</string>
@@ -271,14 +366,14 @@
     <string name="automatic_export_subtitle">Exportieren Sie Ihre Gesundheitsdaten automatisch</string>
     <string name="schedule_exact_background_note">Die genaue Zeitplanung verwendet den Android-Zugriff „Wecker und Erinnerungen“. Der Hintergrundzugriff auf Health Connect ist weiterhin erforderlich. Ein nicht verfügbares Netzwerk oder ein ausgeschaltetes Smartphone kann den Abschluss verzögern.</string>
     <string name="exact_timing_needed_title">Genaue Zeitplanung ist deaktiviert</string>
-    <string name="exact_timing_needed_body">Erlaube „Wecker und Erinnerungen“, damit Exporte zur ausgewählten Zeit ausgelöst werden. Ohne diesen Zugriff verwendet Android WorkManager als verzögerte Ausweichlösung.</string>
+    <string name="exact_timing_needed_body">Erlauben Sie „Wecker und Erinnerungen“, damit Exporte zur ausgewählten Zeit ausgelöst werden. Ohne diesen Zugriff verwendet Android WorkManager eine verzögerte Ausweichlösung.</string>
     <string name="exact_timing_enable_button">Genaue Zeitplanung erlauben</string>
-    <string name="section_cadence">Rhythmus</string>
+    <string name="section_cadence">Intervall</string>
     <string name="cadence_unit_minutes">Minuten</string>
     <string name="cadence_unit_hours">Stunden</string>
     <string name="cadence_unit_days">Tage</string>
     <string name="cadence_unit_weeks">Wochen</string>
-    <string name="cadence_minutes_minimum">Minimaler Rhythmus beträgt 15 Minuten.</string>
+    <string name="cadence_minutes_minimum">Das Mindestintervall beträgt 15 Minuten.</string>
     <string name="section_export_time">Exportzeit</string>
     <string name="label_hour">Stunde</string>
     <string name="label_minute">Minute</string>
@@ -310,16 +405,16 @@
     <string name="notification_channel_scheduled_exports_name">Geplante Exporte</string>
     <string name="notification_channel_scheduled_exports_description">Benachrichtigungen, wenn geplante Gesundheitsexporte abgeschlossen oder fehlgeschlagen sind</string>
     <string name="export_notification_title_complete">Export abgeschlossen</string>
-    <string name="export_notification_title_partial">Export teilweise</string>
+    <string name="export_notification_title_partial">Export teilweise abgeschlossen</string>
     <string name="export_notification_title_failed">Export fehlgeschlagen</string>
     <string name="export_notification_message_days_exported">%1$d/%2$d Tage für %3$s exportiert</string>
     <string name="export_notification_unknown_error">Unbekannter Fehler</string>
 
     <!-- Paywall screen -->
     <string name="paywall_title">Health.md freischalten</string>
-    <string name="paywall_subtitle">Sie haben Ihre 10 kostenlosen Exporte verwendet</string>
+    <string name="paywall_subtitle">Sie haben Ihre 10 kostenlosen Exporte aufgebraucht</string>
     <string name="paywall_unlimited_exports">Unbegrenzte Exporte, für immer</string>
-    <string name="paywall_scheduled_exports">Automatisierte geplante Exporte</string>
+    <string name="paywall_scheduled_exports">Automatische Exporte nach Zeitplan</string>
     <string name="paywall_future_features">Alle zukünftigen Funktionen enthalten</string>
     <string name="paywall_one_time">Einmalige Zahlung — kein Abonnement</string>
     <string name="paywall_unlock_button">Health.md freischalten</string>
@@ -336,7 +431,7 @@
     <string name="nav_settings">Einstellungen</string>
 
     <!-- Privacy policy (HealthPermissionsRationaleActivity) -->
-    <string name="privacy_policy_title">Health Connect Berechtigungen</string>
+    <string name="privacy_policy_title">Health Connect-Berechtigungen</string>
 
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md Feedback</string>
@@ -365,11 +460,11 @@
     <!-- DateFormatPreference display names -->
     <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US Kurz (01/13/2026)</string>
-    <string name="date_format_display_us_long">US Lang (January 13, 2026)</string>
+    <string name="date_format_display_us_long">US Lang (Januar 13, 2026)</string>
     <string name="date_format_display_eu_short">EU Kurz (13/01/2026)</string>
-    <string name="date_format_display_eu_long">EU Lang (13 January 2026)</string>
+    <string name="date_format_display_eu_long">EU Lang (13 Januar 2026)</string>
     <string name="date_format_display_compact">Kompakt (20260113)</string>
-    <string name="date_format_display_friendly">Freundlich (Mon, Jan 13, 2026)</string>
+    <string name="date_format_display_friendly">Lesbar (Mo., Jan. 13, 2026)</string>
 
     <!-- TimeFormatPreference display names -->
     <string name="time_format_display_24h">24-Stunden (14:30)</string>
@@ -395,7 +490,7 @@
 
     <!-- BulletStyle display names -->
     <string name="bullet_display_dash">Bindestrich (-)</string>
-    <string name="bullet_display_asterisk">Asterisk (*)</string>
+    <string name="bullet_display_asterisk">Sternchen (*)</string>
     <string name="bullet_display_plus">Plus (+)</string>
 
     <!-- Completed localization from canonical translatable resources -->
@@ -412,7 +507,7 @@
     <string name="action_clear_history">Verlauf löschen</string>
     <string name="action_keep_history">Verlauf beibehalten</string>
     <string name="action_retry_export">Export wiederholen</string>
-    <string name="action_retrying_export">Export wird wiederholt…</string>
+    <string name="action_retrying_export">Export wird erneut ausgeführt…</string>
     <string name="action_delete_field">Feld löschen</string>
     <string name="health_connect_error_title">Health Connect-Aktion fehlgeschlagen</string>
     <string name="health_connect_error_access_check">Health.md konnte Ihren Health Connect-Zugriff nicht prüfen. Öffnen Sie Health Connect, schließen Sie die Einrichtung ab und versuchen Sie es erneut.</string>
@@ -421,7 +516,7 @@
     <string name="health_connect_error_settings_launch">Die Health Connect-Einstellungen konnten auf diesem Gerät nicht geöffnet werden.</string>
     <string name="health_connect_error_install_launch">Die Health Connect-Seite im Play Store konnte auf diesem Gerät nicht geöffnet werden.</string>
     <string name="health_connect_error_history_unavailable">Diese Version von Health Connect kann keinen vollständigen Verlaufszugriff gewähren. Aktualisieren Sie Health Connect oder wählen Sie Tage aus den letzten 30 Tagen.</string>
-    <string name="health_connect_error_background_unavailable">Dieser Health Connect-Anbieter kann Daten nicht im Hintergrund lesen. Aktualisieren Sie Health Connect, bevor Sie geplante Exporte aktivieren.</string>
+    <string name="health_connect_error_background_unavailable">Dieser Health Connect-Anbieter kann Daten nicht im Hintergrund lesen. Aktualisieren Sie Health Connect, bevor Sie geplante Exporte oder die Widget-Aktualisierung im Hintergrund aktivieren.</string>
     <string name="history_permission_required_title">Health Connect-Verlaufzugriff erforderlich</string>
     <string name="history_permission_required_message">Health Connect beschränkt Lesezugriffe auf etwa 30 Tage vor der ersten Berechtigung dieser App. Gewähren Sie Verlaufzugriff, damit ältere ausgewählte Daten exportiert werden, statt stillschweigend ausgelassen zu werden.</string>
     <string name="history_permission_grant_button">Verlaufzugriff gewähren</string>
@@ -435,12 +530,18 @@
     <string name="export_diagnostics_title_partial">Teilweiser Export</string>
     <string name="export_diagnostics_title_failed">Export fehlgeschlagen</string>
     <string name="export_diagnostics_title_cancelled">Export abgebrochen</string>
-    <string name="export_diagnostics_failed_count">%d Tage wurden nicht exportiert</string>
+    <plurals name="export_diagnostics_failed_count">
+        <item quantity="one">%1$d Tag wurde nicht exportiert</item>
+        <item quantity="other">%1$d Tage wurden nicht exportiert</item>
+    </plurals>
     <string name="export_diagnostics_cancelled_message">Der Export wurde beendet, bevor alle Tage verarbeitet werden konnten.</string>
     <string name="export_diagnostics_reasons_title">Diagnose</string>
-    <string name="export_diagnostics_reason_count">%1$s: %2$d Tage</string>
-    <string name="export_diagnostics_date_list">Fehlgeschlagene Daten: %s</string>
-    <string name="export_diagnostics_date_list_more">Fehlgeschlagene Daten: %1$s, +%2$d weitere</string>
+    <plurals name="export_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d Tag</item>
+        <item quantity="other">%1$s: %2$d Tage</item>
+    </plurals>
+    <string name="export_diagnostics_date_list">Fehlgeschlagene Datumsangaben: %s</string>
+    <string name="export_diagnostics_date_list_more">Fehlgeschlagene Datumsangaben: %1$s, +%2$d weitere</string>
     <string name="export_diagnostics_no_details">Es wurden keine Details pro Tag aufgezeichnet. Versuchen Sie einen kleineren Zeitraum und prüfen Sie die Health Connect-Berechtigungen.</string>
     <string name="export_diagnostics_use_failed_range">Fehlgeschlagenen Zeitraum verwenden</string>
     <string name="export_failure_no_folder_label">Kein Ordner ausgewählt</string>
@@ -494,7 +595,7 @@
     <string name="feedback_discord_subtitle">Chatten Sie mit der Health.md-Community</string>
     <string name="feedback_no_app_available">Keine App zum Öffnen dieses Links verfügbar</string>
     <string name="granular_data_title">Detaillierte Zeitreihen einbeziehen</string>
-    <string name="granular_data_description">Fügen Sie zeitgestempelte Messwerte wie Herzfrequenz und Schlafphasen zu Kompatibilitätsexporten hinzu. Für eine API-vollständige Kopie verwenden Sie Raw API Snapshot.</string>
+    <string name="granular_data_description">Fügen Sie zeitgestempelte Messwerte wie Herzfrequenz und Schlafphasen zu Kompatibilitätsexporten hinzu. Für eine API-vollständige Kopie verwenden Sie den API-Rohdaten-Snapshot.</string>
     <string name="metric_category_cycling">Radfahren</string>
     <string name="metric_category_medications">Medikamente</string>
     <string name="metric_category_other">Sonstiges</string>
@@ -538,13 +639,13 @@
     <string name="metric_name_running_power">Laufleistung</string>
     <string name="metric_name_activity_intensity_minutes">Aktivitätsintensitätsminuten</string>
     <string name="metric_name_energy_from_fat">Energie aus Fett</string>
-    <string name="metric_name_nutrition_meals">Ernährungsmahlzeiten</string>
+    <string name="metric_name_nutrition_meals">Erfasste Mahlzeiten</string>
     <string name="metric_name_menstruation_periods">Menstruationsperioden</string>
     <string name="metric_name_menstruation_period_days">Menstruationstage</string>
     <string name="metric_name_planned_workouts">Geplante Trainingseinheiten</string>
     <string name="metric_name_medical_resources">Medizinische Ressourcen</string>
     <string name="inject_markdown_sections_title">Metrikabschnitte einfügen</string>
-    <string name="inject_markdown_sections_subtitle">Führt außerdem von der App verwaltete Markdown-Abschnitte wie Schlaf, Aktivität, Herz und Vitalwerte zusammen, während Ihr Notiztext erhalten bleibt.</string>
+    <string name="inject_markdown_sections_subtitle">Fügt außerdem von der App verwaltete Markdown-Abschnitte wie Schlaf, Aktivität, Herz und Vitalwerte zusammen, während Ihr Notiztext erhalten bleibt.</string>
     <string name="custom_markdown_template_label">Benutzerdefinierte Vorlage</string>
     <string name="custom_markdown_template_help">Erstellen Sie Ihr eigenes Markdown-Layout. Health.md ersetzt Platzhalter und entfernt bedingte Abschnitte, wenn für diese Kategorie keine Daten vorhanden sind.</string>
     <string name="custom_markdown_template_placeholder"># Gesundheitsdaten — {{date}}\n\n{{metrics}}</string>
@@ -580,8 +681,11 @@
     <string name="background_health_permission_needed_body">Geplante Exporte benötigen die Health Connect-Berechtigung „Auf Daten im Hintergrund zugreifen“, damit WorkManager Gesundheitsdaten lesen kann, während die App geschlossen ist.</string>
     <string name="background_health_permission_enable_button">Hintergrundzugriff aktivieren</string>
     <string name="scheduled_recovery_title">Verpasste geplante Exporte wiederherstellen?</string>
-    <string name="scheduled_recovery_body">Health.md hat noch nicht exportierte geplante Tage gefunden (%1$d): %2$s. Wenn ein geplanter Export verpasst wurde, weil das Telefon nach einem Neustart gesperrt war, der Hintergrundzugriff fehlte oder Health Connect nicht verfügbar war, kann Health.md genau diese Tage jetzt erneut exportieren, solange die App geöffnet und entsperrt ist. Gewähren Sie den Hintergrundzugriff, um künftige Ausfälle zu vermeiden.</string>
-    <string name="scheduled_recovery_retry_button">Ausstehende Daten erneut exportieren</string>
+    <plurals name="scheduled_recovery_body">
+        <item quantity="one">Health.md hat für %1$d geplanten Exporttag einen noch ausstehenden Export gefunden: %2$s. Falls der Export ausgefallen ist, weil das Telefon nach einem Neustart gesperrt war, der Hintergrundzugriff fehlte oder Health Connect nicht verfügbar war, kann Health.md genau diesen Tag jetzt erneut exportieren, solange die App geöffnet und das Telefon entsperrt ist. Gewähren Sie Hintergrundzugriff, um zukünftige Ausfälle zu vermeiden.</item>
+        <item quantity="other">Health.md hat für %1$d geplante Exporttage noch ausstehende Exporte gefunden: %2$s. Falls die Exporte ausgefallen sind, weil das Telefon nach einem Neustart gesperrt war, der Hintergrundzugriff fehlte oder Health Connect nicht verfügbar war, kann Health.md genau diese Tage jetzt erneut exportieren, solange die App geöffnet und das Telefon entsperrt ist. Gewähren Sie Hintergrundzugriff, um zukünftige Ausfälle zu vermeiden.</item>
+    </plurals>
+    <string name="scheduled_recovery_retry_button">Ausstehende Tage erneut exportieren</string>
     <string name="scheduled_recovery_running_button">Wiederherstellung läuft…</string>
     <string name="scheduled_recovery_blocked_paywall">Schalten Sie Health.md frei, bevor Sie geplante Exporte wiederherstellen.</string>
     <string name="scheduled_recovery_blocked_folder">Wählen Sie einen Exportordner aus, bevor Sie geplante Exporte wiederherstellen.</string>
@@ -590,17 +694,17 @@
     <string name="scheduled_recovery_blocked_locked">Entsperren Sie Ihr Telefon nach einem Neustart einmal und öffnen Sie dann Health.md erneut, um diese Tage wiederherzustellen.</string>
     <string name="scheduled_recovery_blocked_permissions">Erteilen Sie Health Connect-Berechtigungen, bevor Sie geplante Exporte wiederherstellen.</string>
     <string name="scheduled_recovery_blocked_running">Ein Wiederherstellungsexport für geplante Exporte läuft bereits.</string>
-    <string name="scheduled_recovery_no_pending">Es stehen keine geplanten Exportdaten zur Wiederherstellung aus.</string>
-    <string name="scheduled_recovery_result_complete">Geplante Wiederherstellung abgeschlossen.</string>
+    <string name="scheduled_recovery_no_pending">Es stehen keine geplanten Exporttage zur Wiederherstellung aus.</string>
+    <string name="scheduled_recovery_result_complete">Wiederherstellung geplanter Exporte abgeschlossen.</string>
     <string name="scheduled_recovery_result_partial">Bei der Wiederherstellung wurden %1$d von %2$d geplanten Tagen exportiert. Noch ausstehend: %3$d.</string>
-    <string name="scheduled_recovery_result_blocked">Die geplante Wiederherstellung ist noch nicht bereit.</string>
+    <string name="scheduled_recovery_result_blocked">Die Wiederherstellung geplanter Exporte ist noch nicht möglich.</string>
     <string name="not_now">Jetzt nicht</string>
     <string name="release_notes_title">Neu in %s</string>
     <string name="release_notes_settings_hint">Sie können Exportformate, benutzerdefiniertes Markdown und Metriken in den Einstellungen anpassen.</string>
     <string name="release_notes_open_settings">Einstellungen öffnen</string>
     <string name="release_notes_got_it">Verstanden</string>
     <string name="release_notes_highlight_feedback">Die erweiterte Health Connect-Abdeckung ergänzt weitere Metriken für Aktivität, Körper, Ernährung, Mobilität, Achtsamkeit, reproduktive Gesundheit und medizinische Ressourcen.</string>
-    <string name="release_notes_highlight_export_parity">Neue Android-spezifische Details umfassen Aktivitätsintensität, Mahlzeiten aus der Ernährungserfassung, Menstruationsperioden, geplante Workouts und granulare Messwerte, sofern verfügbar.</string>
+    <string name="release_notes_highlight_export_parity">Neue Android-spezifische Details umfassen Aktivitätsintensität, Mahlzeiten aus der Ernährungserfassung, Menstruationsperioden, geplante Trainingseinheiten und granulare Messwerte, sofern verfügbar.</string>
     <string name="release_notes_highlight_templates">Markdown-, JSON-, CSV- und Obsidian-Exporte enthalten jetzt umfassendere Metrikwerte im gesamten erweiterten Katalog.</string>
     <string name="release_notes_highlight_workouts">Die Erläuterung zu den Health Connect-Berechtigungen wurde überarbeitet, um die erweiterten schreibgeschützten Exportberechtigungen zu erklären.</string>
     <string name="release_notes_highlight_accessibility">TalkBack-Beschriftungen und Berührungsziele wurden in den Bereichen Export, Zeitplan und Einstellungen verbessert.</string>
@@ -621,13 +725,13 @@
     <string name="shortcut_schedule_long">Geplante Exporte öffnen</string>
     <string name="shortcut_history_short">Verlauf</string>
     <string name="shortcut_history_long">Exportverlauf öffnen</string>
-    <string name="privacy_policy_subtitle">Health.md ist eine App zum Export von Gesundheitsdaten. Jede unten aufgeführte Berechtigung bezieht sich direkt auf Daten, die aus Health Connect gelesen und nur an das von Ihnen gewählte Ziel exportiert werden. Ordnerexporte bleiben im lokalen Speicher oder in einem angebundenen Speicheranbieter. Wenn Sie ausdrücklich API-Endpunkt auswählen, werden Datensätze direkt an die von Ihnen konfigurierte HTTP- oder HTTPS-URL gesendet; HTTP ist bei der Übertragung nicht verschlüsselt. Wenn Sie ausdrücklich eine gekoppelte Direct CLI verbinden, werden Datensätze über eine authentifizierte, verschlüsselte Verbindung an diesen Computer gesendet. Personal Health Record-Ressourcen werden nur exportiert, wenn Sie diese Metrik auswählen und die zugehörigen Berechtigungen erteilen. Der Verlaufszugriff wird für große manuelle Exporte verwendet. Der Hintergrundzugriff wird nur verwendet, wenn Sie geplante Exporte aktivieren.</string>
+    <string name="privacy_policy_subtitle">Health.md ist eine App zum Export von Gesundheitsdaten. Jede unten aufgeführte Berechtigung bezieht sich direkt auf Daten, die aus Health Connect gelesen und nur an das von Ihnen gewählte Ziel exportiert werden. Ordnerexporte bleiben im lokalen oder anbietergestützten Speicher. Wenn Sie ausdrücklich API-Endpunkt auswählen, werden Datensätze direkt an die von Ihnen konfigurierte HTTP- oder HTTPS-URL gesendet; HTTP ist bei der Übertragung nicht verschlüsselt. Wenn Sie ausdrücklich eine gekoppelte Direct CLI verbinden, werden Datensätze über eine authentifizierte, verschlüsselte Verbindung an diesen Computer gesendet. Personal Health Record-Ressourcen werden nur exportiert, wenn Sie diese Metrik auswählen und die zugehörigen Berechtigungen erteilen. Der Verlaufszugriff wird für große manuelle Exporte verwendet. Der Hintergrundzugriff wird nur verwendet, wenn Sie geplante Exporte aktivieren.</string>
     <string name="privacy_category_sleep">Schlaf</string>
     <string name="privacy_category_sleep_permissions">SleepSession</string>
     <string name="privacy_category_sleep_exports">Exportierte Felder: Gesamtschlafdauer, Tiefschlaf, REM-Schlaf, Leichtschlaf, Wachzeit, Zeit im Bett</string>
     <string name="privacy_category_activity">Aktivität</string>
     <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, PlannedExerciseSession, ActivityIntensity, BasalMetabolicRate</string>
-    <string name="privacy_category_activity_exports">Exportierte Felder: Schrittzahl, Schrittfrequenz, aktive Kalorien, Gesamtkalorien, Grundumsatz, Trainingsminuten, geplante Workouts, Minuten mit Aktivitätsintensität, gestiegene Etagen, Geh-/Laufdistanz, Distanz beim Radfahren/Schwimmen/Rollstuhlfahren/Schneesport, Höhengewinn, Rollstuhlschübe, Schwimmzüge</string>
+    <string name="privacy_category_activity_exports">Exportierte Felder: Schrittzahl, Schrittfrequenz, aktive Kalorien, Gesamtkalorien, Grundumsatz, Trainingsminuten, geplante Trainingseinheiten, Minuten mit Aktivitätsintensität, gestiegene Etagen, Geh-/Laufdistanz, Distanz beim Radfahren/Schwimmen/Rollstuhlfahren/Schneesport, Höhengewinn, Rollstuhlschübe, Schwimmzüge</string>
     <string name="privacy_category_heart">Herz</string>
     <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
     <string name="privacy_category_heart_exports">Exportierte Felder: Ruheherzfrequenz, durchschnittliche/minimale/maximale Herzfrequenz, durchschnittliche Herzfrequenz beim Gehen, Herzfrequenzvariabilität (HRV)</string>
@@ -659,14 +763,14 @@
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
     <string name="privacy_category_history_exports">Wird nur für große manuelle Exporte verwendet, etwa für 90 Tage oder den gesamten Zeitraum, damit Health.md auf Health Connect-Daten zugreifen kann, die älter als das standardmäßige 30-Tage-Fenster sind</string>
     <string name="privacy_policy_direct_cli">Direct CLI-Exporte erfolgen nur, nachdem Sie Ihr Gerät ausdrücklich mit Ihrem Computer gekoppelt und verbunden haben. Gesundheitsdaten werden über eine authentifizierte, verschlüsselte Verbindung übertragen, für eine wiederaufnehmbare Übertragung höchstens sieben Tage privat gespeichert und bei Abbruch oder Aufheben der Kopplung früher gelöscht.</string>
-    <string name="privacy_policy_footer">Health.md betreibt keine Cloud für Gesundheitsdaten. Die First-Party-Kampagnenattribution kann zufällige, von der App erzeugte Installations-/Ereignis-UUIDs und validierte Kampagnenmetadaten senden, jedoch niemals Gesundheitsdaten, rohe Referrer, Geräte-IDs, Exporte, Kontodaten oder Pfade.</string>
-    <string name="privacy_policy_body">Health.md liest Health Connect-Daten ausschließlich, um die von Ihnen angeforderten Exporte zu erstellen. Ordner-Exporte werden im ausgewählten Speicher abgelegt, API-Endpunkt-Exporte gehen direkt an einen von Ihnen konfigurierten Dienst, und ein ausdrücklich verbundener Direct CLI-Export wird über eine authentifizierte Verschlüsselung an Ihren gekoppelten Computer übertragen. Separat kann die First-Party-Kampagnenattribution eine Installation aus dem Play Store mithilfe zufälliger, von der App erzeugter UUIDs und bereinigter Kampagnenmetadaten einer Kampagne zuordnen. Dabei werden keinerlei Gesundheitsdaten, rohe Referrer, Gerätekennungen, Exportinhalte, Kontodaten oder Dateipfade übertragen.</string>
+    <string name="privacy_policy_footer">Health.md betreibt keine Cloud für Gesundheitsdaten. Die eigene Kampagnenattribution kann zufällige, von der App erzeugte Installations-/Ereignis-UUIDs und validierte Kampagnenmetadaten senden, jedoch niemals Gesundheitsdaten, unverarbeitete Referrer-Daten, Geräte-IDs, Exporte, Kontodaten oder Pfade.</string>
+    <string name="privacy_policy_body">Health.md liest Health Connect-Daten ausschließlich, um die von Ihnen angeforderten Exporte zu erstellen. Ordnerexporte werden im ausgewählten Speicher abgelegt, API-Endpunkt-Exporte gehen direkt an einen von Ihnen konfigurierten Dienst, und ein ausdrücklich verbundener Direct CLI-Export wird verschlüsselt und authentifiziert an Ihren gekoppelten Computer übertragen. Separat kann die eigene Kampagnenattribution eine Installation aus dem Play Store mithilfe zufälliger, von der App erzeugter UUIDs und bereinigter Kampagnenmetadaten einer Kampagne zuordnen. Dabei werden keinerlei Gesundheitsdaten, unverarbeitete Referrer-Daten, Gerätekennungen, Exportinhalte, Kontodaten oder Dateipfade übertragen.</string>
     <string name="section_export_type">Exporttyp</string>
     <string name="export_type_compatibility">Kompatibilitäts-Export</string>
     <string name="export_type_compatibility_description">Tägliche Markdown-, Bases-, JSON- oder CSV-Dateien für bestehende Health.md-Workflows</string>
-    <string name="export_type_raw_snapshot">Raw API Snapshot</string>
-    <string name="export_type_raw_snapshot_description">API-vollständige native Health Connect-Datensätze in einem unveränderlichen Bereichsartefakt</string>
-    <string name="raw_snapshot_about_title">Semantik von Raw API Snapshot</string>
+    <string name="export_type_raw_snapshot">API-Rohdaten-Snapshot</string>
+    <string name="export_type_raw_snapshot_description">Vollständige native Health Connect-API-Datensätze in einem unveränderlichen Artefakt pro Zeitraum</string>
+    <string name="raw_snapshot_about_title">Eigenschaften von Rohdaten-Snapshots</string>
     <string name="raw_snapshot_about_body">Erfasst jedes Feld, das von der API des ausgewählten Anbieters offengelegt wird. Lesevorgänge sind nicht transaktional, daher können sich Daten während des Exports ändern. Snapshots können keine Löschungen, unzugänglichen Datensätze, ursprünglichen Eingabeeinheiten, die über die API nicht verfügbar sind, oder Felder enthalten, die dieser App-Version unbekannt sind.</string>
     <string name="raw_snapshot_format_title">Snapshot-Format</string>
     <string name="raw_snapshot_format_json">JSON</string>
@@ -682,25 +786,28 @@
     <string name="raw_snapshot_routes_title">Präzise Trainingsrouten</string>
     <string name="raw_snapshot_routes_control">Präzise Routen einschließen</string>
     <string name="raw_snapshot_routes_description">Trainingsrouten können genaue Wohn-, Arbeits- und Reiseorte offenlegen. Health Connect kann eine separate Zustimmung für Routen erfordern.</string>
-    <string name="raw_snapshot_immutable_destination_note">Raw API Snapshots sind unveränderliche Exporte mit genau einem Artefakt pro Bereich. Sie werden unter health/raw (oder Ihrem konfigurierten Unterordner/raw) gespeichert. Tägliche Dateinamensvorlagen sowie die Modi Anhängen, Aktualisieren oder Überschreiben gelten nicht.</string>
-    <string name="raw_snapshot_provider_unsupported">Dieser Anbieter stellt keinen nativen Raw-API-Adapter bereit. Wählen Sie Health Connect, Fitbit, Withings, Oura, WHOOP oder wechseln Sie zum Kompatibilitäts-Export.</string>
-    <string name="raw_snapshot_selection_required">Wählen Sie mindestens eine Gesundheitsmetrik aus oder wählen Sie Alle autorisierten unterstützten Daten.</string>
-    <string name="raw_snapshot_https_required">Für Raw API Snapshots ist ein HTTPS-Endpunkt erforderlich.</string>
-    <string name="raw_snapshot_partial_label">Teilweiser Raw API Snapshot</string>
-    <string name="raw_snapshot_cancelled_label">Raw API Snapshot abgebrochen</string>
-    <string name="raw_snapshot_result_created">Raw API Snapshot erstellt</string>
-    <string name="raw_snapshot_result_uploaded">Raw API Snapshot hochgeladen</string>
+    <string name="raw_snapshot_immutable_destination_note">Rohdaten-Snapshots sind unveränderliche Exporte mit genau einem Artefakt pro Bereich. Sie werden unter health/raw (oder Ihrem konfigurierten Unterordner/raw) gespeichert. Tägliche Dateinamensvorlagen sowie die Modi Anhängen, Aktualisieren oder Überschreiben gelten nicht.</string>
+    <string name="raw_snapshot_provider_unsupported">Dieser Anbieter stellt keinen nativen Rohdaten-API-Adapter bereit. Wählen Sie Health Connect, Fitbit, Withings, Oura, WHOOP oder wechseln Sie zum Kompatibilitäts-Export.</string>
+    <string name="raw_snapshot_selection_required">Wählen Sie mindestens eine Gesundheitsmetrik oder „Alle autorisierten unterstützten Daten“ aus.</string>
+    <string name="raw_snapshot_https_required">Für Rohdaten-Snapshots ist ein HTTPS-Endpunkt erforderlich.</string>
+    <string name="raw_snapshot_partial_label">Teilweiser Rohdaten-Snapshot</string>
+    <string name="raw_snapshot_cancelled_label">Rohdaten-Snapshot abgebrochen</string>
+    <string name="raw_snapshot_result_created">Rohdaten-Snapshot erstellt</string>
+    <string name="raw_snapshot_result_uploaded">Rohdaten-Snapshot hochgeladen</string>
     <string name="raw_snapshot_result_count">Abgeschlossene Snapshot-Aktionen: %1$d/%2$d</string>
     <string name="raw_snapshot_progress_count">Snapshot-Aktionen: %1$d / %2$d</string>
     <string name="raw_snapshot_diagnostics_failed_count">Unvollständige Snapshot-Aktionen: %d</string>
-    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
-    <string name="raw_snapshot_diagnostics_cancelled_message">Der Raw API Snapshot wurde gestoppt, bevor der native Quell-Lesevorgang und die Bereitstellung des Artefakts abgeschlossen waren.</string>
+    <plurals name="raw_snapshot_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d Aktion</item>
+        <item quantity="other">%1$s: %2$d Aktionen</item>
+    </plurals>
+    <string name="raw_snapshot_diagnostics_cancelled_message">Der Rohdaten-Snapshot wurde gestoppt, bevor der native Quell-Lesevorgang und die Bereitstellung des Artefakts abgeschlossen waren.</string>
     <string name="raw_snapshot_diagnostics_no_details">Für den Snapshot wurden keine Diagnosedaten aufgezeichnet. Prüfen Sie den Zugriff des Anbieters und versuchen Sie den Bereich erneut.</string>
-    <string name="raw_snapshot_guidance_provider">Überprüfen Sie den Zugriff des ausgewählten Anbieters und das Manifest des Rohartefakts, bevor Sie es erneut versuchen.</string>
-    <string name="raw_snapshot_guidance_cancelled">Es wurde kein Rohartefakt veröffentlicht. Wiederholen Sie den Vorgang, wenn Sie bereit sind.</string>
+    <string name="raw_snapshot_guidance_provider">Überprüfen Sie den Zugriff des ausgewählten Anbieters und das Manifest des Rohdatenartefakts, bevor Sie es erneut versuchen.</string>
+    <string name="raw_snapshot_guidance_cancelled">Es wurde kein Rohdatenartefakt veröffentlicht. Wiederholen Sie den Vorgang, wenn Sie bereit sind.</string>
     <string name="raw_snapshot_history_entry">Snapshot-Aktionen: %1$d/%2$d \u2022 %3$s bis %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">Snapshot-Diagnose</string>
-    <string name="raw_snapshot_notification_message">Raw-Snapshot-Bereich mit Enddatum %1$s: %2$s</string>
+    <string name="raw_snapshot_notification_message">Rohdaten-Snapshot für den Zeitraum bis %1$s: %2$s</string>
     <string name="raw_snapshot_status_complete">abgeschlossen</string>
     <string name="raw_snapshot_status_failed">fehlgeschlagen</string>
     <string name="onboarding_welcome_title">Willkommen bei\nHealth.md</string>
@@ -713,7 +820,7 @@
     <string name="onboarding_health_feature_1">Nur Lesezugriff – wir ändern Ihre Daten niemals</string>
     <string name="onboarding_health_feature_2">Gesundheitsexporte verwenden nur Ziele, die Sie auswählen</string>
     <string name="onboarding_health_feature_3">Keine Health.md-Cloud für Gesundheitsdaten</string>
-    <string name="onboarding_health_grant_button">Gesundheitsdaten verbinden</string>
+    <string name="onboarding_health_grant_button">Gesundheitsdaten verknüpfen</string>
     <string name="onboarding_health_connected">Health Connect verbunden</string>
     <string name="onboarding_storage_title">Wählen Sie Ihren\nExportort</string>
     <string name="onboarding_storage_subtitle">Wählen Sie aus, wo Health.md Ihre exportierten Gesundheitsnotizen speichern soll.</string>
@@ -731,7 +838,7 @@
     <string name="onboarding_skip">Überspringen</string>
     <string name="onboarding_back">Zurück</string>
     <string name="export_failure_paywall_label">Freischaltung erforderlich</string>
-    <string name="export_guidance_paywall">Für geplante Exporte ist die lebenslange Freischaltung erforderlich. Öffnen Sie die Paywall, um unbegrenzte Exporte und die Zeitplanung freizuschalten.</string>
+    <string name="export_guidance_paywall">Für geplante Exporte ist die lebenslange Freischaltung erforderlich. Öffnen Sie den Kaufbildschirm, um unbegrenzte Exporte und die Zeitplanung freizuschalten.</string>
     <string name="export_source_retry">Erneut versuchen</string>
     <string name="export_source_shortcut">Verknüpfung</string>
     <string name="export_source_remote">Remote</string>
@@ -739,12 +846,15 @@
     <string name="schedule_unlock_required_body">Manuelle Exporte umfassen 10 kostenlose Durchläufe. Automatische geplante Exporte sind in der einmaligen lebenslangen Freischaltung enthalten.</string>
     <string name="schedule_unlock_required_short">Schalten Sie Health.md frei, um geplante Exporte zu aktivieren.</string>
     <string name="section_schedule_lookback">Rückblick für geplante Exporte</string>
-    <string name="schedule_lookback_summary">Bei jedem geplanten Durchlauf werden die letzten %1$d vollständigen Kalendertag(e) bis einschließlich gestern sowie alle noch ausstehenden fehlgeschlagenen Datumsangaben exportiert.</string>
+    <string name="schedule_lookback_summary">Anzahl der Tage im Rückblick: %1$d. Jeder geplante Durchlauf exportiert die entsprechenden vollständigen Kalendertage bis einschließlich gestern sowie alle noch ausstehenden fehlgeschlagenen Tage.</string>
     <string name="export_folder_root_label">Exportordner</string>
     <string name="history_clear_title">Exportverlauf löschen?</string>
     <string name="history_clear_body">Dadurch werden alle lokalen Einträge im Exportverlauf entfernt. Exportierte Dateien werden nicht gelöscht.</string>
     <string name="history_target_label">Ziel: %1$s</string>
-    <string name="history_file_count">Dateien: %1$d</string>
+    <plurals name="history_file_count">
+        <item quantity="one">Datei: %1$d</item>
+        <item quantity="other">Dateien: %1$d</item>
+    </plurals>
     <string name="history_detail_title">Exportdetails</string>
     <string name="history_detail_source">Quelle</string>
     <string name="history_detail_when">Zeitpunkt</string>
@@ -784,4 +894,397 @@
     <string name="search">Suchen</string>
     <string name="enabled">Aktiviert</string>
     <string name="disabled">Deaktiviert</string>
+    <!-- Direct CLI, API, provider, history, scheduling, widget, and accessibility additions. -->
+    <string name="release_notes_highlight_widgets">Fügen Sie die Widgets „Gesundheitsübersicht“, „Aktivität“, „Herzfrequenzbereich“ und „Schlaf“ mit optionaler Hintergrundaktualisierung zu Ihrem Startbildschirm hinzu.</string>
+    <string name="direct_cli_title">Direct CLI</string>
+    <string name="direct_cli_intro_title">Verschlüsselte Desktop-Exporte</string>
+    <string name="direct_cli_intro_body">Die CLI lauscht auf Ihrem Computer. Health.md stellt eine direkte Verbindung her und sendet den Export ohne Umweg über die Cloud.</string>
+    <string name="direct_cli_pair_step_run">1. Führen Sie auf Ihrem Computer Folgendes aus:</string>
+    <string name="direct_cli_pair_step_enter">2. Geben Sie die Computeradresse und den 20-stelligen Android-Code ein, der von der CLI angezeigt wird.</string>
+    <string name="direct_cli_computer_address">Computeradresse</string>
+    <string name="direct_cli_port">Port</string>
+    <string name="direct_cli_pairing_code">Pairing-Code</string>
+    <string name="direct_cli_pair_button">Mit CLI koppeln</string>
+    <string name="direct_cli_paired_listener">Mit %1$s gekoppelt</string>
+    <string name="direct_cli_save_address">Adresse speichern</string>
+    <string name="direct_cli_export_instruction">Führen Sie einen Exportbefehl auf Ihrem Computer aus und tippen Sie dann auf „Verbinden“:</string>
+    <string name="direct_cli_connect">Verbinden</string>
+    <string name="direct_cli_disconnect">Trennen</string>
+    <string name="direct_cli_forget">Gekoppelte CLI vergessen</string>
+    <string name="direct_cli_status_title">Status</string>
+    <string name="direct_cli_status_not_connected">Nicht verbunden</string>
+    <string name="direct_cli_status_pairing">Kopplung…</string>
+    <string name="direct_cli_status_connecting">Verbindung wird hergestellt…</string>
+    <string name="direct_cli_status_connected">Verbunden mit %1$s</string>
+    <string name="direct_cli_status_transferring">Übertragung: %1$s von %2$s</string>
+    <string name="direct_cli_status_paired">Mit %1$s gekoppelt.</string>
+    <string name="direct_cli_status_session_finished">Direct CLI-Sitzung beendet.</string>
+    <string name="direct_cli_status_export_completed">Android-Export abgeschlossen.</string>
+    <string name="direct_cli_status_export_cancelled">Android-Export abgebrochen.</string>
+    <string name="direct_cli_failure_connection">Die Verbindung zur Health.md-CLI konnte nicht hergestellt werden. Prüfen Sie, ob die CLI auf Verbindungen wartet, und versuchen Sie es erneut.</string>
+    <string name="direct_cli_failure_timeout">Die Direct CLI-Sitzung hat das Zeitlimit von Android erreicht.</string>
+    <string name="direct_cli_failure_quota">Das Limit für den kostenlosen Export wurde erreicht.</string>
+    <string name="direct_cli_failure_fitbit_range">Für den Fitbit-Rohdatenexport ist ein expliziter Zeitraum von höchstens 366 Tagen erforderlich.</string>
+    <string name="direct_cli_failure_source_unavailable">Die angeforderte Gesundheitsquelle ist auf diesem Gerät nicht verfügbar.</string>
+    <string name="direct_cli_failure_health_access">Auf dem Android-Gerät ist der Zugriff auf Gesundheitsdaten erforderlich.</string>
+    <string name="direct_cli_failure_device_locked">Entsperren Sie das Android-Gerät, bevor Sie Gesundheitsdaten exportieren.</string>
+    <string name="direct_cli_failure_historical_access">Für die angeforderten Datumsangaben ist der Zugriff auf historische Gesundheitsdaten erforderlich.</string>
+    <string name="direct_cli_failure_file_limit">Der erstellte Export umfasst mehr als 4.096 Dateien. Verwenden Sie weniger Tage oder deaktivieren Sie die Nachverfolgung einzelner Einträge.</string>
+    <string name="direct_cli_failure_spool_missing">Der zwischengespeicherte Export fehlt und muss neu gestartet werden.</string>
+    <string name="direct_cli_failure_export">Der Android-Export konnte nicht sicher abgeschlossen werden.</string>
+    <string name="direct_cli_notification_waiting">Warten auf Health.md CLI</string>
+    <string name="direct_cli_notification_idle">Direct CLI ist inaktiv</string>
+    <string name="direct_cli_notification_pairing">Kopplung mit Health.md CLI</string>
+    <string name="direct_cli_notification_connecting">Verbindung zur Health.md-CLI herstellen</string>
+    <string name="direct_cli_notification_transferring">Übertragen des Android-Gesundheitsexports</string>
+    <string name="direct_cli_notification_title">Health.md Direct CLI</string>
+    <string name="direct_cli_notification_channel_name">Direct CLI-Exporte</string>
+    <string name="direct_cli_notification_channel_description">Verschlüsselte direkte Exportverbindung und Übertragungsfortschritt</string>
+    <string name="api_export_target_title">Exportziel</string>
+    <string name="api_export_section_endpoint">Endpunkt</string>
+    <string name="api_export_endpoint_url_label">Endpunkt-URL</string>
+    <string name="api_export_endpoint_help">Erforderlich. Halten Sie API-Schlüssel und andere Geheimnisse von der URL fern.</string>
+    <string name="api_export_authorization_saved">%1$s gespeichert</string>
+    <string name="api_export_remove_credential">Anmeldeinformationen entfernen</string>
+    <string name="api_export_new_authorization_label">Neue %1$s</string>
+    <string name="api_export_authorization_label">%1$s-Token oder %2$s-Anmeldeinformationen</string>
+    <string name="api_export_authorization_replacement_placeholder">Geben Sie einen Wert ein, um den gespeicherten Wert zu ersetzen</string>
+    <string name="api_export_authorization_placeholder">Token oder %1$s-Wert</string>
+    <string name="api_export_authorization_saved_help">Lassen Sie das Feld leer, um den gespeicherten Wert beizubehalten. Tokens ohne Schema verwenden automatisch %1$s.</string>
+    <string name="api_export_authorization_help">Tokens ohne Schema verwenden automatisch %1$s. Werte mit %1$s und %2$s werden akzeptiert.</string>
+    <string name="api_export_custom_headers_title">Benutzerdefinierte Header</string>
+    <string name="api_export_custom_headers_saved">Benutzerdefinierte Header gespeichert</string>
+    <string name="api_export_remove_headers">Header entfernen</string>
+    <string name="api_export_replacement_headers_label">Ersatz-Header</string>
+    <string name="api_export_request_headers_label">Anforderungsheader</string>
+    <string name="api_export_replacement_headers_help">Geben Sie den vollständigen Ersatzsatz ein, ein %1$s pro Zeile.</string>
+    <string name="api_export_request_headers_help">Verwenden Sie einen %1$s pro Zeile. Mit %2$s bleiben Transportheader von der App verwaltet.</string>
+    <string name="api_export_close_settings">Einstellungen schließen</string>
+    <string name="api_export_save_settings">Einstellungen speichern</string>
+    <string name="api_export_dialog_title">API-Export</string>
+    <string name="api_export_dialog_description">Senden Sie ausgewählte Datensätze als einen %1$s %2$s an einen von Ihnen kontrollierten %3$s- oder %4$s-Endpunkt.</string>
+    <string name="api_export_close_content_description">API-Exporteinstellungen schließen</string>
+    <string name="api_export_optional_label">Optional</string>
+    <string name="api_export_manage_request_headers">Anforderungsheader verwalten</string>
+    <string name="api_export_add_request_headers">Anforderungsheader hinzufügen</string>
+    <string name="api_export_headers_saved_hidden">Sicher gespeichert · Werte ausgeblendet</string>
+    <string name="api_export_headers_add_help">Fügen Sie API-Schlüssel oder dienstspezifische Werte hinzu</string>
+    <string name="api_export_collapse_custom_headers">Benutzerdefinierte Header einklappen</string>
+    <string name="api_export_expand_custom_headers">Benutzerdefinierte Header ausklappen</string>
+    <string name="api_export_error_invalid_endpoint">Geben Sie eine gültige %1$s- oder %2$s-URL ohne Fragment oder eingebetteten Benutzernamen/Passwort ein.</string>
+    <string name="api_export_error_authorization_empty">Geben Sie einen gültigen %1$s-Token oder %2$s-Wert ein.</string>
+    <string name="api_export_error_authorization_characters">%1$s-Werte dürfen keine Steuer- oder Nicht-ASCII-Zeichen enthalten.</string>
+    <string name="api_export_error_headers_total_size">Anforderungsheader dürfen höchstens %1$d Zeichen lang sein.</string>
+    <string name="api_export_error_headers_line_break">Anforderungsheader enthalten einen nicht unterstützten Zeilenumbruch.</string>
+    <string name="api_export_error_header_missing_separator">Headerzeile %1$d muss %2$s verwenden.</string>
+    <string name="api_export_error_header_invalid_name">Headerzeile %1$d hat einen ungültigen Namen. Namen dürfen höchstens %2$d gültige %3$s-Headerzeichen enthalten.</string>
+    <string name="api_export_error_header_reserved_name">%1$s wird von %2$s verwaltet und kann nicht überschrieben werden.</string>
+    <string name="api_export_error_header_duplicate_name">Header %1$s ist mehr als einmal konfiguriert.</string>
+    <string name="api_export_error_header_value_too_long">Header %1$s muss einen Wert von %2$d Zeichen oder weniger haben.</string>
+    <string name="api_export_error_header_value_characters">Header %1$s enthält nicht unterstützte Zeichen im Wert.</string>
+    <string name="api_export_error_save_failed">API-Anfrageeinstellungen konnten nicht sicher gespeichert werden.</string>
+    <string name="api_export_endpoint_example">https://api.example.com/healthmd</string>
+    <string name="api_export_headers_example">X-API-Key: secret\nX-Client-ID: healthmd</string>
+    <string name="api_export_header_line_syntax">Name: value</string>
+    <string name="api_export_literal_authorization">Authorization</string>
+    <string name="api_export_literal_bearer">Bearer</string>
+    <string name="api_export_literal_basic">Basic</string>
+    <string name="api_export_literal_json">JSON</string>
+    <string name="api_export_literal_post">POST</string>
+    <string name="api_export_literal_http">HTTP</string>
+    <string name="api_export_literal_https">HTTPS</string>
+    <plurals name="api_export_error_header_count">
+        <item quantity="one">Konfigurieren Sie nicht mehr als %1$d Anforderungsheader.</item>
+        <item quantity="other">Konfigurieren Sie nicht mehr als %1$d Anforderungsheader.</item>
+    </plurals>
+    <string name="settings_direct_cli_subtitle">Koppeln Sie Health.md mit der Desktop-CLI, um verschlüsselte iOS- oder Android-kompatible Exporte zu erstellen.</string>
+    <string name="health_provider_health_connect_summary">Standardmäßiger Android-Gesundheitshub, der für private Exporte auf dem Gerät verwendet wird.</string>
+    <string name="health_provider_health_connect_setup_description">Erteilen Sie Health Connect-Berechtigungen über den Exportbildschirm. Health.md liest Datensätze lokal und schreibt sie direkt in Ihren Ordner.</string>
+    <string name="health_provider_samsung_health_summary">Samsung-Telefone, Galaxy Watch, Schlaf, Schritte, Training, Vitalwerte.</string>
+    <string name="health_provider_samsung_health_setup_description">Öffnen Sie Samsung Health und aktivieren Sie die Freigabe mit Health Connect. Das Samsung Health Data SDK kann später hinzugefügt werden, wenn vom Partner genehmigte Daten außerhalb von Health Connect benötigt werden.</string>
+    <string name="health_provider_huawei_health_summary">Huawei-Geräte und HMS/AppGallery-Märkte.</string>
+    <string name="health_provider_huawei_health_setup_description">Für die Unterstützung von Huawei ist eine Registrierung der HMS Health Kit-App und ein HMS-fähiger Build erforderlich. Dieser Katalog hält Huawei sichtbar, ohne HMS-Abhängigkeiten zum Play-Build hinzuzufügen.</string>
+    <string name="health_provider_fitbit_summary">Fitbit-Tracker, Fitbit-Daten der Pixel Watch, Schlaf, Aktivität und Herz.</string>
+    <string name="health_provider_fitbit_setup_description">Der direkte Fitbit-Import verwendet die Fitbit Web API mit OAuth-Bereichen und Refresh-Tokens. Bis die App-Anmeldeinformationen konfiguriert sind, exportieren Sie Fitbit-Daten über Health Connect, sofern verfügbar.</string>
+    <string name="health_provider_garmin_summary">Garmin-Uhren, Training, Aktivität, Schlaf und Body-Battery-ähnliche Metriken.</string>
+    <string name="health_provider_garmin_setup_description">Garmin-Produktionsimporte erfordern eine Partnergenehmigung für die Garmin Health API und normalerweise einen Backend-/Webhook-Synchronisierungspfad. Health.md verzichtet bewusst auf Google Fit als Ausweichlösung.</string>
+    <string name="health_provider_withings_summary">Withings-Waagen und -Uhren, Blutdruck und Schlafmatten.</string>
+    <string name="health_provider_withings_setup_description">Der direkte Withings-Import verwendet OAuth 2.0 und die öffentliche Withings-API. Konfigurieren Sie Client-Anmeldeinformationen, bevor Sie Live-Lesevorgänge aus der Cloud aktivieren.</string>
+    <string name="health_provider_oura_summary">Oura Ring: Schlaf, Tagesform, Aktivität, Herzfrequenz und HRV.</string>
+    <string name="health_provider_oura_setup_description">Der direkte Oura-Import verwendet die Oura Cloud API mit OAuth 2.0. Konfigurieren Sie Client-Anmeldeinformationen, bevor Sie Live-Cloud-Lesevorgänge aktivieren.</string>
+    <string name="health_provider_polar_summary">Polar Training, Herzfrequenzgeräte, Schlaf/Aktivität über AccessLink.</string>
+    <string name="health_provider_polar_setup_description">Der historische Import von Polar sollte Polar AccessLink OAuth verwenden. Die Unterstützung von BLE-Sensoren ist eine separate Funktion für zukünftige Live-Sitzungen und kein Ersatz für den Verlaufsexport.</string>
+    <string name="health_provider_whoop_summary">WHOOP Erholung, Belastung, Schlaf, Training, Physiologie.</string>
+    <string name="health_provider_whoop_setup_description">Der direkte WHOOP-Import verwendet die WHOOP-API mit OAuth-Bereichen für Zyklen, Erholung, Schlaf, Trainings und Profildaten.</string>
+    <string name="health_provider_integration_android_system">Android-System</string>
+    <string name="health_provider_integration_health_connect_source">Health Connect-Quelle</string>
+    <string name="health_provider_integration_vendor_sdk">Anbieter-SDK</string>
+    <string name="health_provider_integration_cloud_api">Cloud-API</string>
+    <string name="health_provider_integration_partner_api">Partner-API</string>
+    <string name="health_provider_direct_export_available">Exportbereit</string>
+    <string name="health_provider_direct_export_requires_oauth_credentials">Benötigt OAuth-Anmeldeinformationen</string>
+    <string name="health_provider_direct_export_requires_vendor_approval">Erfordert die Genehmigung des Anbieters</string>
+    <string name="health_provider_direct_export_requires_partner_approval">Erfordert die Zustimmung des Partners</string>
+    <string name="health_provider_direct_export_requires_app_configuration">Erfordert App-Konfiguration</string>
+    <string name="health_provider_action_open">Öffnen</string>
+    <string name="health_provider_action_install_setup">Installieren / einrichten</string>
+    <string name="privacy_permissions_label">Berechtigungen:</string>
+    <string name="privacy_export_label">Export:</string>
+    <string name="onboarding_storage_selected_folder_fallback">Ausgewählter Ordner</string>
+    <string name="advanced_settings_no_formats_selected">Keine Formate ausgewählt</string>
+    <string name="custom_markdown_template_empty_preview">(leere Vorschau)</string>
+    <string name="billing_error_product_unavailable">Produktinformationen können nicht geladen werden. Bitte versuchen Sie es erneut.</string>
+    <string name="billing_error_service_unavailable">Abrechnungsdienst nicht verfügbar. Bitte versuchen Sie es erneut.</string>
+    <string name="billing_error_purchase_failed">Der Kauf konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.</string>
+    <string name="billing_error_no_previous_purchase">Kein vorheriger Kauf gefunden.</string>
+    <string name="billing_error_restore_failed">Einkäufe konnten nicht wiederhergestellt werden. Bitte versuchen Sie es erneut.</string>
+    <string name="health_provider_label_health_connect">Health Connect</string>
+    <string name="health_provider_label_all_connected">Alle verbundenen Quellen</string>
+    <string name="health_provider_label_fitbit">Fitbit</string>
+    <string name="health_provider_label_withings">Withings</string>
+    <string name="health_provider_label_oura">Oura</string>
+    <string name="health_provider_label_polar">Polar Flow</string>
+    <string name="health_provider_label_whoop">WHOOP</string>
+    <string name="health_provider_label_generic">Gesundheitsquelle</string>
+    <string name="health_provider_sign_in_denied">Die Anmeldung bei der Gesundheitsquelle wurde nicht genehmigt.</string>
+    <string name="health_provider_sign_in_invalid_callback">Die Anmeldung bei der Gesundheitsquelle konnte nicht überprüft werden. Bitte versuchen Sie es erneut.</string>
+    <string name="health_provider_sign_in_connection_failed">Die Gesundheitsquelle konnte nicht verbunden werden. Bitte versuchen Sie es erneut.</string>
+    <string name="feedback_diagnostic_app">App: Health.md %1$s (%2$d)</string>
+    <string name="feedback_diagnostic_platform">Plattform: Android %1$s (API %2$d)</string>
+    <string name="feedback_diagnostic_device">Gerät: %1$s</string>
+    <string name="feedback_issue_describe_heading">Beschreiben Sie das Problem</string>
+    <string name="feedback_issue_describe_hint">Eine klare Beschreibung dessen, was passiert ist</string>
+    <string name="feedback_issue_steps_heading">Schritte zur Reproduktion</string>
+    <string name="feedback_issue_expected_heading">Erwartetes Verhalten</string>
+    <string name="feedback_issue_expected_hint">Was Sie erwartet haben</string>
+    <string name="automation_history_permissions_missing">Health Connect-Berechtigungen fehlen</string>
+    <plurals name="automation_history_failed_dates">
+        <item quantity="one">%1$d fehlgeschlagenes Datum</item>
+        <item quantity="other">%1$d fehlgeschlagene Datumsangaben</item>
+    </plurals>
+    <string name="action_edit_endpoint">API-Endpunkt bearbeiten</string>
+    <string name="history_date_range">%1$s – %2$s</string>
+    <string name="history_failed_date_reason">%1$s: %2$s</string>
+    <string name="history_retry_api_required">Konfigurieren Sie einen API-Endpunkt, bevor Sie es erneut versuchen.</string>
+    <string name="history_retry_complete">Wiederholung abgeschlossen.</string>
+    <string name="history_retry_failed">Wiederholungsversuch fehlgeschlagen. Weitere Informationen finden Sie im Exportverlauf.</string>
+    <string name="history_retry_folder_required">Wählen Sie einen Exportordner aus, bevor Sie es erneut versuchen.</string>
+    <string name="history_retry_permissions_required">Erteilen Sie Health Connect-Berechtigungen, bevor Sie es erneut versuchen.</string>
+    <string name="history_retry_raw_failed">Der Wiederholungsversuch des Rohdaten-Snapshots ist fehlgeschlagen. Weitere Informationen finden Sie im Exportverlauf.</string>
+    <string name="history_warning_details_unavailable">Warnungsdetails sind nicht verfügbar.</string>
+    <string name="schedule_decrease_hour">Stunde verringern</string>
+    <string name="schedule_decrease_lookback_days">Anzahl der Rückblickstage verringern</string>
+    <string name="schedule_decrease_minute">Minute verringern</string>
+    <string name="schedule_destination_not_ready_title">Exportziel nicht bereit</string>
+    <string name="schedule_error_api_required">Konfigurieren Sie einen API-Endpunkt, bevor Sie den Zeitplan aktivieren.</string>
+    <string name="schedule_error_folder_required">Wählen Sie zunächst im Exportbildschirm einen Exportordner aus.</string>
+    <string name="schedule_error_invalid_api_settings">Überprüfen Sie den API-Endpunkt und die Anfrageeinstellungen und versuchen Sie es dann erneut.</string>
+    <string name="schedule_error_invalid_api_url">Geben Sie eine gültige HTTP- oder HTTPS-URL ohne Fragment oder eingebetteten Benutzernamen/Passwort ein.</string>
+    <string name="schedule_error_invalid_headers">Geben Sie gültige Anforderungsheader ein, einen Namen und einen Wert pro Zeile.</string>
+    <string name="schedule_error_save_api_settings">API-Anfrageeinstellungen konnten nicht sicher gespeichert werden.</string>
+    <string name="schedule_increase_hour">Stunde erhöhen</string>
+    <string name="schedule_increase_lookback_days">Anzahl der Rückblickstage erhöhen</string>
+    <string name="schedule_increase_minute">Minute erhöhen</string>
+    <string name="schedule_next_export_datetime">%1$s um %2$s</string>
+    <string name="schedule_target_api_configured">POST JSON an %1$s</string>
+    <string name="schedule_target_api_unconfigured">Senden Sie geplantes JSON an Ihren API-Endpunkt</string>
+    <string name="schedule_target_folder_choose">Wählen Sie im Exportbildschirm einen Ordner aus</string>
+    <string name="schedule_target_folder_ready">Geplante Dateien in den ausgewählten Geräteordner schreiben</string>
+    <string name="schedule_toggle_time_period">Zwischen AM und PM wechseln</string>
+    <string name="scheduled_recovery_history_cancelled">Wiederherstellung abgebrochen; unvollständige Datumsangaben stehen weiterhin aus.</string>
+    <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
+    <plurals name="export_history_failed_dates_pending_retry">
+        <item quantity="one">%1$d fehlgeschlagenes Datum wartet auf einen erneuten Versuch</item>
+        <item quantity="other">%1$d fehlgeschlagene Datumsangaben warten auf einen erneuten Versuch</item>
+    </plurals>
+    <plurals name="export_notification_days_exported">
+        <item quantity="one">%1$d/%2$d Tag für %3$s exportiert</item>
+        <item quantity="other">%1$d/%2$d Tage für %3$s exportiert</item>
+    </plurals>
+    <plurals name="history_detail_exported_days">
+        <item quantity="one">%1$d/%2$d Tag</item>
+        <item quantity="other">%1$d/%2$d Tage</item>
+    </plurals>
+    <plurals name="history_detail_file_count">
+        <item quantity="one">%1$d Datei</item>
+        <item quantity="other">%1$d Dateien</item>
+    </plurals>
+    <plurals name="history_failed_date_sample_more">
+        <item quantity="one">Fehlgeschlagene Datumsangaben: %1$s, +%2$d weitere</item>
+        <item quantity="other">Fehlgeschlagene Datumsangaben: %1$s, +%2$d weitere</item>
+    </plurals>
+    <plurals name="history_more_items">
+        <item quantity="one">+%1$d mehr</item>
+        <item quantity="other">+%1$d mehr</item>
+    </plurals>
+    <plurals name="history_retry_failed_dates">
+        <item quantity="one">Der Wiederholungsversuch wurde mit %1$d fehlgeschlagenem Datum abgeschlossen.</item>
+        <item quantity="other">Der Wiederholungsversuch wurde mit %1$d fehlgeschlagenen Datumsangaben abgeschlossen.</item>
+    </plurals>
+    <plurals name="history_warning_failed_dates">
+        <item quantity="one">%1$d fehlgeschlagenes Datum</item>
+        <item quantity="other">%1$d fehlgeschlagene Datumsangaben</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_incomplete_count">
+        <item quantity="one">%1$d unvollständige Snapshot-Aktion</item>
+        <item quantity="other">%1$d unvollständige Snapshot-Aktionen</item>
+    </plurals>
+    <plurals name="raw_snapshot_history_entry_actions">
+        <item quantity="one">Snapshot-Aktionen: %1$d/%2$d Aktion • %3$s bis %4$s</item>
+        <item quantity="other">Snapshot-Aktionen: %1$d/%2$d Aktionen • %3$s bis %4$s</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_days">
+        <item quantity="one">Tag</item>
+        <item quantity="other">Tage</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_hours">
+        <item quantity="one">Stunde</item>
+        <item quantity="other">Stunden</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_minutes">
+        <item quantity="one">Minute</item>
+        <item quantity="other">Minuten</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_weeks">
+        <item quantity="one">Woche</item>
+        <item quantity="other">Wochen</item>
+    </plurals>
+    <plurals name="schedule_lookback_days_summary">
+        <item quantity="one">Bei jedem Lauf wird %1$d vergangener Tag bis einschließlich gestern exportiert.</item>
+        <item quantity="other">Bei jedem Lauf werden %1$d vergangene Tage bis einschließlich gestern exportiert.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_history_failed_dates">
+        <item quantity="one">Wiederherstellung abgeschlossen; %1$d fehlgeschlagenes Datum steht noch aus.</item>
+        <item quantity="other">Wiederherstellung abgeschlossen; %1$d fehlgeschlagene Datumsangaben stehen noch aus.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_exported_dates">
+        <item quantity="one">Wiederherstellung: %1$d/%2$d Datum exportiert.</item>
+        <item quantity="other">Wiederherstellung: %1$d/%2$d Datumsangaben exportiert.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_pending_dates">
+        <item quantity="one">%1$d Datum steht noch aus.</item>
+        <item quantity="other">%1$d Datumsangaben stehen noch aus.</item>
+    </plurals>
+    <string name="export_api_action_edit">Bearbeiten</string>
+    <string name="export_api_authorization_secure">Autorisierung sicher gespeichert</string>
+    <string name="export_api_compatibility_mode_description">API-Exporte senden immer JSON. Es gelten die Einstellungen für Metriken und Zeitreihen. Dateipfade und Schreibmodi gelten nicht.</string>
+    <string name="export_api_configure_endpoint">Konfigurieren Sie einen API-Endpunkt</string>
+    <string name="export_api_error_invalid_endpoint">Geben Sie eine gültige HTTP- oder HTTPS-URL ohne Fragment oder eingebetteten Benutzernamen/Passwort ein.</string>
+    <string name="export_api_error_invalid_headers">Geben Sie gültige Anforderungsheader ein, einen Namen und einen Wert pro Zeile.</string>
+    <string name="export_api_error_secure_save">API-Anfrageeinstellungen konnten nicht sicher gespeichert werden.</string>
+    <string name="export_api_headers_secure">Benutzerdefinierte Anforderungsheader sicher gespeichert</string>
+    <string name="export_api_post_endpoint">POST %1$s</string>
+    <string name="export_api_raw_mode_description">Rohdaten-Snapshots streamen das fertige Artefakt mit Schema-, Export-ID- und Prüfsummen-Headern.</string>
+    <string name="export_no_format_selected">Wählen Sie mindestens ein Exportformat aus, um fortzufahren.</string>
+    <string name="export_preview_action_create_daily_note">Tagesnotiz erstellen</string>
+    <string name="export_preview_action_daily_note_failed">Tagesnotiz fehlgeschlagen</string>
+    <string name="export_preview_action_skip_daily_note">Tagesnotiz überspringen</string>
+    <string name="export_preview_action_update_daily_note">Tagesnotiz aktualisieren</string>
+    <string name="export_preview_action_write_individual_entry">Einzeleintrag schreiben</string>
+    <string name="export_preview_api_preparation_failed">Die Vorbereitung des API-Exports ist fehlgeschlagen.</string>
+    <string name="export_preview_artifacts_per_range">Artefakte pro Bereich</string>
+    <string name="export_preview_back_description">Zurück zur Exportvorschau</string>
+    <string name="export_preview_destination_label">Ziel</string>
+    <string name="export_preview_empty_file">(leere Datei)</string>
+    <string name="export_preview_formats_per_day">Formate pro Tag</string>
+    <string name="export_preview_no_exportable_file">Für dieses Datum gibt es keine exportierbare Datei.</string>
+    <string name="export_preview_no_files_written">Es würden keine Dateien geschrieben.</string>
+    <string name="export_preview_planning_failed">Die Exportplanung ist fehlgeschlagen.</string>
+    <string name="export_preview_raw_access_denied">Der Zugriff auf die Rohdaten-Snapshot-Vorschau von %1$s wurde verweigert. Überprüfen Sie die Anbieterberechtigungen.</string>
+    <string name="export_preview_raw_failed">Die Rohdaten-Snapshot-Vorschau von %1$s ist fehlgeschlagen, bevor das Artefakt vollständig war.</string>
+    <string name="export_preview_raw_failed_manifest">%1$s hat ein fehlgeschlagenes Rohdaten-Snapshot-Manifest erstellt. Überprüfen Sie den Anbieterzugriff.</string>
+    <string name="export_preview_raw_invalid_range">Das Enddatum des Rohdaten-Snapshots liegt vor seinem Startdatum.</string>
+    <string name="export_preview_raw_no_final_status">Die Vorschau von %1$s wurde ohne endgültigen Rohdaten-Snapshot-Status beendet.</string>
+    <string name="export_preview_raw_partial">%1$s hat eine teilweise Rohdaten-Snapshot-Vorschau erstellt. Überprüfen Sie das Artefaktmanifest.</string>
+    <string name="export_preview_raw_provider_unavailable">Für eine Rohdaten-Snapshot-Vorschau ist kein verbundener Anbieter verfügbar.</string>
+    <string name="export_preview_raw_provider_unregistered">%1$s ist nicht für anbieternative Rohdaten-Snapshots registriert; Health Connect wurde nicht als Ausweichlösung verwendet.</string>
+    <string name="export_preview_raw_service_unavailable">Der Vorschaudienst für Rohdaten-Snapshots ist nicht verfügbar.</string>
+    <string name="export_preview_selected_folder">Ausgewählter Ordner</string>
+    <string name="export_preview_selected_range">Ausgewählter Bereich</string>
+    <string name="export_preview_summary">%1$s • %2$s • %3$s</string>
+    <string name="export_preview_truncation_marker">\n\n… Vorschau abgeschnitten: %1$s wurde in der Mitte dieser %2$s-Datei weggelassen. …\n\n</string>
+    <string name="export_preview_warning_title">Warnung</string>
+    <string name="export_selected_range">%1$s – %2$s</string>
+    <string name="export_target_api_configured_subtitle">POST %1$s an %2$s</string>
+    <string name="export_target_api_json_unconfigured_subtitle">Senden Sie JSON an Ihren API-Endpunkt</string>
+    <string name="export_target_api_raw_unconfigured_subtitle">Streamen Sie einen Rohdaten-Snapshot an einen HTTPS-Endpunkt</string>
+    <string name="export_target_folder_selected_subtitle">Dateien nach %1$s schreiben</string>
+    <string name="export_target_folder_unselected_subtitle">Wählen Sie einen lokalen oder von einem Anbieter bereitgestellten Ordner</string>
+    <string name="folder_organization_flat_label">Ohne Unterordner</string>
+    <string name="folder_organization_by_year_label">Nach Jahr</string>
+    <string name="folder_organization_by_month_label">Nach Monat</string>
+    <string name="folder_organization_by_year_month_label">Nach Jahr/Monat</string>
+    <string name="folder_organization_flat_preview">Keine automatischen Datumsordner</string>
+    <plurals name="export_progress_state_days">
+        <item quantity="one">%1$d von %2$d Tag exportiert</item>
+        <item quantity="other">%1$d von %2$d Tagen exportiert</item>
+    </plurals>
+    <plurals name="export_progress_state_days_with_date">
+        <item quantity="one">%1$d von %2$d Tag exportiert. Aktuelles Datum: %3$s</item>
+        <item quantity="other">%1$d von %2$d Tagen exportiert. Aktuelles Datum: %3$s</item>
+    </plurals>
+    <plurals name="export_progress_state_raw">
+        <item quantity="one">%1$d von %2$d Rohdaten-Snapshot-Aktion für %3$s bis %4$s abgeschlossen</item>
+        <item quantity="other">%1$d von %2$d Rohdaten-Snapshot-Aktionen für %3$s bis %4$s abgeschlossen</item>
+    </plurals>
+    <plurals name="export_diagnostics_date_list_more_count">
+        <item quantity="one">Fehlgeschlagene Datumsangaben: %1$s, +%2$d weiteres Datum</item>
+        <item quantity="other">Fehlgeschlagene Datumsangaben: %1$s, +%2$d weitere Datumsangaben</item>
+    </plurals>
+    <plurals name="export_diagnostics_failed_days">
+        <item quantity="one">%1$d Tag wurde nicht exportiert</item>
+        <item quantity="other">%1$d Tage wurden nicht exportiert</item>
+    </plurals>
+    <plurals name="export_diagnostics_reason_days">
+        <item quantity="one">%1$s: %2$d Tag</item>
+        <item quantity="other">%1$s: %2$d Tage</item>
+    </plurals>
+    <plurals name="export_preview_artifact_count">
+        <item quantity="one">%1$d Artefakt</item>
+        <item quantity="other">%1$d Artefakte</item>
+    </plurals>
+    <plurals name="export_preview_day_count">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <plurals name="export_preview_days_previewed">
+        <item quantity="one">%1$d/%2$d Tag</item>
+        <item quantity="other">%1$d/%2$d Tage</item>
+    </plurals>
+    <plurals name="export_preview_file_count">
+        <item quantity="one">%1$d Datei</item>
+        <item quantity="other">%1$d Dateien</item>
+    </plurals>
+    <plurals name="export_preview_limited_days">
+        <item quantity="one">Vorschau des letzten %1$d Tages mit Daten. Der vollständige Export wird an jedem ausgewählten Datum ausgeführt.</item>
+        <item quantity="other">Vorschau der %1$d letzten Tage mit Daten. Der vollständige Export wird an jedem ausgewählten Datum ausgeführt.</item>
+    </plurals>
+    <plurals name="export_progress_days_count">
+        <item quantity="one">%1$d / %2$d Tag</item>
+        <item quantity="other">%1$d / %2$d Tage</item>
+    </plurals>
+    <plurals name="export_result_exported_days">
+        <item quantity="one">%1$d/%2$d Tag exportiert</item>
+        <item quantity="other">%1$d/%2$d Tage exportiert</item>
+    </plurals>
+    <plurals name="export_result_uploaded_days">
+        <item quantity="one">%1$d/%2$d Tag hochgeladen</item>
+        <item quantity="other">%1$d/%2$d Tage hochgeladen</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_failed_actions">
+        <item quantity="one">Unvollständige Snapshot-Aktion: %1$d</item>
+        <item quantity="other">Unvollständige Snapshot-Aktionen: %1$d</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_reason_actions">
+        <item quantity="one">%1$s: %2$d Aktion</item>
+        <item quantity="other">%1$s: %2$d Aktionen</item>
+    </plurals>
+    <plurals name="raw_snapshot_progress_actions">
+        <item quantity="one">Snapshot-Aktionen: %1$d / %2$d Aktion</item>
+        <item quantity="other">Snapshot-Aktionen: %1$d / %2$d Aktionen</item>
+    </plurals>
+    <plurals name="raw_snapshot_result_actions">
+        <item quantity="one">Snapshot-Aktion abgeschlossen: %1$d/%2$d</item>
+        <item quantity="other">Snapshot-Aktionen abgeschlossen: %1$d/%2$d</item>
+    </plurals>
 </resources>

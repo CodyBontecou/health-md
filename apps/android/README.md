@@ -94,6 +94,12 @@ vault/
 
 Schedule exports with WorkManager, recover missed scheduled dates, retry from export history, and trigger exports from Tasker, adb, or other automation tools through explicit broadcast intents. Launcher shortcuts open Export, Schedule, and History.
 
+### Home-Screen Widgets
+
+Add responsive Health Summary, Activity, Heart Range, and Sleep widgets to the Android home screen. Widgets read only their required Health Connect categories, share a minimal 14-day no-backup snapshot, and show seven-day sleep and heart charts. One local WorkManager pulse reconciles permission revocations and stale copy; it reads Health Connect in the background only when optional background access is granted. Android has no Stand Hours record, so Activity uses Steps as its third ring. Health.md excludes measurement-bearing widgets from Android lock-screen hosts because Android cannot provide Apple-style sensitive-value redaction.
+
+See [Android home-screen widgets](docs/features/widgets.md).
+
 ### Export Destinations
 
 Android file exports use the Storage Access Framework, so users can choose local folders or provider-backed folders exposed by Google Drive, OneDrive, Syncthing, Obsidian Sync, or another document provider.
@@ -132,7 +138,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 ## Tech Stack
 
 - **Language:** Kotlin 2.1
-- **UI:** Jetpack Compose + Material 3
+- **UI:** Jetpack Compose + Material 3; Jetpack Glance home-screen widgets
 - **Minimum Android:** 9.0 / API 28
 - **Compile SDK:** 36
 - **Health data:** AndroidX Health Connect Client 1.2.0-alpha02
@@ -148,6 +154,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 |-----------|---------|
 | Health Connect | Health permission flow, aggregate reads, records, historical/background access |
 | Jetpack Compose / Material 3 | Android interface, onboarding, export, settings, paywall, and schedule screens |
+| Jetpack Glance | Responsive Health Summary, Activity, Heart Range, and Sleep home-screen widgets |
 | Navigation Compose | Screen routing and nested settings flows |
 | Hilt | Dependency injection for repositories, managers, workers, and view models |
 | WorkManager | Scheduled exports, retry/recovery behavior, and reboot rescheduling |
@@ -183,6 +190,7 @@ app/
         repository/                   # Repository interfaces
       rawexport/                     # Versioned raw snapshot models, mappers, spool, storage, and API client
       rawchanges/                    # Incremental Health Connect changes/tombstone backend
+      widget/                        # Glance providers, minimal snapshot, setup, and refresh pipeline
       presentation/
         common/                       # Shared Compose controls
         export/                       # Export screen and preview/progress UI
@@ -281,7 +289,28 @@ Focused commands:
 ./gradlew :app:testDebugUnitTest --tests com.healthmd.exportcontract.ReleaseReadinessTest
 ./gradlew :app:lintDebug
 ./gradlew :app:connectedDebugAndroidTest
+
+# Hermetic Direct CLI Compose workflow coverage on a connected device/emulator
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.directcli.DirectCliScreenTest
 ```
+
+The opt-in Direct CLI network E2E drives the real **Settings → Direct CLI** UI, foreground service,
+Android Keystore trust, Rust pairing/authenticated transport, v2 negotiation, the foreground
+notification and its Disconnect action, status, forget, and code-based re-pair. It deliberately
+requests no export and records no health payload. The
+script installs `com.healthmd.android.e2e`, never mutates `com.healthmd.android`, and uninstalls the
+isolated app after the run:
+
+```bash
+ANDROID_SERIAL=2C061FDH200CJN \
+HEALTHMD_ANDROID_E2E_HOST=<computer-LAN-or-Tailscale-address> \
+  ./scripts/run-direct-cli-ui-e2e.sh
+```
+
+Use `10.0.2.2` as the host for an Android emulator. The script starts the matching ignored Rust
+listener automatically, creates an ephemeral 20-digit code, bounds both sides with timeouts, and
+retains only health-free pass/fail markers.
 
 The export-contract tests verify Android compatibility output against the iOS Health.md schema and obsidian-health-md plugin, plus raw snapshot/record/change schemas, field ledgers, deterministic checksums, pagination, privacy boundaries, and crash-safe incremental state transitions.
 
@@ -291,7 +320,7 @@ Health.md requests permissions only when a feature needs them:
 
 - **Health Connect read access** — required to export selected health categories
 - **Health Connect historical access** — used for large manual exports beyond the normal read window
-- **Health Connect background access** — used only when scheduled exports are enabled
+- **Health Connect background access** — used only when scheduled exports are enabled or installed widgets need background refresh
 - **Notifications** — optional status notifications for completed or failed scheduled exports
 - **Boot completed** — reschedules exports after device restart
 - **User-selected files** — writes to folders chosen through Android's Storage Access Framework
@@ -304,8 +333,9 @@ Health data stays local-first:
 - Health Connect records are read on Android and written directly to folders you choose.
 - Exports can target local/provider-backed folders or an HTTP(S) API endpoint explicitly configured by the user; Health.md does not run a health-data cloud.
 - Optional direct cloud-provider imports use provider OAuth tokens stored on-device; enabling those providers sends requests directly to that provider's API.
-- Scheduled exports run locally through WorkManager and use Health Connect background access only when you enable scheduling.
+- Scheduled exports and installed widgets run locally through WorkManager and use Health Connect background access only when you enable scheduling or allow background widget refresh.
 - Export history and settings are stored locally with Room and DataStore.
+- Widget measurements are reduced to a bounded 14-day snapshot in credential-protected no-backup storage and deleted after the final widget is removed.
 - Billing is handled by Google Play; health samples and exported files are not sent to a Health.md server. API Endpoint records travel directly to the user-configured service.
 - Health.md uses no third-party analytics or attribution SDK. It uses two separate, bounded first-party systems: campaign-install attribution and coarse onboarding/pricing analytics.
 - Campaign attribution sends only random app-install/event UUIDs, app version/build, optional Play timestamps, and sanitized campaign token/source/medium/content metadata to a configured first-party Cloudflare endpoint.
@@ -334,6 +364,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 - [Health provider support](docs/health-provider-support.md) — supported Android/wearable ecosystems and direct-import requirements
 - [Health provider beta test checklist](docs/provider-beta-test-checklist.md) — tester flow and redacted diagnostics guidance for provider verification
 - [Workout details](docs/features/workout-details.md) — workout export fields, route status, splits, and granular samples
+- [Android home-screen widgets](docs/features/widgets.md) — widget parity, permissions, refresh, freshness, and privacy
 
 ## Contributing
 

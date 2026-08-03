@@ -95,6 +95,73 @@
                 android:resource="@xml/shortcuts" />
         </activity>
 
+        <!-- Shared permission/setup flow for all Health.md home-screen widgets. -->
+        <activity
+            android:name=".widget.setup.WidgetSetupActivity"
+            android:exported="true"
+            android:theme="@style/Theme.HealthMd">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <!-- Four independently discoverable, responsive Health.md widgets. -->
+        <receiver
+            android:name=".widget.glance.HealthSummaryWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_health_summary_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/health_summary_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.glance.ActivityWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_activity_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/activity_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.glance.HeartRangeWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_heart_range_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/heart_range_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.glance.SleepWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_sleep_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sleep_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.glance.HealthWidgetLocaleChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+                <action android:name="android.intent.action.APPLICATION_LOCALE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!-- OAuth redirect callback for direct cloud health providers -->
         <activity
             android:name=".presentation.oauth.OAuthCallbackActivity"

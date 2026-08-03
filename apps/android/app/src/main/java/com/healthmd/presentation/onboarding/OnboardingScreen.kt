@@ -12,6 +12,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -23,10 +26,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -65,9 +70,13 @@ fun OnboardingScreen(
     val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
     val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val layoutDirection = LocalLayoutDirection.current
+    val horizontalMotionDirection = if (layoutDirection == LayoutDirection.Ltr) 1f else -1f
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
     var advanceAfterUnlock by remember { mutableStateOf(false) }
+    val selectedFolderFallback = stringResource(R.string.onboarding_storage_selected_folder_fallback)
+    val folderDisplayName = uiState.folderUri?.let { uiState.folderName ?: selectedFolderFallback }
 
     val healthConnectManager = remember { HealthConnectManager(context) }
     val healthConnectIntentLauncher = remember { HealthConnectIntentLauncher(context) }
@@ -147,8 +156,8 @@ fun OnboardingScreen(
         }
     }
 
-    LaunchedEffect(uiState.folderName, pagerState.settledPage) {
-        if (pagerState.settledPage == 2 && uiState.folderName != null) {
+    LaunchedEffect(uiState.folderUri, pagerState.settledPage) {
+        if (pagerState.settledPage == 2 && uiState.folderUri != null) {
             kotlinx.coroutines.delay(800)
             pagerState.animateScrollToPage(3)
         }
@@ -215,7 +224,7 @@ fun OnboardingScreen(
                         .fillMaxSize()
                         .graphicsLayer {
                             alpha = 1f - pageOffset.absoluteValue.coerceIn(0f, 1f) * 0.4f
-                            translationX = pageOffset * 100
+                            translationX = pageOffset * 100f * horizontalMotionDirection
                         },
                 ) {
                     when (page) {
@@ -260,7 +269,7 @@ fun OnboardingScreen(
                             },
                         )
                         2 -> StorageSetupPage(
-                            folderName = uiState.folderName,
+                            folderName = folderDisplayName,
                             onSelectFolder = { folderPickerLauncher.launch(null) },
                         )
                         3 -> PaywallScreen(
@@ -279,7 +288,7 @@ fun OnboardingScreen(
                             isPurchasing = isPurchasing,
                             isRestoring = isRestoring,
                             priceText = priceText,
-                            errorMessage = purchaseError,
+                            purchaseError = purchaseError,
                             onClearError = paywallViewModel::clearError,
                             subtitle = stringResource(R.string.schedule_unlock_required_body),
                             isDebugBuild = paywallViewModel.isDebugBuild,
@@ -302,7 +311,7 @@ fun OnboardingScreen(
                 currentPage = pagerState.currentPage,
                 canContinue = when (pagerState.currentPage) {
                     1 -> uiState.hasPermissions
-                    2 -> uiState.folderName != null
+                    2 -> uiState.folderUri != null
                     else -> true
                 },
                 onBack = {
@@ -376,7 +385,7 @@ private fun WelcomePage() {
 
         // Feature rows
         FeaturePill(
-            icon = Icons.Outlined.Article,
+            icon = Icons.AutoMirrored.Outlined.Article,
             text = stringResource(R.string.onboarding_welcome_feature_1),
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -773,6 +782,8 @@ private fun OnboardingBottomBar(
     onContinue: () -> Unit,
     onSkip: () -> Unit,
 ) {
+    val horizontalMotionDirection = if (LocalLayoutDirection.current == LayoutDirection.Ltr) 1 else -1
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -784,12 +795,12 @@ private fun OnboardingBottomBar(
         // Back button
         AnimatedVisibility(
             visible = currentPage > 0 && currentPage < 4,
-            enter = fadeIn() + slideInHorizontally { -it },
-            exit = fadeOut() + slideOutHorizontally { -it },
+            enter = fadeIn() + slideInHorizontally { -it * horizontalMotionDirection },
+            exit = fadeOut() + slideOutHorizontally { -it * horizontalMotionDirection },
         ) {
             TextButton(onClick = onBack) {
                 Icon(
-                    Icons.Outlined.ArrowBack,
+                    Icons.AutoMirrored.Outlined.ArrowBack,
                     contentDescription = null,
                     tint = AppColors.textMuted,
                     modifier = Modifier.size(18.dp),
@@ -810,8 +821,8 @@ private fun OnboardingBottomBar(
         // Continue / Skip
         AnimatedVisibility(
             visible = currentPage < 4,
-            enter = fadeIn() + slideInHorizontally { it },
-            exit = fadeOut() + slideOutHorizontally { it },
+            enter = fadeIn() + slideInHorizontally { it * horizontalMotionDirection },
+            exit = fadeOut() + slideOutHorizontally { it * horizontalMotionDirection },
         ) {
             Row {
                 // Skip button for permission/storage pages
@@ -828,7 +839,7 @@ private fun OnboardingBottomBar(
                 SecondaryButton(
                     text = stringResource(R.string.onboarding_continue),
                     onClick = onContinue,
-                    icon = Icons.Outlined.ArrowForward,
+                    icon = Icons.AutoMirrored.Outlined.ArrowForward,
                     enabled = canContinue,
                 )
             }

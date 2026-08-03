@@ -77,14 +77,36 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+sealed interface DirectCliCompletion {
+    data class Paired(val listenerName: String) : DirectCliCompletion
+    data object SessionFinished : DirectCliCompletion
+    data object ExportCompleted : DirectCliCompletion
+    data object ExportCancelled : DirectCliCompletion
+}
+
+enum class DirectCliFailure {
+    PAIRING_FAILED,
+    CONNECTION_FAILED,
+    SESSION_TIMEOUT,
+    QUOTA_EXHAUSTED,
+    FITBIT_RANGE_REQUIRED,
+    SOURCE_UNAVAILABLE,
+    HEALTH_ACCESS_REQUIRED,
+    DEVICE_LOCKED,
+    HISTORICAL_ACCESS_REQUIRED,
+    GENERATED_FILE_LIMIT,
+    SPOOL_MISSING,
+    EXPORT_FAILED,
+}
+
 sealed interface DirectCliConnectionState {
     data object Idle : DirectCliConnectionState
     data object Pairing : DirectCliConnectionState
     data object WaitingForCli : DirectCliConnectionState
     data class Connected(val listenerName: String) : DirectCliConnectionState
     data class Transferring(val completedBytes: Long, val totalBytes: Long) : DirectCliConnectionState
-    data class Completed(val message: String) : DirectCliConnectionState
-    data class Failed(val message: String) : DirectCliConnectionState
+    data class Completed(val outcome: DirectCliCompletion) : DirectCliConnectionState
+    data class Failed(val reason: DirectCliFailure) : DirectCliConnectionState
 }
 
 @Singleton
@@ -126,7 +148,7 @@ class DirectCliCoordinator @Inject constructor(
                 negotiate(channel)
                 trustStore.save(connected.listener, host, port)
                 _state.value = DirectCliConnectionState.Completed(
-                    "Paired with ${connected.listener.displayName}.",
+                    DirectCliCompletion.Paired(connected.listener.displayName),
                 )
             } finally {
                 activeChannel = null
@@ -154,7 +176,9 @@ class DirectCliCoordinator @Inject constructor(
                 _state.value = DirectCliConnectionState.Connected(connected.listener.displayName)
                 serve(channel, transferNegotiation)
                 if (_state.value is DirectCliConnectionState.Connected) {
-                    _state.value = DirectCliConnectionState.Completed("Direct CLI session finished.")
+                    _state.value = DirectCliConnectionState.Completed(
+                        DirectCliCompletion.SessionFinished,
+                    )
                 }
             } finally {
                 protocolAuthority.endOperation()
@@ -176,8 +200,8 @@ class DirectCliCoordinator @Inject constructor(
         }
     }
 
-    fun reportFailure(message: String) {
-        _state.value = DirectCliConnectionState.Failed(message)
+    fun reportFailure(reason: DirectCliFailure) {
+        _state.value = DirectCliConnectionState.Failed(reason)
     }
 
     fun resetSession() {
@@ -282,6 +306,7 @@ class DirectCliCoordinator @Inject constructor(
                         ErrorCode.QUOTA_EXHAUSTED,
                         phase,
                         "The free export limit has been reached.",
+                        DirectCliFailure.QUOTA_EXHAUSTED,
                     )
                     return
                 }
@@ -295,6 +320,7 @@ class DirectCliCoordinator @Inject constructor(
                             ErrorCode.INVALID_REQUEST,
                             phase,
                             "Fitbit raw export requires an explicit range of at most 366 days.",
+                            DirectCliFailure.FITBIT_RANGE_REQUIRED,
                         )
                         return
                     }
@@ -310,6 +336,7 @@ class DirectCliCoordinator @Inject constructor(
                         ErrorCode.SOURCE_UNAVAILABLE,
                         phase,
                         "The requested health provider is unavailable on this device.",
+                        DirectCliFailure.SOURCE_UNAVAILABLE,
                     )
                     return
                 }
@@ -325,6 +352,7 @@ class DirectCliCoordinator @Inject constructor(
                         ErrorCode.PERMISSION_REQUIRED,
                         phase,
                         "Health access is required on the Android device.",
+                        DirectCliFailure.HEALTH_ACCESS_REQUIRED,
                     )
                     return
                 }
@@ -335,6 +363,7 @@ class DirectCliCoordinator @Inject constructor(
                         ErrorCode.DEVICE_LOCKED,
                         phase,
                         "Unlock the Android device before exporting health data.",
+                        DirectCliFailure.DEVICE_LOCKED,
                     )
                     return
                 }
@@ -353,6 +382,7 @@ class DirectCliCoordinator @Inject constructor(
                         ErrorCode.PERMISSION_REQUIRED,
                         phase,
                         "Historical health access is required for the requested dates.",
+                        DirectCliFailure.HISTORICAL_ACCESS_REQUIRED,
                     )
                     return
                 }
@@ -405,12 +435,16 @@ class DirectCliCoordinator @Inject constructor(
             if (!journal.completed && completionPersisted) {
                 runCatching { settingsRepository.incrementSuccessfulExportCount() }
             }
-            _state.value = DirectCliConnectionState.Completed("Android export completed.")
+            _state.value = DirectCliConnectionState.Completed(
+                DirectCliCompletion.ExportCompleted,
+            )
         } catch (error: CancellationException) {
             throw error
         } catch (_: DirectExportCancelledException) {
             jobStore.cancel(request.jobId)
-            _state.value = DirectCliConnectionState.Completed("Android export cancelled.")
+            _state.value = DirectCliConnectionState.Completed(
+                DirectCliCompletion.ExportCancelled,
+            )
         } catch (_: DirectGeneratedArtifactLimitException) {
             jobStore.cancel(request.jobId)
             reject(
@@ -419,6 +453,7 @@ class DirectCliCoordinator @Inject constructor(
                 ErrorCode.STAGING_FAILED,
                 phase,
                 "Generated export exceeds 4,096 files; use fewer dates or disable individual tracking.",
+                DirectCliFailure.GENERATED_FILE_LIMIT,
             )
         } catch (_: MissingSpoolException) {
             reject(
@@ -427,6 +462,7 @@ class DirectCliCoordinator @Inject constructor(
                 ErrorCode.SPOOL_MISSING_RESTART_REQUIRED,
                 phase,
                 "The retained export is missing and must be restarted.",
+                DirectCliFailure.SPOOL_MISSING,
             )
         } catch (_: Throwable) {
             reject(
@@ -435,9 +471,7 @@ class DirectCliCoordinator @Inject constructor(
                 ErrorCode.INTERNAL_FAILURE,
                 phase,
                 "The Android export could not be completed safely.",
-            )
-            _state.value = DirectCliConnectionState.Failed(
-                "The Android export could not be completed safely.",
+                DirectCliFailure.EXPORT_FAILED,
             )
         } finally {
             try {
@@ -526,7 +560,9 @@ class DirectCliCoordinator @Inject constructor(
                             com.healthmd.direct.protocol.JobPayload.serializer(),
                             payload,
                         )
-                        _state.value = DirectCliConnectionState.Completed("Android export cancelled.")
+                        _state.value = DirectCliConnectionState.Completed(
+                            DirectCliCompletion.ExportCancelled,
+                        )
                         parentJob.cancel(CancellationException("Direct export cancelled by CLI."))
                         return@launch
                     }
@@ -823,6 +859,7 @@ class DirectCliCoordinator @Inject constructor(
         code: ErrorCode,
         phase: ExportPhase,
         message: String,
+        failure: DirectCliFailure,
     ) {
         runCatching {
             channel.sendV2(
@@ -837,7 +874,7 @@ class DirectCliCoordinator @Inject constructor(
                 ),
             )
         }
-        _state.value = DirectCliConnectionState.Failed(message)
+        _state.value = DirectCliConnectionState.Failed(failure)
     }
 
     private fun ArtifactFormat.mediaType(): String = when (this) {

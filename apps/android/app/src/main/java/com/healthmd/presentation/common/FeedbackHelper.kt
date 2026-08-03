@@ -21,12 +21,16 @@ object FeedbackHelper {
         val osVersion = Build.VERSION.RELEASE
         val device = "${Build.MANUFACTURER} ${Build.MODEL}"
 
-        return """
-            |---
-            |App: Health.md $versionName ($versionCode)
-            |Platform: Android $osVersion (API ${Build.VERSION.SDK_INT})
-            |Device: $device
-        """.trimMargin()
+        return listOf(
+            "---",
+            context.getString(R.string.feedback_diagnostic_app, versionName, versionCode),
+            context.getString(
+                R.string.feedback_diagnostic_platform,
+                osVersion,
+                Build.VERSION.SDK_INT,
+            ),
+            context.getString(R.string.feedback_diagnostic_device, device),
+        ).joinToString("\n")
     }
 
     fun sendFeedbackEmail(context: Context) {
@@ -50,20 +54,20 @@ object FeedbackHelper {
 
     fun openGitHubIssue(context: Context) {
         val diagnostics = getDiagnosticsBlock(context)
-        val body = """
-            |**Describe the issue**
-            |<!-- A clear description of what happened -->
-            |
-            |**Steps to reproduce**
-            |1.
-            |2.
-            |3.
-            |
-            |**Expected behavior**
-            |<!-- What you expected to happen -->
-            |
-            |$diagnostics
-        """.trimMargin()
+        val body = listOf(
+            "**${context.getString(R.string.feedback_issue_describe_heading)}**",
+            "<!-- ${context.getString(R.string.feedback_issue_describe_hint)} -->",
+            "",
+            "**${context.getString(R.string.feedback_issue_steps_heading)}**",
+            "1.",
+            "2.",
+            "3.",
+            "",
+            "**${context.getString(R.string.feedback_issue_expected_heading)}**",
+            "<!-- ${context.getString(R.string.feedback_issue_expected_hint)} -->",
+            "",
+            diagnostics,
+        ).joinToString("\n")
 
         val uri = Uri.parse("https://github.com/$GITHUB_REPO/issues/new")
             .buildUpon()

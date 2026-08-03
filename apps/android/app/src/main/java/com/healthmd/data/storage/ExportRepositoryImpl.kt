@@ -25,7 +25,10 @@ import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
+import com.healthmd.domain.model.ExportPreviewIssue
+import com.healthmd.domain.model.ExportPreviewIssueKind
 import com.healthmd.domain.model.ExportPreviewSideEffect
+import com.healthmd.domain.model.ExportPreviewSideEffectAction
 import com.healthmd.domain.model.ExportPreviewSideEffectType
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportResult
@@ -611,7 +614,10 @@ class ExportRepositoryImpl(
         val folderUri = settingsRepository.getExportFolderUri()
 
         if (settings.selectedExportFormats.isEmpty()) {
-            return ExportPreviewDay(date = data.date, warning = "No export formats selected")
+            return ExportPreviewDay(
+                date = data.date,
+                issues = listOf(ExportPreviewIssue(ExportPreviewIssueKind.NO_FORMATS_SELECTED)),
+            )
         }
 
         val selection = try {
@@ -713,7 +719,11 @@ class ExportRepositoryImpl(
             date = data.date,
             files = files,
             sideEffects = sideEffects,
-            warning = if (files.isEmpty() && sideEffects.none { it.wouldWrite }) "No files would be written" else null,
+            issues = if (files.isEmpty() && sideEffects.none { it.wouldWrite }) {
+                listOf(ExportPreviewIssue(ExportPreviewIssueKind.NO_FILES_WRITTEN))
+            } else {
+                emptyList()
+            },
         )
     }
 
@@ -783,14 +793,18 @@ class ExportRepositoryImpl(
         return ExportPreviewDay(
             date = data.date,
             files = files,
-            warning = if (files.isEmpty()) "No files would be written" else null,
+            issues = if (files.isEmpty()) {
+                listOf(ExportPreviewIssue(ExportPreviewIssueKind.NO_FILES_WRITTEN))
+            } else {
+                emptyList()
+            },
         )
     }
 
     private fun planningFailurePreview(data: HealthData): ExportPreviewDay = ExportPreviewDay(
         date = data.date,
         failureReason = ExportFailureReason.UNKNOWN,
-        warning = "Export planning failed",
+        issues = listOf(ExportPreviewIssue(ExportPreviewIssueKind.PLANNING_FAILED)),
     )
 
     override suspend fun hasExportFolder(): Boolean =
@@ -879,10 +893,10 @@ class ExportRepositoryImpl(
             type = ExportPreviewSideEffectType.DAILY_NOTE,
             relativePath = relativePath,
             action = when (result) {
-                InjectionResult.UPDATED -> "Update daily note"
-                InjectionResult.CREATED -> "Create daily note"
-                InjectionResult.SKIPPED -> "Skip daily note"
-                InjectionResult.FAILED -> "Daily note failed"
+                InjectionResult.UPDATED -> ExportPreviewSideEffectAction.UPDATE_DAILY_NOTE
+                InjectionResult.CREATED -> ExportPreviewSideEffectAction.CREATE_DAILY_NOTE
+                InjectionResult.SKIPPED -> ExportPreviewSideEffectAction.SKIP_DAILY_NOTE
+                InjectionResult.FAILED -> ExportPreviewSideEffectAction.DAILY_NOTE_FAILED
             },
             content = content,
             wouldWrite = result == InjectionResult.UPDATED || result == InjectionResult.CREATED,
@@ -904,7 +918,7 @@ class ExportRepositoryImpl(
             PlannedSideEffect(
                 type = ExportPreviewSideEffectType.INDIVIDUAL_ENTRY,
                 relativePath = entryPath,
-                action = "Write individual entry",
+                action = ExportPreviewSideEffectAction.WRITE_INDIVIDUAL_ENTRY,
                 content = content,
                 wouldWrite = true,
             )
@@ -1040,7 +1054,7 @@ class ExportRepositoryImpl(
     private data class PlannedSideEffect(
         val type: ExportPreviewSideEffectType,
         val relativePath: String,
-        val action: String,
+        val action: ExportPreviewSideEffectAction,
         val content: String?,
         val wouldWrite: Boolean,
     )

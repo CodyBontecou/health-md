@@ -38,13 +38,90 @@
     <string name="health_connect_error_settings_launch">无法在此设备上打开 Health Connect 设置。</string>
     <string name="health_connect_error_install_launch">无法在此设备上打开 Health Connect Play Store 页面。</string>
     <string name="health_connect_error_history_unavailable">此版本的 Health Connect 无法授予完整的历史记录访问权限。请更新 Health Connect，或选择过去 30 天内的日期。</string>
-    <string name="health_connect_error_background_unavailable">此 Health Connect 提供程序无法在后台读取数据。在启用计划导出之前更新 Health Connect。</string>
+    <string name="health_connect_error_background_unavailable">当前 Health Connect 服务无法在后台读取数据。请先更新 Health Connect，再启用计划导出或后台刷新小组件。</string>
     <string name="permissions_required_title">需要权限</string>
     <string name="permissions_required_message">授予 Health Connect 权限以导出您的健康数据。</string>
     <string name="permissions_grant_button">授予权限</string>
     <string name="history_permission_required_title">需要 Health Connect 历史记录访问权限</string>
     <string name="history_permission_required_message">Health Connect 默认只能读取本应用首次获得权限前约 30 天内的数据。请授予历史记录访问权限，以导出所选的更早日期，避免这些数据在无提示的情况下被遗漏。</string>
     <string name="history_permission_grant_button">授予历史记录访问权限</string>
+
+    <!-- Android home-screen widgets -->
+    <string name="widget_health_summary_name">健康摘要</string>
+    <string name="widget_health_summary_description">来自 Health.md 的今日活动、睡眠、心脏和恢复指标。</string>
+    <string name="widget_activity_name">活动</string>
+    <string name="widget_activity_description">来自 Health.md 的步数、活动消耗热量和锻炼进度。</string>
+    <string name="widget_heart_range_name">心率范围</string>
+    <string name="widget_heart_range_description">来自 Health.md 的七日最低、平均和最高心率。</string>
+    <string name="widget_sleep_name">睡眠</string>
+    <string name="widget_sleep_description">来自 Health.md 的昨夜睡眠和七日睡眠图表。</string>
+    <string name="widget_label_today">今天</string>
+    <string name="widget_label_move">活动</string>
+    <string name="widget_label_exercise">锻炼</string>
+    <string name="widget_label_sleep">睡眠</string>
+    <string name="widget_label_resting">静息</string>
+    <string name="widget_label_heart_range">心率范围</string>
+    <string name="widget_label_average">平均</string>
+    <string name="widget_label_minimum">最低 %1$s</string>
+    <string name="widget_label_maximum">最高 %1$s</string>
+    <string name="widget_label_last_night">昨夜</string>
+    <string name="widget_label_seven_day_sleep">七日睡眠</string>
+    <string name="widget_label_seven_day_average">七日平均</string>
+    <string name="widget_label_bedtime">入睡</string>
+    <string name="widget_label_wake">醒来</string>
+    <string name="widget_unit_steps">%1$s 步</string>
+    <string name="widget_unit_kilocalories">%1$s kcal</string>
+    <string name="widget_unit_minutes">%1$s 分钟</string>
+    <string name="widget_unit_hours">%1$s 小时</string>
+    <string name="widget_unit_bpm">%1$s bpm</string>
+    <string name="widget_unit_milliseconds">%1$s ms</string>
+    <string name="widget_goal_eight_hours">目标：%1$s 小时</string>
+    <string name="widget_state_loading">正在加载健康数据…</string>
+    <string name="widget_state_open_for_access">打开 Health.md 以允许访问 Health Connect。</string>
+    <string name="widget_state_background_access">打开 Health.md 以刷新此小组件。</string>
+    <string name="widget_state_health_connect_unavailable">设置 Health Connect，然后打开 Health.md。</string>
+    <string name="widget_state_unlock">解锁手机以刷新 Health.md。</string>
+    <string name="widget_state_no_summary_data">没有健康摘要数据</string>
+    <string name="widget_state_no_activity_data">没有活动数据</string>
+    <string name="widget_state_no_heart_data">没有心脏数据</string>
+    <string name="widget_state_no_sleep_data">没有睡眠数据</string>
+    <plurals name="widget_state_updated_minutes">
+        <item quantity="other">%1$s 分钟前更新</item>
+    </plurals>
+    <plurals name="widget_state_updated_hours">
+        <item quantity="other">%1$s 小时前更新</item>
+    </plurals>
+    <string name="widget_setup_title">设置%1$s</string>
+    <string name="widget_setup_body">Health.md 只读取此小组件显示的活动、睡眠或心脏指标。测量数据保留在此设备上。</string>
+    <string name="widget_setup_foreground_access">允许小组件访问健康数据</string>
+    <string name="widget_setup_background_access">允许后台刷新</string>
+    <string name="widget_setup_background_body">后台访问可在 Health.md 未打开时保持小组件数据最新。没有此权限也可以添加小组件。</string>
+    <string name="widget_setup_add">添加小组件</string>
+    <string name="widget_setup_adding">正在添加小组件…</string>
+    <string name="widget_setup_access_ready">Health Connect 访问权限已就绪。</string>
+    <string name="widget_setup_partial_access">小组件将显示您选择共享的指标。</string>
+    <string name="widget_setup_error">无法设置小组件。请检查 Health Connect 并重试。</string>
+    <string name="widget_preview_summary_value">8,742 步</string>
+    <string name="widget_preview_summary_detail">睡眠 7.5 小时 · 58 bpm</string>
+    <string name="widget_preview_activity_value">421 kcal · 37 分钟</string>
+    <string name="widget_preview_activity_detail">8,742 / 10,000 步</string>
+    <string name="widget_preview_heart_value">平均 72 bpm</string>
+    <string name="widget_preview_heart_detail">最低 47 · 最高 151 · 46 ms RMSSD</string>
+    <string name="widget_preview_sleep_value">昨夜 7.5 小时</string>
+    <string name="widget_preview_sleep_detail">22:30 – 06:30</string>
+    <string name="widget_settings_title">主屏幕小组件</string>
+    <string name="widget_settings_none">未安装小组件</string>
+    <string name="widget_settings_add_from_home">从主屏幕的小组件选择器添加 Health.md。</string>
+    <string name="widget_settings_current">小组件数据为最新，可在后台刷新。</string>
+    <string name="widget_settings_foreground_only">小组件会在 Health.md 打开时刷新。</string>
+    <string name="widget_settings_stale">缓存值已过期。依赖这些测量值前请先刷新。</string>
+    <string name="widget_settings_access_required">需要 Health Connect 访问权限。</string>
+    <string name="widget_settings_no_data">尚无可用的小组件数据。</string>
+    <string name="widget_settings_refresh">刷新小组件</string>
+    <string name="widget_settings_manage_access">管理小组件访问权限</string>
+    <plurals name="widget_settings_count">
+        <item quantity="other">已安装 %1$s 个小组件</item>
+    </plurals>
     <string name="section_date_range">日期范围</string>
     <string name="date_shortcut_1d">1天</string>
     <string name="date_shortcut_7d">7天</string>
@@ -75,7 +152,9 @@
     <string name="export_preview_limited_other">正在预览最近 %1$d 个有数据的日期。完整导出将针对每个所选日期运行。</string>
     <string name="export_preview_no_data_title">没有可预览的数据</string>
     <string name="export_preview_no_data_message">所选日期没有健康数据，或未选择任何格式。</string>
-    <string name="free_exports_remaining">还剩 %d 次免费导出</string>
+    <plurals name="free_exports_remaining">
+        <item quantity="other">还剩 %1$d 次免费导出</item>
+    </plurals>
     <string name="unlock_button">解锁 Health.md</string>
     <string name="export_result_days">已导出 %1$d/%2$d 天</string>
     <string name="open_folder">打开文件夹</string>
@@ -84,10 +163,14 @@
     <string name="export_diagnostics_title_partial">部分导出</string>
     <string name="export_diagnostics_title_failed">导出失败</string>
     <string name="export_diagnostics_title_cancelled">导出已取消</string>
-    <string name="export_diagnostics_failed_count">%d 天未导出</string>
+    <plurals name="export_diagnostics_failed_count">
+        <item quantity="other">有 %1$d 天未导出</item>
+    </plurals>
     <string name="export_diagnostics_cancelled_message">导出在处理完所有日期前停止了。</string>
     <string name="export_diagnostics_reasons_title">诊断</string>
-    <string name="export_diagnostics_reason_count">%1$s：%2$d天</string>
+    <plurals name="export_diagnostics_reason_count">
+        <item quantity="other">%1$s：%2$d 天</item>
+    </plurals>
     <string name="export_diagnostics_date_list">失败日期：%s</string>
     <string name="export_diagnostics_date_list_more">失败日期：%1$s，+%2$d 更多</string>
     <string name="export_diagnostics_no_details">没有记录每天的详细信息。尝试较小的范围并检查 Health Connect 权限。</string>
@@ -152,16 +235,16 @@
     <string name="health_provider_connected">已连接 %s</string>
     <string name="section_health_diagnostics">健康诊断</string>
     <string name="health_diagnostics_description">与 Beta 测试人员或支持人员共享已移除敏感信息的提供商报告。报告包含提供商设置、权限、OAuth 配置状态/令牌存在标志和最近一次导出错误类别，但不包含健康测量数据或令牌值。</string>
-    <string name="health_diagnostics_share_title">分享经过编辑的诊断</string>
+    <string name="health_diagnostics_share_title">分享已脱敏的诊断信息</string>
     <string name="health_diagnostics_share_subtitle">不包含令牌、提供商机密、原始文件路径或健康测量数据</string>
-    <string name="health_diagnostics_share_subject">Health.md 编辑诊断</string>
+    <string name="health_diagnostics_share_subject">Health.md 脱敏诊断信息</string>
     <string name="health_diagnostics_share_chooser">共享诊断信息</string>
     <string name="section_write_mode">写入模式</string>
     <string name="section_filename_template">文件名模板</string>
     <string name="filename_template_hint">{date}</string>
     <string name="filename_template_tokens">{date}、{year}、{month}、{day}、{weekday}、{monthName}、{quarter}</string>
     <string name="section_format_options">格式选项</string>
-    <string name="toggle_include_frontmatter">包含前言</string>
+    <string name="toggle_include_frontmatter">包含 Frontmatter 元数据</string>
     <string name="toggle_group_by_category">按类别分组</string>
     <string name="toggle_emoji_headers">标题中的表情符号</string>
     <string name="label_units">单位</string>
@@ -182,15 +265,19 @@
     <string name="reset_to_defaults">重置为默认值</string>
     <string name="advanced_settings_title">导出设置</string>
     <string name="section_health_metrics">健康指标</string>
-    <string name="metrics_enabled_summary">已启用 %1$d/%2$d 个指标</string>
+    <plurals name="metrics_enabled_summary">
+        <item quantity="other">已启用 %1$d/%2$d 个指标</item>
+    </plurals>
     <string name="section_current_format">当前格式</string>
     <string name="write_mode_summary">写入模式：%s</string>
     <string name="section_format_customization">格式自定义</string>
-    <string name="section_daily_note_injection">每日笔记注入</string>
+    <string name="section_daily_note_injection">写入每日笔记</string>
     <string name="daily_note_enabled_summary">已启用 • %s</string>
     <string name="daily_note_disabled">已禁用</string>
     <string name="section_individual_tracking">个别条目追踪</string>
-    <string name="individual_tracking_enabled_summary">已启用 • %d 个指标</string>
+    <plurals name="individual_tracking_enabled_summary">
+        <item quantity="other">已启用 • %1$d 个指标</item>
+    </plurals>
     <string name="granular_data_title">包括详细的时间序列</string>
     <string name="granular_data_description">将带有时间戳的样本（例如心率和睡眠阶段）添加到兼容性导出中。对于 API 完整副本，请使用 Raw API Snapshot。</string>
     <string name="metric_selection_title">健康指标</string>
@@ -206,7 +293,7 @@
     <string name="metric_category_body">身体测量</string>
     <string name="metric_category_nutrition">营养</string>
     <string name="metric_category_mobility">移动性</string>
-    <string name="metric_category_cycling">骑自行车</string>
+    <string name="metric_category_cycling">骑行</string>
     <string name="metric_category_hearing">听力</string>
     <string name="metric_category_mindfulness">正念</string>
     <string name="metric_category_reproductive">生殖健康</string>
@@ -217,7 +304,7 @@
     <string name="metric_name_sleep_total">总睡眠时间</string>
     <string name="metric_name_sleep_deep">深度睡眠</string>
     <string name="metric_name_sleep_rem">REM 睡眠</string>
-    <string name="metric_name_sleep_light">浅层睡眠</string>
+    <string name="metric_name_sleep_light">浅睡眠</string>
     <string name="metric_name_sleep_awake">清醒时间</string>
     <string name="metric_name_sleep_in_bed">在床上时间</string>
     <string name="metric_name_steps">步数</string>
@@ -299,7 +386,7 @@
     <string name="metric_name_caffeine">咖啡因</string>
     <string name="metric_name_walking_speed">步行速度</string>
     <string name="metric_name_vo2_max">VO2 Max</string>
-    <string name="metric_name_cycling_cadence">骑行节奏</string>
+    <string name="metric_name_cycling_cadence">骑行踏频</string>
     <string name="metric_name_steps_cadence">步行节奏</string>
     <string name="metric_name_power_avg">平均功率</string>
     <string name="metric_name_power_max">最大功率</string>
@@ -307,30 +394,30 @@
     <string name="metric_name_running_power">跑步功率</string>
     <string name="metric_name_activity_intensity_minutes">活动强度分钟数</string>
     <string name="metric_name_energy_from_fat">来自脂肪的能量</string>
-    <string name="metric_name_nutrition_meals">营养膳食</string>
+    <string name="metric_name_nutrition_meals">膳食记录</string>
     <string name="metric_name_menstruation_periods">月经周期</string>
     <string name="metric_name_menstruation_period_days">经期天数</string>
     <string name="metric_name_planned_workouts">计划锻炼</string>
     <string name="metric_name_medical_resources">医疗资源</string>
     <string name="metric_name_audio_exposure">音频暴露</string>
     <string name="metric_name_mindful_minutes">正念分钟</string>
-    <string name="metric_name_mindful_sessions">正念会话</string>
-    <string name="metric_name_menstrual_flow">月经流量</string>
+    <string name="metric_name_mindful_sessions">正念练习</string>
+    <string name="metric_name_menstrual_flow">月经量</string>
     <string name="metric_name_cervical_mucus">宫颈粘液质量</string>
     <string name="metric_name_ovulation_test">排卵测试</string>
     <string name="metric_name_sexual_activity">性活动</string>
     <string name="metric_name_intermenstrual_bleeding">经间出血</string>
     <string name="metric_name_workouts">锻炼</string>
     <string name="metric_name_unknown">未知指标</string>
-    <string name="daily_note_description">将健康指标注入到您现有 Obsidian 每日笔记的 YAML 前言中。</string>
-    <string name="daily_note_enable_title">启用注入</string>
-    <string name="daily_note_enable_subtitle">将健康数据注入到每日笔记中</string>
+    <string name="daily_note_description">将健康指标写入现有 Obsidian 每日笔记的 YAML Frontmatter 元数据。</string>
+    <string name="daily_note_enable_title">启用写入</string>
+    <string name="daily_note_enable_subtitle">将健康数据写入每日笔记</string>
     <string name="section_daily_notes_folder">每日笔记文件夹</string>
     <string name="daily_notes_folder_hint">Daily</string>
     <string name="daily_notes_folder_help">相对于您的导出文件夹（例如"Daily"或"Journal/Daily"）</string>
     <string name="section_filename_pattern">文件名模式</string>
     <string name="section_preview_path">预览路径</string>
-    <string name="inject_markdown_sections_title">注入公制部分</string>
+    <string name="inject_markdown_sections_title">写入健康指标章节</string>
     <string name="inject_markdown_sections_subtitle">还可以合并应用管理的 Markdown 部分，例如睡眠、活动、心脏和生命体征，同时保留笔记文本。</string>
     <string name="create_note_if_missing_title">如果缺失则创建笔记</string>
     <string name="create_note_if_missing_subtitle">如果每日笔记不存在则创建</string>
@@ -354,7 +441,9 @@
     <string name="individual_tracking_title">个别条目追踪</string>
     <string name="individual_tracking_description">将个别时间戳的健康条目导出为单独的文件。适用于锻炼、血压读数和其他离散测量。</string>
     <string name="individual_tracking_enable_title">启用个别追踪</string>
-    <string name="individual_tracking_metrics_count">已选择 %d 个指标</string>
+    <plurals name="individual_tracking_metrics_count">
+        <item quantity="other">已选择 %1$d 个指标</item>
+    </plurals>
     <string name="section_quick_actions">快速操作</string>
     <string name="action_suggested">建议</string>
     <string name="action_all">全部</string>
@@ -377,7 +466,9 @@
     <string name="history_status_success">✓ 成功</string>
     <string name="history_status_partial">! 部分</string>
     <string name="history_status_failed">✗ 失败</string>
-    <string name="history_entry_days">%1$d/%2$d 天 • %3$s 至 %4$s</string>
+    <plurals name="history_entry_days">
+        <item quantity="other">%1$d/%2$d 天 • %3$s 至 %4$s</item>
+    </plurals>
     <string name="history_timestamp_format">%1$s 在 %2$s</string>
     <string name="export_source_manual">手动</string>
     <string name="export_source_scheduled">计划</string>
@@ -407,7 +498,7 @@
     <string name="schedule_frequency_every_minutes">每 %1$d 分钟</string>
     <string name="schedule_frequency_hourly">每小时</string>
     <string name="schedule_frequency_every_hours">每 %1$d 小时</string>
-    <string name="schedule_frequency_daily">日常的</string>
+    <string name="schedule_frequency_daily">每天</string>
     <string name="schedule_frequency_every_days">每%1$d天</string>
     <string name="schedule_frequency_weekly">每周</string>
     <string name="schedule_frequency_every_weeks">每 %1$d 周</string>
@@ -443,9 +534,11 @@
     <string name="background_health_permission_needed_title">Health Connect 需要后台访问</string>
     <string name="background_health_permission_needed_body">计划导出需要 Health Connect 的“在后台访问数据”权限，以便 WorkManager 可以在应用程序关闭时读取健康数据。</string>
     <string name="background_health_permission_enable_button">启用后台访问</string>
-    <string name="schedule_workmanager_notice">导出在后台使用 WorkManager 运行。为了可靠的计划，请从电池优化中排除 Health.md。</string>
+    <string name="schedule_workmanager_notice">导出通过 WorkManager 在后台运行。为确保计划任务可靠执行，请允许 Health Connect 后台访问，并将 Health.md 排除在电池优化之外。</string>
     <string name="scheduled_recovery_title">恢复错过的计划导出？</string>
-    <string name="scheduled_recovery_body">Health.md 发现 %1$d 待定预定日期：%2$s。如果由于手机重新启动后被锁定、后台访问缺失或 Health Connect 不可用而错过了计划的导出，则 Health.md 现在可以在应用程序打开并解锁时重试这些确切日期。授予后台访问权限以防止将来发生失误。</string>
+    <plurals name="scheduled_recovery_body">
+        <item quantity="other">Health.md 发现 %1$d 个待处理的计划日期：%2$s。如果计划导出因手机重启后处于锁定状态、缺少后台访问权限或 Health Connect 不可用而未能执行，您现在可在应用打开且手机已解锁时，让 Health.md 重试这些确切日期。授予后台访问权限可避免今后再次遗漏。</item>
+    </plurals>
     <string name="scheduled_recovery_retry_button">重试待定日期</string>
     <string name="scheduled_recovery_running_button">正在恢复……</string>
     <string name="scheduled_recovery_blocked_paywall">在恢复计划导出之前解锁 Health.md。</string>
@@ -457,17 +550,17 @@
     <string name="scheduled_recovery_blocked_running">计划的恢复导出已在运行。</string>
     <string name="scheduled_recovery_no_pending">没有计划导出日期等待恢复。</string>
     <string name="scheduled_recovery_result_complete">计划恢复已完成。</string>
-    <string name="scheduled_recovery_result_partial">恢复导出的 %1$d/%2$d 日期。 %3$d 日期仍待确定。</string>
+    <string name="scheduled_recovery_result_partial">恢复操作已导出 %1$d/%2$d 个日期，另有 %3$d 个日期仍待处理。</string>
     <string name="scheduled_recovery_result_blocked">计划的恢复尚未准备好。</string>
-    <string name="not_now">现在不要</string>
+    <string name="not_now">暂不</string>
     <string name="release_notes_title">%s 的新功能</string>
     <string name="release_notes_settings_hint">您可以从“设置”中调整导出格式、自定义 Markdown 和指标。</string>
     <string name="release_notes_open_settings">打开设置</string>
     <string name="release_notes_got_it">知道了</string>
     <string name="release_notes_highlight_feedback">扩大的 Health Connect 覆盖范围增加了更多的活动、身体、营养、流动性、正念、生殖健康和医疗资源指标。</string>
-    <string name="release_notes_highlight_export_parity">仅限 Android 的新详细信息包括活动强度、营养餐、月经期、计划锻炼和颗粒样本（如果有）。</string>
-    <string name="release_notes_highlight_templates">Markdown、JSON、CSV 和 Obsidian 导出现在在更大的目录中携带更丰富的指标值。</string>
-    <string name="release_notes_highlight_workouts">刷新了 Health Connect 权限基本原理，以解释扩展的只读导出权限。</string>
+    <string name="release_notes_highlight_export_parity">Android 新增的详细数据包括活动强度、膳食记录、月经周期、计划锻炼，以及可用时的细粒度样本。</string>
+    <string name="release_notes_highlight_templates">Markdown、JSON、CSV 和 Obsidian 导出现在支持更大的指标目录和更丰富的指标值。</string>
+    <string name="release_notes_highlight_workouts">更新了 Health Connect 权限说明，以解释新增只读导出权限的用途。</string>
     <string name="release_notes_highlight_accessibility">TalkBack 标签和触摸目标在导出、计划和设置流程中得到了改进。</string>
     <string name="notification_channel_scheduled_exports_name">计划导出</string>
     <string name="notification_channel_scheduled_exports_description">计划的健康导出完成或失败时的通知</string>
@@ -475,7 +568,7 @@
     <string name="export_notification_title_partial">导出部分</string>
     <string name="export_notification_title_failed">导出失败</string>
     <string name="export_notification_message_days_exported">为 %3$s 导出了 %1$d/%2$d 天</string>
-    <string name="export_notification_background_permission_required">预定导出需要 Health Connect 后台访问。打开 Health.md &gt; 计划来启用它。</string>
+    <string name="export_notification_background_permission_required">计划导出需要 Health Connect 后台访问权限。请打开 Health.md &gt; 计划并启用该权限。</string>
     <string name="export_notification_unknown_error">未知错误</string>
     <string name="paywall_title">解锁 Health.md</string>
     <string name="paywall_subtitle">您已使用 10 次免费导出</string>
@@ -486,7 +579,7 @@
     <string name="paywall_unlock_button">解锁 Health.md</string>
     <string name="paywall_unlock_button_price">解锁%s</string>
     <string name="paywall_restore">恢复购买</string>
-    <string name="paywall_purchasing">加工\u2026</string>
+    <string name="paywall_purchasing">处理中\u2026</string>
     <string name="paywall_restoring">正在恢复\u2026</string>
     <string name="debug_purchase_title">调试控制</string>
     <string name="debug_current_state">当前状态：%s</string>
@@ -515,7 +608,7 @@
     <string name="privacy_category_activity">活动</string>
     <string name="privacy_category_activity_permissions">Steps, StepsCadence, ActiveCaloriesBurned, TotalCaloriesBurned, Distance, ElevationGained, FloorsClimbed, WheelchairPushes, ExerciseSession, PlannedExerciseSession, ActivityIntensity, BasalMetabolicRate</string>
     <string name="privacy_category_activity_exports">导出字段：步数、步频、活跃卡路里、总卡路里、基础卡路里、运动分钟数、计划锻炼、活动强度分钟数、爬楼层数、步行/跑步距离、骑行/游泳/轮椅/雪上运动距离、海拔增加、轮椅推力、游泳划水</string>
-    <string name="privacy_category_heart">心</string>
+    <string name="privacy_category_heart">心脏</string>
     <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
     <string name="privacy_category_heart_exports">导出字段：静息心率、平均/最小/最大心率、平均步行心率、心率变异性 (HRV)</string>
     <string name="privacy_category_vitals">生命体征</string>
@@ -535,7 +628,7 @@
     <string name="privacy_category_reproductive_exports">导出字段：月经量、月经次数/天数、宫颈粘液外观/感觉、排卵测试结果、经间期出血、性活动</string>
     <string name="privacy_category_mindfulness">正念</string>
     <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
-    <string name="privacy_category_mindfulness_exports">导出字段：正念分钟数和会话数</string>
+    <string name="privacy_category_mindfulness_exports">导出字段：正念时长（分钟）和练习次数</string>
     <string name="privacy_category_medical">医疗资源</string>
     <string name="privacy_category_medical_permissions">医学过敏/不耐受、病情、实验室结果、药物、个人详细信息、医生详细信息、怀孕、手术、社会史、疫苗、就诊和生命体征</string>
     <string name="privacy_category_medical_exports">导出字段：本地 Personal Health Record 资源计数、资源类型、显示名称、代码、时间戳和源元数据（当 Health Connect 提供时）</string>
@@ -544,7 +637,7 @@
     <string name="privacy_category_background_exports">仅在启用计划导出时使用，以便 Health.md 可以在后台读取昨天的 Health Connect 数据并将其写入您选择的本地导出文件夹</string>
     <string name="privacy_category_history">历史健康数据访问</string>
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
-    <string name="privacy_category_history_exports">仅用于大型手动导出，例如 90 天或所有时间，因此 Health.md 可以读取早于标准 30 天窗口的 Health Connect 数据</string>
+    <string name="privacy_category_history_exports">仅用于 90 天或全部时间等大型手动导出，以便 Health.md 读取标准 30 天范围之前的 Health Connect 数据</string>
     <string name="privacy_policy_direct_cli">仅当您显式配对并连接到计算机后，才会进行 Direct CLI 导出。健康记录通过经过身份验证的加密连接发送，私下保留最多 7 天以进行可恢复传输，并在您取消或忘记配对时尽快删除。</string>
     <string name="privacy_policy_footer">Health.md 不运营健康数据云。第一方活动归因可能会发送随机应用程序生成的安装/事件 UUIDs 和经过验证的活动元数据，而不是健康数据、原始引荐来源网址、设备 ID、导出、帐户或路径。</string>
     <string name="privacy_policy_body">Health.md 读取 Health Connect 数据仅用于创建您请求的导出。文件夹导出将转到选定的存储，API Endpoint 导出将直接转到您配置的服务，显式连接的 Direct CLI 导出将通过经过身份验证的加密发送到您的配对计算机。另外，第一方营销活动归因可以使用随机应用生成的 UUIDs 和经过清理的营销活动元数据将 Play 安装与营销活动关联起来。不包含健康数据、原始引荐来源网址、设备标识符、导出内容、帐户数据或文件路径。</string>
@@ -554,15 +647,15 @@
     <string name="export_type_compatibility">兼容性导出</string>
     <string name="export_type_compatibility_description">现有 Health.md 工作流程的每日 Markdown、Bases、JSON 或 CSV 文件</string>
     <string name="export_type_raw_snapshot">原始 API 快照</string>
-    <string name="export_type_raw_snapshot_description">API 完整的本机 Health Connect 记录在一个不可变的范围工件中</string>
+    <string name="export_type_raw_snapshot_description">将原生 Health Connect API 的完整记录保存为一个不可变的范围导出文件</string>
     <string name="raw_snapshot_about_title">原始快照语义</string>
     <string name="raw_snapshot_about_body">捕获所选提供商的 API 公开的每个字段。读取是非事务性的，因此数据在导出过程中可能会发生变化。快照不能包含删除、无法访问的记录、无法通过 API 获取的原始输入单元或此应用程序版本未知的字段。</string>
     <string name="raw_snapshot_format_title">快照格式</string>
     <string name="raw_snapshot_format_json">JSON</string>
-    <string name="raw_snapshot_format_json_description">一份规范的 JSON 文档，包含标题、记录、问题和清单</string>
+    <string name="raw_snapshot_format_json_description">一份规范的 JSON 文档，包含头部、记录、问题和清单</string>
     <string name="raw_snapshot_format_ndjson">NDJSON</string>
-    <string name="raw_snapshot_format_ndjson_description">用于大型快照的流式换行符分隔信封</string>
-    <string name="raw_snapshot_one_artifact_note">每个导出操作都会执行一次源读取并以所选格式创建一个工件。</string>
+    <string name="raw_snapshot_format_ndjson_description">适合大型快照的流式换行分隔格式</string>
+    <string name="raw_snapshot_one_artifact_note">每次导出都会读取一次数据源，并以所选格式创建一个导出文件。</string>
     <string name="raw_snapshot_scope_title">记录范围</string>
     <string name="raw_snapshot_scope_selected">选定的记录类型</string>
     <string name="raw_snapshot_scope_selected_description">使用由您选择的 Health.md 指标表示的记录类型</string>
@@ -571,27 +664,29 @@
     <string name="raw_snapshot_routes_title">精准运动路线</string>
     <string name="raw_snapshot_routes_control">包括精确路线</string>
     <string name="raw_snapshot_routes_description">锻炼路线可以显示精确的家庭、工作和旅行地点。 Health Connect 可能需要单独的路线同意。</string>
-    <string name="raw_snapshot_immutable_destination_note">原始快照是在 health/raw（或您配置的子文件夹/raw）下编写的不可变的、每个范围一个工件的导出。每日文件名模板和追加、更新或覆盖模式不适用。</string>
-    <string name="raw_snapshot_provider_unsupported">该提供程序不公开本机原始 API 适配器。选择Health Connect、Fitbit、Withings、Oura、WHOOP，或切换到Compatibility Export。</string>
+    <string name="raw_snapshot_immutable_destination_note">原始快照不可修改，每个范围生成一个导出文件，并写入 health/raw（或您配置的 subfolder/raw）。每日文件名模板以及追加、更新或覆盖模式不适用。</string>
+    <string name="raw_snapshot_provider_unsupported">该提供方不支持原生 Raw API 适配器。请选择 Health Connect、Fitbit、Withings、Oura、WHOOP，或切换到兼容性导出。</string>
     <string name="raw_snapshot_selection_required">请至少选择一项健康指标，或选择“所有已获授权的受支持数据”。</string>
     <string name="raw_snapshot_https_required">原始 API 快照需要 HTTPS 端点。</string>
-    <string name="raw_snapshot_partial_label">原始快照部分</string>
+    <string name="raw_snapshot_partial_label">原始快照（部分完成）</string>
     <string name="raw_snapshot_cancelled_label">原始快照已取消</string>
-    <string name="raw_snapshot_result_created">创建原始快照</string>
+    <string name="raw_snapshot_result_created">原始快照已创建</string>
     <string name="raw_snapshot_result_uploaded">原始快照已上传</string>
     <string name="raw_snapshot_result_count">已完成的快照操作：%1$d/%2$d</string>
     <string name="raw_snapshot_progress_count">快照操作：%1$d / %2$d</string>
     <string name="raw_snapshot_diagnostics_failed_count">不完整的快照操作：%d</string>
-    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
-    <string name="raw_snapshot_diagnostics_cancelled_message">原始快照在其本机源读取和工件升级完成之前停止。</string>
+    <plurals name="raw_snapshot_diagnostics_reason_count">
+        <item quantity="other">%1$s：%2$d 个操作</item>
+    </plurals>
+    <string name="raw_snapshot_diagnostics_cancelled_message">原始快照在原生数据源读取和导出文件最终确认完成前停止。</string>
     <string name="raw_snapshot_diagnostics_no_details">没有记录快照诊断。检查提供商的访问权限并重试该范围。</string>
-    <string name="raw_snapshot_guidance_provider">在重试之前，请检查所选提供商的访问权限和原始工件清单。</string>
-    <string name="raw_snapshot_guidance_cancelled">没有发布原始工件。准备好后重试。</string>
+    <string name="raw_snapshot_guidance_provider">重试前，请检查所选提供方的访问权限和原始导出文件清单。</string>
+    <string name="raw_snapshot_guidance_cancelled">未生成原始导出文件。准备好后可重试。</string>
     <string name="raw_snapshot_history_entry">快照操作：%1$d/%2$d \u2022 %3$s 至 %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">快照诊断</string>
     <string name="raw_snapshot_notification_message">原始快照范围结尾为 %1$s：%2$s</string>
-    <string name="raw_snapshot_status_complete">完全的</string>
-    <string name="raw_snapshot_status_failed">失败的</string>
+    <string name="raw_snapshot_status_complete">已完成</string>
+    <string name="raw_snapshot_status_failed">失败</string>
     <string name="format_display_markdown">Markdown</string>
     <string name="format_display_obsidian_bases">Obsidian Bases</string>
     <string name="format_display_json">JSON</string>
@@ -603,12 +698,12 @@
     <string name="write_mode_display_update">更新</string>
     <string name="write_mode_desc_update">更新应用管理的部分，同时保留您的自定义内容</string>
     <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
-    <string name="date_format_display_us_short">US Short (01/13/2026)</string>
-    <string name="date_format_display_us_long">US Long (January 13, 2026)</string>
-    <string name="date_format_display_eu_short">EU Short (13/01/2026)</string>
-    <string name="date_format_display_eu_long">EU Long (13 January 2026)</string>
-    <string name="date_format_display_compact">Compact (20260113)</string>
-    <string name="date_format_display_friendly">Friendly (Mon, Jan 13, 2026)</string>
+    <string name="date_format_display_us_short">美式短日期（01/13/2026）</string>
+    <string name="date_format_display_us_long">美式长日期（2026年1月13日）</string>
+    <string name="date_format_display_eu_short">欧式短日期（13/01/2026）</string>
+    <string name="date_format_display_eu_long">欧式长日期（2026年1月13日）</string>
+    <string name="date_format_display_compact">紧凑格式（20260113）</string>
+    <string name="date_format_display_friendly">易读格式（周一，2026年1月13日）</string>
     <string name="time_format_display_24h">24小时 (14:30)</string>
     <string name="time_format_display_24h_seconds">24小时带秒 (14:30:45)</string>
     <string name="time_format_display_12h">12小时 (2:30 PM)</string>
@@ -659,24 +754,26 @@
     <string name="export_guidance_paywall">预定导出需要终身解锁。打开付费专区以解锁无限的导出和调度。</string>
     <string name="export_source_retry">重试</string>
     <string name="export_source_shortcut">捷径</string>
-    <string name="export_source_remote">偏僻的</string>
+    <string name="export_source_remote">远程</string>
     <string name="schedule_unlock_required_title">解锁预定导出</string>
     <string name="schedule_unlock_required_body">手动导出包括 10 次免费运行。自动计划导出包含在一次性终身解锁中。</string>
     <string name="schedule_unlock_required_short">解锁 Health.md 以启用计划导出。</string>
-    <string name="section_schedule_lookback">预定回顾</string>
-    <string name="schedule_lookback_summary">每个计划运行都会导出昨天结束的最后 %1$d 完整日期以及任何待处理的失败日期。</string>
+    <string name="section_schedule_lookback">计划导出范围</string>
+    <string name="schedule_lookback_summary">每次计划运行都会导出截至昨天的最近 %1$d 个完整日期，以及之前失败且仍待处理的日期。</string>
     <string name="export_folder_root_label">导出文件夹</string>
     <string name="history_clear_title">清除导出历史记录？</string>
     <string name="history_clear_body">这将删除所有本地导出历史记录条目。导出的文件不会被删除。</string>
-    <string name="history_target_label">目标：%1$s</string>
-    <string name="history_file_count">文件：%1$d</string>
+    <string name="history_target_label">导出目标：%1$s</string>
+    <plurals name="history_file_count">
+        <item quantity="other">文件：%1$d 个</item>
+    </plurals>
     <string name="history_detail_title">导出详情</string>
     <string name="history_detail_source">来源</string>
-    <string name="history_detail_when">什么时候</string>
+    <string name="history_detail_when">日期/时间</string>
     <string name="history_detail_range">范围</string>
     <string name="history_detail_counts">天</string>
-    <string name="history_detail_destination_type">目的地类型</string>
-    <string name="history_detail_target">目标</string>
+    <string name="history_detail_destination_type">目标类型</string>
+    <string name="history_detail_target">导出目标</string>
     <string name="history_detail_files">文件</string>
     <string name="history_detail_failure">失败</string>
     <string name="history_detail_warning">警告</string>
@@ -690,23 +787,308 @@
     <string name="folder_organization_label">自动文件夹</string>
     <string name="folder_structure_template_label">自定义文件夹模板</string>
     <string name="path_preview_label">路径预览</string>
-    <string name="frontmatter_customization_title">前沿领域</string>
+    <string name="frontmatter_customization_title">Frontmatter 元数据字段</string>
     <string name="frontmatter_customization_subtitle">重命名字段、添加 YAML 值并选择显示哪些指标。</string>
-    <string name="frontmatter_key_style_section">按键样式</string>
+    <string name="frontmatter_key_style_section">键名样式</string>
     <string name="frontmatter_date_type_section">日期和类型</string>
-    <string name="frontmatter_include_date">包括日期</string>
-    <string name="frontmatter_date_key">日期键</string>
+    <string name="frontmatter_include_date">包含日期</string>
+    <string name="frontmatter_date_key">日期键名</string>
     <string name="frontmatter_include_type">包含类型</string>
-    <string name="frontmatter_type_key">类型键</string>
+    <string name="frontmatter_type_key">类型键名</string>
     <string name="frontmatter_type_value">类型值</string>
     <string name="frontmatter_custom_fields_section">静态自定义字段</string>
     <string name="frontmatter_placeholder_fields_section">占位符字段</string>
-    <string name="frontmatter_metric_fields_section">度量字段</string>
-    <string name="frontmatter_field_key">钥匙</string>
-    <string name="frontmatter_field_value">价值</string>
+    <string name="frontmatter_metric_fields_section">健康指标字段</string>
+    <string name="frontmatter_field_key">键名</string>
+    <string name="frontmatter_field_value">值</string>
     <string name="frontmatter_placeholder_value">空白占位符</string>
-    <string name="frontmatter_output_key">输出键</string>
+    <string name="frontmatter_output_key">输出键名</string>
     <string name="search">搜索</string>
     <string name="enabled">启用</string>
     <string name="disabled">已禁用</string>
+
+    <!-- Direct CLI、API 导出、提供商、历史记录和导出预览 -->
+    <string name="release_notes_highlight_widgets">可将健康摘要、活动、心率范围和睡眠小组件添加到主屏幕，并可选择启用后台刷新。</string>
+    <string name="direct_cli_title">Direct CLI</string>
+    <string name="direct_cli_intro_title">加密的桌面导出</string>
+    <string name="direct_cli_intro_body">CLI 在您的电脑上监听。Health.md 会直接连接并发送导出，无需云端中转。</string>
+    <string name="direct_cli_pair_step_run">1. 在电脑上运行：</string>
+    <string name="direct_cli_pair_step_enter">2. 输入 CLI 显示的电脑地址和 20 位 Android 代码。</string>
+    <string name="direct_cli_computer_address">电脑地址</string>
+    <string name="direct_cli_port">端口</string>
+    <string name="direct_cli_pairing_code">配对代码</string>
+    <string name="direct_cli_pair_button">与 CLI 配对</string>
+    <string name="direct_cli_paired_listener">已与 %1$s 配对</string>
+    <string name="direct_cli_save_address">保存地址</string>
+    <string name="direct_cli_export_instruction">在电脑上运行导出命令，然后点按“连接”：</string>
+    <string name="direct_cli_connect">连接</string>
+    <string name="direct_cli_disconnect">断开连接</string>
+    <string name="direct_cli_forget">忘记已配对的 CLI</string>
+    <string name="direct_cli_status_title">状态</string>
+    <string name="direct_cli_status_not_connected">未连接</string>
+    <string name="direct_cli_status_pairing">正在配对…</string>
+    <string name="direct_cli_status_connecting">正在连接…</string>
+    <string name="direct_cli_status_connected">已连接到 %1$s</string>
+    <string name="direct_cli_status_transferring">正在传输 %1$s，共 %2$s</string>
+    <string name="direct_cli_status_paired">已与 %1$s 配对。</string>
+    <string name="direct_cli_status_session_finished">Direct CLI 会话已结束。</string>
+    <string name="direct_cli_status_export_completed">Android 导出已完成。</string>
+    <string name="direct_cli_status_export_cancelled">Android 导出已取消。</string>
+    <string name="direct_cli_failure_connection">无法连接 Health.md CLI。请确认其正在监听，然后重试。</string>
+    <string name="direct_cli_failure_timeout">Direct CLI 会话已达到 Android 的时间限制。</string>
+    <string name="direct_cli_failure_quota">已达到免费导出次数上限。</string>
+    <string name="direct_cli_failure_fitbit_range">Fitbit 原始导出需要明确指定不超过 366 天的范围。</string>
+    <string name="direct_cli_failure_source_unavailable">此设备无法使用所请求的健康数据提供商。</string>
+    <string name="direct_cli_failure_health_access">需要在 Android 设备上授予健康数据访问权限。</string>
+    <string name="direct_cli_failure_device_locked">导出健康数据前，请解锁 Android 设备。</string>
+    <string name="direct_cli_failure_historical_access">请求的日期需要历史健康数据访问权限。</string>
+    <string name="direct_cli_failure_file_limit">生成的导出超过 4,096 个文件；请减少日期或关闭单项跟踪。</string>
+    <string name="direct_cli_failure_spool_missing">保留的导出已丢失，必须重新开始。</string>
+    <string name="direct_cli_failure_export">无法安全完成 Android 导出。</string>
+    <string name="direct_cli_notification_waiting">正在等待 Health.md CLI</string>
+    <string name="direct_cli_notification_idle">Direct CLI 当前空闲</string>
+    <string name="direct_cli_notification_pairing">正在与 Health.md CLI 配对</string>
+    <string name="direct_cli_notification_connecting">正在连接 Health.md CLI</string>
+    <string name="direct_cli_notification_transferring">正在传输 Android 健康数据导出</string>
+    <string name="direct_cli_notification_title">Health.md Direct CLI</string>
+    <string name="direct_cli_notification_channel_name">Direct CLI 导出</string>
+    <string name="direct_cli_notification_channel_description">加密直连导出的连接状态和传输进度</string>
+
+    <string name="api_export_target_title">导出目标</string>
+    <string name="api_export_section_endpoint">端点</string>
+    <string name="api_export_endpoint_url_label">端点 URL</string>
+    <string name="api_export_endpoint_help">必填。请勿在 URL 中包含 API 密钥或其他机密信息。</string>
+    <string name="api_export_authorization_saved">已保存 %1$s</string>
+    <string name="api_export_remove_credential">移除凭据</string>
+    <string name="api_export_new_authorization_label">新建 %1$s</string>
+    <string name="api_export_authorization_label">%1$s 令牌或 %2$s 凭据</string>
+    <string name="api_export_authorization_replacement_placeholder">输入用于替换已保存值的新值</string>
+    <string name="api_export_authorization_placeholder">令牌或 %1$s 值</string>
+    <string name="api_export_authorization_saved_help">留空可保留已保存的值。普通令牌会自动使用 %1$s。</string>
+    <string name="api_export_authorization_help">普通令牌会自动使用 %1$s。支持 %1$s 和 %2$s 值。</string>
+    <string name="api_export_custom_headers_title">自定义标头</string>
+    <string name="api_export_custom_headers_saved">自定义标头已保存</string>
+    <string name="api_export_remove_headers">移除标头</string>
+    <string name="api_export_replacement_headers_label">替换标头</string>
+    <string name="api_export_request_headers_label">请求标头</string>
+    <string name="api_export_replacement_headers_help">输入完整的替换集合，每行一个 %1$s。</string>
+    <string name="api_export_request_headers_help">每行使用一个 %1$s。%2$s 会让传输标头继续由应用管理。</string>
+    <string name="api_export_close_settings">关闭设置</string>
+    <string name="api_export_save_settings">保存设置</string>
+    <string name="api_export_dialog_title">API 导出</string>
+    <string name="api_export_dialog_description">将所选记录作为一个 %1$s %2$s，发送到您控制的 %3$s 或 %4$s 端点。</string>
+    <string name="api_export_close_content_description">关闭 API 导出设置</string>
+    <string name="api_export_optional_label">可选</string>
+    <string name="api_export_manage_request_headers">管理请求标头</string>
+    <string name="api_export_add_request_headers">添加请求标头</string>
+    <string name="api_export_headers_saved_hidden">已安全保存 · 值已隐藏</string>
+    <string name="api_export_headers_add_help">添加 API 密钥或服务专用值</string>
+    <string name="api_export_collapse_custom_headers">收起自定义标头</string>
+    <string name="api_export_expand_custom_headers">展开自定义标头</string>
+    <string name="api_export_error_invalid_endpoint">请输入有效的 %1$s 或 %2$s URL，且不得包含片段或嵌入的用户名/密码。</string>
+    <string name="api_export_error_authorization_empty">请输入有效的 %1$s 令牌或 %2$s 值。</string>
+    <string name="api_export_error_authorization_characters">%1$s 值不能包含控制字符或非 ASCII 字符。</string>
+    <string name="api_export_error_headers_total_size">请求标头不得超过 %1$d 个字符。</string>
+    <string name="api_export_error_headers_line_break">请求标头包含不支持的换行符。</string>
+    <string name="api_export_error_header_missing_separator">标头第 %1$d 行必须使用 %2$s。</string>
+    <string name="api_export_error_header_invalid_name">标头第 %1$d 行的名称无效。名称最多可包含 %2$d 个有效的 %3$s 标头字符。</string>
+    <string name="api_export_error_header_reserved_name">%1$s 由 %2$s 管理，无法覆盖。</string>
+    <string name="api_export_error_header_duplicate_name">标头 %1$s 配置了多次。</string>
+    <string name="api_export_error_header_value_too_long">标头 %1$s 的值不得超过 %2$d 个字符。</string>
+    <string name="api_export_error_header_value_characters">标头 %1$s 包含不支持的值字符。</string>
+    <string name="api_export_error_save_failed">无法安全保存 API 请求设置。</string>
+    <string name="api_export_endpoint_example">https://api.example.com/healthmd</string>
+    <string name="api_export_headers_example">X-API-Key: secret\nX-Client-ID: healthmd</string>
+    <string name="api_export_header_line_syntax">Name: value</string>
+    <string name="api_export_literal_authorization">Authorization</string>
+    <string name="api_export_literal_bearer">Bearer</string>
+    <string name="api_export_literal_basic">Basic</string>
+    <string name="api_export_literal_json">JSON</string>
+    <string name="api_export_literal_post">POST</string>
+    <string name="api_export_literal_http">HTTP</string>
+    <string name="api_export_literal_https">HTTPS</string>
+    <plurals name="api_export_error_header_count"><item quantity="other">请求标头最多可配置 %1$d 个。</item></plurals>
+
+    <string name="settings_direct_cli_subtitle">与桌面 CLI 配对，以进行加密且兼容 iOS 或 Android 的导出。</string>
+    <string name="health_provider_health_connect_summary">用于在设备上进行私密导出的默认 Android 健康数据中心。</string>
+    <string name="health_provider_health_connect_setup_description">在导出屏幕授予 Health Connect 权限。Health.md 会在本地读取记录，并直接写入您的文件夹。</string>
+    <string name="health_provider_samsung_health_summary">Samsung 手机、Galaxy Watch、睡眠、步数、锻炼和生命体征。</string>
+    <string name="health_provider_samsung_health_setup_description">打开 Samsung Health 并启用与 Health Connect 共享。如果今后需要 Health Connect 之外经合作伙伴批准的数据，可添加 Samsung 的 Health Data SDK 直连支持。</string>
+    <string name="health_provider_huawei_health_summary">Huawei 设备及 HMS/AppGallery 市场。</string>
+    <string name="health_provider_huawei_health_setup_description">支持 Huawei 需要注册 HMS Health Kit 应用并使用启用 HMS 的版本。此目录会保留 Huawei 选项，同时不向 Play 版本添加 HMS 依赖项。</string>
+    <string name="health_provider_fitbit_summary">Fitbit 追踪器、Pixel Watch Fitbit 数据、睡眠、活动和心脏数据。</string>
+    <string name="health_provider_fitbit_setup_description">Fitbit 直接导入通过 OAuth 范围和刷新令牌使用 Fitbit Web API。配置应用凭据前，请在可用时通过 Health Connect 导出 Fitbit 数据。</string>
+    <string name="health_provider_garmin_summary">Garmin 手表、训练、活动、睡眠和身体电量类指标。</string>
+    <string name="health_provider_garmin_setup_description">Garmin 正式环境导入需要 Garmin Health API 合作伙伴批准，通常还需要后端/Webhook 同步路径。Health.md 按设计不使用 Google Fit 回退方案。</string>
+    <string name="health_provider_withings_summary">Withings 体重秤、手表、血压计和睡眠垫。</string>
+    <string name="health_provider_withings_setup_description">Withings 直接导入使用 OAuth 2.0 和 Withings 公共 API。启用实时云端读取前，请配置客户端凭据。</string>
+    <string name="health_provider_oura_summary">Oura Ring 的睡眠、准备度、活动、心率和 HRV。</string>
+    <string name="health_provider_oura_setup_description">Oura 直接导入通过 OAuth 2.0 使用 Oura Cloud API。启用实时云端读取前，请配置客户端凭据。</string>
+    <string name="health_provider_polar_summary">Polar 训练、心率设备，以及通过 AccessLink 获取的睡眠/活动数据。</string>
+    <string name="health_provider_polar_setup_description">Polar 历史数据导入应使用 Polar AccessLink OAuth。BLE 传感器支持是未来单独提供的实时会话功能，不能替代历史记录导出。</string>
+    <string name="health_provider_whoop_summary">WHOOP 恢复、负荷、睡眠、锻炼和生理数据。</string>
+    <string name="health_provider_whoop_setup_description">WHOOP 直接导入使用 WHOOP API，并请求周期、恢复、睡眠、锻炼和个人资料数据的 OAuth 范围。</string>
+    <string name="health_provider_integration_android_system">Android 系统</string>
+    <string name="health_provider_integration_health_connect_source">Health Connect 数据源</string>
+    <string name="health_provider_integration_vendor_sdk">供应商 SDK</string>
+    <string name="health_provider_integration_cloud_api">云端 API</string>
+    <string name="health_provider_integration_partner_api">合作伙伴 API</string>
+    <string name="health_provider_direct_export_available">可直接导出</string>
+    <string name="health_provider_direct_export_requires_oauth_credentials">需要 OAuth 凭据</string>
+    <string name="health_provider_direct_export_requires_vendor_approval">需要供应商批准</string>
+    <string name="health_provider_direct_export_requires_partner_approval">需要合作伙伴批准</string>
+    <string name="health_provider_direct_export_requires_app_configuration">需要配置应用</string>
+    <string name="health_provider_action_open">打开</string>
+    <string name="health_provider_action_install_setup">安装/设置</string>
+    <string name="privacy_permissions_label">权限：</string>
+    <string name="privacy_export_label">导出：</string>
+    <string name="onboarding_storage_selected_folder_fallback">所选文件夹</string>
+    <string name="advanced_settings_no_formats_selected">未选择格式</string>
+    <string name="custom_markdown_template_empty_preview">（预览为空）</string>
+
+    <string name="billing_error_product_unavailable">无法加载商品信息。请重试。</string>
+    <string name="billing_error_service_unavailable">结算服务不可用。请重试。</string>
+    <string name="billing_error_purchase_failed">无法完成购买。请重试。</string>
+    <string name="billing_error_no_previous_purchase">未找到以往的购买记录。</string>
+    <string name="billing_error_restore_failed">无法恢复购买。请重试。</string>
+    <string name="health_provider_label_health_connect">Health Connect</string>
+    <string name="health_provider_label_all_connected">所有已连接的数据源</string>
+    <string name="health_provider_label_fitbit">Fitbit</string>
+    <string name="health_provider_label_withings">Withings</string>
+    <string name="health_provider_label_oura">Oura</string>
+    <string name="health_provider_label_polar">Polar Flow</string>
+    <string name="health_provider_label_whoop">WHOOP</string>
+    <string name="health_provider_label_generic">健康数据源</string>
+    <string name="health_provider_sign_in_denied">健康数据源登录未获批准。</string>
+    <string name="health_provider_sign_in_invalid_callback">无法验证健康数据源登录。请重试。</string>
+    <string name="health_provider_sign_in_connection_failed">无法连接健康数据源。请重试。</string>
+    <string name="feedback_diagnostic_app">应用：Health.md %1$s（%2$d）</string>
+    <string name="feedback_diagnostic_platform">平台：Android %1$s（API %2$d）</string>
+    <string name="feedback_diagnostic_device">设备：%1$s</string>
+    <string name="feedback_issue_describe_heading">描述问题</string>
+    <string name="feedback_issue_describe_hint">清楚描述发生的情况</string>
+    <string name="feedback_issue_steps_heading">重现步骤</string>
+    <string name="feedback_issue_expected_heading">预期行为</string>
+    <string name="feedback_issue_expected_hint">说明您原本预期会发生什么</string>
+    <string name="automation_history_permissions_missing">缺少 Health Connect 权限</string>
+    <plurals name="automation_history_failed_dates"><item quantity="other">%1$d 个失败日期</item></plurals>
+
+    <string name="action_edit_endpoint">编辑 API 端点</string>
+    <string name="history_date_range">%1$s 至 %2$s</string>
+    <string name="history_failed_date_reason">%1$s：%2$s</string>
+    <string name="history_retry_api_required">重试前请配置 API 端点。</string>
+    <string name="history_retry_complete">重试已完成。</string>
+    <string name="history_retry_failed">重试失败。请查看导出历史记录了解详情。</string>
+    <string name="history_retry_folder_required">重试前请选择导出文件夹。</string>
+    <string name="history_retry_permissions_required">重试前请授予 Health Connect 权限。</string>
+    <string name="history_retry_raw_failed">原始快照重试失败。请查看导出历史记录了解详情。</string>
+    <string name="history_warning_details_unavailable">无法获取警告详情。</string>
+    <string name="schedule_decrease_hour">减少小时</string>
+    <string name="schedule_decrease_lookback_days">减少回溯天数</string>
+    <string name="schedule_decrease_minute">减少分钟</string>
+    <string name="schedule_destination_not_ready_title">导出目标尚未就绪</string>
+    <string name="schedule_error_api_required">启用计划前请配置 API 端点。</string>
+    <string name="schedule_error_folder_required">请先在导出屏幕选择导出文件夹。</string>
+    <string name="schedule_error_invalid_api_settings">请检查 API 端点和请求设置，然后重试。</string>
+    <string name="schedule_error_invalid_api_url">请输入有效的 HTTP 或 HTTPS URL，且不得包含片段或嵌入的用户名/密码。</string>
+    <string name="schedule_error_invalid_headers">请输入有效的请求标头，每行一个名称和值。</string>
+    <string name="schedule_error_save_api_settings">无法安全保存 API 请求设置。</string>
+    <string name="schedule_increase_hour">增加小时</string>
+    <string name="schedule_increase_lookback_days">增加回溯天数</string>
+    <string name="schedule_increase_minute">增加分钟</string>
+    <string name="schedule_next_export_datetime">%1$s %2$s</string>
+    <string name="schedule_target_api_configured">将 JSON POST 到 %1$s</string>
+    <string name="schedule_target_api_unconfigured">将计划的 JSON 发送到您的 API 端点</string>
+    <string name="schedule_target_folder_choose">从导出屏幕选择文件夹</string>
+    <string name="schedule_target_folder_ready">将计划文件写入所选设备文件夹</string>
+    <string name="schedule_toggle_time_period">切换上午或下午</string>
+    <string name="scheduled_recovery_history_cancelled">恢复已取消；未完成的日期仍处于待处理状态。</string>
+    <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
+    <plurals name="export_history_failed_dates_pending_retry"><item quantity="other">%1$d 个失败日期等待重试</item></plurals>
+    <plurals name="export_notification_days_exported"><item quantity="other">已为 %3$s 导出 %1$d/%2$d 天</item></plurals>
+    <plurals name="history_detail_exported_days"><item quantity="other">%1$d/%2$d 天</item></plurals>
+    <plurals name="history_detail_file_count"><item quantity="other">%1$d 个文件</item></plurals>
+    <plurals name="history_failed_date_sample_more"><item quantity="other">失败日期：%1$s，另有 %2$d 个</item></plurals>
+    <plurals name="history_more_items"><item quantity="other">另有 %1$d 项</item></plurals>
+    <plurals name="history_retry_failed_dates"><item quantity="other">重试已结束，仍有 %1$d 个日期失败。</item></plurals>
+    <plurals name="history_warning_failed_dates"><item quantity="other">%1$d 个失败日期</item></plurals>
+    <plurals name="raw_snapshot_diagnostics_incomplete_count"><item quantity="other">%1$d 个未完成的快照操作</item></plurals>
+    <plurals name="raw_snapshot_history_entry_actions"><item quantity="other">快照操作：%1$d/%2$d 个 • %3$s 至 %4$s</item></plurals>
+    <plurals name="schedule_cadence_unit_days"><item quantity="other">天</item></plurals>
+    <plurals name="schedule_cadence_unit_hours"><item quantity="other">小时</item></plurals>
+    <plurals name="schedule_cadence_unit_minutes"><item quantity="other">分钟</item></plurals>
+    <plurals name="schedule_cadence_unit_weeks"><item quantity="other">周</item></plurals>
+    <plurals name="schedule_lookback_days_summary"><item quantity="other">每次运行都会导出截至昨天的过去 %1$d 天。</item></plurals>
+    <plurals name="scheduled_recovery_history_failed_dates"><item quantity="other">恢复已完成，仍有 %1$d 个失败日期待处理。</item></plurals>
+    <plurals name="scheduled_recovery_result_exported_dates"><item quantity="other">恢复操作已导出 %1$d/%2$d 个日期。</item></plurals>
+    <plurals name="scheduled_recovery_result_pending_dates"><item quantity="other">仍有 %1$d 个日期待处理。</item></plurals>
+
+    <string name="export_api_action_edit">编辑</string>
+    <string name="export_api_authorization_secure">Authorization 已安全保存</string>
+    <string name="export_api_compatibility_mode_description">API 导出始终发送 JSON。指标和时间序列设置会生效；文件路径和写入模式不会生效。</string>
+    <string name="export_api_configure_endpoint">配置 API 端点</string>
+    <string name="export_api_error_invalid_endpoint">请输入有效的 HTTP 或 HTTPS URL，且不得包含片段或嵌入的用户名/密码。</string>
+    <string name="export_api_error_invalid_headers">请输入有效的请求标头，每行一个名称和值。</string>
+    <string name="export_api_error_secure_save">无法安全保存 API 请求设置。</string>
+    <string name="export_api_headers_secure">自定义请求标头已安全保存</string>
+    <string name="export_api_post_endpoint">POST %1$s</string>
+    <string name="export_api_raw_mode_description">原始快照会流式传输已完成的导出文件，并附带架构、导出 ID 和校验和标头。</string>
+    <string name="export_no_format_selected">请至少选择一种导出格式以继续。</string>
+    <string name="export_preview_action_create_daily_note">创建每日笔记</string>
+    <string name="export_preview_action_daily_note_failed">每日笔记处理失败</string>
+    <string name="export_preview_action_skip_daily_note">跳过每日笔记</string>
+    <string name="export_preview_action_update_daily_note">更新每日笔记</string>
+    <string name="export_preview_action_write_individual_entry">写入单项记录</string>
+    <string name="export_preview_api_preparation_failed">API 导出准备失败。</string>
+    <string name="export_preview_artifacts_per_range">每个范围的导出文件数</string>
+    <string name="export_preview_back_description">返回导出预览</string>
+    <string name="export_preview_destination_label">目标位置</string>
+    <string name="export_preview_empty_file">（空文件）</string>
+    <string name="export_preview_formats_per_day">每天的格式数</string>
+    <string name="export_preview_no_exportable_file">此日期没有可导出的文件。</string>
+    <string name="export_preview_no_files_written">不会写入任何文件。</string>
+    <string name="export_preview_planning_failed">导出规划失败。</string>
+    <string name="export_preview_raw_access_denied">%1$s 原始快照预览访问被拒绝。请检查提供商权限。</string>
+    <string name="export_preview_raw_failed">%1$s 原始快照预览在导出文件完成前失败。</string>
+    <string name="export_preview_raw_failed_manifest">%1$s 生成了失败的原始快照清单。请检查提供商访问权限。</string>
+    <string name="export_preview_raw_invalid_range">原始快照结束日期早于开始日期。</string>
+    <string name="export_preview_raw_no_final_status">%1$s 预览结束时没有最终原始快照状态。</string>
+    <string name="export_preview_raw_partial">%1$s 生成了不完整的原始快照预览。请检查导出文件清单。</string>
+    <string name="export_preview_raw_provider_unavailable">没有已连接的提供商可用于原始快照预览。</string>
+    <string name="export_preview_raw_provider_unregistered">%1$s 未注册提供商原生原始快照；未使用 Health Connect 回退方案。</string>
+    <string name="export_preview_raw_service_unavailable">原始快照预览服务不可用。</string>
+    <string name="export_preview_selected_folder">所选文件夹</string>
+    <string name="export_preview_selected_range">所选范围</string>
+    <string name="export_preview_summary">%1$s • %2$s • %3$s</string>
+    <string name="export_preview_truncation_marker">\n\n… 预览已截断：此 %2$s 文件中间省略了 %1$s。…\n\n</string>
+    <string name="export_preview_warning_title">警告</string>
+    <string name="export_selected_range">%1$s 至 %2$s</string>
+    <string name="export_target_api_configured_subtitle">将 %1$s POST 到 %2$s</string>
+    <string name="export_target_api_json_unconfigured_subtitle">将 JSON 发送到您的 API 端点</string>
+    <string name="export_target_api_raw_unconfigured_subtitle">将原始快照流式传输到 HTTPS 端点</string>
+    <string name="export_target_folder_selected_subtitle">将文件写入 %1$s</string>
+    <string name="export_target_folder_unselected_subtitle">选择本地或提供商支持的文件夹</string>
+    <string name="folder_organization_flat_label">平铺</string>
+    <string name="folder_organization_by_year_label">按年份</string>
+    <string name="folder_organization_by_month_label">按月份</string>
+    <string name="folder_organization_by_year_month_label">按年/月</string>
+    <string name="folder_organization_flat_preview">不自动创建日期文件夹</string>
+    <plurals name="export_progress_state_days"><item quantity="other">已导出 %1$d/%2$d 天</item></plurals>
+    <plurals name="export_progress_state_days_with_date"><item quantity="other">已导出 %1$d/%2$d 天。当前日期：%3$s</item></plurals>
+    <plurals name="export_progress_state_raw"><item quantity="other">%3$s 至 %4$s：已完成 %1$d/%2$d 个原始快照操作</item></plurals>
+    <plurals name="export_diagnostics_date_list_more_count"><item quantity="other">失败日期：%1$s，另有 %2$d 个</item></plurals>
+    <plurals name="export_diagnostics_failed_days"><item quantity="other">有 %1$d 天未导出</item></plurals>
+    <plurals name="export_diagnostics_reason_days"><item quantity="other">%1$s：%2$d 天</item></plurals>
+    <plurals name="export_preview_artifact_count"><item quantity="other">%1$d 个导出文件</item></plurals>
+    <plurals name="export_preview_day_count"><item quantity="other">%1$d 天</item></plurals>
+    <plurals name="export_preview_days_previewed"><item quantity="other">%1$d/%2$d 天</item></plurals>
+    <plurals name="export_preview_file_count"><item quantity="other">%1$d 个文件</item></plurals>
+    <plurals name="export_preview_limited_days"><item quantity="other">正在预览最近 %1$d 个有数据的日期。完整导出会对所有所选日期运行。</item></plurals>
+    <plurals name="export_progress_days_count"><item quantity="other">%1$d / %2$d 天</item></plurals>
+    <plurals name="export_result_exported_days"><item quantity="other">已导出 %1$d/%2$d 天</item></plurals>
+    <plurals name="export_result_uploaded_days"><item quantity="other">已上传 %1$d/%2$d 天</item></plurals>
+    <plurals name="raw_snapshot_diagnostics_failed_actions"><item quantity="other">未完成的快照操作：%1$d 个</item></plurals>
+    <plurals name="raw_snapshot_diagnostics_reason_actions"><item quantity="other">%1$s：%2$d 个操作</item></plurals>
+    <plurals name="raw_snapshot_progress_actions"><item quantity="other">快照操作：%1$d / %2$d 个</item></plurals>
+    <plurals name="raw_snapshot_result_actions"><item quantity="other">已完成快照操作：%1$d/%2$d 个</item></plurals>
 </resources>

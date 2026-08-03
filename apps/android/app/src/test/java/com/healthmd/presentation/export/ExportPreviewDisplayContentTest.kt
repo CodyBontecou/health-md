@@ -29,8 +29,9 @@ class ExportPreviewDisplayContentTest {
 
         assertThat(display.isTruncated).isTrue()
         assertThat(display.text).startsWith("HEADxxxxxxxx")
-        assertThat(display.text).endsWith("xxxxTAIL")
-        assertThat(display.text).contains("Preview truncated")
+        assertThat(display.tailText).endsWith("xxxxTAIL")
+        assertThat(display.render("empty", "<localized marker>"))
+            .isEqualTo(display.text + "<localized marker>" + display.tailText)
         assertThat(display.originalByteCount).isEqualTo(content.toByteArray(Charsets.UTF_8).size)
         assertThat(display.omittedByteCount).isEqualTo(188)
     }
@@ -49,14 +50,15 @@ class ExportPreviewDisplayContentTest {
         assertThat(display.isTruncated).isTrue()
         assertThat(display.text).doesNotContain("�")
         assertThat(display.text).startsWith("start")
-        assertThat(display.text).endsWith("end")
+        assertThat(display.tailText).endsWith("end")
     }
 
     @Test
     fun emptyContent_usesReadablePlaceholder() {
         val display = ExportPreviewDisplayContent.make("")
 
-        assertThat(display.text).isEqualTo("(empty file)")
+        assertThat(display.text).isEmpty()
+        assertThat(display.render("Localized empty file", "unused")).isEqualTo("Localized empty file")
         assertThat(display.originalByteCount).isEqualTo(0)
         assertThat(display.isTruncated).isFalse()
     }

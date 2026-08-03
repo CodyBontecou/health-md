@@ -7,6 +7,8 @@ import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
+import com.healthmd.domain.model.ExportPreviewIssue
+import com.healthmd.domain.model.ExportPreviewIssueKind
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -43,6 +45,7 @@ import kotlinx.coroutines.CancellationException
 /** Product boundary for raw exports. It never requests compatibility HealthData. */
 internal data class RawArtifactPreview(
     val content: String,
+    val tailContent: String = "",
     val omittedByteCount: Int,
 )
 
@@ -81,32 +84,27 @@ class RawSnapshotExportRunner @Inject constructor(
         expectedDestinationFingerprint: String?,
     ): ExportResult {
         if (endDate.isBefore(startDate)) {
-            return failure(startDate, target, ExportFailureReason.UNKNOWN, "The raw snapshot end date is before its start date.")
+            return failure(startDate, target, ExportFailureReason.UNKNOWN)
         }
         if (settings.rawSnapshot.scope == RawSnapshotScope.SELECTED_RECORD_TYPES &&
             settings.metricSelection.enabledMetrics.isEmpty()
         ) {
-            return failure(
-                startDate,
-                target,
-                ExportFailureReason.NO_HEALTH_DATA,
-                "Select at least one health metric or choose All Authorized Supported Data.",
-            )
+            return failure(startDate, target, ExportFailureReason.NO_HEALTH_DATA)
         }
         val providerIds = selectedProviderIds()
         if (providerIds.isEmpty()) {
-            return failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER, "No connected provider is available for a raw snapshot.")
+            return failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
         }
 
         val apiConfiguration = if (target == ExportTarget.API_ENDPOINT) {
             val captured = credentialStore.requestConfiguration(settings.apiEndpointUrl)
-                ?: return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT, "Configure a raw snapshot HTTPS endpoint.")
+                ?: return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT)
             val scheme = runCatching { URI(captured.endpointUrl).scheme }.getOrNull()
             if (!scheme.equals("https", ignoreCase = true)) {
-                return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT, "Raw snapshot API endpoints must use HTTPS.")
+                return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT)
             }
             if (expectedDestinationFingerprint != null && expectedDestinationFingerprint != captured.destinationFingerprint) {
-                return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT, "The raw snapshot destination changed after this export was scheduled.")
+                return failure(startDate, target, ExportFailureReason.INVALID_API_ENDPOINT)
             }
             // Immutable action snapshot: every provider uses this exact URL, authorization, headers,
             // and fingerprint even if settings are edited while the action is running.
@@ -119,12 +117,7 @@ class RawSnapshotExportRunner @Inject constructor(
         for (providerId in providerIds) {
             val repository = rawRepositoryRegistry.repositoryFor(providerId)
             val result = if (repository == null) {
-                failure(
-                    startDate,
-                    target,
-                    ExportFailureReason.RAW_UNSUPPORTED_PROVIDER,
-                    "$providerId is not registered for provider-native raw snapshots; Health Connect fallback was not used.",
-                )
+                failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
             } else {
                 exportProvider(
                     providerId, repository, startDate, endDate, request, settings, target,
@@ -149,7 +142,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 startDate,
                 requestedDateCount,
                 ExportFailureReason.UNKNOWN,
-                "The raw snapshot end date is before its start date.",
+                ExportPreviewIssue(ExportPreviewIssueKind.RAW_INVALID_DATE_RANGE),
             )
         }
         if (settings.rawSnapshot.scope == RawSnapshotScope.SELECTED_RECORD_TYPES &&
@@ -159,7 +152,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 startDate,
                 requestedDateCount,
                 ExportFailureReason.NO_HEALTH_DATA,
-                "Select at least one health metric or choose All Authorized Supported Data.",
+                ExportPreviewIssue(ExportPreviewIssueKind.RAW_SELECTION_REQUIRED),
             )
         }
 
@@ -169,20 +162,20 @@ class RawSnapshotExportRunner @Inject constructor(
                 startDate,
                 requestedDateCount,
                 ExportFailureReason.RAW_UNSUPPORTED_PROVIDER,
-                "No connected provider is available for a raw snapshot preview.",
+                ExportPreviewIssue(ExportPreviewIssueKind.RAW_PROVIDER_UNAVAILABLE),
             )
         }
 
         val request = buildRequest(startDate, endDate, ZoneId.systemDefault(), settings)
         val files = mutableListOf<ExportPreviewFile>()
-        val warnings = mutableListOf<String>()
+        val issues = mutableListOf<ExportPreviewIssue>()
         var firstFailure: ExportFailureReason? = null
 
         for (providerId in providerIds) {
             val repository = rawRepositoryRegistry.repositoryFor(providerId)
             if (repository == null) {
                 firstFailure = firstFailure ?: ExportFailureReason.RAW_UNSUPPORTED_PROVIDER
-                warnings += "$providerId is not registered for provider-native raw snapshots; Health Connect fallback was not used."
+                issues += ExportPreviewIssue(ExportPreviewIssueKind.RAW_PROVIDER_UNREGISTERED, providerId)
                 continue
             }
 
@@ -209,21 +202,22 @@ class RawSnapshotExportRunner @Inject constructor(
                     byteCount = raw.bytesWritten.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
                     content = bounded.content,
                     previewOmittedByteCount = bounded.omittedByteCount,
+                    previewTailContent = bounded.tailContent,
                 )
                 when (raw.manifest.status) {
                     RawSnapshotStatus.COMPLETE -> Unit
-                    RawSnapshotStatus.PARTIAL -> warnings += "$providerId produced a partial raw snapshot preview. Review the artifact manifest."
-                    RawSnapshotStatus.FAILED -> warnings += "$providerId produced a failed raw snapshot manifest. Review provider access."
-                    else -> warnings += "$providerId preview ended without a final raw snapshot status."
+                    RawSnapshotStatus.PARTIAL -> issues += ExportPreviewIssue(ExportPreviewIssueKind.RAW_PARTIAL, providerId)
+                    RawSnapshotStatus.FAILED -> issues += ExportPreviewIssue(ExportPreviewIssueKind.RAW_FAILED_MANIFEST, providerId)
+                    else -> issues += ExportPreviewIssue(ExportPreviewIssueKind.RAW_NO_FINAL_STATUS, providerId)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: SecurityException) {
                 firstFailure = firstFailure ?: ExportFailureReason.ACCESS_DENIED
-                warnings += "$providerId raw snapshot preview access was denied. Review provider permissions."
+                issues += ExportPreviewIssue(ExportPreviewIssueKind.RAW_ACCESS_DENIED, providerId)
             } catch (_: Exception) {
                 firstFailure = firstFailure ?: ExportFailureReason.HEALTH_CONNECT_ERROR
-                warnings += "$providerId raw snapshot preview failed before the artifact was complete."
+                issues += ExportPreviewIssue(ExportPreviewIssueKind.RAW_PREVIEW_FAILED, providerId)
             } finally {
                 artifact?.let(::cleanupPrivateArtifact)
             }
@@ -233,7 +227,7 @@ class RawSnapshotExportRunner @Inject constructor(
             date = startDate,
             files = files,
             failureReason = firstFailure.takeIf { files.isEmpty() },
-            warning = warnings.takeIf(List<String>::isNotEmpty)?.joinToString("\n"),
+            issues = issues,
             requestedDates = if (requestedDateCount > 0) {
                 generateSequence(startDate) { date -> date.plusDays(1).takeIf { !it.isAfter(endDate) } }.toList()
             } else {
@@ -265,12 +259,12 @@ class RawSnapshotExportRunner @Inject constructor(
         startDate: LocalDate,
         requestedDateCount: Int,
         reason: ExportFailureReason,
-        message: String,
+        issue: ExportPreviewIssue,
     ) = ExportPreview(
         requestedDateCount = requestedDateCount,
         previewedDateCount = 0,
         isTruncated = false,
-        days = listOf(ExportPreviewDay(startDate, failureReason = reason, warning = message)),
+        days = listOf(ExportPreviewDay(startDate, failureReason = reason, issues = listOf(issue))),
         isRangeArtifact = true,
     )
 
@@ -288,21 +282,22 @@ class RawSnapshotExportRunner @Inject constructor(
             ExportTarget.DEVICE_FOLDER -> exportToFolder(providerId, repository, startDate, endDate, request, settings)
             ExportTarget.API_ENDPOINT -> exportToApi(providerId, repository, startDate, request, requireNotNull(apiConfiguration))
         }
-    } catch (cancelled: CancellationException) {
-        failure(startDate, target, ExportFailureReason.RAW_CANCELLED, "$providerId raw snapshot export was cancelled.", cancelled = true)
+    } catch (_: CancellationException) {
+        failure(startDate, target, ExportFailureReason.RAW_CANCELLED, cancelled = true)
     } catch (error: RawSnapshotApiException) {
         failure(
-            startDate, target,
-            if (error.statusCode == null) ExportFailureReason.NETWORK_ERROR else ExportFailureReason.API_REJECTED,
-            error.message ?: "$providerId raw snapshot upload failed.", error.statusCode,
+            date = startDate,
+            target = target,
+            reason = if (error.statusCode == null) ExportFailureReason.NETWORK_ERROR else ExportFailureReason.API_REJECTED,
+            statusCode = error.statusCode,
         )
     } catch (_: SecurityException) {
-        failure(startDate, target, ExportFailureReason.ACCESS_DENIED, "$providerId raw snapshot access was denied. Review provider permissions.")
+        failure(startDate, target, ExportFailureReason.ACCESS_DENIED)
     } catch (_: Exception) {
         failure(
-            startDate, target,
+            startDate,
+            target,
             if (target == ExportTarget.DEVICE_FOLDER) ExportFailureReason.FILE_WRITE_ERROR else ExportFailureReason.HEALTH_CONNECT_ERROR,
-            "$providerId raw snapshot failed before the artifact was complete.",
         )
     }
 
@@ -315,7 +310,7 @@ class RawSnapshotExportRunner @Inject constructor(
         settings: ExportSettings,
     ): ExportResult {
         val folderUri = settingsRepository.getExportFolderUri()
-            ?: return failure(startDate, ExportTarget.DEVICE_FOLDER, ExportFailureReason.NO_FOLDER_SELECTED, "Select an export folder before creating a raw snapshot.")
+            ?: return failure(startDate, ExportTarget.DEVICE_FOLDER, ExportFailureReason.NO_FOLDER_SELECTED)
         val relativeDirectory = listOf(
             settings.subfolder.trim('/').takeIf(String::isNotBlank),
             RAW_DIRECTORY,
@@ -385,35 +380,28 @@ class RawSnapshotExportRunner @Inject constructor(
             date,
             target,
             ExportFailureReason.RAW_PARTIAL,
-            if (target == ExportTarget.DEVICE_FOLDER) {
-                "Raw snapshot is partial. Review its promoted artifact manifest before use."
-            } else {
-                "Raw snapshot was partial and was not uploaded. Review provider access and retry."
-            },
             artifactCount = if (target == ExportTarget.DEVICE_FOLDER) 1 else 0,
         )
         RawSnapshotStatus.FAILED -> failure(
             date,
             target,
             ExportFailureReason.HEALTH_CONNECT_ERROR,
-            "The selected provider could not complete the raw snapshot. Review the artifact manifest and permissions.",
             artifactCount = if (target == ExportTarget.DEVICE_FOLDER) 1 else 0,
         )
-        else -> failure(date, target, ExportFailureReason.UNKNOWN, "Raw snapshot ended without a final status.")
+        else -> failure(date, target, ExportFailureReason.UNKNOWN)
     }
 
     private fun failure(
         date: LocalDate,
         target: ExportTarget,
         reason: ExportFailureReason,
-        message: String,
         statusCode: Int? = null,
         cancelled: Boolean = false,
         artifactCount: Int = 0,
     ) = ExportResult(
         successCount = 0,
         totalCount = 1,
-        failedDateDetails = listOf(FailedDateDetail(date, reason, message)),
+        failedDateDetails = listOf(FailedDateDetail(date, reason)),
         wasCancelled = cancelled,
         target = target,
         httpStatusCode = statusCode,
@@ -478,10 +466,9 @@ class RawSnapshotExportRunner @Inject constructor(
             val retainedByteCount = head.toByteArray(Charsets.UTF_8).size.toLong() +
                 tail.toByteArray(Charsets.UTF_8).size.toLong()
             val omitted = (byteCount - retainedByteCount).coerceAtLeast(0)
-            val marker = "\n\n… Preview truncated: ${formatRawPreviewBytes(omitted)} " +
-                "omitted from the middle of this ${formatRawPreviewBytes(byteCount)} file. …\n\n"
             return RawArtifactPreview(
-                content = head + marker + tail,
+                content = head,
+                tailContent = tail,
                 omittedByteCount = omitted.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
             )
         }
@@ -491,12 +478,6 @@ class RawSnapshotExportRunner @Inject constructor(
             .onUnmappableCharacter(CodingErrorAction.IGNORE)
             .decode(ByteBuffer.wrap(bytes))
             .toString()
-
-        private fun formatRawPreviewBytes(bytes: Long): String = when {
-            bytes < 1024 -> "$bytes B"
-            bytes < 1024 * 1024 -> String.format(java.util.Locale.US, "%.1f KB", bytes / 1024.0)
-            else -> String.format(java.util.Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
-        }
 
         internal fun aggregateProviderResults(
             results: List<ExportResult>,
@@ -517,11 +498,7 @@ class RawSnapshotExportRunner @Inject constructor(
             successCount = 0,
             totalCount = 1,
             failedDateDetails = listOf(
-                FailedDateDetail(
-                    date,
-                    ExportFailureReason.FILE_WRITE_ERROR,
-                    "The raw snapshot artifact is durable, but its checksum sidecar could not be verified. The artifact remains available for inspection.",
-                ),
+                FailedDateDetail(date, ExportFailureReason.FILE_WRITE_ERROR),
             ),
             target = ExportTarget.DEVICE_FOLDER,
             exportMode = ExportMode.RAW_SNAPSHOT,

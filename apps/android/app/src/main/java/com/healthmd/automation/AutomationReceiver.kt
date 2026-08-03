@@ -4,10 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import com.healthmd.R
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.domain.export.ExportAccountingPolicy
+import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
@@ -67,17 +67,21 @@ class AutomationReceiver : BroadcastReceiver() {
                         val start = intent.getStringExtra(EXTRA_START_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                         val end = intent.getStringExtra(EXTRA_END_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
                         if (start == null || end == null || end.isBefore(start)) {
-                            publishResult(RESULT_INVALID_INPUT, "Invalid date range", Bundle.EMPTY)
+                            publishResult(RESULT_INVALID_INPUT, PROTOCOL_INVALID_DATE_RANGE, Bundle.EMPTY)
                         } else {
                             runExport(context, ExportOrchestrator.dateRange(start, end))
                         }
                     }
                     ACTION_GET_LAST_STATUS -> publishLastStatus()
-                    else -> publishResult(RESULT_INVALID_INPUT, "Unknown action: ${intent.action}", Bundle.EMPTY)
+                    else -> publishResult(
+                        RESULT_INVALID_INPUT,
+                        "$PROTOCOL_UNKNOWN_ACTION_PREFIX${intent.action}",
+                        Bundle.EMPTY,
+                    )
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Automation intent failed")
-                publishResult(RESULT_FAILURE, e.message ?: "Automation failed", Bundle.EMPTY)
+                publishResult(RESULT_FAILURE, PROTOCOL_AUTOMATION_FAILED, Bundle.EMPTY)
             } finally {
                 pendingResult.finish()
             }
@@ -91,7 +95,7 @@ class AutomationReceiver : BroadcastReceiver() {
 
     private suspend fun runExportWhileAwake(context: Context, dates: List<LocalDate>) {
         if (dates.isEmpty()) {
-            publishResult(RESULT_INVALID_INPUT, "No dates requested", Bundle.EMPTY)
+            publishResult(RESULT_INVALID_INPUT, PROTOCOL_NO_DATES_REQUESTED, Bundle.EMPTY)
             return
         }
 
@@ -106,8 +110,14 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = dates.size,
                 failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.PAYWALL_REQUIRED) },
             )
-            recordHistory(context, dates, result, ExportFailureReason.PAYWALL_REQUIRED, context.getString(R.string.schedule_unlock_required_short))
-            publishExportResult(result, "Unlock Health.md to run automation exports")
+            recordHistory(
+                context,
+                dates,
+                result,
+                ExportFailureReason.PAYWALL_REQUIRED,
+                PROTOCOL_SCHEDULE_UNLOCK_REQUIRED,
+            )
+            publishExportResult(result, PROTOCOL_UNLOCK_REQUIRED)
             return
         }
 
@@ -117,8 +127,14 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = dates.size,
                 failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
             )
-            recordHistory(context, dates, result, ExportFailureReason.NO_FOLDER_SELECTED, "No export folder selected")
-            publishExportResult(result, "No export folder selected")
+            recordHistory(
+                context,
+                dates,
+                result,
+                ExportFailureReason.NO_FOLDER_SELECTED,
+                PROTOCOL_NO_EXPORT_FOLDER,
+            )
+            publishExportResult(result, PROTOCOL_NO_EXPORT_FOLDER)
             return
         }
 
@@ -128,31 +144,43 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = dates.size,
                 failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.ACCESS_DENIED) },
             )
-            recordHistory(context, dates, result, ExportFailureReason.ACCESS_DENIED, "Health Connect permissions missing")
-            publishExportResult(result, "Health Connect permissions missing")
+            recordHistory(
+                context,
+                dates,
+                result,
+                ExportFailureReason.ACCESS_DENIED,
+                PROTOCOL_HEALTH_PERMISSIONS_MISSING,
+            )
+            publishExportResult(result, PROTOCOL_HEALTH_PERMISSIONS_MISSING)
             return
         }
 
         val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
         val result = orchestrator.exportDates(dates, settings)
-        recordHistory(context, dates, result, result.primaryFailureReason, result.warningSummary())
+        recordHistory(
+            context,
+            dates,
+            result,
+            result.primaryFailureReason,
+            result.protocolWarningSummary(),
+        )
 
         if (ExportAccountingPolicy.shouldConsumeFreeExport(result, isPurchased)) {
             settingsRepository.recordFreeExportUse()
         }
 
-        publishExportResult(result, "${result.successCount}/${result.totalCount} days exported")
+        publishExportResult(result, protocolDaysExported(result.successCount, result.totalCount))
     }
 
     private suspend fun publishLastStatus() {
         val entry = exportHistoryRepository.getAllEntries().first().firstOrNull()
         if (entry == null) {
-            publishResult(RESULT_SUCCESS, "No export history", Bundle.EMPTY)
+            publishResult(RESULT_SUCCESS, PROTOCOL_NO_EXPORT_HISTORY, Bundle.EMPTY)
             return
         }
         publishResult(
             if (entry.isFailure) RESULT_FAILURE else RESULT_SUCCESS,
-            "${entry.successCount}/${entry.totalCount} days exported",
+            protocolDaysExported(entry.successCount, entry.totalCount),
             Bundle().apply {
                 putLong(EXTRA_HISTORY_ID, entry.id)
                 putString(EXTRA_SOURCE, entry.source.name)
@@ -184,27 +212,32 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = result.totalCount,
                 failureReason = failureReason,
                 failedDateDetails = result.failedDateDetails,
-                targetLabel = targetLabel(context, settings),
+                targetLabel = targetLabel(settings),
                 fileCount = result.successCount * settings.selectedExportFormats.size,
                 warningSummary = warning,
             )
         )
     }
 
-    private fun targetLabel(context: Context, settings: com.healthmd.domain.model.ExportSettings): String = buildString {
+    private fun targetLabel(settings: com.healthmd.domain.model.ExportSettings): String = buildString {
         val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
-        append(subfolder ?: context.getString(R.string.export_folder_root_label))
+        append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)
         settings.formatFolderPath(LocalDate.now().minusDays(1))?.takeIf { it.isNotBlank() }?.let {
             append("/").append(it.trim('/'))
         }
     }
 
-    private fun ExportResult.warningSummary(): String? = when {
+    /** Persisted automation output is a public protocol field and must remain locale-invariant. */
+    private fun ExportResult.protocolWarningSummary(): String? = when {
         isPartialSuccess -> "${failedDateDetails.size} failed date(s)"
-        wasCancelled -> "Export cancelled"
+        wasCancelled -> PROTOCOL_EXPORT_CANCELLED
         isFailure -> primaryFailureReason?.name
         else -> null
     }
+
+    /** resultData is an automation protocol field, so its existing English text remains invariant. */
+    private fun protocolDaysExported(successCount: Int, totalCount: Int): String =
+        "$successCount/$totalCount days exported"
 
     private fun publishExportResult(result: ExportResult, message: String) {
         publishResult(
@@ -248,5 +281,16 @@ class AutomationReceiver : BroadcastReceiver() {
         const val RESULT_SUCCESS = 1
         const val RESULT_FAILURE = 2
         const val RESULT_INVALID_INPUT = 3
+
+        private const val PROTOCOL_INVALID_DATE_RANGE = "Invalid date range"
+        private const val PROTOCOL_UNKNOWN_ACTION_PREFIX = "Unknown action: "
+        private const val PROTOCOL_AUTOMATION_FAILED = "Automation failed"
+        private const val PROTOCOL_NO_DATES_REQUESTED = "No dates requested"
+        private const val PROTOCOL_UNLOCK_REQUIRED = "Unlock Health.md to run automation exports"
+        private const val PROTOCOL_SCHEDULE_UNLOCK_REQUIRED = "Unlock Health.md to enable scheduled exports."
+        private const val PROTOCOL_NO_EXPORT_FOLDER = "No export folder selected"
+        private const val PROTOCOL_HEALTH_PERMISSIONS_MISSING = "Health Connect permissions missing"
+        private const val PROTOCOL_NO_EXPORT_HISTORY = "No export history"
+        private const val PROTOCOL_EXPORT_CANCELLED = "Export cancelled"
     }
 }

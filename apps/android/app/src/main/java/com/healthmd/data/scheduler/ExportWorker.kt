@@ -23,6 +23,7 @@ import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.ExportEnginePin
+import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
@@ -45,6 +46,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.withLock
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 import java.util.UUID
 import timber.log.Timber
 
@@ -135,7 +138,8 @@ class ExportWorker @AssistedInject constructor(
 
         val restoredSettings = try {
             capturedSnapshot?.restoreOnto(persistedSettings) ?: persistedSettings
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            Timber.e(error, "Scheduled export settings snapshot is invalid")
             return Result.failure()
         }
         // An accepted occurrence keeps its frozen output settings and intended date window even if
@@ -234,7 +238,7 @@ class ExportWorker @AssistedInject constructor(
                     dates = dates,
                     result = ExportResult(0, dates.size, failureDetails),
                     failureReason = ExportFailureReason.PAYWALL_REQUIRED,
-                    warning = applicationContext.getString(R.string.schedule_unlock_required_short),
+                    warning = PROTOCOL_SCHEDULE_UNLOCK_REQUIRED,
                 )
             )
             persistPendingRetryDates(
@@ -322,7 +326,7 @@ class ExportWorker @AssistedInject constructor(
                     target = settings.scheduledExportTarget,
                     targetLabel = targetLabel(settings, endDate),
                     fileCount = 0,
-                    warningSummary = applicationContext.getString(R.string.export_notification_background_permission_required),
+                    warningSummary = PROTOCOL_BACKGROUND_PERMISSION_REQUIRED,
                     exportMode = settings.exportMode,
                 )
             )
@@ -396,7 +400,8 @@ class ExportWorker @AssistedInject constructor(
                 // One raw action covers the whole range for every requested provider. Until every
                 // artifact is complete, retain every attempted date rather than only startDate.
                 val failure = result.failedDateDetails.firstOrNull() ?: FailedDateDetail(
-                    dates.first(), ExportFailureReason.RAW_PARTIAL, "One or more raw provider artifacts are incomplete.",
+                    dates.first(),
+                    ExportFailureReason.RAW_PARTIAL,
                 )
                 dates.map { failure.copy(date = it) }
             } else {
@@ -441,17 +446,18 @@ class ExportWorker @AssistedInject constructor(
                 if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                     applicationContext.getString(
                         R.string.raw_snapshot_notification_message,
-                        endDate,
+                        localizedDate(endDate),
                         applicationContext.getString(
                             if (result.isFullSuccess) R.string.raw_snapshot_status_complete else R.string.raw_snapshot_status_failed,
                         ),
                     )
                 } else {
-                    applicationContext.getString(
-                        R.string.export_notification_message_days_exported,
+                    applicationContext.resources.getQuantityString(
+                        R.plurals.export_notification_days_exported,
+                        result.totalCount,
                         result.successCount,
                         result.totalCount,
-                        endDate,
+                        localizedDate(endDate),
                     )
                 },
                 if (result.isFullSuccess) NavDestination.EXPORT.route else NavDestination.SCHEDULE.route,
@@ -471,7 +477,8 @@ class ExportWorker @AssistedInject constructor(
             }
         } catch (error: kotlinx.coroutines.CancellationException) {
             throw error
-        } catch (e: Exception) {
+        } catch (error: Exception) {
+            Timber.e(error, "Scheduled export failed")
             persistPendingRetryDates(
                 dates,
                 ExportFailureReason.UNKNOWN,
@@ -483,7 +490,7 @@ class ExportWorker @AssistedInject constructor(
             )
             showNotification(
                 applicationContext.getString(R.string.export_notification_title_failed),
-                e.message ?: applicationContext.getString(R.string.export_notification_unknown_error),
+                applicationContext.getString(R.string.export_notification_unknown_error),
                 NavDestination.SCHEDULE.route,
                 promptRecovery = true,
             )
@@ -616,7 +623,7 @@ class ExportWorker @AssistedInject constructor(
             APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
         } else buildString {
             val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
-            append(subfolder ?: applicationContext.getString(R.string.export_folder_root_label))
+            append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)
             settings.formatFolderPath(date)?.takeIf { it.isNotBlank() }?.let {
                 append("/").append(it.trim('/'))
             }
@@ -634,10 +641,17 @@ class ExportWorker @AssistedInject constructor(
         else -> false
     }
 
+    /** History is also returned through the automation broadcast API, so keep this invariant. */
     private fun ExportResult.warningSummary(): String? = when {
         isPartialSuccess -> "${failedDateDetails.size} failed date(s) pending retry"
         isFailure -> primaryFailureReason?.name
         else -> null
+    }
+
+    private fun localizedDate(date: LocalDate): String {
+        val instant = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        return android.text.format.DateFormat.getMediumDateFormat(applicationContext)
+            .format(Date.from(instant))
     }
 
     private fun showNotification(
@@ -670,7 +684,11 @@ class ExportWorker @AssistedInject constructor(
             .build()
 
         val manager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationId = (System.currentTimeMillis() and 0x7FFFFFFF.toLong()).toInt()
+        val notificationId = if (route == NavDestination.EXPORT.route) {
+            EXPORT_RESULT_NOTIFICATION_ID
+        } else {
+            SCHEDULE_RESULT_NOTIFICATION_ID
+        }
         manager.notify(notificationId, notification)
     }
 
@@ -692,5 +710,20 @@ class ExportWorker @AssistedInject constructor(
         const val INPUT_INTENDED_RUN_LOCAL_DATE = ScheduledExportOccurrence.KEY_INTENDED_LOCAL_DATE
         const val INPUT_INTENDED_ZONE_ID = ScheduledExportOccurrence.KEY_ZONE_ID
         private const val FOREGROUND_NOTIFICATION_ID = 6_042
+        private const val EXPORT_RESULT_NOTIFICATION_ID = 6_043
+        private const val SCHEDULE_RESULT_NOTIFICATION_ID = 6_044
+
+        // Stable protocol/history values. They are localized only when rendered in the app UI.
+        private const val PROTOCOL_SCHEDULE_UNLOCK_REQUIRED =
+            "Unlock Health.md to enable scheduled exports."
+        private const val PROTOCOL_BACKGROUND_PERMISSION_REQUIRED =
+            "Scheduled exports need Health Connect background access. Open Health.md > Schedule to enable it."
+
+        /** Remove completed notifications carrying copy from the previous app locale. */
+        fun clearLocalizedResultNotifications(context: Context) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.cancel(EXPORT_RESULT_NOTIFICATION_ID)
+            manager.cancel(SCHEDULE_RESULT_NOTIFICATION_ID)
+        }
     }
 }

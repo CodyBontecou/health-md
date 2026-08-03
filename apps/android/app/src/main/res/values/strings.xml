@@ -44,13 +44,93 @@
     <string name="health_connect_error_settings_launch">Health Connect settings couldn’t be opened on this device.</string>
     <string name="health_connect_error_install_launch">The Health Connect Play Store page couldn’t be opened on this device.</string>
     <string name="health_connect_error_history_unavailable">This version of Health Connect can’t grant full history access. Update Health Connect or select dates from the last 30 days.</string>
-    <string name="health_connect_error_background_unavailable">This Health Connect provider can’t read data in the background. Update Health Connect before enabling scheduled exports.</string>
+    <string name="health_connect_error_background_unavailable">This Health Connect provider can’t read data in the background. Update Health Connect before enabling scheduled exports or background widget refresh.</string>
     <string name="permissions_required_title">Permissions Required</string>
     <string name="permissions_required_message">Grant Health Connect permissions to export your health data.</string>
     <string name="permissions_grant_button">Grant Permissions</string>
     <string name="history_permission_required_title">Health Connect history access needed</string>
     <string name="history_permission_required_message">Health Connect limits reads to about 30 days before this app first got permission. Grant history access so older selected dates are exported instead of silently omitted.</string>
     <string name="history_permission_grant_button">Grant history access</string>
+
+    <!-- Android home-screen widgets -->
+    <string name="widget_health_summary_name">Health Summary</string>
+    <string name="widget_health_summary_description">Today’s activity, sleep, heart, and recovery metrics from Health.md.</string>
+    <string name="widget_activity_name">Activity</string>
+    <string name="widget_activity_description">Steps, active calories, and exercise progress from Health.md.</string>
+    <string name="widget_heart_range_name">Heart Range</string>
+    <string name="widget_heart_range_description">Seven days of minimum, average, and maximum heart rate from Health.md.</string>
+    <string name="widget_sleep_name">Sleep</string>
+    <string name="widget_sleep_description">Last night’s sleep and a seven-day sleep chart from Health.md.</string>
+    <string name="widget_label_today">Today</string>
+    <string name="widget_label_move">Move</string>
+    <string name="widget_label_exercise">Exercise</string>
+    <string name="widget_label_sleep">Sleep</string>
+    <string name="widget_label_resting">Resting</string>
+    <string name="widget_label_heart_range">Heart Range</string>
+    <string name="widget_label_average">Average</string>
+    <string name="widget_label_minimum">Min %1$s</string>
+    <string name="widget_label_maximum">Max %1$s</string>
+    <string name="widget_label_last_night">Last night</string>
+    <string name="widget_label_seven_day_sleep">7-day sleep</string>
+    <string name="widget_label_seven_day_average">7-day average</string>
+    <string name="widget_label_bedtime">Bedtime</string>
+    <string name="widget_label_wake">Wake</string>
+    <string name="widget_unit_steps">%1$s steps</string>
+    <string name="widget_unit_kilocalories">%1$s kcal</string>
+    <string name="widget_unit_minutes">%1$s min</string>
+    <string name="widget_unit_hours">%1$s hr</string>
+    <string name="widget_unit_bpm">%1$s bpm</string>
+    <string name="widget_unit_milliseconds">%1$s ms</string>
+    <string name="widget_goal_eight_hours">Goal: %1$s hours</string>
+    <string name="widget_state_loading">Loading health data…</string>
+    <string name="widget_state_open_for_access">Open Health.md to allow Health Connect access.</string>
+    <string name="widget_state_background_access">Open Health.md to refresh this widget.</string>
+    <string name="widget_state_health_connect_unavailable">Set up Health Connect, then open Health.md.</string>
+    <string name="widget_state_unlock">Unlock your phone to refresh Health.md.</string>
+    <string name="widget_state_no_summary_data">No health summary data</string>
+    <string name="widget_state_no_activity_data">No activity data</string>
+    <string name="widget_state_no_heart_data">No heart data</string>
+    <string name="widget_state_no_sleep_data">No sleep data</string>
+    <plurals name="widget_state_updated_minutes">
+        <item quantity="one">Updated %1$s minute ago</item>
+        <item quantity="other">Updated %1$s minutes ago</item>
+    </plurals>
+    <plurals name="widget_state_updated_hours">
+        <item quantity="one">Updated %1$s hour ago</item>
+        <item quantity="other">Updated %1$s hours ago</item>
+    </plurals>
+    <string name="widget_setup_title">Set Up %1$s</string>
+    <string name="widget_setup_body">Health.md reads only the activity, sleep, or heart metrics shown by this widget. Measurements stay on this device.</string>
+    <string name="widget_setup_foreground_access">Allow Widget Health Access</string>
+    <string name="widget_setup_background_access">Allow Background Refresh</string>
+    <string name="widget_setup_background_body">Background access keeps widgets current when Health.md isn’t open. You can add the widget without it.</string>
+    <string name="widget_setup_add">Add Widget</string>
+    <string name="widget_setup_adding">Adding Widget…</string>
+    <string name="widget_setup_access_ready">Health Connect access is ready.</string>
+    <string name="widget_setup_partial_access">The widget will show the metrics you chose to share.</string>
+    <string name="widget_setup_error">The widget couldn’t be set up. Check Health Connect and try again.</string>
+    <string name="widget_preview_summary_value">8,742 steps</string>
+    <string name="widget_preview_summary_detail">7.5 hr sleep · 58 bpm</string>
+    <string name="widget_preview_activity_value">421 kcal · 37 min</string>
+    <string name="widget_preview_activity_detail">8,742 / 10,000 steps</string>
+    <string name="widget_preview_heart_value">72 bpm average</string>
+    <string name="widget_preview_heart_detail">47 min · 151 max · 46 ms RMSSD</string>
+    <string name="widget_preview_sleep_value">7.5 hr last night</string>
+    <string name="widget_preview_sleep_detail">10:30 PM – 6:30 AM</string>
+    <string name="widget_settings_title">Home-Screen Widgets</string>
+    <string name="widget_settings_none">No widgets installed</string>
+    <string name="widget_settings_add_from_home">Add Health.md from your home screen’s widget picker.</string>
+    <string name="widget_settings_current">Widgets are current and can refresh in the background.</string>
+    <string name="widget_settings_foreground_only">Widgets refresh when Health.md is open.</string>
+    <string name="widget_settings_stale">Cached values are stale. Refresh them before relying on the measurements.</string>
+    <string name="widget_settings_access_required">Health Connect access is required.</string>
+    <string name="widget_settings_no_data">No widget data is available yet.</string>
+    <string name="widget_settings_refresh">Refresh Widgets</string>
+    <string name="widget_settings_manage_access">Manage Widget Access</string>
+    <plurals name="widget_settings_count">
+        <item quantity="one">%1$s widget installed</item>
+        <item quantity="other">%1$s widgets installed</item>
+    </plurals>
 
     <!-- Date range -->
     <string name="section_date_range">Date Range</string>
@@ -89,7 +169,10 @@
     <string name="export_preview_limited_other" tools:ignore="PluralsCandidate">Previewing the %1$d most recent days with data. The full export will run on every selected date.</string>
     <string name="export_preview_no_data_title">No data to preview</string>
     <string name="export_preview_no_data_message">There is no health data for the selected dates, or no formats are selected.</string>
-    <string name="free_exports_remaining">%d free exports remaining</string>
+    <plurals name="free_exports_remaining">
+        <item quantity="one">%1$d free export remaining</item>
+        <item quantity="other">%1$d free exports remaining</item>
+    </plurals>
     <string name="unlock_button">Unlock Health.md</string>
     <string name="export_result_days">%1$d/%2$d days exported</string>
     <string name="open_folder">Open folder</string>
@@ -100,10 +183,16 @@
     <string name="export_diagnostics_title_partial">Partial export</string>
     <string name="export_diagnostics_title_failed">Export failed</string>
     <string name="export_diagnostics_title_cancelled">Export cancelled</string>
-    <string name="export_diagnostics_failed_count">%d days did not export</string>
+    <plurals name="export_diagnostics_failed_count">
+        <item quantity="one">%1$d day did not export</item>
+        <item quantity="other">%1$d days did not export</item>
+    </plurals>
     <string name="export_diagnostics_cancelled_message">The export stopped before every day could be processed.</string>
     <string name="export_diagnostics_reasons_title">Diagnostics</string>
-    <string name="export_diagnostics_reason_count">%1$s: %2$d days</string>
+    <plurals name="export_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d day</item>
+        <item quantity="other">%1$s: %2$d days</item>
+    </plurals>
     <string name="export_diagnostics_date_list">Failed dates: %s</string>
     <string name="export_diagnostics_date_list_more">Failed dates: %1$s, +%2$d more</string>
     <string name="export_diagnostics_no_details">No per-day details were recorded. Try a smaller range and check Health Connect permissions.</string>
@@ -208,7 +297,10 @@
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">Export Settings</string>
     <string name="section_health_metrics">Health Metrics</string>
-    <string name="metrics_enabled_summary">%1$d/%2$d metrics enabled</string>
+    <plurals name="metrics_enabled_summary">
+        <item quantity="one">%1$d/%2$d metric enabled</item>
+        <item quantity="other">%1$d/%2$d metrics enabled</item>
+    </plurals>
     <string name="section_current_format">Current Format</string>
     <string name="write_mode_summary">Write mode: %s</string>
     <string name="section_format_customization">Format Customization</string>
@@ -216,7 +308,10 @@
     <string name="daily_note_enabled_summary">Enabled \u2022 %s</string>
     <string name="daily_note_disabled">Disabled</string>
     <string name="section_individual_tracking">Individual Entry Tracking</string>
-    <string name="individual_tracking_enabled_summary">Enabled \u2022 %d metrics</string>
+    <plurals name="individual_tracking_enabled_summary">
+        <item quantity="one">Enabled • %1$d metric</item>
+        <item quantity="other">Enabled • %1$d metrics</item>
+    </plurals>
     <string name="granular_data_title">Include Detailed Time-Series</string>
     <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
 
@@ -391,7 +486,10 @@
     <string name="individual_tracking_title">Individual Entry Tracking</string>
     <string name="individual_tracking_description">Export individual timestamped health entries as separate files. Useful for workouts, blood pressure readings, and other discrete measurements.</string>
     <string name="individual_tracking_enable_title">Enable Individual Tracking</string>
-    <string name="individual_tracking_metrics_count">%d metrics selected</string>
+    <plurals name="individual_tracking_metrics_count">
+        <item quantity="one">%1$d metric selected</item>
+        <item quantity="other">%1$d metrics selected</item>
+    </plurals>
     <string name="section_quick_actions">Quick Actions</string>
     <string name="action_suggested">Suggested</string>
     <string name="action_all">All</string>
@@ -416,7 +514,10 @@
     <string name="history_status_success">\u2713 Success</string>
     <string name="history_status_partial">! Partial</string>
     <string name="history_status_failed">\u2717 Failed</string>
-    <string name="history_entry_days">%1$d/%2$d days \u2022 %3$s to %4$s</string>
+    <plurals name="history_entry_days">
+        <item quantity="one">%1$d/%2$d day • %3$s to %4$s</item>
+        <item quantity="other">%1$d/%2$d days • %3$s to %4$s</item>
+    </plurals>
     <string name="history_timestamp_format">%1$s at %2$s</string>
     <string name="export_source_manual">Manual</string>
     <string name="export_source_scheduled">Scheduled</string>
@@ -490,7 +591,10 @@
     <string name="background_health_permission_enable_button">Enable background access</string>
     <string name="schedule_workmanager_notice">Exports run in the background using WorkManager. For reliable scheduling, allow Health Connect background access and exclude Health.md from battery optimization.</string>
     <string name="scheduled_recovery_title">Recover missed scheduled exports?</string>
-    <string name="scheduled_recovery_body">Health.md found %1$d pending scheduled date(s): %2$s. If a scheduled export missed because the phone was locked after reboot, background access was missing, or Health Connect was unavailable, Health.md can retry those exact dates now while the app is open and unlocked. Grant background access to prevent future misses.</string>
+    <plurals name="scheduled_recovery_body">
+        <item quantity="one">Health.md found %1$d pending scheduled date: %2$s. If a scheduled export missed because the phone was locked after reboot, background access was missing, or Health Connect was unavailable, Health.md can retry that exact date now while the app is open and unlocked. Grant background access to prevent future misses.</item>
+        <item quantity="other">Health.md found %1$d pending scheduled dates: %2$s. If scheduled exports missed because the phone was locked after reboot, background access was missing, or Health Connect was unavailable, Health.md can retry those exact dates now while the app is open and unlocked. Grant background access to prevent future misses.</item>
+    </plurals>
     <string name="scheduled_recovery_retry_button">Retry pending dates</string>
     <string name="scheduled_recovery_running_button">Recovering…</string>
     <string name="scheduled_recovery_blocked_paywall">Unlock Health.md before recovering scheduled exports.</string>
@@ -511,6 +615,7 @@
     <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
     <string name="release_notes_open_settings">Open Settings</string>
     <string name="release_notes_got_it">Got it</string>
+    <string name="release_notes_highlight_widgets">Add Health Summary, Activity, Heart Range, and Sleep widgets to your home screen, with optional background refresh.</string>
     <string name="release_notes_highlight_feedback">Expanded Health Connect coverage adds more activity, body, nutrition, mobility, mindfulness, reproductive health, and medical resource metrics.</string>
     <string name="release_notes_highlight_export_parity">New Android-only details include activity intensity, nutrition meals, menstruation periods, planned workouts, and granular samples when available.</string>
     <string name="release_notes_highlight_templates">Markdown, JSON, CSV, and Obsidian exports now carry richer metric values across the larger catalog.</string>
@@ -667,7 +772,10 @@
     <string name="raw_snapshot_result_count">Snapshot actions completed: %1$d/%2$d</string>
     <string name="raw_snapshot_progress_count">Snapshot actions: %1$d / %2$d</string>
     <string name="raw_snapshot_diagnostics_failed_count">Incomplete snapshot actions: %d</string>
-    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
+    <plurals name="raw_snapshot_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d action</item>
+        <item quantity="other">%1$s: %2$d actions</item>
+    </plurals>
     <string name="raw_snapshot_diagnostics_cancelled_message">The raw snapshot stopped before its native source read and artifact promotion completed.</string>
     <string name="raw_snapshot_diagnostics_no_details">No snapshot diagnostics were recorded. Check provider access and retry the range.</string>
     <string name="raw_snapshot_guidance_provider">Review the selected provider’s access and the raw artifact manifest before retrying.</string>
@@ -777,7 +885,10 @@
     <string name="history_clear_title">Clear export history?</string>
     <string name="history_clear_body">This removes all local export history entries. Exported files are not deleted.</string>
     <string name="history_target_label">Target: %1$s</string>
-    <string name="history_file_count">Files: %1$d</string>
+    <plurals name="history_file_count">
+        <item quantity="one">File: %1$d</item>
+        <item quantity="other">Files: %1$d</item>
+    </plurals>
     <string name="history_detail_title">Export details</string>
     <string name="history_detail_source">Source</string>
     <string name="history_detail_when">When</string>
@@ -819,4 +930,407 @@
     <string name="search">Search</string>
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
+
+    <!-- Direct CLI pairing, status, and foreground-service copy. -->
+    <string name="direct_cli_title">Direct CLI</string>
+    <string name="direct_cli_intro_title">Encrypted desktop exports</string>
+    <string name="direct_cli_intro_body">The CLI listens on your computer. Health.md connects directly and sends the export without a cloud relay.</string>
+    <string name="direct_cli_pair_step_run">1. On your computer, run:</string>
+    <string name="direct_cli_pair_step_enter">2. Enter the computer address and 20-digit Android code shown by the CLI.</string>
+    <string name="direct_cli_computer_address">Computer address</string>
+    <string name="direct_cli_port">Port</string>
+    <string name="direct_cli_pairing_code">Pairing code</string>
+    <string name="direct_cli_pair_button">Pair with CLI</string>
+    <string name="direct_cli_paired_listener">Paired with %1$s</string>
+    <string name="direct_cli_save_address">Save address</string>
+    <string name="direct_cli_export_instruction">Run an export command on your computer, then tap Connect:</string>
+    <string name="direct_cli_connect">Connect</string>
+    <string name="direct_cli_disconnect">Disconnect</string>
+    <string name="direct_cli_forget">Forget paired CLI</string>
+    <string name="direct_cli_status_title">Status</string>
+    <string name="direct_cli_status_not_connected">Not connected</string>
+    <string name="direct_cli_status_pairing">Pairing…</string>
+    <string name="direct_cli_status_connecting">Connecting…</string>
+    <string name="direct_cli_status_connected">Connected to %1$s</string>
+    <string name="direct_cli_status_transferring">Transferring %1$s of %2$s</string>
+    <string name="direct_cli_status_paired">Paired with %1$s.</string>
+    <string name="direct_cli_status_session_finished">Direct CLI session finished.</string>
+    <string name="direct_cli_status_export_completed">Android export completed.</string>
+    <string name="direct_cli_status_export_cancelled">Android export cancelled.</string>
+    <string name="direct_cli_failure_connection">Could not connect to the Health.md CLI. Confirm it is listening and try again.</string>
+    <string name="direct_cli_failure_timeout">The Direct CLI session reached Android\'s time limit.</string>
+    <string name="direct_cli_failure_quota">The free export limit has been reached.</string>
+    <string name="direct_cli_failure_fitbit_range">Fitbit raw export requires an explicit range of at most 366 days.</string>
+    <string name="direct_cli_failure_source_unavailable">The requested health provider is unavailable on this device.</string>
+    <string name="direct_cli_failure_health_access">Health access is required on the Android device.</string>
+    <string name="direct_cli_failure_device_locked">Unlock the Android device before exporting health data.</string>
+    <string name="direct_cli_failure_historical_access">Historical health access is required for the requested dates.</string>
+    <string name="direct_cli_failure_file_limit">Generated export exceeds 4,096 files; use fewer dates or disable individual tracking.</string>
+    <string name="direct_cli_failure_spool_missing">The retained export is missing and must be restarted.</string>
+    <string name="direct_cli_failure_export">The Android export could not be completed safely.</string>
+    <string name="direct_cli_notification_waiting">Waiting for Health.md CLI</string>
+    <string name="direct_cli_notification_idle">Direct CLI is idle</string>
+    <string name="direct_cli_notification_pairing">Pairing with Health.md CLI</string>
+    <string name="direct_cli_notification_connecting">Connecting to Health.md CLI</string>
+    <string name="direct_cli_notification_transferring">Transferring Android health export</string>
+    <string name="direct_cli_notification_title">Health.md Direct CLI</string>
+    <string name="direct_cli_notification_channel_name">Direct CLI exports</string>
+    <string name="direct_cli_notification_channel_description">Encrypted direct export connection and transfer progress</string>
+
+    <!-- API export settings and validation. -->
+    <string name="api_export_target_title">Export Target</string>
+    <string name="api_export_section_endpoint">Endpoint</string>
+    <string name="api_export_endpoint_url_label">Endpoint URL</string>
+    <string name="api_export_endpoint_help">Required. Keep API keys and other secrets out of the URL.</string>
+    <string name="api_export_authorization_saved">%1$s Saved</string>
+    <string name="api_export_remove_credential">Remove Credential</string>
+    <string name="api_export_new_authorization_label">New %1$s</string>
+    <string name="api_export_authorization_label">%1$s Token or %2$s Credential</string>
+    <string name="api_export_authorization_replacement_placeholder">Enter a value to replace the saved one</string>
+    <string name="api_export_authorization_placeholder">Token or %1$s value</string>
+    <string name="api_export_authorization_saved_help">Leave blank to keep the saved value. Plain tokens use %1$s automatically.</string>
+    <string name="api_export_authorization_help">Plain tokens use %1$s automatically. %1$s and %2$s values are accepted.</string>
+    <string name="api_export_custom_headers_title">Custom Headers</string>
+    <string name="api_export_custom_headers_saved">Custom Headers Saved</string>
+    <string name="api_export_remove_headers">Remove Headers</string>
+    <string name="api_export_replacement_headers_label">Replacement Headers</string>
+    <string name="api_export_request_headers_label">Request Headers</string>
+    <string name="api_export_replacement_headers_help">Enter the complete replacement set, one %1$s per line.</string>
+    <string name="api_export_request_headers_help">Use one %1$s per line. %2$s keeps transport headers app-managed.</string>
+    <string name="api_export_close_settings">Close Settings</string>
+    <string name="api_export_save_settings">Save Settings</string>
+    <string name="api_export_dialog_title">API Export</string>
+    <string name="api_export_dialog_description">Send selected records as one %1$s %2$s to an %3$s or %4$s endpoint you control.</string>
+    <string name="api_export_close_content_description">Close API export settings</string>
+    <string name="api_export_optional_label">Optional</string>
+    <string name="api_export_manage_request_headers">Manage Request Headers</string>
+    <string name="api_export_add_request_headers">Add Request Headers</string>
+    <string name="api_export_headers_saved_hidden">Saved securely · values hidden</string>
+    <string name="api_export_headers_add_help">Add API keys or service-specific values</string>
+    <string name="api_export_collapse_custom_headers">Collapse custom headers</string>
+    <string name="api_export_expand_custom_headers">Expand custom headers</string>
+    <string name="api_export_error_invalid_endpoint">Enter a valid %1$s or %2$s URL without a fragment or embedded username/password.</string>
+    <string name="api_export_error_authorization_empty">Enter a valid %1$s token or %2$s value.</string>
+    <string name="api_export_error_authorization_characters">%1$s values cannot contain control or non-ASCII characters.</string>
+    <string name="api_export_error_headers_total_size">Request headers must be %1$d characters or less.</string>
+    <string name="api_export_error_headers_line_break">Request headers contain an unsupported line break.</string>
+    <string name="api_export_error_header_missing_separator">Header line %1$d must use %2$s.</string>
+    <string name="api_export_error_header_invalid_name">Header line %1$d has an invalid name. Names may contain at most %2$d valid %3$s header characters.</string>
+    <string name="api_export_error_header_reserved_name">%1$s is managed by %2$s and cannot be overridden.</string>
+    <string name="api_export_error_header_duplicate_name">Header %1$s is configured more than once.</string>
+    <string name="api_export_error_header_value_too_long">Header %1$s must have a value of %2$d characters or less.</string>
+    <string name="api_export_error_header_value_characters">Header %1$s contains unsupported value characters.</string>
+    <string name="api_export_error_save_failed">Could not securely save API request settings.</string>
+    <string name="api_export_endpoint_example">https://api.example.com/healthmd</string>
+    <string name="api_export_headers_example">X-API-Key: secret\nX-Client-ID: healthmd</string>
+    <string name="api_export_header_line_syntax">Name: value</string>
+    <string name="api_export_literal_authorization">Authorization</string>
+    <string name="api_export_literal_bearer">Bearer</string>
+    <string name="api_export_literal_basic">Basic</string>
+    <string name="api_export_literal_json">JSON</string>
+    <string name="api_export_literal_post">POST</string>
+    <string name="api_export_literal_http">HTTP</string>
+    <string name="api_export_literal_https">HTTPS</string>
+    <plurals name="api_export_error_header_count">
+        <item quantity="one">Configure no more than %1$d request header.</item>
+        <item quantity="other">Configure no more than %1$d request headers.</item>
+    </plurals>
+
+    <!-- Health providers, settings, onboarding, and privacy. -->
+    <string name="settings_direct_cli_subtitle">Pair with the desktop CLI for encrypted iOS- or Android-compatible exports.</string>
+    <string name="health_provider_health_connect_summary">Default Android health hub used for private on-device exports.</string>
+    <string name="health_provider_health_connect_setup_description">Grant Health Connect permissions from the Export screen. Health.md reads records locally and writes them directly to your folder.</string>
+    <string name="health_provider_samsung_health_summary">Samsung phones, Galaxy Watch, sleep, steps, workouts, vitals.</string>
+    <string name="health_provider_samsung_health_setup_description">Open Samsung Health and enable sharing with Health Connect. Samsung\'s direct Health Data SDK can be added later if partner-approved data is needed outside Health Connect.</string>
+    <string name="health_provider_huawei_health_summary">Huawei devices and HMS/AppGallery markets.</string>
+    <string name="health_provider_huawei_health_setup_description">Huawei support requires HMS Health Kit app registration and an HMS-enabled build. This catalog keeps Huawei visible without adding HMS dependencies to the Play build.</string>
+    <string name="health_provider_fitbit_summary">Fitbit trackers, Pixel Watch Fitbit data, sleep, activity, heart.</string>
+    <string name="health_provider_fitbit_setup_description">Direct Fitbit import uses the Fitbit Web API with OAuth scopes and refresh tokens. Until app credentials are configured, export Fitbit data through Health Connect where available.</string>
+    <string name="health_provider_garmin_summary">Garmin watches, training, activity, sleep, body battery-style metrics.</string>
+    <string name="health_provider_garmin_setup_description">Garmin production imports require Garmin Health API partner approval and usually a backend/webhook sync path. Health.md excludes Google Fit fallbacks by design.</string>
+    <string name="health_provider_withings_summary">Withings scales, watches, blood pressure, sleep mats.</string>
+    <string name="health_provider_withings_setup_description">Direct Withings import uses OAuth 2.0 and the Withings public API. Configure client credentials before enabling live cloud reads.</string>
+    <string name="health_provider_oura_summary">Oura Ring sleep, readiness, activity, heart rate, HRV.</string>
+    <string name="health_provider_oura_setup_description">Direct Oura import uses the Oura Cloud API with OAuth 2.0. Configure client credentials before enabling live cloud reads.</string>
+    <string name="health_provider_polar_summary">Polar training, heart-rate devices, sleep/activity via AccessLink.</string>
+    <string name="health_provider_polar_setup_description">Historical Polar import should use Polar AccessLink OAuth. BLE sensor support is a separate future live-session feature, not a replacement for history export.</string>
+    <string name="health_provider_whoop_summary">WHOOP recovery, strain, sleep, workouts, physiology.</string>
+    <string name="health_provider_whoop_setup_description">Direct WHOOP import uses the WHOOP API with OAuth scopes for cycles, recovery, sleep, workouts, and profile data.</string>
+    <string name="health_provider_integration_android_system">Android system</string>
+    <string name="health_provider_integration_health_connect_source">Health Connect source</string>
+    <string name="health_provider_integration_vendor_sdk">Vendor SDK</string>
+    <string name="health_provider_integration_cloud_api">Cloud API</string>
+    <string name="health_provider_integration_partner_api">Partner API</string>
+    <string name="health_provider_direct_export_available">Export-ready</string>
+    <string name="health_provider_direct_export_requires_oauth_credentials">Needs OAuth credentials</string>
+    <string name="health_provider_direct_export_requires_vendor_approval">Needs vendor approval</string>
+    <string name="health_provider_direct_export_requires_partner_approval">Needs partner approval</string>
+    <string name="health_provider_direct_export_requires_app_configuration">Needs app configuration</string>
+    <string name="health_provider_action_open">Open</string>
+    <string name="health_provider_action_install_setup">Install / setup</string>
+    <string name="privacy_permissions_label">Permissions:</string>
+    <string name="privacy_export_label">Export:</string>
+    <string name="onboarding_storage_selected_folder_fallback">Selected Folder</string>
+    <string name="advanced_settings_no_formats_selected">No formats selected</string>
+    <string name="custom_markdown_template_empty_preview">(empty preview)</string>
+
+    <!-- Billing, OAuth, feedback, and automation. -->
+    <string name="billing_error_product_unavailable">Unable to load product information. Please try again.</string>
+    <string name="billing_error_service_unavailable">Billing service unavailable. Please try again.</string>
+    <string name="billing_error_purchase_failed">Purchase could not be completed. Please try again.</string>
+    <string name="billing_error_no_previous_purchase">No previous purchase found.</string>
+    <string name="billing_error_restore_failed">Could not restore purchases. Please try again.</string>
+    <string name="health_provider_label_health_connect">Health Connect</string>
+    <string name="health_provider_label_all_connected">All connected sources</string>
+    <string name="health_provider_label_fitbit">Fitbit</string>
+    <string name="health_provider_label_withings">Withings</string>
+    <string name="health_provider_label_oura">Oura</string>
+    <string name="health_provider_label_polar">Polar Flow</string>
+    <string name="health_provider_label_whoop">WHOOP</string>
+    <string name="health_provider_label_generic">Health source</string>
+    <string name="health_provider_sign_in_denied">Health source sign-in was not approved.</string>
+    <string name="health_provider_sign_in_invalid_callback">Could not verify the health source sign-in. Please try again.</string>
+    <string name="health_provider_sign_in_connection_failed">Could not connect the health source. Please try again.</string>
+    <string name="feedback_diagnostic_app">App: Health.md %1$s (%2$d)</string>
+    <string name="feedback_diagnostic_platform">Platform: Android %1$s (API %2$d)</string>
+    <string name="feedback_diagnostic_device">Device: %1$s</string>
+    <string name="feedback_issue_describe_heading">Describe the issue</string>
+    <string name="feedback_issue_describe_hint">A clear description of what happened</string>
+    <string name="feedback_issue_steps_heading">Steps to reproduce</string>
+    <string name="feedback_issue_expected_heading">Expected behavior</string>
+    <string name="feedback_issue_expected_hint">What you expected to happen</string>
+    <string name="automation_history_permissions_missing">Health Connect permissions missing</string>
+    <plurals name="automation_history_failed_dates">
+        <item quantity="one">%1$d failed date</item>
+        <item quantity="other">%1$d failed dates</item>
+    </plurals>
+
+    <!-- Export history, scheduling, and scheduled recovery. -->
+    <string name="action_edit_endpoint">Edit API endpoint</string>
+    <string name="history_date_range">%1$s – %2$s</string>
+    <string name="history_failed_date_reason">%1$s: %2$s</string>
+    <string name="history_retry_api_required">Configure an API endpoint before retrying.</string>
+    <string name="history_retry_complete">Retry completed.</string>
+    <string name="history_retry_failed">Retry failed. Review export history for details.</string>
+    <string name="history_retry_folder_required">Select an export folder before retrying.</string>
+    <string name="history_retry_permissions_required">Grant Health Connect permissions before retrying.</string>
+    <string name="history_retry_raw_failed">Raw snapshot retry failed. Review export history for details.</string>
+    <string name="history_warning_details_unavailable">Warning details are unavailable.</string>
+    <string name="schedule_decrease_hour">Decrease hour</string>
+    <string name="schedule_decrease_lookback_days">Decrease lookback days</string>
+    <string name="schedule_decrease_minute">Decrease minute</string>
+    <string name="schedule_destination_not_ready_title">Export destination not ready</string>
+    <string name="schedule_error_api_required">Configure an API endpoint before enabling the schedule.</string>
+    <string name="schedule_error_folder_required">Choose an export folder on the Export screen first.</string>
+    <string name="schedule_error_invalid_api_settings">Check the API endpoint and request settings, then try again.</string>
+    <string name="schedule_error_invalid_api_url">Enter a valid HTTP or HTTPS URL without a fragment or embedded username/password.</string>
+    <string name="schedule_error_invalid_headers">Enter valid request headers, one name and value per line.</string>
+    <string name="schedule_error_save_api_settings">Could not securely save API request settings.</string>
+    <string name="schedule_increase_hour">Increase hour</string>
+    <string name="schedule_increase_lookback_days">Increase lookback days</string>
+    <string name="schedule_increase_minute">Increase minute</string>
+    <string name="schedule_next_export_datetime">%1$s at %2$s</string>
+    <string name="schedule_target_api_configured">POST JSON to %1$s</string>
+    <string name="schedule_target_api_unconfigured">Send scheduled JSON to your API endpoint</string>
+    <string name="schedule_target_folder_choose">Choose a folder from the Export screen</string>
+    <string name="schedule_target_folder_ready">Write scheduled files to the selected device folder</string>
+    <string name="schedule_toggle_time_period">Switch AM or PM</string>
+    <string name="scheduled_recovery_history_cancelled">Recovery cancelled; unfinished dates remain pending.</string>
+    <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
+    <plurals name="export_history_failed_dates_pending_retry">
+        <item quantity="one">%1$d failed date pending retry</item>
+        <item quantity="other">%1$d failed dates pending retry</item>
+    </plurals>
+    <plurals name="export_notification_days_exported">
+        <item quantity="one">%1$d/%2$d day exported for %3$s</item>
+        <item quantity="other">%1$d/%2$d days exported for %3$s</item>
+    </plurals>
+    <plurals name="history_detail_exported_days">
+        <item quantity="one">%1$d/%2$d day</item>
+        <item quantity="other">%1$d/%2$d days</item>
+    </plurals>
+    <plurals name="history_detail_file_count">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <plurals name="history_failed_date_sample_more">
+        <item quantity="one">Failed dates: %1$s, +%2$d more</item>
+        <item quantity="other">Failed dates: %1$s, +%2$d more</item>
+    </plurals>
+    <plurals name="history_more_items">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <plurals name="history_retry_failed_dates">
+        <item quantity="one">Retry finished with %1$d failed date.</item>
+        <item quantity="other">Retry finished with %1$d failed dates.</item>
+    </plurals>
+    <plurals name="history_warning_failed_dates">
+        <item quantity="one">%1$d failed date</item>
+        <item quantity="other">%1$d failed dates</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_incomplete_count">
+        <item quantity="one">%1$d incomplete snapshot action</item>
+        <item quantity="other">%1$d incomplete snapshot actions</item>
+    </plurals>
+    <plurals name="raw_snapshot_history_entry_actions">
+        <item quantity="one">Snapshot actions: %1$d/%2$d action • %3$s to %4$s</item>
+        <item quantity="other">Snapshot actions: %1$d/%2$d actions • %3$s to %4$s</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_days">
+        <item quantity="one">day</item>
+        <item quantity="other">days</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_hours">
+        <item quantity="one">hour</item>
+        <item quantity="other">hours</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_minutes">
+        <item quantity="one">minute</item>
+        <item quantity="other">minutes</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_weeks">
+        <item quantity="one">week</item>
+        <item quantity="other">weeks</item>
+    </plurals>
+    <plurals name="schedule_lookback_days_summary">
+        <item quantity="one">Each run exports the past %1$d day ending with yesterday.</item>
+        <item quantity="other">Each run exports the past %1$d days ending with yesterday.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_history_failed_dates">
+        <item quantity="one">Recovery finished with %1$d failed date still pending.</item>
+        <item quantity="other">Recovery finished with %1$d failed dates still pending.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_exported_dates">
+        <item quantity="one">Recovery exported %1$d/%2$d date.</item>
+        <item quantity="other">Recovery exported %1$d/%2$d dates.</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_pending_dates">
+        <item quantity="one">%1$d date remains pending.</item>
+        <item quantity="other">%1$d dates remain pending.</item>
+    </plurals>
+
+    <!-- Export configuration, progress, diagnostics, and preview. -->
+    <string name="export_api_action_edit">Edit</string>
+    <string name="export_api_authorization_secure">Authorization stored securely</string>
+    <string name="export_api_compatibility_mode_description">API exports always send JSON. Metric and time-series settings apply; file paths and write modes do not.</string>
+    <string name="export_api_configure_endpoint">Configure an API endpoint</string>
+    <string name="export_api_error_invalid_endpoint">Enter a valid HTTP or HTTPS URL without a fragment or embedded username/password.</string>
+    <string name="export_api_error_invalid_headers">Enter valid request headers, one name and value per line.</string>
+    <string name="export_api_error_secure_save">Could not securely save API request settings.</string>
+    <string name="export_api_headers_secure">Custom request headers stored securely</string>
+    <string name="export_api_post_endpoint">POST %1$s</string>
+    <string name="export_api_raw_mode_description">Raw snapshots stream the completed artifact with schema, export ID, and checksum headers.</string>
+    <string name="export_no_format_selected">Select at least one export format to continue.</string>
+    <string name="export_preview_action_create_daily_note">Create daily note</string>
+    <string name="export_preview_action_daily_note_failed">Daily note failed</string>
+    <string name="export_preview_action_skip_daily_note">Skip daily note</string>
+    <string name="export_preview_action_update_daily_note">Update daily note</string>
+    <string name="export_preview_action_write_individual_entry">Write individual entry</string>
+    <string name="export_preview_api_preparation_failed">API export preparation failed.</string>
+    <string name="export_preview_artifacts_per_range">Artifacts per range</string>
+    <string name="export_preview_back_description">Back to export preview</string>
+    <string name="export_preview_destination_label">Destination</string>
+    <string name="export_preview_empty_file">(empty file)</string>
+    <string name="export_preview_formats_per_day">Formats per day</string>
+    <string name="export_preview_no_exportable_file">No exportable file for this date.</string>
+    <string name="export_preview_no_files_written">No files would be written.</string>
+    <string name="export_preview_planning_failed">Export planning failed.</string>
+    <string name="export_preview_raw_access_denied">%1$s raw snapshot preview access was denied. Review provider permissions.</string>
+    <string name="export_preview_raw_failed">%1$s raw snapshot preview failed before the artifact was complete.</string>
+    <string name="export_preview_raw_failed_manifest">%1$s produced a failed raw snapshot manifest. Review provider access.</string>
+    <string name="export_preview_raw_invalid_range">The raw snapshot end date is before its start date.</string>
+    <string name="export_preview_raw_no_final_status">%1$s preview ended without a final raw snapshot status.</string>
+    <string name="export_preview_raw_partial">%1$s produced a partial raw snapshot preview. Review the artifact manifest.</string>
+    <string name="export_preview_raw_provider_unavailable">No connected provider is available for a raw snapshot preview.</string>
+    <string name="export_preview_raw_provider_unregistered">%1$s is not registered for provider-native raw snapshots; Health Connect fallback was not used.</string>
+    <string name="export_preview_raw_service_unavailable">Raw snapshot preview service unavailable.</string>
+    <string name="export_preview_selected_folder">Selected folder</string>
+    <string name="export_preview_selected_range">Selected range</string>
+    <string name="export_preview_summary">%1$s • %2$s • %3$s</string>
+    <string name="export_preview_truncation_marker">\n\n… Preview truncated: %1$s omitted from the middle of this %2$s file. …\n\n</string>
+    <string name="export_preview_warning_title">Warning</string>
+    <string name="export_selected_range">%1$s – %2$s</string>
+    <string name="export_target_api_configured_subtitle">POST %1$s to %2$s</string>
+    <string name="export_target_api_json_unconfigured_subtitle">Send JSON to your API endpoint</string>
+    <string name="export_target_api_raw_unconfigured_subtitle">Stream a raw snapshot to an HTTPS endpoint</string>
+    <string name="export_target_folder_selected_subtitle">Write files to %1$s</string>
+    <string name="export_target_folder_unselected_subtitle">Choose a local or provider-backed folder</string>
+    <string name="folder_organization_flat_label">Flat</string>
+    <string name="folder_organization_by_year_label">By year</string>
+    <string name="folder_organization_by_month_label">By month</string>
+    <string name="folder_organization_by_year_month_label">By year/month</string>
+    <string name="folder_organization_flat_preview">No automatic date folders</string>
+    <plurals name="export_progress_state_days">
+        <item quantity="one">%1$d of %2$d day exported</item>
+        <item quantity="other">%1$d of %2$d days exported</item>
+    </plurals>
+    <plurals name="export_progress_state_days_with_date">
+        <item quantity="one">%1$d of %2$d day exported. Current date: %3$s</item>
+        <item quantity="other">%1$d of %2$d days exported. Current date: %3$s</item>
+    </plurals>
+    <plurals name="export_progress_state_raw">
+        <item quantity="one">%1$d of %2$d raw snapshot action completed for %3$s to %4$s</item>
+        <item quantity="other">%1$d of %2$d raw snapshot actions completed for %3$s to %4$s</item>
+    </plurals>
+    <plurals name="export_diagnostics_date_list_more_count">
+        <item quantity="one">Failed dates: %1$s, +%2$d more date</item>
+        <item quantity="other">Failed dates: %1$s, +%2$d more dates</item>
+    </plurals>
+    <plurals name="export_diagnostics_failed_days">
+        <item quantity="one">%1$d day did not export</item>
+        <item quantity="other">%1$d days did not export</item>
+    </plurals>
+    <plurals name="export_diagnostics_reason_days">
+        <item quantity="one">%1$s: %2$d day</item>
+        <item quantity="other">%1$s: %2$d days</item>
+    </plurals>
+    <plurals name="export_preview_artifact_count">
+        <item quantity="one">%1$d artifact</item>
+        <item quantity="other">%1$d artifacts</item>
+    </plurals>
+    <plurals name="export_preview_day_count">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="export_preview_days_previewed">
+        <item quantity="one">%1$d/%2$d day</item>
+        <item quantity="other">%1$d/%2$d days</item>
+    </plurals>
+    <plurals name="export_preview_file_count">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <plurals name="export_preview_limited_days">
+        <item quantity="one">Previewing the most recent %1$d day with data. The full export will run on every selected date.</item>
+        <item quantity="other">Previewing the %1$d most recent days with data. The full export will run on every selected date.</item>
+    </plurals>
+    <plurals name="export_progress_days_count">
+        <item quantity="one">%1$d / %2$d day</item>
+        <item quantity="other">%1$d / %2$d days</item>
+    </plurals>
+    <plurals name="export_result_exported_days">
+        <item quantity="one">%1$d/%2$d day exported</item>
+        <item quantity="other">%1$d/%2$d days exported</item>
+    </plurals>
+    <plurals name="export_result_uploaded_days">
+        <item quantity="one">%1$d/%2$d day uploaded</item>
+        <item quantity="other">%1$d/%2$d days uploaded</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_failed_actions">
+        <item quantity="one">Incomplete snapshot action: %1$d</item>
+        <item quantity="other">Incomplete snapshot actions: %1$d</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_reason_actions">
+        <item quantity="one">%1$s: %2$d action</item>
+        <item quantity="other">%1$s: %2$d actions</item>
+    </plurals>
+    <plurals name="raw_snapshot_progress_actions">
+        <item quantity="one">Snapshot actions: %1$d / %2$d action</item>
+        <item quantity="other">Snapshot actions: %1$d / %2$d actions</item>
+    </plurals>
+    <plurals name="raw_snapshot_result_actions">
+        <item quantity="one">Snapshot action completed: %1$d/%2$d</item>
+        <item quantity="other">Snapshot actions completed: %1$d/%2$d</item>
+    </plurals>
 </resources>

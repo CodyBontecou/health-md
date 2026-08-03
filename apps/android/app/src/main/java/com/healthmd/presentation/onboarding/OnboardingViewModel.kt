@@ -193,16 +193,16 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    private fun extractFolderName(uriString: String): String {
+    private fun extractFolderName(uriString: String): String? {
         return try {
             val uri = Uri.parse(uriString)
             val docId = DocumentsContract.getTreeDocumentId(uri)
-            // docId is typically "primary:FolderName" or similar
+            // docId is typically "primary:FolderName" or similar.
             docId.substringAfterLast(':').substringAfterLast('/')
                 .ifBlank { docId.substringAfterLast('/') }
-                .ifBlank { "Selected Folder" }
-        } catch (e: Exception) {
-            "Selected Folder"
+                .takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
         }
     }
 

@@ -18,6 +18,22 @@ import java.util.Base64
 import java.security.MessageDigest
 import java.security.SecureRandom
 
+/** Stable UI-safe categories for OAuth failures; technical detail stays on the exception for logs. */
+enum class OAuthFailureReason {
+    PROVIDER_DENIED,
+    INVALID_CALLBACK,
+    INVALID_STATE,
+    UNKNOWN_PROVIDER,
+    TOKEN_EXCHANGE_FAILED,
+    INVALID_TOKEN_RESPONSE,
+}
+
+class OAuthAuthorizationException(
+    val reason: OAuthFailureReason,
+    technicalMessage: String,
+    cause: Throwable? = null,
+) : Exception(technicalMessage, cause)
+
 class OAuthAuthorizationManager(
     private val configRegistry: OAuthConfigRegistry,
     private val tokenStore: OAuthTokenStore,
@@ -59,32 +75,69 @@ class OAuthAuthorizationManager(
     suspend fun handleCallback(callbackUri: Uri): OAuthCallbackResult = handleCallback(callbackUri.toString())
 
     suspend fun handleCallback(callbackUri: String): OAuthCallbackResult {
-        val queryParameters = queryParameters(callbackUri)
-        queryParameters["error"]?.let { error ->
-            throw IllegalStateException("OAuth authorization failed: $error")
+        val queryParameters = try {
+            queryParameters(callbackUri)
+        } catch (error: Exception) {
+            throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_CALLBACK,
+                technicalMessage = "OAuth callback URI could not be parsed",
+                cause = error,
+            )
+        }
+        queryParameters["error"]?.let { providerError ->
+            val description = queryParameters["error_description"]
+            throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.PROVIDER_DENIED,
+                technicalMessage = buildString {
+                    append("OAuth provider denied authorization: error=").append(providerError)
+                    if (!description.isNullOrBlank()) append(", description=").append(description)
+                },
+            )
         }
         val code = queryParameters["code"]
-            ?: throw IllegalArgumentException("OAuth callback did not include a code")
+            ?: throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_CALLBACK,
+                technicalMessage = "OAuth callback did not include a code",
+            )
         val state = queryParameters["state"]
-            ?: throw IllegalArgumentException("OAuth callback did not include state")
+            ?: throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_CALLBACK,
+                technicalMessage = "OAuth callback did not include state",
+            )
         val pending = tokenStore.consumePendingAuthorization(state)
-            ?: throw IllegalArgumentException("OAuth callback state was not recognized")
+            ?: throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_STATE,
+                technicalMessage = "OAuth callback state was not recognized",
+            )
         val config = configRegistry.get(pending.providerId)
-            ?: throw IllegalArgumentException("Unknown OAuth provider: ${pending.providerId}")
-        val token = exchangeToken(
-            config = config,
-            params = buildMap {
-                put("grant_type", "authorization_code")
-                put("code", code)
-                put("redirect_uri", config.redirectUri)
-                put("client_id", config.clientId)
-                put("code_verifier", pending.codeVerifier)
-                if (config.clientAuthStyle == OAuthClientAuthStyle.RequestBody && config.clientSecret.isNotBlank()) {
-                    put("client_secret", config.clientSecret)
-                }
-                putAll(config.tokenExtraParams)
-            }
-        )
+            ?: throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.UNKNOWN_PROVIDER,
+                technicalMessage = "Unknown OAuth provider: ${pending.providerId}",
+            )
+        val token = try {
+            exchangeToken(
+                config = config,
+                params = buildMap {
+                    put("grant_type", "authorization_code")
+                    put("code", code)
+                    put("redirect_uri", config.redirectUri)
+                    put("client_id", config.clientId)
+                    put("code_verifier", pending.codeVerifier)
+                    if (config.clientAuthStyle == OAuthClientAuthStyle.RequestBody && config.clientSecret.isNotBlank()) {
+                        put("client_secret", config.clientSecret)
+                    }
+                    putAll(config.tokenExtraParams)
+                },
+            )
+        } catch (error: OAuthAuthorizationException) {
+            throw error
+        } catch (error: Exception) {
+            throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.TOKEN_EXCHANGE_FAILED,
+                technicalMessage = "OAuth token exchange failed for provider=${config.providerId}: ${error.message}",
+                cause = error,
+            )
+        }
         tokenStore.saveToken(token)
         return OAuthCallbackResult(providerId = config.providerId, token = token)
     }
@@ -147,11 +200,25 @@ class OAuthAuthorizationManager(
             connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
         }
         if (responseCode !in 200..299) {
-            throw IllegalStateException("OAuth token request failed ($responseCode): $responseText")
+            throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.TOKEN_EXCHANGE_FAILED,
+                technicalMessage = "OAuth token request failed ($responseCode): $responseText",
+            )
         }
-        val response = json.parseToJsonElement(responseText) as JsonObject
+        val response = try {
+            json.parseToJsonElement(responseText) as JsonObject
+        } catch (error: Exception) {
+            throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
+                technicalMessage = "OAuth token response was not a JSON object",
+                cause = error,
+            )
+        }
         val accessToken = response.string("access_token")
-            ?: throw IllegalStateException("OAuth token response did not include access_token")
+            ?: throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
+                technicalMessage = "OAuth token response did not include access_token",
+            )
         val expiresInSeconds = response.string("expires_in")?.toLongOrNull()
         OAuthToken(
             providerId = config.providerId,

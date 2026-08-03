@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#241946</color>
+    <color name="widget_preview_background">#FFFFFFFF</color>
+    <color name="widget_preview_surface">#FFFAFAFA</color>
+    <color name="widget_preview_primary">#FF171717</color>
+    <color name="widget_preview_secondary">#FF4D4D4D</color>
+    <color name="widget_preview_brand">#FF66488F</color>
+    <color name="widget_preview_activity">#FFAA4D00</color>
+    <color name="widget_preview_heart">#FFD8001B</color>
+    <color name="widget_preview_sleep">#FF7D00CC</color>
 </resources>

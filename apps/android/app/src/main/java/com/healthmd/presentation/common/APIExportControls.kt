@@ -46,6 +46,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
@@ -56,6 +58,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.healthmd.R
+import com.healthmd.data.export.APIExportAuthorization
+import com.healthmd.data.export.APIExportAuthorizationValidationReason
+import com.healthmd.data.export.APIExportAuthorizationValidationResult
+import com.healthmd.data.export.APIExportHeaderValidationException
+import com.healthmd.data.export.APIExportHeaderValidationReason
 import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportTarget
@@ -81,18 +89,18 @@ fun ExportTargetSelector(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
-            text = "Export Target",
+            text = stringResource(R.string.api_export_target_title),
             style = MaterialTheme.typography.labelSmall,
             color = AppColors.textMuted,
         )
         ExportTargetRow(
-            title = "Device folder",
+            title = stringResource(R.string.export_preview_device_destination),
             subtitle = folderSubtitle,
             selected = selectedTarget == ExportTarget.DEVICE_FOLDER,
             onClick = { onTargetSelected(ExportTarget.DEVICE_FOLDER) },
         )
         ExportTargetRow(
-            title = "API endpoint",
+            title = stringResource(R.string.export_preview_api_destination),
             subtitle = apiSubtitle,
             selected = selectedTarget == ExportTarget.API_ENDPOINT,
             onClick = { onTargetSelected(ExportTarget.API_ENDPOINT) },
@@ -144,29 +152,55 @@ fun APIExportSettingsDialog(
     var authorization by remember { mutableStateOf("") }
     var requestHeaders by remember { mutableStateOf("") }
     var requestHeadersExpanded by remember { mutableStateOf(false) }
-    var localError by remember { mutableStateOf<String?>(null) }
+    var localError by remember { mutableStateOf<APISettingsValidationError?>(null) }
 
     LaunchedEffect(configurationError) {
-        if (configurationError != null) localError = configurationError
+        // View models currently expose only display strings. Do not render those strings because
+        // they may be exception/parser English; localize a safe boundary error instead.
+        if (configurationError != null) {
+            localError = APISettingsValidationError.ConfigurationSaveFailed
+        }
     }
 
     val saveSettings = {
-        if (!APIExportEndpoint.isConfigured(endpointUrl)) {
-            localError = "Enter a valid HTTP or HTTPS URL without a fragment or embedded username/password."
-        } else {
-            val headerError = requestHeaders
-                .takeIf { it.isNotBlank() }
-                ?.let { raw -> runCatching { APIExportHeaders.parse(raw) }.exceptionOrNull()?.message }
-            if (headerError != null) {
-                localError = headerError
-                requestHeadersExpanded = true
-            } else {
-                onSave(
-                    endpointUrl,
-                    authorization.takeIf { it.isNotBlank() },
-                    requestHeaders.takeIf { it.isNotBlank() },
-                )
-                onDismiss()
+        when {
+            !APIExportEndpoint.isConfigured(endpointUrl) -> {
+                localError = APISettingsValidationError.InvalidEndpoint
+            }
+            else -> {
+                val authorizationError = authorization
+                    .takeIf { it.isNotBlank() }
+                    ?.let(APIExportAuthorization::validate)
+                    ?.let { result ->
+                        (result as? APIExportAuthorizationValidationResult.Invalid)?.reason
+                    }
+                val headerError = requestHeaders
+                    .takeIf { it.isNotBlank() }
+                    ?.let { raw ->
+                        try {
+                            APIExportHeaders.parse(raw)
+                            null
+                        } catch (error: APIExportHeaderValidationException) {
+                            error.reason
+                        }
+                    }
+                when {
+                    authorizationError != null -> {
+                        localError = APISettingsValidationError.InvalidAuthorization(authorizationError)
+                    }
+                    headerError != null -> {
+                        localError = APISettingsValidationError.InvalidHeaders(headerError)
+                        requestHeadersExpanded = true
+                    }
+                    else -> {
+                        onSave(
+                            endpointUrl,
+                            authorization.takeIf { it.isNotBlank() },
+                            requestHeaders.takeIf { it.isNotBlank() },
+                        )
+                        onDismiss()
+                    }
+                }
             }
         }
     }
@@ -203,15 +237,15 @@ fun APIExportSettingsDialog(
                             .padding(GeistSpacing.space6),
                         verticalArrangement = Arrangement.spacedBy(GeistSpacing.space6),
                     ) {
-                        APISettingsSection(title = "Endpoint") {
+                        APISettingsSection(title = stringResource(R.string.api_export_section_endpoint)) {
                             OutlinedTextField(
                                 value = endpointUrl,
                                 onValueChange = {
                                     endpointUrl = it
                                     localError = null
                                 },
-                                label = { Text("Endpoint URL") },
-                                placeholder = { Text("https://api.example.com/healthmd") },
+                                label = { Text(stringResource(R.string.api_export_endpoint_url_label)) },
+                                placeholder = { Text(stringResource(R.string.api_export_endpoint_example)) },
                                 textStyle = GeistType.copy14Mono,
                                 keyboardOptions = KeyboardOptions(
                                     keyboardType = KeyboardType.Uri,
@@ -221,17 +255,23 @@ fun APIExportSettingsDialog(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Text(
-                                "Required. Keep API keys and other secrets out of the URL.",
+                                stringResource(R.string.api_export_endpoint_help),
                                 style = GeistType.copy13,
                                 color = colors.secondary,
                             )
                         }
 
-                        APISettingsSection(title = "Authorization", optional = true) {
+                        APISettingsSection(
+                            title = stringResource(R.string.api_export_literal_authorization),
+                            optional = true,
+                        ) {
                             if (authorizationConfigured) {
                                 StoredSecretStatus(
-                                    label = "Authorization Saved",
-                                    removeLabel = "Remove Credential",
+                                    label = stringResource(
+                                        R.string.api_export_authorization_saved,
+                                        stringResource(R.string.api_export_literal_authorization),
+                                    ),
+                                    removeLabel = stringResource(R.string.api_export_remove_credential),
                                     onRemove = {
                                         localError = null
                                         onClearAuthorization()
@@ -245,10 +285,32 @@ fun APIExportSettingsDialog(
                                     localError = null
                                 },
                                 label = {
-                                    Text(if (authorizationConfigured) "New Authorization" else "Bearer Token or Basic Credential")
+                                    Text(
+                                        if (authorizationConfigured) {
+                                            stringResource(
+                                                R.string.api_export_new_authorization_label,
+                                                stringResource(R.string.api_export_literal_authorization),
+                                            )
+                                        } else {
+                                            stringResource(
+                                                R.string.api_export_authorization_label,
+                                                stringResource(R.string.api_export_literal_bearer),
+                                                stringResource(R.string.api_export_literal_basic),
+                                            )
+                                        },
+                                    )
                                 },
                                 placeholder = {
-                                    Text(if (authorizationConfigured) "Enter a value to replace the saved one" else "Token or Authorization value")
+                                    Text(
+                                        if (authorizationConfigured) {
+                                            stringResource(R.string.api_export_authorization_replacement_placeholder)
+                                        } else {
+                                            stringResource(
+                                                R.string.api_export_authorization_placeholder,
+                                                stringResource(R.string.api_export_literal_authorization),
+                                            )
+                                        },
+                                    )
                                 },
                                 textStyle = GeistType.copy14Mono,
                                 visualTransformation = PasswordVisualTransformation(),
@@ -261,16 +323,26 @@ fun APIExportSettingsDialog(
                             )
                             Text(
                                 if (authorizationConfigured) {
-                                    "Leave blank to keep the saved value. Plain tokens use Bearer automatically."
+                                    stringResource(
+                                        R.string.api_export_authorization_saved_help,
+                                        stringResource(R.string.api_export_literal_bearer),
+                                    )
                                 } else {
-                                    "Plain tokens use Bearer automatically. Bearer and Basic values are accepted."
+                                    stringResource(
+                                        R.string.api_export_authorization_help,
+                                        stringResource(R.string.api_export_literal_bearer),
+                                        stringResource(R.string.api_export_literal_basic),
+                                    )
                                 },
                                 style = GeistType.copy13,
                                 color = colors.secondary,
                             )
                         }
 
-                        APISettingsSection(title = "Custom Headers", optional = true) {
+                        APISettingsSection(
+                            title = stringResource(R.string.api_export_custom_headers_title),
+                            optional = true,
+                        ) {
                             CustomHeadersDisclosure(
                                 configured = requestHeadersConfigured,
                                 expanded = requestHeadersExpanded,
@@ -279,8 +351,8 @@ fun APIExportSettingsDialog(
                             if (requestHeadersExpanded) {
                                 if (requestHeadersConfigured) {
                                     StoredSecretStatus(
-                                        label = "Custom Headers Saved",
-                                        removeLabel = "Remove Headers",
+                                        label = stringResource(R.string.api_export_custom_headers_saved),
+                                        removeLabel = stringResource(R.string.api_export_remove_headers),
                                         onRemove = {
                                             localError = null
                                             onClearRequestHeaders()
@@ -294,10 +366,18 @@ fun APIExportSettingsDialog(
                                         localError = null
                                     },
                                     label = {
-                                        Text(if (requestHeadersConfigured) "Replacement Headers" else "Request Headers")
+                                        Text(
+                                            stringResource(
+                                                if (requestHeadersConfigured) {
+                                                    R.string.api_export_replacement_headers_label
+                                                } else {
+                                                    R.string.api_export_request_headers_label
+                                                },
+                                            ),
+                                        )
                                     },
                                     placeholder = {
-                                        Text("X-API-Key: secret\nX-Client-ID: healthmd")
+                                        Text(stringResource(R.string.api_export_headers_example))
                                     },
                                     textStyle = GeistType.copy14Mono,
                                     minLines = 3,
@@ -306,9 +386,16 @@ fun APIExportSettingsDialog(
                                 )
                                 Text(
                                     if (requestHeadersConfigured) {
-                                        "Enter the complete replacement set, one Name: value per line."
+                                        stringResource(
+                                            R.string.api_export_replacement_headers_help,
+                                            stringResource(R.string.api_export_header_line_syntax),
+                                        )
                                     } else {
-                                        "Use one Name: value per line. Health.md keeps transport headers app-managed."
+                                        stringResource(
+                                            R.string.api_export_request_headers_help,
+                                            stringResource(R.string.api_export_header_line_syntax),
+                                            stringResource(R.string.app_name),
+                                        )
                                     },
                                     style = GeistType.copy13,
                                     color = colors.secondary,
@@ -317,7 +404,7 @@ fun APIExportSettingsDialog(
                         }
 
                         localError?.let { error ->
-                            APISettingsError(message = error)
+                            APISettingsError(error = error)
                         }
                     }
 
@@ -329,12 +416,12 @@ fun APIExportSettingsDialog(
                         horizontalArrangement = Arrangement.spacedBy(GeistSpacing.space3),
                     ) {
                         SecondaryButton(
-                            text = "Close Settings",
+                            text = stringResource(R.string.api_export_close_settings),
                             onClick = onDismiss,
                             modifier = Modifier.weight(1f),
                         )
                         PrimaryButton(
-                            text = "Save Settings",
+                            text = stringResource(R.string.api_export_save_settings),
                             onClick = saveSettings,
                             modifier = Modifier.weight(1f),
                         )
@@ -362,12 +449,18 @@ private fun APISettingsDialogHeader(onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
         ) {
             Text(
-                text = "API Export",
+                text = stringResource(R.string.api_export_dialog_title),
                 style = GeistType.heading20,
                 color = colors.primary,
             )
             Text(
-                text = "Send selected records as one JSON POST to an HTTP or HTTPS endpoint you control.",
+                text = stringResource(
+                    R.string.api_export_dialog_description,
+                    stringResource(R.string.api_export_literal_json),
+                    stringResource(R.string.api_export_literal_post),
+                    stringResource(R.string.api_export_literal_http),
+                    stringResource(R.string.api_export_literal_https),
+                ),
                 style = GeistType.copy13,
                 color = colors.secondary,
             )
@@ -378,7 +471,7 @@ private fun APISettingsDialogHeader(onDismiss: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Outlined.Close,
-                contentDescription = "Close API export settings",
+                contentDescription = stringResource(R.string.api_export_close_content_description),
                 tint = colors.secondary,
             )
         }
@@ -409,7 +502,7 @@ private fun APISettingsSection(
             )
             if (optional) {
                 Text(
-                    text = "Optional",
+                    text = stringResource(R.string.api_export_optional_label),
                     style = GeistType.label12,
                     color = colors.disabled,
                 )
@@ -478,26 +571,123 @@ private fun CustomHeadersDisclosure(
             verticalArrangement = Arrangement.spacedBy(GeistSpacing.space1),
         ) {
             Text(
-                text = if (configured) "Manage Request Headers" else "Add Request Headers",
+                text = stringResource(
+                    if (configured) {
+                        R.string.api_export_manage_request_headers
+                    } else {
+                        R.string.api_export_add_request_headers
+                    },
+                ),
                 style = GeistType.label14,
                 color = colors.primary,
             )
             Text(
-                text = if (configured) "Saved securely · values hidden" else "Add API keys or service-specific values",
+                text = stringResource(
+                    if (configured) {
+                        R.string.api_export_headers_saved_hidden
+                    } else {
+                        R.string.api_export_headers_add_help
+                    },
+                ),
                 style = GeistType.copy13,
                 color = if (configured) colors.success else colors.secondary,
             )
         }
         Icon(
             imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-            contentDescription = if (expanded) "Collapse custom headers" else "Expand custom headers",
+            contentDescription = stringResource(
+                if (expanded) {
+                    R.string.api_export_collapse_custom_headers
+                } else {
+                    R.string.api_export_expand_custom_headers
+                },
+            ),
             tint = colors.secondary,
         )
     }
 }
 
+private sealed interface APISettingsValidationError {
+    data object InvalidEndpoint : APISettingsValidationError
+    data class InvalidAuthorization(
+        val reason: APIExportAuthorizationValidationReason,
+    ) : APISettingsValidationError
+    data class InvalidHeaders(
+        val reason: APIExportHeaderValidationReason,
+    ) : APISettingsValidationError
+    data object ConfigurationSaveFailed : APISettingsValidationError
+}
+
 @Composable
-private fun APISettingsError(message: String) {
+private fun APISettingsValidationError.apiExportLocalizedMessage(): String = when (this) {
+    APISettingsValidationError.InvalidEndpoint -> stringResource(
+        R.string.api_export_error_invalid_endpoint,
+        stringResource(R.string.api_export_literal_http),
+        stringResource(R.string.api_export_literal_https),
+    )
+    is APISettingsValidationError.InvalidAuthorization -> when (reason) {
+        APIExportAuthorizationValidationReason.EMPTY ->
+            stringResource(
+                R.string.api_export_error_authorization_empty,
+                stringResource(R.string.api_export_literal_bearer),
+                stringResource(R.string.api_export_literal_authorization),
+            )
+        APIExportAuthorizationValidationReason.UNSUPPORTED_CHARACTERS ->
+            stringResource(
+                R.string.api_export_error_authorization_characters,
+                stringResource(R.string.api_export_literal_authorization),
+            )
+    }
+    is APISettingsValidationError.InvalidHeaders -> when (val reason = reason) {
+        is APIExportHeaderValidationReason.TotalSizeExceeded ->
+            stringResource(R.string.api_export_error_headers_total_size, reason.maximumCharacters)
+        APIExportHeaderValidationReason.UnsupportedLineBreak ->
+            stringResource(R.string.api_export_error_headers_line_break)
+        is APIExportHeaderValidationReason.MissingSeparator ->
+            stringResource(
+                R.string.api_export_error_header_missing_separator,
+                reason.headerIndex,
+                stringResource(R.string.api_export_header_line_syntax),
+            )
+        is APIExportHeaderValidationReason.InvalidName ->
+            stringResource(
+                R.string.api_export_error_header_invalid_name,
+                reason.headerIndex,
+                reason.maximumNameCharacters,
+                stringResource(R.string.api_export_literal_http),
+            )
+        is APIExportHeaderValidationReason.ReservedName ->
+            stringResource(
+                R.string.api_export_error_header_reserved_name,
+                reason.headerName,
+                stringResource(R.string.app_name),
+            )
+        is APIExportHeaderValidationReason.DuplicateName ->
+            stringResource(R.string.api_export_error_header_duplicate_name, reason.headerName)
+        is APIExportHeaderValidationReason.ValueTooLong ->
+            stringResource(
+                R.string.api_export_error_header_value_too_long,
+                reason.headerName,
+                reason.maximumValueCharacters,
+            )
+        is APIExportHeaderValidationReason.UnsupportedValueCharacters ->
+            stringResource(
+                R.string.api_export_error_header_value_characters,
+                reason.headerName,
+            )
+        is APIExportHeaderValidationReason.TooManyHeaders ->
+            pluralStringResource(
+                R.plurals.api_export_error_header_count,
+                reason.maximumCount,
+                reason.maximumCount,
+            )
+    }
+    APISettingsValidationError.ConfigurationSaveFailed ->
+        stringResource(R.string.api_export_error_save_failed)
+}
+
+@Composable
+private fun APISettingsError(error: APISettingsValidationError) {
     val colors = LocalGeistColors.current
     val shape = RoundedCornerShape(GeistRadii.small)
     Row(
@@ -517,7 +707,7 @@ private fun APISettingsError(message: String) {
             modifier = Modifier.size(GeistSpacing.space4),
         )
         Text(
-            text = message,
+            text = error.apiExportLocalizedMessage(),
             style = GeistType.copy13,
             color = colors.error,
             modifier = Modifier.weight(1f),

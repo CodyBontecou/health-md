@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
     <!-- Common -->
     <string name="ok">ठीक है</string>
@@ -15,9 +15,9 @@
     <string name="action_set_start_date">आरंभ तिथि निर्धारित करें</string>
     <string name="action_set_end_date">समाप्ति तिथि निर्धारित करें</string>
     <string name="action_cancel_selection">चयन रद्द करें</string>
-    <string name="action_configure_endpoint">समापनबिंदु कॉन्फ़िगर करें</string>
+    <string name="action_configure_endpoint">एंडपॉइंट कॉन्फ़िगर करें</string>
     <string name="action_dismiss_error">त्रुटि ख़ारिज करें</string>
-    <string name="action_clear_history">साफ़ इतिहास</string>
+    <string name="action_clear_history">इतिहास साफ़ करें</string>
     <string name="action_keep_history">इतिहास रखें</string>
     <string name="action_retry_export">निर्यात का पुनः प्रयास करें</string>
     <string name="action_retrying_export">निर्यात का पुनः प्रयास किया जा रहा है...</string>
@@ -41,23 +41,103 @@
     <string name="health_connect_error_settings_launch">इस डिवाइस पर Health Connect की सेटिंग्स नहीं खोली जा सकीं।</string>
     <string name="health_connect_error_install_launch">इस डिवाइस पर Health Connect का Play Store पेज नहीं खोला जा सका।</string>
     <string name="health_connect_error_history_unavailable">Health Connect का यह संस्करण पूरे इतिहास का एक्सेस नहीं दे सकता। Health Connect को अपडेट करें या पिछले 30 दिनों की तारीखें चुनें।</string>
-    <string name="health_connect_error_background_unavailable">यह Health Connect प्रदाता बैकग्राउंड में डेटा नहीं पढ़ सकता। शेड्यूल किए गए निर्यात चालू करने से पहले Health Connect को अपडेट करें।</string>
+    <string name="health_connect_error_background_unavailable">यह Health Connect प्रदाता बैकग्राउंड में डेटा नहीं पढ़ सकता। शेड्यूल किए गए निर्यात या बैकग्राउंड विजेट रीफ़्रेश चालू करने से पहले Health Connect को अपडेट करें।</string>
     <string name="permissions_required_title">अनुमतियाँ आवश्यक हैं</string>
     <string name="permissions_required_message">अपने स्वास्थ्य डेटा को निर्यात करने के लिए Health Connect अनुमतियाँ दें।</string>
     <string name="permissions_grant_button">अनुमतियाँ दें</string>
-    <string name="history_permission_required_title">Health Connect इतिहास पहुंच की आवश्यकता है</string>
+    <string name="history_permission_required_title">Health Connect के इतिहास का एक्सेस ज़रूरी है</string>
     <string name="history_permission_required_message">Health Connect इस ऐप को पहली बार अनुमति मिलने से लगभग 30 दिन पहले तक का डेटा ही पढ़ने देता है। इतिहास का एक्सेस दें, ताकि चुनी गई पुरानी तारीखें चुपचाप छोड़ी जाने के बजाय निर्यात हों।</string>
-    <string name="history_permission_grant_button">इतिहास पहुंच प्रदान करें</string>
+    <string name="history_permission_grant_button">इतिहास का एक्सेस दें</string>
+
+    <!-- Android home-screen widgets -->
+    <string name="widget_health_summary_name">स्वास्थ्य सारांश</string>
+    <string name="widget_health_summary_description">Health.md से आज की गतिविधि, नींद, हृदय और रिकवरी मेट्रिक्स।</string>
+    <string name="widget_activity_name">गतिविधि</string>
+    <string name="widget_activity_description">Health.md से कदम, सक्रिय कैलोरी और व्यायाम की प्रगति।</string>
+    <string name="widget_heart_range_name">हृदय गति सीमा</string>
+    <string name="widget_heart_range_description">Health.md से सात दिनों की न्यूनतम, औसत और अधिकतम हृदय गति।</string>
+    <string name="widget_sleep_name">नींद</string>
+    <string name="widget_sleep_description">Health.md से पिछली रात की नींद और सात दिनों का नींद चार्ट।</string>
+    <string name="widget_label_today">आज</string>
+    <string name="widget_label_move">गतिविधि</string>
+    <string name="widget_label_exercise">व्यायाम</string>
+    <string name="widget_label_sleep">नींद</string>
+    <string name="widget_label_resting">आराम के समय</string>
+    <string name="widget_label_heart_range">हृदय गति सीमा</string>
+    <string name="widget_label_average">औसत</string>
+    <string name="widget_label_minimum">न्यूनतम %1$s</string>
+    <string name="widget_label_maximum">अधिकतम %1$s</string>
+    <string name="widget_label_last_night">पिछली रात</string>
+    <string name="widget_label_seven_day_sleep">7 दिनों की नींद</string>
+    <string name="widget_label_seven_day_average">7 दिनों का औसत</string>
+    <string name="widget_label_bedtime">सोने का समय</string>
+    <string name="widget_label_wake">जागने का समय</string>
+    <string name="widget_unit_steps">%1$s कदम</string>
+    <string name="widget_unit_kilocalories">%1$s kcal</string>
+    <string name="widget_unit_minutes">%1$s मिनट</string>
+    <string name="widget_unit_hours">%1$s घंटे</string>
+    <string name="widget_unit_bpm">%1$s bpm</string>
+    <string name="widget_unit_milliseconds">%1$s ms</string>
+    <string name="widget_goal_eight_hours">लक्ष्य: %1$s घंटे</string>
+    <string name="widget_state_loading">स्वास्थ्य डेटा लोड हो रहा है…</string>
+    <string name="widget_state_open_for_access">Health Connect एक्सेस की अनुमति देने के लिए Health.md खोलें।</string>
+    <string name="widget_state_background_access">इस विजेट को रीफ़्रेश करने के लिए Health.md खोलें।</string>
+    <string name="widget_state_health_connect_unavailable">Health Connect सेट अप करें, फिर Health.md खोलें।</string>
+    <string name="widget_state_unlock">Health.md को रीफ़्रेश करने के लिए अपना फ़ोन अनलॉक करें।</string>
+    <string name="widget_state_no_summary_data">कोई स्वास्थ्य सारांश डेटा नहीं</string>
+    <string name="widget_state_no_activity_data">कोई गतिविधि डेटा नहीं</string>
+    <string name="widget_state_no_heart_data">कोई हृदय डेटा नहीं</string>
+    <string name="widget_state_no_sleep_data">कोई नींद डेटा नहीं</string>
+    <plurals name="widget_state_updated_minutes">
+        <item quantity="one">%1$s मिनट पहले अपडेट किया गया</item>
+        <item quantity="other">%1$s मिनट पहले अपडेट किया गया</item>
+    </plurals>
+    <plurals name="widget_state_updated_hours">
+        <item quantity="one">%1$s घंटा पहले अपडेट किया गया</item>
+        <item quantity="other">%1$s घंटे पहले अपडेट किया गया</item>
+    </plurals>
+    <string name="widget_setup_title">%1$s सेट अप करें</string>
+    <string name="widget_setup_body">Health.md केवल इस विजेट में दिखाए गए गतिविधि, नींद या हृदय मेट्रिक्स पढ़ता है। माप इसी डिवाइस पर रहते हैं।</string>
+    <string name="widget_setup_foreground_access">विजेट को स्वास्थ्य एक्सेस दें</string>
+    <string name="widget_setup_background_access">बैकग्राउंड रीफ़्रेश की अनुमति दें</string>
+    <string name="widget_setup_background_body">Health.md खुला न होने पर भी बैकग्राउंड एक्सेस विजेट को वर्तमान रखता है। आप इसके बिना भी विजेट जोड़ सकते हैं।</string>
+    <string name="widget_setup_add">विजेट जोड़ें</string>
+    <string name="widget_setup_adding">विजेट जोड़ा जा रहा है…</string>
+    <string name="widget_setup_access_ready">Health Connect एक्सेस तैयार है।</string>
+    <string name="widget_setup_partial_access">विजेट वे मेट्रिक्स दिखाएगा जिन्हें आपने साझा करना चुना है।</string>
+    <string name="widget_setup_error">विजेट सेट अप नहीं किया जा सका। Health Connect जाँचें और फिर से कोशिश करें।</string>
+    <string name="widget_preview_summary_value">8,742 कदम</string>
+    <string name="widget_preview_summary_detail">7.5 घंटे की नींद · 58 bpm</string>
+    <string name="widget_preview_activity_value">421 kcal · 37 मिनट</string>
+    <string name="widget_preview_activity_detail">8,742 / 10,000 कदम</string>
+    <string name="widget_preview_heart_value">औसत 72 bpm</string>
+    <string name="widget_preview_heart_detail">47 मिनट · अधिकतम 151 · 46 ms RMSSD</string>
+    <string name="widget_preview_sleep_value">पिछली रात 7.5 घंटे</string>
+    <string name="widget_preview_sleep_detail">रात 10:30 – सुबह 6:30</string>
+    <string name="widget_settings_title">होम-स्क्रीन विजेट</string>
+    <string name="widget_settings_none">कोई विजेट इंस्टॉल नहीं है</string>
+    <string name="widget_settings_add_from_home">अपनी होम स्क्रीन के विजेट पिकर से Health.md जोड़ें।</string>
+    <string name="widget_settings_current">विजेट अप-टू-डेट हैं और बैकग्राउंड में रीफ़्रेश हो सकते हैं।</string>
+    <string name="widget_settings_foreground_only">Health.md खुला होने पर विजेट रीफ़्रेश होते हैं।</string>
+    <string name="widget_settings_stale">कैश किए गए मान पुराने हैं। मापों पर भरोसा करने से पहले उन्हें रीफ़्रेश करें।</string>
+    <string name="widget_settings_access_required">Health Connect एक्सेस आवश्यक है।</string>
+    <string name="widget_settings_no_data">अभी कोई विजेट डेटा उपलब्ध नहीं है।</string>
+    <string name="widget_settings_refresh">विजेट रीफ़्रेश करें</string>
+    <string name="widget_settings_manage_access">विजेट एक्सेस प्रबंधित करें</string>
+    <plurals name="widget_settings_count">
+        <item quantity="one">%1$s विजेट इंस्टॉल है</item>
+        <item quantity="other">%1$s विजेट इंस्टॉल हैं</item>
+    </plurals>
     <!-- Date range -->
-    <string name="section_date_range">तारीख की श्रेणी</string>
-    <string name="date_shortcut_1d">1दिन</string>
-    <string name="date_shortcut_7d">7दिन</string>
-    <string name="date_shortcut_30d">30दिन</string>
-    <string name="date_shortcut_90d">90दिन</string>
+    <string name="section_date_range">तारीख की सीमा</string>
+    <string name="date_shortcut_1d">1 दिन</string>
+    <string name="date_shortcut_7d">7 दिन</string>
+    <string name="date_shortcut_30d">30 दिन</string>
+    <string name="date_shortcut_90d">90 दिन</string>
     <string name="date_shortcut_all">सभी</string>
     <string name="date_option_today">आज</string>
     <string name="date_option_yesterday">कल</string>
-    <string name="date_option_all_time">हर समय</string>
+    <string name="date_option_all_time">पूरी अवधि</string>
     <string name="date_option_custom">कस्टम</string>
     <string name="date_start_label">आरंभ तिथि</string>
     <string name="date_end_label">समाप्ति तिथि</string>
@@ -75,14 +155,17 @@
     <string name="export_preview_done">पूर्ण</string>
     <string name="export_preview_building">पूर्वावलोकन बनाया जा रहा है…</string>
     <string name="export_preview_device_destination">डिवाइस फ़ोल्डर</string>
-    <string name="export_preview_api_destination">API समापन बिंदु</string>
+    <string name="export_preview_api_destination">API एंडपॉइंट</string>
     <string name="export_preview_complete_file">निर्यात की जाने वाली पूरी %1$s फ़ाइल दिखाई जा रही है।</string>
     <string name="export_preview_truncated_file">इस %1$s फ़ाइल का संक्षिप्त पूर्वावलोकन दिखाया जा रहा है। पूर्ण निर्यात में सभी डेटा शामिल रहेगा।</string>
     <string name="export_preview_limited_one">डेटा वाले सबसे हाल के दिन का पूर्वावलोकन। पूर्ण निर्यात हर चुनी गई तारीख के लिए चलेगा।</string>
     <string name="export_preview_limited_other">डेटा वाले सबसे हाल के %1$d दिनों का पूर्वावलोकन। पूर्ण निर्यात हर चुनी गई तारीख के लिए चलेगा।</string>
     <string name="export_preview_no_data_title">पूर्वावलोकन के लिए कोई डेटा नहीं</string>
     <string name="export_preview_no_data_message">चुनी गई तारीखों के लिए कोई स्वास्थ्य डेटा नहीं है, या कोई फ़ॉर्मैट नहीं चुना गया है।</string>
-    <string name="free_exports_remaining">%d निःशुल्क निर्यात बचे हैं</string>
+    <plurals name="free_exports_remaining">
+        <item quantity="one">%1$d निःशुल्क निर्यात शेष</item>
+        <item quantity="other">%1$d निःशुल्क निर्यात शेष</item>
+    </plurals>
     <string name="unlock_button">Health.md अनलॉक करें</string>
     <string name="export_result_days">%1$d/%2$d दिन निर्यात किए गए</string>
     <string name="open_folder">फ़ोल्डर खोलें</string>
@@ -92,10 +175,16 @@
     <string name="export_diagnostics_title_partial">आंशिक निर्यात</string>
     <string name="export_diagnostics_title_failed">निर्यात विफल</string>
     <string name="export_diagnostics_title_cancelled">निर्यात रद्द कर दिया गया</string>
-    <string name="export_diagnostics_failed_count">%d दिन निर्यात नहीं किया</string>
+    <plurals name="export_diagnostics_failed_count">
+        <item quantity="one">%1$d दिन निर्यात नहीं हुआ</item>
+        <item quantity="other">%1$d दिन निर्यात नहीं हुए</item>
+    </plurals>
     <string name="export_diagnostics_cancelled_message">हर दिन संसाधित होने से पहले निर्यात बंद हो गया।</string>
     <string name="export_diagnostics_reasons_title">निदान</string>
-    <string name="export_diagnostics_reason_count">%1$s: %2$d दिन</string>
+    <plurals name="export_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d दिन</item>
+        <item quantity="other">%1$s: %2$d दिन</item>
+    </plurals>
     <string name="export_diagnostics_date_list">विफल दिनांक: %s</string>
     <string name="export_diagnostics_date_list_more">विफल दिनांक: %1$s, +%2$d अधिक</string>
     <string name="export_diagnostics_no_details">प्रतिदिन का कोई विवरण दर्ज नहीं किया गया। छोटी रेंज आज़माएं और Health Connect अनुमतियां जांचें।</string>
@@ -104,35 +193,35 @@
     <string name="export_failure_no_data_label">कोई Health Connect डेटा नहीं</string>
     <string name="export_failure_access_denied_label">स्वास्थ्य पहुंच अस्वीकृत</string>
     <string name="export_failure_file_write_label">फ़ाइल लिखना विफल रहा</string>
-    <string name="export_failure_rate_limited_label">Health Connect दर सीमा</string>
+    <string name="export_failure_rate_limited_label">Health Connect रेट लिमिट</string>
     <string name="export_failure_health_connect_label">Health Connect की त्रुटि</string>
     <string name="export_failure_device_locked_label">रिबूट के बाद डिवाइस लॉक हो गया</string>
     <string name="export_failure_background_permission_label">पृष्ठभूमि पहुंच अनुपलब्ध</string>
-    <string name="export_failure_invalid_api_endpoint_label">अमान्य API समापनबिंदु</string>
+    <string name="export_failure_invalid_api_endpoint_label">अमान्य API एंडपॉइंट</string>
     <string name="export_failure_network_label">API नेटवर्क त्रुटि</string>
-    <string name="export_failure_api_rejected_label">APIअस्वीकृत निर्यात</string>
+    <string name="export_failure_api_rejected_label">API ने निर्यात अस्वीकार किया</string>
     <string name="export_failure_unknown_label">अज्ञात विफलता</string>
-    <string name="export_guidance_rate_limit">Health Connect पढ़ने की संख्या सीमित। थोड़ी देर प्रतीक्षा करें, छोटी तिथि सीमा का पुनः प्रयास करें, या शेष तिथियों को बाद में निर्यात करें।</string>
+    <string name="export_guidance_rate_limit">Health Connect ने डेटा पढ़ने की संख्या सीमित कर दी है। थोड़ी देर प्रतीक्षा करें, छोटी तारीख सीमा के साथ फिर से कोशिश करें या बाकी तारीखें बाद में निर्यात करें।</string>
     <string name="export_guidance_historical_permission">Health Connect खोलें और गुम डेटा/इतिहास की अनुमति दें, फिर विफल श्रेणी का पुनः प्रयास करें।</string>
-    <string name="export_guidance_file_write">अपने निर्यात फ़ोल्डर को फिर से चुनें ताकि Health.md वहां फ़ाइलें लिख सकें, फिर पुनः प्रयास करें।</string>
+    <string name="export_guidance_file_write">अपना निर्यात फ़ोल्डर फिर से चुनें, ताकि Health.md वहाँ फ़ाइलें लिख सके, फिर दोबारा कोशिश करें।</string>
     <string name="export_guidance_no_data">बिना पठनीय Health Connect डेटा वाले दिन छोड़ दिए जाते हैं। यदि इन तिथियों में डेटा होना चाहिए, तो पुष्टि करें कि आपका ट्रैकर ऐप Health Connect के साथ समन्वयित हो रहा है, इतिहास तक पहुंच प्रदान करें, और विफल सीमा का पुनः प्रयास करें।</string>
     <string name="export_guidance_background_permission">शेड्यूल किए गए निर्यात के लिए Health Connect का बैकग्राउंड एक्सेस दें, फिर से कोशिश करें।</string>
     <string name="export_guidance_device_locked">रीबूट के बाद एक बार अपने फोन को अनलॉक करें, फिर पुनः प्रयास करें।</string>
     <string name="export_guidance_no_folder">एक निर्यात फ़ोल्डर चुनें और पुनः प्रयास करें।</string>
     <string name="export_guidance_health_connect">Health Connect अनुमतियाँ जाँचें और छोटी दिनांक सीमा पुनः प्रयास करें।</string>
-    <string name="export_guidance_api_configuration">API समापन बिंदु सेटिंग खोलें और एक वैध HTTP या HTTPS URL दर्ज करें।</string>
+    <string name="export_guidance_api_configuration">API एंडपॉइंट सेटिंग्स खोलें और एक मान्य HTTP या HTTPS URL दर्ज करें।</string>
     <string name="export_guidance_network">अपना कनेक्शन और एंडपॉइंट का TLS प्रमाणपत्र जांचें, फिर पुनः प्रयास करें।</string>
-    <string name="export_guidance_api_rejected">पुनः प्रयास करने से पहले समापन बिंदु पथ, सहेजे गए प्राधिकरण या कस्टम हेडर, अनुरोध सीमाएं और सर्वर लॉग की जांच करें।</string>
+    <string name="export_guidance_api_rejected">दोबारा कोशिश करने से पहले एंडपॉइंट पाथ, सहेजा गया Authorization या कस्टम हेडर, अनुरोध सीमाएँ और सर्वर लॉग जाँचें।</string>
     <string name="export_guidance_unknown">छोटी रेंज के साथ पुनः प्रयास करें. यदि यह विफल रहता है, तो इस निर्यात इतिहास के साथ प्रतिक्रिया भेजें।</string>
     <!-- Export failure messages -->
-    <string name="error_no_health_data">इस तारीख की श्रेणी के लिए कोई स्वास्थ्य डेटा नहीं मिला</string>
+    <string name="error_no_health_data">इस तारीख सीमा के लिए कोई स्वास्थ्य डेटा नहीं मिला</string>
     <string name="error_file_write">फ़ाइल लिखने में विफल \u2014 फ़ोल्डर पहुँच जाँचें</string>
     <string name="error_access_denied">निर्यात फ़ोल्डर तक पहुँच अस्वीकृत</string>
     <string name="error_no_folder">कोई निर्यात फ़ोल्डर चुना नहीं गया</string>
     <string name="error_health_connect">Health Connect त्रुटि \u2014 अनुमतियाँ जाँचें</string>
-    <string name="error_device_locked">निर्यात के दौरान डिवाइस लॉक किया गया था</string>
+    <string name="error_device_locked">पिछले रीबूट के बाद से फ़ोन अनलॉक नहीं किया गया है — इसे अनलॉक करके फिर से कोशिश करें</string>
     <string name="error_background_permission_denied">शेड्यूल किए गए निर्यात के लिए Health Connect का बैकग्राउंड एक्सेस ज़रूरी है</string>
-    <string name="error_rate_limited">Health Connect दर निर्यात को सीमित कर रही है - थोड़ा इंतजार करें, फिर शेष तिथियों का पुनः प्रयास करें</string>
+    <string name="error_rate_limited">Health Connect निर्यात की दर सीमित कर रहा है — थोड़ी देर प्रतीक्षा करें, फिर बाकी तारीखों के लिए दोबारा कोशिश करें</string>
     <string name="error_unknown">एक अप्रत्याशित त्रुटि हुई</string>
     <!-- Debug panel -->
     <string name="debug_panel_title">डिबग जानकारी</string>
@@ -154,7 +243,7 @@
     <string name="settings_title">अपने ऐप को\nकॉन्फ़िगर करें</string>
     <string name="settings_subtitle">प्रीमियम और सहायता प्रबंधित करें</string>
     <string name="section_health_sources">स्वास्थ्य सूत्र</string>
-    <string name="health_sources_description">Health Connect डिफ़ॉल्ट निर्यात पथ रहता है। ये समर्थित पारिस्थितिकी तंत्र आज Health Connect के माध्यम से, या क्रेडेंशियल या पार्टनर एक्सेस कॉन्फ़िगर होने के बाद प्रत्यक्ष SDK/OAuth एडेप्टर के माध्यम से Health.md फ़ीड कर सकते हैं।</string>
+    <string name="health_sources_description">Health Connect डिफ़ॉल्ट निर्यात मार्ग बना रहता है। ये समर्थित इकोसिस्टम अभी Health Connect के ज़रिए Health.md को डेटा दे सकते हैं, या क्रेडेंशियल/पार्टनर एक्सेस कॉन्फ़िगर होने के बाद सीधे SDK/OAuth अडैप्टर के ज़रिए।</string>
     <string name="health_provider_status_installed">स्थापित</string>
     <string name="health_provider_status_selected">चयनित</string>
     <string name="health_provider_status_ready_to_connect">कनेक्ट करने के लिए तैयार</string>
@@ -163,9 +252,9 @@
     <string name="health_provider_connected">जुड़ा हुआ %s</string>
     <string name="section_health_diagnostics">स्वास्थ्य निदान</string>
     <string name="health_diagnostics_description">ऐसी प्रदाता रिपोर्ट बीटा परीक्षकों या सहायता टीम के साथ साझा करें जिससे संवेदनशील जानकारी हटा दी गई है। इसमें प्रदाता सेटअप, अनुमतियाँ, OAuth कॉन्फ़िगर होने और टोकन मौजूद होने के संकेत, तथा अंतिम निर्यात त्रुटि श्रेणियाँ शामिल हैं; स्वास्थ्य माप या टोकन मान शामिल नहीं होते।</string>
-    <string name="health_diagnostics_share_title">संपादित निदान साझा करें</string>
-    <string name="health_diagnostics_share_subtitle">कोई टोकन, प्रदाता रहस्य, कच्ची फ़ाइल पथ या स्वास्थ्य माप नहीं</string>
-    <string name="health_diagnostics_share_subject">Health.md संशोधित निदान</string>
+    <string name="health_diagnostics_share_title">संवेदनशील जानकारी हटाए गए निदान साझा करें</string>
+    <string name="health_diagnostics_share_subtitle">कोई टोकन, प्रदाता का गोपनीय डेटा, रॉ फ़ाइल पाथ या स्वास्थ्य माप नहीं</string>
+    <string name="health_diagnostics_share_subject">Health.md निदान (संवेदनशील जानकारी हटाई गई)</string>
     <string name="health_diagnostics_share_chooser">निदान साझा करें</string>
     <string name="section_write_mode">लिखने की विधि</string>
     <string name="section_filename_template">फ़ाइल नाम टेम्पलेट</string>
@@ -195,22 +284,28 @@
     <!-- Advanced settings screen -->
     <string name="advanced_settings_title">निर्यात सेटिंग्स</string>
     <string name="section_health_metrics">स्वास्थ्य मेट्रिक्स</string>
-    <string name="metrics_enabled_summary">%1$d/%2$d मेट्रिक्स सक्षम किए गए</string>
+    <plurals name="metrics_enabled_summary">
+        <item quantity="one">%1$d/%2$d मेट्रिक सक्षम</item>
+        <item quantity="other">%1$d/%2$d मेट्रिक्स सक्षम</item>
+    </plurals>
     <string name="section_current_format">वर्तमान प्रारूप</string>
     <string name="write_mode_summary">लिखने की विधि: %s</string>
     <string name="section_format_customization">प्रारूप कस्टमाइज़ेशन</string>
-    <string name="section_daily_note_injection">दैनिक नोट इंजेक्शन</string>
+    <string name="section_daily_note_injection">दैनिक नोट में जोड़ना</string>
     <string name="daily_note_enabled_summary">सक्षम \u2022 %s</string>
     <string name="daily_note_disabled">अक्षम</string>
     <string name="section_individual_tracking">व्यक्तिगत प्रविष्टि ट्रैकिंग</string>
-    <string name="individual_tracking_enabled_summary">सक्षम \u2022 %d मेट्रिक्स</string>
+    <plurals name="individual_tracking_enabled_summary">
+        <item quantity="one">सक्षम • %1$d मेट्रिक</item>
+        <item quantity="other">सक्षम • %1$d मेट्रिक्स</item>
+    </plurals>
     <string name="granular_data_title">विस्तृत समय-श्रृंखला शामिल करें</string>
     <string name="granular_data_description">संगतता निर्यात में हृदय गति और नींद के चरण जैसे टाइमस्टैम्प वाले नमूने जोड़ें। API-पूर्ण प्रतिलिपि के लिए, Raw API Snapshot का उपयोग करें।</string>
     <!-- Metric selection screen -->
     <string name="metric_selection_title">स्वास्थ्य मेट्रिक्स</string>
     <string name="search_metrics_hint">मेट्रिक्स खोजें...</string>
     <string name="select_all">सभी चुनें</string>
-    <string name="deselect_all">सभी को अचुना करें</string>
+    <string name="deselect_all">सभी का चयन हटाएँ</string>
     <string name="metrics_enabled_category">%1$d/%2$d सक्षम किए गए</string>
     <!-- Metric categories and labels -->
     <string name="metric_category_sleep">नींद</string>
@@ -258,8 +353,8 @@
     <string name="metric_name_respiratory_rate">श्वसन दर</string>
     <string name="metric_name_blood_oxygen">रक्त ऑक्सीजन</string>
     <string name="metric_name_body_temp">शरीर का तापमान</string>
-    <string name="metric_name_bp_systolic">रक्त दबाव (सिस्टोलिक)</string>
-    <string name="metric_name_bp_diastolic">रक्त दबाव (डायस्टोलिक)</string>
+    <string name="metric_name_bp_systolic">रक्तचाप (सिस्टोलिक)</string>
+    <string name="metric_name_bp_diastolic">रक्तचाप (डायस्टोलिक)</string>
     <string name="metric_name_blood_glucose">रक्त शर्करा</string>
     <string name="metric_name_basal_body_temp">बेसल बॉडी तापमान</string>
     <string name="metric_name_skin_temperature">त्वचा तापमान डेल्टा</string>
@@ -267,9 +362,9 @@
     <string name="metric_name_height">ऊंचाई</string>
     <string name="metric_name_bmi">BMI</string>
     <string name="metric_name_body_fat">शरीर में वसा</string>
-    <string name="metric_name_lean_mass">दुबला शरीर द्रव्यमान</string>
-    <string name="metric_name_body_water_mass">शरीर जल द्रव्यमान</string>
-    <string name="metric_name_bone_mass">हड्डी द्रव्यमान</string>
+    <string name="metric_name_lean_mass">वसा-रहित शारीरिक द्रव्यमान</string>
+    <string name="metric_name_body_water_mass">शरीर में पानी का द्रव्यमान</string>
+    <string name="metric_name_bone_mass">हड्डियों का द्रव्यमान</string>
     <string name="metric_name_dietary_energy">आहार ऊर्जा</string>
     <string name="metric_name_protein">प्रोटीन</string>
     <string name="metric_name_carbs">कार्बोहाइड्रेट</string>
@@ -322,14 +417,14 @@
     <string name="metric_name_running_power">दौड़ने की शक्ति</string>
     <string name="metric_name_activity_intensity_minutes">गतिविधि की तीव्रता के मिनट</string>
     <string name="metric_name_energy_from_fat">वसा से ऊर्जा</string>
-    <string name="metric_name_nutrition_meals">पोषण भोजन</string>
+    <string name="metric_name_nutrition_meals">पोषण संबंधी भोजन</string>
     <string name="metric_name_menstruation_periods">मासिक धर्म अवधियां</string>
     <string name="metric_name_menstruation_period_days">मासिक धर्म के दिन</string>
     <string name="metric_name_planned_workouts">नियोजित वर्कआउट</string>
     <string name="metric_name_medical_resources">चिकित्सा संसाधन</string>
     <string name="metric_name_audio_exposure">ऑडियो एक्सपोजर</string>
     <string name="metric_name_mindful_minutes">सचेत मिनट</string>
-    <string name="metric_name_mindful_sessions">Mindful Sessions</string>
+    <string name="metric_name_mindful_sessions">सचेतन सत्र</string>
     <string name="metric_name_menstrual_flow">मासिक धर्म प्रवाह</string>
     <string name="metric_name_cervical_mucus">सर्वाइकल श्लेष्म गुणवत्ता</string>
     <string name="metric_name_ovulation_test">ओवुलेशन परीक्षण</string>
@@ -338,16 +433,16 @@
     <string name="metric_name_workouts">व्यायाम</string>
     <string name="metric_name_unknown">अज्ञात मेट्रिक</string>
     <!-- Daily note injection screen -->
-    <string name="daily_note_description">अपने मौजूदा Obsidian दैनिक नोट्स के YAML फ्रंटमैटर में स्वास्थ्य मेट्रिक्स इंजेक्ट करें।</string>
-    <string name="daily_note_enable_title">इंजेक्शन सक्षम करें</string>
-    <string name="daily_note_enable_subtitle">दैनिक नोट्स में स्वास्थ्य डेटा इंजेक्ट करें</string>
+    <string name="daily_note_description">अपने मौजूदा Obsidian दैनिक नोटों के YAML Frontmatter में स्वास्थ्य मेट्रिक्स जोड़ें।</string>
+    <string name="daily_note_enable_title">नोट में जोड़ना चालू करें</string>
+    <string name="daily_note_enable_subtitle">दैनिक नोटों में स्वास्थ्य डेटा जोड़ें</string>
     <string name="section_daily_notes_folder">दैनिक नोट्स फ़ोल्डर</string>
     <string name="daily_notes_folder_hint">Daily</string>
     <string name="daily_notes_folder_help">आपके निर्यात फ़ोल्डर के सापेक्ष (जैसे, "Daily" या "Journal/Daily")</string>
     <string name="section_filename_pattern">फ़ाइल नाम पैटर्न</string>
     <string name="section_preview_path">पूर्वावलोकन पथ</string>
-    <string name="inject_markdown_sections_title">मीट्रिक अनुभाग इंजेक्ट करें</string>
-    <string name="inject_markdown_sections_subtitle">अपने नोट टेक्स्ट को संरक्षित करते हुए स्लीप, एक्टिविटी, हार्ट और वाइटल्स जैसे ऐप-प्रबंधित Markdown अनुभागों को भी मर्ज करें।</string>
+    <string name="inject_markdown_sections_title">मेट्रिक सेक्शन जोड़ें</string>
+    <string name="inject_markdown_sections_subtitle">अपने नोट का टेक्स्ट सुरक्षित रखते हुए Sleep, Activity, Heart और Vitals जैसे ऐप-प्रबंधित Markdown सेक्शन भी मर्ज करें।</string>
     <string name="create_note_if_missing_title">नोट गायब होने पर बनाएं</string>
     <string name="create_note_if_missing_subtitle">दैनिक नोट बनाएं यदि यह मौजूद नहीं है</string>
     <!-- Format customization screen -->
@@ -355,7 +450,7 @@
     <string name="section_date_format">तारीख प्रारूप</string>
     <string name="section_time_format">समय प्रारूप</string>
     <string name="section_unit_system">इकाई प्रणाली</string>
-    <string name="section_markdown_template">मार्कडाउन टेम्पलेट शैली</string>
+    <string name="section_markdown_template">Markdown टेम्पलेट शैली</string>
     <string name="custom_markdown_template_label">कस्टम टेम्पलेट</string>
     <string name="custom_markdown_template_help">अपना खुद का Markdown लेआउट लिखें। Health.md प्लेसहोल्डर्स को बदल देता है और सशर्त अनुभागों को हटा देता है जब उस श्रेणी में कोई डेटा नहीं होता है।</string>
     <string name="custom_markdown_template_placeholder"># स्वास्थ्य डेटा — {{date}}\n\n{{metrics}}</string>
@@ -367,26 +462,29 @@
     <string name="section_options">विकल्प</string>
     <string name="toggle_include_summary">सारांश शामिल करें</string>
     <string name="toggle_android_native_fields">Android-मूल स्वास्थ्य क्षेत्र शामिल करें</string>
-    <string name="toggle_legacy_android_aliases">डुप्लिकेट विरासत Android कुंजियाँ और लेबल</string>
+    <string name="toggle_legacy_android_aliases">लेगेसी Android कुंजियाँ और लेबल डुप्लिकेट करें</string>
     <!-- Individual tracking screen -->
     <string name="individual_tracking_title">व्यक्तिगत प्रविष्टि ट्रैकिंग</string>
-    <string name="individual_tracking_description">व्यक्तिगत समय-मुहरबंद स्वास्थ्य प्रविष्टियों को अलग फ़ाइलों के रूप में निर्यात करें। व्यायाम, रक्त दबाव पाठ्यांक और अन्य अलग-अलग मापन के लिए उपयोगी।</string>
+    <string name="individual_tracking_description">टाइमस्टैम्प वाली हर स्वास्थ्य प्रविष्टि को अलग फ़ाइल के रूप में निर्यात करें। वर्कआउट, रक्तचाप रीडिंग और अन्य अलग-अलग मापों के लिए उपयोगी।</string>
     <string name="individual_tracking_enable_title">व्यक्तिगत ट्रैकिंग सक्षम करें</string>
-    <string name="individual_tracking_metrics_count">%d मेट्रिक्स चुने गए</string>
+    <plurals name="individual_tracking_metrics_count">
+        <item quantity="one">%1$d मेट्रिक चुना गया</item>
+        <item quantity="other">%1$d मेट्रिक्स चुने गए</item>
+    </plurals>
     <string name="section_quick_actions">त्वरित कार्य</string>
     <string name="action_suggested">सुझाया गया</string>
     <string name="action_all">सभी</string>
     <string name="action_none">कोई नहीं</string>
-    <string name="section_tracked_metrics">ट्रैक की गई मेट्रिक्स</string>
+    <string name="section_tracked_metrics">ट्रैक किए गए मेट्रिक्स</string>
     <string name="metric_workouts">व्यायाम</string>
-    <string name="metric_blood_pressure">रक्त दबाव</string>
+    <string name="metric_blood_pressure">रक्तचाप</string>
     <string name="metric_blood_glucose">रक्त शर्करा</string>
     <string name="metric_weight">वजन</string>
-    <string name="section_entries_folder">प्रविष्टियों फ़ोल्डर नाम</string>
+    <string name="section_entries_folder">प्रविष्टियों के फ़ोल्डर का नाम</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
-    <string name="individual_tracking_filename_tokens">Tokens: {date}, {time}, {metric}, {category}</string>
-    <string name="individual_tracking_suggested_badge">Suggested</string>
+    <string name="individual_tracking_filename_tokens">टोकन: {date}, {time}, {metric}, {category}</string>
+    <string name="individual_tracking_suggested_badge">सुझाया गया</string>
     <string name="organize_by_category_title">श्रेणी के अनुसार व्यवस्थित करें</string>
     <string name="organize_by_category_subtitle">प्रविष्टियों को श्रेणी उप-फ़ोल्डर में समूहीकृत करें</string>
     <!-- History screen -->
@@ -396,7 +494,10 @@
     <string name="history_status_success">\u2713 सफल</string>
     <string name="history_status_partial">! आंशिक</string>
     <string name="history_status_failed">\u2717 विफल</string>
-    <string name="history_entry_days">%1$d/%2$d दिन \u2022 %3$s से %4$s</string>
+    <plurals name="history_entry_days">
+        <item quantity="one">%1$d/%2$d दिन • %3$s से %4$s तक</item>
+        <item quantity="other">%1$d/%2$d दिन • %3$s से %4$s तक</item>
+    </plurals>
     <string name="history_timestamp_format">%1$s को %2$s</string>
     <string name="export_source_manual">मैनुअल</string>
     <string name="export_source_scheduled">निर्धारित</string>
@@ -407,7 +508,7 @@
     <string name="automatic_export_title">स्वचालित निर्यात</string>
     <string name="automatic_export_subtitle">अपने स्वास्थ्य डेटा को स्वचालित रूप से निर्यात करें</string>
     <string name="schedule_enable_scheduled_exports">अनुसूचित निर्यात सक्षम करें</string>
-    <string name="schedule_automatic_export_body">शेड्यूल किए गए निर्यात आपके चयनित Android निर्यात फ़ोल्डर में लिखें। मैन्युअल निर्यात निर्यात टैब से उपलब्ध रहते हैं।</string>
+    <string name="schedule_automatic_export_body">निर्धारित निर्यात आपके चुने हुए Android निर्यात फ़ोल्डर में लिखे जाते हैं। निर्यात टैब से मैन्युअल निर्यात भी उपलब्ध रहते हैं।</string>
     <string name="schedule_background_note">नोट: Android सटीक पृष्ठभूमि समय को नियंत्रित करता है। विश्वसनीय अनुसूचित निर्यात के लिए Health Connect बैकग्राउंड एक्सेस को सक्षम रखें और Health.md को बैटरी ऑप्टिमाइज़ेशन से बाहर रखें।</string>
     <string name="schedule_exact_background_note">सटीक समय के लिए Android की अलार्म और रिमाइंडर अनुमति का उपयोग होता है। Health Connect की बैकग्राउंड अनुमति अभी भी ज़रूरी है, और नेटवर्क न होने या फ़ोन बंद होने पर प्रक्रिया पूरी होने में देरी हो सकती है।</string>
     <string name="exact_timing_needed_title">सटीक समय बंद है</string>
@@ -432,15 +533,15 @@
     <string name="schedule_frequency_weekly">साप्ताहिक</string>
     <string name="schedule_frequency_every_weeks">हर %1$d सप्ताह</string>
     <string name="schedule_time">समय</string>
-    <string name="schedule_time_period_am">AM</string>
-    <string name="schedule_time_period_pm">PM</string>
+    <string name="schedule_time_period_am">पूर्वाह्न</string>
+    <string name="schedule_time_period_pm">अपराह्न</string>
     <string name="schedule_date_window">तारीखें</string>
     <string name="schedule_date_window_past_complete_days">पिछले पूरे दिन</string>
     <string name="schedule_date_window_today">आज</string>
     <string name="schedule_export_past_days">पिछले दिनों निर्यात करें</string>
-    <string name="schedule_lookback_ios_single">प्रत्येक रन कल के साथ समाप्त होने वाले पिछले 1 दिन को निर्यात करता है।</string>
-    <string name="schedule_lookback_ios_plural">प्रत्येक रन कल के साथ समाप्त होने वाले पिछले %1$d दिनों को निर्यात करता है।</string>
-    <string name="schedule_today_summary">प्रत्येक रन आज का डेटा निर्यात करता है ताकि आपकी वर्तमान दैनिक फ़ाइल अद्यतित रह सके। उसी दिन डुप्लिकेट सामग्री से बचने के लिए ओवरराइट या अपडेट राइट मोड का उपयोग करें।</string>
+    <string name="schedule_lookback_ios_single">हर बार कल तक के पिछले 1 दिन का डेटा निर्यात होता है।</string>
+    <string name="schedule_lookback_ios_plural">हर बार कल तक के पिछले %1$d दिनों का डेटा निर्यात होता है।</string>
+    <string name="schedule_today_summary">हर बार आज का डेटा निर्यात होता है, ताकि मौजूदा दैनिक फ़ाइल अप-टू-डेट रहे। एक ही दिन की सामग्री दो बार जुड़ने से बचाने के लिए Overwrite या Update लेखन मोड का उपयोग करें।</string>
     <string name="schedule_next_export_every">अगला निर्यात: हर %1$s</string>
     <string name="schedule_next_export_every_at">अगला निर्यात: हर %1$s को %2$s पर</string>
     <string name="schedule_next_export_at_datetime">अगला निर्यात: %1$s</string>
@@ -469,31 +570,34 @@
     <string name="background_health_permission_enable_button">पृष्ठभूमि पहुंच सक्षम करें</string>
     <string name="schedule_workmanager_notice">निर्यात WorkManager का उपयोग करके बैकग्राउंड में चलते हैं। भरोसेमंद शेड्यूलिंग के लिए Health Connect का बैकग्राउंड एक्सेस दें और Health.md को बैटरी ऑप्टिमाइज़ेशन से बाहर रखें।</string>
     <string name="scheduled_recovery_title">छूटे हुए निर्धारित निर्यात पुनर्प्राप्त करें?</string>
-    <string name="scheduled_recovery_body">Health.md पाया गया %1$d लंबित निर्धारित तिथि(दिनांकें): %2$s। यदि रिबूट के बाद फोन लॉक हो गया था, बैकग्राउंड एक्सेस गायब था, या Health Connect अनुपलब्ध था, तो शेड्यूल किया गया निर्यात छूट गया था, Health.md अब ऐप के खुले और अनलॉक होने पर उन सटीक तिथियों को पुनः प्रयास कर सकता है। भविष्य में होने वाली चूक को रोकने के लिए पृष्ठभूमि पहुंच प्रदान करें।</string>
+    <plurals name="scheduled_recovery_body">
+        <item quantity="one">Health.md को %1$d लंबित निर्धारित तारीख मिली: %2$s। अगर रीबूट के बाद फ़ोन लॉक होने, बैकग्राउंड एक्सेस न होने या Health Connect अनुपलब्ध होने के कारण निर्धारित निर्यात छूट गया, तो ऐप खुला और अनलॉक होने पर Health.md अभी उसी तारीख के लिए दोबारा निर्यात कर सकता है। आगे ऐसी चूक रोकने के लिए बैकग्राउंड एक्सेस दें।</item>
+        <item quantity="other">Health.md को %1$d लंबित निर्धारित तारीखें मिलीं: %2$s। अगर रीबूट के बाद फ़ोन लॉक होने, बैकग्राउंड एक्सेस न होने या Health Connect अनुपलब्ध होने के कारण निर्धारित निर्यात छूट गए, तो ऐप खुला और अनलॉक होने पर Health.md अभी उन्हीं तारीखों के लिए दोबारा निर्यात कर सकता है। आगे ऐसी चूक रोकने के लिए बैकग्राउंड एक्सेस दें।</item>
+    </plurals>
     <string name="scheduled_recovery_retry_button">लंबित तिथियों का पुनः प्रयास करें</string>
-    <string name="scheduled_recovery_running_button">ठीक हो रहा है...</string>
+    <string name="scheduled_recovery_running_button">पुनर्प्राप्त किया जा रहा है…</string>
     <string name="scheduled_recovery_blocked_paywall">शेड्यूल किए गए निर्यात वापस पाने से पहले Health.md अनलॉक करें।</string>
     <string name="scheduled_recovery_blocked_folder">निर्धारित निर्यात पुनर्प्राप्त करने से पहले एक निर्यात फ़ोल्डर चुनें।</string>
-    <string name="scheduled_recovery_blocked_api">निर्धारित API निर्यात पुनर्प्राप्त करने से पहले एक API समापन बिंदु कॉन्फ़िगर करें।</string>
-    <string name="scheduled_recovery_blocked_api_changed">इन निर्यातों के विफल होने के बाद API समापन बिंदु बदल गया। उन्हें पुनर्प्राप्त करने के लिए मूल समापन बिंदु को पुनर्स्थापित करें; Health.md उन्हें स्वचालित रूप से नई सेवा पर नहीं भेजेगा।</string>
+    <string name="scheduled_recovery_blocked_api">निर्धारित API निर्यात पुनर्प्राप्त करने से पहले API एंडपॉइंट कॉन्फ़िगर करें।</string>
+    <string name="scheduled_recovery_blocked_api_changed">इन निर्यातों के विफल होने के बाद API एंडपॉइंट बदल गया। इन्हें पुनर्प्राप्त करने के लिए पुराना एंडपॉइंट वापस सेट करें; Health.md इन्हें अपने आप नई सेवा पर नहीं भेजेगा।</string>
     <string name="scheduled_recovery_blocked_locked">रीबूट के बाद एक बार अपने फोन को अनलॉक करें, फिर इन तिथियों को पुनर्प्राप्त करने के लिए Health.md दोबारा खोलें।</string>
     <string name="scheduled_recovery_blocked_permissions">शेड्यूल किए गए निर्यात वापस पाने से पहले Health Connect की अनुमतियाँ दें।</string>
     <string name="scheduled_recovery_blocked_running">एक निर्धारित पुनर्प्राप्ति निर्यात पहले से ही चल रहा है।</string>
     <string name="scheduled_recovery_no_pending">कोई भी निर्धारित निर्यात तिथि पुनर्प्राप्ति के लिए लंबित नहीं है।</string>
     <string name="scheduled_recovery_result_complete">निर्धारित पुनर्प्राप्ति पूर्ण हुई.</string>
-    <string name="scheduled_recovery_result_partial">पुनर्प्राप्ति निर्यात की गई %1$d/%2$d तारीख़ें। %3$d तारीख़ें लंबित हैं।</string>
-    <string name="scheduled_recovery_result_blocked">शेड्यूल्ड पुनर्प्राप्ति अभी तैयार नहीं है.</string>
+    <string name="scheduled_recovery_result_partial">पुनर्प्राप्ति में %2$d में से %1$d तारीखें निर्यात हुईं। %3$d तारीखें अभी लंबित हैं।</string>
+    <string name="scheduled_recovery_result_blocked">निर्धारित पुनर्प्राप्ति अभी तैयार नहीं है।</string>
     <string name="not_now">अभी नहीं</string>
     <!-- Release notes -->
     <string name="release_notes_title">%s में नया क्या है?</string>
-    <string name="release_notes_settings_hint">आप सेटिंग्स से निर्यात प्रारूप, कस्टम Markdown और मेट्रिक्स को ट्यून कर सकते हैं।</string>
+    <string name="release_notes_settings_hint">आप सेटिंग्स में निर्यात प्रारूप, कस्टम Markdown और मेट्रिक्स को समायोजित कर सकते हैं।</string>
     <string name="release_notes_open_settings">सेटिंग्स खोलें</string>
     <string name="release_notes_got_it">समझ गया</string>
-    <string name="release_notes_highlight_feedback">विस्तारित Health Connect कवरेज में अधिक गतिविधि, शरीर, पोषण, गतिशीलता, दिमागीपन, प्रजनन स्वास्थ्य और चिकित्सा संसाधन मेट्रिक्स शामिल हैं।</string>
-    <string name="release_notes_highlight_export_parity">नए Android-केवल विवरणों में गतिविधि की तीव्रता, पोषण भोजन, मासिक धर्म की अवधि, नियोजित वर्कआउट और उपलब्ध होने पर दानेदार नमूने शामिल हैं।</string>
-    <string name="release_notes_highlight_templates">Markdown, JSON, CSV, और Obsidian निर्यात अब बड़े कैटलॉग में समृद्ध मीट्रिक मान रखते हैं।</string>
+    <string name="release_notes_highlight_feedback">विस्तारित Health Connect कवरेज में गतिविधि, शरीर, पोषण, गतिशीलता, सचेतनता, प्रजनन स्वास्थ्य और चिकित्सा संसाधनों के और मेट्रिक्स शामिल हैं।</string>
+    <string name="release_notes_highlight_export_parity">नए Android-विशिष्ट विवरणों में गतिविधि की तीव्रता, भोजन का पोषण डेटा, मासिक धर्म की अवधि, नियोजित वर्कआउट और उपलब्ध होने पर टाइमस्टैम्प वाले विस्तृत नमूने शामिल हैं।</string>
+    <string name="release_notes_highlight_templates">Markdown, JSON, CSV और Obsidian निर्यातों में अब बड़े कैटलॉग के ज़्यादा विस्तृत मेट्रिक मान शामिल हैं।</string>
     <string name="release_notes_highlight_workouts">केवल-पढ़ने वाली विस्तृत निर्यात अनुमतियों को समझाने के लिए Health Connect की अनुमति संबंधी जानकारी अपडेट की गई है।</string>
-    <string name="release_notes_highlight_accessibility">निर्यात, शेड्यूल और सेटिंग प्रवाह में लेबल और स्पर्श लक्ष्य में सुधार किया गया।</string>
+    <string name="release_notes_highlight_accessibility">निर्यात, शेड्यूल और सेटिंग्स की पूरी प्रक्रिया में TalkBack लेबल और टच टार्गेट बेहतर किए गए हैं।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">निर्धारित निर्यात</string>
     <string name="notification_channel_scheduled_exports_description">जब निर्धारित स्वास्थ्य निर्यात पूरे हों या विफल हों तो सूचनाएं</string>
@@ -539,7 +643,7 @@
     <string name="shortcut_history_long">निर्यात इतिहास खोलें</string>
     <!-- Privacy policy / permissions rationale (HealthPermissionsRationaleActivity) -->
     <string name="privacy_policy_title">Health Connect अनुमतियाँ</string>
-    <string name="privacy_policy_subtitle">Health.md एक स्वास्थ्य डेटा निर्यात ऐप है। नीचे दी गई प्रत्येक अनुमति सीधे Health Connect से पढ़े गए डेटा को मैप करती है और केवल आपके द्वारा चुने गए गंतव्य पर निर्यात की जाती है। फ़ोल्डर निर्यात स्थानीय या प्रदाता-समर्थित संग्रहण में रहता है। यदि आप स्पष्ट रूप से API समापन बिंदु का चयन करते हैं, तो रिकॉर्ड सीधे आपके द्वारा कॉन्फ़िगर किए गए HTTP या HTTPS URL पर भेजे जाते हैं; HTTP पारगमन में एन्क्रिप्टेड नहीं है। यदि आप किसी युग्मित Direct CLI को स्पष्ट रूप से कनेक्ट करते हैं, तो रिकॉर्ड उस कंप्यूटर पर एक प्रमाणित एन्क्रिप्टेड कनेक्शन के माध्यम से भेजे जाते हैं। Personal Health Recordसंसाधन केवल तभी निर्यात किए जाते हैं जब आप उस मीट्रिक का चयन करते हैं और संबंधित अनुमतियाँ प्रदान करते हैं। इतिहास पहुंच का उपयोग बड़े मैन्युअल निर्यात के लिए किया जाता है। पृष्ठभूमि पहुंच का उपयोग केवल तभी किया जाता है जब आप निर्धारित निर्यात सक्षम करते हैं।</string>
+    <string name="privacy_policy_subtitle">Health.md एक स्वास्थ्य डेटा निर्यात ऐप है। नीचे दी गई हर अनुमति सीधे उस खास डेटा से संबंधित है जिसे Health Connect से पढ़ा जाता है, और वह डेटा केवल आपके चुने हुए गंतव्य पर निर्यात होता है। फ़ोल्डर निर्यात स्थानीय या प्रदाता-समर्थित स्टोरेज में रहते हैं। यदि आप स्पष्ट रूप से API Endpoint चुनते हैं, तो रिकॉर्ड सीधे आपके कॉन्फ़िगर किए गए HTTP या HTTPS URL पर भेजे जाते हैं; HTTP के ज़रिए भेजा गया डेटा ट्रांज़िट में एन्क्रिप्टेड नहीं होता। यदि आप स्पष्ट रूप से पेयर किया हुआ Direct CLI कनेक्ट करते हैं, तो रिकॉर्ड प्रमाणित, एन्क्रिप्टेड कनेक्शन से उस कंप्यूटर पर भेजे जाते हैं। Personal Health Record संसाधन तभी निर्यात होते हैं जब आप संबंधित मेट्रिक चुनते और आवश्यक अनुमतियाँ देते हैं। इतिहास एक्सेस का उपयोग बड़े मैन्युअल निर्यातों के लिए होता है। बैकग्राउंड एक्सेस का उपयोग केवल तब होता है जब आप निर्धारित निर्यात चालू करते हैं।</string>
     <!-- Per-category permission rationale labels -->
     <string name="privacy_category_sleep">नींद</string>
     <string name="privacy_category_sleep_permissions">SleepSession</string>
@@ -555,7 +659,7 @@
     <string name="privacy_category_vitals_exports">निर्यातित क्षेत्र: श्वसन दर, रक्त ऑक्सीजन, शरीर का तापमान, रक्तचाप (सिस्टोलिक/डायस्टोलिक), रक्त ग्लूकोज, बेसल शरीर का तापमान, त्वचा का तापमान</string>
     <string name="privacy_category_body">शरीर</string>
     <string name="privacy_category_body_permissions">Weight, Height, BodyFat, LeanBodyMass, BodyWaterMass, BoneMass</string>
-    <string name="privacy_category_body_exports">निर्यातित क्षेत्र: वजन, ऊँचाई, BMI, शरीर में वसा%, दुबला शरीर द्रव्यमान, शरीर में जल द्रव्यमान, अस्थि द्रव्यमान</string>
+    <string name="privacy_category_body_exports">निर्यातित फ़ील्ड: वजन, ऊँचाई, BMI, शरीर में वसा %, वसा-रहित शारीरिक द्रव्यमान, शरीर में पानी का द्रव्यमान, हड्डियों का द्रव्यमान</string>
     <string name="privacy_category_nutrition">पोषण</string>
     <string name="privacy_category_nutrition_permissions">Nutrition, Hydration</string>
     <string name="privacy_category_nutrition_exports">निर्यातित क्षेत्र: आहार कैलोरी, मैक्रोन्यूट्रिएंट्स, वसा उपप्रकार, फाइबर, चीनी, सोडियम, कोलेस्ट्रॉल, पानी, कैफीन, विटामिन और खनिज</string>
@@ -564,23 +668,23 @@
     <string name="privacy_category_mobility_exports">निर्यातित फ़ील्ड: चलने की गति, VO2 अधिकतम, साइकिल चलाने की ताल, कदमों की ताल, औसत और अधिकतम पावर आउटपुट, दौड़ने की गति और दौड़ने की शक्ति</string>
     <string name="privacy_category_reproductive">प्रजनन स्वास्थ्य</string>
     <string name="privacy_category_reproductive_permissions">MenstruationFlow, MenstruationPeriod, CervicalMucus, OvulationTest, IntermenstrualBleeding, SexualActivity</string>
-    <string name="privacy_category_reproductive_exports">निर्यातित क्षेत्र: मासिक धर्म प्रवाह, मासिक धर्म अवधि गिनती/दिन, गर्भाशय ग्रीवा बलगम उपस्थिति/संवेदना, ओव्यूलेशन परीक्षण परिणाम, अंतरमासिक रक्तस्राव, यौन गतिविधि</string>
+    <string name="privacy_category_reproductive_exports">निर्यातित फ़ील्ड: मासिक धर्म प्रवाह, मासिक धर्म अवधियों की संख्या/दिन, सर्वाइकल म्यूकस की बनावट/अनुभूति, ओव्यूलेशन परीक्षण का परिणाम, मासिक धर्म के बीच रक्तस्राव, यौन गतिविधि</string>
     <string name="privacy_category_mindfulness">सचेतनता</string>
     <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
-    <string name="privacy_category_mindfulness_exports">निर्यातित फ़ील्ड: ध्यानपूर्ण मिनट और सत्र गणना</string>
+    <string name="privacy_category_mindfulness_exports">निर्यातित फ़ील्ड: सचेतन मिनट और सत्रों की संख्या</string>
     <string name="privacy_category_medical">चिकित्सा संसाधन</string>
-    <string name="privacy_category_medical_permissions">चिकित्सीय एलर्जी/असहिष्णुता, स्थितियाँ, प्रयोगशाला परिणाम, दवाएँ, व्यक्तिगत विवरण, चिकित्सक विवरण, गर्भावस्था, प्रक्रियाएँ, सामाजिक इतिहास, टीके, दौरे और महत्वपूर्ण संकेत</string>
-    <string name="privacy_category_medical_exports">निर्यातित फ़ील्ड: स्थानीय Personal Health Record संसाधन गणना, संसाधन प्रकार, प्रदर्शन नाम, कोड, टाइमस्टैम्प और स्रोत मेटाडेटा जब Health Connect उन्हें प्रदान करता है</string>
+    <string name="privacy_category_medical_permissions">चिकित्सीय एलर्जी/असहिष्णुता, स्वास्थ्य स्थितियाँ, प्रयोगशाला परिणाम, दवाएँ, व्यक्तिगत विवरण, चिकित्सक विवरण, गर्भावस्था, प्रक्रियाएँ, सामाजिक इतिहास, टीके, चिकित्सकीय मुलाकातें और महत्वपूर्ण संकेत</string>
+    <string name="privacy_category_medical_exports">Health Connect के उपलब्ध कराने पर निर्यातित फ़ील्ड: स्थानीय Personal Health Record संसाधनों की संख्या, संसाधन प्रकार, डिस्प्ले नाम, कोड, टाइमस्टैम्प और स्रोत मेटाडेटा</string>
     <string name="privacy_category_background">अनुसूचित पृष्ठभूमि पहुंच</string>
     <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
     <string name="privacy_category_background_exports">केवल तभी उपयोग किया जाता है जब निर्धारित निर्यात सक्षम हो ताकि Health.md पृष्ठभूमि में कल के Health Connect डेटा को पढ़ सके और इसे आपके चयनित स्थानीय निर्यात फ़ोल्डर में लिख सके</string>
     <string name="privacy_category_history">ऐतिहासिक स्वास्थ्य डेटा एक्सेस</string>
     <string name="privacy_category_history_permissions">READ_HEALTH_DATA_HISTORY</string>
-    <string name="privacy_category_history_exports">केवल बड़े मैन्युअल निर्यात के लिए उपयोग किया जाता है, जैसे कि 90 दिन या सभी समय, इसलिए Health.md मानक 30-दिन की विंडो से पुराना Health Connect डेटा पढ़ सकता है</string>
-    <string name="privacy_policy_direct_cli">Direct CLI निर्यात तभी होता है जब आप स्पष्ट रूप से युग्मित होते हैं और अपने कंप्यूटर से कनेक्ट होते हैं। स्वास्थ्य रिकॉर्ड एक प्रमाणित एन्क्रिप्टेड कनेक्शन के माध्यम से भेजे जाते हैं, अधिकतम सात दिनों के लिए पुन: प्रारंभ करने योग्य स्थानांतरण के लिए निजी तौर पर रखे जाते हैं, और जब आप युग्मन को रद्द करते हैं या भूल जाते हैं तो जल्द ही हटा दिया जाता है।</string>
-    <string name="privacy_policy_footer">Health.md कोई स्वास्थ्य-डेटा क्लाउड संचालित नहीं करता। प्रथम-पक्ष अभियान एट्रिब्यूशन ऐप द्वारा बनाए गए यादृच्छिक इंस्टॉल/इवेंट UUID और सत्यापित अभियान मेटाडेटा भेज सकता है; स्वास्थ्य डेटा, मूल रेफ़रर, डिवाइस ID, निर्यात, खाते या पथ कभी नहीं भेजे जाते।</string>
+    <string name="privacy_category_history_exports">केवल बड़े मैन्युअल निर्यातों के लिए उपयोग होता है, जैसे 90 दिन या पूरी अवधि, ताकि Health.md मानक 30-दिन की सीमा से पुराना Health Connect डेटा पढ़ सके</string>
+    <string name="privacy_policy_direct_cli">Direct CLI निर्यात तभी होता है जब आप स्पष्ट रूप से अपने कंप्यूटर से पेयर और कनेक्ट करते हैं। स्वास्थ्य रिकॉर्ड प्रमाणित, एन्क्रिप्टेड कनेक्शन से भेजे जाते हैं। ट्रांसफ़र दोबारा शुरू किया जा सके, इसके लिए उन्हें अधिकतम सात दिन निजी रूप से रखा जाता है; रद्द करने या पेयरिंग हटाने पर वे इससे पहले ही मिटा दिए जाते हैं।</string>
+    <string name="privacy_policy_footer">Health.md कोई स्वास्थ्य-डेटा क्लाउड संचालित नहीं करता। अभियान एट्रिब्यूशन ऐप के बनाए रैंडम इंस्टॉल/इवेंट UUIDs और सत्यापित अभियान मेटाडेटा भेज सकता है। यह कभी स्वास्थ्य डेटा, रॉ रेफ़रर, डिवाइस IDs, निर्यात, खाते या पाथ नहीं भेजता।</string>
     <!-- Legacy body string kept for locale fallback -->
-    <string name="privacy_policy_body">Health.md केवल आपके अनुरोध वाले निर्यात बनाने के लिए Health Connect डेटा पढ़ता है। फ़ोल्डर निर्यात चुने गए स्टोरेज में जाते हैं, API Endpoint निर्यात सीधे आपकी कॉन्फ़िगर की हुई सेवा में जाते हैं और स्पष्ट रूप से कनेक्ट किया गया Direct CLI निर्यात प्रमाणित एन्क्रिप्शन के जरिए आपके पेयर किए गए कंप्यूटर तक जाता है। अलग से, प्रथम-पक्ष अभियान एट्रिब्यूशन ऐप के बनाए रैंडम UUIDs और साफ़ किए गए अभियान मेटाडेटा से Play इंस्टॉल को किसी अभियान से जोड़ सकता है। इसमें स्वास्थ्य डेटा, मूल रेफरर, डिवाइस पहचानकर्ता, निर्यात सामग्री, खाता डेटा या फ़ाइल पथ शामिल नहीं होता।</string>
+    <string name="privacy_policy_body">Health.md केवल आपके अनुरोध वाले निर्यात बनाने के लिए Health Connect डेटा पढ़ता है। फ़ोल्डर निर्यात चुने गए स्टोरेज में जाते हैं, API Endpoint निर्यात सीधे आपकी कॉन्फ़िगर की हुई सेवा में जाते हैं और स्पष्ट रूप से कनेक्ट किया गया Direct CLI निर्यात प्रमाणित एन्क्रिप्शन के जरिए आपके पेयर किए गए कंप्यूटर तक जाता है। अलग से, प्रथम-पक्ष अभियान एट्रिब्यूशन ऐप के बनाए रैंडम UUIDs और साफ़ किए गए अभियान मेटाडेटा से Play इंस्टॉल को किसी अभियान से जोड़ सकता है। इसमें स्वास्थ्य डेटा, रॉ रेफ़रर, डिवाइस पहचानकर्ता, निर्यात सामग्री, खाता डेटा या फ़ाइल पथ शामिल नहीं होता।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md प्रतिक्रिया</string>
     <string name="feedback_send_chooser">प्रतिक्रिया भेजें</string>
@@ -591,17 +695,17 @@
     -->
     <!-- Raw snapshot product controls -->
     <string name="section_export_type">निर्यात प्रकार</string>
-    <string name="export_type_compatibility">Compatibility Export</string>
+    <string name="export_type_compatibility">संगतता निर्यात</string>
     <string name="export_type_compatibility_description">मौजूदा Health.md वर्कफ़्लो के लिए दैनिक Markdown, Bases, JSON या CSV फ़ाइलें</string>
-    <string name="export_type_raw_snapshot">Raw API Snapshot</string>
+    <string name="export_type_raw_snapshot">रॉ API स्नैपशॉट</string>
     <string name="export_type_raw_snapshot_description">एक अपरिवर्तनीय रेंज आर्टिफ़ैक्ट में API-पूर्ण नेटिव Health Connect रिकॉर्ड</string>
-    <string name="raw_snapshot_about_title">कच्चा स्नैपशॉट शब्दार्थ</string>
-    <string name="raw_snapshot_about_body">चयनित प्रदाता के API द्वारा उजागर किए गए प्रत्येक फ़ील्ड को कैप्चर करता है। रीड्स गैर-लेन-देन योग्य हैं, इसलिए निर्यात के दौरान डेटा बदल सकता है। स्नैपशॉट में विलोपन, अप्राप्य रिकॉर्ड, API के माध्यम से अनुपलब्ध मूल इनपुट इकाइयाँ, या इस ऐप संस्करण के लिए अज्ञात फ़ील्ड शामिल नहीं हो सकते हैं।</string>
+    <string name="raw_snapshot_about_title">रॉ स्नैपशॉट का व्यवहार</string>
+    <string name="raw_snapshot_about_body">चुने गए प्रदाता के API में उपलब्ध हर फ़ील्ड को कैप्चर करता है। रीड ट्रांज़ैक्शनल नहीं होते, इसलिए निर्यात के दौरान डेटा बदल सकता है। स्नैपशॉट में मिटाए गए रिकॉर्ड की जानकारी, पहुँच से बाहर रिकॉर्ड, API से अनुपलब्ध मूल इनपुट इकाइयाँ या ऐप के इस संस्करण के लिए अज्ञात फ़ील्ड शामिल नहीं हो सकते।</string>
     <string name="raw_snapshot_format_title">स्नैपशॉट प्रारूप</string>
     <string name="raw_snapshot_format_json">JSON</string>
-    <string name="raw_snapshot_format_json_description">हेडर, रिकॉर्ड, समस्याओं और मेनिफेस्ट वाला एक मानक JSON दस्तावेज़</string>
+    <string name="raw_snapshot_format_json_description">हेडर, रिकॉर्ड, समस्याओं और मैनिफ़ेस्ट वाला एक कैनोनिकल JSON दस्तावेज़</string>
     <string name="raw_snapshot_format_ndjson">NDJSON</string>
-    <string name="raw_snapshot_format_ndjson_description">बड़े स्नैपशॉट के लिए एक स्ट्रीमिंग न्यूलाइन-सीमांकित लिफाफा</string>
+    <string name="raw_snapshot_format_ndjson_description">बड़े स्नैपशॉट के लिए स्ट्रीमिंग योग्य, न्यूलाइन से अलग किया गया एनवेलप</string>
     <string name="raw_snapshot_one_artifact_note">प्रत्येक निर्यात कार्रवाई एक स्रोत को पढ़ती है और चयनित प्रारूप में एक आर्टिफैक्ट बनाती है।</string>
     <string name="raw_snapshot_scope_title">रिकॉर्ड का दायरा</string>
     <string name="raw_snapshot_scope_selected">चयनित रिकॉर्ड प्रकार</string>
@@ -610,22 +714,25 @@
     <string name="raw_snapshot_scope_all_description">प्रत्येक समर्थित मूल रिकॉर्ड प्रकार को शामिल करें जिसके लिए Health Connect पहुंच प्रदान करता है</string>
     <string name="raw_snapshot_routes_title">सटीक व्यायाम मार्ग</string>
     <string name="raw_snapshot_routes_control">सटीक मार्ग शामिल करें</string>
-    <string name="raw_snapshot_routes_description">व्यायाम मार्ग सटीक घर, कार्य और यात्रा स्थानों को प्रकट कर सकते हैं। Health Connect अलग मार्ग सहमति की आवश्यकता हो सकती है।</string>
-    <string name="raw_snapshot_immutable_destination_note">रॉ स्नैपशॉट अपरिवर्तनीय, प्रति रेंज एक आर्टिफ़ैक्ट वाले निर्यात हैं, जिन्हें health/raw (या आपके कॉन्फ़िगर किए गए सबफ़ोल्डर/raw) के अंतर्गत लिखा जाता है। दैनिक फ़ाइलनाम टेम्पलेट और संलग्न करें, अद्यतन करें या अधिलेखन मोड लागू नहीं होते।</string>
-    <string name="raw_snapshot_provider_unsupported">यह प्रदाता मूल रॉ API अडैप्टर उपलब्ध नहीं कराता। Health Connect, Fitbit, Withings, Oura या WHOOP चुनें, या Compatibility Export पर जाएँ।</string>
+    <string name="raw_snapshot_routes_description">व्यायाम मार्ग घर, कार्यस्थल और यात्रा के सटीक स्थान उजागर कर सकते हैं। Health Connect मार्गों के लिए अलग सहमति माँग सकता है।</string>
+    <string name="raw_snapshot_immutable_destination_note">रॉ स्नैपशॉट अपरिवर्तनीय, प्रति रेंज एक आर्टिफ़ैक्ट वाले निर्यात हैं, जिन्हें health/raw (या आपके कॉन्फ़िगर किए गए subfolder/raw) के अंतर्गत लिखा जाता है। दैनिक फ़ाइलनाम टेम्पलेट और Append, Update या Overwrite मोड लागू नहीं होते।</string>
+    <string name="raw_snapshot_provider_unsupported">यह प्रदाता नेटिव रॉ API अडैप्टर उपलब्ध नहीं कराता। Health Connect, Fitbit, Withings, Oura या WHOOP चुनें, या Compatibility Export पर जाएँ।</string>
     <string name="raw_snapshot_selection_required">कम से कम एक स्वास्थ्य मीट्रिक चुनें या सभी अधिकृत समर्थित डेटा चुनें।</string>
-    <string name="raw_snapshot_https_required">कच्चे API स्नैपशॉट के लिए HTTPS समापन बिंदु की आवश्यकता होती है।</string>
-    <string name="raw_snapshot_partial_label">कच्चा स्नैपशॉट आंशिक</string>
-    <string name="raw_snapshot_cancelled_label">कच्चा स्नैपशॉट रद्द किया गया</string>
-    <string name="raw_snapshot_result_created">कच्चा स्नैपशॉट बनाया गया</string>
-    <string name="raw_snapshot_result_uploaded">कच्चा स्नैपशॉट अपलोड किया गया</string>
+    <string name="raw_snapshot_https_required">रॉ API स्नैपशॉट के लिए HTTPS एंडपॉइंट ज़रूरी है।</string>
+    <string name="raw_snapshot_partial_label">आंशिक रॉ स्नैपशॉट</string>
+    <string name="raw_snapshot_cancelled_label">रॉ स्नैपशॉट रद्द किया गया</string>
+    <string name="raw_snapshot_result_created">रॉ स्नैपशॉट बनाया गया</string>
+    <string name="raw_snapshot_result_uploaded">रॉ स्नैपशॉट अपलोड किया गया</string>
     <string name="raw_snapshot_result_count">स्नैपशॉट क्रियाएँ पूर्ण: %1$d/%2$d</string>
     <string name="raw_snapshot_progress_count">स्नैपशॉट क्रियाएँ: %1$d / %2$d</string>
     <string name="raw_snapshot_diagnostics_failed_count">अपूर्ण स्नैपशॉट क्रियाएँ: %d</string>
-    <string name="raw_snapshot_diagnostics_reason_count">%1$s: %2$d</string>
-    <string name="raw_snapshot_diagnostics_cancelled_message">कच्चा स्नैपशॉट अपने मूल स्रोत को पढ़ने और आर्टिफैक्ट प्रमोशन पूरा होने से पहले ही बंद हो गया।</string>
+    <plurals name="raw_snapshot_diagnostics_reason_count">
+        <item quantity="one">%1$s: %2$d कार्रवाई</item>
+        <item quantity="other">%1$s: %2$d कार्रवाइयाँ</item>
+    </plurals>
+    <string name="raw_snapshot_diagnostics_cancelled_message">नेटिव स्रोत की रीड और आर्टिफ़ैक्ट का प्रकाशन पूरा होने से पहले ही रॉ स्नैपशॉट रुक गया।</string>
     <string name="raw_snapshot_diagnostics_no_details">कोई स्नैपशॉट डायग्नोस्टिक्स रिकॉर्ड नहीं किया गया। प्रदाता पहुंच की जाँच करें और सीमा का पुनः प्रयास करें।</string>
-    <string name="raw_snapshot_guidance_provider">पुनः प्रयास करने से पहले चयनित प्रदाता की पहुंच और कच्चे आर्टिफैक्ट मेनिफ़ेस्ट की समीक्षा करें।</string>
+    <string name="raw_snapshot_guidance_provider">दोबारा कोशिश करने से पहले चुने गए प्रदाता का एक्सेस और रॉ आर्टिफ़ैक्ट मैनिफ़ेस्ट जाँचें।</string>
     <string name="raw_snapshot_guidance_cancelled">कोई रॉ आर्टिफ़ैक्ट प्रकाशित नहीं किया गया। तैयार होने पर पुनः प्रयास करें।</string>
     <string name="raw_snapshot_history_entry">स्नैपशॉट क्रियाएँ: %1$d/%2$d \u2022 %3$s से %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">स्नैपशॉट निदान</string>
@@ -633,34 +740,34 @@
     <string name="raw_snapshot_status_complete">पूर्ण</string>
     <string name="raw_snapshot_status_failed">विफल</string>
     <!-- ExportFormat display names -->
-    <string name="format_display_markdown">मार्कडाउन</string>
-    <string name="format_display_obsidian_bases">Obsidian आधार</string>
+    <string name="format_display_markdown">Markdown</string>
+    <string name="format_display_obsidian_bases">Obsidian Bases</string>
     <string name="format_display_json">JSON</string>
     <string name="format_display_csv">CSV</string>
     <!-- WriteMode display names and descriptions -->
-    <string name="write_mode_display_overwrite">अधिलेखन</string>
+    <string name="write_mode_display_overwrite">ओवरराइट</string>
     <string name="write_mode_desc_overwrite">मौजूदा फ़ाइलों को नए स्वास्थ्य डेटा के साथ बदलें</string>
-    <string name="write_mode_display_append">संलग्न करें</string>
+    <string name="write_mode_display_append">अंत में जोड़ें</string>
     <string name="write_mode_desc_append">मौजूदा फ़ाइलों के अंत में स्वास्थ्य डेटा जोड़ें</string>
-    <string name="write_mode_display_update">अद्यतन करें</string>
+    <string name="write_mode_display_update">अपडेट</string>
     <string name="write_mode_desc_update">अपनी कस्टम सामग्री को संरक्षित करते हुए ऐप-प्रबंधित अनुभागों को अपडेट करें</string>
     <!-- DateFormatPreference display names -->
     <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US लघु (01/13/2026)</string>
-    <string name="date_format_display_us_long">US लंबे (January 13, 2026)</string>
+    <string name="date_format_display_us_long">US दीर्घ (जनवरी 13, 2026)</string>
     <string name="date_format_display_eu_short">EU लघु (13/01/2026)</string>
-    <string name="date_format_display_eu_long">EU लंबे (13 January 2026)</string>
+    <string name="date_format_display_eu_long">EU दीर्घ (13 जनवरी 2026)</string>
     <string name="date_format_display_compact">संक्षिप्त (20260113)</string>
-    <string name="date_format_display_friendly">अनुकूल (Mon, Jan 13, 2026)</string>
+    <string name="date_format_display_friendly">सहज (सोम, जन॰ 13, 2026)</string>
     <!-- TimeFormatPreference display names -->
     <string name="time_format_display_24h">24-घंटे (14:30)</string>
     <string name="time_format_display_24h_seconds">24-घंटे सेकंड के साथ (14:30:45)</string>
-    <string name="time_format_display_12h">12-घंटे (2:30 PM)</string>
-    <string name="time_format_display_12h_seconds">12-घंटे सेकंड के साथ (2:30:45 PM)</string>
+    <string name="time_format_display_12h">12-घंटे (2:30 अपराह्न)</string>
+    <string name="time_format_display_12h_seconds">सेकंड सहित 12-घंटे (2:30:45 अपराह्न)</string>
     <!-- UnitPreference display names and descriptions -->
     <string name="unit_display_metric">मीट्रिक</string>
     <string name="unit_desc_metric">किलोमीटर, किलोग्राम, सेल्सियस</string>
-    <string name="unit_display_imperial">साम्राज्यिक</string>
+    <string name="unit_display_imperial">इम्पीरियल</string>
     <string name="unit_desc_imperial">मील, पाउंड, फारेनहाइट</string>
     <!-- MarkdownTemplateStyle display names and descriptions -->
     <string name="template_display_standard">मानक</string>
@@ -676,14 +783,14 @@
     <string name="bullet_display_asterisk">तारा (*)</string>
     <string name="bullet_display_plus">प्लस (+)</string>
     <!-- Onboarding -->
-    <string name="onboarding_welcome_title">आपका स्वागत है\nHealth.md</string>
+    <string name="onboarding_welcome_title">Health.md में\nआपका स्वागत है</string>
     <string name="onboarding_welcome_subtitle">अपनी स्वास्थ्य यात्रा को सुंदर, पोर्टेबल मार्कडाउन फ़ाइलों के रूप में निर्यात करें</string>
     <string name="onboarding_welcome_feature_1">Obsidian, Notion, और किसी भी मार्कडाउन ऐप के साथ काम करता है</string>
     <string name="onboarding_welcome_feature_2">आपका स्वास्थ्य डेटा केवल आपके द्वारा चुने गए गंतव्यों तक ही जाता है</string>
     <string name="onboarding_welcome_feature_3">स्वचालित निर्यात आपके नोट्स को अद्यतित रखता है</string>
     <string name="onboarding_health_title">आपका स्वास्थ्य,\nआपका डेटा</string>
     <string name="onboarding_health_subtitle">Health.md को Health Connect से आपके स्वास्थ्य डेटा को पढ़ने के लिए अनुमति की आवश्यकता है - लेकिन केवल इसे आपके लिए निर्यात करने के लिए।</string>
-    <string name="onboarding_health_feature_1">केवल पढ़ने योग्य पहुंच - हम आपके डेटा को कभी संशोधित नहीं करते हैं</string>
+    <string name="onboarding_health_feature_1">केवल पढ़ने की पहुँच — हम आपका डेटा कभी नहीं बदलते</string>
     <string name="onboarding_health_feature_2">स्वास्थ्य निर्यात केवल आपके द्वारा चुने गए गंतव्यों का उपयोग करते हैं</string>
     <string name="onboarding_health_feature_3">Health.md का कोई स्वास्थ्य-डेटा क्लाउड नहीं</string>
     <string name="onboarding_health_grant_button">स्वास्थ्य डेटा कनेक्ट करें</string>
@@ -696,7 +803,7 @@
     <string name="onboarding_storage_selected">इसमें सहेजा जा रहा है: %s</string>
     <string name="onboarding_ready_title">आप पूरी तरह तैयार हैं!</string>
     <string name="onboarding_ready_subtitle">Health.md आपका कल्याण डेटा निर्यात करने के लिए तैयार है।</string>
-    <string name="onboarding_ready_tip_1">अपना पहला स्वास्थ्य नोट्स बनाने के लिए निर्यात पर टैप करें</string>
+    <string name="onboarding_ready_tip_1">अपना पहला स्वास्थ्य नोट बनाने के लिए निर्यात पर टैप करें</string>
     <string name="onboarding_ready_tip_2">शेड्यूल टैब में स्वचालित निर्यात सेट करें</string>
     <string name="onboarding_ready_tip_3">सेटिंग्स में अपने निर्यात प्रारूप को अनुकूलित करें</string>
     <string name="onboarding_ready_start_button">निर्यात प्रारंभ करें</string>
@@ -710,15 +817,18 @@
     <string name="export_source_shortcut">शॉर्टकट</string>
     <string name="export_source_remote">रिमोट</string>
     <string name="schedule_unlock_required_title">निर्धारित निर्यात अनलॉक करें</string>
-    <string name="schedule_unlock_required_body">मैन्युअल निर्यात में 10 निःशुल्क रन शामिल हैं। स्वचालित अनुसूचित निर्यात एक बार के जीवनकाल अनलॉक के साथ शामिल हैं।</string>
+    <string name="schedule_unlock_required_body">मैन्युअल निर्यात 10 बार मुफ़्त चलाए जा सकते हैं। एकमुश्त लाइफ़टाइम अनलॉक में स्वचालित निर्धारित निर्यात शामिल हैं।</string>
     <string name="schedule_unlock_required_short">शेड्यूल किए गए निर्यात चालू करने के लिए Health.md अनलॉक करें।</string>
-    <string name="section_schedule_lookback">शेड्यूल किया गया लुकबैक</string>
-    <string name="schedule_lookback_summary">प्रत्येक शेड्यूल किया गया रन कल समाप्त होने वाले अंतिम %1$d पूरे दिन, साथ ही किसी भी लंबित विफल तिथियों को निर्यात करता है।</string>
-    <string name="export_folder_root_label">फ़ोल्डर निर्यात करें</string>
+    <string name="section_schedule_lookback">निर्धारित निर्यात की पिछली अवधि</string>
+    <string name="schedule_lookback_summary">हर निर्धारित निर्यात में कल तक के पिछले %1$d पूरे दिन और लंबित विफल तारीखें निर्यात होती हैं।</string>
+    <string name="export_folder_root_label">निर्यात फ़ोल्डर</string>
     <string name="history_clear_title">निर्यात इतिहास साफ़ करें?</string>
     <string name="history_clear_body">यह सभी स्थानीय निर्यात इतिहास प्रविष्टियाँ हटा देता है। निर्यात की गई फ़ाइलें हटाई नहीं जातीं.</string>
     <string name="history_target_label">लक्ष्यः %1$s</string>
-    <string name="history_file_count">फ़ाइलें: %1$d</string>
+    <plurals name="history_file_count">
+        <item quantity="one">फ़ाइल: %1$d</item>
+        <item quantity="other">फ़ाइलें: %1$d</item>
+    </plurals>
     <string name="history_detail_title">निर्यात विवरण</string>
     <string name="history_detail_source">स्रोत</string>
     <string name="history_detail_when">कब</string>
@@ -747,7 +857,7 @@
     <string name="frontmatter_date_key">दिनांक कुंजी</string>
     <string name="frontmatter_include_type">प्रकार शामिल करें</string>
     <string name="frontmatter_type_key">प्रकार की कुंजी</string>
-    <string name="frontmatter_type_value">मान टाइप करें</string>
+    <string name="frontmatter_type_value">प्रकार का मान</string>
     <string name="frontmatter_custom_fields_section">स्थैतिक कस्टम फ़ील्ड</string>
     <string name="frontmatter_placeholder_fields_section">प्लेसहोल्डर फ़ील्ड</string>
     <string name="frontmatter_metric_fields_section">मीट्रिक फ़ील्ड</string>
@@ -758,4 +868,398 @@
     <string name="search">खोजें</string>
     <string name="enabled">सक्षम</string>
     <string name="disabled">अक्षम</string>
+
+    <!-- Canonical localization additions -->
+    <string name="release_notes_highlight_widgets">वैकल्पिक बैकग्राउंड रीफ़्रेश के साथ अपनी होम स्क्रीन पर स्वास्थ्य सारांश, गतिविधि, हृदय गति सीमा और नींद के विजेट जोड़ें।</string>
+    <string name="direct_cli_title">Direct CLI</string>
+    <string name="direct_cli_intro_title">एन्क्रिप्टेड डेस्कटॉप निर्यात</string>
+    <string name="direct_cli_intro_body">CLI आपके कंप्यूटर पर कनेक्शन की प्रतीक्षा करता है। Health.md सीधे कनेक्ट होकर बिना किसी क्लाउड रिले के निर्यात भेजता है।</string>
+    <string name="direct_cli_pair_step_run">1. अपने कंप्यूटर पर यह चलाएँ:</string>
+    <string name="direct_cli_pair_step_enter">2. CLI द्वारा दिखाया गया कंप्यूटर पता और 20-अंकीय Android कोड दर्ज करें।</string>
+    <string name="direct_cli_computer_address">कंप्यूटर पता</string>
+    <string name="direct_cli_port">पोर्ट</string>
+    <string name="direct_cli_pairing_code">पेयरिंग कोड</string>
+    <string name="direct_cli_pair_button">CLI के साथ पेयर करें</string>
+    <string name="direct_cli_paired_listener">%1$s के साथ पेयर किया गया</string>
+    <string name="direct_cli_save_address">पता सहेजें</string>
+    <string name="direct_cli_export_instruction">अपने कंप्यूटर पर निर्यात कमांड चलाएँ, फिर कनेक्ट करें पर टैप करें:</string>
+    <string name="direct_cli_connect">कनेक्ट करें</string>
+    <string name="direct_cli_disconnect">डिसकनेक्ट करें</string>
+    <string name="direct_cli_forget">पेयर किया गया CLI भूलें</string>
+    <string name="direct_cli_status_title">स्थिति</string>
+    <string name="direct_cli_status_not_connected">कनेक्ट नहीं है</string>
+    <string name="direct_cli_status_pairing">पेयर किया जा रहा है…</string>
+    <string name="direct_cli_status_connecting">कनेक्ट किया जा रहा है…</string>
+    <string name="direct_cli_status_connected">%1$s से कनेक्टेड</string>
+    <string name="direct_cli_status_transferring">%1$s / %2$s स्थानांतरित हो रहा है</string>
+    <string name="direct_cli_status_paired">%1$s के साथ पेयर किया गया।</string>
+    <string name="direct_cli_status_session_finished">Direct CLI सत्र समाप्त हो गया।</string>
+    <string name="direct_cli_status_export_completed">Android निर्यात पूरा हुआ।</string>
+    <string name="direct_cli_status_export_cancelled">Android निर्यात रद्द किया गया।</string>
+    <string name="direct_cli_failure_connection">Health.md CLI से कनेक्ट नहीं हो सका। पक्का करें कि वह कनेक्शन स्वीकार करने के लिए तैयार है, फिर दोबारा कोशिश करें।</string>
+    <string name="direct_cli_failure_timeout">Direct CLI सत्र Android की समय सीमा तक पहुँच गया।</string>
+    <string name="direct_cli_failure_quota">निःशुल्क निर्यात सीमा पूरी हो चुकी है।</string>
+    <string name="direct_cli_failure_fitbit_range">Fitbit रॉ निर्यात के लिए अधिकतम 366 दिनों की स्पष्ट रेंज ज़रूरी है।</string>
+    <string name="direct_cli_failure_source_unavailable">अनुरोधित स्वास्थ्य प्रदाता इस डिवाइस पर उपलब्ध नहीं है।</string>
+    <string name="direct_cli_failure_health_access">Android डिवाइस पर स्वास्थ्य एक्सेस आवश्यक है।</string>
+    <string name="direct_cli_failure_device_locked">स्वास्थ्य डेटा निर्यात करने से पहले Android डिवाइस अनलॉक करें।</string>
+    <string name="direct_cli_failure_historical_access">अनुरोधित तारीखों के लिए ऐतिहासिक स्वास्थ्य एक्सेस आवश्यक है।</string>
+    <string name="direct_cli_failure_file_limit">बनाया गया निर्यात 4,096 फ़ाइलों से अधिक है; कम तिथियाँ चुनें या अलग-अलग ट्रैकिंग बंद करें।</string>
+    <string name="direct_cli_failure_spool_missing">सहेजा गया निर्यात गायब है और उसे पुनः शुरू करना होगा।</string>
+    <string name="direct_cli_failure_export">Android निर्यात सुरक्षित रूप से पूरा नहीं किया जा सका।</string>
+    <string name="direct_cli_notification_waiting">Health.md CLI की प्रतीक्षा कर रहा है</string>
+    <string name="direct_cli_notification_idle">Direct CLI निष्क्रिय है</string>
+    <string name="direct_cli_notification_pairing">Health.md CLI से पेयर किया जा रहा है</string>
+    <string name="direct_cli_notification_connecting">Health.md CLI से कनेक्ट किया जा रहा है</string>
+    <string name="direct_cli_notification_transferring">Android स्वास्थ्य निर्यात स्थानांतरित किया जा रहा है</string>
+    <string name="direct_cli_notification_title">Health.md Direct CLI</string>
+    <string name="direct_cli_notification_channel_name">Direct CLI निर्यात</string>
+    <string name="direct_cli_notification_channel_description">एन्क्रिप्टेड डायरेक्ट निर्यात कनेक्शन और स्थानांतरण प्रगति</string>
+    <string name="api_export_target_title">निर्यात लक्ष्य</string>
+    <string name="api_export_section_endpoint">एंडपॉइंट</string>
+    <string name="api_export_endpoint_url_label">एंडपॉइंट URL</string>
+    <string name="api_export_endpoint_help">आवश्यक। API कुंजियों और अन्य गोपनीय मानों को URL में शामिल न करें।</string>
+    <string name="api_export_authorization_saved">%1$s सहेजा गया</string>
+    <string name="api_export_remove_credential">क्रेडेंशियल हटाएँ</string>
+    <string name="api_export_new_authorization_label">नया %1$s</string>
+    <string name="api_export_authorization_label">%1$s टोकन या %2$s क्रेडेंशियल</string>
+    <string name="api_export_authorization_replacement_placeholder">सहेजे गए को बदलने के लिए मान दर्ज करें</string>
+    <string name="api_export_authorization_placeholder">टोकन या %1$s मान</string>
+    <string name="api_export_authorization_saved_help">सहेजा गया मान रखने के लिए खाली छोड़ें। सादे टोकन अपने आप %1$s का उपयोग करते हैं।</string>
+    <string name="api_export_authorization_help">सादे टोकन अपने आप %1$s का उपयोग करते हैं। %1$s और %2$s मान स्वीकार किए जाते हैं।</string>
+    <string name="api_export_custom_headers_title">कस्टम हेडर</string>
+    <string name="api_export_custom_headers_saved">कस्टम हेडर सहेजे गए</string>
+    <string name="api_export_remove_headers">हेडर हटाएँ</string>
+    <string name="api_export_replacement_headers_label">प्रतिस्थापन हेडर</string>
+    <string name="api_export_request_headers_label">अनुरोध हेडर</string>
+    <string name="api_export_replacement_headers_help">पूरा प्रतिस्थापन सेट दर्ज करें, हर पंक्ति में एक %1$s।</string>
+    <string name="api_export_request_headers_help">हर पंक्ति में एक %1$s का उपयोग करें। %2$s परिवहन हेडर को ऐप-प्रबंधित रखता है।</string>
+    <string name="api_export_close_settings">सेटिंग्स बंद करें</string>
+    <string name="api_export_save_settings">सेटिंग्स सहेजें</string>
+    <string name="api_export_dialog_title">API निर्यात</string>
+    <string name="api_export_dialog_description">चुने गए रिकॉर्ड एक %1$s %2$s के रूप में आपके नियंत्रण वाले %3$s या %4$s एंडपॉइंट पर भेजें।</string>
+    <string name="api_export_close_content_description">API निर्यात सेटिंग्स बंद करें</string>
+    <string name="api_export_optional_label">वैकल्पिक</string>
+    <string name="api_export_manage_request_headers">अनुरोध हेडर प्रबंधित करें</string>
+    <string name="api_export_add_request_headers">अनुरोध हेडर जोड़ें</string>
+    <string name="api_export_headers_saved_hidden">सुरक्षित रूप से सहेजा गया · मान छिपाए गए</string>
+    <string name="api_export_headers_add_help">API कुंजियाँ या सेवा-विशिष्ट मान जोड़ें</string>
+    <string name="api_export_collapse_custom_headers">कस्टम हेडर संक्षिप्त करें</string>
+    <string name="api_export_expand_custom_headers">कस्टम हेडर विस्तृत करें</string>
+    <string name="api_export_error_invalid_endpoint">फ़्रैगमेंट या एम्बेड किए गए उपयोगकर्ता नाम/पासवर्ड के बिना मान्य %1$s या %2$s URL दर्ज करें।</string>
+    <string name="api_export_error_authorization_empty">मान्य %1$s टोकन या %2$s मान दर्ज करें।</string>
+    <string name="api_export_error_authorization_characters">%1$s मानों में नियंत्रण या non-ASCII वर्ण नहीं हो सकते।</string>
+    <string name="api_export_error_headers_total_size">अनुरोध हेडर %1$d वर्णों या उससे कम होने चाहिए।</string>
+    <string name="api_export_error_headers_line_break">अनुरोध हेडर में असमर्थित पंक्ति-विराम है।</string>
+    <string name="api_export_error_header_missing_separator">हेडर पंक्ति %1$d में %2$s का उपयोग होना चाहिए।</string>
+    <string name="api_export_error_header_invalid_name">हेडर पंक्ति %1$d में अमान्य नाम है। नाम में अधिकतम %2$d मान्य %3$s हेडर वर्ण हो सकते हैं।</string>
+    <string name="api_export_error_header_reserved_name">%1$s को %2$s प्रबंधित करता है और इसे ओवरराइड नहीं किया जा सकता।</string>
+    <string name="api_export_error_header_duplicate_name">हेडर %1$s एक से अधिक बार कॉन्फ़िगर किया गया है।</string>
+    <string name="api_export_error_header_value_too_long">हेडर %1$s का मान %2$d वर्णों या उससे कम होना चाहिए।</string>
+    <string name="api_export_error_header_value_characters">हेडर %1$s में असमर्थित मान वर्ण हैं।</string>
+    <string name="api_export_error_save_failed">API अनुरोध सेटिंग्स को सुरक्षित रूप से सहेजा नहीं जा सका।</string>
+    <string name="api_export_endpoint_example">https://api.example.com/healthmd</string>
+    <string name="api_export_headers_example">X-API-Key: secret\nX-Client-ID: healthmd</string>
+    <string name="api_export_header_line_syntax">Name: value</string>
+    <string name="api_export_literal_authorization">Authorization</string>
+    <string name="api_export_literal_bearer">Bearer</string>
+    <string name="api_export_literal_basic">Basic</string>
+    <string name="api_export_literal_json">JSON</string>
+    <string name="api_export_literal_post">POST</string>
+    <string name="api_export_literal_http">HTTP</string>
+    <string name="api_export_literal_https">HTTPS</string>
+    <plurals name="api_export_error_header_count">
+        <item quantity="one">अधिकतम %1$d अनुरोध हेडर कॉन्फ़िगर करें।</item>
+        <item quantity="other">अधिकतम %1$d अनुरोध हेडर कॉन्फ़िगर करें।</item>
+    </plurals>
+    <string name="settings_direct_cli_subtitle">एन्क्रिप्टेड iOS- या Android-संगत निर्यातों के लिए डेस्कटॉप CLI से पेयर करें।</string>
+    <string name="health_provider_health_connect_summary">निजी ऑन-डिवाइस निर्यात के लिए उपयोग किया जाने वाला डिफ़ॉल्ट Android स्वास्थ्य हब।</string>
+    <string name="health_provider_health_connect_setup_description">निर्यात स्क्रीन से Health Connect अनुमतियाँ दें। Health.md रिकॉर्ड स्थानीय रूप से पढ़ता है और उन्हें सीधे आपके फ़ोल्डर में लिखता है।</string>
+    <string name="health_provider_samsung_health_summary">Samsung फ़ोन, Galaxy Watch, नींद, कदम, व्यायाम और महत्वपूर्ण स्वास्थ्य संकेत।</string>
+    <string name="health_provider_samsung_health_setup_description">Samsung Health खोलें और Health Connect के साथ साझाकरण सक्षम करें। यदि Health Connect के बाहर भागीदार-अनुमोदित डेटा चाहिए, तो Samsung का प्रत्यक्ष Health Data SDK बाद में जोड़ा जा सकता है।</string>
+    <string name="health_provider_huawei_health_summary">Huawei डिवाइस और HMS/AppGallery बाज़ार।</string>
+    <string name="health_provider_huawei_health_setup_description">Huawei समर्थन के लिए HMS Health Kit ऐप पंजीकरण और HMS-सक्षम बिल्ड आवश्यक है। यह सूची Huawei को Play बिल्ड में HMS निर्भरताएँ जोड़े बिना दिखाती है।</string>
+    <string name="health_provider_fitbit_summary">Fitbit ट्रैकर, Pixel Watch का Fitbit डेटा, नींद, गतिविधि और हृदय।</string>
+    <string name="health_provider_fitbit_setup_description">सीधे Fitbit इम्पोर्ट में OAuth स्कोप और रिफ़्रेश टोकन के साथ Fitbit Web API का उपयोग होता है। ऐप क्रेडेंशियल कॉन्फ़िगर होने तक, जहाँ उपलब्ध हो वहाँ Health Connect से Fitbit डेटा निर्यात करें।</string>
+    <string name="health_provider_garmin_summary">Garmin घड़ियाँ, प्रशिक्षण, गतिविधि, नींद और शारीरिक ऊर्जा जैसे मापदंड।</string>
+    <string name="health_provider_garmin_setup_description">Garmin के प्रोडक्शन इम्पोर्ट के लिए Garmin Health API पार्टनर की मंज़ूरी और आम तौर पर बैकएंड/वेबहुक सिंक पाथ ज़रूरी है। Health.md डिज़ाइन के अनुसार Google Fit फ़ॉलबैक का उपयोग नहीं करता।</string>
+    <string name="health_provider_withings_summary">Withings स्केल, घड़ियाँ, रक्तचाप और स्लीप मैट।</string>
+    <string name="health_provider_withings_setup_description">सीधे Withings इम्पोर्ट में OAuth 2.0 और Withings public API का उपयोग होता है। लाइव क्लाउड रीड चालू करने से पहले क्लाइंट क्रेडेंशियल कॉन्फ़िगर करें।</string>
+    <string name="health_provider_oura_summary">Oura Ring की नींद, रेडिनेस, गतिविधि, हृदय गति और HRV।</string>
+    <string name="health_provider_oura_setup_description">सीधे Oura इम्पोर्ट में OAuth 2.0 के साथ Oura Cloud API का उपयोग होता है। लाइव क्लाउड रीड चालू करने से पहले क्लाइंट क्रेडेंशियल कॉन्फ़िगर करें।</string>
+    <string name="health_provider_polar_summary">Polar प्रशिक्षण, हृदय-गति उपकरण और AccessLink के माध्यम से नींद/गतिविधि।</string>
+    <string name="health_provider_polar_setup_description">Polar के ऐतिहासिक इम्पोर्ट के लिए Polar AccessLink OAuth का उपयोग करें। BLE सेंसर समर्थन भविष्य का अलग लाइव-सेशन फ़ीचर है, इतिहास निर्यात का विकल्प नहीं।</string>
+    <string name="health_provider_whoop_summary">WHOOP रिकवरी, Strain, नींद, वर्कआउट और शारीरिक डेटा।</string>
+    <string name="health_provider_whoop_setup_description">सीधे WHOOP इम्पोर्ट में साइकल, रिकवरी, नींद, वर्कआउट और प्रोफ़ाइल डेटा के OAuth स्कोप के साथ WHOOP API का उपयोग होता है।</string>
+    <string name="health_provider_integration_android_system">Android सिस्टम</string>
+    <string name="health_provider_integration_health_connect_source">Health Connect स्रोत</string>
+    <string name="health_provider_integration_vendor_sdk">विक्रेता SDK</string>
+    <string name="health_provider_integration_cloud_api">क्लाउड API</string>
+    <string name="health_provider_integration_partner_api">भागीदार API</string>
+    <string name="health_provider_direct_export_available">निर्यात-तैयार</string>
+    <string name="health_provider_direct_export_requires_oauth_credentials">OAuth क्रेडेंशियल ज़रूरी हैं</string>
+    <string name="health_provider_direct_export_requires_vendor_approval">विक्रेता की मंज़ूरी चाहिए</string>
+    <string name="health_provider_direct_export_requires_partner_approval">साझेदार की मंज़ूरी चाहिए</string>
+    <string name="health_provider_direct_export_requires_app_configuration">ऐप कॉन्फ़िगरेशन चाहिए</string>
+    <string name="health_provider_action_open">खोलें</string>
+    <string name="health_provider_action_install_setup">इंस्टॉल / सेटअप</string>
+    <string name="privacy_permissions_label">अनुमतियाँ:</string>
+    <string name="privacy_export_label">निर्यात:</string>
+    <string name="onboarding_storage_selected_folder_fallback">चयनित फ़ोल्डर</string>
+    <string name="advanced_settings_no_formats_selected">कोई प्रारूप चयनित नहीं</string>
+    <string name="custom_markdown_template_empty_preview">(खाली पूर्वावलोकन)</string>
+    <string name="billing_error_product_unavailable">उत्पाद जानकारी लोड नहीं हो सकी। कृपया फिर से कोशिश करें।</string>
+    <string name="billing_error_service_unavailable">बिलिंग सेवा उपलब्ध नहीं है। कृपया फिर से कोशिश करें।</string>
+    <string name="billing_error_purchase_failed">खरीद पूरी नहीं हो सकी। कृपया फिर से कोशिश करें।</string>
+    <string name="billing_error_no_previous_purchase">कोई पिछली खरीद नहीं मिली।</string>
+    <string name="billing_error_restore_failed">खरीदारी पुनर्स्थापित नहीं की जा सकीं। कृपया फिर से कोशिश करें।</string>
+    <string name="health_provider_label_health_connect">Health Connect</string>
+    <string name="health_provider_label_all_connected">सभी जुड़े स्रोत</string>
+    <string name="health_provider_label_fitbit">Fitbit</string>
+    <string name="health_provider_label_withings">Withings</string>
+    <string name="health_provider_label_oura">Oura</string>
+    <string name="health_provider_label_polar">Polar Flow</string>
+    <string name="health_provider_label_whoop">WHOOP</string>
+    <string name="health_provider_label_generic">स्वास्थ्य स्रोत</string>
+    <string name="health_provider_sign_in_denied">स्वास्थ्य स्रोत में प्रवेश स्वीकृत नहीं हुआ।</string>
+    <string name="health_provider_sign_in_invalid_callback">स्वास्थ्य स्रोत में प्रवेश सत्यापित नहीं किया जा सका। कृपया फिर से कोशिश करें।</string>
+    <string name="health_provider_sign_in_connection_failed">स्वास्थ्य स्रोत से कनेक्ट नहीं हो सका। कृपया फिर से कोशिश करें।</string>
+    <string name="feedback_diagnostic_app">ऐप: Health.md %1$s (%2$d)</string>
+    <string name="feedback_diagnostic_platform">प्लेटफ़ॉर्म: Android %1$s (API %2$d)</string>
+    <string name="feedback_diagnostic_device">डिवाइस: %1$s</string>
+    <string name="feedback_issue_describe_heading">समस्या का वर्णन करें</string>
+    <string name="feedback_issue_describe_hint">क्या हुआ, इसका स्पष्ट विवरण</string>
+    <string name="feedback_issue_steps_heading">समस्या दोहराने के चरण</string>
+    <string name="feedback_issue_expected_heading">अपेक्षित व्यवहार</string>
+    <string name="feedback_issue_expected_hint">आपको क्या होने की उम्मीद थी</string>
+    <string name="automation_history_permissions_missing">Health Connect अनुमतियाँ अनुपलब्ध</string>
+    <plurals name="automation_history_failed_dates">
+        <item quantity="one">%1$d असफल तारीख</item>
+        <item quantity="other">%1$d असफल तारीखें</item>
+    </plurals>
+    <string name="action_edit_endpoint">API एंडपॉइंट संपादित करें</string>
+    <string name="history_date_range">%1$s – %2$s</string>
+    <string name="history_failed_date_reason">%1$s: %2$s</string>
+    <string name="history_retry_api_required">दोबारा कोशिश करने से पहले API एंडपॉइंट कॉन्फ़िगर करें।</string>
+    <string name="history_retry_complete">पुनः प्रयास पूरा हुआ।</string>
+    <string name="history_retry_failed">पुनः प्रयास विफल हुआ। विवरण के लिए निर्यात इतिहास देखें।</string>
+    <string name="history_retry_folder_required">पुनः प्रयास करने से पहले एक निर्यात फ़ोल्डर चुनें।</string>
+    <string name="history_retry_permissions_required">पुनः प्रयास करने से पहले Health Connect अनुमतियाँ दें।</string>
+    <string name="history_retry_raw_failed">रॉ स्नैपशॉट पुनः प्रयास विफल हुआ। विवरण के लिए निर्यात इतिहास देखें।</string>
+    <string name="history_warning_details_unavailable">चेतावनी विवरण उपलब्ध नहीं हैं।</string>
+    <string name="schedule_decrease_hour">घंटा घटाएँ</string>
+    <string name="schedule_decrease_lookback_days">पिछली अवधि के दिन घटाएँ</string>
+    <string name="schedule_decrease_minute">मिनट घटाएँ</string>
+    <string name="schedule_destination_not_ready_title">निर्यात गंतव्य तैयार नहीं है</string>
+    <string name="schedule_error_api_required">शेड्यूल चालू करने से पहले API एंडपॉइंट कॉन्फ़िगर करें।</string>
+    <string name="schedule_error_folder_required">पहले निर्यात स्क्रीन पर निर्यात फ़ोल्डर चुनें।</string>
+    <string name="schedule_error_invalid_api_settings">API एंडपॉइंट और अनुरोध सेटिंग्स जाँचें, फिर दोबारा कोशिश करें।</string>
+    <string name="schedule_error_invalid_api_url">फ़्रैगमेंट या एम्बेड किए गए उपयोगकर्ता नाम/पासवर्ड के बिना मान्य HTTP या HTTPS URL दर्ज करें।</string>
+    <string name="schedule_error_invalid_headers">मान्य अनुरोध हेडर दर्ज करें, प्रत्येक पंक्ति में एक नाम और मान।</string>
+    <string name="schedule_error_save_api_settings">API अनुरोध सेटिंग्स को सुरक्षित रूप से सहेजा नहीं जा सका।</string>
+    <string name="schedule_increase_hour">घंटा बढ़ाएँ</string>
+    <string name="schedule_increase_lookback_days">पिछली अवधि के दिन बढ़ाएँ</string>
+    <string name="schedule_increase_minute">मिनट बढ़ाएँ</string>
+    <string name="schedule_next_export_datetime">%1$s को %2$s पर</string>
+    <string name="schedule_target_api_configured">%1$s पर POST JSON</string>
+    <string name="schedule_target_api_unconfigured">अपने API एंडपॉइंट पर निर्धारित JSON भेजें</string>
+    <string name="schedule_target_folder_choose">निर्यात स्क्रीन से फ़ोल्डर चुनें</string>
+    <string name="schedule_target_folder_ready">निर्धारित फ़ाइलें चयनित उपकरण फ़ोल्डर में लिखें</string>
+    <string name="schedule_toggle_time_period">पूर्वाह्न या अपराह्न बदलें</string>
+    <string name="scheduled_recovery_history_cancelled">पुनर्प्राप्ति रद्द की गई; अधूरी तारीखें लंबित रहेंगी।</string>
+    <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
+    <plurals name="export_history_failed_dates_pending_retry">
+        <item quantity="one">पुनः प्रयास के लिए लंबित %1$d असफल तारीख</item>
+        <item quantity="other">पुनः प्रयास के लिए लंबित %1$d असफल तारीखें</item>
+    </plurals>
+    <plurals name="export_notification_days_exported">
+        <item quantity="one">%1$d/%2$d दिन %3$s के लिए निर्यात किया गया</item>
+        <item quantity="other">%1$d/%2$d दिन %3$s के लिए निर्यात किए गए</item>
+    </plurals>
+    <plurals name="history_detail_exported_days">
+        <item quantity="one">%1$d/%2$d दिन</item>
+        <item quantity="other">%1$d/%2$d दिन</item>
+    </plurals>
+    <plurals name="history_detail_file_count">
+        <item quantity="one">%1$d फ़ाइल</item>
+        <item quantity="other">%1$d फ़ाइलें</item>
+    </plurals>
+    <plurals name="history_failed_date_sample_more">
+        <item quantity="one">असफल तारीखें: %1$s, +%2$d और</item>
+        <item quantity="other">असफल तारीखें: %1$s, +%2$d और</item>
+    </plurals>
+    <plurals name="history_more_items">
+        <item quantity="one">+%1$d और</item>
+        <item quantity="other">+%1$d और</item>
+    </plurals>
+    <plurals name="history_retry_failed_dates">
+        <item quantity="one">पुनः प्रयास %1$d असफल तारीख के साथ समाप्त हुआ।</item>
+        <item quantity="other">पुनः प्रयास %1$d असफल तारीखों के साथ समाप्त हुआ।</item>
+    </plurals>
+    <plurals name="history_warning_failed_dates">
+        <item quantity="one">%1$d असफल तारीख</item>
+        <item quantity="other">%1$d असफल तारीखें</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_incomplete_count">
+        <item quantity="one">%1$d अधूरी स्नैपशॉट कार्रवाई</item>
+        <item quantity="other">%1$d अधूरी स्नैपशॉट कार्रवाइयाँ</item>
+    </plurals>
+    <plurals name="raw_snapshot_history_entry_actions">
+        <item quantity="one">स्नैपशॉट कार्रवाइयाँ: %1$d/%2$d कार्रवाई • %3$s से %4$s तक</item>
+        <item quantity="other">स्नैपशॉट कार्रवाइयाँ: %1$d/%2$d कार्रवाइयाँ • %3$s से %4$s तक</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_days" tools:ignore="ImpliedQuantity">
+        <item quantity="one">दिन</item>
+        <item quantity="other">दिन</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_hours" tools:ignore="ImpliedQuantity">
+        <item quantity="one">घंटा</item>
+        <item quantity="other">घंटे</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_minutes" tools:ignore="ImpliedQuantity">
+        <item quantity="one">मिनट</item>
+        <item quantity="other">मिनट</item>
+    </plurals>
+    <plurals name="schedule_cadence_unit_weeks" tools:ignore="ImpliedQuantity">
+        <item quantity="one">सप्ताह</item>
+        <item quantity="other">सप्ताह</item>
+    </plurals>
+    <plurals name="schedule_lookback_days_summary">
+        <item quantity="one">हर बार कल तक के पिछले %1$d दिन का डेटा निर्यात होता है।</item>
+        <item quantity="other">हर बार कल तक के पिछले %1$d दिनों का डेटा निर्यात होता है।</item>
+    </plurals>
+    <plurals name="scheduled_recovery_history_failed_dates">
+        <item quantity="one">रिकवरी पूरी हुई; %1$d असफल तारीख अभी भी लंबित है।</item>
+        <item quantity="other">रिकवरी पूरी हुई; %1$d असफल तारीखें अभी भी लंबित हैं।</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_exported_dates">
+        <item quantity="one">पुनर्प्राप्ति ने %1$d/%2$d तारीख निर्यात की।</item>
+        <item quantity="other">पुनर्प्राप्ति ने %1$d/%2$d तारीखें निर्यात कीं।</item>
+    </plurals>
+    <plurals name="scheduled_recovery_result_pending_dates">
+        <item quantity="one">%1$d तारीख अभी भी लंबित है।</item>
+        <item quantity="other">%1$d तारीखें अभी भी लंबित हैं।</item>
+    </plurals>
+    <string name="export_api_action_edit">संपादित करें</string>
+    <string name="export_api_authorization_secure">Authorization सुरक्षित रूप से सहेजा गया</string>
+    <string name="export_api_compatibility_mode_description">API निर्यात हमेशा JSON भेजते हैं। मापदंड और समय-श्रृंखला सेटिंग लागू होती हैं; फ़ाइल पथ और लेखन मोड लागू नहीं होते।</string>
+    <string name="export_api_configure_endpoint">API एंडपॉइंट कॉन्फ़िगर करें</string>
+    <string name="export_api_error_invalid_endpoint">फ़्रैगमेंट या एम्बेड किए गए उपयोगकर्ता नाम/पासवर्ड के बिना मान्य HTTP या HTTPS URL दर्ज करें।</string>
+    <string name="export_api_error_invalid_headers">मान्य अनुरोध हेडर दर्ज करें, प्रत्येक पंक्ति में एक नाम और मान।</string>
+    <string name="export_api_error_secure_save">API अनुरोध सेटिंग्स को सुरक्षित रूप से सहेजा नहीं जा सका।</string>
+    <string name="export_api_headers_secure">कस्टम अनुरोध हेडर सुरक्षित रूप से सहेजे गए</string>
+    <string name="export_api_post_endpoint">%1$s पर POST</string>
+    <string name="export_api_raw_mode_description">रॉ स्नैपशॉट पूरे आर्टिफ़ैक्ट को schema, export ID और checksum हेडर के साथ स्ट्रीम करते हैं।</string>
+    <string name="export_no_format_selected">जारी रखने के लिए कम से कम एक निर्यात प्रारूप चुनें।</string>
+    <string name="export_preview_action_create_daily_note">दैनिक नोट बनाएँ</string>
+    <string name="export_preview_action_daily_note_failed">दैनिक नोट विफल</string>
+    <string name="export_preview_action_skip_daily_note">दैनिक नोट छोड़ें</string>
+    <string name="export_preview_action_update_daily_note">दैनिक नोट अपडेट करें</string>
+    <string name="export_preview_action_write_individual_entry">व्यक्तिगत प्रविष्टि लिखें</string>
+    <string name="export_preview_api_preparation_failed">API निर्यात की तैयारी विफल हुई।</string>
+    <string name="export_preview_artifacts_per_range">प्रति रेंज आर्टिफ़ैक्ट</string>
+    <string name="export_preview_back_description">निर्यात पूर्वावलोकन पर वापस जाएँ</string>
+    <string name="export_preview_destination_label">गंतव्य</string>
+    <string name="export_preview_empty_file">(खाली फ़ाइल)</string>
+    <string name="export_preview_formats_per_day">प्रति दिन प्रारूप</string>
+    <string name="export_preview_no_exportable_file">इस तारीख के लिए कोई निर्यात योग्य फ़ाइल नहीं है।</string>
+    <string name="export_preview_no_files_written">कोई फ़ाइल नहीं लिखी जाएगी।</string>
+    <string name="export_preview_planning_failed">निर्यात योजना विफल हुई।</string>
+    <string name="export_preview_raw_access_denied">%1$s रॉ स्नैपशॉट पूर्वावलोकन एक्सेस अस्वीकृत हुआ। प्रदाता अनुमतियाँ देखें।</string>
+    <string name="export_preview_raw_failed">आर्टिफैक्ट पूरा होने से पहले %1$s रॉ स्नैपशॉट पूर्वावलोकन विफल हुआ।</string>
+    <string name="export_preview_raw_failed_manifest">%1$s ने एक विफल रॉ स्नैपशॉट मैनिफ़ेस्ट बनाया। प्रदाता एक्सेस देखें।</string>
+    <string name="export_preview_raw_invalid_range">रॉ स्नैपशॉट की समाप्ति तारीख, प्रारंभ तारीख से पहले है।</string>
+    <string name="export_preview_raw_no_final_status">%1$s पूर्वावलोकन बिना अंतिम रॉ स्नैपशॉट स्थिति के समाप्त हुआ।</string>
+    <string name="export_preview_raw_partial">%1$s ने आंशिक रॉ स्नैपशॉट पूर्वावलोकन बनाया। आर्टिफैक्ट मैनिफ़ेस्ट देखें।</string>
+    <string name="export_preview_raw_provider_unavailable">रॉ स्नैपशॉट पूर्वावलोकन के लिए कोई जुड़ा हुआ प्रदाता उपलब्ध नहीं है।</string>
+    <string name="export_preview_raw_provider_unregistered">%1$s प्रदाता के नेटिव रॉ स्नैपशॉट के लिए पंजीकृत नहीं है; Health Connect फ़ॉलबैक का उपयोग नहीं किया गया।</string>
+    <string name="export_preview_raw_service_unavailable">रॉ स्नैपशॉट पूर्वावलोकन सेवा उपलब्ध नहीं है।</string>
+    <string name="export_preview_selected_folder">चयनित फ़ोल्डर</string>
+    <string name="export_preview_selected_range">चुनी हुई रेंज</string>
+    <string name="export_preview_summary">%1$s • %2$s • %3$s</string>
+    <string name="export_preview_truncation_marker">\n\n… पूर्वावलोकन छोटा किया गया: इस %2$s फ़ाइल के बीच से %1$s हटा दिया गया। …\n\n</string>
+    <string name="export_preview_warning_title">चेतावनी</string>
+    <string name="export_selected_range">%1$s – %2$s</string>
+    <string name="export_target_api_configured_subtitle">%2$s पर %1$s को POST</string>
+    <string name="export_target_api_json_unconfigured_subtitle">अपने API एंडपॉइंट पर JSON भेजें</string>
+    <string name="export_target_api_raw_unconfigured_subtitle">रॉ स्नैपशॉट को HTTPS एंडपॉइंट पर स्ट्रीम करें</string>
+    <string name="export_target_folder_selected_subtitle">फ़ाइलें %1$s में लिखें</string>
+    <string name="export_target_folder_unselected_subtitle">स्थानीय या प्रदाता-समर्थित फ़ोल्डर चुनें</string>
+    <string name="folder_organization_flat_label">फ़्लैट</string>
+    <string name="folder_organization_by_year_label">वर्ष के अनुसार</string>
+    <string name="folder_organization_by_month_label">माह के अनुसार</string>
+    <string name="folder_organization_by_year_month_label">वर्ष/माह के अनुसार</string>
+    <string name="folder_organization_flat_preview">कोई स्वचालित तारीख फ़ोल्डर नहीं</string>
+    <plurals name="export_progress_state_days">
+        <item quantity="one">%2$d में से %1$d दिन निर्यात हुआ</item>
+        <item quantity="other">%2$d में से %1$d दिन निर्यात हुए</item>
+    </plurals>
+    <plurals name="export_progress_state_days_with_date">
+        <item quantity="one">%2$d में से %1$d दिन निर्यात हुआ। वर्तमान तारीख: %3$s</item>
+        <item quantity="other">%2$d में से %1$d दिन निर्यात हुए। वर्तमान तारीख: %3$s</item>
+    </plurals>
+    <plurals name="export_progress_state_raw">
+        <item quantity="one">%2$d में से %1$d रॉ स्नैपशॉट कार्रवाई %3$s से %4$s के लिए पूरी हुई</item>
+        <item quantity="other">%2$d में से %1$d रॉ स्नैपशॉट कार्रवाइयाँ %3$s से %4$s के लिए पूरी हुईं</item>
+    </plurals>
+    <plurals name="export_diagnostics_date_list_more_count">
+        <item quantity="one">असफल तारीखें: %1$s, +%2$d और तारीख</item>
+        <item quantity="other">असफल तारीखें: %1$s, +%2$d और तारीखें</item>
+    </plurals>
+    <plurals name="export_diagnostics_failed_days">
+        <item quantity="one">%1$d दिन निर्यात नहीं हुआ</item>
+        <item quantity="other">%1$d दिन निर्यात नहीं हुए</item>
+    </plurals>
+    <plurals name="export_diagnostics_reason_days">
+        <item quantity="one">%1$s: %2$d दिन</item>
+        <item quantity="other">%1$s: %2$d दिन</item>
+    </plurals>
+    <plurals name="export_preview_artifact_count">
+        <item quantity="one">%1$d आर्टिफैक्ट</item>
+        <item quantity="other">%1$d आर्टिफैक्ट</item>
+    </plurals>
+    <plurals name="export_preview_day_count">
+        <item quantity="one">%1$d दिन</item>
+        <item quantity="other">%1$d दिन</item>
+    </plurals>
+    <plurals name="export_preview_days_previewed">
+        <item quantity="one">%1$d/%2$d दिन</item>
+        <item quantity="other">%1$d/%2$d दिन</item>
+    </plurals>
+    <plurals name="export_preview_file_count">
+        <item quantity="one">%1$d फ़ाइल</item>
+        <item quantity="other">%1$d फ़ाइलें</item>
+    </plurals>
+    <plurals name="export_preview_limited_days">
+        <item quantity="one">डेटा वाले सबसे हाल के %1$d दिन का पूर्वावलोकन किया जा रहा है। पूर्ण निर्यात चयनित हर तारीख पर चलेगा।</item>
+        <item quantity="other">डेटा वाले सबसे हाल के %1$d दिनों का पूर्वावलोकन किया जा रहा है। पूर्ण निर्यात चयनित हर तारीख पर चलेगा।</item>
+    </plurals>
+    <plurals name="export_progress_days_count">
+        <item quantity="one">%1$d / %2$d दिन</item>
+        <item quantity="other">%1$d / %2$d दिन</item>
+    </plurals>
+    <plurals name="export_result_exported_days">
+        <item quantity="one">%1$d/%2$d दिन निर्यात हुआ</item>
+        <item quantity="other">%1$d/%2$d दिन निर्यात हुए</item>
+    </plurals>
+    <plurals name="export_result_uploaded_days">
+        <item quantity="one">%1$d/%2$d दिन अपलोड हुआ</item>
+        <item quantity="other">%1$d/%2$d दिन अपलोड हुए</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_failed_actions">
+        <item quantity="one">अधूरी स्नैपशॉट कार्रवाई: %1$d</item>
+        <item quantity="other">अधूरी स्नैपशॉट कार्रवाइयाँ: %1$d</item>
+    </plurals>
+    <plurals name="raw_snapshot_diagnostics_reason_actions">
+        <item quantity="one">%1$s: %2$d कार्रवाई</item>
+        <item quantity="other">%1$s: %2$d कार्रवाइयाँ</item>
+    </plurals>
+    <plurals name="raw_snapshot_progress_actions">
+        <item quantity="one">स्नैपशॉट कार्रवाइयाँ: %1$d / %2$d कार्रवाई</item>
+        <item quantity="other">स्नैपशॉट कार्रवाइयाँ: %1$d / %2$d कार्रवाइयाँ</item>
+    </plurals>
+    <plurals name="raw_snapshot_result_actions">
+        <item quantity="one">स्नैपशॉट कार्रवाई पूरी हुई: %1$d/%2$d</item>
+        <item quantity="other">स्नैपशॉट कार्रवाइयाँ पूरी हुईं: %1$d/%2$d</item>
+    </plurals>
 </resources>

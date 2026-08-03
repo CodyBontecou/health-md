@@ -2,6 +2,7 @@ package com.healthmd.domain.repository
 
 import android.app.Activity
 import com.android.billingclient.api.ProductDetails
+import com.healthmd.domain.billing.BillingError
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -20,8 +21,8 @@ interface BillingRepository {
     /** Whether a restore operation is currently in progress */
     val isRestoring: StateFlow<Boolean>
     
-    /** Current purchase error message, if any */
-    val purchaseError: StateFlow<String?>
+    /** Current typed purchase failure, if any */
+    val purchaseError: StateFlow<BillingError?>
     
     /** Product details from Play Store (contains pricing info) */
     val productDetails: StateFlow<ProductDetails?>

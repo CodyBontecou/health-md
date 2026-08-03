@@ -15,6 +15,7 @@ import com.healthmd.data.health.HealthProviderDiagnosticsReporter
 import com.healthmd.data.health.oauth.OAuthAuthorizationManager
 import com.healthmd.data.health.providers.HealthProviderCatalog
 import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.CompatibilitySchemaProfile
@@ -666,7 +667,7 @@ private class FakeBillingRepository : BillingRepository {
     override val isUnlocked: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
     override val isPurchasing: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
     override val isRestoring: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-    override val purchaseError: StateFlow<String?> = MutableStateFlow<String?>(null).asStateFlow()
+    override val purchaseError: StateFlow<BillingError?> = MutableStateFlow<BillingError?>(null).asStateFlow()
     override val productDetails: StateFlow<ProductDetails?> = MutableStateFlow<ProductDetails?>(null).asStateFlow()
 
     override fun startConnection() = Unit

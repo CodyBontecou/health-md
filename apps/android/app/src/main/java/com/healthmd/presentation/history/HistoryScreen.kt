@@ -14,6 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -21,12 +23,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
+import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
+import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.presentation.common.GeistBadge
 import com.healthmd.presentation.common.GeistCard
 import com.healthmd.presentation.common.GeistIconCircle
-import com.healthmd.presentation.export.dateSampleText
 import com.healthmd.presentation.export.failureReasonLabel
 import com.healthmd.presentation.export.guidanceText
 import com.healthmd.presentation.export.toDiagnosticsSummary
@@ -36,6 +39,8 @@ import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.rawexport.ExportMode
 import java.text.DateFormat
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Date
 
 @Composable
@@ -147,7 +152,7 @@ fun HistoryScreen(
 @Composable
 private fun HistoryList(
     entries: List<ExportHistoryEntry>,
-    retryMessage: String?,
+    retryMessage: HistoryUiMessage?,
     onClear: () -> Unit,
     onEntryClick: (ExportHistoryEntry) -> Unit,
     modifier: Modifier = Modifier,
@@ -182,7 +187,11 @@ private fun HistoryList(
             }
             retryMessage?.let { message ->
                 GeistBadge(borderColor = AppColors.accentBorder) {
-                    Text(message, style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary)
+                    Text(
+                        message.localizedText(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textSecondary,
+                    )
                 }
             }
         }
@@ -194,8 +203,9 @@ private fun HistoryList(
 
 @Composable
 private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
-    val dateOnly = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(entry.timestamp))
-    val timeOnly = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(entry.timestamp))
+    val context = LocalContext.current
+    val dateOnly = android.text.format.DateFormat.getMediumDateFormat(context).format(Date(entry.timestamp))
+    val timeOnly = android.text.format.DateFormat.getTimeFormat(context).format(Date(entry.timestamp))
     val timestampStr = stringResource(R.string.history_timestamp_format, dateOnly, timeOnly)
 
     val statusColor = when {
@@ -230,13 +240,20 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.sm))
+            val startDate = localizedDate(entry.dateRangeStart)
+            val endDate = localizedDate(entry.dateRangeEnd)
             Text(
-                stringResource(
-                    if (entry.exportMode == ExportMode.RAW_SNAPSHOT) R.string.raw_snapshot_history_entry else R.string.history_entry_days,
+                pluralStringResource(
+                    if (entry.exportMode == ExportMode.RAW_SNAPSHOT) {
+                        R.plurals.raw_snapshot_history_entry_actions
+                    } else {
+                        R.plurals.history_entry_days
+                    },
+                    entry.totalCount,
                     entry.successCount,
                     entry.totalCount,
-                    entry.dateRangeStart,
-                    entry.dateRangeEnd,
+                    startDate,
+                    endDate,
                 ),
                 style = GeistType.copy14Mono,
                 color = AppColors.textPrimary,
@@ -246,7 +263,7 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
                 style = GeistType.copy13Mono,
                 color = AppColors.textMuted,
             )
-            entry.targetLabel?.let {
+            localizedTargetLabel(entry)?.let {
                 Text(
                     stringResource(R.string.history_target_label, it),
                     style = GeistType.copy13Mono,
@@ -255,7 +272,11 @@ private fun HistoryEntryCard(entry: ExportHistoryEntry, onClick: () -> Unit) {
             }
             if (entry.fileCount > 0) {
                 Text(
-                    stringResource(R.string.history_file_count, entry.fileCount),
+                    pluralStringResource(
+                        R.plurals.history_file_count,
+                        entry.fileCount,
+                        entry.fileCount,
+                    ),
                     style = GeistType.copy13Mono,
                     color = AppColors.textMuted,
                 )
@@ -276,8 +297,13 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
     HorizontalDivider(color = AppColors.borderDefault)
     Spacer(modifier = Modifier.height(Spacing.sm))
     Text(
-        stringResource(
-            if (isRawSnapshot) R.string.raw_snapshot_diagnostics_failed_count else R.string.export_diagnostics_failed_count,
+        pluralStringResource(
+            if (isRawSnapshot) {
+                R.plurals.raw_snapshot_diagnostics_incomplete_count
+            } else {
+                R.plurals.export_diagnostics_failed_count
+            },
+            summary.failedDayCount,
             summary.failedDayCount,
         ),
         style = MaterialTheme.typography.bodySmall,
@@ -287,8 +313,13 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
     if (primaryGroup != null) {
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
-            stringResource(
-                if (isRawSnapshot) R.string.raw_snapshot_diagnostics_reason_count else R.string.export_diagnostics_reason_count,
+            pluralStringResource(
+                if (isRawSnapshot) {
+                    R.plurals.raw_snapshot_diagnostics_reason_count
+                } else {
+                    R.plurals.export_diagnostics_reason_count
+                },
+                primaryGroup.count,
                 primaryGroup.failureReasonLabel(),
                 primaryGroup.count,
             ),
@@ -303,7 +334,10 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
         )
         if (!isRawSnapshot && primaryGroup.sampleDates.isNotEmpty()) {
             Text(
-                primaryGroup.dateSampleText(),
+                localizedDateSampleText(
+                    dates = primaryGroup.sampleDates,
+                    remainingCount = primaryGroup.remainingDateCount,
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = AppColors.textMuted,
             )
@@ -322,7 +356,7 @@ private fun FailureSummary(entry: ExportHistoryEntry, statusColor: androidx.comp
 private fun HistoryDetailCard(
     entry: ExportHistoryEntry,
     isRetrying: Boolean,
-    retryMessage: String?,
+    retryMessage: HistoryUiMessage?,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -346,23 +380,58 @@ private fun HistoryDetailCard(
 }
 
 @Composable
-private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: String?) {
-    val timestamp = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(entry.timestamp))
+private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: HistoryUiMessage?) {
+    val context = LocalContext.current
+    val timestamp = stringResource(
+        R.string.history_timestamp_format,
+        android.text.format.DateFormat.getMediumDateFormat(context).format(Date(entry.timestamp)),
+        android.text.format.DateFormat.getTimeFormat(context).format(Date(entry.timestamp)),
+    )
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         DetailLine(stringResource(R.string.history_detail_source), entry.source.localizedDisplayName())
         DetailLine(stringResource(R.string.history_detail_when), timestamp)
-        DetailLine(stringResource(R.string.history_detail_range), "${entry.dateRangeStart} → ${entry.dateRangeEnd}")
-        DetailLine(stringResource(R.string.history_detail_counts), "${entry.successCount}/${entry.totalCount}")
+        DetailLine(
+            stringResource(R.string.history_detail_range),
+            stringResource(
+                R.string.history_date_range,
+                localizedDate(entry.dateRangeStart),
+                localizedDate(entry.dateRangeEnd),
+            ),
+        )
+        DetailLine(
+            stringResource(R.string.history_detail_counts),
+            pluralStringResource(
+                R.plurals.history_detail_exported_days,
+                entry.totalCount,
+                entry.successCount,
+                entry.totalCount,
+            ),
+        )
         DetailLine(
             stringResource(R.string.history_detail_destination_type),
-            if (entry.target == ExportTarget.API_ENDPOINT) "API endpoint" else "Device folder",
+            stringResource(
+                if (entry.target == ExportTarget.API_ENDPOINT) {
+                    R.string.export_preview_api_destination
+                } else {
+                    R.string.export_preview_device_destination
+                },
+            ),
         )
-        entry.targetLabel?.let { DetailLine(stringResource(R.string.history_detail_target), it) }
-        if (entry.target == ExportTarget.DEVICE_FOLDER) {
-            DetailLine(stringResource(R.string.history_detail_files), entry.fileCount.toString())
+        localizedTargetLabel(entry)?.let {
+            DetailLine(stringResource(R.string.history_detail_target), it)
         }
-        entry.failureReason?.let { DetailLine(stringResource(R.string.history_detail_failure), it.name) }
-        entry.warningSummary?.let { DetailLine(stringResource(R.string.history_detail_warning), it) }
+        if (entry.target == ExportTarget.DEVICE_FOLDER) {
+            DetailLine(
+                stringResource(R.string.history_detail_files),
+                pluralStringResource(R.plurals.history_detail_file_count, entry.fileCount, entry.fileCount),
+            )
+        }
+        entry.failureReason?.let {
+            DetailLine(stringResource(R.string.history_detail_failure), it.localizedLabel())
+        }
+        localizedWarningSummary(entry)?.let {
+            DetailLine(stringResource(R.string.history_detail_warning), it)
+        }
         if (entry.failedDateDetails.isNotEmpty()) {
             val isRawSnapshot = entry.exportMode == ExportMode.RAW_SNAPSHOT
             Spacer(modifier = Modifier.height(Spacing.xs))
@@ -375,14 +444,27 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: String
             )
             entry.failedDateDetails.take(8).forEach { detail ->
                 Text(
-                    if (isRawSnapshot) detail.reason.name else "${detail.date}: ${detail.reason.name}",
+                    if (isRawSnapshot) {
+                        detail.reason.localizedLabel()
+                    } else {
+                        stringResource(
+                            R.string.history_failed_date_reason,
+                            localizedDate(detail.date),
+                            detail.reason.localizedLabel(),
+                        )
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary,
                 )
             }
             if (entry.failedDateDetails.size > 8) {
+                val remainingCount = entry.failedDateDetails.size - 8
                 Text(
-                    "+${entry.failedDateDetails.size - 8} more",
+                    pluralStringResource(
+                        R.plurals.history_more_items,
+                        remainingCount,
+                        remainingCount,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textMuted,
                 )
@@ -390,7 +472,11 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: String
         }
         retryMessage?.let {
             Spacer(modifier = Modifier.height(Spacing.xs))
-            Text(it, style = MaterialTheme.typography.bodySmall, color = AppColors.accent)
+            Text(
+                it.localizedText(),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.accent,
+            )
         }
     }
 }
@@ -399,7 +485,7 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: String
 private fun HistoryDetailDialog(
     entry: ExportHistoryEntry,
     isRetrying: Boolean,
-    retryMessage: String?,
+    retryMessage: HistoryUiMessage?,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -428,3 +514,91 @@ private fun DetailLine(label: String, value: String) {
         Text(value, style = GeistType.copy13Mono, color = AppColors.textPrimary, textAlign = TextAlign.End)
     }
 }
+
+@Composable
+private fun HistoryUiMessage.localizedText(): String = when (this) {
+    is HistoryUiMessage.Text -> stringResource(resourceId, *arguments.toTypedArray())
+    is HistoryUiMessage.Plural -> pluralStringResource(
+        resourceId,
+        quantity,
+        *arguments.toTypedArray(),
+    )
+}
+
+@Composable
+private fun localizedDate(date: LocalDate): String =
+    formatLocalDate(date, android.text.format.DateFormat.getMediumDateFormat(LocalContext.current))
+
+private fun formatLocalDate(date: LocalDate, formatter: DateFormat): String {
+    val instant = date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+    return formatter.format(Date.from(instant))
+}
+
+@Composable
+private fun localizedDateSampleText(
+    dates: List<LocalDate>,
+    remainingCount: Int,
+): String {
+    val formatter = android.text.format.DateFormat.getMediumDateFormat(LocalContext.current)
+    val localizedDates = dates.joinToString(", ") { formatLocalDate(it, formatter) }
+    return if (remainingCount > 0) {
+        pluralStringResource(
+            R.plurals.history_failed_date_sample_more,
+            remainingCount,
+            localizedDates,
+            remainingCount,
+        )
+    } else {
+        stringResource(R.string.export_diagnostics_date_list, localizedDates)
+    }
+}
+
+@Composable
+private fun localizedTargetLabel(entry: ExportHistoryEntry): String? {
+    val targetLabel = entry.targetLabel ?: return null
+    if (entry.target != ExportTarget.DEVICE_FOLDER) return targetLabel
+
+    val localizedRoot = stringResource(R.string.export_folder_root_label)
+    return when {
+        targetLabel == EXPORT_FOLDER_ROOT_TARGET_LABEL -> localizedRoot
+        targetLabel.startsWith("$EXPORT_FOLDER_ROOT_TARGET_LABEL/") ->
+            localizedRoot + targetLabel.removePrefix(EXPORT_FOLDER_ROOT_TARGET_LABEL)
+        else -> targetLabel
+    }
+}
+
+@Composable
+private fun localizedWarningSummary(entry: ExportHistoryEntry): String? = when {
+    entry.failureReason == ExportFailureReason.RAW_CANCELLED ->
+        stringResource(R.string.export_diagnostics_title_cancelled)
+    entry.failedDateDetails.isNotEmpty() -> pluralStringResource(
+        R.plurals.history_warning_failed_dates,
+        entry.failedDateDetails.size,
+        entry.failedDateDetails.size,
+    )
+    !entry.isFullSuccess && entry.warningSummary != null ->
+        stringResource(R.string.history_warning_details_unavailable)
+    else -> null
+}
+
+@Composable
+private fun ExportFailureReason.localizedLabel(): String = stringResource(
+    when (this) {
+        ExportFailureReason.NO_FOLDER_SELECTED -> R.string.export_failure_no_folder_label
+        ExportFailureReason.NO_HEALTH_DATA -> R.string.export_failure_no_data_label
+        ExportFailureReason.ACCESS_DENIED -> R.string.export_failure_access_denied_label
+        ExportFailureReason.FILE_WRITE_ERROR -> R.string.export_failure_file_write_label
+        ExportFailureReason.RATE_LIMITED -> R.string.export_failure_rate_limited_label
+        ExportFailureReason.HEALTH_CONNECT_ERROR -> R.string.export_failure_health_connect_label
+        ExportFailureReason.DEVICE_LOCKED -> R.string.export_failure_device_locked_label
+        ExportFailureReason.BACKGROUND_PERMISSION_DENIED -> R.string.export_failure_background_permission_label
+        ExportFailureReason.PAYWALL_REQUIRED -> R.string.export_failure_paywall_label
+        ExportFailureReason.INVALID_API_ENDPOINT -> R.string.export_failure_invalid_api_endpoint_label
+        ExportFailureReason.NETWORK_ERROR -> R.string.export_failure_network_label
+        ExportFailureReason.API_REJECTED -> R.string.export_failure_api_rejected_label
+        ExportFailureReason.RAW_UNSUPPORTED_PROVIDER -> R.string.raw_snapshot_provider_unsupported
+        ExportFailureReason.RAW_PARTIAL -> R.string.raw_snapshot_partial_label
+        ExportFailureReason.RAW_CANCELLED -> R.string.raw_snapshot_cancelled_label
+        ExportFailureReason.UNKNOWN -> R.string.export_failure_unknown_label
+    },
+)

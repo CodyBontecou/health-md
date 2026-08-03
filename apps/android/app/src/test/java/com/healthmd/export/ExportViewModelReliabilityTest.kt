@@ -41,7 +41,7 @@ class ExportViewModelReliabilityTest {
         assertThat(state.isExporting).isFalse()
         assertThat(state.exportProgress).isEqualTo(3)
         assertThat(state.exportTotal).isEqualTo(3)
-        assertThat(state.exportProgressDate).isEqualTo(dates.last().toString())
+        assertThat(state.exportProgressDate).isEqualTo(dates.last())
         assertThat(state.exportedFolderUri).isEqualTo("content://exports")
         assertThat(state.lastResult?.isFullSuccess).isTrue()
 

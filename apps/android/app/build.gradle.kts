@@ -41,6 +41,9 @@ val exportEngineAndroidFrozenV4 = configuredEngineMode("EXPORT_ENGINE_ANDROID_FR
 val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROID_ANALYTICAL_V5")
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
 val directProtocolEngine = configuredEngineMode("DIRECT_PROTOCOL_ENGINE")
+val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTestBuildType")
+    .getOrElse("debug")
+    .also { require(it in setOf("debug", "e2e")) }
 
 android {
     namespace = "com.healthmd"
@@ -129,6 +132,12 @@ android {
                 debugSymbolLevel = "FULL"
             }
         }
+        create("e2e") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".e2e"
+            versionNameSuffix = "-e2e"
+            matchingFallbacks += listOf("debug")
+        }
     }
 
     compileOptions {
@@ -143,6 +152,16 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    androidResources {
+        generateLocaleConfig = true
+    }
+
+    testBuildType = instrumentedTestBuildType
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
     }
 
     packaging {
@@ -163,6 +182,7 @@ dependencies {
     implementation(libs.compose.material.icons)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
+    add("e2eImplementation", libs.compose.ui.test.manifest)
 
     // AndroidX
     implementation(libs.core.ktx)
@@ -170,6 +190,8 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.navigation.compose)
+    implementation(libs.glance)
+    implementation(libs.glance.appwidget)
 
     // Health Connect
     implementation(libs.health.connect)
@@ -224,8 +246,16 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.okhttp.tls)
+    testImplementation(libs.glance.testing)
+    testImplementation(libs.glance.appwidget.testing)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.work.testing)
     testImplementation("com.networknt:json-schema-validator:1.5.9")
     androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
 }

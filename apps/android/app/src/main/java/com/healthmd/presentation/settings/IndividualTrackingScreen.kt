@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.ExpandLess
@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,7 @@ import com.healthmd.presentation.i18n.localizedDisplayName
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Radii
 import com.healthmd.presentation.theme.Spacing
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +45,10 @@ fun IndividualTrackingScreen(
     var searchQuery by remember { mutableStateOf("") }
     var expandedCategories by remember { mutableStateOf(HealthMetrics.categories.toSet()) }
     val context = LocalContext.current
+    val locale = context.resources.configuration.locales[0]
+    val integerFormat = remember(locale) {
+        NumberFormat.getIntegerInstance(locale).apply { isGroupingUsed = false }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -54,7 +60,7 @@ fun IndividualTrackingScreen(
         item(key = "header") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = AppColors.textPrimary)
                 }
                 Text(
                     stringResource(R.string.individual_tracking_title),
@@ -64,7 +70,7 @@ fun IndividualTrackingScreen(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "${settings.trackedMetricCount}/${HealthMetrics.totalCount}",
+                    "${integerFormat.format(settings.trackedMetricCount)}/${integerFormat.format(HealthMetrics.totalCount)}",
                     style = MaterialTheme.typography.labelLarge,
                     color = AppColors.accent,
                 )
@@ -91,7 +97,11 @@ fun IndividualTrackingScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.individual_tracking_enable_title), color = AppColors.textPrimary, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            stringResource(R.string.individual_tracking_metrics_count, settings.trackedMetricCount),
+                            pluralStringResource(
+                                R.plurals.individual_tracking_metrics_count,
+                                settings.trackedMetricCount,
+                                settings.trackedMetricCount,
+                            ),
                             color = AppColors.textSecondary,
                             style = MaterialTheme.typography.bodySmall,
                         )

@@ -3,6 +3,12 @@ package com.healthmd.domain.model
 import com.healthmd.rawexport.ExportMode
 import kotlinx.serialization.Serializable
 
+/**
+ * Stable persisted marker for the selected export folder root.
+ * Presentation replaces this prefix with the current locale's folder-root label.
+ */
+const val EXPORT_FOLDER_ROOT_TARGET_LABEL = "Export folder"
+
 @Serializable
 enum class ExportSource {
     MANUAL,
