@@ -1340,6 +1340,9 @@ final class VaultManager: ObservableObject {
 
     /// Refresh vault access for background tasks
     func refreshVaultAccess() {
+        // UI tests intentionally use an in-memory folder without a persisted security bookmark.
+        // Preserve that explicit fixture while keeping production bookmark validation unchanged.
+        if TestMode.isUITesting, TestMode.vaultSelected { return }
         loadSavedSettings()
     }
 
