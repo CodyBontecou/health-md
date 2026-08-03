@@ -197,7 +197,7 @@ pub struct QueryInvocation {
 
 pub fn list(profile: SurfaceProfile) -> Vec<Value> {
     let mut tools = base_operation_declarations();
-    if profile.is_remote() {
+    if profile.is_read_only() {
         tools.retain(|tool| {
             tool.get("name")
                 .and_then(Value::as_str)
@@ -205,9 +205,38 @@ pub fn list(profile: SurfaceProfile) -> Vec<Value> {
                 .is_some_and(|operation| !operation.local_only)
         });
     }
+    apply_profile_descriptions(&mut tools, profile);
     enrich_query_schemas(&mut tools, profile);
     enrich_common_metadata(&mut tools);
     tools
+}
+
+fn apply_profile_descriptions(tools: &mut [Value], profile: SurfaceProfile) {
+    if !profile.is_read_only() {
+        return;
+    }
+    for tool in tools {
+        let name = tool
+            .get("name")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let description = match (profile, name.as_str()) {
+            (SurfaceProfile::LocalReadOnly, "healthmd_doctor") => Some(
+                "Diagnose paired foreground iPhone query readiness. If unpaired, run `healthmd direct pair` outside MCP; pairing and export jobs are unavailable in this read-only surface.",
+            ),
+            (SurfaceProfile::RemoteReadOnly, "healthmd_doctor") => Some(
+                "Diagnose paired foreground iPhone query readiness. If unpaired, ask the server operator to pair its source outside MCP; pairing and export jobs are unavailable in this read-only surface.",
+            ),
+            (_, "healthmd_capabilities") => Some(
+                "List read-only direct-query, evidence, visualization, and pagination capabilities. This surface exposes no pairing or export jobs.",
+            ),
+            _ => None,
+        };
+        if let Some(description) = description {
+            tool["description"] = Value::String(description.to_owned());
+        }
+    }
 }
 
 /// Return the fixed tool catalog or one named tool schema for offline discovery.
@@ -1200,16 +1229,37 @@ mod tests {
     }
 
     #[test]
-    fn remote_catalog_is_read_only_and_excludes_every_local_operation() {
-        let tools = list(SurfaceProfile::RemoteReadOnly);
-        assert_eq!(tools.len(), 13);
-        assert!(tools.iter().all(|tool| {
-            tool.pointer("/annotations/readOnlyHint") == Some(&Value::Bool(true))
-                && tool.get("title").and_then(Value::as_str).is_some()
-                && tool["name"]
-                    .as_str()
-                    .and_then(definition)
-                    .is_some_and(|operation| !operation.local_only)
-        }));
+    fn read_only_catalogs_exclude_every_local_operation() {
+        for profile in [
+            SurfaceProfile::LocalReadOnly,
+            SurfaceProfile::RemoteReadOnly,
+        ] {
+            let tools = list(profile);
+            assert_eq!(tools.len(), 13);
+            assert!(tools.iter().all(|tool| {
+                tool.pointer("/annotations/readOnlyHint") == Some(&Value::Bool(true))
+                    && tool.get("title").and_then(Value::as_str).is_some()
+                    && tool["name"]
+                        .as_str()
+                        .and_then(definition)
+                        .is_some_and(|operation| !operation.local_only)
+            }));
+            let doctor = tools
+                .iter()
+                .find(|tool| tool["name"] == "healthmd_doctor")
+                .and_then(|tool| tool["description"].as_str())
+                .unwrap();
+            assert!(!doctor.contains("healthmd_pairing_start"));
+            assert!(!doctor.contains("export readiness"));
+            match profile {
+                SurfaceProfile::LocalReadOnly => {
+                    assert!(doctor.contains("healthmd direct pair"));
+                }
+                SurfaceProfile::RemoteReadOnly => {
+                    assert!(doctor.contains("server operator"));
+                }
+                SurfaceProfile::LocalDirect => unreachable!(),
+            }
+        }
     }
 }

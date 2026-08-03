@@ -4,7 +4,9 @@ The `healthmd` CLI for direct iOS/Android exports and same-executable `healthmd 
 for typed iPhone analysis and visualization on macOS, Linux, and Windows. `healthmd setup codex`
 configures and pairs the integration; `healthmd-mcp` remains a compatibility launcher. Local stdio
 MCP hosts can render the bounded `healthmd_pairing_start` QR image and poll
-`healthmd_pairing_status`; HTTP/OAuth profiles never expose those tools. MCP hosts receive fully
+`healthmd_pairing_status`. Least-privilege hosts can instead launch `healthmd mcp serve-read-only`,
+which exposes only the 13 readiness/query tools and needs no HTTP, OAuth, tunnel, or cloud service.
+HTTP/OAuth profiles never expose local pairing or export-job tools. MCP hosts receive fully
 expanded nested input schemas and examples. Humans and troubleshooting agents can
 print the same schema locally with `healthmd mcp schema healthmd_sleep_sessions` without opening a
 listener or contacting iPhone.

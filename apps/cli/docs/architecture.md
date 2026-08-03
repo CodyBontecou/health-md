@@ -59,6 +59,13 @@ require host approval. Unix `healthmd-mcp` uses `exec(2)` to become the sibling 
 Windows has no `exec(2)`, so `healthmd-mcp.exe` serves in-process and supervises its own same-file
 helper against the same fixed Credential Manager service/account.
 
+`healthmd mcp serve-read-only` is a second default-build stdio entry for local least-privilege
+hosts. It uses a distinct `local_read_only` application profile and a caller identity carrying only
+`healthmd:read`. Catalog filtering and call authorization independently exclude both pairing tools
+and all four export-job tools, including status; the pairing UI resource and local destination
+authority are also absent. Pairing happens separately with `healthmd direct pair`. This entry starts
+no MCP HTTP listener and introduces no cloud, OAuth, tunnel, or iPhone protocol dependency.
+
 The default CLI feature set ends at local stdio and direct iPhone transport. The experimental
 `streamable-http` and `oauth-resource-server` Cargo features add a read-only HTTP envelope but are
 absent from release binaries. Feature-enabled `healthmd mcp serve-http` uses the same direct backend

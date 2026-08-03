@@ -9,7 +9,7 @@ use healthmd_client::{
     job::{JobRecord, JobState},
 };
 use healthmd_operations::{
-    BackendCapabilities, BackendError, CallContext, CallerMode, HealthDataBackend,
+    BackendCapabilities, BackendError, CallContext, CallerIdentity, CallerMode, HealthDataBackend,
     PairingStartResult, QueryDetailLevel, QueryPageRequest, generated_file_export_from_value,
     job_id as parse_job_id,
 };
@@ -96,22 +96,8 @@ impl HealthDataBackend for DirectIphoneBackend {
             .await
             .map_err(|error| backend_error(&error, None))?;
         if devices.is_empty() {
-            let (message, next_tool) = if self.configuration.device_id.is_some() {
-                (
-                    "This MCP server is pinned to an unpaired device. Remove the stale device selection before onboarding.",
-                    None,
-                )
-            } else if context.caller.mode == CallerMode::LocalStdio {
-                (
-                    "Call healthmd_pairing_start, show its QR image, then scan it from Sync > Direct CLI Access > Scan Pairing QR in foreground Health.md.",
-                    Some("healthmd_pairing_start"),
-                )
-            } else {
-                (
-                    "Run `healthmd direct pair` locally, then scan its QR from Sync > Direct CLI Access > Scan Pairing QR in foreground Health.md.",
-                    None,
-                )
-            };
+            let (message, next_tool) =
+                unpaired_guidance(self.configuration.device_id.is_some(), &context.caller);
             return Ok(json!({
                 "schema": "healthmd.direct_readiness",
                 "schema_version": 1,
@@ -384,6 +370,28 @@ fn job_receipt(record: &JobRecord) -> Value {
     value
 }
 
+fn unpaired_guidance(
+    device_is_pinned: bool,
+    caller: &CallerIdentity,
+) -> (&'static str, Option<&'static str>) {
+    if device_is_pinned {
+        return (
+            "This MCP server is pinned to an unpaired device. Remove the stale device selection before onboarding.",
+            None,
+        );
+    }
+    if caller.mode == CallerMode::LocalStdio && caller.has_scope("healthmd:pair") {
+        return (
+            "Call healthmd_pairing_start, show its QR image, then scan it from Sync > Direct CLI Access > Scan Pairing QR in foreground Health.md.",
+            Some("healthmd_pairing_start"),
+        );
+    }
+    (
+        "Run `healthmd direct pair` locally, then scan its QR from Sync > Direct CLI Access > Scan Pairing QR in foreground Health.md.",
+        None,
+    )
+}
+
 fn pairing_backend_error(error: PairingCoordinatorError) -> BackendError {
     BackendError::new(error.code(), error.message())
 }
@@ -479,4 +487,21 @@ fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {
         mapped = mapped.with_job_id(job_id);
     }
     mapped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_only_stdio_guidance_never_advertises_hidden_pairing_tools() {
+        let (message, next_tool) = unpaired_guidance(false, &CallerIdentity::local_read_only());
+        assert!(message.contains("healthmd direct pair"));
+        assert!(!message.contains("healthmd_pairing_start"));
+        assert_eq!(next_tool, None);
+
+        let (message, next_tool) = unpaired_guidance(false, &CallerIdentity::local());
+        assert!(message.contains("healthmd_pairing_start"));
+        assert_eq!(next_tool, Some("healthmd_pairing_start"));
+    }
 }

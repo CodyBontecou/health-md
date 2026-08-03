@@ -46,8 +46,10 @@
   shapes/counts, reject unknown nested query fields, and bind iPhone paging cursors to the trusted
   CLI installation.
 - Make local stdio/direct-iPhone MCP the empty-feature default for `healthmd-cli` and release
-  artifacts. Keep the direct-backed Streamable HTTP and OAuth resource-server transports available
-  only through explicit experimental Cargo features.
+  artifacts. Add `healthmd mcp serve-read-only` as a separate cloud-free local stdio profile with
+  only the 13 readiness/query tools, a read-only caller identity, no pairing resource, and
+  fail-closed rejection of all pairing/export-job calls. Keep the direct-backed Streamable HTTP and
+  OAuth resource-server transports available only through explicit experimental Cargo features.
 - Add the publishable transport-neutral `healthmd-operations` crate as the shared authority for
   backend contracts, fixed operation definitions, typed query/export/date/selection normalization,
   canonical receipts, validation, and traversal limits. Generate the packaged MCP catalog from its

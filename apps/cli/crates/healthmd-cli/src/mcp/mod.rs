@@ -173,6 +173,41 @@ async fn execute_query_invocation(
         .map_err(QueryError::Backend)
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum StdioSurface {
+    LocalDirect,
+    ReadOnly,
+}
+
+impl StdioSurface {
+    const fn profile(self) -> healthmd_mcp::SurfaceProfile {
+        match self {
+            Self::LocalDirect => healthmd_mcp::SurfaceProfile::LocalDirect,
+            Self::ReadOnly => healthmd_mcp::SurfaceProfile::LocalReadOnly,
+        }
+    }
+
+    fn caller(self) -> healthmd_mcp::CallerIdentity {
+        match self {
+            Self::LocalDirect => healthmd_mcp::CallerIdentity::local(),
+            Self::ReadOnly => healthmd_mcp::CallerIdentity::local_read_only(),
+        }
+    }
+}
+
+fn stdio_dispatcher(
+    backend: Arc<dyn healthmd_operations::HealthDataBackend>,
+    surface: StdioSurface,
+) -> Arc<healthmd_mcp::JsonRpcSession> {
+    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
+        backend,
+        surface.profile(),
+    ));
+    Arc::new(healthmd_mcp::JsonRpcSession::new(
+        application.session(surface.caller()),
+    ))
+}
+
 /// Serve the fixed Health.md MCP surface over newline-delimited JSON-RPC stdio.
 ///
 /// The normal entry point is `healthmd mcp serve`, which deliberately uses the same installed,
@@ -183,16 +218,27 @@ async fn execute_query_invocation(
 /// # Errors
 ///
 /// Returns [`ServeError`] when native direct-client state cannot be initialized.
-#[allow(clippy::too_many_lines)]
 pub async fn serve(options: ServeOptions) -> Result<(), ServeError> {
+    serve_stdio(options, StdioSurface::LocalDirect).await
+}
+
+/// Serve the 13-tool read-only Health.md MCP surface over local newline-delimited JSON-RPC stdio.
+///
+/// Pairing and every generated-file export operation are absent and rejected even when called by
+/// name. Pair the iPhone separately with `healthmd direct pair`. This profile starts no MCP HTTP
+/// listener and requires no Health.md or third-party cloud service.
+///
+/// # Errors
+///
+/// Returns [`ServeError`] when native direct-client state cannot be initialized.
+pub async fn serve_read_only(options: ServeOptions) -> Result<(), ServeError> {
+    serve_stdio(options, StdioSurface::ReadOnly).await
+}
+
+#[allow(clippy::too_many_lines)]
+async fn serve_stdio(options: ServeOptions, surface: StdioSurface) -> Result<(), ServeError> {
     let backend = direct_backend::DirectIphoneBackend::open(&options)?;
-    let application = Arc::new(healthmd_mcp::HealthMdApplication::new(
-        Arc::new(backend),
-        healthmd_mcp::SurfaceProfile::LocalDirect,
-    ));
-    let dispatcher = Arc::new(healthmd_mcp::JsonRpcSession::new(
-        application.session(healthmd_mcp::CallerIdentity::local()),
-    ));
+    let dispatcher = stdio_dispatcher(Arc::new(backend), surface);
 
     let (line_sender, mut line_receiver) = mpsc::channel::<Vec<u8>>(32);
     std::thread::spawn(move || {
@@ -494,6 +540,64 @@ mod tests {
         assert!(!at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS - 1));
         assert!(at_capacity(MAXIMUM_IN_FLIGHT_REQUESTS));
         assert!(at_capacity(usize::MAX));
+    }
+
+    #[tokio::test]
+    async fn read_only_stdio_dispatcher_is_fail_closed_and_cloud_free() {
+        let dispatcher =
+            stdio_dispatcher(Arc::new(FixtureBackend::default()), StdioSurface::ReadOnly);
+        let initialize = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let initialize: Value = serde_json::from_str(&initialize).unwrap();
+        let instructions = initialize["result"]["instructions"].as_str().unwrap();
+        assert!(instructions.contains("read-only"));
+        assert!(instructions.contains("healthmd direct pair"));
+        assert!(instructions.contains("no Health.md cloud"));
+        assert!(!instructions.contains("healthmd_pairing_start"));
+
+        let tools = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let tools: Value = serde_json::from_str(&tools).unwrap();
+        let tools = tools["result"]["tools"].as_array().unwrap();
+        assert_eq!(tools.len(), 13);
+        assert!(tools.iter().all(|tool| {
+            tool.pointer("/annotations/readOnlyHint") == Some(&json!(true))
+                && !tool["name"].as_str().is_some_and(|name| {
+                    name.starts_with("healthmd_pairing_") || name.starts_with("healthmd_export_")
+                })
+        }));
+        let doctor = tools
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_doctor")
+            .and_then(|tool| tool["description"].as_str())
+            .unwrap();
+        assert!(doctor.contains("healthmd direct pair"));
+        assert!(!doctor.contains("healthmd_pairing_start"));
+        assert!(!doctor.contains("export readiness"));
+
+        let hidden = dispatcher
+            .handle(
+                r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"healthmd_export_files","arguments":{}}}"#,
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let hidden: Value = serde_json::from_str(&hidden).unwrap();
+        assert_eq!(hidden.pointer("/error/code"), Some(&json!(-32_602)));
+        assert_eq!(
+            hidden.pointer("/error/message"),
+            Some(&json!("Unknown tool"))
+        );
     }
 
     #[tokio::test]

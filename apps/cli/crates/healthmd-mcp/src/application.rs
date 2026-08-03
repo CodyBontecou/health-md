@@ -156,11 +156,16 @@ impl HealthMdSession {
     }
 
     pub fn instructions(&self) -> String {
-        self.application
-            .operations
-            .backend()
-            .capabilities()
-            .instructions
+        match self.application.profile() {
+            SurfaceProfile::LocalReadOnly => "Use this local read-only Health.md surface for readiness and typed queries only. Pair the iPhone outside this MCP session with `healthmd direct pair`; pairing and file-export tools are unavailable here. Keep Health.md foreground on the paired iPhone. Prefer healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Queries use only the authenticated direct iPhone channel; no Health.md cloud or Mac app is required.".to_owned(),
+            SurfaceProfile::RemoteReadOnly => "Use this remote read-only Health.md surface for readiness and typed queries only. Pairing and file-export tools are unavailable; the server operator must pair its iPhone source outside MCP. Keep Health.md foreground on the paired iPhone. Prefer healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Every query is live; there is no synchronized health-data corpus or fallback.".to_owned(),
+            SurfaceProfile::LocalDirect => self
+                .application
+                .operations
+                .backend()
+                .capabilities()
+                .instructions,
+        }
     }
 
     /// Execute one fixed MCP tool within this caller session.
@@ -855,6 +860,20 @@ mod tests {
         })
     }
 
+    fn local_tool_calls() -> Vec<(&'static str, Value)> {
+        vec![
+            ("healthmd_pairing_start", json!({})),
+            (
+                "healthmd_pairing_status",
+                json!({"pairing_session_id": Uuid::new_v4()}),
+            ),
+            ("healthmd_export_files", json!({})),
+            ("healthmd_export_job_status", json!({})),
+            ("healthmd_export_job_resume", json!({})),
+            ("healthmd_export_job_cancel", json!({})),
+        ]
+    }
+
     #[tokio::test]
     async fn local_pairing_returns_an_image_without_exposing_its_secret_as_text() {
         let pairing_session_id = Uuid::new_v4();
@@ -1212,6 +1231,79 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn read_only_stdio_exposes_only_read_tools_and_capabilities() {
+        let backend = ScriptedBackend::new([]);
+        let application = Arc::new(HealthMdApplication::new(
+            backend,
+            SurfaceProfile::LocalReadOnly,
+        ));
+        let caller = CallerIdentity::local_read_only();
+        assert_eq!(caller.mode, CallerMode::LocalStdio);
+        assert!(caller.has_scope("healthmd:read"));
+        assert!(!caller.has_scope("healthmd:pair"));
+        assert!(!caller.has_scope("healthmd:export"));
+
+        let session = application.session(caller);
+        session.set_ui_enabled(true);
+        let tools = session.list_tools();
+        assert_eq!(tools.len(), 13);
+        assert!(tools.iter().all(|tool| {
+            tool.pointer("/annotations/readOnlyHint") == Some(&json!(true))
+                && !tool["name"].as_str().is_some_and(|name| {
+                    name.starts_with("healthmd_pairing_") || name.starts_with("healthmd_export_")
+                })
+        }));
+        assert_eq!(session.list_resources().len(), 1);
+        assert!(session.read_resource(apps::PAIRING_RESOURCE_URI).is_err());
+        assert!(!session.instructions().contains("healthmd_pairing_start"));
+        assert!(session.instructions().contains("healthmd direct pair"));
+        assert!(session.instructions().contains("no Health.md cloud"));
+
+        let capabilities = session
+            .call_tool(
+                "healthmd_capabilities",
+                json!({}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        let capabilities: Value =
+            serde_json::from_str(capabilities["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(capabilities["surface_profile"], "local_read_only");
+        assert_eq!(capabilities["supports_local_pairing"], false);
+        assert_eq!(capabilities["supports_local_file_exports"], false);
+        assert_eq!(
+            capabilities["operations"].as_array().map(Vec::len),
+            Some(13)
+        );
+
+        for (name, arguments) in local_tool_calls() {
+            let error = session
+                .call_tool(name, arguments, CancellationToken::new(), None)
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, -32_602);
+            assert_eq!(error.message, "Unknown tool");
+        }
+    }
+
+    #[test]
+    fn remote_read_only_instructions_are_operator_scoped() {
+        let application = Arc::new(HealthMdApplication::new(
+            ScriptedBackend::new([]),
+            SurfaceProfile::RemoteReadOnly,
+        ));
+        let session = application.session(CallerIdentity::loopback());
+        let instructions = session.instructions();
+        assert!(instructions.contains("server operator"));
+        assert!(instructions.contains("no synchronized health-data corpus"));
+        assert!(!instructions.contains("healthmd direct pair"));
+        assert!(!instructions.contains("healthmd_pairing_start"));
+        assert!(!instructions.contains("no Health.md cloud"));
+    }
+
+    #[tokio::test]
     async fn remote_profile_rejects_every_local_tool_before_backend_dispatch() {
         let backend = ScriptedBackend::new([]);
         let application = Arc::new(HealthMdApplication::new(
@@ -1219,14 +1311,7 @@ mod tests {
             SurfaceProfile::RemoteReadOnly,
         ));
         let session = application.session(CallerIdentity::loopback());
-        for (name, arguments) in [
-            ("healthmd_pairing_start", json!({})),
-            (
-                "healthmd_pairing_status",
-                json!({"pairing_session_id": Uuid::new_v4()}),
-            ),
-            ("healthmd_export_files", json!({})),
-        ] {
+        for (name, arguments) in local_tool_calls() {
             let error = session
                 .call_tool(name, arguments, CancellationToken::new(), None)
                 .await

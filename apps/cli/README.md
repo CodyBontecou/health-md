@@ -46,7 +46,7 @@ in-memory JSON validation is capped at 64 MiB.
 | Mobile source | Protocol | Conservative source floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
 | Export-capable iPhone | selector 1 / v1 | iOS 3.0.3 from exact candidate SHA | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.0.3 from exact candidate SHA | V1 plus 17-tool MCP/query | Pending physical qualification |
+| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.0.3 from exact candidate SHA | V1 plus 19-tool local MCP/query | Pending physical qualification |
 | Android | selector 2 / v2 | Android 1.5.4 (`versionCode 25`) from exact candidate SHA | Status, native raw, files, resume, cancel | Pending physical qualification |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
@@ -296,12 +296,25 @@ cancel tools for approval. `healthmd-mcp` remains an installed compatibility lau
 replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
 and supervises its own same-file helper against the same fixed Credential Manager service/account.
 
-The local server exposes 19 fixed operations for pairing, readiness, bounded typed queries, charts,
-sleep, workouts, comparisons, coverage, evidence, and durable generated-file exports. It has no
-shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated exports require an
-explicit existing destination.
+The complete local server exposes 19 fixed operations for pairing, readiness, bounded typed
+queries, charts, sleep, workouts, comparisons, coverage, evidence, and durable generated-file
+exports. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated
+exports require an explicit existing destination.
 
-A local desktop MCP client can onboard without opening a separate terminal. Call
+For a least-privilege local host that should never receive pairing or filesystem-export authority,
+pair outside MCP and use the separate read-only stdio entry:
+
+```bash
+healthmd direct pair
+healthmd mcp serve-read-only
+```
+
+`serve-read-only` is part of the default local-first build. It exposes exactly the 13 readiness,
+discovery, and typed-query tools; all six pairing/export-job tools are absent and guessed calls are
+rejected. It starts no MCP HTTP listener, requires no OAuth or tunnel, and uses no Health.md or
+third-party cloud service. The iPhone must already be paired and remain foreground for each query.
+
+A complete local desktop MCP client can onboard without opening a separate terminal. Call
 `healthmd_pairing_start`, render the returned `image/png`, and ask the user to open Health.md's
 **Sync → Direct CLI Access → Scan Pairing QR** screen and scan it. Health.md starts pairing
 immediately from that in-app scan; no second Pair tap is required. Poll `healthmd_pairing_status`
@@ -403,6 +416,7 @@ cargo run -- --help
 cargo run -- setup codex --help
 cargo run -- query --help
 cargo run -- mcp serve --help
+cargo run -- mcp serve-read-only --help
 cargo run --features streamable-http -- mcp serve-http --help
 cargo run --features oauth-resource-server -- mcp serve-http --help
 cargo run -- mcp schema healthmd_sleep_sessions

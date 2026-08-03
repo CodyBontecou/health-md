@@ -5,16 +5,19 @@
 Health.md does not operate or provide a synchronized health-data corpus. It does not upload, retain,
 or back up users' health data for later MCP queries.
 
-The default CLI exposes local MCP over newline-delimited JSON-RPC on stdio. Source builds may also
-enable a read-only Streamable HTTP transport for development or a deliberately configured
-single-owner direct relay:
+The default CLI exposes both complete and least-privilege local MCP over newline-delimited JSON-RPC
+on stdio. Source builds may also enable a read-only Streamable HTTP transport for development or a
+deliberately configured single-owner direct relay:
 
 | Mode | Transport | Data source | Retained health data |
 |---|---|---|---|
-| Local | JSON-RPC over stdio | Paired foreground iPhone over the encrypted direct protocol | None |
+| Complete local | `healthmd mcp serve` over stdio | Paired foreground iPhone over the encrypted direct protocol | None |
+| Read-only local | `healthmd mcp serve-read-only` over stdio | The same paired foreground iPhone | None |
 | Remote relay | MCP Streamable HTTP at `/mcp` | The same paired foreground iPhone | None |
 
-Both modes use the same `healthmd-operations` registry and direct iPhone backend. The HTTP mode does
+All modes use the same `healthmd-operations` registry and direct iPhone backend. The local read-only
+entry uses no HTTP, OAuth, tunnel, or cloud service; its distinct `local_read_only` profile exposes
+the same 13-tool least-privilege catalog without sharing the remote transport identity. The HTTP mode does
 not replace that backend with server storage. Every health query still requires the paired iPhone to
 be open, authorized, reachable, and able to answer the bounded request.
 

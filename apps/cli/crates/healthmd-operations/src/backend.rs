@@ -30,6 +30,16 @@ impl CallerIdentity {
         }
     }
 
+    pub fn local_read_only() -> Self {
+        Self {
+            subject: "local-user".to_owned(),
+            tenant: None,
+            issuer: None,
+            scopes: BTreeSet::from(["healthmd:read".to_owned()]),
+            mode: CallerMode::LocalStdio,
+        }
+    }
+
     pub fn loopback() -> Self {
         Self {
             subject: "local-user".to_owned(),

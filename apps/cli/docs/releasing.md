@@ -151,10 +151,11 @@ dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
 
-Distribution builds intentionally use the empty default feature set: shipped binaries expose local
-stdio/direct-iPhone MCP but not `serve-http` or OAuth. The optional direct-backed HTTP transport is
-source-build-only and is never added to release archives implicitly. Health.md has no synchronized
-remote health-data corpus command.
+Distribution builds intentionally use the empty default feature set: shipped binaries expose the
+19-tool complete local stdio/direct-iPhone MCP entry and the separately authorized 13-tool
+`serve-read-only` stdio entry, but not `serve-http` or OAuth. The optional direct-backed HTTP
+transport is source-build-only and is never added to release archives implicitly. Health.md has no
+synchronized remote health-data corpus command.
 
 Review generated artifacts and checksums under `apps/cli/target/distrib`, and review the
 [mobile compatibility ledger](mobile-compatibility.md). The first public release remains blocked

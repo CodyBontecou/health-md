@@ -11,6 +11,12 @@ The portable mode does not require Health.md for Mac. `healthmd setup codex` saf
 Codex / Claude <-> healthmd mcp serve <-> authenticated encrypted port 17647 <-> foreground iPhone
 ```
 
+A least-privilege local host can instead launch `healthmd mcp serve-read-only` after pairing with
+`healthmd direct pair`. That default-build stdio entry uses the distinct `local_read_only` profile:
+it exposes only the 13 readiness/query tools, omits the pairing resource and all export-job tools,
+and rejects guessed local-only calls before backend dispatch. It starts no MCP HTTP listener and
+requires no OAuth, tunnel, or cloud service.
+
 The portable source and operator documentation live under `apps/cli`, and its public query contract is `packages/contracts/direct-protocol/v3/protocol.md`.
 
 Portable Codex onboarding is:

@@ -122,8 +122,10 @@ struct McpArgs {
 
 #[derive(Debug, Subcommand)]
 enum McpCommand {
-    /// Serve newline-delimited JSON-RPC over stdio for Codex, Claude, or another MCP host.
+    /// Serve the complete local JSON-RPC surface over stdio.
     Serve(McpServeArgs),
+    /// Serve only readiness and typed-query tools over local stdio, without pairing or exports.
+    ServeReadOnly(McpServeArgs),
     /// Serve the read-only MCP surface over standard Streamable HTTP on loopback.
     #[cfg(feature = "streamable-http")]
     ServeHttp(Box<McpServeHttpArgs>),
@@ -509,20 +511,30 @@ async fn async_main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    if let Command::Mcp(McpArgs {
-        command: McpCommand::Serve(options),
-    }) = &cli.command
-    {
+    let stdio_mcp = match &cli.command {
+        Command::Mcp(McpArgs {
+            command: McpCommand::Serve(options),
+        }) => Some((options, false)),
+        Command::Mcp(McpArgs {
+            command: McpCommand::ServeReadOnly(options),
+        }) => Some((options, true)),
+        _ => None,
+    };
+    if let Some((options, read_only)) = stdio_mcp {
         if cli.backend != Backend::Direct || cli.transport != Transport::ManualIp {
             eprintln!("healthmd: MCP requires the direct Manual IP transport");
             return ExitCode::from(1);
         }
-        let result = mcp::serve(mcp::ServeOptions {
+        let options = mcp::ServeOptions {
             device_id: cli.device,
             port: cli.port,
             timeout_seconds: options.timeout_seconds,
-        })
-        .await;
+        };
+        let result = if read_only {
+            mcp::serve_read_only(options).await
+        } else {
+            mcp::serve(options).await
+        };
         if let Err(error) = result {
             eprintln!("healthmd: {error}");
             return ExitCode::from(1);
@@ -2026,6 +2038,9 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Mcp(McpArgs {
             command: McpCommand::Serve(_),
         }) => "mcp serve",
+        Command::Mcp(McpArgs {
+            command: McpCommand::ServeReadOnly(_),
+        }) => "mcp serve-read-only",
         #[cfg(feature = "streamable-http")]
         Command::Mcp(McpArgs {
             command: McpCommand::ServeHttp(_),
@@ -2253,6 +2268,24 @@ mod tests {
         };
         assert_eq!(options.timeout_seconds, 900);
 
+        let read_only = Cli::try_parse_from([
+            "healthmd",
+            "--device",
+            "01234567-89ab-4cde-8fab-0123456789ab",
+            "mcp",
+            "serve-read-only",
+            "--timeout-seconds",
+            "600",
+        ])
+        .unwrap();
+        let Command::Mcp(McpArgs {
+            command: McpCommand::ServeReadOnly(options),
+        }) = read_only.command
+        else {
+            panic!("expected read-only MCP serve command");
+        };
+        assert_eq!(options.timeout_seconds, 600);
+
         let schema =
             Cli::try_parse_from(["healthmd", "mcp", "schema", "healthmd_sleep_sessions"]).unwrap();
         let Command::Mcp(McpArgs {
@@ -2288,6 +2321,7 @@ mod tests {
         assert!(Cli::try_parse_from(["healthmd", "mcp", "serve-http"]).is_err());
         assert!(Cli::try_parse_from(["healthmd", "mcp", "serve-hosted"]).is_err());
         assert!(Cli::try_parse_from(["healthmd", "mcp", "serve"]).is_ok());
+        assert!(Cli::try_parse_from(["healthmd", "mcp", "serve-read-only"]).is_ok());
         assert!(Cli::try_parse_from(["healthmd", "mcp", "schema"]).is_ok());
     }
 

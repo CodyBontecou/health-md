@@ -53,9 +53,14 @@ It uses the isolated `com.healthmd.android.e2e` app and concurrently runs the ig
 notification Disconnect action, requests status only, and retains no health payload. Verify the
 release archive's checksum and assert that it contains both `healthmd` and
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
-`healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`, and
-`healthmd mcp schema healthmd_sleep_sessions`. Confirm that the default release rejects
-`mcp serve-http` and that every build rejects the removed `mcp serve-hosted` command. Separately run
+`healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`,
+`healthmd mcp serve-read-only --help`, and `healthmd mcp schema healthmd_sleep_sessions`. Feed the
+same bounded stdio initialize/tools calls to both serve modes: the complete mode must expose 19
+tools, while read-only mode must expose exactly 13 tools with `readOnlyHint`, no pairing resource,
+and no pairing/export-job declarations. Guess all six omitted tool names and require `Unknown tool`
+before backend dispatch. Confirm that neither stdio mode starts an MCP HTTP listener, that the
+default release rejects `mcp serve-http`, and that every build rejects the removed
+`mcp serve-hosted` command. Separately run
 source builds with `cargo run --features streamable-http -- mcp serve-http --help` and
 `cargo run --features oauth-resource-server -- mcp serve-http --help`, `healthmd-mcp --version`,
 generated-registry freshness, CLI↔MCP canonical query parity, same-binary and compatibility-launcher
