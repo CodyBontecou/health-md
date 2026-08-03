@@ -250,8 +250,10 @@ jobs:
           responses = run_stdio_server([str(executable), "mcp", "serve"])
           assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
           tools = responses[2]["result"]["tools"]
-          assert len(tools) == 17
-          assert any(tool["name"] == "healthmd_metric_chart" for tool in tools)
+          tool_names = {tool["name"] for tool in tools}
+          assert len(tools) == 19
+          assert "healthmd_metric_chart" in tool_names
+          assert {"healthmd_pairing_start", "healthmd_pairing_status"} <= tool_names
           sleep = next(tool for tool in tools if tool["name"] == "healthmd_sleep_sessions")
           assert len(sleep["inputSchema"]["properties"]["dates"]["oneOf"]) == 2
           assert sleep["inputSchema"]["examples"][0]["all_pages"] is True

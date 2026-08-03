@@ -107,11 +107,8 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: |
-            cd apps/android
-            ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
-            ANDROID_SERIAL=emulator-5554 \
-            HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 \
-              ./scripts/run-direct-cli-ui-e2e.sh
+            cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
+            cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
 
   rust-kotlin-direct-interop:
     name: Rust/Kotlin direct interop
