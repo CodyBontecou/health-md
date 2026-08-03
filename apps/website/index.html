@@ -29,6 +29,45 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/app-icon/icon_32x32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon/icon_192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon/icon_180x180.png">
+  <script id="healthmd-locale-redirect">
+    (() => {
+      const { location, navigator } = window;
+      if (!["http:", "https:"].includes(location.protocol)) return;
+
+      const localeSessionKey = "healthmd-locale-detected";
+      const isSpanishEntry = location.pathname === "/es/" || location.pathname === "/es/index.html";
+      let localeWasDetected = false;
+
+      try {
+        localeWasDetected = window.sessionStorage.getItem(localeSessionKey) === "1";
+        if (isSpanishEntry) window.sessionStorage.setItem(localeSessionKey, "1");
+      } catch {
+        // Language detection still works when browser storage is unavailable.
+      }
+
+      if (isSpanishEntry) return;
+
+      const isCanonicalEnglishEntry = location.pathname === "/" || location.pathname === "/index.html";
+      if (!isCanonicalEnglishEntry || localeWasDetected) return;
+
+      try {
+        window.sessionStorage.setItem(localeSessionKey, "1");
+      } catch {
+        // Keep the default locale behavior when browser storage is unavailable.
+      }
+
+      const browserLanguages = navigator.languages?.length
+        ? navigator.languages
+        : [navigator.language];
+      const preferredLocale = browserLanguages
+        .map((language) => String(language || "").toLowerCase().split(/[-_]/, 1)[0])
+        .find((language) => language === "en" || language === "es");
+
+      if (preferredLocale === "es") {
+        location.replace(`/es/${location.search}${location.hash}`);
+      }
+    })();
+  </script>
   <script>document.documentElement.classList.add("has-js");</script>
   <link rel="stylesheet" href="assets/landing.css">
   <script src="assets/landing.js" defer></script>
@@ -77,9 +116,8 @@
         <span class="brand-name">health.md</span>
       </a>
 
-      <nav class="header-nav" aria-label="Documentation and language">
+      <nav class="header-nav" aria-label="Documentation">
         <a class="header-docs-link" href="docs/">Docs</a>
-        <a class="header-language-link" href="/es/" hreflang="es" lang="es">Español</a>
       </nav>
     </div>
   </header>

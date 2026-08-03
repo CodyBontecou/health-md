@@ -120,8 +120,7 @@ a {
 
 .brand,
 .header-nav,
-.header-docs-link,
-.header-language-link {
+.header-docs-link {
   pointer-events: auto;
 }
 
@@ -146,8 +145,7 @@ a {
   gap: 18px;
 }
 
-.header-docs-link,
-.header-language-link {
+.header-docs-link {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -158,12 +156,7 @@ a {
   letter-spacing: -0.02em;
 }
 
-.header-language-link {
-  font-size: 13px;
-}
-
-.header-docs-link::after,
-.header-language-link::after {
+.header-docs-link::after {
   content: "";
   position: absolute;
   right: 0;
@@ -176,8 +169,7 @@ a {
   transition: transform 180ms var(--ease);
 }
 
-.header-docs-link:hover::after,
-.header-language-link:hover::after {
+.header-docs-link:hover::after {
   transform: scaleX(1);
   transform-origin: left;
 }

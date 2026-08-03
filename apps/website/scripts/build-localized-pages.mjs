@@ -90,7 +90,6 @@ function localizeLandingRoutes(html, locale) {
     .replace('<meta property="og:locale" content="en_US">', '<meta property="og:locale" content="es_ES">')
     .replace('<meta property="og:locale:alternate" content="es_ES">', '<meta property="og:locale:alternate" content="en_US">')
     .replace(/href="\/docs\//g, 'href="/es/docs/')
-    .replace('href="/es/" hreflang="es" lang="es">English</a>', 'href="/" hreflang="en" lang="en">English</a>')
     .replaceAll('https://apps.apple.com/us/app/health-md/id6757763969', 'https://apps.apple.com/app/health-md/id6757763969?l=es')
     .replaceAll('https://play.google.com/store/apps/details?id=com.healthmd.android', 'https://play.google.com/store/apps/details?id=com.healthmd.android&hl=es')
     .replace('href="https://play.google.com/store/apps/details?id=com.healthmd.android&hl=es"', 'href="https://play.google.com/store/apps/details?id=com.healthmd.android&amp;hl=es"')

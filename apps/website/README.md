@@ -18,8 +18,11 @@ npm run build
 ## Localization
 
 English remains at the canonical root routes. Spanish uses `/es/` and `/es/docs/`.
-The shared locale and route contract lives in `i18n/`, while the landing catalogs are
-`i18n/messages/en.json` and `i18n/messages/es.json`.
+On the first landing-page visit in a browser session, `/` redirects to `/es/` when Spanish
+is the first supported browser language. Explicit locale URLs are never overridden, and a
+visitor can remove `/es` to remain on the English root for that session. The shared locale
+and route contract lives in `i18n/`, while the landing catalogs are `i18n/messages/en.json`
+and `i18n/messages/es.json`.
 
 ```bash
 npm run i18n:check

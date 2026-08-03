@@ -167,13 +167,14 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 });
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
-  assert.match(index, /<nav class="header-nav" aria-label="Documentation and language">/);
+  assert.match(index, /<nav class="header-nav" aria-label="Documentation">/);
   assert.match(index, /<a class="header-docs-link" href="docs\/">Docs<\/a>/);
-  assert.match(index, /<a class="header-language-link" href="\/es\/" hreflang="es" lang="es">Español<\/a>/);
+  assert.doesNotMatch(index, /header-language-link|>Español<\/a>/);
   assert.doesNotMatch(index, /↗/);
   assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px 13\.7% 0/);
   assert.match(styles, /\.brand-name\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*19px;[\s\S]*?font-weight:\s*590/);
-  assert.match(styles, /\.header-docs-link,\s*\.header-language-link\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*15px;[\s\S]*?font-weight:\s*430/);
+  assert.match(styles, /\.header-docs-link\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*15px;[\s\S]*?font-weight:\s*430/);
+  assert.doesNotMatch(styles, /header-language-link/);
   assert.doesNotMatch(index, /data-menu-toggle|primary-navigation|hero-meta|hero-route|brand-mode/);
   assert.match(styles, /@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /\.hero-intro\s*{[\s\S]*?position:\s*absolute/);
@@ -181,11 +182,13 @@ test("landing experience follows the reference's single-screen desktop compositi
   assert.match(styles, /\.hero-pitch\s*{[\s\S]*?position:\s*absolute/);
 });
 
-test("landing establishes its reveal state before the stylesheet can paint", () => {
+test("landing negotiates locale and establishes its reveal state before the stylesheet can paint", () => {
+  const localeRedirectPosition = index.indexOf('<script id="healthmd-locale-redirect">');
   const bootstrapPosition = index.indexOf('<script>document.documentElement.classList.add("has-js");</script>');
   const stylesheetPosition = index.indexOf('<link rel="stylesheet" href="assets/landing.css">');
 
-  assert.ok(bootstrapPosition >= 0);
+  assert.ok(localeRedirectPosition >= 0);
+  assert.ok(localeRedirectPosition < bootstrapPosition);
   assert.ok(bootstrapPosition < stylesheetPosition);
 });
 

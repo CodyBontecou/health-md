@@ -22,6 +22,8 @@ test('Spanish catalog matches English and renders a fully localized landing rout
   assert.match(html, /Impulsa<br>tu salud\./);
   assert.match(html, /Health\.md no almacena tus datos de salud/);
   assert.match(html, /href="\/es\/docs\/configuration\/"/);
+  assert.match(html, /id="healthmd-locale-redirect"/);
+  assert.doesNotMatch(html, /header-language-link|>English<\/a>/);
   assert.match(html, /assets\/store-badges\/es\/download-on-app-store\.svg/);
   assert.match(html, /assets\/screenshots\/showcase\/es\/scheduled-exports\.png/);
   assert.match(html, /"intlLocale":"es"/);

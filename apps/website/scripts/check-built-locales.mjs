@@ -43,6 +43,8 @@ const [
 
 assert.match(englishLanding, /<html lang="en">/);
 assert.match(englishLanding, /hreflang="es" href="https:\/\/healthmd\.app\/es\/"/);
+assert.match(englishLanding, /id="healthmd-locale-redirect"/);
+assert.doesNotMatch(englishLanding, /header-language-link|>Español<\/a>/);
 assert.match(spanishLanding, /<html lang="es" dir="ltr">/);
 assert.match(spanishLanding, /<link rel="canonical" href="https:\/\/healthmd\.app\/es\/">/);
 assert.match(spanishLanding, /<meta property="og:locale" content="es_ES">/);
@@ -51,6 +53,8 @@ assert.match(spanishLanding, /assets\/store-badges\/es\/download-on-app-store\.s
 assert.match(spanishLanding, /assets\/store-badges\/es\/get-it-on-google-play\.png/);
 assert.match(spanishLanding, /assets\/screenshots\/showcase\/es\/scheduled-exports\.png/);
 assert.match(spanishLanding, /id="healthmd-landing-messages"/);
+assert.match(spanishLanding, /id="healthmd-locale-redirect"/);
+assert.doesNotMatch(spanishLanding, /header-language-link|>English<\/a>/);
 assert.match(spanishLanding, /aria-label="Archivo de muestra listo"/);
 assert.match(spanishLanding, /Frecuencia cardíaca en reposo<\/td><td>58 lpm/);
 assert.doesNotMatch(spanishLanding, /Move your<br>health forward|Your data\. Your rules\.|Download a sample/);
