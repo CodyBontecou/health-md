@@ -5,6 +5,104 @@
 
   var reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var SVG_NAMESPACE = "http://www.w3.org/2000/svg";
+  var DEFAULT_MESSAGES = {
+    intlLocale: "en-US",
+    sampleReady: "Sample file ready",
+    sampleTitle: "Health Data Sample",
+    sampleDisclaimer: "Sample data only. These values are fictional.",
+    metric: "Metric",
+    value: "Value",
+    date: "Date",
+    steps: "Steps",
+    stepsUnit: "steps",
+    sleep: "Sleep",
+    hourShort: "hr",
+    minuteShort: "min",
+    restingHeartRate: "Resting heart rate",
+    heartRateUnit: "bpm",
+    walkingDistance: "Walking distance",
+    related: "Related",
+    healthDashboard: "Health Dashboard",
+    emptyFormats: "Choose one or more export formats.",
+    downloadNone: "Download samples",
+    downloadOne: "Download a sample",
+    downloadMany: "Download {count} samples",
+    sampleMarkdownHref: "/assets/samples/health-data-sample.md",
+    sampleObsidianHref: "/assets/samples/health-data-sample-obsidian.md",
+    scheduleDailyTime: "7:00 AM",
+    scheduleWeeklyTime: "Monday",
+    scheduleWeeklyFile: "Health/<br>Week 32.md",
+    scheduleMonthlyTime: "1st of month",
+    scheduleMonthlyFile: "Health/<br>August 2026.md",
+    scopedRequest: "· scoped request",
+    typedQuery: "· typed query",
+    codexQuestions: [
+      "Compare my average resting heart rate this week with last week.",
+      "Show sleep sessions around my running workouts.",
+      "Which days are missing sleep data?"
+    ],
+    claudeQuestions: [
+      "Compare my resting heart rate this week with last week.",
+      "Show sleep sessions before and after my running workouts.",
+      "Find any days with missing sleep data."
+    ],
+    terminalQuestions: [
+      "Compare average resting heart rate for this week and last week.",
+      "List sleep sessions around running workouts.",
+      "Show dates with missing sleep coverage."
+    ]
+  };
+  var messages = DEFAULT_MESSAGES;
+  var messageElement = document.getElementById("healthmd-landing-messages");
+  if (messageElement) {
+    try {
+      messages = Object.assign({}, DEFAULT_MESSAGES, JSON.parse(messageElement.textContent || "{}"));
+    } catch (_error) {
+      messages = DEFAULT_MESSAGES;
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function formatSampleDate() {
+    return new Intl.DateTimeFormat(messages.intlLocale, {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(new Date(Date.UTC(2026, 7, 2)));
+  }
+
+  function formatNumber(value) {
+    return new Intl.NumberFormat(messages.intlLocale).format(value);
+  }
+
+  function localizedMarkdownSample() {
+    return '<h3># ' + escapeHtml(messages.sampleTitle) + '</h3>' +
+      '<p><em>*' + escapeHtml(messages.sampleDisclaimer) + '*</em></p>' +
+      '<table><thead><tr><th>' + escapeHtml(messages.metric) + '</th><th>' + escapeHtml(messages.value) + '</th></tr></thead><tbody>' +
+      '<tr><td>' + escapeHtml(messages.date) + '</td><td>' + escapeHtml(formatSampleDate()) + '</td></tr>' +
+      '<tr><td>' + escapeHtml(messages.steps) + '</td><td>' + escapeHtml(formatNumber(8421) + ' ' + messages.stepsUnit) + '</td></tr>' +
+      '<tr><td>' + escapeHtml(messages.sleep) + '</td><td>7 ' + escapeHtml(messages.hourShort) + ' 42 ' + escapeHtml(messages.minuteShort) + '</td></tr>' +
+      '<tr><td>' + escapeHtml(messages.restingHeartRate) + '</td><td>58 ' + escapeHtml(messages.heartRateUnit) + '</td></tr>' +
+      '<tr><td>' + escapeHtml(messages.walkingDistance) + '</td><td>' + escapeHtml(formatNumber(4.1)) + ' mi</td></tr>' +
+      '</tbody></table>';
+  }
+
+  function localizedObsidianSample() {
+    return "---\ndate: 2026-08-02\ntype: health-data\ntags:\n  - health/summary\n---\n\n# " + messages.sampleTitle +
+      "\n\n- " + messages.steps + ": " + formatNumber(8421) +
+      "\n- " + messages.sleep + ": 7 " + messages.hourShort + " 42 " + messages.minuteShort +
+      "\n- " + messages.restingHeartRate + ": 58 " + messages.heartRateUnit +
+      "\n- " + messages.walkingDistance + ": " + formatNumber(4.1) + " mi\n\n" + messages.related + ": [[" + messages.healthDashboard + "]]";
+  }
 
   function seededValue(index, salt) {
     var value = Math.sin(index * 91.317 + salt * 47.733) * 43758.5453;
@@ -144,26 +242,26 @@
       markdown: {
         filename: "health-data-sample.md",
         size: "1.2 KB",
-        href: "assets/samples/health-data-sample.md",
-        html: '<h3># Health Data Sample</h3><p><em>*Sample data only. These values are fictional.*</em></p><table><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody><tr><td>Date</td><td>August 2, 2026</td></tr><tr><td>Steps</td><td>8,421 steps</td></tr><tr><td>Sleep</td><td>7 hr 42 min</td></tr><tr><td>Resting heart rate</td><td>58 bpm</td></tr><tr><td>Walking distance</td><td>4.1 mi</td></tr></tbody></table>'
+        href: messages.sampleMarkdownHref,
+        html: localizedMarkdownSample()
       },
       json: {
         filename: "health-data-sample.json",
         size: "328 B",
-        href: "assets/samples/health-data-sample.json",
+        href: "/assets/samples/health-data-sample.json",
         text: '{\n  "date": "2026-08-02",\n  "steps": 8421,\n  "sleepMinutes": 462,\n  "restingHeartRateBpm": 58,\n  "walkingDistanceMiles": 4.1\n}'
       },
       csv: {
         filename: "health-data-sample.csv",
         size: "157 B",
-        href: "assets/samples/health-data-sample.csv",
+        href: "/assets/samples/health-data-sample.csv",
         text: "metric,value,unit\ndate,2026-08-02,\nsteps,8421,steps\nsleep,462,minutes\nresting_heart_rate,58,bpm\nwalking_distance,4.1,mi"
       },
       obsidian: {
         filename: "health-data-sample-obsidian.md",
         size: "1.4 KB",
-        href: "assets/samples/health-data-sample-obsidian.md",
-        text: "---\ndate: 2026-08-02\ntype: health-data\ntags:\n  - health/summary\n---\n\n# Health Data Sample\n\n- Steps: 8,421\n- Sleep: 7 hr 42 min\n- Resting heart rate: 58 bpm\n- Walking distance: 4.1 mi\n\nRelated: [[Health Dashboard]]"
+        href: messages.sampleObsidianHref,
+        text: localizedObsidianSample()
       }
     };
 
@@ -203,7 +301,7 @@
 
       success.classList.add("file-success");
       success.setAttribute("viewBox", "0 0 24 24");
-      success.setAttribute("aria-label", "Sample file ready");
+      success.setAttribute("aria-label", messages.sampleReady);
       circle.setAttribute("cx", "12");
       circle.setAttribute("cy", "12");
       circle.setAttribute("r", "9");
@@ -233,11 +331,11 @@
       if (!selectedFormats.length) {
         var empty = document.createElement("p");
         empty.className = "file-preview-empty";
-        empty.textContent = "Choose one or more export formats.";
+        empty.textContent = messages.emptyFormats;
         stack.appendChild(empty);
         download.removeAttribute("href");
         download.setAttribute("aria-disabled", "true");
-        downloadLabel.textContent = "Download samples";
+        downloadLabel.textContent = messages.downloadNone;
         return;
       }
 
@@ -253,8 +351,8 @@
       download.setAttribute("href", samples[selectedFormats[selectedFormats.length - 1]].href);
       download.removeAttribute("aria-disabled");
       downloadLabel.textContent = selectedFormats.length === 1
-        ? "Download a sample"
-        : "Download " + selectedFormats.length + " samples";
+        ? messages.downloadOne
+        : messages.downloadMany.replace("{count}", String(selectedFormats.length));
     }
 
     buttons.forEach(function (button) {
@@ -302,9 +400,9 @@
     if (!buttons.length || !time || !file) return;
 
     var schedules = {
-      daily: { time: "7:00 AM", file: "Health/<br>2026-08-03.md" },
-      weekly: { time: "Monday", file: "Health/<br>Week 32.md" },
-      monthly: { time: "1st of month", file: "Health/<br>August 2026.md" }
+      daily: { time: messages.scheduleDailyTime, file: "Health/<br>2026-08-03.md" },
+      weekly: { time: messages.scheduleWeeklyTime, file: messages.scheduleWeeklyFile },
+      monthly: { time: messages.scheduleMonthlyTime, file: messages.scheduleMonthlyFile }
     };
 
     buttons.forEach(function (button) {
@@ -338,30 +436,18 @@
     var clients = {
       codex: {
         title: "Health.md MCP",
-        note: "· scoped request",
-        questions: [
-          "Compare my average resting heart rate this week with last week.",
-          "Show sleep sessions around my running workouts.",
-          "Which days are missing sleep data?"
-        ]
+        note: messages.scopedRequest,
+        questions: messages.codexQuestions
       },
       claude: {
         title: "Health.md MCP",
-        note: "· scoped request",
-        questions: [
-          "Compare my resting heart rate this week with last week.",
-          "Show sleep sessions before and after my running workouts.",
-          "Find any days with missing sleep data."
-        ]
+        note: messages.scopedRequest,
+        questions: messages.claudeQuestions
       },
       terminal: {
         title: "Health.md CLI",
-        note: "· typed query",
-        questions: [
-          "Compare average resting heart rate for this week and last week.",
-          "List sleep sessions around running workouts.",
-          "Show dates with missing sleep coverage."
-        ]
+        note: messages.typedQuery,
+        questions: messages.terminalQuestions
       }
     };
 

@@ -23,8 +23,15 @@
   Authenticode for both Windows binaries and the PowerShell installer, native signed-upgrade probes,
   a Sigstore-signed checksum closure, and byte-for-byte remote draft revalidation.
 - Add capability-gated direct iPhone query protocol v3 and the portable `healthmd-mcp` binary with
-  17 fixed tools, typed analysis/evidence, bounded paging, MCP Apps UI, portable PNG charts,
+  19 local fixed tools, typed analysis/evidence, bounded paging, MCP Apps UI, portable PNG charts,
   durable generated-file export controls, cancellation recovery, and no Mac-app dependency.
+- Let local stdio MCP clients start a bounded iPhone pairing session, render its short-lived QR as
+  `image/png`, and poll a health-free session receipt. Scanning the QR with Health.md's in-app
+  Direct CLI scanner starts the authenticated connection immediately without a second Pair tap;
+  external custom-URL opens are not pairing consent. Pairing remains unavailable to
+  HTTP/OAuth profiles, and its one-time code, host address, and deep link never appear in text
+  results. Pairing start fails closed when existing trust or a device pin would make later MCP
+  routing ambiguous.
 - Support generated-file destination commits on macOS, Linux, and Windows by treating the desktop
   destination as opaque on iPhone while the receiving host validates and binds native filesystem
   identity.

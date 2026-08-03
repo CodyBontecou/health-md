@@ -5,7 +5,7 @@ use chrono::Timelike as _;
 use healthmd_client::{
     ClientError,
     credentials::CredentialStore,
-    handshake::authenticate,
+    handshake::{AuthenticatedConnection, authenticate},
     packet::PacketConnection,
     secure_channel::{SecurePayload, V2SecurePayload},
     storage::StorageLayout,
@@ -233,4 +233,189 @@ async fn accepts_android_pairing_and_v2_negotiation() {
             },
         }
     }
+}
+
+async fn accept_ui_connection(
+    listener: &TcpListener,
+    server_id: &SwiftUuid,
+    trust_store: &TrustStore<MemoryCredentials>,
+    pairing_codes: Option<(&str, &str)>,
+) -> Result<AuthenticatedConnection, ClientError> {
+    let stream = loop {
+        let (stream, _) = tokio::time::timeout(Duration::from_secs(60), listener.accept())
+            .await
+            .map_err(|_| ClientError::TimedOut)?
+            .map_err(|error| ClientError::Connection(error.to_string()))?;
+        let mut prefix = [0_u8; 8];
+        let is_http_probe = matches!(
+            tokio::time::timeout(Duration::from_secs(5), stream.peek(&mut prefix)).await,
+            Ok(Ok(count)) if count >= 4
+                && matches!(&prefix[..4], b"GET " | b"HEAD" | b"POST" | b"PUT ")
+        );
+        if is_http_probe {
+            eprintln!("ANDROID_UI_E2E_NON_PROTOCOL_PROBE_IGNORED");
+            continue;
+        }
+        break stream;
+    };
+    authenticate(
+        PacketConnection::new(stream),
+        *server_id,
+        "Rust Android UI E2E CLI",
+        pairing_codes,
+        trust_store,
+        Duration::from_secs(30),
+    )
+    .await
+}
+
+async fn negotiate_ui_connection(
+    connection: &mut AuthenticatedConnection,
+    server_id: &SwiftUuid,
+) -> v2::SourceHello {
+    connection
+        .channel
+        .send(&DirectMessage::Hello(Unlabeled::from(
+            PeerCapabilities::portable_cli_all_versions(*server_id),
+        )))
+        .await
+        .unwrap();
+    let SecurePayload::Message(message) = connection.channel.receive().await.unwrap() else {
+        panic!("expected Android negotiation hello");
+    };
+    let DirectMessage::Hello(Unlabeled { value: hello }) = *message else {
+        panic!("expected Android negotiation hello");
+    };
+    assert_eq!(hello.platform, PeerPlatform::Android);
+    assert_eq!(hello.protocol_versions, vec![2]);
+    assert_eq!(hello.installation_id.0, connection.device.installation_id.0);
+
+    let envelope = connection.channel.receive_v2().await.unwrap();
+    let v2::Message::SourceHello(source) = envelope.message else {
+        panic!("expected Android source capabilities");
+    };
+    assert_eq!(source.source.platform, v2::SourcePlatform::Android);
+    assert_eq!(
+        source.source.installation_id,
+        connection.device.installation_id.0
+    );
+    assert!(
+        source
+            .products
+            .iter()
+            .any(|product| product.product_id == v2::ProductId::AndroidProviderNativeSnapshotV1)
+    );
+    source
+}
+
+/// Physical/emulator app gate. The Android instrumentation test drives Settings -> Direct CLI,
+/// while this listener verifies wrong-code rejection, pairing, reconnect, disconnect, status,
+/// forget, and code-based re-pair without requesting or retaining health payloads.
+#[tokio::test]
+#[ignore = "requires the Android Direct CLI UI instrumentation test"]
+async fn accepts_android_ui_pair_reconnect_disconnect_status_and_repair() {
+    let bind_address =
+        std::env::var("HEALTHMD_ANDROID_UI_E2E_BIND").unwrap_or_else(|_| "127.0.0.1".into());
+    let port = std::env::var("HEALTHMD_ANDROID_UI_E2E_PORT")
+        .ok()
+        .and_then(|value| value.parse::<u16>().ok())
+        .unwrap_or(18_648);
+    let pairing_code = std::env::var("HEALTHMD_ANDROID_UI_E2E_PAIRING_CODE")
+        .unwrap_or_else(|_| "12345678901234567890".into());
+    assert_eq!(pairing_code.len(), 20);
+    assert!(pairing_code.bytes().all(|byte| byte.is_ascii_digit()));
+
+    let listener = TcpListener::bind((bind_address.as_str(), port))
+        .await
+        .unwrap();
+    eprintln!("ANDROID_UI_E2E_LISTENER_READY:{port}");
+
+    let server_id = SwiftUuid(Uuid::parse_str("11234567-89ab-4cde-8fab-0123456789ab").unwrap());
+    let store = TrustStore::new(MemoryCredentials::default());
+
+    let wrong_leading_digit = if pairing_code.as_bytes()[0] == b'0' {
+        '1'
+    } else {
+        '0'
+    };
+    let wrong_code = format!("{wrong_leading_digit}{}", &pairing_code[1..]);
+    let rejected = accept_ui_connection(
+        &listener,
+        &server_id,
+        &store,
+        Some(("123456", &pairing_code)),
+    )
+    .await;
+    match rejected {
+        Err(ClientError::Authentication(_)) => {
+            assert_ne!(wrong_code, pairing_code);
+            eprintln!("ANDROID_UI_E2E_WRONG_CODE_REJECTED");
+        }
+        Ok(_) => panic!("wrong pairing code was unexpectedly accepted"),
+        Err(error) => panic!("expected wrong-code authentication rejection, got {error:?}"),
+    }
+
+    let mut paired = accept_ui_connection(
+        &listener,
+        &server_id,
+        &store,
+        Some(("123456", &pairing_code)),
+    )
+    .await
+    .unwrap();
+    assert!(paired.was_new_pairing);
+    let first_device_id = paired.device.installation_id;
+    negotiate_ui_connection(&mut paired, &server_id).await;
+    drop(paired);
+    eprintln!("ANDROID_UI_E2E_PAIRED");
+
+    let mut disconnect = accept_ui_connection(&listener, &server_id, &store, None)
+        .await
+        .unwrap();
+    assert!(!disconnect.was_new_pairing);
+    assert_eq!(disconnect.device.installation_id, first_device_id);
+    negotiate_ui_connection(&mut disconnect, &server_id).await;
+    eprintln!("ANDROID_UI_E2E_DISCONNECT_READY");
+    let closed = tokio::time::timeout(Duration::from_secs(60), disconnect.channel.receive_v2())
+        .await
+        .expect("Android did not disconnect within the bounded UI test window");
+    assert!(closed.is_err());
+    eprintln!("ANDROID_UI_E2E_DISCONNECTED");
+
+    let mut status = accept_ui_connection(&listener, &server_id, &store, None)
+        .await
+        .unwrap();
+    assert!(!status.was_new_pairing);
+    assert_eq!(status.device.installation_id, first_device_id);
+    negotiate_ui_connection(&mut status, &server_id).await;
+    status
+        .channel
+        .send_v2(&v2::Envelope::new(v2::Message::StatusRequest(
+            v2::StatusRequest {
+                requested_at: chrono::Utc::now(),
+            },
+        )))
+        .await
+        .unwrap();
+    let response = status.channel.receive_v2().await.unwrap();
+    let v2::Message::StatusResponse(source_status) = response.message else {
+        panic!("expected Android status response");
+    };
+    assert_eq!(source_status.source.installation_id, first_device_id.0);
+    assert!(source_status.app_active);
+    drop(status);
+    eprintln!("ANDROID_UI_E2E_STATUS_COMPLETE");
+
+    let mut repaired = accept_ui_connection(
+        &listener,
+        &server_id,
+        &store,
+        Some(("123456", &pairing_code)),
+    )
+    .await
+    .unwrap();
+    assert!(repaired.was_new_pairing);
+    assert_eq!(repaired.device.installation_id, first_device_id);
+    negotiate_ui_connection(&mut repaired, &server_id).await;
+    eprintln!("ANDROID_UI_E2E_COMPLETE");
 }

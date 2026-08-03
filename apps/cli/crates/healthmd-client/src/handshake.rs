@@ -23,6 +23,12 @@ pub struct AuthenticatedConnection {
     pub pairing_protocol_version: i32,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum NewPairingPolicy {
+    AllowAny,
+    RequireNoOtherTrust,
+}
+
 /// Authenticate one mobile-initiated direct connection and persist trust before responding.
 ///
 /// # Errors
@@ -30,12 +36,39 @@ pub struct AuthenticatedConnection {
 /// Returns an error for incompatible/malformed handshakes, invalid credentials, unavailable
 /// secure storage, cryptographic failure, or TCP failure.
 pub async fn authenticate<C: CredentialStore>(
+    packet: PacketConnection,
+    owner_installation_id: SwiftUuid,
+    server_display_name: &str,
+    pairing_codes: Option<(&str, &str)>,
+    trust_store: &TrustStore<C>,
+    timeout: Duration,
+) -> Result<AuthenticatedConnection, ClientError> {
+    authenticate_with_policy(
+        packet,
+        owner_installation_id,
+        server_display_name,
+        pairing_codes,
+        trust_store,
+        timeout,
+        NewPairingPolicy::AllowAny,
+    )
+    .await
+}
+
+/// Authenticate with an atomic policy governing whether code pairing may add another trust record.
+///
+/// # Errors
+///
+/// Returns the normal bounded authentication failures, plus [`ClientError::PairingConflict`] when
+/// first-device onboarding races with another process that already added a different device.
+pub(crate) async fn authenticate_with_policy<C: CredentialStore>(
     mut packet: PacketConnection,
     owner_installation_id: SwiftUuid,
     server_display_name: &str,
     pairing_codes: Option<(&str, &str)>,
     trust_store: &TrustStore<C>,
     timeout: Duration,
+    new_pairing_policy: NewPairingPolicy,
 ) -> Result<AuthenticatedConnection, ClientError> {
     let deadline = Instant::now() + timeout;
     let result = authenticate_inner(
@@ -45,6 +78,7 @@ pub async fn authenticate<C: CredentialStore>(
         pairing_codes,
         trust_store,
         deadline,
+        new_pairing_policy,
     )
     .await;
 
@@ -80,6 +114,7 @@ async fn authenticate_inner<C: CredentialStore>(
     pairing_codes: Option<(&str, &str)>,
     trust_store: &TrustStore<C>,
     deadline: Instant,
+    new_pairing_policy: NewPairingPolicy,
 ) -> Result<([u8; 32], TrustedClient, bool, i32), ClientError> {
     let SyncPacket::PairingRequest(Unlabeled { value: request }) =
         tokio::time::timeout(remaining(deadline)?, packet.receive())
@@ -108,6 +143,11 @@ async fn authenticate_inner<C: CredentialStore>(
     let mut state = trust_store.load(owner_installation_id).await?;
     let _ = remaining(deadline)?;
     let existing = state.client(client_id.0).cloned();
+    if new_pairing_policy == NewPairingPolicy::RequireNoOtherTrust
+        && !state.trusted_clients.is_empty()
+    {
+        return Err(ClientError::PairingConflict);
+    }
     let trusted_reconnect = existing.as_ref().is_some_and(|saved| {
         request.trusted_verifier.as_ref().is_some_and(|verifier| {
             crypto::constant_time_equal(
@@ -435,5 +475,75 @@ mod tests {
             state.client(client_id.0).unwrap().reconnect_secret,
             reconnect_secret
         );
+    }
+
+    #[tokio::test]
+    async fn first_device_policy_atomically_rejects_a_different_new_trust_record() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let credentials = MemoryCredentials::default();
+        let store = TrustStore::new(credentials.clone());
+        let server_id = SwiftUuid(Uuid::new_v4());
+        let existing_id = SwiftUuid(Uuid::new_v4());
+        let now = Utc::now();
+        let mut state = crate::trust::TrustState::empty(server_id);
+        state
+            .save_client(TrustedClient {
+                installation_id: existing_id,
+                display_name: "Existing iPhone".into(),
+                platform: Some(healthmd_protocol::wire::PeerPlatform::Ios),
+                reconnect_secret: vec![7; 32],
+                paired_at: now,
+                last_connected_at: now,
+            })
+            .unwrap();
+        store.save(&state).await.unwrap();
+
+        let server_credentials = credentials.clone();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            authenticate_with_policy(
+                PacketConnection::new(stream),
+                server_id,
+                "healthmd CLI",
+                Some(("123456", "12345678901234567890")),
+                &TrustStore::new(server_credentials),
+                Duration::from_secs(5),
+                NewPairingPolicy::RequireNoOtherTrust,
+            )
+            .await
+        });
+
+        let mut packet = PacketConnection::new(TcpStream::connect(address).await.unwrap());
+        let new_client_id = SwiftUuid(Uuid::new_v4());
+        let (_, client_public) = crypto::ephemeral_key_pair().unwrap();
+        let client_nonce = [9_u8; 32];
+        let code_verifier =
+            crypto::pairing_verifier("123456", new_client_id.0, &client_public, &client_nonce);
+        packet
+            .send(&SyncPacket::PairingRequest(Unlabeled::from(
+                PairingRequest {
+                    protocol_version: 1,
+                    device_name: "Second iPhone".into(),
+                    client_public_key: client_public.to_vec(),
+                    client_nonce: client_nonce.to_vec(),
+                    code_verifier: code_verifier.to_vec(),
+                    client_installation_id: Some(new_client_id),
+                    trusted_verifier: None,
+                },
+            )))
+            .await
+            .unwrap();
+        assert!(matches!(
+            packet.receive().await.unwrap(),
+            SyncPacket::PairingRejected(_)
+        ));
+        assert!(matches!(
+            server.await.unwrap(),
+            Err(ClientError::PairingConflict)
+        ));
+        let state = TrustStore::new(credentials).load(server_id).await.unwrap();
+        assert_eq!(state.trusted_clients.len(), 1);
+        assert_eq!(state.trusted_clients[0].installation_id, existing_id);
     }
 }

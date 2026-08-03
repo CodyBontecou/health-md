@@ -1,7 +1,63 @@
 ---
 import DefaultHead from '@astrojs/starlight/components/Head.astro';
+import { englishDocsPath, hasSpanishDocTranslation } from '../../../i18n/routes.mjs';
 
-const { entry, head, lang, siteTitle } = Astro.locals.starlightRoute;
+const route = Astro.locals.starlightRoute;
+const { entry, head, lang, siteTitle, isFallback } = route;
+const isSpanish = lang === 'es' || lang.startsWith('es-');
+const isSpanishContent = isSpanish && !isFallback;
+const translationExists = hasSpanishDocTranslation(Astro.url.pathname);
+const site = Astro.site ?? new URL('https://healthmd.app');
+const englishPath = englishDocsPath(Astro.url.pathname);
+const spanishPath = englishPath.replace(/^\/docs(?=\/|$)/, '/es/docs');
+const englishCanonical = new URL(englishPath, site).href;
+const spanishCanonical = new URL(spanishPath, site).href;
+const pageCanonical = isFallback ? englishCanonical : new URL(Astro.url.pathname, site).href;
+
+const canonicalEntry = head.find(
+  ({ tag, attrs }) => tag === 'link' && attrs?.rel === 'canonical',
+);
+if (canonicalEntry?.attrs) canonicalEntry.attrs.href = pageCanonical;
+
+for (let index = head.length - 1; index >= 0; index -= 1) {
+  const item = head[index];
+  if (item?.tag === 'link' && item.attrs?.rel === 'alternate' && item.attrs.hreflang) {
+    head.splice(index, 1);
+  }
+}
+head.push(
+  { tag: 'link', attrs: { rel: 'alternate', hreflang: 'en', href: englishCanonical } },
+  { tag: 'link', attrs: { rel: 'alternate', hreflang: 'x-default', href: englishCanonical } },
+);
+if (translationExists) {
+  head.push({ tag: 'link', attrs: { rel: 'alternate', hreflang: 'es', href: spanishCanonical } });
+}
+if (isFallback && !head.some(({ tag, attrs }) => tag === 'meta' && attrs?.name === 'robots')) {
+  head.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex,follow' } });
+}
+
+for (const item of head) {
+  if (item.tag !== 'meta' || !item.attrs) continue;
+  if (item.attrs.property === 'og:locale') item.attrs.content = isSpanishContent ? 'es_ES' : 'en_US';
+  if (isSpanishContent && (item.attrs.property === 'og:image' || item.attrs.name === 'twitter:image')) {
+    item.attrs.content = 'https://healthmd.app/docs/social/docs-og-es.png';
+  }
+  if (
+    isSpanishContent &&
+    (item.attrs.property === 'og:image:alt' || item.attrs.name === 'twitter:image:alt')
+  ) {
+    item.attrs.content = 'Documentación de Health.md: exporta, consulta, automatiza y crea';
+  }
+}
+if (translationExists) {
+  head.push({
+    tag: 'meta',
+    attrs: {
+      property: 'og:locale:alternate',
+      content: isSpanish ? 'en_US' : 'es_ES',
+    },
+  });
+}
 
 const meta = (attribute: 'name' | 'property', value: string) => {
   const content = head.find(
@@ -9,17 +65,10 @@ const meta = (attribute: 'name' | 'property', value: string) => {
   )?.attrs?.content;
   return typeof content === 'string' ? content : undefined;
 };
-
-const canonicalEntry = head.find(
-  ({ tag, attrs }) => tag === 'link' && attrs?.rel === 'canonical',
-);
-const canonical = typeof canonicalEntry?.attrs?.href === 'string'
-  ? canonicalEntry.attrs.href
-  : new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
-const canonicalURL = new URL(canonical);
 const description = meta('name', 'description');
 const image = meta('property', 'og:image');
 const noindex = meta('name', 'robots')?.includes('noindex') ?? false;
+const canonicalURL = new URL(pageCanonical);
 const pathParts = canonicalURL.pathname.split('/').filter(Boolean);
 const pretty = (value: string) => decodeURIComponent(value)
   .replaceAll('-', ' ')
@@ -28,7 +77,7 @@ const breadcrumbs = pathParts.map((part, index) => ({
   '@type': 'ListItem',
   position: index + 1,
   name: index === 0
-    ? `${siteTitle} docs`
+    ? isSpanish ? `Documentación de ${siteTitle}` : `${siteTitle} docs`
     : index === pathParts.length - 1
       ? entry.data.title
       : pretty(part),
@@ -39,10 +88,10 @@ const jsonLD = JSON.stringify({
   '@graph': [
     {
       '@type': 'TechArticle',
-      '@id': `${canonical}#article`,
+      '@id': `${pageCanonical}#article`,
       headline: entry.data.title,
       description,
-      url: canonical,
+      url: pageCanonical,
       image,
       inLanguage: lang,
       publisher: {

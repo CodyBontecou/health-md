@@ -26,6 +26,24 @@ public final class DirectNearbyClient: @unchecked Sendable {
     public func forgetServer() throws {
         var state = trustStore.loadState(ownerInstallationID: installationID)
         state.trustedMac = nil
+        state.provisionalTrustedMac = nil
+        try trustStore.saveState(state)
+    }
+
+    public func commitProvisionalServer() throws {
+        var state = trustStore.loadState(ownerInstallationID: installationID)
+        guard let provisionalTrustedMac = state.provisionalTrustedMac else {
+            throw ManualIPTrustStoreError.missingProvisionalTrust
+        }
+        state.trustedMac = provisionalTrustedMac
+        state.provisionalTrustedMac = nil
+        try trustStore.saveState(state)
+    }
+
+    public func discardProvisionalServer() throws {
+        var state = trustStore.loadState(ownerInstallationID: installationID)
+        guard state.provisionalTrustedMac != nil else { return }
+        state.provisionalTrustedMac = nil
         try trustStore.saveState(state)
     }
 

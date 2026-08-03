@@ -14,4 +14,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://healthmd.app/sitemap.xml
-Sitemap: https://healthmd.app/docs/sitemap-index.xml
+Sitemap: https://healthmd.app/sitemap-index.xml

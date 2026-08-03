@@ -72,6 +72,7 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         }
         XCTAssertEqual(clientChannel.peerInstallationID, serverID)
         XCTAssertEqual(serverChannel.peerInstallationID, clientID)
+        XCTAssertNil(client.savedServer())
         let hello = DirectMessage.hello(DirectPeerCapabilities(
             platform: .iOS,
             installationID: clientID
@@ -79,6 +80,7 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         try await clientChannel.send(hello)
         let receivedHello = try await serverChannel.receive()
         XCTAssertEqual(receivedHello, .message(hello))
+        try client.commitProvisionalServer()
         XCTAssertEqual(server.trustedClients().map(\.installationID), [clientID])
         XCTAssertEqual(client.savedServer()?.installationID, serverID)
 
@@ -136,11 +138,13 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         }
         XCTAssertEqual(clientChannel.peerInstallationID, serverID)
         XCTAssertEqual(serverChannel.peerInstallationID, clientID)
+        XCTAssertNil(client.savedServer())
 
         let capabilities = DirectPeerCapabilities(platform: .iOS, installationID: clientID)
         try await clientChannel.send(.hello(capabilities))
         let received = try await serverChannel.receive()
         XCTAssertEqual(received, .message(.hello(capabilities)))
+        try client.commitProvisionalServer()
 
         try await serverChannel.send(.statusRequest(DirectStatusRequest(
             requestedAt: Date(timeIntervalSince1970: 1_700_000_000)

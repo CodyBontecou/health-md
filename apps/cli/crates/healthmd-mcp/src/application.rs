@@ -4,7 +4,7 @@ use std::sync::{
 };
 
 use healthmd_operations::{
-    CallContext, CallerIdentity, HealthDataBackend, HealthOperations, OperationLimits,
+    CallContext, CallerIdentity, CallerMode, HealthDataBackend, HealthOperations, OperationLimits,
     SurfaceProfile,
 };
 use serde_json::{Value, json};
@@ -57,8 +57,33 @@ impl HealthMdApplication {
         catalog::list(self.profile(), ui_enabled)
     }
 
-    fn tool_exists(&self, name: &str) -> bool {
-        self.list_tools(false)
+    fn list_tools_for_caller(&self, ui_enabled: bool, caller: &CallerIdentity) -> Vec<Value> {
+        let mut tools = self.list_tools(ui_enabled);
+        tools.retain(|tool| {
+            let Some(operation) = tool
+                .get("name")
+                .and_then(Value::as_str)
+                .and_then(healthmd_operations::definition)
+            else {
+                return false;
+            };
+            if !operation.local_only {
+                return true;
+            }
+            if caller.mode != CallerMode::LocalStdio {
+                return false;
+            }
+            match operation.kind {
+                healthmd_operations::OperationKind::Pairing => caller.has_scope("healthmd:pair"),
+                healthmd_operations::OperationKind::Export => caller.has_scope("healthmd:export"),
+                _ => true,
+            }
+        });
+        tools
+    }
+
+    fn tool_exists_for_caller(&self, name: &str, caller: &CallerIdentity) -> bool {
+        self.list_tools_for_caller(false, caller)
             .iter()
             .any(|tool| tool.get("name").and_then(Value::as_str) == Some(name))
     }
@@ -92,7 +117,8 @@ impl HealthMdSession {
     }
 
     pub fn list_tools(&self) -> Vec<Value> {
-        self.application.list_tools(self.ui_enabled())
+        self.application
+            .list_tools_for_caller(self.ui_enabled(), &self.caller)
     }
 
     pub fn list_resources(&self) -> Vec<Value> {
@@ -162,7 +188,7 @@ impl HealthMdSession {
         cancellation: CancellationToken,
         session_id: Option<String>,
     ) -> Result<Value, ApplicationError> {
-        if !self.application.tool_exists(name) {
+        if !self.application.tool_exists_for_caller(name, &caller) {
             return Err(ApplicationError::invalid_params("Unknown tool"));
         }
         if !caller.has_scope("healthmd:read") {
@@ -202,7 +228,7 @@ impl HealthMdSession {
                 Ok(value)
             }
             "healthmd_capabilities" => Ok(result::tool_result(
-                capabilities_value(&self.application),
+                capabilities_value(&self.application, &context.caller),
                 false,
                 None,
                 Vec::new(),
@@ -213,6 +239,8 @@ impl HealthMdSession {
                 None,
                 Vec::new(),
             )),
+            "healthmd_pairing_start" => self.start_pairing(&context, &arguments).await,
+            "healthmd_pairing_status" => self.pairing_status(&context, &arguments).await,
             "healthmd_export_files" => self.start_export(&context, &arguments).await,
             "healthmd_export_job_status" => self.export_status(&context, &arguments).await,
             "healthmd_export_job_resume" => self.resume_export(&context, &arguments).await,
@@ -246,6 +274,76 @@ impl HealthMdSession {
             self.ui_enabled(),
             !self.ui_enabled() && name == "healthmd_metric_chart",
         ))
+    }
+
+    async fn start_pairing(
+        &self,
+        context: &CallContext,
+        arguments: &Value,
+    ) -> Result<Value, ApplicationError> {
+        self.require_local_pairing(&context.caller)?;
+        let timeout_seconds = pairing_timeout_seconds(arguments)
+            .map_err(|()| ApplicationError::invalid_params("Invalid tool arguments"))?;
+        if context.cancellation.is_cancelled() {
+            return Ok(result::tool_result(
+                result::cancelled(None),
+                true,
+                None,
+                Vec::new(),
+            ));
+        }
+        let response = tokio::select! {
+            response = self
+                .application
+                .operations
+                .backend()
+                .start_pairing(context, timeout_seconds) => response,
+            () = context.cancellation.cancelled() => return Ok(result::tool_result(
+                result::cancelled(None), true, None, Vec::new(),
+            )),
+        };
+        Ok(match response {
+            Ok(started) => result::pairing_start_tool_result(started.receipt, started.qr_png),
+            Err(error) => {
+                result::tool_result(result::backend_error(&error), true, None, Vec::new())
+            }
+        })
+    }
+
+    async fn pairing_status(
+        &self,
+        context: &CallContext,
+        arguments: &Value,
+    ) -> Result<Value, ApplicationError> {
+        self.require_local_pairing(&context.caller)?;
+        let pairing_session_id = pairing_session_id(arguments)
+            .map_err(|()| ApplicationError::invalid_params("Invalid tool arguments"))?;
+        if context.cancellation.is_cancelled() {
+            return Ok(result::tool_result(
+                result::cancelled(None),
+                true,
+                None,
+                Vec::new(),
+            ));
+        }
+        let value = self
+            .application
+            .operations
+            .backend()
+            .pairing_status(context, pairing_session_id)
+            .await;
+        Ok(match value {
+            Ok(value) => {
+                let is_error = matches!(
+                    value.get("status").and_then(Value::as_str),
+                    Some("timed_out" | "failed")
+                );
+                result::tool_result(value, is_error, None, Vec::new())
+            }
+            Err(error) => {
+                result::tool_result(result::backend_error(&error), true, None, Vec::new())
+            }
+        })
     }
 
     async fn start_export(
@@ -357,6 +455,17 @@ impl HealthMdSession {
         ))
     }
 
+    fn require_local_pairing(&self, caller: &CallerIdentity) -> Result<(), ApplicationError> {
+        if self.application.profile() == SurfaceProfile::LocalDirect
+            && caller.mode == CallerMode::LocalStdio
+            && caller.has_scope("healthmd:pair")
+        {
+            Ok(())
+        } else {
+            Err(ApplicationError::invalid_params("Unknown tool"))
+        }
+    }
+
     fn require_local_export(&self, caller: &CallerIdentity) -> Result<(), ApplicationError> {
         if self.application.profile().exposes_local_exports()
             && self
@@ -389,8 +498,55 @@ where
     }
 }
 
-fn capabilities_value(application: &HealthMdApplication) -> Value {
+fn pairing_timeout_seconds(arguments: &Value) -> Result<u64, ()> {
+    let object = arguments.as_object().ok_or(())?;
+    if object.keys().any(|key| key != "timeout_seconds") {
+        return Err(());
+    }
+    let timeout = match object.get("timeout_seconds") {
+        Some(value) => value.as_u64().ok_or(())?,
+        None => healthmd_operations::limits::DEFAULT_PAIRING_TIMEOUT_SECONDS,
+    };
+    if (healthmd_operations::limits::MINIMUM_PAIRING_TIMEOUT_SECONDS
+        ..=healthmd_operations::limits::MAXIMUM_PAIRING_TIMEOUT_SECONDS)
+        .contains(&timeout)
+    {
+        Ok(timeout)
+    } else {
+        Err(())
+    }
+}
+
+fn pairing_session_id(arguments: &Value) -> Result<Uuid, ()> {
+    let object = arguments.as_object().ok_or(())?;
+    if object.len() != 1 || !object.contains_key("pairing_session_id") {
+        return Err(());
+    }
+    object
+        .get("pairing_session_id")
+        .and_then(Value::as_str)
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .ok_or(())
+}
+
+fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity) -> Value {
     let backend = application.operations.backend().capabilities();
+    let supports_local_pairing = application.profile() == SurfaceProfile::LocalDirect
+        && caller.mode == CallerMode::LocalStdio
+        && caller.has_scope("healthmd:pair");
+    let supports_local_file_exports = application.profile().exposes_local_exports()
+        && caller.mode == CallerMode::LocalStdio
+        && caller.has_scope("healthmd:export")
+        && backend.supports_local_file_exports;
+    let mut result_fallbacks = vec![
+        "authoritative_json",
+        "text",
+        "png_metric_chart",
+        "mcp_app_html",
+    ];
+    if supports_local_pairing {
+        result_fallbacks.push("png_pairing_qr");
+    }
     json!({
         "schema": "healthmd.mcp_capabilities",
         "schema_version": 1,
@@ -401,10 +557,10 @@ fn capabilities_value(application: &HealthMdApplication) -> Value {
         "iphone_must_be_foreground": backend.requires_foreground_source,
         "requires_foreground_source": backend.requires_foreground_source,
         "supports_queries": backend.supports_queries,
-        "supports_local_file_exports": application.profile().exposes_local_exports()
-            && backend.supports_local_file_exports,
+        "supports_local_pairing": supports_local_pairing,
+        "supports_local_file_exports": supports_local_file_exports,
         "operations": application
-            .list_tools(false)
+            .list_tools_for_caller(false, caller)
             .into_iter()
             .filter_map(|tool| tool.get("name").and_then(Value::as_str).map(str::to_owned))
             .collect::<Vec<_>>(),
@@ -438,7 +594,7 @@ fn capabilities_value(application: &HealthMdApplication) -> Value {
             "maximum_aggregate_bytes": application.operations.limits().maximum_traversal_bytes,
             "all_available_is_logically_unbounded": true
         },
-        "result_fallbacks": ["authoritative_json", "text", "png_metric_chart", "mcp_app_html"]
+        "result_fallbacks": result_fallbacks
     })
 }
 
@@ -574,6 +730,94 @@ mod tests {
         }
     }
 
+    struct PairingFixtureBackend {
+        timeout: Mutex<Option<u64>>,
+        pairing_session_id: Uuid,
+        block_start: bool,
+    }
+
+    impl PairingFixtureBackend {
+        fn new(pairing_session_id: Uuid) -> Arc<Self> {
+            Arc::new(Self {
+                timeout: Mutex::new(None),
+                pairing_session_id,
+                block_start: false,
+            })
+        }
+
+        fn blocking() -> Arc<Self> {
+            Arc::new(Self {
+                timeout: Mutex::new(None),
+                pairing_session_id: Uuid::new_v4(),
+                block_start: true,
+            })
+        }
+    }
+
+    #[async_trait]
+    impl HealthDataBackend for PairingFixtureBackend {
+        fn capabilities(&self) -> BackendCapabilities {
+            BackendCapabilities {
+                source_kind: "fixture".to_owned(),
+                transport: "fixture".to_owned(),
+                supports_queries: true,
+                supports_local_file_exports: false,
+                requires_foreground_source: false,
+                instructions: "Use the fixture.".to_owned(),
+            }
+        }
+
+        async fn readiness(&self, _context: &CallContext) -> Result<Value, BackendError> {
+            Ok(json!({"ready": true}))
+        }
+
+        async fn doctor(&self, context: &CallContext) -> Result<Value, BackendError> {
+            self.readiness(context).await
+        }
+
+        async fn query_page(
+            &self,
+            _context: &CallContext,
+            _request: QueryPageRequest,
+        ) -> Result<Value, BackendError> {
+            Ok(page(0, None))
+        }
+
+        async fn start_pairing(
+            &self,
+            _context: &CallContext,
+            timeout_seconds: u64,
+        ) -> Result<healthmd_operations::PairingStartResult, BackendError> {
+            *self.timeout.lock().unwrap() = Some(timeout_seconds);
+            if self.block_start {
+                std::future::pending::<()>().await;
+            }
+            Ok(healthmd_operations::PairingStartResult {
+                receipt: json!({
+                    "schema": "healthmd.pairing_session",
+                    "schema_version": 1,
+                    "pairing_session_id": self.pairing_session_id,
+                    "status": "waiting_for_scan"
+                }),
+                qr_png: b"\x89PNG\r\n\x1a\nfixture-secret".to_vec(),
+            })
+        }
+
+        async fn pairing_status(
+            &self,
+            _context: &CallContext,
+            pairing_session_id: Uuid,
+        ) -> Result<Value, BackendError> {
+            assert_eq!(pairing_session_id, self.pairing_session_id);
+            Ok(json!({
+                "schema": "healthmd.pairing_session",
+                "schema_version": 1,
+                "pairing_session_id": pairing_session_id,
+                "status": "paired"
+            }))
+        }
+    }
+
     fn raw_query_arguments(all_pages: bool) -> Value {
         json!({
             "request": {
@@ -599,7 +843,160 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn remote_profile_traverses_cursors_without_exposing_exports() {
+    async fn local_pairing_returns_an_image_without_exposing_its_secret_as_text() {
+        let pairing_session_id = Uuid::new_v4();
+        let backend = PairingFixtureBackend::new(pairing_session_id);
+        let application = Arc::new(HealthMdApplication::new(
+            backend.clone(),
+            SurfaceProfile::LocalDirect,
+        ));
+        let session = application.session(CallerIdentity::local());
+        assert_eq!(session.list_tools().len(), 19);
+
+        let result = session
+            .call_tool(
+                "healthmd_pairing_start",
+                json!({}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(backend.timeout.lock().unwrap().as_ref(), Some(&180));
+        assert_eq!(result.pointer("/content/1/type"), Some(&json!("image")));
+        assert_eq!(
+            result.pointer("/content/1/mimeType"),
+            Some(&json!("image/png"))
+        );
+        assert!(result.get("structuredContent").is_none());
+        let text = result.pointer("/content/0/text").unwrap().as_str().unwrap();
+        assert!(!text.contains("fixture-secret"));
+        assert!(!text.contains("healthmd://"));
+
+        let status = session
+            .call_tool(
+                "healthmd_pairing_status",
+                json!({"pairing_session_id": pairing_session_id}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(status["isError"], false);
+        assert!(
+            status["content"][0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("paired")
+        );
+
+        let error = session
+            .call_tool(
+                "healthmd_pairing_start",
+                json!({"timeout_seconds": 29}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.message, "Invalid tool arguments");
+    }
+
+    #[tokio::test]
+    async fn pairing_start_observes_cancellation_while_backend_startup_is_pending() {
+        let application = Arc::new(HealthMdApplication::new(
+            PairingFixtureBackend::blocking(),
+            SurfaceProfile::LocalDirect,
+        ));
+        let session = application.session(CallerIdentity::local());
+        let cancellation = CancellationToken::new();
+        let cancelling = cancellation.clone();
+        let call = session.call_tool("healthmd_pairing_start", json!({}), cancellation, None);
+        let cancel = async move {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            cancelling.cancel();
+        };
+        let (result, ()) = tokio::join!(call, cancel);
+        let result = result.unwrap();
+        let text: Value =
+            serde_json::from_str(result["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(text["error"], "healthmd_request_cancelled");
+        assert_eq!(result["isError"], true);
+    }
+
+    #[tokio::test]
+    async fn pairing_requires_local_stdio_even_with_local_profile_and_scope() {
+        let backend = PairingFixtureBackend::new(Uuid::new_v4());
+        let application = Arc::new(HealthMdApplication::new(
+            backend,
+            SurfaceProfile::LocalDirect,
+        ));
+        let mut caller = CallerIdentity::local();
+        caller.mode = CallerMode::LocalHttp;
+        let session = application.session(caller);
+        assert_eq!(session.list_tools().len(), 13);
+        assert!(session.list_tools().iter().all(|tool| {
+            !tool["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("healthmd_pairing_"))
+        }));
+        let capabilities = session
+            .call_tool(
+                "healthmd_capabilities",
+                json!({}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap();
+        let capabilities: Value =
+            serde_json::from_str(capabilities["content"][0]["text"].as_str().unwrap()).unwrap();
+        assert_eq!(capabilities["supports_local_pairing"], false);
+        assert!(
+            capabilities["operations"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|name| {
+                    !name
+                        .as_str()
+                        .is_some_and(|name| name.starts_with("healthmd_pairing_"))
+                })
+        );
+
+        let error = session
+            .call_tool(
+                "healthmd_pairing_start",
+                json!({}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.message, "Unknown tool");
+
+        let mut no_pair_scope = CallerIdentity::local();
+        no_pair_scope.scopes.remove("healthmd:pair");
+        let session = application.session(no_pair_scope);
+        assert!(session.list_tools().iter().all(|tool| {
+            !tool["name"]
+                .as_str()
+                .is_some_and(|name| name.starts_with("healthmd_pairing_"))
+        }));
+        let error = session
+            .call_tool(
+                "healthmd_pairing_start",
+                json!({}),
+                CancellationToken::new(),
+                None,
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.message, "Unknown tool");
+    }
+
+    #[tokio::test]
+    async fn remote_profile_traverses_cursors_without_exposing_local_operations() {
         let backend = ScriptedBackend::new([Ok(page(2, Some("opaque-a"))), Ok(page(3, None))]);
         let application = Arc::new(HealthMdApplication::new(
             backend.clone(),
@@ -758,6 +1155,16 @@ mod tests {
             tool.pointer("/_meta/ui/resourceUri") == Some(&json!(apps::RESOURCE_URI))
         }));
         assert!(
+            ui.list_tools()
+                .iter()
+                .filter(|tool| {
+                    tool["name"]
+                        .as_str()
+                        .is_some_and(|name| name.starts_with("healthmd_pairing_"))
+                })
+                .all(|tool| tool.pointer("/_meta/ui").is_none())
+        );
+        assert!(
             text.list_tools()
                 .iter()
                 .all(|tool| tool.pointer("/_meta/ui").is_none())
@@ -765,23 +1172,27 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn remote_profile_rejects_local_export_tools_before_backend_dispatch() {
+    async fn remote_profile_rejects_every_local_tool_before_backend_dispatch() {
         let backend = ScriptedBackend::new([]);
         let application = Arc::new(HealthMdApplication::new(
             backend,
             SurfaceProfile::RemoteReadOnly,
         ));
         let session = application.session(CallerIdentity::loopback());
-        let error = session
-            .call_tool(
-                "healthmd_export_files",
-                json!({}),
-                CancellationToken::new(),
-                None,
-            )
-            .await
-            .unwrap_err();
-        assert_eq!(error.code, -32_602);
-        assert_eq!(error.message, "Unknown tool");
+        for (name, arguments) in [
+            ("healthmd_pairing_start", json!({})),
+            (
+                "healthmd_pairing_status",
+                json!({"pairing_session_id": Uuid::new_v4()}),
+            ),
+            ("healthmd_export_files", json!({})),
+        ] {
+            let error = session
+                .call_tool(name, arguments, CancellationToken::new(), None)
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, -32_602);
+            assert_eq!(error.message, "Unknown tool");
+        }
     }
 }

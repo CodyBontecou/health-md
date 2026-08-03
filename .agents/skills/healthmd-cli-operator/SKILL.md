@@ -14,7 +14,7 @@ Use the installed standalone `healthmd`. Do not use the monorepo's `apps/apple/s
 - On macOS/Linux use `NO_COLOR=1 TERM=dumb`, a hard `timeout`, and stdin from `/dev/null`. Give exports longer bounds than status.
 - Parse stdout JSON or the explicit output artifact. Pairing instructions and health-free progress may use stderr.
 - Never infer success from exit status alone.
-- Ask for physical iPhone actions when needed: open/unlock Health.md, enable Direct CLI Access, enter a code, approve local-network access, or grant HealthKit read access.
+- Ask for physical iPhone actions when needed: open/unlock Health.md, scan a pairing QR with its in-app Direct CLI scanner (which connects automatically), enable Direct CLI Access, enter a fallback code, approve local-network access, or grant HealthKit read access.
 - Never print health values unless explicitly requested. Counts, dates, paths, statuses, and diagnostics are enough.
 - Never retry an unknown-outcome export blindly. Inspect its durable job first.
 
@@ -43,10 +43,9 @@ NO_COLOR=1 TERM=dumb timeout 180 healthmd direct pair </dev/null
 
 While it waits, tell the user to:
 
-1. Open **Health.md → Settings → Mac Sync → Direct CLI Access** on iPhone.
-2. Enable it and select **Manual IP**.
-3. Enter a printed LAN/Tailscale address, port, and six-digit code.
-4. Keep Health.md foregrounded through success.
+1. In foreground Health.md, open **Sync → Direct CLI Access**, tap **Scan Pairing QR**, and scan the displayed image. The in-app scan starts pairing automatically; no second Pair tap is required. Do not open the QR as a custom URL.
+2. Keep Health.md foregrounded through success.
+3. If in-app scanning is unavailable, open **Sync → Direct CLI Access**, enable **Manual IP**, and enter the printed LAN/Tailscale address, port, and six-digit code.
 
 Confirm stdout has `healthmd.direct_pairing_result`, `status: success`, and the intended device. After an unknown outcome, inspect `healthmd direct devices` rather than pairing again.
 

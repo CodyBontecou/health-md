@@ -1,7 +1,6 @@
 #if os(iOS)
 import Combine
 import HealthMdConnectionCore
-import Network
 import UIKit
 
 final class IPhoneDirectExportConnection: @unchecked Sendable {
@@ -113,8 +112,8 @@ nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
             values[item.name] = value
         }
         guard let host = values["host"],
-              host.utf8.count <= 45,
-              IPv4Address(host) != nil,
+              host.utf8.count <= 15,
+              Self.isAllowedLocalPairingHost(host),
               let portText = values["port"],
               let port = UInt16(portText),
               port > 0,
@@ -124,6 +123,62 @@ nonisolated struct IPhoneDirectCLIPairingLink: Equatable, Sendable {
         self.host = host
         self.port = port
         self.pairingCode = pairingCode
+    }
+
+    init?(scannedPayload: String) {
+        guard !scannedPayload.isEmpty,
+              scannedPayload.utf8.count <= 512,
+              scannedPayload == scannedPayload.trimmingCharacters(in: .whitespacesAndNewlines),
+              !scannedPayload.contains("%"),
+              scannedPayload.rangeOfCharacter(from: .controlCharacters) == nil,
+              let url = URL(string: scannedPayload) else { return nil }
+        self.init(url: url)
+    }
+
+    private static func isAllowedLocalPairingHost(_ host: String) -> Bool {
+        let components = host.split(separator: ".", omittingEmptySubsequences: false)
+        guard components.count == 4 else { return false }
+        var octets: [UInt8] = []
+        octets.reserveCapacity(4)
+        for component in components {
+            let digits = Array(component.utf8)
+            guard (1...3).contains(digits.count),
+                  digits.allSatisfy({ (48...57).contains($0) }),
+                  digits.count == 1 || digits[0] != 48 else { return false }
+            var value = 0
+            for digit in digits {
+                value = value * 10 + Int(digit - 48)
+            }
+            guard let octet = UInt8(exactly: value) else { return false }
+            octets.append(octet)
+        }
+        return octets[0] == 10
+            || (octets[0] == 172 && (16...31).contains(octets[1]))
+            || (octets[0] == 192 && octets[1] == 168)
+            || (octets[0] == 100 && (64...127).contains(octets[1]))
+    }
+}
+
+enum IPhoneDirectCLIPairingHandoffAction: Equatable, Sendable {
+    case deferUntilActive
+    case connect
+    case waitForActiveOperation
+    case expired
+}
+
+struct IPhoneDirectCLIPairingHandoffPolicy {
+    nonisolated static func action(
+        appIsActive: Bool,
+        hasActiveOperation: Bool,
+        receivedAt: Date,
+        now: Date = Date()
+    ) -> IPhoneDirectCLIPairingHandoffAction {
+        let age = now.timeIntervalSince(receivedAt)
+        guard age >= 0, age < DirectPairingSecurity.pairingCodeLifetime else {
+            return .expired
+        }
+        guard appIsActive else { return .deferUntilActive }
+        return hasActiveOperation ? .waitForActiveOperation : .connect
     }
 }
 
@@ -155,11 +210,37 @@ struct IPhoneDirectCLIBackgroundPolicy {
 /// iOS remains the HealthKit owner.
 @MainActor
 final class IPhoneDirectCLIService: ObservableObject {
+    private struct ProvisionalPairingTrust {
+        let sessionID: UUID
+        let previousServer: ManualIPTrustedMac?
+    }
+
+    struct PairingConfigurationSnapshot: Codable {
+        let host: String?
+        let port: String?
+        let transport: String?
+        let enabled: Bool?
+        let previousTrustedMacInstallationID: UUID?
+        let previousTrustedMacPairedAt: Date?
+
+        func stillHasPreviousTrust(_ trustedMac: ManualIPTrustedMac?) -> Bool {
+            guard let previousTrustedMacInstallationID,
+                  let previousTrustedMacPairedAt else {
+                return trustedMac == nil
+            }
+            guard let trustedMac else { return true }
+            return trustedMac.installationID == previousTrustedMacInstallationID
+                && trustedMac.pairedAt == previousTrustedMacPairedAt
+        }
+    }
+
     static let enabledKey = "directCLIEnabled"
     static let hostKey = "directCLIHost"
     static let portKey = "directCLIPort"
     static let transportKey = "directCLITransport"
     static let installationIDKey = "directCLIInstallationID"
+    private static let pendingPairingConfigurationKey =
+        "directCLIPendingPairingConfigurationV1"
 
     @Published private(set) var isConnected = false
     @Published private(set) var isConnecting = false
@@ -214,6 +295,12 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var backgroundExportContinuationID: UUID?
     private var reconnectGeneration = 0
     private var visibleConnectionAttemptID: UUID?
+    private var shouldAutoConnectPendingPairingLink = false
+    private var pendingPairingLinkReceivedAt: Date?
+    private var pendingPairingAttemptHasStarted = false
+    private var pendingPairingExpiryTask: Task<Void, Never>?
+    private var provisionalPairingTrust: ProvisionalPairingTrust?
+    private var pairingConfigurationSnapshot: PairingConfigurationSnapshot?
 
     init(
         defaults: UserDefaults = .standard,
@@ -229,9 +316,19 @@ final class IPhoneDirectCLIService: ObservableObject {
             account: "trust-state-v1"
         )
         self.trustStore = trustStore
-        self.needsPairingCode = trustStore.loadState(
-            ownerInstallationID: installationID
-        ).trustedMac == nil
+        var trustState = trustStore.loadState(ownerInstallationID: installationID)
+        if defaults.data(forKey: Self.pendingPairingConfigurationKey) != nil {
+            if let interruptedPairing = Self.loadPendingPairingConfiguration(defaults: defaults),
+               interruptedPairing.stillHasPreviousTrust(trustState.trustedMac) {
+                Self.restorePairingConfiguration(interruptedPairing, defaults: defaults)
+            }
+            defaults.removeObject(forKey: Self.pendingPairingConfigurationKey)
+        }
+        if trustState.provisionalTrustedMac != nil {
+            trustState.provisionalTrustedMac = nil
+            try? trustStore.saveState(trustState)
+        }
+        self.needsPairingCode = trustState.trustedMac == nil
     }
 
     var isEnabled: Bool {
@@ -244,6 +341,12 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     var hasPairedCLI: Bool {
         client.savedServer() != nil
+    }
+
+    var isPairingHandoffWaitingForActiveOperation: Bool {
+        pendingPairingLink != nil
+            && shouldAutoConnectPendingPairingLink
+            && (exportTask != nil || queryTask != nil)
     }
 
     var configuredHost: String {
@@ -284,30 +387,176 @@ final class IPhoneDirectCLIService: ObservableObject {
         startReconnectLoopIfNeeded()
     }
 
-    func prepare(pairingLink: IPhoneDirectCLIPairingLink) {
-        pendingPairingLink = pairingLink
-        lastError = nil
+    func rejectExternalPairingLink() {
+        guard pendingPairingLink == nil, !isConnecting else { return }
+        lastError = "For secure pairing, open the Sync tab and use Scan Pairing QR inside Health.md."
     }
 
-    func approvePendingPairingLink() {
-        guard let pairingLink = pendingPairingLink else { return }
-        guard exportTask == nil, queryTask == nil else {
-            lastError = "Wait for the active direct operation before changing pairing."
+    func handleScannedPairingLink(_ pairingLink: IPhoneDirectCLIPairingLink) {
+        if pendingPairingLink == pairingLink,
+           isConnecting
+            || shouldAutoConnectPendingPairingLink
+            || pendingPairingAttemptHasStarted {
             return
         }
-        defaults.set(DirectTransportKind.manualIP.rawValue, forKey: Self.transportKey)
-        disconnect(clearError: true)
-        connect(
-            host: pairingLink.host,
-            port: pairingLink.port,
-            pairingCode: pairingLink.pairingCode
+        guard !isConnecting, !pendingPairingAttemptHasStarted else {
+            lastError = "Wait for the current QR pairing attempt before opening another code."
+            return
+        }
+        pendingPairingLink = pairingLink
+        let receivedAt = Date()
+        pendingPairingLinkReceivedAt = receivedAt
+        pendingPairingAttemptHasStarted = false
+        shouldAutoConnectPendingPairingLink = true
+        lastError = nil
+        schedulePendingPairingLinkExpiry(pairingLink, receivedAt: receivedAt)
+        beginPendingPairingLinkIfReady()
+    }
+
+    func retryPendingPairingLink() {
+        guard pendingPairingLink != nil else { return }
+        shouldAutoConnectPendingPairingLink = true
+        lastError = nil
+        beginPendingPairingLinkIfReady()
+    }
+
+    private func schedulePendingPairingLinkExpiry(
+        _ pairingLink: IPhoneDirectCLIPairingLink,
+        receivedAt: Date
+    ) {
+        pendingPairingExpiryTask?.cancel()
+        pendingPairingExpiryTask = Task { [weak self] in
+            let nanoseconds = UInt64(
+                DirectPairingSecurity.pairingCodeLifetime * 1_000_000_000
+            )
+            do {
+                try await Task.sleep(nanoseconds: nanoseconds)
+            } catch {
+                return
+            }
+            guard let self,
+                  self.pendingPairingLink == pairingLink,
+                  self.pendingPairingLinkReceivedAt == receivedAt else { return }
+            let shouldDisconnect = self.pendingPairingAttemptHasStarted
+            self.clearPendingPairingLinkState()
+            if shouldDisconnect {
+                self.disconnect(clearError: false)
+            }
+            self.needsPairingCode = self.client.savedServer() == nil
+            self.lastError = "This pairing QR expired. Scan a fresh QR code."
+        }
+    }
+
+    private func clearPendingPairingLinkState() {
+        pendingPairingExpiryTask?.cancel()
+        pendingPairingExpiryTask = nil
+        pendingPairingLink = nil
+        pendingPairingLinkReceivedAt = nil
+        pendingPairingAttemptHasStarted = false
+        shouldAutoConnectPendingPairingLink = false
+    }
+
+    private func capturePairingConfigurationIfNeeded() -> Bool {
+        guard pairingConfigurationSnapshot == nil else { return true }
+        let previousServer = client.savedServer()
+        let snapshot = PairingConfigurationSnapshot(
+            host: defaults.object(forKey: Self.hostKey) as? String,
+            port: defaults.object(forKey: Self.portKey) as? String,
+            transport: defaults.object(forKey: Self.transportKey) as? String,
+            enabled: defaults.object(forKey: Self.enabledKey) as? Bool,
+            previousTrustedMacInstallationID: previousServer?.installationID,
+            previousTrustedMacPairedAt: previousServer?.pairedAt
         )
+        guard let encoded = try? JSONEncoder().encode(snapshot) else { return false }
+        defaults.set(encoded, forKey: Self.pendingPairingConfigurationKey)
+        pairingConfigurationSnapshot = snapshot
+        return true
+    }
+
+    private static func loadPendingPairingConfiguration(
+        defaults: UserDefaults
+    ) -> PairingConfigurationSnapshot? {
+        guard let encoded = defaults.data(forKey: pendingPairingConfigurationKey) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(PairingConfigurationSnapshot.self, from: encoded)
+    }
+
+    private static func restorePairingConfiguration(
+        _ snapshot: PairingConfigurationSnapshot,
+        defaults: UserDefaults
+    ) {
+        restoreDefault(snapshot.host, forKey: hostKey, defaults: defaults)
+        restoreDefault(snapshot.port, forKey: portKey, defaults: defaults)
+        restoreDefault(snapshot.transport, forKey: transportKey, defaults: defaults)
+        restoreDefault(snapshot.enabled, forKey: enabledKey, defaults: defaults)
+    }
+
+    private func restorePairingConfigurationIfNeeded() {
+        guard let snapshot = pairingConfigurationSnapshot else { return }
+        pairingConfigurationSnapshot = nil
+        Self.restorePairingConfiguration(snapshot, defaults: defaults)
+        defaults.removeObject(forKey: Self.pendingPairingConfigurationKey)
+    }
+
+    private static func restoreDefault(
+        _ value: Any?,
+        forKey key: String,
+        defaults: UserDefaults
+    ) {
+        if let value {
+            defaults.set(value, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    private func beginPendingPairingLinkIfReady() {
+        guard shouldAutoConnectPendingPairingLink,
+              let pairingLink = pendingPairingLink,
+              let receivedAt = pendingPairingLinkReceivedAt else { return }
+        switch IPhoneDirectCLIPairingHandoffPolicy.action(
+            appIsActive: appIsActive,
+            hasActiveOperation: exportTask != nil || queryTask != nil,
+            receivedAt: receivedAt
+        ) {
+        case .deferUntilActive:
+            return
+        case .waitForActiveOperation:
+            lastError = nil
+        case .expired:
+            let shouldDisconnect = pendingPairingAttemptHasStarted
+            clearPendingPairingLinkState()
+            if shouldDisconnect {
+                disconnect(clearError: false)
+            }
+            needsPairingCode = client.savedServer() == nil
+            lastError = "This pairing QR expired. Scan a fresh QR code."
+        case .connect:
+            shouldAutoConnectPendingPairingLink = false
+            pendingPairingAttemptHasStarted = true
+            disconnect(clearError: true)
+            guard capturePairingConfigurationIfNeeded() else {
+                clearPendingPairingLinkState()
+                lastError = "Pairing could not preserve the current Direct CLI settings. Try again."
+                return
+            }
+            defaults.set(DirectTransportKind.manualIP.rawValue, forKey: Self.transportKey)
+            connect(
+                host: pairingLink.host,
+                port: pairingLink.port,
+                pairingCode: pairingLink.pairingCode
+            )
+        }
     }
 
     func cancelPendingPairingLink() {
-        pendingPairingLink = nil
-        if isConnecting, client.savedServer() == nil {
+        let shouldDisconnectPairingAttempt = pendingPairingAttemptHasStarted
+        clearPendingPairingLinkState()
+        if shouldDisconnectPairingAttempt {
             disconnect(clearError: true)
+        } else {
+            lastError = nil
         }
     }
 
@@ -341,10 +590,15 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     func forgetPairedCLI() {
-        try? client.forgetServer()
-        pendingPairingLink = nil
         disconnect(clearError: true)
-        needsPairingCode = true
+        clearPendingPairingLinkState()
+        do {
+            try client.forgetServer()
+            needsPairingCode = true
+        } catch {
+            needsPairingCode = client.savedServer() == nil
+            lastError = error.localizedDescription
+        }
     }
 
     func applicationDidBecomeActive() {
@@ -352,14 +606,20 @@ final class IPhoneDirectCLIService: ObservableObject {
         endBackgroundExportContinuation()
         updateIdleTimer()
         IPhoneDirectExportCoordinator.shared.cleanupExpiredJobs()
+        beginPendingPairingLinkIfReady()
         startReconnectLoopIfNeeded()
+    }
+
+    func applicationWillResignActive() {
+        appIsActive = false
+        updateIdleTimer()
     }
 
     func applicationDidEnterBackground() {
         appIsActive = false
         updateIdleTimer()
         if queryTask != nil {
-            disconnect(clearError: false)
+            disconnectForBackground()
             return
         }
 
@@ -370,10 +630,19 @@ final class IPhoneDirectCLIService: ObservableObject {
         case .continueActiveExport:
             stopReconnectLoop()
             if !beginBackgroundExportContinuation() {
-                disconnect(clearError: false)
+                disconnectForBackground()
             }
         case .disconnect:
-            disconnect(clearError: false)
+            disconnectForBackground()
+        }
+    }
+
+    private func disconnectForBackground() {
+        let shouldResumePendingPairing = pendingPairingLink != nil && lastError == nil
+        disconnect(clearError: false)
+        if shouldResumePendingPairing, lastError == nil {
+            pendingPairingAttemptHasStarted = false
+            shouldAutoConnectPendingPairingLink = true
         }
     }
 
@@ -386,7 +655,10 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func startReconnectLoopIfNeeded() {
-        guard isEnabled, appIsActive, reconnectTask == nil else { return }
+        guard isEnabled,
+              appIsActive,
+              reconnectTask == nil,
+              pendingPairingLink == nil else { return }
         guard client.savedServer() != nil else {
             needsPairingCode = true
             return
@@ -437,7 +709,10 @@ final class IPhoneDirectCLIService: ObservableObject {
             }
             return
         }
+        let isCodePairing = pairingCode?.isEmpty == false
+        let savedServerBeforePairing = isCodePairing ? client.savedServer() : nil
         var provisionalChannel: DirectSecureChannel?
+        var pairingTrustWasWritten = false
         do {
             try protocolAuthority.assertCompatible()
             let connected: DirectSecureChannel
@@ -461,6 +736,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                     )
                 }
             }
+            pairingTrustWasWritten = isCodePairing
             provisionalChannel = connected
             try await connected.send(.hello(DirectPeerCapabilities(
                 protocolVersions: [
@@ -479,6 +755,20 @@ final class IPhoneDirectCLIService: ObservableObject {
                   configuredHost == host,
                   configuredPort == port else {
                 connected.cancel()
+                if pairingTrustWasWritten {
+                    do {
+                        try client.restoreSavedServer(savedServerBeforePairing)
+                    } catch {
+                        clearPendingPairingLinkState()
+                        if reportErrors {
+                            lastError = "Pairing stopped and previous CLI trust could not be restored. Forget the paired CLI before trying again."
+                        }
+                    }
+                }
+                if isCodePairing {
+                    pendingPairingAttemptHasStarted = false
+                    restorePairingConfigurationIfNeeded()
+                }
                 return
             }
             channel = connected
@@ -486,21 +776,109 @@ final class IPhoneDirectCLIService: ObservableObject {
             isConnected = true
             connectedCLIName = connected.peerDisplayName
             needsPairingCode = false
-            pendingPairingLink = nil
             lastError = nil
-            beginSession(on: connected)
+            beginSession(
+                on: connected,
+                pairingTrustWasWritten: pairingTrustWasWritten,
+                previousServer: savedServerBeforePairing
+            )
         } catch {
             provisionalChannel?.cancel()
+            var trustRestoreFailed = false
+            if isCodePairing {
+                do {
+                    try client.restoreSavedServer(savedServerBeforePairing)
+                } catch {
+                    trustRestoreFailed = true
+                }
+                pendingPairingAttemptHasStarted = false
+                restorePairingConfigurationIfNeeded()
+            }
+            if trustRestoreFailed {
+                clearPendingPairingLinkState()
+                lastError = "Pairing did not complete and previous CLI trust could not be restored. Forget the paired CLI and scan a fresh QR code."
+            }
             guard !Task.isCancelled else { return }
-            if reportErrors { lastError = error.localizedDescription }
+            if reportErrors, !trustRestoreFailed {
+                lastError = error.localizedDescription
+            }
             if client.savedServer() == nil { needsPairingCode = true }
         }
     }
 
-    private func beginSession(on connected: DirectSecureChannel) {
+    private func commitProvisionalPairingTrustIfNeeded(for sessionID: UUID) throws {
+        guard provisionalPairingTrust?.sessionID == sessionID else { return }
+        guard appIsActive else {
+            let trustWasRestored = rollbackProvisionalPairingTrustIfNeeded(for: sessionID)
+            guard trustWasRestored else {
+                throw DirectChannelError.authenticationFailed(
+                    "Pairing stopped and previous CLI trust could not be restored. Forget the paired CLI before trying again."
+                )
+            }
+            shouldAutoConnectPendingPairingLink = true
+            throw DirectChannelError.authenticationFailed(
+                "Keep Health.md foreground while pairing completes."
+            )
+        }
+        guard let receivedAt = pendingPairingLinkReceivedAt,
+              IPhoneDirectCLIPairingHandoffPolicy.action(
+                appIsActive: true,
+                hasActiveOperation: false,
+                receivedAt: receivedAt
+              ) != .expired else {
+            let trustWasRestored = rollbackProvisionalPairingTrustIfNeeded(for: sessionID)
+            guard trustWasRestored else {
+                throw DirectChannelError.authenticationFailed(
+                    "Pairing expired and previous CLI trust could not be restored. Forget the paired CLI before trying again."
+                )
+            }
+            clearPendingPairingLinkState()
+            throw DirectChannelError.authenticationFailed(
+                "This pairing QR expired. Scan a fresh QR code."
+            )
+        }
+        try client.commitProvisionalServer()
+        provisionalPairingTrust = nil
+        pairingConfigurationSnapshot = nil
+        defaults.removeObject(forKey: Self.pendingPairingConfigurationKey)
+        clearPendingPairingLinkState()
+        needsPairingCode = false
+    }
+
+    @discardableResult
+    private func rollbackProvisionalPairingTrustIfNeeded(for sessionID: UUID? = nil) -> Bool {
+        guard let provisionalPairingTrust,
+              sessionID == nil || provisionalPairingTrust.sessionID == sessionID else {
+            return true
+        }
+        self.provisionalPairingTrust = nil
+        pendingPairingAttemptHasStarted = false
+        restorePairingConfigurationIfNeeded()
+        do {
+            try client.restoreSavedServer(provisionalPairingTrust.previousServer)
+            needsPairingCode = client.savedServer() == nil
+            return true
+        } catch {
+            clearPendingPairingLinkState()
+            lastError = "Pairing did not complete and previous CLI trust could not be restored. Forget the paired CLI before trying again."
+            return false
+        }
+    }
+
+    private func beginSession(
+        on connected: DirectSecureChannel,
+        pairingTrustWasWritten: Bool,
+        previousServer: ManualIPTrustedMac?
+    ) {
         let sessionID = UUID()
         activeSessionID = sessionID
         sessionTask?.cancel()
+        if pairingTrustWasWritten {
+            provisionalPairingTrust = ProvisionalPairingTrust(
+                sessionID: sessionID,
+                previousServer: previousServer
+            )
+        }
         let exportConnection = IPhoneDirectExportConnection(channel: connected)
         self.exportConnection = exportConnection
         sessionTask = Task { [weak self] in
@@ -519,7 +897,8 @@ final class IPhoneDirectCLIService: ObservableObject {
                     try await self.handle(
                         message,
                         on: connected,
-                        exportConnection: exportConnection
+                        exportConnection: exportConnection,
+                        sessionID: sessionID
                     )
                 }
             } catch {
@@ -532,6 +911,15 @@ final class IPhoneDirectCLIService: ObservableObject {
             await exportConnection.finish()
             self.protocolAuthority.endOperation()
             guard self.activeSessionID == sessionID else { return }
+            let pairingWasIncomplete = self.provisionalPairingTrust?.sessionID == sessionID
+            let pairingTrustWasRestored = self.rollbackProvisionalPairingTrustIfNeeded(
+                for: sessionID
+            )
+            if pairingWasIncomplete,
+               pairingTrustWasRestored,
+               self.lastError == nil {
+                self.lastError = "Pairing did not complete. Keep Health.md open and retry with the current QR, or scan a fresh code."
+            }
             self.exportTask?.cancel()
             self.exportTask = nil
             self.activeExportOperationID = nil
@@ -550,6 +938,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             self.exportConnection = nil
             self.sessionTask = nil
             self.activeSessionID = nil
+            self.beginPendingPairingLinkIfReady()
             self.startReconnectLoopIfNeeded()
         }
     }
@@ -557,7 +946,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     private func handle(
         _ message: DirectMessage,
         on channel: DirectSecureChannel,
-        exportConnection: IPhoneDirectExportConnection
+        exportConnection: IPhoneDirectExportConnection,
+        sessionID: UUID
     ) async throws {
         switch message {
         case .hello(let capabilities):
@@ -579,6 +969,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             _ = try protocolAuthority.negotiateTransfer(peer: capabilities.transfer)
             remoteCapabilities = capabilities
             protocolAuthority.beginBootstrap()
+            try commitProvisionalPairingTrustIfNeeded(for: sessionID)
         case .statusRequest:
             if !appIsActive {
                 try await channel.send(.statusResponse(DirectIPhoneStatus(
@@ -736,6 +1127,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         endBackgroundExportContinuation()
         if !appIsActive {
             disconnect(clearError: false)
+        } else {
+            beginPendingPairingLinkIfReady()
         }
     }
 
@@ -747,6 +1140,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         endBackgroundExportContinuation()
         if !appIsActive {
             disconnect(clearError: false)
+        } else {
+            beginPendingPairingLinkIfReady()
         }
     }
 
@@ -790,6 +1185,8 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func disconnect(clearError: Bool) {
+        let pairingTrustWasRestored = rollbackProvisionalPairingTrustIfNeeded()
+        restorePairingConfigurationIfNeeded()
         stopReconnectLoop()
         activeSessionID = nil
         sessionTask?.cancel()
@@ -814,7 +1211,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         isConnecting = false
         connectedCLIName = nil
         endBackgroundExportContinuation()
-        if clearError { lastError = nil }
+        if clearError, pairingTrustWasRestored { lastError = nil }
     }
 
     private static func loadOrCreateInstallationID(defaults: UserDefaults) -> UUID {

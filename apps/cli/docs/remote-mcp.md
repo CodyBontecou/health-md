@@ -36,8 +36,9 @@ The listener is loopback-only. Without OAuth it also rejects every non-loopback 
 public reverse proxy cannot turn development mode into an unauthenticated remote endpoint. It
 supports MCP Streamable HTTP revisions `2025-06-18` and `2025-11-25`, bounded JSON requests and
 responses, cancellation, opaque sessions, and the negotiated MCP Apps extension. It exposes the 13 read-only readiness, discovery, typed query, chart, sleep,
-workout, comparison, coverage, and evidence tools. Generated-file export, resume, and cancel tools
-remain local-only.
+workout, comparison, coverage, and evidence tools. Pairing QR/session tools and generated-file
+export, resume, and cancel tools remain local-stdio-only and cannot be discovered or invoked over
+HTTP/OAuth.
 
 The relay has no health-data database, compact-day store, synchronization API, account-data API,
 retention scheduler, health-data backup, or remote export path. It processes only the bounded live

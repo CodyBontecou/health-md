@@ -21,7 +21,11 @@ impl CallerIdentity {
             subject: "local-user".to_owned(),
             tenant: None,
             issuer: None,
-            scopes: BTreeSet::from(["healthmd:read".to_owned(), "healthmd:export".to_owned()]),
+            scopes: BTreeSet::from([
+                "healthmd:read".to_owned(),
+                "healthmd:export".to_owned(),
+                "healthmd:pair".to_owned(),
+            ]),
             mode: CallerMode::LocalStdio,
         }
     }
@@ -89,6 +93,13 @@ pub struct QueryPageRequest {
     pub detail_level: QueryDetailLevel,
 }
 
+/// A local pairing listener that is ready for the returned QR code to be scanned.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PairingStartResult {
+    pub receipt: Value,
+    pub qr_png: Vec<u8>,
+}
+
 /// Stable, health-free backend failure. Arbitrary upstream error text must never be copied here.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BackendError {
@@ -134,6 +145,28 @@ pub trait HealthDataBackend: Send + Sync {
         context: &CallContext,
         request: QueryPageRequest,
     ) -> Result<Value, BackendError>;
+
+    async fn start_pairing(
+        &self,
+        _context: &CallContext,
+        _timeout_seconds: u64,
+    ) -> Result<PairingStartResult, BackendError> {
+        Err(BackendError::new(
+            "healthmd_pairing_unsupported",
+            "This Health.md data source does not support local device pairing.",
+        ))
+    }
+
+    async fn pairing_status(
+        &self,
+        _context: &CallContext,
+        _pairing_session_id: Uuid,
+    ) -> Result<Value, BackendError> {
+        Err(BackendError::new(
+            "healthmd_pairing_unsupported",
+            "This Health.md data source does not support local device pairing.",
+        ))
+    }
 
     async fn start_export(
         &self,

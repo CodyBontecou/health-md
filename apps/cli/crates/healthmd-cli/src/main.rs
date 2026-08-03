@@ -10,7 +10,10 @@ use std::{
 
 use chrono::{Duration as ChronoDuration, Local, SecondsFormat, Timelike as _, Utc};
 use clap::{Args, Parser, Subcommand, ValueEnum, error::ErrorKind};
-use healthmd_cli::{mcp, onboarding};
+use healthmd_cli::{
+    mcp, onboarding,
+    pairing::{LocalAddress, ios_pairing_link, local_ipv4_addresses, preferred_pairing_address},
+};
 use healthmd_client::{
     ClientError,
     direct::{DirectClient, SourceStatus},
@@ -1056,9 +1059,8 @@ async fn direct_status(
         return Err(CommandError {
             backend: "direct",
             code: "direct_not_paired",
-            message:
-                "Run `healthmd direct pair`, then enable Direct CLI Access on the open iPhone app."
-                    .into(),
+            message: "Run `healthmd direct pair`, then scan its QR from Sync > Direct CLI Access > Scan Pairing QR in the open iPhone app."
+                .into(),
         });
     }
     let result = client
@@ -1880,83 +1882,25 @@ fn atomic_private_copy(source: &Path, destination: &Path) -> io::Result<()> {
 }
 
 fn generate_pairing_code(digit_count: usize) -> Result<String, CommandError> {
-    let mut code = String::with_capacity(digit_count);
-    while code.len() < digit_count {
-        let bytes = healthmd_protocol::crypto::random_bytes::<32>().map_err(|_| CommandError {
-            backend: "direct",
-            code: "secure_random_unavailable",
-            message: "the operating system could not generate a secure pairing code".into(),
-        })?;
-        for byte in bytes.into_iter().filter(|byte| *byte < 250) {
-            code.push(char::from(b'0' + (byte % 10)));
-            if code.len() == digit_count {
-                break;
-            }
-        }
-    }
-    Ok(code)
-}
-
-struct LocalAddress {
-    address: String,
-    interface: String,
-    tailscale: bool,
-}
-
-fn ios_pairing_link(address: &str, port: u16, pairing_code: &str) -> String {
-    format!("healthmd://direct-cli/pair?host={address}&port={port}&code={pairing_code}")
+    healthmd_cli::pairing::generate_numeric_code(digit_count).map_err(|_| CommandError {
+        backend: "direct",
+        code: "secure_random_unavailable",
+        message: "the operating system could not generate a secure pairing code".into(),
+    })
 }
 
 fn print_ios_pairing_qr(addresses: &[LocalAddress], port: u16, pairing_code: &str) {
-    let address = addresses
-        .iter()
-        .find(|address| !address.tailscale)
-        .or_else(|| addresses.first());
-    let Some(address) = address else { return };
+    let Some(address) = preferred_pairing_address(addresses) else {
+        return;
+    };
     let link = ios_pairing_link(&address.address, port, pairing_code);
     let Ok(code) = QrCode::new(link.as_bytes()) else {
         return;
     };
     let rendered = code.render::<unicode::Dense1x2>().quiet_zone(true).build();
-    eprintln!("Scan with the iPhone Camera to open Health.md and pair:\n{rendered}");
-}
-
-fn local_ipv4_addresses() -> Vec<LocalAddress> {
-    let mut addresses: Vec<_> = if_addrs::get_if_addrs()
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|interface| {
-            let std::net::IpAddr::V4(address) = interface.ip() else {
-                return None;
-            };
-            if address.is_loopback()
-                || address.is_unspecified()
-                || address.is_multicast()
-                || address.is_link_local()
-            {
-                return None;
-            }
-            let octets = address.octets();
-            Some(LocalAddress {
-                address: address.to_string(),
-                interface: interface.name,
-                tailscale: is_tailscale_ipv4(octets),
-            })
-        })
-        .collect();
-    addresses.sort_by(|left, right| {
-        right
-            .tailscale
-            .cmp(&left.tailscale)
-            .then_with(|| left.interface.cmp(&right.interface))
-            .then_with(|| left.address.cmp(&right.address))
-    });
-    addresses.dedup_by(|left, right| left.address == right.address);
-    addresses
-}
-
-const fn is_tailscale_ipv4(octets: [u8; 4]) -> bool {
-    octets[0] == 100 && octets[1] >= 64 && octets[1] <= 127
+    eprintln!(
+        "In foreground Health.md, open Sync > Direct CLI Access, tap Scan Pairing QR, and scan this image:\n{rendered}"
+    );
 }
 
 fn usage_error(message: &str) -> CommandError {
@@ -2163,10 +2107,12 @@ mod tests {
 
     #[test]
     fn tailscale_carrier_grade_nat_range_is_detected() {
-        assert!(is_tailscale_ipv4([100, 64, 0, 1]));
-        assert!(is_tailscale_ipv4([100, 127, 255, 254]));
-        assert!(!is_tailscale_ipv4([100, 128, 0, 1]));
-        assert!(!is_tailscale_ipv4([192, 168, 1, 2]));
+        assert!(healthmd_cli::pairing::is_tailscale_ipv4([100, 64, 0, 1]));
+        assert!(healthmd_cli::pairing::is_tailscale_ipv4([
+            100, 127, 255, 254
+        ]));
+        assert!(!healthmd_cli::pairing::is_tailscale_ipv4([100, 128, 0, 1]));
+        assert!(!healthmd_cli::pairing::is_tailscale_ipv4([192, 168, 1, 2]));
     }
 
     #[test]

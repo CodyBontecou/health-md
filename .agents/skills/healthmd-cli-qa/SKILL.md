@@ -161,6 +161,7 @@ NO_COLOR=1 TERM=dumb timeout 300 \
 Pass:
 
 - pair code/instructions only on stderr and one success object on stdout;
+- scanning the QR from **Sync → Direct CLI Access → Scan Pairing QR** starts pairing automatically without a second Pair tap; camera denial recovers after Settings, malformed/noncanonical private hosts and external custom-URL opens cannot pair, and manual code entry remains available;
 - local trust records intended iPhone and reconnect needs no new code;
 - status says `backend: direct`, `mac_app: bypassed`, reports protected/readiness state, and no health values;
 - raw validates exact dates, profile/result/archive/schema, manifests, byte counts, partition chain, and final digest before atomic output;

@@ -4,6 +4,15 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Added an in-app Direct CLI QR scanner with camera-permission recovery, strict private-LAN/Tailscale payload validation, and automatic pairing after a valid scan.
+
+### Changed
+- Scanning a Direct CLI or MCP pairing QR from **Sync → Direct CLI Access → Scan Pairing QR** now starts the authenticated connection immediately, with no second **Pair** tap. External custom-URL opens no longer authorize pairing.
+
+### Fixed
+- New Direct CLI trust remains provisional until a valid peer hello; incomplete, cancelled, duplicated, expired, or interrupted QR handoffs restore previous trust and endpoint settings.
+
 ## [3.0.4] - 2026-08-03
 
 ### Added

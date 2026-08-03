@@ -1,0 +1,28 @@
+english,spanish,context,translate
+Health.md,Health.md,Product name,no
+Apple Health,Apple Health,Apple product name,no
+Health Connect,Health Connect,Android product name,no
+local-first,con procesamiento local,Privacy and architecture copy,yes
+health data,datos de salud,General product copy,yes
+export,exportación,Noun,yes
+export,to export: exportar; imperative: exporta,Verb,yes
+scheduled export,exportación programada,Automation,yes
+folder,carpeta,File destination,yes
+vault,bóveda,Obsidian destination,yes
+agent,agente,AI/local-agent workflow,yes
+local agent,agente local,AI/local-agent workflow,yes
+MCP server,servidor MCP,Technical product surface,yes
+CLI,CLI,Technical interface,no
+preview,vista previa,Export action,yes
+Files,Archivos,Apple app and file destination,yes
+pairing,emparejamiento,Direct-device connection,yes
+scoped request,solicitud acotada,Bounded agent request,yes
+bpm,lpm,Human-facing Spanish heart-rate unit; keep bpm in schemas and raw files,yes
+frontmatter,frontmatter,Markdown/Obsidian technical term,no
+schema key,clave de esquema,Prose only; literal keys remain unchanged,yes
+metric ID,ID de métrica,Prose only; literal IDs remain unchanged,yes
+Full Access,Full Access,Purchase product name,no
+Markdown,Markdown,File format,no
+JSON,JSON,File format,no
+CSV,CSV,File format,no
+Obsidian Bases,Obsidian Bases,File format/product name,no

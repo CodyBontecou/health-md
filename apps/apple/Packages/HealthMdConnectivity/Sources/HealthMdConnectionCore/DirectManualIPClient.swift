@@ -67,8 +67,30 @@ public final class DirectManualIPClient: @unchecked Sendable {
     }
 
     public func forgetServer() throws {
+        try restoreSavedServer(nil)
+    }
+
+    public func restoreSavedServer(_ server: ManualIPTrustedMac?) throws {
         var state = trustStore.loadState(ownerInstallationID: installationID)
-        state.trustedMac = nil
+        state.trustedMac = server
+        state.provisionalTrustedMac = nil
+        try trustStore.saveState(state)
+    }
+
+    public func commitProvisionalServer() throws {
+        var state = trustStore.loadState(ownerInstallationID: installationID)
+        guard let provisionalTrustedMac = state.provisionalTrustedMac else {
+            throw ManualIPTrustStoreError.missingProvisionalTrust
+        }
+        state.trustedMac = provisionalTrustedMac
+        state.provisionalTrustedMac = nil
+        try trustStore.saveState(state)
+    }
+
+    public func discardProvisionalServer() throws {
+        var state = trustStore.loadState(ownerInstallationID: installationID)
+        guard state.provisionalTrustedMac != nil else { return }
+        state.provisionalTrustedMac = nil
         try trustStore.saveState(state)
     }
 
@@ -79,7 +101,11 @@ public final class DirectManualIPClient: @unchecked Sendable {
         pairingCode: String?
     ) async throws -> DirectSecureChannel {
         let normalizedCode = pairingCode.map(ManualIPSyncSecurity.normalizedPairingCode)
-        let state = trustStore.loadState(ownerInstallationID: installationID)
+        var state = trustStore.loadState(ownerInstallationID: installationID)
+        if state.provisionalTrustedMac != nil {
+            state.provisionalTrustedMac = nil
+            try trustStore.saveState(state)
+        }
         let trustedServer = normalizedCode?.isEmpty == false ? nil : state.trustedMac
         guard trustedServer != nil || normalizedCode?.isEmpty == false else {
             throw DirectChannelError.authenticationFailed("Enter the pairing code shown by the healthmd CLI.")
@@ -182,7 +208,7 @@ public final class DirectManualIPClient: @unchecked Sendable {
         }
 
         var updated = state
-        updated.trustedMac = ManualIPTrustedMac(
+        let authenticatedServer = ManualIPTrustedMac(
             installationID: serverInstallationID,
             displayName: response.macName,
             host: host,
@@ -190,7 +216,20 @@ public final class DirectManualIPClient: @unchecked Sendable {
             reconnectSecret: reconnectSecret,
             pairedAt: trustedServer?.pairedAt ?? Date()
         )
-        try trustStore.saveState(updated)
+        if trustedServer == nil {
+            updated.provisionalTrustedMac = authenticatedServer
+        } else {
+            updated.trustedMac = authenticatedServer
+            updated.provisionalTrustedMac = nil
+        }
+        do {
+            try Task.checkCancellation()
+            try trustStore.saveState(updated)
+            try Task.checkCancellation()
+        } catch is CancellationError {
+            try trustStore.saveState(state)
+            throw CancellationError()
+        }
         return DirectSecureChannel(
             packetConnection: packetConnection,
             sessionKey: sessionKey,

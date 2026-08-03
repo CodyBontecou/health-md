@@ -18,6 +18,8 @@ pub fn list(profile: SurfaceProfile, ui_enabled: bool) -> Vec<Value> {
                     | "healthmd_doctor"
                     | "healthmd_capabilities"
                     | "healthmd_metrics"
+                    | "healthmd_pairing_start"
+                    | "healthmd_pairing_status"
             ) {
                 apps::attach_tool_metadata(operation);
             }

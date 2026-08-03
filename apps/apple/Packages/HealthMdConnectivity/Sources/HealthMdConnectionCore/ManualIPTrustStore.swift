@@ -55,15 +55,18 @@ public struct ManualIPTrustedClient: Codable, Equatable, Sendable {
 public struct ManualIPTrustState: Codable, Equatable, Sendable {
     public let ownerInstallationID: UUID
     public var trustedMac: ManualIPTrustedMac?
+    public var provisionalTrustedMac: ManualIPTrustedMac?
     public var trustedClients: [ManualIPTrustedClient]
 
     public init(
         ownerInstallationID: UUID,
         trustedMac: ManualIPTrustedMac? = nil,
+        provisionalTrustedMac: ManualIPTrustedMac? = nil,
         trustedClients: [ManualIPTrustedClient] = []
     ) {
         self.ownerInstallationID = ownerInstallationID
         self.trustedMac = trustedMac
+        self.provisionalTrustedMac = provisionalTrustedMac
         self.trustedClients = trustedClients
     }
 
@@ -80,6 +83,7 @@ public struct ManualIPTrustState: Codable, Equatable, Sendable {
 public enum ManualIPTrustStoreError: LocalizedError {
     case keychain(OSStatus)
     case invalidKeychainItem
+    case missingProvisionalTrust
 
     public var errorDescription: String? {
         switch self {
@@ -87,6 +91,8 @@ public enum ManualIPTrustStoreError: LocalizedError {
             return "Keychain returned status \(status)."
         case .invalidKeychainItem:
             return "The saved manual IP connection is invalid."
+        case .missingProvisionalTrust:
+            return "The provisional direct CLI pairing credential is unavailable."
         }
     }
 }

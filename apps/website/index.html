@@ -6,11 +6,16 @@
   <title>Health.md | Move Your Health Forward</title>
   <meta name="description" content="A local-first bridge from Apple Health and Health Connect to the files, scripts, and agents you choose. Health.md does not store your health data.">
   <link rel="canonical" href="https://healthmd.app/">
+  <link rel="alternate" hreflang="en" href="https://healthmd.app/">
+  <link rel="alternate" hreflang="es" href="https://healthmd.app/es/">
+  <link rel="alternate" hreflang="x-default" href="https://healthmd.app/">
   <meta name="robots" content="index,follow">
   <meta name="theme-color" content="#fafaf8">
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="es_ES">
   <meta property="og:title" content="Move Your Health Forward">
   <meta property="og:description" content="A local-first bridge from Apple Health and Health Connect to the files, scripts, and agents you choose. Health.md does not store your health data.">
   <meta property="og:url" content="https://healthmd.app/">
@@ -36,6 +41,7 @@
     "applicationCategory": "HealthApplication",
     "operatingSystem": "Android, iOS, iPadOS, macOS, Linux, Windows",
     "url": "https://healthmd.app/",
+    "inLanguage": "en",
     "downloadUrl": [
       "https://apps.apple.com/us/app/health-md/id6757763969",
       "https://play.google.com/store/apps/details?id=com.healthmd.android"
@@ -71,8 +77,9 @@
         <span class="brand-name">health.md</span>
       </a>
 
-      <nav class="header-nav" aria-label="Documentation">
+      <nav class="header-nav" aria-label="Documentation and language">
         <a class="header-docs-link" href="docs/">Docs</a>
+        <a class="header-language-link" href="/es/" hreflang="es" lang="es">Español</a>
       </nav>
     </div>
   </header>
@@ -250,13 +257,6 @@
 
       </div>
 
-      <figure class="export-phone-wrap reveal">
-        <div class="export-phone" role="img" aria-label="Apple Health Summary displayed in a white iPhone 17 Pro">
-          <img class="export-phone-screen" src="assets/screenshots/showcase/apple-health-summary.png" width="1206" height="2622" decoding="async" alt="Apple Health Summary showing sleep score, steps, walking distance, and weight">
-          <img class="export-phone-frame" src="assets/screenshots/showcase/iphone-17-pro-silver.png" width="1350" height="2760" decoding="async" alt="">
-        </div>
-      </figure>
-
       <div class="export-transfer reveal" aria-hidden="true"><span></span><span></span><span></span><span></span><svg viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5"></path></svg></div>
 
       <div class="file-preview-stack reveal" data-preview-stack aria-live="polite" aria-label="Selected export files">
@@ -298,7 +298,7 @@
           <button type="button" data-schedule-frequency="monthly" aria-pressed="false">Monthly</button>
         </div>
 
-        <svg class="schedule-routes" viewBox="0 0 500 660" preserveAspectRatio="none" aria-hidden="true">
+        <svg class="schedule-routes schedule-routes-desktop" viewBox="0 0 500 660" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <marker id="schedule-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z"></path>
@@ -308,6 +308,19 @@
           <path class="schedule-route-branch" marker-end="url(#schedule-arrow)" d="M184 495 C260 495 250 211 314 211"></path>
           <path class="schedule-route-branch" marker-end="url(#schedule-arrow)" d="M184 495 C260 495 254 329 314 329"></path>
           <path class="schedule-route-branch" marker-end="url(#schedule-arrow)" d="M184 495 C255 495 264 447 314 447"></path>
+        </svg>
+
+        <svg class="schedule-routes schedule-routes-mobile" viewBox="0 0 350 590" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <marker id="schedule-arrow-mobile" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z"></path>
+            </marker>
+          </defs>
+          <path class="schedule-route-main" d="M175 58 V351"></path>
+          <path class="schedule-route-trunk" d="M175 416 V425"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow-mobile)" d="M175 425 H55 V460"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow-mobile)" d="M175 425 V460"></path>
+          <path class="schedule-route-branch" marker-end="url(#schedule-arrow-mobile)" d="M175 425 H295 V460"></path>
         </svg>
 
         <div class="schedule-clock" aria-hidden="true">

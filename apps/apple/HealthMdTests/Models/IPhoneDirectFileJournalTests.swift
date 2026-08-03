@@ -376,7 +376,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     #endif
 
     #if os(iOS)
-    func testDirectCLIPairingLinkAcceptsOnlyExactBoundedIPv4Payload() throws {
+    func testDirectCLIPairingLinkAcceptsOnlyExactBoundedPrivateIPv4Payload() throws {
         let valid = try XCTUnwrap(IPhoneDirectCLIPairingLink(
             url: try XCTUnwrap(URL(
                 string: "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
@@ -385,10 +385,47 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertEqual(valid.host, "192.168.1.42")
         XCTAssertEqual(valid.port, 17_647)
         XCTAssertEqual(valid.pairingCode, "123456")
+        XCTAssertEqual(
+            IPhoneDirectCLIPairingLink(
+                scannedPayload: "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
+            ),
+            valid
+        )
+        XCTAssertNil(IPhoneDirectCLIPairingLink(
+            scannedPayload: " healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456"
+        ))
+        XCTAssertNil(IPhoneDirectCLIPairingLink(
+            scannedPayload: String(repeating: "a", count: 513)
+        ))
+        XCTAssertNil(IPhoneDirectCLIPairingLink(
+            scannedPayload: "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=%31%32%33%34%35%36"
+        ))
+        for allowedHost in [
+            "10.0.0.1",
+            "172.16.0.1",
+            "172.31.255.254",
+            "100.64.0.1",
+            "100.127.255.254"
+        ] {
+            XCTAssertNotNil(IPhoneDirectCLIPairingLink(
+                url: try XCTUnwrap(URL(
+                    string: "healthmd://direct-cli/pair?host=\(allowedHost)&port=17647&code=123456"
+                ))
+            ))
+        }
 
         for invalid in [
             "https://direct-cli/pair?host=192.168.1.42&port=17647&code=123456",
             "healthmd://direct-cli/pair?host=example.com&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=3232235818&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=0300.0250.1.42&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=192.168.001.042&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=127.0.0.1&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=172.15.255.255&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=172.32.0.1&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=100.63.255.255&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=100.128.0.1&port=17647&code=123456",
+            "healthmd://direct-cli/pair?host=8.8.8.8&port=17647&code=123456",
             "healthmd://direct-cli/pair?host=192.168.1.42&port=0&code=123456",
             "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=12345a",
             "healthmd://direct-cli/pair?host=192.168.1.42&port=17647&code=123456&extra=1",

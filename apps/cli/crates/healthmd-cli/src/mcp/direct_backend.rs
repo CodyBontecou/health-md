@@ -9,8 +9,9 @@ use healthmd_client::{
     job::{JobRecord, JobState},
 };
 use healthmd_operations::{
-    BackendCapabilities, BackendError, CallContext, HealthDataBackend, QueryDetailLevel,
-    QueryPageRequest, generated_file_export_from_value, job_id as parse_job_id,
+    BackendCapabilities, BackendError, CallContext, CallerMode, HealthDataBackend,
+    PairingStartResult, QueryDetailLevel, QueryPageRequest, generated_file_export_from_value,
+    job_id as parse_job_id,
 };
 use healthmd_protocol::{
     encoding::SwiftUuid,
@@ -21,12 +22,15 @@ use serde_json::{Value, json};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+use crate::pairing::{PairingCoordinator, PairingCoordinatorError};
+
 use super::{ServeError, ServeOptions};
 
 pub struct DirectIphoneBackend {
     client: Arc<DirectClient>,
     configuration: DirectBackendConfiguration,
-    operation_gate: Mutex<()>,
+    operation_gate: Arc<Mutex<()>>,
+    pairing: PairingCoordinator,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -38,15 +42,23 @@ struct DirectBackendConfiguration {
 
 impl DirectIphoneBackend {
     pub fn open(options: &ServeOptions) -> Result<Self, ServeError> {
-        let client = DirectClient::open().map_err(|_| ServeError)?;
+        let client = Arc::new(DirectClient::open().map_err(|_| ServeError)?);
+        let operation_gate = Arc::new(Mutex::new(()));
+        let pairing = PairingCoordinator::new(
+            Arc::clone(&client),
+            options.device_id,
+            options.port,
+            Arc::clone(&operation_gate),
+        );
         Ok(Self {
-            client: Arc::new(client),
+            client,
             configuration: DirectBackendConfiguration {
                 device_id: options.device_id,
                 port: options.port,
                 timeout: Duration::from_secs(options.timeout_seconds),
             },
-            operation_gate: Mutex::new(()),
+            operation_gate,
+            pairing,
         })
     }
 }
@@ -60,7 +72,7 @@ impl HealthDataBackend for DirectIphoneBackend {
             supports_queries: true,
             supports_local_file_exports: true,
             requires_foreground_source: true,
-            instructions: "Keep Health.md foreground on the paired iPhone. Use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Queries use only the authenticated direct iPhone channel; no Health.md Mac app is required.".to_owned(),
+            instructions: "For an unpaired iPhone, call healthmd_pairing_start, render its returned image/png QR code directly, tell the user to scan it from Health.md's Sync > Direct CLI Access > Scan Pairing QR screen, and poll healthmd_pairing_status; never run healthmd setup codex, healthmd direct pair, or reconstruct terminal QR glyphs from an MCP client. External custom-URL opens are not pairing consent. Keep Health.md foreground on the paired iPhone. Use fixed typed tools directly: healthmd_sleep_sessions for sleep, healthmd_workouts for workouts, and healthmd_metric_chart for metric series. Queries use only the authenticated direct iPhone channel; no Health.md Mac app is required.".to_owned(),
         }
     }
 
@@ -84,15 +96,54 @@ impl HealthDataBackend for DirectIphoneBackend {
             .await
             .map_err(|error| backend_error(&error, None))?;
         if devices.is_empty() {
+            let (message, next_tool) = if self.configuration.device_id.is_some() {
+                (
+                    "This MCP server is pinned to an unpaired device. Remove the stale device selection before onboarding.",
+                    None,
+                )
+            } else if context.caller.mode == CallerMode::LocalStdio {
+                (
+                    "Call healthmd_pairing_start, show its QR image, then scan it from Sync > Direct CLI Access > Scan Pairing QR in foreground Health.md.",
+                    Some("healthmd_pairing_start"),
+                )
+            } else {
+                (
+                    "Run `healthmd direct pair` locally, then scan its QR from Sync > Direct CLI Access > Scan Pairing QR in foreground Health.md.",
+                    None,
+                )
+            };
             return Ok(json!({
                 "schema": "healthmd.direct_readiness",
                 "schema_version": 1,
                 "status": "not_paired",
                 "ready": false,
-                "message": "Run `healthmd direct pair`, then approve pairing in the foreground Health.md iPhone app."
+                "message": message,
+                "next_tool": next_tool
             }));
         }
         self.readiness(context).await
+    }
+
+    async fn start_pairing(
+        &self,
+        _context: &CallContext,
+        timeout_seconds: u64,
+    ) -> Result<PairingStartResult, BackendError> {
+        self.pairing
+            .start(timeout_seconds)
+            .await
+            .map_err(pairing_backend_error)
+    }
+
+    async fn pairing_status(
+        &self,
+        _context: &CallContext,
+        pairing_session_id: Uuid,
+    ) -> Result<Value, BackendError> {
+        self.pairing
+            .status(pairing_session_id)
+            .await
+            .map_err(pairing_backend_error)
     }
 
     async fn query_page(
@@ -331,6 +382,10 @@ fn job_receipt(record: &JobRecord) -> Value {
         value["destination_path"] = Value::String(destination.root_path.clone());
     }
     value
+}
+
+fn pairing_backend_error(error: PairingCoordinatorError) -> BackendError {
+    BackendError::new(error.code(), error.message())
 }
 
 fn backend_error(error: &ClientError, job_id: Option<Uuid>) -> BackendError {

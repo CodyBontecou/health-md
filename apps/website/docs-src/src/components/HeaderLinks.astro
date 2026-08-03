@@ -1,6 +1,14 @@
-<nav class="healthmd-header-links" aria-label="Primary">
-  <a href="/docs/mcp/">MCP</a>
-  <a href="/docs/cli/">CLI</a>
-  <a href="/docs/reference/">Data</a>
-  <a href="/" class="header-home-link">Home <span aria-hidden="true">↗</span></a>
+---
+const { lang } = Astro.locals.starlightRoute;
+const isSpanish = lang === 'es' || lang.startsWith('es-');
+const docsRoot = isSpanish ? '/es/docs' : '/docs';
+const labels = isSpanish
+  ? { primary: 'Principal', data: 'Datos', home: 'Inicio' }
+  : { primary: 'Primary', data: 'Data', home: 'Home' };
+---
+<nav class="healthmd-header-links" aria-label={labels.primary}>
+  <a href={`${docsRoot}/mcp/`}>MCP</a>
+  <a href={`${docsRoot}/cli/`}>CLI</a>
+  <a href={`${docsRoot}/reference/`}>{labels.data}</a>
+  <a href={isSpanish ? '/es/' : '/'} class="header-home-link">{labels.home} <span aria-hidden="true">↗</span></a>
 </nav>

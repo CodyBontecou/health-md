@@ -90,6 +90,7 @@ enum AccessibilityID {
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"
         static let autoSyncToggle = "sync.autoSyncToggle"
+        static let directCLIScanButton = "sync.directCLIScanButton"
     }
 
     // MARK: - Settings

@@ -39,7 +39,19 @@ dist plan
 Do not run either workspace's Cargo command from the other directory or combine their lockfiles. CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass
 `:direct-protocol:test`, `:app:testDebugUnitTest`, and `:app:assembleDebug`. Run the ignored
 Rust/Kotlin live gate to verify real pairing, negotiation, status, binary artifact transfer, final
-acknowledgement, and completion. Verify the release archive's checksum and assert that it contains both `healthmd` and
+acknowledgement, and completion. Also run `:app:connectedDebugAndroidTest` for hermetic Direct CLI
+Compose coverage. The opt-in real-app UI/transport gate is:
+
+```bash
+ANDROID_SERIAL=2C061FDH200CJN \
+HEALTHMD_ANDROID_E2E_HOST=<reachable-computer-address> \
+  apps/android/scripts/run-direct-cli-ui-e2e.sh
+```
+
+It uses the isolated `com.healthmd.android.e2e` app and concurrently runs the ignored Rust listener
+`accepts_android_ui_pair_reconnect_disconnect_status_and_repair`; it verifies the foreground
+notification Disconnect action, requests status only, and retains no health payload. Verify the
+release archive's checksum and assert that it contains both `healthmd` and
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
 `healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`, and
 `healthmd mcp schema healthmd_sleep_sessions`. Confirm that the default release rejects

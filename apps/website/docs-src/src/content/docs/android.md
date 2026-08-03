@@ -15,7 +15,7 @@ description: Set up Health.md for Android, export Health Connect data to Markdow
 <div class="reference-stats">
 <div><strong>106</strong><span>selectable Health Connect metrics</span></div>
 <div><strong>4</strong><span>export formats</span></div>
-<div><strong>3</strong><span>free manual export actions</span></div>
+<div><strong>10</strong><span>free manual export actions</span></div>
 <div><strong>0</strong><span>Health.md cloud accounts required</span></div>
 </div>
 
@@ -46,7 +46,7 @@ Health.md for Android turns Health Connect into a local-first health journal. Ch
 6. Preview the output.
 7. Tap export and verify the generated files in your folder or vault.
 
-The free plan includes 3 manual export actions so you can test permissions, folder access, formats, and your Obsidian workflow before unlocking unlimited exports.
+The free plan includes 10 manual export actions so you can test permissions, folder access, formats, and your Obsidian workflow before unlocking unlimited exports.
 
 ## Destinations on Android
 
@@ -76,7 +76,7 @@ Android JSON exports are designed to be compatible with Health.md's Obsidian vis
 
 ## Scheduling and automation
 
-Scheduled exports use Android WorkManager, so the selected time is a target rather than a hard guarantee. Health.md records export history, can recover missed scheduled dates, and lets you retry failed runs.
+Scheduled exports use a one-shot exact alarm when you grant Android's Alarms & reminders access, with durable WorkManager work as a backup. Without exact-alarm access, WorkManager becomes the primary scheduler, so the selected time is a target rather than a hard guarantee. Health.md records export history, can recover missed scheduled dates, and lets you retry failed runs.
 
 For Tasker, adb, or other automation tools, Health.md exposes explicit-only broadcast intents. External callers must address the receiver component directly:
 
@@ -113,11 +113,11 @@ Google Fit is intentionally excluded from the supported-provider surface because
 
 ## Pricing and restore
 
-- The Android app includes 3 free manual export actions.
+- The Android app includes 10 free manual export actions.
 - Unlimited exports and scheduled automation unlock with a one-time lifetime purchase through Google Play Billing.
 - There is no subscription and no recurring charge.
 - Google Play shows the live local price before purchase.
-- Restore Purchase uses the Google account that bought Full Access.
+- Restore Purchase uses the Google account that bought Premium.
 
 ## Privacy model
 
@@ -141,4 +141,4 @@ If you want the strictest local setup, run manual exports to a local device fold
   <a href="/docs/visualizations-roadmap/"><span>Obsidian</span>How exported JSON and Markdown power Health.md visualizations.</a>
 </div>
 
-<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-07-08</p>
+<p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Last updated 2026-08-03</p>

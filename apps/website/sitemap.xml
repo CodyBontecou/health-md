@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://healthmd.app/</loc>
-    <lastmod>2026-07-08</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/es/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
@@ -32,13 +44,37 @@
   </url>
   <url>
     <loc>https://healthmd.app/privacy-policy.html</loc>
-    <lastmod>2026-07-08</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/es/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-03</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
     <loc>https://healthmd.app/terms-of-service.html</loc>
-    <lastmod>2026-07-08</lastmod>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/es/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-03</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>

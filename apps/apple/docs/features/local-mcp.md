@@ -19,7 +19,7 @@ Portable Codex onboarding is:
 healthmd setup codex
 ```
 
-When pairing is needed, the command displays an ephemeral QR. Scanning it with the iPhone Camera opens the existing `healthmd` URL scheme, validates an exact local IPv4 endpoint/port/six-digit code, switches Health.md to Sync, and asks the user to approve **Pair with healthmd** without persisting the code. Manual entry remains the fallback. The generated MCP entry points to the absolute `healthmd` path with arguments `mcp serve`, pins an explicit iPhone when needed, preserves unrelated Codex configuration, applies bounded timeouts, and prompts for export/resume/cancel. Use `--skip-pairing` only when configuration and pairing must be separated.
+When pairing is needed, the command displays an ephemeral QR. On iPhone, open Health.md's **Sync** tab, tap **Scan Pairing QR** under **Direct CLI Access**, and scan the displayed image. That in-app camera scan is the explicit pairing action: Health.md validates an exact private-LAN or Tailscale IPv4 endpoint/port/six-digit code and starts the authenticated connection automatically without persisting the code or requiring a second Pair tap. External `healthmd://` opens are rejected because their source cannot prove a physical scan. Manual entry remains the fallback. The generated MCP entry points to the absolute `healthmd` path with arguments `mcp serve`, pins an explicit iPhone when needed, preserves unrelated Codex configuration, applies bounded timeouts, and prompts for export/resume/cancel. Use `--skip-pairing` only when configuration and pairing must be separated.
 
 ## Bundled Mac topology
 

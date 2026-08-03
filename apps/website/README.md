@@ -15,6 +15,28 @@ npm run build
 
 `npm run dev` uses the component `Procfile` through Shoreman.
 
+## Localization
+
+English remains at the canonical root routes. Spanish uses `/es/` and `/es/docs/`.
+The shared locale and route contract lives in `i18n/`, while the landing catalogs are
+`i18n/messages/en.json` and `i18n/messages/es.json`.
+
+```bash
+npm run i18n:check
+npm run build
+```
+
+The build renders the Spanish landing page from the current English `index.html`, so landing
+changes must update both catalogs when visible copy changes. Spanish first-success guides live in
+`docs-src/src/content/docs/es/`. Missing Spanish documentation renders the English source with a
+Spanish notice, an English canonical URL, and `noindex,follow`; it is not added to the sitemap.
+Do not translate commands, schema keys, metric IDs, filenames, JSON/CSV fixtures, or generated
+reference artifacts.
+
+Spanish legal pages under `es/` are convenience translations. The English legal pages remain the
+controlling versions and are linked from each translation. A qualified human must review Spanish
+legal and health terminology before these routes are deployed to production.
+
 ## External Obsidian plugin source
 
 The Obsidian plugin remains in [`CodyBontecou/health-md-visualizations`](https://github.com/CodyBontecou/health-md-visualizations). CI checks out the revision recorded in `external-sources.json`.

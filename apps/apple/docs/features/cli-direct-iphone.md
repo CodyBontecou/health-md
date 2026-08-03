@@ -66,9 +66,9 @@ Pairing creates a trust relationship distinct from the Health.md Mac app's own s
    healthmd direct pair --transport manual-ip
    ```
 
-2. Keep that command running. For an IPv4 LAN endpoint, scan the terminal QR with the iPhone Camera.
-3. Health.md opens the Sync tab and shows the exact endpoint for review. Tap **Pair with healthmd** only when it matches the command you just started. The link remains staged in memory and does not alter the saved endpoint or interrupt active work before approval.
-4. If QR handoff is unavailable, enable Direct CLI Access, select **Manual IP**, enter the shown LAN/Tailscale address, port, and code, then tap Pair.
+2. Keep that command running. On iPhone, open Health.md's **Sync** tab. Under **Direct CLI Access**, tap **Scan Pairing QR** and point the in-app camera at the terminal QR.
+3. The in-app scan is the explicit pairing action. Health.md accepts only a private-LAN or Tailscale IPv4 endpoint, validates the exact port and one-time code, and starts the authenticated connection automatically without a second Pair tap. External `healthmd://` opens are rejected because another app cannot prove that the user scanned the QR. If a direct operation is active, the handoff waits and starts automatically when that operation finishes. If the first connection fails, the in-app card offers Retry and Cancel without persisting the code.
+4. If in-app QR scanning is unavailable, enable Direct CLI Access, select **Manual IP**, enter the shown LAN/Tailscale address, port, and code, then tap Pair.
 5. The CLI prints the final machine-readable pairing result on stdout.
 
 For Codex, `healthmd setup codex` combines this pairing flow with safe, idempotent host configuration. Pairing accepts `--port PORT`, `--timeout SECONDS`, and `--pairing-code CODE` for controlled automation. If a non-default Manual IP port is saved on iPhone, pass the same global `--port PORT` before later status/export/resume/cancel commands. Avoid putting a pairing code in shell history unless necessary.
@@ -87,7 +87,7 @@ Tailscale address on every portable platform.
 2. On iPhone, enable Direct CLI Access, select **Nearby**, enter the displayed code, then tap Pair.
 3. Keep both devices nearby and Health.md foregrounded until both report success.
 
-Pairing is one-time. After success, the iPhone stores the reconnect credential in Keychain and shows **Ready for healthmd** while Direct CLI Access is enabled. A paired Manual IP iPhone keeps a bounded foreground reconnect loop active so each one-shot CLI listener is discovered within its command window; subsequent commands do not require another code or an access toggle. A paired Nearby iPhone keeps one cancellable discovery wait active while foregrounded, so it does not cycle through timed loading states. Toggling access off cancels reconnect work without deleting trust. Use **Forget Pairing** only when the CLI should require a new code.
+Pairing is one-time. A newly issued Keychain credential remains provisional until the authenticated CLI sends a valid peer hello; failed, cancelled, expired, or interrupted attempts cannot replace established trust. After success, the iPhone shows **Ready for healthmd** while Direct CLI Access is enabled. A paired Manual IP iPhone keeps a bounded foreground reconnect loop active so each one-shot CLI listener is discovered within its command window; subsequent commands do not require another code or an access toggle. A paired Nearby iPhone keeps one cancellable discovery wait active while foregrounded, so it does not cycle through timed loading states. Toggling access off cancels reconnect work without deleting trust. Use **Forget Pairing** only when the CLI should require a new code.
 
 Nearby requires Multipeer's encrypted session and then applies the same Health.md application-layer authentication and encryption as Manual IP.
 
@@ -191,7 +191,7 @@ A wait timeout, Ctrl-C, process exit, background-time expiration, or connection 
 - Every connection proves the stored reconnect secret, binds both installation IDs and fresh nonces/keys, and derives a fresh session key.
 - Application messages and transfer frames use ChaCha20-Poly1305 authentication/encryption with serialized monotonic sequence envelopes that reject replay/out-of-order packets, including over already encrypted Nearby sessions.
 - Manual IP is not plaintext even on LAN or Tailscale. Nearby requires `MCEncryptionPreference.required` and retains the application security layer.
-- iPhone trust is in Keychain. Transfer spools are protected, backup-excluded app-container files. Terminal journals/spools are retained for idempotent acknowledgement/recovery until the fixed seven-day expiry, then activation/export cleanup removes them; unpairing removes trust, not an unexpired job ledger.
+- iPhone trust is in Keychain. QR pairing is accepted only from Health.md's in-app camera scanner; custom-URL delivery from another app cannot establish trust. Transfer spools are protected, backup-excluded app-container files. Terminal journals/spools are retained for idempotent acknowledgement/recovery until the fixed seven-day expiry, then activation/export cleanup removes them; unpairing removes trust, not an unexpired job ledger.
 - Portable identity/jobs/spools use the platform's per-user data directory (on macOS, `~/Library/Application Support/Health.md/CLI/Direct/v1`) with owner-only directory/file permissions and backup exclusion where supported. Pairing trust is stored in Keychain, Secret Service/kernel keyring, or Windows Credential Manager.
 - The bundled Swift `healthmd-mcp` remains sandboxed and Mac-loopback-only. The portable Rust MCP mode runs as `healthmd mcp serve` so it intentionally shares `healthmd`'s signed credential and explicit-destination authority; its fixed MCP surface still exposes no arbitrary filesystem operation.
 - Status/progress logs may contain IDs, dates, counts, byte counts, and safe errors, but must not contain health samples, routes, clinical content, or raw payloads.
@@ -221,7 +221,7 @@ Do not retry an unknown-outcome mutation blindly. Inspect `status --job`, reopen
 
 Physical-device release QA should cover both transports and at least:
 
-1. first pairing, trusted reconnect, wrong code, wrong peer, and unpair on both sides;
+1. first pairing through the in-app scanner, camera denial and Settings recovery, malformed/noncanonical-host QR rejection, external custom-URL rejection, trusted reconnect, wrong code, wrong peer, and unpair on both sides;
 2. Manual IP on LAN and a Tailscale address, plus Nearby discovery with no fallback;
 3. status while foregrounded, backgrounding/foregrounding, locked/protected-data-unavailable state, and local-network denial;
 4. one-day and seven-day strict raw, complete-empty and partial capture, a logical day spanning partitions, interrupted transfer, resume, and cancel;

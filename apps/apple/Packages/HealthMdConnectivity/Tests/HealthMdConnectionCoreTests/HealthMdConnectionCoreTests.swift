@@ -323,6 +323,80 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         }
     }
 
+    func testDirectClientCanRestoreThePrePairingTrustSnapshot() throws {
+        let installationID = UUID()
+        let original = ManualIPTrustedMac(
+            installationID: UUID(),
+            displayName: "original CLI",
+            host: "192.168.1.10",
+            port: 17_647,
+            reconnectSecret: Data(repeating: 0x4a, count: 32),
+            pairedAt: Date(timeIntervalSinceReferenceDate: 100)
+        )
+        let replacement = ManualIPTrustedMac(
+            installationID: UUID(),
+            displayName: "replacement CLI",
+            host: "192.168.1.11",
+            port: 17_648,
+            reconnectSecret: Data(repeating: 0x5b, count: 32),
+            pairedAt: Date(timeIntervalSinceReferenceDate: 200)
+        )
+        let trustStore = InMemoryDirectTrustStore(state: ManualIPTrustState(
+            ownerInstallationID: installationID,
+            trustedMac: original
+        ))
+        let client = DirectManualIPClient(
+            installationID: installationID,
+            displayName: "test iPhone",
+            trustStore: trustStore
+        )
+
+        try client.restoreSavedServer(replacement)
+        XCTAssertEqual(client.savedServer(), replacement)
+        try client.restoreSavedServer(original)
+        XCTAssertEqual(client.savedServer(), original)
+        try client.restoreSavedServer(nil)
+        XCTAssertNil(client.savedServer())
+    }
+
+    func testLegacyTrustStateDecodesWithoutAProvisionalCredential() throws {
+        let owner = UUID()
+        let data = try JSONSerialization.data(withJSONObject: [
+            "ownerInstallationID": owner.uuidString,
+            "trustedClients": []
+        ])
+        let state = try JSONDecoder().decode(ManualIPTrustState.self, from: data)
+        XCTAssertEqual(state.ownerInstallationID, owner)
+        XCTAssertNil(state.trustedMac)
+        XCTAssertNil(state.provisionalTrustedMac)
+    }
+
+    func testProvisionalDirectTrustIsIgnoredUntilPeerHelloCommitsIt() throws {
+        let installationID = UUID()
+        let provisional = ManualIPTrustedMac(
+            installationID: UUID(),
+            displayName: "provisional CLI",
+            host: "192.168.1.12",
+            port: 17_647,
+            reconnectSecret: Data(repeating: 0x6c, count: 32),
+            pairedAt: Date(timeIntervalSinceReferenceDate: 300)
+        )
+        let trustStore = InMemoryDirectTrustStore(state: ManualIPTrustState(
+            ownerInstallationID: installationID,
+            provisionalTrustedMac: provisional
+        ))
+        let client = DirectManualIPClient(
+            installationID: installationID,
+            displayName: "test iPhone",
+            trustStore: trustStore
+        )
+
+        XCTAssertNil(client.savedServer())
+        try client.commitProvisionalServer()
+        XCTAssertEqual(client.savedServer(), provisional)
+        try client.restoreSavedServer(nil)
+    }
+
     func testNearbyContinuousWaitIsCancelledWithoutWaitingForATimeout() async throws {
         let installationID = UUID()
         let state = ManualIPTrustState(

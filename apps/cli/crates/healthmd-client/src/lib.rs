@@ -48,6 +48,8 @@ pub enum ClientError {
     DeviceSelectionRequired(Vec<uuid::Uuid>),
     #[error("the requested direct mobile source is not paired: {0}")]
     DeviceNotPaired(uuid::Uuid),
+    #[error("first-device pairing cannot add trust while another mobile source is paired")]
+    PairingConflict,
     #[error("the direct mobile operation timed out")]
     TimedOut,
     #[error("the direct iPhone does not support bounded query protocol v3")]

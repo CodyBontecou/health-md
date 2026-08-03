@@ -411,7 +411,9 @@ struct HealthMdApp: App {
                         message: message
                     )
                 }
-                directCLIService.applicationDidBecomeActive()
+                if scenePhase == .active {
+                    directCLIService.applicationDidBecomeActive()
+                }
 
                 // Start advertising if sync was previously enabled
                 if UserDefaults.standard.bool(forKey: "syncEnabled") {
@@ -442,20 +444,25 @@ struct HealthMdApp: App {
                     return
                 }
                 #endif
-                guard let pairingLink = IPhoneDirectCLIPairingLink(url: url) else { return }
-                directCLIService.prepare(pairingLink: pairingLink)
+                guard IPhoneDirectCLIPairingLink(url: url) != nil else { return }
+                directCLIService.rejectExternalPairingLink()
             }
             .onChange(of: scenePhase) { _, phase in
                 guard !TestMode.suppressesRuntimeServices else { return }
-                if phase == .active {
+                switch phase {
+                case .active:
                     syncService.restoreSavedManualIPConnectionIfNeeded()
                     directCLIService.applicationDidBecomeActive()
-                } else if phase == .background {
+                case .inactive:
+                    directCLIService.applicationWillResignActive()
+                case .background:
                     #if DEBUG
                     exportPerformanceLab.applicationDidEnterBackground()
                     #endif
                     IPhoneDirectQueryCoordinator.shared.clearCachedContext()
                     directCLIService.applicationDidEnterBackground()
+                @unknown default:
+                    directCLIService.applicationWillResignActive()
                 }
             }
             .onChange(of: syncService.connectionState) { _, state in

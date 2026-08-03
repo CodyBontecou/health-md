@@ -16,7 +16,7 @@ pub mod transport;
 pub use application::{ApplicationLimits, HealthMdApplication, HealthMdSession};
 pub use backend::{
     BackendCapabilities, BackendError, CallContext, CallerIdentity, CallerMode, HealthDataBackend,
-    QueryDetailLevel, QueryPageRequest,
+    PairingStartResult, QueryDetailLevel, QueryPageRequest,
 };
 pub use catalog::tool_catalog;
 pub use healthmd_operations::SurfaceProfile;

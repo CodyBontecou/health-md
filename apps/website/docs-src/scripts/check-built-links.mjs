@@ -7,9 +7,18 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const CANONICAL_ORIGIN = 'https://healthmd.app';
 const SITE_ORIGINS = new Set([CANONICAL_ORIGIN, 'https://healthmd.isolated.tech']);
-const DOCS_PREFIX = '/docs';
-const ALLOWED_NON_DOCS_SITE_PATHS = new Set(['/']);
-const ALLOWED_NON_DOCS_SITE_PREFIXES = ['/assets/', '/visualizations/', '/blog/'];
+const BUILT_PREFIXES = ['/docs/', '/es/docs/', '/_astro/', '/pagefind/'];
+const BUILT_PATHS = new Set(['/sitemap-index.xml', '/sitemap-0.xml', '/favicon.png']);
+const ALLOWED_SITE_PATHS = new Set([
+  '/',
+  '/404/',
+  '/es/',
+  '/privacy-policy.html',
+  '/terms-of-service.html',
+  '/es/privacy-policy.html',
+  '/es/terms-of-service.html',
+]);
+const ALLOWED_SITE_PREFIXES = ['/assets/', '/visualizations/', '/blog/'];
 
 async function walk(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -24,21 +33,18 @@ async function walk(directory) {
 
 function pageUrl(file) {
   const relative = path.relative(DIST, file).split(path.sep).join('/');
-  if (relative === 'index.html') return `${CANONICAL_ORIGIN}${DOCS_PREFIX}/`;
+  if (relative === '404.html') return new URL('/404/', CANONICAL_ORIGIN);
   if (relative.endsWith('/index.html')) {
-    return `${CANONICAL_ORIGIN}${DOCS_PREFIX}/${relative.slice(0, -'index.html'.length)}`;
+    return new URL(`/${relative.slice(0, -'index.html'.length)}`, CANONICAL_ORIGIN);
   }
-  return `${CANONICAL_ORIGIN}${DOCS_PREFIX}/${relative}`;
+  return new URL(`/${relative}`, CANONICAL_ORIGIN);
 }
 
-function targetFile(url) {
-  let relative = decodeURIComponent(url.pathname.slice(DOCS_PREFIX.length));
-  relative = relative.replace(/^\/+/, '');
-  if (relative === '404/') relative = '404.html';
-  else if (!relative || relative.endsWith('/')) relative += 'index.html';
-  const candidate = path.resolve(DIST, relative);
+function safeDistPath(pathname) {
+  const decoded = decodeURIComponent(pathname).replace(/^\/+/, '');
+  const candidate = path.resolve(DIST, decoded);
   if (candidate !== DIST && !candidate.startsWith(`${DIST}${path.sep}`)) {
-    throw new Error(`path escapes docs build: ${url.pathname}`);
+    throw new Error(`path escapes docs build: ${pathname}`);
   }
   return candidate;
 }
@@ -50,6 +56,17 @@ async function exists(file) {
   } catch {
     return false;
   }
+}
+
+async function targetFile(url) {
+  const base = safeDistPath(url.pathname);
+  const candidates = url.pathname.endsWith('/')
+    ? [path.join(base, 'index.html'), `${base}.html`]
+    : [base, path.join(base, 'index.html'), `${base}.html`];
+  for (const candidate of candidates) {
+    if (await exists(candidate)) return candidate;
+  }
+  return candidates[0];
 }
 
 const allFiles = await walk(DIST);
@@ -70,7 +87,7 @@ for (const sourceFile of htmlFiles) {
   const attributes = [...html.matchAll(/\b(?:href|src)=(['"])(.*?)\1/gi)].map((match) => match[2]);
 
   for (const destination of attributes) {
-    if (!destination || /^(?:mailto:|tel:|data:|javascript:)/i.test(destination)) continue;
+    if (!destination || /^(?:mailto:|tel:|data:|javascript:|blob:)/i.test(destination)) continue;
 
     let resolved;
     try {
@@ -81,18 +98,20 @@ for (const sourceFile of htmlFiles) {
     }
 
     if (!SITE_ORIGINS.has(resolved.origin)) continue;
-    if (!resolved.pathname.startsWith(`${DOCS_PREFIX}/`)) {
-      const allowed = ALLOWED_NON_DOCS_SITE_PATHS.has(resolved.pathname)
-        || ALLOWED_NON_DOCS_SITE_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
+    const isBuiltTarget = BUILT_PATHS.has(resolved.pathname)
+      || BUILT_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
+    if (!isBuiltTarget) {
+      const allowed = ALLOWED_SITE_PATHS.has(resolved.pathname)
+        || ALLOWED_SITE_PREFIXES.some((prefix) => resolved.pathname.startsWith(prefix));
       if (!allowed) {
-        failures.push(`${path.relative(DIST, sourceFile)}: same-origin link escapes docs prefix: ${destination}`);
+        failures.push(`${path.relative(DIST, sourceFile)}: same-origin link escapes supported site paths: ${destination}`);
       }
       continue;
     }
 
     let target;
     try {
-      target = targetFile(resolved);
+      target = await targetFile(resolved);
     } catch (error) {
       failures.push(`${path.relative(DIST, sourceFile)}: ${error.message}`);
       continue;

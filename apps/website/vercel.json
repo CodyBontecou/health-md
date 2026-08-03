@@ -9,6 +9,10 @@
       "permanent": true
     },
     { "source": "/docs", "destination": "/docs/", "permanent": true },
+    { "source": "/es", "destination": "/es/", "permanent": true },
+    { "source": "/es/docs", "destination": "/es/docs/", "permanent": true },
+    { "source": "/docs/sitemap-index.xml", "destination": "/sitemap-index.xml", "permanent": true },
+    { "source": "/docs/sitemap-0.xml", "destination": "/sitemap-0.xml", "permanent": true },
     { "source": "/docs/data-reference", "destination": "/docs/reference/", "permanent": true },
     { "source": "/docs/data-reference/", "destination": "/docs/reference/", "permanent": true },
     { "source": "/blog", "destination": "/blog/", "permanent": true },
@@ -16,7 +20,7 @@
   ],
   "headers": [
     {
-      "source": "/docs/_astro/(.*)",
+      "source": "/_astro/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]

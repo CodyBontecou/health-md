@@ -389,3 +389,41 @@ async fn fake_android_peer_pairs_v2_without_downgrading_to_v1() {
     assert_eq!(paired.source, SourceKind::Android);
     assert_eq!(paired.device.installation_id, trust.installation_id);
 }
+
+#[tokio::test]
+async fn ios_only_pairing_rejects_android_and_removes_new_trust() {
+    let temporary = TempDir::new().unwrap();
+    let client = test_client(&temporary);
+    let (port_sender, port_receiver) = oneshot::channel();
+    let pair = client.pair_ios(
+        "123456",
+        "12345678901234567890",
+        0,
+        Duration::from_secs(5),
+        move |port| port_sender.send(port).unwrap(),
+    );
+    let peer = async {
+        let port = port_receiver.await.unwrap();
+        let (mut channel, trust) = connect_fake_mobile(
+            port,
+            2,
+            "Unexpected Android",
+            Some("12345678901234567890"),
+            None,
+        )
+        .await;
+        let _ = receive_cli_hello(&mut channel).await;
+        channel
+            .send(&DirectMessage::Hello(Unlabeled::from(mobile_capabilities(
+                &trust,
+                PeerPlatform::Android,
+                vec![2],
+                None,
+            ))))
+            .await
+            .unwrap();
+    };
+    let (result, ()) = tokio::join!(pair, peer);
+    assert!(matches!(result, Err(ClientError::Authentication(_))));
+    assert!(client.paired_devices().await.unwrap().is_empty());
+}

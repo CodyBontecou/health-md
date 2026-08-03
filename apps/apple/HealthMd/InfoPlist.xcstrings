@@ -196,6 +196,71 @@
         }
       }
     },
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md uses the camera only to scan a Direct CLI pairing QR code you choose."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md usa la cámara únicamente para escanear el código QR de emparejamiento de Direct CLI que elijas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md utilise la caméra uniquement pour scanner le code QR d’association Direct CLI que vous choisissez."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md verwendet die Kamera nur, um einen von Ihnen ausgewählten Direct-CLI-Kopplungs-QR-Code zu scannen."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md usa la fotocamera solo per scansionare il codice QR di abbinamento Direct CLI scelto da te."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Health.md usa a câmera somente para escanear o código QR de pareamento do Direct CLI que você escolher."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md gebruikt de camera alleen om een door jou gekozen QR-code voor Direct CLI-koppeling te scannen."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.mdは、選択したDirect CLIペアリング用QRコードをスキャンするためにのみカメラを使用します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md는 사용자가 선택한 Direct CLI 페어링 QR 코드를 스캔할 때만 카메라를 사용합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md 仅使用相机扫描您选择的 Direct CLI 配对二维码。"
+          }
+        }
+      }
+    },
     "NSHealthUpdateUsageDescription": {
       "extractionState": "manual",
       "localizations": {

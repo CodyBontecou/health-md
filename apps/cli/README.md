@@ -286,18 +286,33 @@ pins the paired device:
 healthmd setup codex
 ```
 
-Keep Health.md foreground on iPhone and scan the displayed QR with the iPhone Camera; it opens
-Health.md, selects the Sync tab, applies the bounded Manual IP endpoint and one-time code, then asks the user to approve
-**Pair with healthmd**. Manual entry under **Settings → Mac Sync → Direct CLI Access** remains the fallback. Restart Codex after a changed
-configuration. The generated entry launches `healthmd mcp serve` and marks export, resume, and
+Keep Health.md foreground on iPhone, open **Sync → Direct CLI Access**, tap **Scan Pairing QR**,
+and scan the displayed image. The in-app camera scan is the explicit pairing action: Health.md
+validates the bounded Manual IP endpoint and one-time code and starts the authenticated connection
+automatically without a second **Pair** tap. External custom-URL opens are rejected. Manual entry
+under **Sync → Direct CLI Access** remains the fallback.
+Restart Codex after a changed configuration. The generated entry launches `healthmd mcp serve` and marks export, resume, and
 cancel tools for approval. `healthmd-mcp` remains an installed compatibility launcher. On Unix it
 replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
 and supervises its own same-file helper against the same fixed Credential Manager service/account.
 
-The local server exposes 17 fixed operations for readiness, bounded typed queries, charts, sleep,
-workouts, comparisons, coverage, evidence, and durable generated-file exports. It has no shell, SQL,
-arbitrary URL, or arbitrary file-read tool. Approved generated exports require an explicit existing
-destination.
+The local server exposes 19 fixed operations for pairing, readiness, bounded typed queries, charts,
+sleep, workouts, comparisons, coverage, evidence, and durable generated-file exports. It has no
+shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated exports require an
+explicit existing destination.
+
+A local desktop MCP client can onboard without opening a separate terminal. Call
+`healthmd_pairing_start`, render the returned `image/png`, and ask the user to open Health.md's
+**Sync → Direct CLI Access → Scan Pairing QR** screen and scan it. Health.md starts pairing
+immediately from that in-app scan; no second Pair tap is required. Poll `healthmd_pairing_status`
+with the returned `pairing_session_id` until it reports
+`paired`, `timed_out`, or `failed`. The listener defaults to 180
+seconds and is bounded to 30–600 seconds. To prevent ambiguous device routing, pairing start is an
+onboarding operation: it refuses when any mobile trust or an explicit MCP `--device` pin already
+exists. Use `healthmd_doctor` for an existing pairing, or explicitly unpair/reconfigure before
+onboarding another device. The image intentionally contains the short-lived pairing secret; the
+JSON/text receipt does not contain the code, host address, or deep link. These two tools are available
+only through local stdio and are absent from Streamable HTTP and OAuth catalogs.
 
 An experimental, source-build-only read-only Streamable HTTP profile exposes the same application
 for loopback development or a single-owner direct-backed endpoint. It is absent from default release

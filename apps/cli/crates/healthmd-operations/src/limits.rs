@@ -9,6 +9,9 @@ pub const DEFAULT_PAGE_BYTES: usize = 262_144;
 pub const DEFAULT_EXPORT_TIMEOUT_SECONDS: u64 = 300;
 pub const MINIMUM_EXPORT_TIMEOUT_SECONDS: u64 = 5;
 pub const MAXIMUM_EXPORT_TIMEOUT_SECONDS: u64 = 900;
+pub const DEFAULT_PAIRING_TIMEOUT_SECONDS: u64 = 180;
+pub const MINIMUM_PAIRING_TIMEOUT_SECONDS: u64 = 30;
+pub const MAXIMUM_PAIRING_TIMEOUT_SECONDS: u64 = 600;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct OperationLimits {

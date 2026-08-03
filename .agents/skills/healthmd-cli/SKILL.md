@@ -35,7 +35,7 @@ NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 NO_COLOR=1 TERM=dumb timeout 300 healthmd export --last 7 --raw --output week.json </dev/null
 ```
 
-On Windows, use the automation host's process timeout. Pairing needs enough time for the user to enter the code on iPhone.
+On Windows, use the automation host's process timeout. Pairing needs enough time for the user to scan the QR with Health.md's in-app Direct CLI scanner or enter the fallback code on iPhone.
 
 ## Install or verify
 
@@ -68,10 +68,9 @@ NO_COLOR=1 TERM=dumb timeout 180 healthmd direct pair </dev/null
 
 While it waits:
 
-1. Read the six-digit code, candidate computer addresses, and port from stderr.
-2. On iPhone open **Health.md → Settings → Mac Sync → Direct CLI Access**.
-3. Enable access, select **Manual IP**, and enter the computer's LAN/Tailscale address, port, and code.
-4. Keep Health.md foregrounded until stdout returns `healthmd.direct_pairing_result` with `status: success` for the intended iPhone.
+1. In foreground Health.md, open **Sync → Direct CLI Access**, tap **Scan Pairing QR**, and scan the displayed image. That in-app scan starts pairing automatically; do not ask for a second Pair tap or open the QR as a custom URL.
+2. Keep Health.md foregrounded until stdout returns `healthmd.direct_pairing_result` with `status: success` for the intended iPhone.
+3. If in-app scanning is unavailable, open **Sync → Direct CLI Access**, enable **Manual IP**, and enter the printed LAN/Tailscale address, port, and six-digit code.
 
 The default port is `17647`. If another port is saved on iPhone, pass it globally on every network command:
 

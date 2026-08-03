@@ -1,10 +1,16 @@
 # health.md docs
 
-The public `/docs/` section is built with [Astro Starlight](https://starlight.astro.build/).
+The public `/docs/` and `/es/docs/` sections are built with [Astro Starlight](https://starlight.astro.build/).
 
 ## Edit content
 
-Website-specific feature guides live in `src/content/docs/`.
+English website-specific feature guides live in `src/content/docs/`. Spanish translations live in
+`src/content/docs/es/` with the same filenames. The custom content loader keeps English URLs under
+`/docs/` and inserts the locale before the docs segment for Spanish (`/es/docs/`).
+
+Only the Spanish first-success guides are translated today. Other `/es/docs/` routes intentionally
+show Starlight's Spanish fallback notice while rendering English content; the custom head marks them
+`noindex,follow`, canonicalizes them to English, and excludes them from the sitemap.
 
 The complete Apple Health export reference is owned by the app repository at `../app/docs/reference/`. Do not hand-edit the synchronized files under:
 
@@ -34,4 +40,4 @@ npm run docs:preview
 npm run build
 ```
 
-`docs:check` verifies the committed reference snapshot, builds Starlight, and validates built internal links. The root build copies `docs-src/dist/` into `dist/docs/` alongside the landing page, blog, legal pages, and other static assets.
+`docs:check` verifies the committed reference snapshot, builds Starlight, stages docs-owned public assets under `/docs/`, and validates built internal links. The root build merges `docs-src/dist/` into the website `dist/` so Astro's `/docs/`, `/es/docs/`, `/_astro/`, Pagefind, and sitemap routes retain their generated paths alongside the landing page, blog, legal pages, and other static assets.

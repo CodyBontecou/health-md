@@ -23,7 +23,7 @@ use crate::{
     ClientError,
     credentials::OsCredentialStore,
     file_receiver::{FileExportReceipt, FileReceiver, GeneratedDestination},
-    handshake::{AuthenticatedConnection, authenticate},
+    handshake::{AuthenticatedConnection, NewPairingPolicy, authenticate_with_policy},
     job::{JobRecord, JobState, JobStore},
     limits::{MAXIMUM_DATES_PER_JOB, MAXIMUM_JOB_BYTES, MAXIMUM_PARTITIONS_PER_JOB},
     packet::PacketConnection,
@@ -223,6 +223,95 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
     where
         F: FnOnce(u16),
     {
+        self.pair_expected_source(
+            ios_pairing_code,
+            android_pairing_code,
+            port,
+            timeout,
+            None,
+            NewPairingPolicy::AllowAny,
+            on_listening,
+        )
+        .await
+    }
+
+    /// Listen for and pair one foreground Health.md iPhone.
+    ///
+    /// A non-iOS peer is rejected and any newly written trust is removed before this returns.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same bounded listener, authentication, compatibility, and storage errors as
+    /// [`Self::pair`], plus an authentication error when the peer is not an iPhone.
+    pub async fn pair_ios<F>(
+        &self,
+        ios_pairing_code: &str,
+        android_pairing_code: &str,
+        port: u16,
+        timeout: Duration,
+        on_listening: F,
+    ) -> Result<PairingResult, ClientError>
+    where
+        F: FnOnce(u16),
+    {
+        self.pair_expected_source(
+            ios_pairing_code,
+            android_pairing_code,
+            port,
+            timeout,
+            Some(SourceKind::Ios),
+            NewPairingPolicy::AllowAny,
+            on_listening,
+        )
+        .await
+    }
+
+    /// Listen for and onboard the first foreground Health.md iPhone.
+    ///
+    /// The cross-process trust lease atomically rejects a different new device if another process
+    /// added trust after the caller's onboarding preflight.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ClientError::PairingConflict`] when code pairing would add a second trusted device,
+    /// plus the bounded errors documented by [`Self::pair_ios`].
+    pub async fn pair_first_ios<F>(
+        &self,
+        ios_pairing_code: &str,
+        android_pairing_code: &str,
+        port: u16,
+        timeout: Duration,
+        on_listening: F,
+    ) -> Result<PairingResult, ClientError>
+    where
+        F: FnOnce(u16),
+    {
+        self.pair_expected_source(
+            ios_pairing_code,
+            android_pairing_code,
+            port,
+            timeout,
+            Some(SourceKind::Ios),
+            NewPairingPolicy::RequireNoOtherTrust,
+            on_listening,
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn pair_expected_source<F>(
+        &self,
+        ios_pairing_code: &str,
+        android_pairing_code: &str,
+        port: u16,
+        timeout: Duration,
+        expected_source: Option<SourceKind>,
+        new_pairing_policy: NewPairingPolicy,
+        on_listening: F,
+    ) -> Result<PairingResult, ClientError>
+    where
+        F: FnOnce(u16),
+    {
         let ios_code = crate::handshake::normalize_pairing_code(ios_pairing_code);
         let android_code = crate::handshake::normalize_pairing_code(android_pairing_code);
         if ios_code.len() != 6 || android_code.len() != 20 {
@@ -234,7 +323,13 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         let bound_port = listener.local_addr().map_err(connection_error)?.port();
         on_listening(bound_port);
         let mut connection = self
-            .accept_compatible(&listener, Some((&ios_code, &android_code)), None, timeout)
+            .accept_compatible_with_policy(
+                &listener,
+                Some((&ios_code, &android_code)),
+                None,
+                timeout,
+                new_pairing_policy,
+            )
             .await?;
         let device_id = connection.device.installation_id.0;
         let was_new_pairing = connection.was_new_pairing;
@@ -242,6 +337,11 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             let peer =
                 exchange_hello(&mut connection.channel, self.identity.installation_id).await?;
             let (source, _) = validate_source_peer(&connection.channel, &peer)?;
+            if expected_source.is_some_and(|expected| expected != source) {
+                return Err(ClientError::Authentication(
+                    "the paired source platform is not allowed by this operation".into(),
+                ));
+            }
             if !pairing_protocol_matches_source(connection.pairing_protocol_version, source) {
                 return Err(ClientError::Authentication(
                     "the source platform does not match its pairing protocol".into(),
@@ -1856,6 +1956,24 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
         selected_device: Option<Uuid>,
         timeout: Duration,
     ) -> Result<AuthenticatedConnection, ClientError> {
+        self.accept_compatible_with_policy(
+            listener,
+            pairing_codes,
+            selected_device,
+            timeout,
+            NewPairingPolicy::AllowAny,
+        )
+        .await
+    }
+
+    async fn accept_compatible_with_policy(
+        &self,
+        listener: &TcpListener,
+        pairing_codes: Option<(&str, &str)>,
+        selected_device: Option<Uuid>,
+        timeout: Duration,
+        new_pairing_policy: NewPairingPolicy,
+    ) -> Result<AuthenticatedConnection, ClientError> {
         let deadline = Instant::now() + timeout;
         let mut last_error = ClientError::TimedOut;
         for _ in 0..MAXIMUM_AUTHENTICATION_ATTEMPTS {
@@ -1872,13 +1990,14 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             if authentication_remaining.is_zero() {
                 return Err(ClientError::TimedOut);
             }
-            let attempt = authenticate(
+            let attempt = authenticate_with_policy(
                 PacketConnection::new(stream),
                 self.identity.installation_id,
                 &self.display_name,
                 pairing_codes,
                 &self.trust_store,
                 authentication_remaining.min(Duration::from_secs(10)),
+                new_pairing_policy,
             )
             .await;
             drop(lease);
@@ -1916,6 +2035,7 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
                 Err(ClientError::CredentialMutationOutcomeUnknown) => {
                     return Err(ClientError::CredentialMutationOutcomeUnknown);
                 }
+                Err(ClientError::PairingConflict) => return Err(ClientError::PairingConflict),
                 Err(error) => last_error = error,
             }
         }

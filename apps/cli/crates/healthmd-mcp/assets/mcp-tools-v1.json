@@ -23,7 +23,7 @@
       "openWorldHint": false,
       "readOnlyHint": true
     },
-    "description": "Diagnose local direct pairing and foreground iPhone query/export readiness with actionable next steps.",
+    "description": "Diagnose local direct pairing and foreground iPhone query/export readiness. When unpaired, follow its healthmd_pairing_start guidance instead of running a shell pairing command.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
@@ -3424,6 +3424,58 @@
     },
     "name": "healthmd_evidence_packet",
     "title": "Build a health evidence packet"
+  },
+  {
+    "_meta": {
+      "anthropic/requiresUserInteraction": true
+    },
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Preferred MCP onboarding path: after explicit user interaction, start a bounded first-iPhone pairing listener and return a native image/png QR code to render directly. Tell the user to scan it with Health.md's in-app Direct CLI scanner; external custom-URL opens are not pairing consent. Do not substitute healthmd setup codex, healthmd direct pair, or a reconstructed terminal QR. Refuses when trust or a device pin already exists.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "timeout_seconds": {
+          "default": 180,
+          "description": "Seconds the local listener remains available for this QR code.",
+          "maximum": 600,
+          "minimum": 30,
+          "type": "integer"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "name": "healthmd_pairing_start",
+    "title": "Show an iPhone pairing QR code"
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Check the status of a bounded local iPhone pairing session after its QR code is shown.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "pairing_session_id": {
+          "format": "uuid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "pairing_session_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_pairing_status",
+    "title": "Check iPhone pairing status"
   },
   {
     "_meta": {

@@ -45,9 +45,8 @@ test("export showcase turns selected health metrics into downloadable ordinary f
   assert.equal((index.match(/data-export-format=/g) ?? []).length, 4);
   assert.match(index, /data-export-format="markdown" aria-pressed="true"/);
   assert.match(index, /data-sample-download/);
-  assert.match(index, /class="export-phone"/);
-  assert.match(index, /assets\/screenshots\/showcase\/apple-health-summary\.png/);
-  assert.match(index, /assets\/screenshots\/showcase\/iphone-17-pro-silver\.png/);
+  assert.doesNotMatch(index, /class="export-phone(?:-wrap)?"/);
+  assert.doesNotMatch(index, /assets\/screenshots\/showcase\/apple-health-summary\.png/);
   assert.doesNotMatch(index, /class="phone-status"|class="metric-list"/);
   assert.match(index, /class="file-preview-stack reveal" data-preview-stack/);
   assert.match(index, /class="file-preview" data-preview-format="markdown"/);
@@ -56,13 +55,15 @@ test("export showcase turns selected health metrics into downloadable ordinary f
   assert.match(script, /selectedFormats\.push\(format\)/);
   assert.match(script, /selectedFormats\.splice\(selectedIndex, 1\)/);
   assert.match(script, /function createPreviewCard\(/);
-  assert.match(script, /Download " \+ selectedFormats\.length \+ " samples/);
+  assert.match(script, /messages\.downloadMany\.replace\("\{count\}", String\(selectedFormats\.length\)\)/);
   assert.match(styles, /@keyframes preview-card-spawn/);
   assert.match(styles, /--stack-rotation/);
   assert.match(script, /IntersectionObserver/);
   assert.match(styles, /\.export-showcase\s*{[\s\S]*?grid-template-columns:/);
   assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.export-showcase\s*{[\s\S]*?flex-direction:\s*column/);
-  assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.file-preview-stack\s*{\s*width:\s*100%;\s*align-self:\s*stretch;/);
+  assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.format-picker\s*{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
+  assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.export-actions\s*{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
+  assert.match(styles, /@media \(max-width: 650px\)[\s\S]*?\.file-preview-stack\s*{\s*width:\s*100%;\s*max-width:\s*none;\s*align-self:\s*stretch;/);
 
   await Promise.all([
     "assets/samples/health-data-sample.md",
@@ -78,14 +79,21 @@ test("scheduling showcase explains recurring on-device exports", async () => {
   assert.match(index, /Choose when Health\.md exports and where the files go\./);
   assert.equal((index.match(/data-schedule-frequency=/g) ?? []).length, 3);
   assert.match(index, /data-schedule-frequency="daily" aria-pressed="true"/);
-  assert.match(index, /class="schedule-routes"/);
+  assert.match(index, /class="schedule-routes schedule-routes-desktop"/);
+  assert.match(index, /class="schedule-routes schedule-routes-mobile"/);
   assert.match(index, /schedule-route-main" d="M170 62 V473"/);
   assert.equal((index.match(/schedule-route-branch" marker-end="url\(#schedule-arrow\)" d="M184 495/g) ?? []).length, 3);
+  assert.match(index, /schedule-route-trunk" d="M175 416 V425"/);
+  assert.equal((index.match(/schedule-route-branch" marker-end="url\(#schedule-arrow-mobile\)" d="M175 425/g) ?? []).length, 3);
   assert.match(index, /Runs from your device/);
   assert.match(index, /Uses the metrics you choose/);
   assert.match(index, /Saves where you want/);
   assert.match(script, /function setupSchedulePreview\(\)/);
   assert.match(styles, /@keyframes schedule-route-flow/);
+  assert.match(styles, /@media \(max-width: 680px\)[\s\S]*?\.schedule-map\s*{[^}]*height:\s*590px;/);
+  assert.match(styles, /@media \(max-width: 680px\)[\s\S]*?\.schedule-routes-desktop\s*{\s*display:\s*none;/);
+  assert.match(styles, /@media \(max-width: 680px\)[\s\S]*?\.schedule-routes-mobile\s*{\s*display:\s*block;/);
+  assert.match(styles, /@media \(max-width: 680px\)[\s\S]*?\.schedule-destinations\s*{[\s\S]*?top:\s*462px;[\s\S]*?grid-template-columns:\s*repeat\(3,/);
 
   await Promise.all([
     "assets/screenshots/showcase/scheduled-exports.png",
@@ -124,6 +132,7 @@ test("agent showcase connects scoped questions to contextual answers", async () 
   assert.match(styles, /\.agent-showcase\s*{[\s\S]*?grid-template-columns:/);
   assert.match(styles, /@keyframes agent-route-flow/);
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.agent-visual\s*{[\s\S]*?flex-direction:\s*column/);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.agent-hub::after\s*{\s*top:\s*150px;\s*height:\s*10px;/);
   await access(path.join(ROOT, "assets/app-icon/healthmd-mark.png"));
 });
 
@@ -151,12 +160,13 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 });
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
-  assert.match(index, /<nav class="header-nav" aria-label="Documentation">/);
+  assert.match(index, /<nav class="header-nav" aria-label="Documentation and language">/);
   assert.match(index, /<a class="header-docs-link" href="docs\/">Docs<\/a>/);
+  assert.match(index, /<a class="header-language-link" href="\/es\/" hreflang="es" lang="es">Español<\/a>/);
   assert.doesNotMatch(index, /↗/);
   assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px 13\.7% 0/);
   assert.match(styles, /\.brand-name\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*19px;[\s\S]*?font-weight:\s*590/);
-  assert.match(styles, /\.header-docs-link\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*15px;[\s\S]*?font-weight:\s*430/);
+  assert.match(styles, /\.header-docs-link,\s*\.header-language-link\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*15px;[\s\S]*?font-weight:\s*430/);
   assert.doesNotMatch(index, /data-menu-toggle|primary-navigation|hero-meta|hero-route|brand-mode/);
   assert.match(styles, /@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /\.hero-intro\s*{[\s\S]*?position:\s*absolute/);
@@ -374,13 +384,13 @@ test("docs use the landing page's self-hosted light visual system", () => {
 });
 
 test("docs navigation starts with user goals and labels preview surfaces", () => {
-  const getStarted = docsConfig.indexOf("label: 'Get Started'");
-  const agents = docsConfig.indexOf("label: 'Use an Agent'");
-  const exports = docsConfig.indexOf("label: 'Export & Automate'");
-  const integrations = docsConfig.indexOf("label: 'Build an Integration'");
+  const getStarted = docsConfig.indexOf("translatedLabel('Get Started'");
+  const agents = docsConfig.indexOf("translatedLabel('Use an Agent'");
+  const exports = docsConfig.indexOf("translatedLabel('Export & Automate'");
+  const integrations = docsConfig.indexOf("translatedLabel('Build an Integration'");
   assert.ok(getStarted >= 0 && getStarted < agents);
   assert.ok(agents < exports && exports < integrations);
-  assert.match(docsConfig, /First iPhone export', slug: 'iphone-first-export'/);
+  assert.match(docsConfig, /item\('First iPhone export', 'Primera exportación desde iPhone', 'iphone-first-export'\)/);
   assert.match(docsConfig, /Direct iPhone CLI · Preview/);
   assert.ok((docsConfig.match(/collapsed: true/g) ?? []).length >= 5);
   assert.match(docsIndex, /Start with Health\.md/);
@@ -390,7 +400,8 @@ test("docs navigation starts with user goals and labels preview surfaces", () =>
   assert.match(configurationGuide, /Available now · signed Mac helper/);
   assert.match(configurationGuide, /Preview · not yet publicly packaged/);
   assert.match(docsHeader, />MCP<|>MCP<\/a>/);
-  assert.match(docsHeader, /href="\/docs\/reference\/"/);
+  assert.match(docsHeader, /const docsRoot = isSpanish \? '\/es\/docs' : '\/docs'/);
+  assert.match(docsHeader, /href=\{`\$\{docsRoot\}\/reference\/`\}/);
 });
 
 test("docs overview paints a static strand before deferred WebGL", async () => {

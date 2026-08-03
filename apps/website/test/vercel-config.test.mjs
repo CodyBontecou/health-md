@@ -25,7 +25,7 @@ test("Vercel applies security headers to extensionless and directory routes", ()
 });
 
 test("Vercel preserves canonical directory redirects and immutable docs assets", () => {
-  for (const route of ["/docs", "/blog", "/visualizations"]) {
+  for (const route of ["/docs", "/es", "/es/docs", "/blog", "/visualizations"]) {
     const redirect = config.redirects.find((entry) => entry.source === route);
     assert.deepEqual(redirect, {
       source: route,
@@ -42,10 +42,10 @@ test("Vercel preserves canonical directory redirects and immutable docs assets",
     });
   }
 
-  const docsAssets = config.headers.find(
-    (entry) => entry.source === "/docs/_astro/(.*)",
+  const astroAssets = config.headers.find(
+    (entry) => entry.source === "/_astro/(.*)",
   );
-  assert.deepEqual(docsAssets?.headers, [
+  assert.deepEqual(astroAssets?.headers, [
     {
       key: "Cache-Control",
       value: "public, max-age=31536000, immutable",

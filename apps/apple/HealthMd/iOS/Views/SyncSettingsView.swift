@@ -15,6 +15,7 @@ struct SyncSettingsView: View {
     @AppStorage("manualIPLastPort") private var manualMacPort = String(SyncService.manualIPPort)
     @State private var manualPairingCode = ""
     @State private var directCLIPairingCode = ""
+    @State private var showDirectCLIPairingScanner = false
     @FocusState private var focusedManualIPField: ManualIPField?
 
     private enum ManualIPField: Hashable {
@@ -77,6 +78,11 @@ struct SyncSettingsView: View {
             case .disconnected: announcement = "Disconnected from Mac"
             }
             UIAccessibility.post(notification: .announcement, argument: announcement)
+        }
+        .fullScreenCover(isPresented: $showDirectCLIPairingScanner) {
+            DirectCLIPairingScannerView { pairingLink in
+                directCLIService.handleScannedPairingLink(pairingLink)
+            }
         }
     }
 
@@ -356,26 +362,51 @@ struct SyncSettingsView: View {
                     directCLIService.setEnabled(enabled)
                 }
 
-                if let pairingLink = directCLIService.pendingPairingLink {
+                if directCLIService.needsPairingCode,
+                   directCLIService.pendingPairingLink == nil {
                     SyncRowDivider()
 
                     VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Label("Approve Codex pairing", systemImage: "qrcode.viewfinder")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.textPrimary)
-                        Text("Connect to healthmd at \(pairingLink.host):\(pairingLink.port). Only approve this when you just scanned the QR shown by your computer.")
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-
                         Button {
-                            directCLIService.approvePendingPairingLink()
+                            showDirectCLIPairingScanner = true
                         } label: {
-                            Label("Pair with healthmd", systemImage: "link")
+                            Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(directCLIService.isConnecting)
+                        .accessibilityIdentifier(AccessibilityID.Sync.directCLIScanButton)
+                        .accessibilityHint("Opens the in-app camera scanner and pairs as soon as a valid QR is recognized")
+
+                        Text("Start pairing from healthmd or your MCP client, then scan its QR here. Health.md does not auto-pair from links opened by other apps.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if let pairingLink = directCLIService.pendingPairingLink {
+                    SyncRowDivider()
+
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Label("Pairing from QR", systemImage: "qrcode.viewfinder")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.textPrimary)
+                        Text(pairingHandoffMessage(for: pairingLink))
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if !directCLIService.isConnecting,
+                           directCLIService.lastError != nil {
+                            Button {
+                                directCLIService.retryPendingPairingLink()
+                            } label: {
+                                Label("Retry QR pairing", systemImage: "arrow.clockwise")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
 
                         Button("Cancel", role: .cancel) {
                             directCLIService.cancelPendingPairingLink()
@@ -456,12 +487,13 @@ struct SyncSettingsView: View {
                         }
                     }
 
-                    if let directError = directCLIService.lastError {
-                        Text(directError)
-                            .font(.footnote)
-                            .foregroundStyle(Color.warning)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                }
+
+                if let directError = directCLIService.lastError {
+                    Text(directError)
+                        .font(.footnote)
+                        .foregroundStyle(Color.warning)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.horizontal, Spacing.md)
@@ -596,6 +628,18 @@ struct SyncSettingsView: View {
         }
     }
 
+    private func pairingHandoffMessage(
+        for pairingLink: IPhoneDirectCLIPairingLink
+    ) -> String {
+        if directCLIService.isConnecting {
+            return "Connecting automatically to healthmd at \(pairingLink.host):\(pairingLink.port). Keep Health.md open until pairing completes."
+        }
+        if directCLIService.isPairingHandoffWaitingForActiveOperation {
+            return "Waiting for the active direct operation to finish, then Health.md will connect automatically to \(pairingLink.host):\(pairingLink.port)."
+        }
+        return "Scanning this QR inside Health.md authorizes a one-time connection to healthmd at \(pairingLink.host):\(pairingLink.port)."
+    }
+
     private var directCLIStatusIcon: String {
         if directCLIService.isConnected { return "terminal.fill" }
         if directCLIService.isConnecting { return "arrow.triangle.2.circlepath" }
@@ -620,7 +664,7 @@ struct SyncSettingsView: View {
         if directCLIService.hasPairedCLI {
             return "Access is on. The paired CLI can connect when you run a direct command; no new code is required."
         }
-        return "Run healthmd direct pair on your Mac, choose the same transport, and enter its one-time code."
+        return "Scan a fresh QR from healthmd above, or choose the same transport and enter its one-time code manually."
     }
 
     private var directCLITransportLabel: String {

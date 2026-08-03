@@ -8,7 +8,8 @@ use crate::{
     limits::{
         DEFAULT_EXPORT_TIMEOUT_SECONDS, DEFAULT_PAGE_BYTES, DEFAULT_PAGE_ITEMS, MAXIMUM_CATEGORIES,
         MAXIMUM_EXPORT_TIMEOUT_SECONDS, MAXIMUM_METRIC_IDS, MAXIMUM_PAGE_BYTES, MAXIMUM_PAGE_ITEMS,
-        MINIMUM_EXPORT_TIMEOUT_SECONDS,
+        MAXIMUM_PAIRING_TIMEOUT_SECONDS, MINIMUM_EXPORT_TIMEOUT_SECONDS,
+        MINIMUM_PAIRING_TIMEOUT_SECONDS,
     },
 };
 
@@ -17,6 +18,7 @@ pub enum OperationKind {
     Readiness,
     Catalog,
     Query,
+    Pairing,
     Export,
 }
 
@@ -40,7 +42,7 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
     OperationDefinition {
         name: "healthmd_doctor",
         title: "Diagnose Health.md readiness",
-        description: "Diagnose local direct pairing and foreground iPhone query/export readiness with actionable next steps.",
+        description: "Diagnose local direct pairing and foreground iPhone query/export readiness. When unpaired, follow its healthmd_pairing_start guidance instead of running a shell pairing command.",
         kind: OperationKind::Readiness,
         local_only: false,
     },
@@ -122,6 +124,20 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
         local_only: false,
     },
     OperationDefinition {
+        name: "healthmd_pairing_start",
+        title: "Show an iPhone pairing QR code",
+        description: "Preferred MCP onboarding path: after explicit user interaction, start a bounded first-iPhone pairing listener and return a native image/png QR code to render directly. Tell the user to scan it with Health.md's in-app Direct CLI scanner; external custom-URL opens are not pairing consent. Do not substitute healthmd setup codex, healthmd direct pair, or a reconstructed terminal QR. Refuses when trust or a device pin already exists.",
+        kind: OperationKind::Pairing,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_pairing_status",
+        title: "Check iPhone pairing status",
+        description: "Check the status of a bounded local iPhone pairing session after its QR code is shown.",
+        kind: OperationKind::Pairing,
+        local_only: true,
+    },
+    OperationDefinition {
         name: "healthmd_export_files",
         title: "Export Health.md files",
         description: "After explicit user approval, run a durable connected-iPhone generated-file export into an explicit existing desktop destination.",
@@ -181,12 +197,12 @@ pub struct QueryInvocation {
 
 pub fn list(profile: SurfaceProfile) -> Vec<Value> {
     let mut tools = base_operation_declarations();
-    if !profile.exposes_local_exports() {
+    if profile.is_remote() {
         tools.retain(|tool| {
-            !tool
-                .get("name")
+            tool.get("name")
                 .and_then(Value::as_str)
-                .is_some_and(|name| name.starts_with("healthmd_export_"))
+                .and_then(definition)
+                .is_some_and(|operation| !operation.local_only)
         });
     }
     enrich_query_schemas(&mut tools, profile);
@@ -238,6 +254,15 @@ fn base_operation_declarations() -> Vec<Value> {
                 "inputSchema": base_input_schema(operation.name)
             });
             match operation.name {
+                "healthmd_pairing_start" => {
+                    declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
+                    declaration["annotations"] = json!({
+                        "readOnlyHint": false,
+                        "destructiveHint": false,
+                        "idempotentHint": false,
+                        "openWorldHint": false
+                    });
+                }
                 "healthmd_export_files" | "healthmd_export_job_resume" => {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(false);
@@ -246,7 +271,7 @@ fn base_operation_declarations() -> Vec<Value> {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(true);
                 }
-                "healthmd_export_job_status" => {
+                "healthmd_pairing_status" | "healthmd_export_job_status" => {
                     declaration["annotations"] = json!({
                         "readOnlyHint": true,
                         "destructiveHint": false,
@@ -307,6 +332,8 @@ fn base_input_schema(name: &str) -> Value {
                 "all_pages": {"type": "boolean"}
             }
         }),
+        "healthmd_pairing_start" => pairing_start_schema(),
+        "healthmd_pairing_status" => pairing_status_schema(),
         "healthmd_export_files" => export_files_schema(),
         "healthmd_export_job_status" | "healthmd_export_job_cancel" => job_schema(false),
         "healthmd_export_job_resume" => job_schema(true),
@@ -347,6 +374,34 @@ fn query_base_schema(required: &[&str], extras: Map<String, Value>) -> Value {
         "additionalProperties": false,
         "required": required,
         "properties": properties
+    })
+}
+
+fn pairing_start_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+            "timeout_seconds": {
+                "type": "integer",
+                "minimum": MINIMUM_PAIRING_TIMEOUT_SECONDS,
+                "maximum": MAXIMUM_PAIRING_TIMEOUT_SECONDS,
+                "default": crate::limits::DEFAULT_PAIRING_TIMEOUT_SECONDS,
+                "description": "Seconds the local listener remains available for this QR code."
+            }
+        }
+    })
+}
+
+fn pairing_status_schema() -> Value {
+    json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pairing_session_id"],
+        "properties": {
+            "pairing_session_id": {"type": "string", "format": "uuid"}
+        }
     })
 }
 
@@ -416,7 +471,10 @@ fn enrich_common_metadata(tools: &mut [Value]) {
             "title".to_owned(),
             Value::String(operation.title.to_owned()),
         );
-        if operation.kind != OperationKind::Export {
+        if !matches!(
+            operation.kind,
+            OperationKind::Pairing | OperationKind::Export
+        ) {
             object.insert(
                 "annotations".to_owned(),
                 json!({
@@ -1104,15 +1162,54 @@ mod tests {
     }
 
     #[test]
-    fn remote_catalog_is_read_only_and_excludes_local_exports() {
+    fn local_catalog_exposes_bounded_pairing_tools_with_safe_annotations() {
+        let tools = list(SurfaceProfile::LocalDirect);
+        assert_eq!(tools.len(), 19);
+        let start = tools
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_pairing_start")
+            .unwrap();
+        assert_eq!(
+            start.pointer("/annotations/readOnlyHint"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            start.pointer("/annotations/destructiveHint"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            start.pointer("/_meta/anthropic~1requiresUserInteraction"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            start.pointer("/inputSchema/properties/timeout_seconds/maximum"),
+            Some(&json!(600))
+        );
+        let status = tools
+            .iter()
+            .find(|tool| tool["name"] == "healthmd_pairing_status")
+            .unwrap();
+        assert_eq!(
+            status.pointer("/annotations/readOnlyHint"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            status.pointer("/inputSchema/required/0"),
+            Some(&json!("pairing_session_id"))
+        );
+    }
+
+    #[test]
+    fn remote_catalog_is_read_only_and_excludes_every_local_operation() {
         let tools = list(SurfaceProfile::RemoteReadOnly);
         assert_eq!(tools.len(), 13);
         assert!(tools.iter().all(|tool| {
             tool.pointer("/annotations/readOnlyHint") == Some(&Value::Bool(true))
                 && tool.get("title").and_then(Value::as_str).is_some()
-                && !tool["name"]
+                && tool["name"]
                     .as_str()
-                    .is_some_and(|name| name.starts_with("healthmd_export_"))
+                    .and_then(definition)
+                    .is_some_and(|operation| !operation.local_only)
         }));
     }
 }

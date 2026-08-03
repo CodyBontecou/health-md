@@ -2,3 +2,4 @@
 
 pub mod mcp;
 pub mod onboarding;
+pub mod pairing;

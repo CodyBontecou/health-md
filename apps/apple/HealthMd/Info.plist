@@ -44,6 +44,8 @@
 		<string>_healthmd-cli._tcp</string>
 		<string>_healthmd-cli._udp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Health.md uses the camera only to scan a Direct CLI pairing QR code you choose.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Health.md reads only the health data you select to create exports or answer requests from commands you explicitly pair.</string>
 	<key>NSHealthUpdateUsageDescription</key>

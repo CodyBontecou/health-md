@@ -36,6 +36,15 @@ pub fn query_tool_result(
     tool_result(value, is_error, structured, additional)
 }
 
+pub fn pairing_start_tool_result(value: Value, png: Vec<u8>) -> Value {
+    let image = json!({
+        "type": "image",
+        "data": BASE64_STANDARD.encode(png),
+        "mimeType": "image/png"
+    });
+    tool_result(value, false, None, vec![image])
+}
+
 pub fn export_tool_result(
     operation: &str,
     value: Value,
