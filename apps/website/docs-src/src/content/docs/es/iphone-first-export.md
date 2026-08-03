@@ -31,13 +31,13 @@ Si ya completaste la introducción, abre la pestaña **Exportar** y confirma que
   <a href="/docs/assets/docs/iphone-first-export/onboarding-start.webp" target="_blank" rel="noopener" aria-label="Abrir a tamaño completo la captura de la pantalla de introducción">
     <img src="/docs/assets/docs/iphone-first-export/onboarding-start.webp" width="1206" height="2622" loading="lazy" alt="Pantalla de bienvenida de la introducción de Health.md, en el paso 1 de 7, con el botón Start Setup." />
   </a>
-  <figcaption>Start Setup presenta el archivo local, las notas programadas y el modelo de carpetas antes de solicitar acceso.</figcaption>
+  <figcaption>Start Setup presenta el archivo local, las notas programadas y el modelo de carpetas antes de solicitar acceso. La interfaz de esta captura auténtica permanece en inglés.</figcaption>
 </figure>
 <figure class="docs-screenshot">
   <a href="/docs/assets/docs/iphone-first-export/export-setup-required.webp" target="_blank" rel="noopener" aria-label="Abrir a tamaño completo la captura que muestra la configuración pendiente">
     <img src="/docs/assets/docs/iphone-first-export/export-setup-required.webp" width="1206" height="2622" loading="lazy" alt="Pestaña Export de Health.md con Health desconectado, Choose Folder disponible, Local iPhone Folder seleccionado y botones para elegir el intervalo de fechas." />
   </a>
-  <figcaption>Los indicadores de preparación muestran claramente si falta configurar Health o la carpeta. Esta captura del simulador muestra de forma intencional que ambos requisitos están incompletos.</figcaption>
+  <figcaption>Los indicadores de preparación muestran claramente si falta configurar Health o la carpeta. Esta captura de referencia también conserva la interfaz en inglés y muestra de forma intencional que ambos requisitos están incompletos.</figcaption>
 </figure>
 </div>
 
@@ -54,9 +54,9 @@ Un intervalo corto facilita la identificación de problemas con los permisos, la
 
 <figure class="docs-screenshot docs-screenshot-single">
   <a href="/docs/assets/docs/es/iphone-first-export/metric-selection.webp" target="_blank" rel="noopener" aria-label="Abrir a tamaño completo la captura de selección de métricas">
-    <img src="/docs/assets/docs/es/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Pantalla Métricas de salud en español con 217 de 219 métricas habilitadas, el campo de búsqueda y las categorías Sueño, Actividad, Corazón y Respiratorio." />
+    <img src="/docs/assets/docs/es/iphone-first-export/metric-selection.webp" width="1206" height="2622" loading="lazy" alt="Pantalla actual de Métricas de salud con 217 de 219 métricas habilitadas, el interruptor de métricas estándar activado, el campo de búsqueda y las categorías desplegables Sueño, Actividad y Corazón." />
   </a>
-  <figcaption>El total de métricas depende de la versión instalada de la aplicación y de los permisos. Esta captura en español muestra una configuración con 217 métricas habilitadas; no necesitas igualar ese total para completar la primera exportación.</figcaption>
+  <figcaption>El total de métricas depende de la versión instalada de la aplicación y de los permisos. Esta captura localizada muestra 217 de 219 métricas habilitadas y las métricas estándar activadas; no necesitas alcanzar ese total para realizar la primera exportación.</figcaption>
 </figure>
 
 ## 3. Obtén una vista previa antes de escribir
@@ -74,9 +74,9 @@ Vuelve a la pestaña **Exportar** si necesitas ajustar las fechas, las métricas
 
 <figure class="docs-screenshot docs-screenshot-single">
   <a href="/docs/assets/docs/es/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="Abrir a tamaño completo la captura de la vista previa de exportación">
-    <img src="/docs/assets/docs/es/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Vista previa de Health.md en español con un intervalo de un día, cuatro formatos de archivo y la bóveda de prueba TestVault como destino." />
+    <img src="/docs/assets/docs/es/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Vista previa de exportación de Health.md con la estimación de una exportación Markdown de un día, períodos acumulados, el destino y el nombre de archivo generado." />
   </a>
-  <figcaption>La vista previa permite revisar el resultado sin escribirlo. Esta captura de referencia muestra cuatro formatos y una bóveda de prueba; para seguir el recorrido mínimo de esta guía, conserva solo Markdown y tu carpeta local.</figcaption>
+  <figcaption>La vista previa permite revisar el resultado sin escribirlo. Esta captura determinista de la documentación usa datos de muestra de Health e indica explícitamente que no hay ninguna bóveda seleccionada.</figcaption>
 </figure>
 
 ## 4. Exporta y verifica
@@ -98,8 +98,8 @@ Al terminar:
 ## Siguientes pasos
 
 <div class="related">
-  <a href="/docs/metrics/"><span>Elegir datos</span>Busca métricas de Apple Health y ajusta las categorías o los permisos especiales (en inglés).</a>
-  <a href="/docs/format/"><span>Dar forma al resultado</span>Configura formatos, fechas, unidades, frontmatter, plantillas y nombres de archivo (en inglés).</a>
-  <a href="/docs/scheduling/"><span>Automatizar</span>Programa exportaciones periódicas después de verificar una ejecución manual (en inglés).</a>
-  <a href="/docs/folder-vault/"><span>Corregir un destino</span>Conoce los proveedores de Archivos, el acceso a carpetas y la recuperación (en inglés).</a>
+  <a href="/es/docs/metrics/"><span>Elegir datos</span>Busca métricas de Apple Health y ajusta las categorías o los permisos especiales.</a>
+  <a href="/es/docs/format/"><span>Dar forma al resultado</span>Configura formatos, fechas, unidades, frontmatter, plantillas y nombres de archivo.</a>
+  <a href="/es/docs/scheduling/"><span>Automatizar</span>Programa exportaciones periódicas después de verificar una ejecución manual.</a>
+  <a href="/es/docs/folder-vault/"><span>Corregir un destino</span>Conoce los proveedores de Archivos, el acceso a carpetas y la recuperación.</a>
 </div>

@@ -7,8 +7,8 @@ description: Configura Health.md for Android, exporta datos de Health Connect a 
   <p class="docs-eyebrow">De Health Connect a archivos privados</p>
   <p>Health.md for Android lee Health Connect en el dispositivo y escribe Markdown, Obsidian Bases, JSON o CSV en las carpetas que elijas. No necesitas una cuenta de Health.md, una nube para tus datos de salud ni una suscripción.</p>
   <div class="docs-actions">
-    <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android&amp;hl=es" target="_blank" rel="noopener">Descargar en Google Play</a>
-    <a class="docs-button-secondary" href="/docs/export/">Consultar la documentación sobre exportación (en inglés)</a>
+    <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Descargar en Google Play</a>
+    <a class="docs-button-secondary" href="/es/docs/export/">Consultar la documentación sobre exportación</a>
   </div>
 </div>
 
@@ -72,11 +72,11 @@ La aplicación para Android tiene los mismos objetivos de archivos sencillos que
 | JSON | Cargas útiles diarias estructuradas para scripts, paneles, notebooks y el Health.md Obsidian plugin |
 | CSV | Flujos de trabajo con hojas de cálculo y análisis |
 
-Las exportaciones JSON de Android están diseñadas para ser compatibles con las visualizaciones de Health.md en Obsidian. Las exportaciones Markdown y Bases siguen el mismo flujo de trabajo centrado en el frontmatter que se explica en la [guía de formatos (en inglés)](/docs/format/).
+Las exportaciones JSON de Android están diseñadas para ser compatibles con las visualizaciones de Health.md en Obsidian. Las exportaciones Markdown y Bases siguen el mismo flujo de trabajo centrado en el frontmatter que se explica en la [guía de formatos](/es/docs/format/).
 
 ## Programación y automatización
 
-Las exportaciones programadas usan una alarma exacta de una sola ejecución cuando concedes acceso a Alarmas y recordatorios de Android, con WorkManager como respaldo duradero. Sin ese acceso, WorkManager se convierte en el programador principal, por lo que la hora seleccionada es un objetivo y no una garantía estricta. Health.md registra el historial de exportaciones, puede recuperar las fechas programadas que no se ejecutaron y permite reintentar las ejecuciones fallidas.
+Las exportaciones programadas usan una alarma exacta de una sola ejecución cuando concedes acceso a Alarmas y recordatorios de Android, con una tarea persistente de WorkManager como respaldo. Sin ese acceso, WorkManager se convierte en el programador principal, por lo que la hora seleccionada es un objetivo y no una garantía estricta. Health.md registra el historial de exportaciones, puede recuperar las fechas programadas que no se ejecutaron y permite reintentar las ejecuciones fallidas.
 
 Para Tasker, adb u otras herramientas de automatización, Health.md ofrece intents de difusión exclusivamente explícitos. Los clientes externos deben dirigirse directamente al componente receptor:
 
@@ -103,7 +103,7 @@ adb shell am broadcast \
   --es com.healthmd.android.extra.END_DATE 2026-03-07
 ```
 
-La automatización usa tus ajustes de exportación actuales, la carpeta y los formatos seleccionados, la selección de métricas, la contabilización de exportaciones gratuitas y el historial.
+La automatización usa tus ajustes de exportación actuales, la carpeta y los formatos seleccionados, la selección de métricas, el cómputo de exportaciones gratuitas y el historial.
 
 ## Fuentes de salud
 
@@ -135,10 +135,10 @@ Si quieres la configuración local más estricta, ejecuta exportaciones manuales
 ## Documentación relacionada
 
 <div class="related">
-  <a href="/docs/export/"><span>Exportación</span>Flujo de exportación manual, intervalos de fechas, vistas previas, historial y archivos de salida (en inglés).</a>
-  <a href="/docs/metrics/"><span>Métricas</span>Cómo funcionan la selección de métricas y las categorías en Health.md (en inglés).</a>
-  <a href="/docs/format/"><span>Formatos</span>Markdown, Bases, JSON, CSV, unidades, nombres de archivo y frontmatter (en inglés).</a>
-  <a href="/docs/visualizations-roadmap/"><span>Obsidian</span>Cómo el JSON y el Markdown exportados alimentan las visualizaciones de Health.md (en inglés).</a>
+  <a href="/es/docs/export/"><span>Exportación</span>Flujo de exportación manual, intervalos de fechas, vistas previas, historial y archivos de salida.</a>
+  <a href="/es/docs/metrics/"><span>Métricas</span>Cómo funcionan la selección de métricas y las categorías en Health.md.</a>
+  <a href="/es/docs/format/"><span>Formatos</span>Markdown, Bases, JSON, CSV, unidades, nombres de archivo y frontmatter.</a>
+  <a href="/es/docs/visualizations-roadmap/"><span>Obsidian</span>Cómo el JSON y el Markdown exportados alimentan las visualizaciones de Health.md.</a>
 </div>
 
 <p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:14px;">Última actualización: 2026-08-03</p>

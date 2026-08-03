@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { publishedLocales } from "../i18n/locales.mjs";
+import { routePath } from "../i18n/routes.mjs";
+import { expectedVercelConfig } from "../scripts/build-vercel-config.mjs";
 
-const config = JSON.parse(
-  await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
-);
+const configSource = await readFile(new URL("../vercel.json", import.meta.url), "utf8");
+const config = JSON.parse(configSource);
+
+test("Vercel config is generated from the locale manifest", async () => {
+  assert.equal(configSource, await expectedVercelConfig());
+});
 
 test("Vercel applies security headers to extensionless and directory routes", () => {
   const globalHeaders = config.headers.find((entry) => entry.source === "/(.*)");
@@ -25,7 +31,11 @@ test("Vercel applies security headers to extensionless and directory routes", ()
 });
 
 test("Vercel preserves canonical directory redirects and immutable docs assets", () => {
-  for (const route of ["/docs", "/es", "/es/docs", "/blog", "/visualizations"]) {
+  const localizedRoutes = publishedLocales('redirect').flatMap(({ code }) => [
+    routePath('home', code).replace(/\/$/, ''),
+    routePath('docsHome', code).replace(/\/$/, ''),
+  ]);
+  for (const route of ["/docs", ...localizedRoutes, "/blog", "/visualizations"]) {
     const redirect = config.redirects.find((entry) => entry.source === route);
     assert.deepEqual(redirect, {
       source: route,

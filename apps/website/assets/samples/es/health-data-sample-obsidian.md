@@ -3,6 +3,7 @@ date: 2026-08-02
 type: health-data
 tags:
   - health/summary
+sampleData: true
 ---
 
 # Muestra de datos de salud

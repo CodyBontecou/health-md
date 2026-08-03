@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="pt-BR" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidade — Health.md</title>
+  <meta name="description" content="Política de Privacidade do Health.md: os dados de saúde permanecem nos dispositivos e destinos controlados pelo usuário; a análise limitada e pseudonimizada do produto nunca inclui registros de saúde nem exportações.">
+  <link rel="canonical" href="https://healthmd.app/pt-br/privacy-policy.html">
+  <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
+  <link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html">
+  <link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html">
+  <meta name="robots" content="noindex,follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Health.md">
+  <meta property="og:title" content="Política de Privacidade — Health.md">
+  <meta property="og:description" content="Política de Privacidade do Health.md: os dados de saúde permanecem nos dispositivos e destinos controlados pelo usuário; a análise limitada e pseudonimizada do produto nunca inclui registros de saúde nem exportações.">
+  <meta property="og:url" content="https://healthmd.app/pt-br/privacy-policy.html">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta name="theme-color" content="#6d4aff">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="../assets/app-icon/icon_16x16.png">
+  <link rel="icon" type="image/png" sizes="20x20" href="../assets/app-icon/icon_20x20.png">
+  <link rel="icon" type="image/png" sizes="29x29" href="../assets/app-icon/icon_29x29.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/app-icon/icon_32x32.png">
+  <link rel="icon" type="image/png" sizes="40x40" href="../assets/app-icon/icon_40x40.png">
+  <link rel="icon" type="image/png" sizes="60x60" href="../assets/app-icon/icon_60x60.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../assets/app-icon/icon_192x192.png">
+  <link rel="icon" type="image/png" sizes="1024x1024" href="../assets/app-icon/icon_1024x1024.png">
+  <link rel="apple-touch-icon" sizes="76x76" href="../assets/app-icon/icon_76x76.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="../assets/app-icon/icon_120x120.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="../assets/app-icon/icon_152x152.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="../assets/app-icon/icon_167x167.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="../assets/theme.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-primary: #f4f2f8;
+      --bg-secondary: #fbfaff;
+      --bg-tertiary: #e9e5f1;
+      --text-primary: #202024;
+      --text-secondary: #42404a;
+      --text-muted: #6f6a7c;
+      --accent: #6d4aff;
+      --accent-dim: #4f2bbd;
+      --accent-glow: rgba(109, 74, 255, 0.14);
+      --border: #d4cde0;
+      --success: #9b5cf6;
+      --on-accent: #ffffff;
+      --mono: 'JetBrains Mono', 'Space Mono', monospace;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg-primary: #18181d;
+      --bg-secondary: #24222c;
+      --bg-tertiary: #211f28;
+      --text-primary: #f0eef7;
+      --text-secondary: #d3cedf;
+      --text-muted: #aaa3b8;
+      --accent: #a78bfa;
+      --accent-dim: #6d4aff;
+      --accent-glow: rgba(167, 139, 250, 0.18);
+      --border: #3b3549;
+      --success: #c4b5fd;
+      --on-accent: #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg-primary: #18181d;
+        --bg-secondary: #24222c;
+        --bg-tertiary: #211f28;
+        --text-primary: #f0eef7;
+        --text-secondary: #d3cedf;
+        --text-muted: #aaa3b8;
+        --accent: #a78bfa;
+        --accent-dim: #6d4aff;
+        --accent-glow: rgba(167, 139, 250, 0.18);
+        --border: #3b3549;
+        --success: #c4b5fd;
+        --on-accent: #ffffff;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 17px;
+      line-height: 1.75;
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .grid-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .logo-mark::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .logo-text {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .logo-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+
+    .logo-subtext a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .logo-subtext a:hover {
+      color: var(--accent);
+    }
+
+    .back-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+
+    .header-actions {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .language-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .language-selector a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .language-selector a:hover {
+      color: var(--accent);
+    }
+
+    .language-selector [aria-current="page"] {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .theme-toggle {
+      flex: 0 0 auto;
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      background: var(--bg-secondary);
+    }
+
+    .theme-toggle button {
+      min-width: 44px;
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font: 700 10px/1 var(--mono);
+      text-transform: uppercase;
+    }
+
+    .theme-toggle button[aria-pressed="true"] {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+
+    main {
+      padding-top: 140px;
+      padding-bottom: 80px;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      margin-bottom: 60px;
+    }
+
+    .page-label {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      font-size: clamp(40px, 7vw, 56px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      line-height: 1.05;
+    }
+
+    .page-meta {
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    .content-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 52px;
+      margin-bottom: 32px;
+    }
+
+    .content-box h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      margin-top: 40px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .content-box h2:first-child {
+      margin-top: 0;
+    }
+
+    .content-box h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      margin-top: 32px;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .content-box p {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 18px;
+      line-height: 1.9;
+    }
+
+    .content-box ul {
+      margin: 20px 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .content-box ul li {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      padding-left: 28px;
+      position: relative;
+      line-height: 1.9;
+    }
+
+    .content-box ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .content-box strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .highlight-box {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-dim);
+      border-radius: 4px;
+      padding: 24px;
+      margin: 32px 0;
+    }
+
+    .highlight-box p {
+      margin-bottom: 0;
+      color: var(--text-primary);
+    }
+
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 16px 0;
+      }
+
+      .header-inner {
+        align-items: flex-start;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .header-actions {
+        margin-left: auto;
+      }
+
+      .content-box {
+        padding: 30px 22px;
+      }
+
+      .page-title {
+        font-size: 38px;
+      }
+
+      .content-box p,
+      .content-box ul li {
+        font-size: 16px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        padding-top: 152px;
+      }
+
+      .container,
+      .header-inner {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .logo-subtext {
+        display: none;
+      }
+
+      .page-label,
+      .back-link {
+        font-size: 12px;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .theme-toggle button {
+        min-width: 38px;
+        padding: 6px;
+        font-size: 9px;
+      }
+
+      .content-box {
+        padding: 24px 18px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .back-link,
+      .theme-toggle {
+        width: 100%;
+      }
+
+      .back-link {
+        justify-content: center;
+      }
+
+      .theme-toggle button {
+        min-width: 0;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="../assets/theme-icons.css">
+</head>
+<body>
+  <div class="grid-bg"></div>
+
+  <header>
+    <div class="header-inner">
+      <a href="../index.html" class="logo" aria-label="Health.md — página inicial">
+        <div class="logo-mark"></div>
+        <div class="logo-content">
+          <span class="logo-text">health.md</span>
+          <span class="logo-subtext">criado por <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span>
+        </div>
+      </a>
+      <div class="header-actions">
+        <nav class="language-selector" aria-label="Seletor de idioma">
+          <span aria-current="page">Português</span>
+          <span aria-hidden="true">/</span>
+          <a href="../privacy-policy.html" hreflang="en" lang="en">English</a>
+        </nav>
+        <a href="../index.html" class="back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          Voltar
+        </a>
+        <div class="theme-toggle" role="group" aria-label="Tema de cores">
+          <button type="button" data-theme-option="system" aria-pressed="true">Sistema</button>
+          <button type="button" data-theme-option="light" aria-pressed="false">Claro</button>
+          <button type="button" data-theme-option="dark" aria-pressed="false">Escuro</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="page-header">
+        <p class="page-label">Informações legais</p>
+        <h1 class="page-title">Política de Privacidade</h1>
+        <p class="page-meta">Última atualização: 2 de agosto de 2026</p>
+      </div>
+
+      <div class="content-box">
+        <div class="highlight-box">
+          <p><strong>Aviso sobre a tradução:</strong> Esta versão em português do Brasil é fornecida apenas para sua conveniência. Em caso de divergência ou conflito, prevalece a <a href="../privacy-policy.html" hreflang="en" style="color: var(--accent); text-decoration: underline;">versão em inglês da Política de Privacidade</a>.</p>
+        </div>
+
+        <div class="highlight-box">
+          <p><strong>Versão resumida:</strong> O Health.md não coleta nem armazena dados de saúde em servidores do Health.md. Os dados do HealthKit e do Health Connect são processados nos seus dispositivos e enviados apenas aos destinos que você escolher, incluindo pastas, provedores de arquivos, dispositivos emparelhados ou um endpoint de API configurado pelo usuário. O Health.md coleta automaticamente dados próprios e limitados de análise do produto, sem SDK de terceiros para análise, publicidade ou atribuição no app. Esses eventos nunca incluem valores de saúde, nomes de métricas, datas de saúde, conteúdo exportado, caminhos, nomes de dispositivos emparelhados, credenciais ou texto do usuário e não são usados para publicidade nem rastreamento entre apps.</p>
+        </div>
+
+        <h2>Nosso compromisso com a privacidade</h2>
+        <p>
+          Seus dados de saúde pertencem a você. O Health.md só os lê após a permissão da plataforma e não mantém uma cópia em servidor. Esta política explica as exportações e transferências comandadas pelo usuário, as análises próprias e limitadas do produto e do site e a atribuição própria e minimizada de campanhas.
+        </p>
+
+        <h2>Coleta de dados</h2>
+        <p>
+          <strong>As exportações não exigem uma conta do Health.md nem enviam dados de saúde aos servidores do Health.md.</strong> Especificamente:
+        </p>
+        <ul>
+          <li>Não é necessário criar uma conta nem se cadastrar para exportar dados de saúde</li>
+          <li>Nenhuma amostra do HealthKit, registro do Health Connect, documento de exportação, resultado de consulta tipada ou anexo de saúde é coletado ou retido pelos serviços do Health.md</li>
+          <li>Não há SDK de terceiros no app para análise, atribuição, relatórios de falhas, publicidade ou rastreamento</li>
+          <li>Dados de análise do produto ou atribuição de campanha não incluem Advertising ID, Android ID, identificador de hardware, pixel de rastreamento, amostra de saúde, conteúdo de exportação nem caminho de arquivo ou pasta</li>
+          <li>Dados próprios e limitados sobre o produto e as campanhas são coletados apenas conforme descrito abaixo</li>
+        </ul>
+
+        <h2>Atribuição de campanhas operada pelo Health.md</h2>
+        <p>
+          O Health.md usa links próprios de campanha, como <code>healthmd.app/v/yt-csv-001</code>, para medir o desempenho agregado das campanhas sem um SDK de atribuição de terceiros. O serviço de redirecionamento da Cloudflare registra um token de campanha, o slug do link, a plataforma da campanha e o ângulo do conteúdo, uma categoria ampla de destino/cliente, o nome do host de referência quando fornecido, um código de país amplo e um carimbo de data e hora. A linha de clique armazenada não inclui endereço IP nem o User-Agent completo.
+        </p>
+        <p>
+          No Android, o Google Play Install Referrer pode associar à campanha uma instalação resultante. Para uma instalação válida de campanha, o app Android envia um evento contendo UUIDs aleatórios de instalação e de evento gerados pelo app, versão e número da compilação do app, metadados validados de token, origem, mídia e conteúdo da campanha, horário do evento e, opcionalmente, carimbos de data e hora do clique de referência e do início da instalação no Play. O UUID aleatório de instalação é um identificador pseudônimo persistente daquela instalação; ele não é derivado de um identificador do dispositivo ou de publicidade. O Health.md nunca persiste nem transmite o Install Referrer bruto completo.
+        </p>
+        <p>
+          Cliques de campanha e instalações atribuídas são relacionados apenas pelo token de campanha validado para relatórios agregados. Os registros de atribuição de campanha são mantidos por no máximo 13 meses. Os contadores agregados da taxa de ingestão contêm somente uma janela de um minuto e uma contagem e são excluídos após 24 horas. A Cloudflare processa informações comuns de conexão de rede conforme seus próprios termos, mas o Health.md não adiciona endereços IP, User-Agents completos, IDs de solicitação da Cloudflare, cookies ou dados de impressão digital aos registros de atribuição de instalação.
+        </p>
+
+        <h2>Análises do produto operadas pelo Health.md</h2>
+        <p>
+          O Health.md usa um Cloudflare Worker próprio e um banco de dados D1 para entender, de forma ampla, o desempenho da introdução, ativação, exportação, tela de compra e fluxo de compra sem um SDK de análise de terceiros. O app envia um UUID aleatório de instalação e um UUID aleatório de evento, o nome do evento, a versão, compilação e plataforma do app e somente os campos amplos pertinentes incluídos na lista de permissões: etapa da introdução ou configuração ignorada explicitamente, contagens de exportações gratuitas, categoria do destino de exportação, quantidade de formatos, faixas de contagem de métricas e de duração do intervalo de datas, contexto da tela de compra, identificador de produto do StoreKit ou Google Play, resultado da compra ou restauração e categoria ampla de autorização ou erro.
+        </p>
+        <p>
+          A análise do produto nunca inclui valores nem identificadores do HealthKit ou Health Connect, nomes de métricas, datas de saúde, medicamentos, treinos, conteúdo de exportações, resultados de consultas tipadas, nomes ou caminhos de pastas, cofres ou arquivos, nomes de dispositivos emparelhados ou de outros dispositivos, dados de contas, credenciais ou tokens, texto do usuário, Advertising ID, Android ID, identificadores de hardware, referências brutas, User-Agent completo ou endereços IP armazenados. Campos desconhecidos de envelope, evento, propriedade e valor de propriedade são rejeitados pelo serviço de ingestão. O UUID aleatório de instalação permanece durante a instalação do app, portanto é pseudônimo, não anônimo; ele não é derivado de um identificador de dispositivo, conta, publicidade ou saúde.
+        </p>
+        <p>
+          O Health.md coleta automaticamente esses eventos limitados do produto. A análise do produto não é compartilhada com anunciantes nem usada para publicidade, impressão digital ou rastreamento entre apps. As listas públicas de permissões do cliente e do Worker do Health.md foram projetadas para impedir que registros de saúde e conteúdo exportado sejam representados em um payload de análise.
+        </p>
+        <p>
+          As linhas validadas de análise do produto são mantidas por no máximo 13 meses e depois excluídas por uma limpeza diária automática. O Health.md não adiciona às linhas de análise endereços IP brutos, User-Agents completos, URLs de solicitação, cabeçalhos de solicitação, credenciais nem corpos de solicitação além dos campos validados do evento. A Cloudflare processa informações comuns de conexão de rede conforme seus próprios termos.
+        </p>
+
+        <h2>Como o app funciona</h2>
+        <p>
+          O Health.md lê localmente seus dados do Apple Health usando as APIs do HealthKit fornecidas pela Apple e lê localmente os dados de saúde do Android pelo Health Connect. O iPhone continua sendo a fonte das exportações do HealthKit; o Android continua sendo a fonte das exportações do Health Connect; o app para Mac pode funcionar como destino local quando você ativa a sincronização com o Mac. Esses dados:
+        </p>
+        <ul>
+          <li>Permanecem no banco de dados HealthKit da Apple ou no Health Connect do Android, a menos que você os exporte explicitamente</li>
+          <li>São processados no seu dispositivo para a exportação solicitada</li>
+          <li>São exportados apenas para destinos escolhidos por você, como Arquivos, iCloud Drive, provedores de documentos do Android, provedores de arquivos de terceiros, cofres do Obsidian, um Mac ou uma CLI emparelhados ou um endpoint de API configurado pelo usuário</li>
+          <li>Não são enviados a um banco de dados de saúde do Health.md nem retidos pelo Health.md para consultas futuras</li>
+        </ul>
+
+        <h2>Registros médicos do Android Health Connect</h2>
+        <p>
+          O Health.md é um app somente de leitura para portabilidade de dados de saúde e gerenciamento de registros pessoais. Em dispositivos Android compatíveis, seu recurso de exportação <strong>Registros médicos (FHIR)</strong>, visível ao usuário, pode ler recursos médicos autorizados explicitamente pelo usuário no Health Connect. O Health.md solicita acesso de leitura separado para cada categoria porque o Health Connect divide um registro médico pessoal portátil nestas categorias:
+        </p>
+        <ul>
+          <li><strong>Vacinas:</strong> histórico de imunizações</li>
+          <li><strong>Alergias e intolerâncias:</strong> registros AllergyIntolerance</li>
+          <li><strong>Condições:</strong> diagnósticos e histórico da lista de problemas</li>
+          <li><strong>Resultados laboratoriais:</strong> registros laboratoriais Observation</li>
+          <li><strong>Medicamentos:</strong> registros Medication, MedicationRequest e MedicationStatement</li>
+          <li><strong>Dados pessoais:</strong> registros Patient que identificam e fornecem contexto demográfico ao registro do usuário</li>
+          <li><strong>Dados do profissional de saúde:</strong> registros Practitioner e PractitionerRole referenciados pelos registros de atendimento</li>
+          <li><strong>Gravidez:</strong> registros médicos relacionados à gravidez</li>
+          <li><strong>Procedimentos:</strong> histórico de procedimentos</li>
+          <li><strong>Histórico social:</strong> observações de estilo de vida e contexto clínico registradas pelo sistema de origem</li>
+          <li><strong>Consultas:</strong> histórico de Encounter e consultas de atendimento</li>
+          <li><strong>Sinais vitais:</strong> observações clínicas de sinais vitais armazenadas no registro médico</li>
+        </ul>
+        <p>
+          Essas permissões são usadas apenas para incluir uma categoria autorizada em uma exportação iniciada ou agendada pelo usuário. As exportações JSON e nativas do provedor preservam os dados dos recursos FHIR e os metadados de origem fornecidos pelo Health Connect; os resumos Markdown e CSV informam a quantidade de recursos médicos por categoria. O Health.md não diagnostica condições, não recomenda tratamentos, não grava no Health Connect nem usa dados de saúde para publicidade, criação de perfil ou decisões de crédito, seguro ou emprego.
+        </p>
+        <p>
+          Todas as categorias do Health Connect são opcionais. Os usuários podem negar ou revogar uma categoria a qualquer momento; as demais exportações autorizadas continuam funcionando. O Health.md não mantém uma cópia dos dados do Android Health Connect em servidor. Os registros exportados permanecem na pasta, no provedor de documentos, no cofre, no dispositivo emparelhado ou no endpoint HTTPS configurado pelo usuário até que ele os exclua pelos controles desse destino.
+        </p>
+
+        <h2>Armazenamento de dados</h2>
+        <p>
+          O Health.md não armazena dados do Apple Health, do Health Connect ou outros dados de saúde em servidores do Health.md:
+        </p>
+        <ul>
+          <li><strong>Dados de origem:</strong> os dados do Apple Health permanecem no HealthKit, e os dados de saúde do Android permanecem no Health Connect</li>
+          <li><strong>Dados exportados:</strong> arquivos Markdown, Obsidian, CSV e JSON são gravados no destino selecionado por você</li>
+          <li><strong>Transferências diretas:</strong> fluxos com Mac e CLI emparelhados recebem os dados diretamente da fonte móvel e mantêm seu próprio estado local das tarefas</li>
+          <li><strong>Sincronização do provedor de arquivos:</strong> se a pasta escolhida for vinculada ao iCloud Drive, Dropbox, Google Drive, Working Copy, Syncthing, OneDrive ou outro provedor, esse provedor processará o armazenamento e a sincronização conforme seus próprios termos</li>
+          <li><strong>Endpoint de API:</strong> se configurado, as exportações selecionadas vão diretamente para esse endpoint e seguem seus controles de segurança, registro, retenção e exclusão</li>
+          <li><strong>Preferências do app:</strong> configurações de agendamento, pasta, modelo, conexão e desbloqueio são armazenadas com o armazenamento da plataforma, StoreKit ou Google Play Billing</li>
+        </ul>
+        <p>
+          Não temos acesso aos bancos de dados de saúde de origem, arquivos de exportação locais ou destinos controlados por você. Os registros separados de análise do produto e atribuição de campanha descritos acima não contêm dados de saúde nem conteúdo de exportações.
+        </p>
+
+        <h2>Serviços de terceiros</h2>
+        <p>
+          O Health.md não inclui SDKs de publicidade, SDKs de terceiros para análise/atribuição nem rastreamento de terceiros no app. O app interage com serviços das plataformas, infraestrutura própria do produto e de campanhas e destinos escolhidos por você:
+        </p>
+        <ul>
+          <li><strong>Apple HealthKit:</strong> para ler localmente seus dados do Apple Health no dispositivo, com sua permissão explícita</li>
+          <li><strong>Android Health Connect:</strong> para ler localmente registros de saúde do Android no dispositivo, com sua permissão explícita</li>
+          <li><strong>APIs opcionais de provedores de saúde:</strong> se você ativar explicitamente uma importação direta de provedor, o app poderá usar fluxos OAuth do provedor e armazenar tokens do provedor no dispositivo para solicitar dados diretamente dele. O Health.md não usa esses provedores a menos que você os conecte.</li>
+          <li><strong>Arquivos da Apple, Storage Access Framework do Android e provedores de arquivos:</strong> para gravar os arquivos exportados na pasta escolhida por você</li>
+          <li><strong>StoreKit, App Store e Google Play Billing:</strong> para comprar ou restaurar o desbloqueio único Full Access</li>
+          <li><strong>Google Play Install Referrer:</strong> no Android, para associar uma instalação decorrente de um link de campanha válido do Health.md a metadados próprios e sanitizados da campanha</li>
+          <li><strong>Cloudflare:</strong> para receber dados próprios de análise do produto incluídos na lista de permissões, operar redirecionamentos de campanhas, armazenar registros minimizados do produto, cliques e instalações no D1, executar a limpeza por retenção, aplicar limitação agregada contra abusos e fornecer entrega e análise do site</li>
+          <li><strong>Rede local / conectividade próxima:</strong> para descobrir e gravar no destino opcional do Mac quando você ativa a sincronização com o Mac</li>
+        </ul>
+
+        <h2>Análise do site</h2>
+        <p>
+          O site healthmd.app usa o Cloudflare Web Analytics após uma pequena verificação de ativação da análise. O Cloudflare Web Analytics é usado para entender o tráfego agregado, o desempenho e as páginas mais acessadas do site. Ele não usa cookies no cliente neste site e não está conectado aos seus dados do Apple Health ou Health Connect, arquivos exportados, estado de compra no StoreKit ou Google Play nem configurações do app.
+        </p>
+        <p>
+          As páginas do site também podem solicitar fontes ou recursos de CDNs de terceiros, como Google Fonts ou jsDelivr. Esses provedores podem receber informações padrão de solicitações da web, como seu endereço IP, navegador, página de referência e URL solicitada, conforme suas próprias políticas.
+        </p>
+
+        <h2>Atividade de rede</h2>
+        <p>
+          <strong>Os fluxos locais de exportação não enviam dados de saúde ao Health.md.</strong> A atividade de rede limita-se a recursos iniciados por você ou serviços das plataformas, como:
+        </p>
+        <ul>
+          <li>Fluxos de compra ou restauração do StoreKit, App Store e Google Play para Full Access</li>
+          <li>Descoberta e transferência pela rede local quando você ativa o destino Mac</li>
+          <li>Sincronização pelo iCloud Drive, por provedor de documentos do Android ou por provedor de arquivos de terceiros se você escolher essas pastas para os arquivos exportados</li>
+          <li>Solicitações opcionais OAuth ou de API do provedor se você conectar explicitamente uma fonte direta de saúde compatível</li>
+          <li>Consultas diretas ao vivo de um cliente CLI ou MCP emparelhado explicitamente enquanto a fonte móvel estiver disponível; o Health.md não retém esses resultados em seus servidores</li>
+          <li>Entrega de exportação solicitada pelo usuário a um endpoint de API HTTPS se você configurar e selecionar explicitamente esse destino</li>
+          <li>Atualizações do app entregues pela App Store ou pelo Google Play</li>
+          <li>Dados próprios de análise da introdução, ativação, exportação, tela de compra e fluxo de compra incluídos na lista de permissões, conforme descrito acima</li>
+          <li>Redirecionamentos próprios de campanha e atribuição de instalações de campanhas no Android, conforme descrito acima</li>
+          <li>Análise do site e solicitações a CDNs quando você visita healthmd.app em um navegador</li>
+        </ul>
+
+        <h2>Permissões</h2>
+        <p>
+          O Health.md pode solicitar as seguintes permissões das plataformas:
+        </p>
+        <ul>
+          <li><strong>Dados de Saúde (HealthKit):</strong> para ler as categorias do Apple Health que você selecionar para exportações comandadas pelo usuário e consultas diretas. Você pode conceder ou revogar categorias em Ajustes do iOS → Saúde → Acesso a Dados e Dispositivos → Health.md.</li>
+          <li><strong>Dados de condicionamento físico e bem-estar do Health Connect:</strong> para ler as categorias específicas de condicionamento físico, bem-estar, atividade, corpo, nutrição, saúde reprodutiva e sinais vitais do Android que você autorizar para exportações controladas pelo usuário.</li>
+          <li><strong>Registros médicos do Health Connect:</strong> para ler as categorias autorizadas separadamente de Vacinas, Alergias/Intolerâncias, Condições, Resultados Laboratoriais, Medicamentos, Dados Pessoais, Dados do Profissional, Gravidez, Procedimentos, Histórico Social, Consultas e Sinais Vitais Médicos para o recurso de exportação Registros médicos (FHIR) descrito acima.</li>
+          <li><strong>Acesso ao sistema de arquivos:</strong> para gravar arquivos exportados no local do sistema de arquivos escolhido por você. Você seleciona esse local pelo seletor de arquivos da Apple ou pelo seletor do Storage Access Framework do Android.</li>
+          <li><strong>Rede local:</strong> para descobrir o app complementar do Mac e enviar tarefas de exportação quando você ativa a sincronização com o Mac.</li>
+          <li><strong>Notificações:</strong> para avisar quando uma exportação agendada precisa de ação manual ou é concluída.</li>
+        </ul>
+        <p>
+          Essas permissões são usadas apenas para as finalidades declaradas e podem ser revogadas a qualquer momento nos ajustes do iOS, iPadOS, macOS ou Android.
+        </p>
+
+        <h2>Privacidade de crianças e adolescentes</h2>
+        <p>
+          O Health.md não busca nomes, informações de contato, dados de saúde ou perfis de conta para publicidade ou criação de perfis direcionados a crianças e adolescentes. A medição do site e de campanhas descrita acima destina-se à medição de desempenho agregado, não à criação de perfis nem à publicidade direcionada a crianças e adolescentes.
+        </p>
+
+        <h2>Segurança dos dados</h2>
+        <p>
+          O Health.md usa salvaguardas técnicas e organizacionais adequadas a cada forma de armazenamento:
+        </p>
+        <ul>
+          <li>Os dados do Apple HealthKit são protegidos pela segurança do dispositivo Apple e pelas permissões do HealthKit; os dados de saúde do Android são protegidos pela segurança do dispositivo Android e pelas permissões do Health Connect</li>
+          <li>Os arquivos exportados são protegidos pelo sistema de arquivos, cofre, unidade na nuvem, provedor de documentos do Android ou pasta do Mac onde você os armazena</li>
+          <li>O Health.md exige HTTPS para o modo protegido de exportação a um Endpoint de API; o serviço de destino controla seu próprio armazenamento e retenção</li>
+          <li>As transferências diretas com Mac e CLI usam canais autenticados e criptografados, quadros limitados, verificações de integridade e emparelhamento explícito</li>
+          <li>Recomendamos usar códigos de acesso nos dispositivos, manter iOS, iPadOS, macOS e Android atualizados e revisar as permissões de qualquer provedor de sincronização utilizado</li>
+        </ul>
+
+        <h2>Seus direitos e controles</h2>
+        <p>
+          Os registros de análise do produto e de campanhas são pseudônimos e expiram automaticamente em até 13 meses. Você controla as permissões das fontes, o estado local de atribuição, o emparelhamento direto e os arquivos exportados:
+        </p>
+        <ul>
+          <li><strong>Acesso:</strong> gerencie dados do Apple Health pelo Apple Health, dados do Android pelo Health Connect e arquivos exportados pelo destino escolhido</li>
+          <li><strong>Alterações de permissões:</strong> revogue o acesso ao HealthKit, Health Connect, provedor, arquivo, rede local, notificações ou emparelhamento pelos controles pertinentes do app ou da plataforma</li>
+          <li><strong>Análise do produto:</strong> eventos limitados do produto são coletados automaticamente sob as rigorosas exclusões de campos acima e expiram em até 13 meses</li>
+          <li><strong>Exclusão:</strong> exclua os arquivos pelo destino. Desinstalar o Health.md remove o estado local do app, mas não exclui arquivos já gravados em um provedor de arquivos, computador emparelhado, cofre ou endpoint de API. As linhas de análise entregues expiram automaticamente conforme a política de retenção.</li>
+          <li><strong>Portabilidade:</strong> arquivos Markdown, Obsidian, CSV e JSON exportados podem ser usados fora do Health.md</li>
+          <li><strong>Dúvidas sobre campanhas:</strong> os registros próprios de campanhas expiram no prazo indicado acima; fale conosco em caso de dúvidas ou solicitações sobre privacidade</li>
+        </ul>
+
+        <h2>Alterações desta política</h2>
+        <p>
+          Se alterarmos significativamente nossas práticas de privacidade, atualizaremos esta política e avisaremos os usuários por uma atualização do app ou do site. A data de “Última atualização” no início desta política indica quando as alterações foram feitas.
+        </p>
+
+        <h2>Código aberto</h2>
+        <p>
+          Partes da lógica de processamento de dados do Health.md podem estar disponíveis para análise como código aberto ou na documentação, permitindo que os usuários auditem como as exportações são estruturadas. Consulte a documentação ou o repositório do projeto para verificar a disponibilidade atual do código-fonte.
+        </p>
+
+        <h2>Contato</h2>
+        <p>
+          Se tiver dúvidas sobre esta política de privacidade ou sobre como o health.md funciona, entre em contato conosco:
+        </p>
+        <p>
+          <strong>E-mail:</strong> privacy@isolated.tech<br>
+          <strong>Site:</strong> https://isolated.tech
+        </p>
+
+        <h2>Jurisdição</h2>
+        <p>
+          Esta política de privacidade é regida pelas leis da jurisdição onde o health.md opera. Os registros pseudonimizados de análise do produto, a atribuição de campanhas, a análise do site, as solicitações OAuth/CDN de provedores e outros processamentos não relacionados à saúde descritos acima podem estar sujeitos às leis de privacidade aplicáveis, dependendo da sua localização.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <p class="footer-text">© 2026 health.md. Criado com cuidado.</p>
+        <div class="footer-links" aria-label="Links jurídicos e de suporte">
+          <a href="privacy-policy.html" aria-current="page">Política de Privacidade</a>
+          <a href="terms-of-service.html">Termos</a>
+          <a href="mailto:cody@isolated.tech">Suporte</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <script src="../assets/analytics.js" defer></script>
+</body>
+</html>

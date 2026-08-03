@@ -1,17 +1,25 @@
 ---
 import DefaultHead from '@astrojs/starlight/components/Head.astro';
-import { englishDocsPath, hasSpanishDocTranslation } from '../../../i18n/routes.mjs';
+import {
+  defaultLocale,
+  localeFor,
+} from '../../../i18n/locales.mjs';
+import {
+  docsPathForSlug,
+  englishDocsPath,
+  localeFromPathname,
+  translatedLocalesForDoc,
+} from '../../../i18n/routes.mjs';
 
 const route = Astro.locals.starlightRoute;
 const { entry, head, lang, siteTitle, isFallback } = route;
-const isSpanish = lang === 'es' || lang.startsWith('es-');
-const isSpanishContent = isSpanish && !isFallback;
-const translationExists = hasSpanishDocTranslation(Astro.url.pathname);
+const routeLocaleCode = localeFromPathname(Astro.url.pathname);
+const routeLocale = localeFor(routeLocaleCode);
+const contentLocale = isFallback ? localeFor(defaultLocale) : routeLocale;
+const translationLocales = isFallback ? [] : translatedLocalesForDoc(Astro.url.pathname);
 const site = Astro.site ?? new URL('https://healthmd.app');
 const englishPath = englishDocsPath(Astro.url.pathname);
-const spanishPath = englishPath.replace(/^\/docs(?=\/|$)/, '/es/docs');
 const englishCanonical = new URL(englishPath, site).href;
-const spanishCanonical = new URL(spanishPath, site).href;
 const pageCanonical = isFallback ? englishCanonical : new URL(Astro.url.pathname, site).href;
 
 const canonicalEntry = head.find(
@@ -25,37 +33,46 @@ for (let index = head.length - 1; index >= 0; index -= 1) {
     head.splice(index, 1);
   }
 }
-head.push(
-  { tag: 'link', attrs: { rel: 'alternate', hreflang: 'en', href: englishCanonical } },
-  { tag: 'link', attrs: { rel: 'alternate', hreflang: 'x-default', href: englishCanonical } },
-);
-if (translationExists) {
-  head.push({ tag: 'link', attrs: { rel: 'alternate', hreflang: 'es', href: spanishCanonical } });
+for (const localeCode of translationLocales) {
+  const locale = localeFor(localeCode);
+  const slug = englishPath.replace(/^\/docs\/?/, '').replace(/\/$/, '');
+  head.push({
+    tag: 'link',
+    attrs: {
+      rel: 'alternate',
+      hreflang: locale.lang,
+      href: new URL(docsPathForSlug(slug, localeCode), site).href,
+    },
+  });
+}
+if (!isFallback) {
+  head.push({
+    tag: 'link',
+    attrs: { rel: 'alternate', hreflang: 'x-default', href: englishCanonical },
+  });
 }
 if (isFallback && !head.some(({ tag, attrs }) => tag === 'meta' && attrs?.name === 'robots')) {
   head.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex,follow' } });
 }
 
+const imageUrl = new URL(contentLocale.assets.docsOgImage, site).href;
 for (const item of head) {
   if (item.tag !== 'meta' || !item.attrs) continue;
-  if (item.attrs.property === 'og:locale') item.attrs.content = isSpanishContent ? 'es_ES' : 'en_US';
-  if (isSpanishContent && (item.attrs.property === 'og:image' || item.attrs.name === 'twitter:image')) {
-    item.attrs.content = 'https://healthmd.app/docs/social/docs-og-es.png';
+  if (item.attrs.property === 'og:locale') item.attrs.content = contentLocale.ogLocale;
+  if (item.attrs.property === 'og:url') item.attrs.content = pageCanonical;
+  if (item.attrs.property === 'og:image' || item.attrs.name === 'twitter:image') {
+    item.attrs.content = imageUrl;
   }
-  if (
-    isSpanishContent &&
-    (item.attrs.property === 'og:image:alt' || item.attrs.name === 'twitter:image:alt')
-  ) {
-    item.attrs.content = 'Documentación de Health.md: exporta, consulta, automatiza y crea';
+  if (item.attrs.property === 'og:image:alt' || item.attrs.name === 'twitter:image:alt') {
+    item.attrs.content = contentLocale.ui.docsOgImageAlt;
   }
 }
-if (translationExists) {
+for (const localeCode of translationLocales) {
+  const locale = localeFor(localeCode);
+  if (locale.code === contentLocale.code) continue;
   head.push({
     tag: 'meta',
-    attrs: {
-      property: 'og:locale:alternate',
-      content: isSpanish ? 'en_US' : 'es_ES',
-    },
+    attrs: { property: 'og:locale:alternate', content: locale.ogLocale },
   });
 }
 
@@ -73,14 +90,17 @@ const pathParts = canonicalURL.pathname.split('/').filter(Boolean);
 const pretty = (value: string) => decodeURIComponent(value)
   .replaceAll('-', ' ')
   .replace(/\b\w/g, (character) => character.toUpperCase());
+const docsPart = pathParts.indexOf('docs');
 const breadcrumbs = pathParts.map((part, index) => ({
   '@type': 'ListItem',
   position: index + 1,
-  name: index === 0
-    ? isSpanish ? `Documentación de ${siteTitle}` : `${siteTitle} docs`
+  name: index === docsPart
+    ? `${siteTitle} ${contentLocale.ui.docsBreadcrumb}`
     : index === pathParts.length - 1
       ? entry.data.title
-      : pretty(part),
+      : index === 0 && routeLocaleCode !== defaultLocale
+        ? routeLocale.label
+        : pretty(part),
   item: new URL(`/${pathParts.slice(0, index + 1).join('/')}/`, canonicalURL).href,
 }));
 const jsonLD = JSON.stringify({
@@ -93,7 +113,7 @@ const jsonLD = JSON.stringify({
       description,
       url: pageCanonical,
       image,
-      inLanguage: lang,
+      inLanguage: contentLocale.lang,
       publisher: {
         '@type': 'Organization',
         name: 'Health.md',

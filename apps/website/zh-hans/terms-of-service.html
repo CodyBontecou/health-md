@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="zh-Hans">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>服务条款 — Health.md</title>
+<meta content="Health.md 关于 Apple Health 与 Android Health Connect 导出、Full Access、本地优先文件目标、医疗免责声明及应用商店退款处理的服务条款。" name="description"/>
+<link href="https://healthmd.app/zh-hans/terms-of-service.html" rel="canonical"/><link href="https://healthmd.app/terms-of-service.html" hreflang="en" rel="alternate"/><link href="https://healthmd.app/terms-of-service.html" hreflang="x-default" rel="alternate"/><link href="https://healthmd.app/zh-hans/terms-of-service.html" hreflang="zh-Hans" rel="alternate"/>
+<meta content="noindex,follow" name="robots"/>
+<meta content="website" property="og:type"/>
+<meta content="Health.md" property="og:site_name"/>
+<meta content="服务条款 — Health.md" property="og:title"/>
+<meta content="Health.md 关于 Apple Health 与 Android Health Connect 导出、Full Access、本地优先文件目标、医疗免责声明及应用商店退款处理的服务条款。" property="og:description"/>
+<meta content="https://healthmd.app/zh-hans/terms-of-service.html" property="og:url"/>
+<meta content="zh_CN" property="og:locale"/><meta content="en_US" property="og:locale:alternate"/>
+
+<meta content="#6d4aff" name="theme-color"/>
+<link href="../assets/favicon.ico" rel="icon" sizes="any"/>
+<link href="../assets/app-icon/icon_16x16.png" rel="icon" sizes="16x16" type="image/png"/>
+<link href="../assets/app-icon/icon_20x20.png" rel="icon" sizes="20x20" type="image/png"/>
+<link href="../assets/app-icon/icon_29x29.png" rel="icon" sizes="29x29" type="image/png"/>
+<link href="../assets/app-icon/icon_32x32.png" rel="icon" sizes="32x32" type="image/png"/>
+<link href="../assets/app-icon/icon_40x40.png" rel="icon" sizes="40x40" type="image/png"/>
+<link href="../assets/app-icon/icon_60x60.png" rel="icon" sizes="60x60" type="image/png"/>
+<link href="../assets/app-icon/icon_192x192.png" rel="icon" sizes="192x192" type="image/png"/>
+<link href="../assets/app-icon/icon_1024x1024.png" rel="icon" sizes="1024x1024" type="image/png"/>
+<link href="../assets/app-icon/icon_76x76.png" rel="apple-touch-icon" sizes="76x76"/>
+<link href="../assets/app-icon/icon_120x120.png" rel="apple-touch-icon" sizes="120x120"/>
+<link href="../assets/app-icon/icon_152x152.png" rel="apple-touch-icon" sizes="152x152"/>
+<link href="../assets/app-icon/icon_167x167.png" rel="apple-touch-icon" sizes="167x167"/>
+<link href="../assets/app-icon/icon_180x180.png" rel="apple-touch-icon" sizes="180x180"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<script src="../assets/theme.js"></script>
+<style>
+    :root {
+      color-scheme: light;
+      --bg-primary: #f4f2f8;
+      --bg-secondary: #fbfaff;
+      --bg-tertiary: #e9e5f1;
+      --text-primary: #202024;
+      --text-secondary: #42404a;
+      --text-muted: #6f6a7c;
+      --accent: #6d4aff;
+      --accent-dim: #4f2bbd;
+      --accent-glow: rgba(109, 74, 255, 0.14);
+      --border: #d4cde0;
+      --success: #9b5cf6;
+      --on-accent: #ffffff;
+      --mono: 'JetBrains Mono', 'Space Mono', monospace;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg-primary: #18181d;
+      --bg-secondary: #24222c;
+      --bg-tertiary: #211f28;
+      --text-primary: #f0eef7;
+      --text-secondary: #d3cedf;
+      --text-muted: #aaa3b8;
+      --accent: #a78bfa;
+      --accent-dim: #6d4aff;
+      --accent-glow: rgba(167, 139, 250, 0.18);
+      --border: #3b3549;
+      --success: #c4b5fd;
+      --on-accent: #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg-primary: #18181d;
+        --bg-secondary: #24222c;
+        --bg-tertiary: #211f28;
+        --text-primary: #f0eef7;
+        --text-secondary: #d3cedf;
+        --text-muted: #aaa3b8;
+        --accent: #a78bfa;
+        --accent-dim: #6d4aff;
+        --accent-glow: rgba(167, 139, 250, 0.18);
+        --border: #3b3549;
+        --success: #c4b5fd;
+        --on-accent: #ffffff;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 17px;
+      line-height: 1.75;
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .grid-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .logo-mark::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .logo-text {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .logo-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+
+    .logo-subtext a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .logo-subtext a:hover {
+      color: var(--accent);
+    }
+
+    .back-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+
+    .header-actions {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .language-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .language-selector a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .language-selector a:hover {
+      color: var(--accent);
+    }
+
+    .language-selector [aria-current="page"] {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .theme-toggle {
+      flex: 0 0 auto;
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      background: var(--bg-secondary);
+    }
+
+    .theme-toggle button {
+      min-width: 44px;
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font: 700 10px/1 var(--mono);
+      text-transform: uppercase;
+    }
+
+    .theme-toggle button[aria-pressed="true"] {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+
+    main {
+      padding-top: 140px;
+      padding-bottom: 80px;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      margin-bottom: 60px;
+    }
+
+    .page-label {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      font-size: clamp(40px, 7vw, 56px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      line-height: 1.05;
+    }
+
+    .page-meta {
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    .content-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 52px;
+      margin-bottom: 32px;
+    }
+
+    .content-box h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      margin-top: 40px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .content-box h2:first-child {
+      margin-top: 0;
+    }
+
+    .content-box h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      margin-top: 32px;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .content-box p {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 18px;
+      line-height: 1.9;
+    }
+
+    .content-box ul {
+      margin: 20px 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .content-box ul li {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      padding-left: 28px;
+      position: relative;
+      line-height: 1.9;
+    }
+
+    .content-box ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .content-box strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .highlight-box {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-dim);
+      border-radius: 4px;
+      padding: 24px;
+      margin: 32px 0;
+    }
+
+    .highlight-box p {
+      margin-bottom: 0;
+      color: var(--text-primary);
+    }
+
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 16px 0;
+      }
+
+      .header-inner {
+        align-items: flex-start;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .header-actions {
+        margin-left: auto;
+      }
+
+      .content-box {
+        padding: 30px 22px;
+      }
+
+      .page-title {
+        font-size: 38px;
+      }
+
+      .content-box p,
+      .content-box ul li {
+        font-size: 16px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        padding-top: 152px;
+      }
+
+      .container,
+      .header-inner {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .logo-subtext {
+        display: none;
+      }
+
+      .page-label,
+      .back-link {
+        font-size: 12px;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .theme-toggle button {
+        min-width: 38px;
+        padding: 6px;
+        font-size: 9px;
+      }
+
+      .content-box {
+        padding: 24px 18px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .back-link,
+      .theme-toggle {
+        width: 100%;
+      }
+
+      .back-link {
+        justify-content: center;
+      }
+
+      .theme-toggle button {
+        min-width: 0;
+      }
+    }
+  </style>
+<link href="../assets/theme-icons.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header>
+<div class="header-inner">
+<a class="logo" href="../index.html">
+<div class="logo-mark"></div>
+<div class="logo-content">
+<span class="logo-text">health.md</span>
+<span class="logo-subtext">由 <a href="https://isolated.tech" rel="noopener" target="_blank">isolated.tech</a> 构建</span>
+</div>
+</a>
+<div class="header-actions">
+<nav class="language-selector" aria-label="语言选择"><span aria-current="page" lang="zh-Hans">简体中文</span><span aria-hidden="true">/</span><a href="../terms-of-service.html" hreflang="en" lang="en">English</a></nav>
+<a class="back-link" href="../index.html">
+<svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+<path d="M19 12H5M12 19l-7-7 7-7"></path>
+</svg>
+          返回
+        </a>
+<div aria-label="颜色主题" class="theme-toggle" role="group">
+<button aria-pressed="true" data-theme-option="system" type="button">自动</button>
+<button aria-pressed="false" data-theme-option="light" type="button">浅色</button>
+<button aria-pressed="false" data-theme-option="dark" type="button">深色</button>
+</div>
+</div>
+</div>
+</header>
+<main>
+<div class="container">
+<div class="page-header">
+<p class="page-label">法律</p>
+<h1 class="page-title">服务条款</h1>
+<p class="page-meta">最后更新时间：2026 年 8 月 2 日</p>
+</div>
+<div class="content-box">
+<div class="highlight-box"><p><strong>翻译说明：</strong>本简体中文译文是尚未发布的审阅稿，仅供翻译审阅。英文版本为权威文本；如本译文与英文版本有任何差异，以英文版本为准。</p></div>
+<div class="highlight-box">
+<p><strong>简明版：</strong> Health.md 可免费下载，并提供可选的一次性 Full Access 应用内购买。请仅将其用于个人导出，自行管理文件，并注意本应用不提供医疗建议。退款由您购买 Full Access 的应用商店处理。</p>
+</div>
+<h2>1. 同意条款</h2>
+<p>
+          下载、安装或使用 Health.md（以下简称“本应用”），即表示您同意受本服务条款（以下简称“本条款”）约束。如果您不同意本条款，请勿使用本应用。
+        </p>
+<p>
+          本条款构成您与 Health.md 运营方（以下简称“我们”）之间具有法律约束力的协议。您使用本应用时，还须遵守下载本应用的应用商店条款，包括 Apple 的 App Store 服务条款或 Google Play 条款。
+        </p>
+<h2>2. 授予许可</h2>
+<p>
+          在您遵守本条款的前提下，我们授予您一项有限、非独占、不可转让且可撤销的许可，允许您：
+        </p>
+<ul>
+<li>在您拥有或控制的 Apple 或 Android 设备上安装和使用本应用</li>
+<li>出于个人、非商业目的使用本应用的导出、计划导出、Apple 快捷指令、Android 自动化和 Mac 目标位置功能</li>
+</ul>
+<p>
+          本应用可免费下载。Full Access 是可选的一次性应用内购买，由 Apple 平台上的 StoreKit 或 Android 上的 Google Play Billing 处理；它不是订阅，也不会续订。您有权按照本条款使用通过购买解锁的功能，但我们没有义务提供新功能或无限期维护本应用。
+        </p>
+<h2>3. 可接受的使用</h2>
+<p>
+          您同意仅出于合法目的并按照本条款使用本应用。您同意不会：
+        </p>
+<ul>
+<li>对本应用进行逆向工程、反编译、反汇编或尝试推导其源代码（法律不允许限制的情形除外）</li>
+<li>修改、改编本应用或基于本应用创作衍生作品</li>
+<li>出租、租赁、出借、出售、再分发或再许可本应用</li>
+<li>删除、更改或遮盖本应用中的任何所有权声明</li>
+<li>以任何违反适用法律法规的方式使用本应用</li>
+<li>以可能损坏、停用或妨碍我们服务的方式使用本应用</li>
+</ul>
+<h2>4. 应用功能</h2>
+<p>
+          Health.md 旨在：
+        </p>
+<ul>
+<li>通过 HealthKit API 读取 Apple Health 数据，或通过 Health Connect API 读取 Android 健康数据</li>
+<li>将这些数据导出为 Markdown、Obsidian、CSV 和 JSON 文件，并写入您选择的目标位置</li>
+<li>按照您设定的计划自动执行导出，但会受到 Apple 后台执行限制或 Android WorkManager 行为约束</li>
+<li>在受支持的工作流中，将导出作业直接发送到可选的已配对 Mac 或 CLI</li>
+<li>将所选导出直接发送到用户配置的 API 端点</li>
+</ul>
+<p>
+          核心健康数据处理在您的设备本地进行。Health.md 不会在 Health.md 服务器上收集或存储健康数据。部分流程会使用由您指定的网络功能或平台服务，包括通过 App Store 或 Google Play 购买/恢复、应用更新、iCloud、Android 文档提供方或第三方文件提供方同步、已配对设备传输，以及用户配置的 API 端点。
+        </p>
+<h2>5. 健康数据免责声明</h2>
+<p>
+<strong>重要提示：Health.md 是数据导出工具，不是医疗设备或健康服务。</strong>
+</p>
+<ul>
+<li>本应用不提供医疗建议、诊断或治疗</li>
+<li>本应用不能替代合格医疗专业人员的意见</li>
+<li>导出数据仅供个人参考</li>
+<li>我们不会验证 Apple Health、Health Connect、可穿戴设备或已连接健康应用所提供数据的准确性</li>
+<li>未经医疗服务提供者指导，请勿使用导出健康数据作出医疗决定</li>
+</ul>
+<p>
+          如遇医疗紧急情况，请立即联系急救服务。请勿依赖本应用中的任何数据作出有时间紧迫性的医疗决定。
+        </p>
+<h2>6. 数据与隐私</h2>
+<p>
+          您使用本应用时须遵守我们的 <a href="privacy-policy.html" style="color: var(--accent); text-decoration: underline;">隐私政策</a>，该政策通过引用并入本条款。要点包括：
+        </p>
+<ul>
+<li>我们不会在 Health.md 服务器上收集或存储您的健康数据</li>
+<li>除非您明确导出，否则来源数据会保留在 Apple Health 或 Health Connect 中</li>
+<li>导出文件会写入您选择的设备、文件夹、文件提供方、Android 文档提供方或 Mac 目标位置</li>
+<li>您应自行负责管理导出数据和所使用的同步提供方</li>
+<li>您可以控制导出的数据及其存储位置</li>
+</ul>
+<h2>7. 您的责任</h2>
+<p>
+          您负责：
+        </p>
+<ul>
+<li><strong>设备安全：</strong> 保护设备安全，包括设置密码并及时更新 iOS、iPadOS、macOS 和 Android</li>
+<li><strong>数据备份：</strong> 备份设备及导出的 Markdown、Obsidian、CSV 和 JSON 文件。我们不对数据丢失负责。</li>
+<li><strong>访问控制：</strong> 管理哪些人可以访问您的设备、文件夹、知识库、同步提供方和导出文件</li>
+<li><strong>合规：</strong> 确保您对本应用的使用符合所有适用法律法规</li>
+<li><strong>文件存储：</strong> 管理导出文件，包括您使用的任何 iCloud Drive、Android 文档提供方、第三方文件提供方、Obsidian 知识库或 Mac 文件夹</li>
+<li><strong>API 目标位置：</strong> 核实您配置的所有 API 端点的安全性、授权、日志记录、保留和删除行为</li>
+</ul>
+<h2>8. 第三方服务</h2>
+<p>
+          本应用会与以下服务集成：
+        </p>
+<ul>
+<li><strong>Apple HealthKit：</strong> 受 Apple 条款和您的 iOS 隐私设置约束。</li>
+<li><strong>Android Health Connect：</strong> 受 Google/Android 条款和您的 Health Connect 隐私设置约束。</li>
+<li><strong>可选健康数据提供方 API：</strong> 如果直接提供方导入可用且已明确启用，则须遵守该提供方的 OAuth、API、隐私和账户条款。</li>
+<li><strong>Apple“文件”、Android Storage Access Framework 和文件提供方：</strong> 本应用会将导出文件写入您通过平台选择器和文件提供方基础设施选择的文件夹。</li>
+<li><strong>StoreKit、App Store 和 Google Play Billing：</strong> Full Access 的购买、恢复、更新和退款均由相应商店处理。</li>
+<li><strong>本地网络 / Nearby Connectivity：</strong> 可选的 Mac 目标位置工作流需要设备之间能够在本地发现并连接。</li>
+</ul>
+<p>
+          我们不对任何第三方服务、其可用性或其条款负责。
+        </p>
+<h2>9. 保证免责声明</h2>
+<p>
+          本应用按“原样”和“现有可用”状态提供，不附带任何明示或默示保证，包括但不限于：
+        </p>
+<ul>
+<li>对适销性、特定用途适用性或不侵权的保证</li>
+<li>对本应用无错误、不中断或安全的保证</li>
+<li>对导出数据准确性、可靠性或完整性的保证</li>
+</ul>
+<p>
+          部分司法管辖区不允许排除默示保证，因此上述部分排除条款可能不适用于您。
+        </p>
+<h2>10. 责任限制</h2>
+<p>
+          在法律允许的最大范围内，对于因以下事项引起或与之相关的任何间接、附带、特殊、后果性或惩罚性损害，以及任何利润、收入、数据或使用损失，我们概不负责：
+        </p>
+<ul>
+<li>您使用或无法使用本应用</li>
+<li>本应用或导出数据中的任何错误、缺陷或不准确之处</li>
+<li>数据丢失或损坏</li>
+<li>根据导出数据作出的决定</li>
+<li>设备损坏或性能问题</li>
+</ul>
+<p>
+          在任何情况下，我们承担的责任总额均不超过您为本应用支付的金额。
+        </p>
+<p>
+          部分司法管辖区不允许限制或排除附带或后果性损害责任，因此上述限制可能不适用于您。
+        </p>
+<h2>11. 赔偿</h2>
+<p>
+          对于因以下事项引起或与之相关的任何索赔、责任、损害、损失、成本或费用（包括合理的律师费），您同意赔偿 Health.md 运营方、为其抗辩并使其免受损害：
+        </p>
+<ul>
+<li>您使用或滥用本应用</li>
+<li>您违反本条款</li>
+<li>您侵犯任何其他个人或实体的权利</li>
+<li>您违反任何适用法律法规</li>
+</ul>
+<h2>12. 更新和变更</h2>
+<p>
+          我们可能会不时更新本应用，以便：
+        </p>
+<ul>
+<li>修复错误或提高性能</li>
+<li>增加新功能</li>
+<li>遵守新的 iOS、iPadOS、macOS、Android、App Store 或 Google Play 要求</li>
+<li>解决安全问题</li>
+</ul>
+<p>
+          更新通过 App Store 或 Google Play 提供。我们没有义务无限期提供更新。部分更新可能要求您接受新条款。
+        </p>
+<h2>13. 终止</h2>
+<p>
+          本条款在终止前持续有效：
+        </p>
+<ul>
+<li><strong>由您终止：</strong> 您可以随时从所有设备删除本应用，以终止本条款</li>
+<li><strong>由我们终止：</strong> 如果您违反本条款，我们可能会终止您的许可</li>
+<li><strong>由应用商店提供方终止：</strong> 如果您违反 Apple App Store 或 Google Play 条款，您的许可可能被终止</li>
+</ul>
+<p>
+          终止后，您必须停止使用本应用并删除所有副本。根据其性质应在终止后继续有效的条款，包括免责声明、责任限制和赔偿条款，仍将继续有效。
+        </p>
+<h2>14. 知识产权</h2>
+<p>
+          本应用及其原创内容、功能和特性归 Health.md 运营方所有，并受国际版权法、商标法和其他知识产权法保护。
+        </p>
+<p>
+          虽然本应用的部分内容可能按照文档说明开放源代码，但本应用整体，包括其设计和实现，仍属于我们的财产。
+        </p>
+<h2>15. 开源</h2>
+<p>
+          本应用的部分核心逻辑已开放源代码，并按照单独的开源许可证授权。相关组件会在本应用的文档或仓库中标明。您对开源组件的使用受其各自许可证约束。
+        </p>
+<h2>16. 退款</h2>
+<p>
+          退款请求由您购买 Full Access 的应用商店处理，我们不直接办理退款。对于 Apple 平台上的购买，请访问 <a href="https://support.apple.com/en-us/HT204084" rel="noopener" style="color: var(--accent); text-decoration: underline;" target="_blank">Apple 支持页面</a>。对于 Android 平台上的购买，请使用 Google Play 退款流程。
+        </p>
+<h2>17. 出口管制合规</h2>
+<p>
+          您同意遵守所有适用的出口和再出口管制法律法规，包括美国《出口管理条例》。您声明自己不位于受禁运国家，也未被列为受禁方。
+        </p>
+<h2>18. 适用法律和争议解决</h2>
+<p>
+          本条款受我们运营所在地司法管辖区的法律管辖并据其解释，不适用法律冲突原则。
+        </p>
+<p>
+          除法律禁止仲裁的情形外，因本条款或您使用本应用而产生的任何争议，均应按照相关仲裁协会规则通过具有约束力的仲裁解决。
+        </p>
+<h2>19. 可分割性</h2>
+<p>
+          如果本条款的任何规定被认定为不可执行或无效，该规定应仅在必要的最小范围内受到限制或删除，其余规定仍具有完全效力。
+        </p>
+<h2>20. 完整协议</h2>
+<p>
+          本条款、我们的隐私政策以及我们在本应用中发布的其他法律声明，共同构成您与我们之间关于使用本应用的完整协议，并取代此前的任何协议。
+        </p>
+<h2>21. 条款变更</h2>
+<p>
+          我们保留随时修改本条款的权利。如果作出重大变更，我们会通过应用更新或其他合理方式通知您。变更生效后继续使用本应用，即表示您接受更新后的条款。
+        </p>
+<h2>22. 联系方式</h2>
+<p>
+          如果您对本条款有疑问，请通过以下方式联系我们：
+        </p>
+<p>
+<strong>电子邮件：</strong> legal@isolated.tech<br/>
+<strong>网站：</strong> https://isolated.tech
+        </p>
+<h2>23. 商店特定条款</h2>
+<p>
+          本应用通过 Apple App Store 或 Google Play 分发时，还适用以下条款：
+        </p>
+<ul>
+<li>Apple 和 Google 并非本条款的当事方，对本应用不承担任何义务</li>
+<li>所授许可仅限于按照相关应用商店条款，在您拥有或控制的设备上使用本应用</li>
+<li>Apple 和 Google 不对本应用承担任何保证义务</li>
+<li>Apple 和 Google 不负责处理与本应用或您使用本应用有关的任何索赔</li>
+<li>如果任何第三方声称本应用侵犯知识产权，应由我们而非应用商店提供方负责调查和抗辩</li>
+<li>对于由 Apple 分发的副本，Apple 及其子公司是本条款的第三方受益人，并可向您主张本条款</li>
+</ul>
+<h2>确认</h2>
+<p>
+          使用 Health.md，即表示您确认已经阅读并理解本服务条款，并同意受其约束。
+        </p>
+</div>
+</div>
+</main>
+<footer>
+<div class="container">
+<div class="footer-inner">
+<p class="footer-text">© 2026 health.md。精心打造。</p>
+<div class="footer-links">
+<a href="privacy-policy.html">隐私政策</a>
+<a href="terms-of-service.html">条款</a>
+<a href="mailto:cody@isolated.tech">支持</a>
+</div>
+</div>
+</div>
+</footer>
+<script defer="" src="../assets/analytics.js"></script>
+</body>
+</html>

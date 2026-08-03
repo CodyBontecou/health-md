@@ -1,28 +1,30 @@
-english,spanish,context,translate
-Health.md,Health.md,Product name,no
-Apple Health,Apple Health,Apple product name,no
-Health Connect,Health Connect,Android product name,no
-local-first,con procesamiento local,Privacy and architecture copy,yes
-health data,datos de salud,General product copy,yes
-export,exportación,Noun,yes
-export,to export: exportar; imperative: exporta,Verb,yes
-scheduled export,exportación programada,Automation,yes
-folder,carpeta,File destination,yes
-vault,bóveda,Obsidian destination,yes
-agent,agente,AI/local-agent workflow,yes
-local agent,agente local,AI/local-agent workflow,yes
-MCP server,servidor MCP,Technical product surface,yes
-CLI,CLI,Technical interface,no
-preview,vista previa,Export action,yes
-Files,Archivos,Apple app and file destination,yes
-pairing,emparejamiento,Direct-device connection,yes
-scoped request,solicitud acotada,Bounded agent request,yes
-bpm,lpm,Human-facing Spanish heart-rate unit; keep bpm in schemas and raw files,yes
-frontmatter,frontmatter,Markdown/Obsidian technical term,no
-schema key,clave de esquema,Prose only; literal keys remain unchanged,yes
-metric ID,ID de métrica,Prose only; literal IDs remain unchanged,yes
-Full Access,Full Access,Purchase product name,no
-Markdown,Markdown,File format,no
-JSON,JSON,File format,no
-CSV,CSV,File format,no
-Obsidian Bases,Obsidian Bases,File format/product name,no
+source,context,translate,es,de,fr,pt-br,it,nl,ja,ko,zh-hans
+Health.md,Product name,no,Health.md,Health.md,Health.md,Health.md,Health.md,Health.md,Health.md,Health.md,Health.md
+Apple Health,Apple product name,no,Apple Health,Apple Health,Apple Health,Apple Health,Apple Health,Apple Health,Apple Health,Apple Health,Apple Health
+Health Connect,Android product name,no,Health Connect,Health Connect,Health Connect,Health Connect,Health Connect,Health Connect,Health Connect,Health Connect,Health Connect
+local-first,Privacy and architecture copy,yes,con procesamiento local,mit lokaler Verarbeitung,à traitement local,com processamento local,con elaborazione locale,met lokale verwerking,ローカルファースト,로컬 우선,本地优先
+health data,General product copy,yes,datos de salud,Gesundheitsdaten,données de santé,dados de saúde,dati sanitari,gezondheidsgegevens,ヘルスデータ,건강 데이터,健康数据
+export,Noun,yes,exportación,Export,exportation,exportação,esportazione,export,エクスポート,내보내기,导出
+export,Verb or imperative,yes,exportar,exportieren,exporter,exportar,esportare,exporteren,エクスポートする,내보내기,导出
+scheduled export,Automation,yes,exportación programada,geplanter Export,exportation planifiée,exportação agendada,esportazione pianificata,geplande export,スケジュールエクスポート,예약된 내보내기,计划导出
+folder,File destination,yes,carpeta,Ordner,dossier,pasta,cartella,map,フォルダ,폴더,文件夹
+vault,Obsidian destination,yes,bóveda,Vault,coffre,cofre,archivio,kluis,保管庫,보관함,知识库
+agent,AI or local-agent workflow,yes,agente,Agent,agent,agente,agente,agent,エージェント,에이전트,智能体
+local agent,AI or local-agent workflow,yes,agente local,lokaler Agent,agent local,agente local,agente locale,lokale agent,ローカルエージェント,로컬 에이전트,本地智能体
+MCP server,Technical product surface,yes,servidor MCP,MCP-Server,serveur MCP,servidor MCP,server MCP,MCP-server,MCPサーバー,MCP 서버,MCP 服务器
+CLI,Technical interface,no,CLI,CLI,CLI,CLI,CLI,CLI,CLI,CLI,CLI
+preview,Export action,yes,vista previa,Vorschau,aperçu,prévia,anteprima,voorbeeld,プレビュー,미리보기,预览
+Files,Apple app and file destination,yes,Archivos,Dateien,Fichiers,Arquivos,File,Bestanden,ファイル,파일,文件
+pairing,Direct-device connection,yes,emparejamiento,Kopplung,jumelage,emparelhamento,abbinamento,koppeling,ペアリング,페어링,配对
+durable job,Persisted resumable operation,yes,tarea persistente,persistenter Auftrag,tâche persistante,tarefa persistente,attività persistente,persistente taak,永続ジョブ,영속 작업,持久作业
+API envelope,Versioned request or response wrapper,yes,sobre de API,API-Envelope,enveloppe d’API,envelope de API,involucro API,API-envelope,APIエンベロープ,API 엔벨로프,API 封装
+scoped request,Bounded agent request,yes,solicitud acotada,begrenzte Anfrage,requête ciblée,solicitação com escopo,richiesta con ambito definito,afgebakend verzoek,スコープ指定リクエスト,범위가 지정된 요청,限定范围的请求
+bpm,Human-facing heart-rate unit; keep bpm in schemas and raw files,yes,lpm,bpm,bpm,bpm,battiti/min,slagen/min,拍/分,회/분,次/分
+frontmatter,Markdown or Obsidian technical term,no,frontmatter,frontmatter,frontmatter,frontmatter,frontmatter,frontmatter,frontmatter,frontmatter,frontmatter
+schema key,Prose only; literal keys remain unchanged,yes,clave de esquema,Schemaschlüssel,clé de schéma,chave de esquema,chiave dello schema,schemasleutel,スキーマキー,스키마 키,架构键
+metric ID,Prose only; literal IDs remain unchanged,yes,ID de métrica,Metrik-ID,ID de métrique,ID da métrica,ID metrica,meetwaarde-ID,メトリックID,측정 항목 ID,指标 ID
+Full Access,Purchase product name,no,Full Access,Full Access,Full Access,Full Access,Full Access,Full Access,Full Access,Full Access,Full Access
+Markdown,File format,no,Markdown,Markdown,Markdown,Markdown,Markdown,Markdown,Markdown,Markdown,Markdown
+JSON,File format,no,JSON,JSON,JSON,JSON,JSON,JSON,JSON,JSON,JSON
+CSV,File format,no,CSV,CSV,CSV,CSV,CSV,CSV,CSV,CSV,CSV
+Obsidian Bases,File format or product name,no,Obsidian Bases,Obsidian Bases,Obsidian Bases,Obsidian Bases,Obsidian Bases,Obsidian Bases,Obsidian Bases,Obsidian Bases,Obsidian Bases

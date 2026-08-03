@@ -59,8 +59,8 @@
   --hmd-focus-ring: 0 0 0 2px #000000, 0 0 0 4px var(--hmd-purple-900);
 
   /* Starlight mapped to the Health.md Geist design system */
-  --sl-font: "Geist Sans";
-  --sl-font-mono: "Geist Mono";
+  --sl-font: "Geist Sans", -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Apple SD Gothic Neo", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --sl-font-mono: "Geist Mono", "SFMono-Regular", Consolas, monospace;
   --sl-color-white: var(--hmd-gray-1000);
   --sl-color-gray-1: var(--hmd-gray-1000);
   --sl-color-gray-2: var(--hmd-gray-900);
@@ -212,6 +212,15 @@
 
 html {
   background: var(--hmd-background-100);
+}
+
+html:lang(ja),
+html:lang(zh-Hans) {
+  line-break: strict;
+}
+
+html:lang(ko) {
+  word-break: keep-all;
 }
 
 body {

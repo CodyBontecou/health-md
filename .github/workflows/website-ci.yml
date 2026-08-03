@@ -91,7 +91,7 @@ jobs:
       - name: Check authoritative reference snapshot
         run: npm run reference:check -- --source "$GITHUB_WORKSPACE/apps/apple"
 
-      - name: Check Spanish localization contracts
+      - name: Check website localization contracts
         run: npm run i18n:check
 
       - name: Build docs and validate links

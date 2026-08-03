@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- BEGIN GENERATED LOCALIZED HOME URLS -->
   <url>
     <loc>https://healthmd.app/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
     <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
     <lastmod>2026-08-03</lastmod>
     <changefreq>weekly</changefreq>
@@ -13,11 +22,156 @@
     <loc>https://healthmd.app/es/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
     <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
     <lastmod>2026-08-03</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>https://healthmd.app/de/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/pt-br/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/it/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/nl/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/ja/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/ko/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/zh-hans/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/" />
+    <lastmod>2026-08-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <!-- END GENERATED LOCALIZED HOME URLS -->
   <url>
     <loc>https://healthmd.app/visualizations/</loc>
     <lastmod>2026-06-24</lastmod>
@@ -42,6 +196,7 @@
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
+  <!-- BEGIN GENERATED LOCALIZED LEGAL URLS -->
   <url>
     <loc>https://healthmd.app/privacy-policy.html</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
@@ -78,6 +233,7 @@
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
+  <!-- END GENERATED LOCALIZED LEGAL URLS -->
   <!-- BEGIN GENERATED VISUALIZATION URLS -->
   <url>
     <loc>https://healthmd.app/visualizations/overview-trends/intro-stats/theme-colors/</loc>

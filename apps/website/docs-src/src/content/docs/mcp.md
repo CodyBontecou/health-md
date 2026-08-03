@@ -20,7 +20,7 @@ Codex / Claude / another local MCP host
 
 <div class="availability preview">
 <strong>Preview · portable direct MCP</strong>
-<p>The separate 17-tool <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is implemented but not publicly packaged yet. Portable-only commands on this page are marked as preview.</p>
+<p>The separate 19-tool <code>healthmd mcp serve</code> topology for macOS, Linux, and Windows is implemented but not publicly packaged yet. Its cloud-free <code>serve-read-only</code> entry exposes only the 13 readiness/query tools after local pairing. Portable-only commands on this page are marked as preview.</p>
 </div>
 
 ## Requirements

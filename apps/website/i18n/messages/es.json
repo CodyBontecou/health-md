@@ -94,7 +94,13 @@
       "contextLabel": "Contexto de la respuesta de ejemplo",
       "coverage": "Cobertura: 14 de 14 días",
       "observations": "14 observaciones",
-      "evidence": "Evidencia disponible"
+      "evidence": "Evidencia disponible",
+      "downloadTitle": "Lleva tus datos de salud contigo.",
+      "downloadOffer": "Prueba 10 exportaciones gratis. Full Access es una compra única. Sin suscripción.",
+      "footerNavLabel": "Navegación del pie de página",
+      "privacy": "Privacidad",
+      "terms": "Términos",
+      "support": "Soporte"
     },
     "runtime": {
       "intlLocale": "es",

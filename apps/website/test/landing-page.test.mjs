@@ -15,6 +15,7 @@ const threeBuildScript = await readFile(path.join(ROOT, "scripts/build-three-her
 const buildScript = await readFile(path.join(ROOT, "scripts/build-site.mjs"), "utf8");
 const packageJson = JSON.parse(await readFile(path.join(ROOT, "package.json"), "utf8"));
 const docsConfig = await readFile(path.join(ROOT, "docs-src/astro.config.mjs"), "utf8");
+const docsUi = await readFile(path.join(ROOT, "i18n/docs-ui.mjs"), "utf8");
 const docsStyles = await readFile(path.join(ROOT, "docs-src/src/styles/healthmd.css"), "utf8");
 const agentDocsStyles = await readFile(path.join(ROOT, "docs-src/src/styles/agent-first.css"), "utf8");
 const docsIndex = await readFile(path.join(ROOT, "docs-src/src/content/docs/index.md"), "utf8");
@@ -33,10 +34,37 @@ test("landing page makes local-first health data movement the primary message", 
   assert.match(index, /Health\.md does not store your health data\.[\s\S]*You choose every export destination\./);
   assert.match(index, /class="flow-map reveal"/);
   assert.equal((index.match(/<main>/g) ?? []).length, 1);
-  assert.equal((index.match(/<section/g) ?? []).length, 4);
+  assert.equal((index.match(/<section/g) ?? []).length, 5);
   assert.match(index, /<section class="export-showcase" id="exports"/);
-  assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"|id="download"/);
-  assert.doesNotMatch(index, /<footer/);
+  assert.match(index, /<section class="download-cta" id="download"/);
+  assert.doesNotMatch(index, /id="bridge"|id="automation"|id="interfaces"/);
+  assert.match(index, /<footer class="site-footer">/);
+});
+
+test("landing closes with a localized download decision and compact footer", () => {
+  const downloadSection = index.slice(
+    index.indexOf('<section class="download-cta"'),
+    index.indexOf("</main>"),
+  );
+  const footer = index.slice(index.indexOf('<footer class="site-footer">'));
+
+  assert.match(downloadSection, /Take your health data with you\./);
+  assert.match(downloadSection, /Try 10 exports free\. Full Access is a one-time purchase\. No subscription\./);
+  assert.match(downloadSection, /class="download-actions" aria-label="Download Health\.md"/);
+  assert.equal((downloadSection.match(/class="hero-store-badge /g) ?? []).length, 2);
+  assert.match(downloadSection, /href="https:\/\/apps\.apple\.com\/us\/app\/health-md\/id6757763969"/);
+  assert.match(downloadSection, /href="https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.healthmd\.android"/);
+
+  assert.match(footer, /<nav class="footer-links" aria-label="Footer navigation">/);
+  assert.match(footer, /href="docs\/">Docs<\/a>/);
+  assert.match(footer, /href="privacy-policy\.html">Privacy<\/a>/);
+  assert.match(footer, /href="terms-of-service\.html">Terms<\/a>/);
+  assert.match(footer, /href="mailto:cody@isolated\.tech">Support<\/a>/);
+  assert.match(footer, /<!-- HEALTHMD_FOOTER_LANGUAGE_SELECTOR -->/);
+  assert.match(styles, /\.download-cta\s*{[\s\S]*?min-height:\s*680px/);
+  assert.match(styles, /\.site-footer\s*{[\s\S]*?env\(safe-area-inset-bottom\)/);
+  assert.match(styles, /\.footer-language-menu \.language-selector\s*{[\s\S]*?bottom:\s*calc\(100% \+ 8px\)/);
+  assert.match(styles, /@media \(max-width: 720px\)[\s\S]*?\.download-cta\s*{[\s\S]*?min-height:\s*570px/);
 });
 
 test("export showcase turns selected health metrics into downloadable ordinary files", async () => {
@@ -167,14 +195,15 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 });
 
 test("landing experience follows the reference's single-screen desktop composition", () => {
-  assert.match(index, /<nav class="header-nav" aria-label="Documentation">/);
-  assert.match(index, /<a class="header-docs-link" href="docs\/">Docs<\/a>/);
-  assert.doesNotMatch(index, /header-language-link|>Español<\/a>/);
+  assert.match(index, /<div class="header-nav">/);
+  assert.match(index, /<nav aria-label="Documentation"><a class="header-docs-link" href="docs\/">Docs<\/a><\/nav>/);
+  assert.match(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
   assert.doesNotMatch(index, /↗/);
   assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px 13\.7% 0/);
   assert.match(styles, /\.brand-name\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*19px;[\s\S]*?font-weight:\s*590/);
   assert.match(styles, /\.header-docs-link\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*15px;[\s\S]*?font-weight:\s*430/);
-  assert.doesNotMatch(styles, /header-language-link/);
+  assert.match(styles, /\.language-menu\s*{[\s\S]*?position:\s*relative/);
+  assert.match(styles, /\.language-selector\s*{[\s\S]*?position:\s*absolute/);
   assert.doesNotMatch(index, /data-menu-toggle|primary-navigation|hero-meta|hero-route|brand-mode/);
   assert.match(styles, /@media \(min-width: 981px\) and \(min-height: 650px\)[\s\S]*?overflow:\s*hidden/);
   assert.match(styles, /\.hero-intro\s*{[\s\S]*?position:\s*absolute/);
@@ -374,6 +403,11 @@ test("landing page keeps a restrained light design with the app icon in the flow
 test("landing fonts are self-hosted with their license", async () => {
   assert.match(styles, /url\("fonts\/Geist-Variable\.woff2"\)/);
   assert.match(styles, /url\("fonts\/GeistMono-Variable\.woff2"\)/);
+  assert.match(styles, /"Hiragino Sans"[\s\S]*?"Apple SD Gothic Neo"[\s\S]*?"PingFang SC"/);
+  assert.match(styles, /html:lang\(zh-Hans\)[\s\S]*?line-break:\s*strict/);
+  assert.match(styles, /html:lang\(ko\)[\s\S]*?word-break:\s*keep-all/);
+  assert.match(styles, /html:lang\(nl\) \.hero-intro h1\s*\{\s*font-size:\s*clamp\(58px, 5vw, 76px\)/);
+  assert.match(styles, /\.language-selector\s*\{[\s\S]*?max-height:\s*min\(70vh, 430px\)[\s\S]*?overflow-y:\s*auto/);
   assert.doesNotMatch(styles, /cdn\.jsdelivr\.net/);
   await Promise.all([
     "assets/fonts/Geist-Variable.woff2",
@@ -391,19 +425,23 @@ test("docs use the landing page's self-hosted light visual system", () => {
   assert.match(agentDocsStyles, /--hmd-primary:\s*#121212/);
   assert.match(docsStyles, /url\("\/assets\/fonts\/Geist-Variable\.woff2"\)/);
   assert.match(docsStyles, /url\("\/assets\/fonts\/GeistMono-Variable\.woff2"\)/);
+  assert.match(docsStyles, /"Hiragino Sans"[\s\S]*?"Apple SD Gothic Neo"[\s\S]*?"PingFang SC"/);
+  assert.match(docsStyles, /html:lang\(zh-Hans\)[\s\S]*?line-break:\s*strict/);
+  assert.match(docsStyles, /html:lang\(ko\)[\s\S]*?word-break:\s*keep-all/);
   assert.doesNotMatch(docsStyles, /cdn\.jsdelivr\.net/);
 });
 
 test("docs navigation starts with user goals and labels preview surfaces", () => {
-  const getStarted = docsConfig.indexOf("translatedLabel('Get Started'");
-  const agents = docsConfig.indexOf("translatedLabel('Use an Agent'");
-  const exports = docsConfig.indexOf("translatedLabel('Export & Automate'");
-  const integrations = docsConfig.indexOf("translatedLabel('Build an Integration'");
+  const getStarted = docsUi.indexOf("text('Get Started'");
+  const agents = docsUi.indexOf("text('Use an Agent'");
+  const exports = docsUi.indexOf("text('Export & Automate'");
+  const integrations = docsUi.indexOf("text('Build an Integration'");
   assert.ok(getStarted >= 0 && getStarted < agents);
   assert.ok(agents < exports && exports < integrations);
-  assert.match(docsConfig, /item\('First iPhone export', 'Primera exportación desde iPhone', 'iphone-first-export'\)/);
-  assert.match(docsConfig, /Direct iPhone CLI · Preview/);
-  assert.ok((docsConfig.match(/collapsed: true/g) ?? []).length >= 5);
+  assert.match(docsUi, /text\('First iPhone export', 'Primera exportación desde iPhone', 'Erster iPhone-Export'/);
+  assert.match(docsUi, /Direct iPhone CLI · Preview/);
+  assert.ok((docsUi.match(/collapsed: true/g) ?? []).length >= 5);
+  assert.match(docsConfig, /sidebar: starlightSidebar\(\)/);
   assert.match(docsIndex, /Start with Health\.md/);
   assert.match(docsIndex, /Contents\/Helpers\/healthmd" doctor/);
   assert.match(docsIndex, /Five-minute local agent quickstart/);
@@ -411,7 +449,7 @@ test("docs navigation starts with user goals and labels preview surfaces", () =>
   assert.match(configurationGuide, /Available now · signed Mac helper/);
   assert.match(configurationGuide, /Preview · not yet publicly packaged/);
   assert.match(docsHeader, />MCP<|>MCP<\/a>/);
-  assert.match(docsHeader, /const docsRoot = isSpanish \? '\/es\/docs' : '\/docs'/);
+  assert.match(docsHeader, /const docsRoot = routePath\('docsHome', localeCode\)/);
   assert.match(docsHeader, /href=\{`\$\{docsRoot\}\/reference\/`\}/);
 });
 

@@ -1,27 +1,46 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
-import { docsPathForSlug, hasSpanishDocTranslation } from '../i18n/routes.mjs';
+import {
+  defaultLocale,
+  localeFor,
+  publishedLocales,
+} from '../i18n/locales.mjs';
+import { starlightSidebar } from '../i18n/docs-ui.mjs';
+import {
+  docSlugFromPath,
+  docsPathForSlug,
+  hasDocTranslation,
+  localeFromPathname,
+  stripLocalePrefix,
+  translatedLocalesForDoc,
+} from '../i18n/routes.mjs';
 
 const site = 'https://healthmd.app';
-const doc = (slug = '') => ['docs', slug].filter(Boolean).join('/');
-const translatedLabel = (label, es) => ({ label, translations: { es } });
-const item = (label, es, slug = '') => ({ ...translatedLabel(label, es), slug: doc(slug) });
+const docsLocales = publishedLocales('docs');
 
 function localizedSitemapLinks(pathname) {
-  if (!hasSpanishDocTranslation(pathname)) return undefined;
-  const slug = pathname
-    .replace(/^\/es(?=\/)/, '')
-    .replace(/^\/docs\/?/, '')
-    .replace(/\/$/, '');
-  const english = new URL(docsPathForSlug(slug, 'en'), site).href;
-  const spanish = new URL(docsPathForSlug(slug, 'es'), site).href;
-  return [
-    { lang: 'en', url: english },
-    { lang: 'es', url: spanish },
-    { lang: 'x-default', url: english },
-  ];
+  const slug = docSlugFromPath(pathname);
+  if (!slug) return undefined;
+  const links = translatedLocalesForDoc(pathname).map((code) => {
+    const locale = localeFor(code);
+    return {
+      lang: locale.lang,
+      url: new URL(docsPathForSlug(slug, code), site).href,
+    };
+  });
+  links.push({
+    lang: 'x-default',
+    url: new URL(docsPathForSlug(slug, defaultLocale), site).href,
+  });
+  return links;
 }
+
+const starlightLocales = Object.fromEntries(docsLocales.map((locale) => [
+  locale.code === defaultLocale ? 'root' : locale.path,
+  { label: locale.label, lang: locale.lang },
+]));
+const localizedTitles = Object.fromEntries(docsLocales.map((locale) => [locale.lang, 'health.md']));
 
 export default defineConfig({
   site,
@@ -30,11 +49,11 @@ export default defineConfig({
     sitemap({
       filter: (page) => {
         const pathname = new URL(page).pathname;
-        if (pathname === '/docs/data-reference/' || pathname === '/es/docs/data-reference/') return false;
-        if (pathname.startsWith('/es/docs/') || pathname === '/es/docs/') {
-          return hasSpanishDocTranslation(pathname);
-        }
-        return pathname.startsWith('/docs/');
+        const englishPath = stripLocalePrefix(pathname);
+        if (englishPath === '/docs/data-reference/') return false;
+        if (!englishPath.startsWith('/docs/')) return false;
+        const locale = localeFromPathname(pathname);
+        return locale === defaultLocale || hasDocTranslation(pathname, locale);
       },
       namespaces: { xhtml: true },
       serialize: (entry) => ({
@@ -43,14 +62,11 @@ export default defineConfig({
       }),
     }),
     starlight({
-      title: { en: 'health.md', es: 'health.md' },
+      title: localizedTitles,
       description: 'Configure Health.md for agents, MCP, and CLI workflows, then explore versioned health-data contracts and private export tools.',
       favicon: '/docs/favicon.png',
       defaultLocale: 'root',
-      locales: {
-        root: { label: 'English', lang: 'en' },
-        es: { label: 'Español', lang: 'es' },
-      },
+      locales: starlightLocales,
       logo: {
         src: './src/assets/icon_80x80.png',
         alt: 'health.md',
@@ -59,8 +75,12 @@ export default defineConfig({
       expressiveCode: {
         getBlockLocale: ({ file }) => {
           const sourcePath = (file.path ?? '').replaceAll('\\', '/');
+          const sourceLocale = docsLocales.find((locale) =>
+            locale.path && sourcePath.includes(`/src/content/docs/${locale.path}/`),
+          );
+          if (sourceLocale) return sourceLocale.lang;
           const pathname = file.url?.pathname ?? '';
-          return sourcePath.includes('/src/content/docs/es/') || pathname.startsWith('/es/') ? 'es' : 'en';
+          return localeFor(localeFromPathname(pathname)).lang;
         },
       },
       components: {
@@ -114,81 +134,7 @@ export default defineConfig({
           `,
         },
       ],
-      sidebar: [
-        {
-          ...translatedLabel('Get Started', 'Primeros pasos'),
-          items: [
-            item('Choose a goal', 'Elige un objetivo'),
-            item('First iPhone export', 'Primera exportación desde iPhone', 'iphone-first-export'),
-            item('First Android export', 'Primera exportación desde Android', 'android'),
-            item('Connect a local agent', 'Conecta un agente local', 'configuration'),
-            item('Mac companion', 'Aplicación complementaria para Mac', 'macos'),
-          ],
-        },
-        {
-          ...translatedLabel('Use an Agent', 'Usar un agente'),
-          collapsed: true,
-          items: [
-            item('MCP server & tools', 'Servidor MCP y herramientas', 'mcp'),
-            item('Bundled & portable CLI', 'CLI incluida y portátil', 'cli'),
-            item('Query cookbook', 'Recetas de consultas', 'agent-queries'),
-            item('Agent architecture', 'Arquitectura de agentes', 'agents'),
-            item('Direct iPhone CLI · Preview', 'CLI directa para iPhone · Vista previa', 'cli-direct'),
-            item('Canonical extraction', 'Extracción canónica', 'cli-extract'),
-            item('Durable jobs', 'Trabajos duraderos', 'cli-jobs'),
-          ],
-        },
-        {
-          ...translatedLabel('Export & Automate', 'Exportar y automatizar'),
-          collapsed: true,
-          items: [
-            item('Apple onboarding', 'Configuración inicial en Apple', 'onboarding'),
-            item('Folders & vaults', 'Carpetas y bóvedas', 'folder-vault'),
-            item('Export from iPhone', 'Exportar desde iPhone', 'export'),
-            item('Apple Health metrics', 'Métricas de Apple Health', 'metrics'),
-            item('Export formatting', 'Formato de exportación', 'format'),
-            item('iPhone scheduling', 'Programación en iPhone', 'scheduling'),
-            item('Mac sync', 'Sincronización con Mac', 'sync'),
-            item('Shortcuts & App Intents', 'Atajos y App Intents', 'shortcuts'),
-            item('Individual entries', 'Entradas individuales', 'individual-tracking'),
-            item('Daily notes', 'Notas diarias', 'daily-notes'),
-          ],
-        },
-        {
-          ...translatedLabel('Build an Integration', 'Crear una integración'),
-          collapsed: true,
-          items: [
-            item('Contract overview', 'Resumen de contratos', 'reference'),
-            item('API & CLI envelopes', 'Envoltorios de API y CLI', 'reference/api-and-cli'),
-            item('Queries & evidence', 'Consultas y evidencia', 'reference/evidence-packets'),
-            item('Loopback API', 'API de loopback', 'agent-api'),
-            item('URL endpoint', 'Endpoint URL', 'api-endpoint'),
-            item('Direct protocol', 'Protocolo directo', 'reference/connected-mac-iphone-protocol'),
-            item('Integration recipes', 'Recetas de integración', 'reference/integration-recipes'),
-            item('Generated artifacts', 'Artefactos generados', 'reference/generated'),
-          ],
-        },
-        {
-          ...translatedLabel('Data Reference', 'Referencia de datos'),
-          collapsed: true,
-          items: [
-            item('Daily records', 'Registros diarios', 'reference/daily-records'),
-            item('Canonical HealthKit records', 'Registros canónicos de HealthKit', 'reference/canonical-healthkit-records'),
-            item('Export formats', 'Formatos de exportación', 'reference/export-formats'),
-            item('Dictionary & roll-ups', 'Diccionario y agregaciones', 'reference/data-dictionary-and-rollups'),
-            item('Shared metric registry', 'Registro compartido de métricas', 'shared-metric-registry'),
-            item('Reference generation', 'Generación de la referencia', 'reference/generation'),
-          ],
-        },
-        {
-          ...translatedLabel('More', 'Más'),
-          collapsed: true,
-          items: [
-            item('Visualization catalog', 'Catálogo de visualizaciones', 'visualizations-roadmap'),
-            item('Unlock & plans', 'Desbloqueo y planes', 'paywall'),
-          ],
-        },
-      ],
+      sidebar: starlightSidebar(),
     }),
   ],
 });

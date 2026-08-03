@@ -13,7 +13,7 @@ description: Exporta datos de Apple Health o Health Connect, conecta la herramie
     <div class="docs-actions">
       <a class="docs-button" href="/es/docs/iphone-first-export/">Primera exportación desde el iPhone</a>
       <a class="docs-button-secondary" href="/es/docs/configuration/">Conectar un agente</a>
-      <a class="docs-button-secondary" href="/docs/reference/">Explorar los contratos (en inglés)</a>
+      <a class="docs-button-secondary" href="/es/docs/reference/">Explorar los contratos (en inglés)</a>
     </div>
   </div>
 </div>
@@ -21,7 +21,7 @@ description: Exporta datos de Apple Health o Health Connect, conecta la herramie
 <div class="agent-path" aria-label="Elige qué quieres hacer con Health.md">
   <a href="/es/docs/iphone-first-export/"><span>01 · Exportar</span><strong>Empieza en el iPhone</strong>Autoriza Apple Health, elige una carpeta, obtén una vista previa del resultado y ejecuta tu primera exportación.</a>
   <a href="/es/docs/configuration/"><span>02 · Consultar</span><strong>Conecta un agente local</strong>Usa la herramienta auxiliar MCP firmada para Mac con Codex, Claude u otro cliente stdio.</a>
-  <a href="/docs/reference/"><span>03 · Desarrollar</span><strong>Usa contratos estables</strong>Integra esquemas, registros, evidencias, fixtures generados y estructuras exactas de solicitud y respuesta (documentación en inglés).</a>
+  <a href="/es/docs/reference/"><span>03 · Desarrollar</span><strong>Usa contratos estables</strong>Integra esquemas, registros, evidencias, fixtures generados y estructuras exactas de solicitud y respuesta (documentación en inglés).</a>
 </div>
 
 <div class="reference-stats">
@@ -52,9 +52,9 @@ Cuando todo está listo, el resultado de `doctor` usa el esquema `healthmd.cli_d
 
 <div class="related">
   <a href="/es/docs/configuration/"><span>Ya disponible · Mac</span>Configuración: conecta Codex, Claude u otro cliente stdio a la herramienta auxiliar MCP firmada.</a>
-  <a href="/docs/mcp/"><span>Ya disponible · Mac</span>Servidor MCP y App: descubre las 21 herramientas incluidas, genera visualizaciones privadas y conoce la vista previa portátil (en inglés).</a>
-  <a href="/docs/cli/"><span>Ya disponible · Mac</span>Health.md CLI: instala la herramienta auxiliar incluida, comprueba si está listo, consulta datos y distingue la vista previa portátil (en inglés).</a>
-  <a href="/docs/agents/"><span>Arquitectura</span>Contexto del agente: conoce el alcance de las solicitudes, la confianza local, el contexto cifrado, la evidencia, la retención y la privacidad (en inglés).</a>
+  <a href="/es/docs/mcp/"><span>Ya disponible · Mac</span>Servidor MCP y App: descubre las 21 herramientas incluidas, genera visualizaciones privadas y conoce la vista previa portátil.</a>
+  <a href="/es/docs/cli/"><span>Ya disponible · Mac</span>Health.md CLI: instala la herramienta auxiliar incluida, comprueba la disponibilidad, consulta datos y distingue la vista previa portátil.</a>
+  <a href="/es/docs/agents/"><span>Arquitectura</span>Contexto del agente: conoce el alcance de las solicitudes, la confianza local, el contexto cifrado, la evidencia, la retención y la privacidad.</a>
 </div>
 
 <p class="docs-section-kicker">Operaciones habituales</p>
@@ -62,12 +62,12 @@ Cuando todo está listo, el resultado de `doctor` usa el esquema `healthmd.cli_d
 ## Consultar, extraer y automatizar
 
 <div class="related">
-  <a href="/docs/agent-queries/"><span>Consultas tipadas</span>Consulta métricas, sesiones de sueño, entrenamientos, comparaciones, cobertura y evidencia objetiva (en inglés).</a>
-  <a href="/docs/cli-direct/"><span>Vista previa · CLI portátil</span>Acceso directo al iPhone: conoce el emparejamiento mediante Manual IP o Tailscale antes del lanzamiento del paquete independiente (en inglés).</a>
-  <a href="/docs/cli-extract/"><span>Datos de origen</span>Extracción canónica: obtén días seleccionados con el esquema v7, registros de origen, proyecciones o JSONL (en inglés).</a>
-  <a href="/docs/cli-jobs/"><span>Ejecuciones fiables</span>Trabajos duraderos: gestiona de forma segura los tiempos de espera, los resultados inciertos, la reanudación, la cancelación y los resultados parciales (en inglés).</a>
-  <a href="/docs/agent-api/"><span>Bajo nivel</span>API de loopback: usa las rutas exactas de consulta, evidencia, cursor, actualización y trabajos duraderos (en inglés).</a>
-  <a href="/docs/reference/integration-recipes/"><span>Patrones</span>Recetas de integración: analiza y valida los resultados de Health.md sin debilitar sus contratos (en inglés).</a>
+  <a href="/es/docs/agent-queries/"><span>Consultas tipadas</span>Consulta métricas, sesiones de sueño, entrenamientos, comparaciones, cobertura y evidencia factual.</a>
+  <a href="/es/docs/cli-direct/"><span>Vista previa · CLI portátil</span>Acceso directo al iPhone: conoce el emparejamiento mediante Manual IP o Tailscale antes del lanzamiento del paquete independiente.</a>
+  <a href="/es/docs/cli-extract/"><span>Datos de origen</span>Extracción canónica: obtén días seleccionados con el esquema v7, registros de origen, proyecciones o JSONL.</a>
+  <a href="/es/docs/cli-jobs/"><span>Ejecuciones fiables</span>Tareas persistentes: gestiona de forma segura los tiempos de espera, los resultados inciertos, la reanudación, la cancelación y los resultados parciales.</a>
+  <a href="/es/docs/agent-api/"><span>Bajo nivel</span>API de loopback: usa las rutas exactas de consulta, evidencia, cursor, actualización y tareas persistentes.</a>
+  <a href="/es/docs/reference/integration-recipes/"><span>Patrones</span>Recetas de integración: analiza y valida los resultados de Health.md sin debilitar sus contratos (en inglés).</a>
 </div>
 
 <p class="docs-section-kicker">Interfaces estables</p>
@@ -75,12 +75,12 @@ Cuando todo está listo, el resultado de `doctor` usa el esquema `healthmd.cli_d
 ## Contratos y estructuras de datos
 
 <div class="related">
-  <a href="/docs/reference/"><span>Mapa de contratos</span>Referencia de exportación: consulta esquemas, métricas, formatos, registros y fixtures de interoperabilidad (en inglés).</a>
-  <a href="/docs/reference/api-and-cli/"><span>Automatización</span>Contratos de API y CLI: consulta estructuras de solicitud y respuesta, rutas, comportamiento de salida y ejemplos generados (en inglés).</a>
-  <a href="/docs/reference/evidence-packets/"><span>Resultados del agente</span>Consultas y evidencia: valores tipados, cobertura, datos ausentes, operaciones e identidades deterministas (en inglés).</a>
-  <a href="/docs/reference/daily-records/"><span>Esquema v7</span>Registros diarios: conoce el documento público de origen y sus reglas de propiedad (en inglés).</a>
-  <a href="/docs/shared-metric-registry/"><span>Vocabulario</span>Registro de métricas: usa identificadores, categorías, unidades y metadatos de perfil estables entre plataformas (en inglés).</a>
-  <a href="/docs/reference/generated/"><span>Legible por máquina</span>Artefactos generados: consulta campos canónicos, fixtures, inventarios de mensajes y contratos de la CLI (en inglés).</a>
+  <a href="/es/docs/reference/"><span>Mapa de contratos</span>Referencia de exportación: consulta esquemas, métricas, formatos, registros y fixtures de interoperabilidad (en inglés).</a>
+  <a href="/es/docs/reference/api-and-cli/"><span>Automatización</span>Contratos de API y CLI: consulta estructuras de solicitud y respuesta, rutas, comportamiento de salida y ejemplos generados (en inglés).</a>
+  <a href="/es/docs/reference/evidence-packets/"><span>Resultados del agente</span>Consultas y evidencia: valores tipados, cobertura, datos ausentes, operaciones e identidades deterministas (en inglés).</a>
+  <a href="/es/docs/reference/daily-records/"><span>Esquema v7</span>Registros diarios: conoce el documento público de origen y sus reglas de propiedad (en inglés).</a>
+  <a href="/es/docs/shared-metric-registry/"><span>Vocabulario</span>Registro de métricas: usa identificadores, categorías, unidades y metadatos de perfil estables entre plataformas.</a>
+  <a href="/es/docs/reference/generated/"><span>Legible por máquina</span>Artefactos generados: consulta campos canónicos, fixtures, inventarios de mensajes y contratos de la CLI (en inglés).</a>
 </div>
 
 <p class="docs-section-kicker">Flujos de trabajo del producto</p>
@@ -90,10 +90,10 @@ Cuando todo está listo, el resultado de `doctor` usa el esquema `healthmd.cli_d
 <div class="related">
   <a href="/es/docs/iphone-first-export/"><span>Empieza aquí · iPhone</span>Primera exportación: autoriza Apple Health, elige una carpeta, obtén una vista previa y verifica los archivos escritos.</a>
   <a href="/es/docs/android/"><span>Android</span>Health Connect: elige una carpeta de un proveedor de documentos y configura la automatización de la plataforma.</a>
-  <a href="/docs/export/"><span>Archivos</span>Exportación: ejecuta intervalos de fechas explícitos en Markdown, CSV, JSON u Obsidian Bases (en inglés).</a>
-  <a href="/docs/format/"><span>Estructura</span>Personalización del formato: controla las unidades, las fechas, el frontmatter, los nombres de archivo y el comportamiento de escritura (en inglés).</a>
-  <a href="/docs/scheduling/"><span>Segundo plano</span>Programación: conoce el comportamiento de las exportaciones diarias y semanales y los límites de cada plataforma (en inglés).</a>
-  <a href="/docs/shortcuts/"><span>Automatización</span>Shortcuts y App Intents: inicia exportaciones, resúmenes y comprobaciones de estado desde flujos de trabajo de Apple (en inglés).</a>
+  <a href="/es/docs/export/"><span>Archivos</span>Exportación: ejecuta intervalos de fechas explícitos en Markdown, CSV, JSON u Obsidian Bases.</a>
+  <a href="/es/docs/format/"><span>Estructura</span>Personalización del formato: controla las unidades, las fechas, el frontmatter, los nombres de archivo y el comportamiento de escritura.</a>
+  <a href="/es/docs/scheduling/"><span>Segundo plano</span>Programación: conoce el comportamiento de las exportaciones diarias y semanales y los límites de cada plataforma.</a>
+  <a href="/es/docs/shortcuts/"><span>Automatización</span>Shortcuts y App Intents: inicia exportaciones, resúmenes y comprobaciones de estado desde flujos de trabajo de Apple.</a>
 </div>
 
 <p style="margin-top:48px; color:var(--sl-color-gray-3); font-size:12px; font-family:var(--sl-font-mono);">Estructura de la documentación actualizada el 2026-08-02</p>

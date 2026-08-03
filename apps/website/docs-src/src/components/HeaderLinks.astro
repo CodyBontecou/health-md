@@ -1,14 +1,14 @@
 ---
-const { lang } = Astro.locals.starlightRoute;
-const isSpanish = lang === 'es' || lang.startsWith('es-');
-const docsRoot = isSpanish ? '/es/docs' : '/docs';
-const labels = isSpanish
-  ? { primary: 'Principal', data: 'Datos', home: 'Inicio' }
-  : { primary: 'Primary', data: 'Data', home: 'Home' };
+import { localeFor } from '../../../i18n/locales.mjs';
+import { localeFromPathname, routePath } from '../../../i18n/routes.mjs';
+
+const localeCode = localeFromPathname(Astro.url.pathname);
+const locale = localeFor(localeCode);
+const docsRoot = routePath('docsHome', localeCode).replace(/\/$/, '');
 ---
-<nav class="healthmd-header-links" aria-label={labels.primary}>
+<nav class="healthmd-header-links" aria-label={locale.ui.docsPrimary}>
   <a href={`${docsRoot}/mcp/`}>MCP</a>
   <a href={`${docsRoot}/cli/`}>CLI</a>
-  <a href={`${docsRoot}/reference/`}>{labels.data}</a>
-  <a href={isSpanish ? '/es/' : '/'} class="header-home-link">{labels.home} <span aria-hidden="true">↗</span></a>
+  <a href={`${docsRoot}/reference/`}>{locale.ui.docsData}</a>
+  <a href={routePath('home', localeCode)} class="header-home-link">{locale.ui.docsHome} <span aria-hidden="true">↗</span></a>
 </nav>

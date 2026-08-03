@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+
+<html dir="ltr" lang="zh-Hans">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>隐私政策 — Health.md</title>
+<meta content="Health.md 隐私政策：健康数据保留在用户控制的设备和目标位置；有限的第一方假名化产品分析绝不包含健康记录或导出内容。" name="description"/>
+<link href="https://healthmd.app/zh-hans/privacy-policy.html" rel="canonical"/><link href="https://healthmd.app/privacy-policy.html" hreflang="en" rel="alternate"/><link href="https://healthmd.app/privacy-policy.html" hreflang="x-default" rel="alternate"/><link href="https://healthmd.app/zh-hans/privacy-policy.html" hreflang="zh-Hans" rel="alternate"/>
+<meta content="noindex,follow" name="robots"/>
+<meta content="website" property="og:type"/>
+<meta content="Health.md" property="og:site_name"/>
+<meta content="隐私政策 — Health.md" property="og:title"/>
+<meta content="Health.md 隐私政策：健康数据保留在用户控制的设备和目标位置；有限的第一方假名化产品分析绝不包含健康记录或导出内容。" property="og:description"/>
+<meta content="https://healthmd.app/zh-hans/privacy-policy.html" property="og:url"/>
+<meta content="zh_CN" property="og:locale"/><meta content="en_US" property="og:locale:alternate"/>
+
+<meta content="#6d4aff" name="theme-color"/>
+<link href="../assets/favicon.ico" rel="icon" sizes="any"/>
+<link href="../assets/app-icon/icon_16x16.png" rel="icon" sizes="16x16" type="image/png"/>
+<link href="../assets/app-icon/icon_20x20.png" rel="icon" sizes="20x20" type="image/png"/>
+<link href="../assets/app-icon/icon_29x29.png" rel="icon" sizes="29x29" type="image/png"/>
+<link href="../assets/app-icon/icon_32x32.png" rel="icon" sizes="32x32" type="image/png"/>
+<link href="../assets/app-icon/icon_40x40.png" rel="icon" sizes="40x40" type="image/png"/>
+<link href="../assets/app-icon/icon_60x60.png" rel="icon" sizes="60x60" type="image/png"/>
+<link href="../assets/app-icon/icon_192x192.png" rel="icon" sizes="192x192" type="image/png"/>
+<link href="../assets/app-icon/icon_1024x1024.png" rel="icon" sizes="1024x1024" type="image/png"/>
+<link href="../assets/app-icon/icon_76x76.png" rel="apple-touch-icon" sizes="76x76"/>
+<link href="../assets/app-icon/icon_120x120.png" rel="apple-touch-icon" sizes="120x120"/>
+<link href="../assets/app-icon/icon_152x152.png" rel="apple-touch-icon" sizes="152x152"/>
+<link href="../assets/app-icon/icon_167x167.png" rel="apple-touch-icon" sizes="167x167"/>
+<link href="../assets/app-icon/icon_180x180.png" rel="apple-touch-icon" sizes="180x180"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<script src="../assets/theme.js"></script>
+<style>
+    :root {
+      color-scheme: light;
+      --bg-primary: #f4f2f8;
+      --bg-secondary: #fbfaff;
+      --bg-tertiary: #e9e5f1;
+      --text-primary: #202024;
+      --text-secondary: #42404a;
+      --text-muted: #6f6a7c;
+      --accent: #6d4aff;
+      --accent-dim: #4f2bbd;
+      --accent-glow: rgba(109, 74, 255, 0.14);
+      --border: #d4cde0;
+      --success: #9b5cf6;
+      --on-accent: #ffffff;
+      --mono: 'JetBrains Mono', 'Space Mono', monospace;
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg-primary: #18181d;
+      --bg-secondary: #24222c;
+      --bg-tertiary: #211f28;
+      --text-primary: #f0eef7;
+      --text-secondary: #d3cedf;
+      --text-muted: #aaa3b8;
+      --accent: #a78bfa;
+      --accent-dim: #6d4aff;
+      --accent-glow: rgba(167, 139, 250, 0.18);
+      --border: #3b3549;
+      --success: #c4b5fd;
+      --on-accent: #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg-primary: #18181d;
+        --bg-secondary: #24222c;
+        --bg-tertiary: #211f28;
+        --text-primary: #f0eef7;
+        --text-secondary: #d3cedf;
+        --text-muted: #aaa3b8;
+        --accent: #a78bfa;
+        --accent-dim: #6d4aff;
+        --accent-glow: rgba(167, 139, 250, 0.18);
+        --border: #3b3549;
+        --success: #c4b5fd;
+        --on-accent: #ffffff;
+      }
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--mono);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 17px;
+      line-height: 1.75;
+      -webkit-text-size-adjust: 100%;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .grid-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 0;
+      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
+    }
+
+    .header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .logo-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border: 2px solid var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .logo-mark::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .logo-text {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+
+    .logo-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      margin-top: 4px;
+    }
+
+    .logo-subtext a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .logo-subtext a:hover {
+      color: var(--accent);
+    }
+
+    .back-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+    }
+
+    .header-actions {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .language-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .language-selector a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .language-selector a:hover {
+      color: var(--accent);
+    }
+
+    .language-selector [aria-current="page"] {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .theme-toggle {
+      flex: 0 0 auto;
+      display: inline-grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      background: var(--bg-secondary);
+    }
+
+    .theme-toggle button {
+      min-width: 44px;
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font: 700 10px/1 var(--mono);
+      text-transform: uppercase;
+    }
+
+    .theme-toggle button[aria-pressed="true"] {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+
+    main {
+      padding-top: 140px;
+      padding-bottom: 80px;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      margin-bottom: 60px;
+    }
+
+    .page-label {
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      font-size: clamp(40px, 7vw, 56px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      line-height: 1.05;
+    }
+
+    .page-meta {
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+
+    .content-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 52px;
+      margin-bottom: 32px;
+    }
+
+    .content-box h2 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      margin-top: 40px;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .content-box h2:first-child {
+      margin-top: 0;
+    }
+
+    .content-box h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      margin-top: 32px;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .content-box p {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 18px;
+      line-height: 1.9;
+    }
+
+    .content-box ul {
+      margin: 20px 0;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .content-box ul li {
+      font-size: 17px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+      padding-left: 28px;
+      position: relative;
+      line-height: 1.9;
+    }
+
+    .content-box ul li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .content-box strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .highlight-box {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent-dim);
+      border-radius: 4px;
+      padding: 24px;
+      margin: 32px 0;
+    }
+
+    .highlight-box p {
+      margin-bottom: 0;
+      color: var(--text-primary);
+    }
+
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 16px 0;
+      }
+
+      .header-inner {
+        align-items: flex-start;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .header-actions {
+        margin-left: auto;
+      }
+
+      .content-box {
+        padding: 30px 22px;
+      }
+
+      .page-title {
+        font-size: 38px;
+      }
+
+      .content-box p,
+      .content-box ul li {
+        font-size: 16px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+
+      .footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 560px) {
+      main {
+        padding-top: 152px;
+      }
+
+      .container,
+      .header-inner {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+
+      .logo-subtext {
+        display: none;
+      }
+
+      .page-label,
+      .back-link {
+        font-size: 12px;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .theme-toggle button {
+        min-width: 38px;
+        padding: 6px;
+        font-size: 9px;
+      }
+
+      .content-box {
+        padding: 24px 18px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .back-link,
+      .theme-toggle {
+        width: 100%;
+      }
+
+      .back-link {
+        justify-content: center;
+      }
+
+      .theme-toggle button {
+        min-width: 0;
+      }
+    }
+  </style>
+<link href="../assets/theme-icons.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="grid-bg"></div>
+<header>
+<div class="header-inner">
+<a class="logo" href="../index.html">
+<div class="logo-mark"></div>
+<div class="logo-content">
+<span class="logo-text">health.md</span>
+<span class="logo-subtext">由 <a href="https://isolated.tech" rel="noopener" target="_blank">isolated.tech</a> 构建</span>
+</div>
+</a>
+<div class="header-actions">
+<nav class="language-selector" aria-label="语言选择"><span aria-current="page" lang="zh-Hans">简体中文</span><span aria-hidden="true">/</span><a href="../privacy-policy.html" hreflang="en" lang="en">English</a></nav>
+<a class="back-link" href="../index.html">
+<svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16">
+<path d="M19 12H5M12 19l-7-7 7-7"></path>
+</svg>
+          返回
+        </a>
+<div aria-label="颜色主题" class="theme-toggle" role="group">
+<button aria-pressed="true" data-theme-option="system" type="button">自动</button>
+<button aria-pressed="false" data-theme-option="light" type="button">浅色</button>
+<button aria-pressed="false" data-theme-option="dark" type="button">深色</button>
+</div>
+</div>
+</div>
+</header>
+<main>
+<div class="container">
+<div class="page-header">
+<p class="page-label">法律</p>
+<h1 class="page-title">隐私政策</h1>
+<p class="page-meta">最后更新时间：2026 年 8 月 2 日</p>
+</div>
+<div class="content-box">
+<div class="highlight-box"><p><strong>翻译说明：</strong>本简体中文译文是尚未发布的审阅稿，仅供翻译审阅。英文版本为权威文本；如本译文与英文版本有任何差异，以英文版本为准。</p></div>
+<div class="highlight-box">
+<p><strong>简明版：</strong> Health.md 不会在 Health.md 服务器上收集或存储健康数据。HealthKit 和 Health Connect 数据只在您的设备上处理，并且只会发送到您选择的目标位置，包括文件夹、文件提供方、已配对设备或用户配置的 API 端点。Health.md 会自动收集有限的第一方产品分析数据，应用内不使用第三方分析、广告或归因 SDK。这些事件绝不包含健康数值、指标名称、健康日期、导出内容、路径、已连接设备名称、凭据或用户文本，也不会用于广告或跨应用跟踪。</p>
+</div>
+<h2>我们的隐私承诺</h2>
+<p>
+          您的健康数据属于您。Health.md 只会在获得平台授权后读取数据，并且不会在服务器上保留副本。本政策说明由用户发起的导出和传输、有限的第一方产品与网站分析，以及经过最小化处理的第一方营销活动归因。
+        </p>
+<h2>数据收集</h2>
+<p>
+<strong>导出无需 Health.md 账户，也不会将健康数据发送到 Health.md 服务器。</strong> 具体而言：
+        </p>
+<ul>
+<li>导出健康数据无需创建或注册账户</li>
+<li>Health.md 服务不会收集或保留 HealthKit 样本、Health Connect 记录、导出文档、输入的查询结果或健康数据附件</li>
+<li>应用内不含第三方分析、归因、崩溃报告、广告或跟踪 SDK</li>
+<li>产品分析和营销活动归因不包含 Advertising ID、Android ID、硬件 ID、跟踪像素、健康样本、导出内容或文件/文件夹路径</li>
+<li>只会按照下文说明收集有限的第一方产品和营销活动数据</li>
+</ul>
+<h2>第一方营销活动归因</h2>
+<p>
+          Health.md 使用第一方营销活动链接，例如 <code>healthmd.app/v/yt-csv-001</code>，无需第三方归因 SDK 即可衡量营销活动的整体效果。Cloudflare 重定向服务会记录营销活动令牌、链接 slug、营销活动平台和内容角度、粗粒度目标位置/客户端类别、可用时的来源主机名、粗粒度国家或地区代码，以及时间戳。存储的点击记录不包含 IP 地址或完整 User-Agent。
+        </p>
+<p>
+          在 Android 上，Google Play Install Referrer 可以将由营销活动带来的安装与对应活动关联起来。对于有效的营销活动安装，Android 应用会发送一个事件，其中包含由应用随机生成的安装 UUID 和事件 UUID、应用版本和构建号、经过验证的营销活动令牌/source/medium/content 元数据、事件时间，以及可选的 Play 引荐点击和安装开始时间戳。随机安装 UUID 是该次安装的持久假名化标识符，并非由设备标识符或广告标识符派生。Health.md 绝不会保留或传输完整的原始 Install Referrer。
+        </p>
+<p>
+          营销活动点击与归因安装只会通过经过验证的营销活动令牌关联，用于汇总报告。营销活动归因记录最多保留 13 个月。汇总的摄取速率计数器只包含一分钟时间窗口和计数，并会在 24 小时后删除。Cloudflare 会按照其自身条款处理常规网络连接信息，但 Health.md 不会把 IP 地址、完整 User-Agent、Cloudflare 请求 ID、Cookie 或指纹数据添加到安装归因记录中。
+        </p>
+<h2>第一方产品分析</h2>
+<p>
+          Health.md 使用第一方 Cloudflare Worker 和 D1 数据库了解粗粒度的新手引导、激活、导出、付费墙和购买流程表现，不使用第三方分析 SDK。应用会发送随机安装 UUID、随机事件 UUID、事件名称、应用版本/构建号/平台，以及仅与事件相关且列入允许列表的粗粒度字段：新手引导步骤或明确跳过设置、免费导出次数、导出目标类别、格式数量、指标数量和日期跨度区间、付费墙上下文、StoreKit 或 Google Play 产品标识符、购买/恢复结果，以及粗粒度授权或错误类别。
+        </p>
+<p>
+          产品分析绝不包含 HealthKit 或 Health Connect 数值或标识符、指标名称、健康日期、药物、锻炼、导出内容、输入的查询结果、文件夹/知识库/文件名称或路径、已连接设备名称或设备名称、账户数据、凭据或令牌、用户文本、Advertising ID、Android ID、硬件标识符、原始引荐来源、完整 User-Agent 或存储的 IP 地址。摄取服务会拒绝未知的封装字段、事件、属性和属性值。随机安装 UUID 在该次应用安装期间保持不变，因此属于假名化标识符，而不是匿名标识符；它并非由设备、账户、广告或健康标识符派生。
+        </p>
+<p>
+          Health.md 会自动收集这些有限的产品事件。产品分析数据不会与广告商共享，也不会用于广告、指纹识别或跨应用跟踪。Health.md 的公开客户端和 Worker 允许列表经过专门设计，使健康记录和导出内容无法出现在分析载荷中。
+        </p>
+<p>
+          经过验证的产品分析记录最多保留 13 个月，之后由每日自动清理任务删除。除经过验证的事件字段外，Health.md 不会将原始 IP 地址、完整 User-Agent、请求 URL、请求标头、凭据或请求正文添加到分析记录中。Cloudflare 会按照其自身条款处理常规网络连接信息。
+        </p>
+<h2>应用如何工作</h2>
+<p>
+          Health.md 使用 Apple 提供的 HealthKit API 在本地读取 Apple Health 数据，并通过 Health Connect 在本地读取 Android 健康数据。iPhone 始终是 HealthKit 导出的来源，Android 始终是 Health Connect 导出的来源；启用 Mac 同步后，Mac 应用可以作为本地目标位置。这些数据：
+        </p>
+<ul>
+<li>会保留在 Apple 的 HealthKit 数据库或 Android Health Connect 中，除非您明确将其导出</li>
+<li>只在您的设备上处理，用于执行您请求的导出</li>
+<li>只会导出到您选择的目标位置，例如“文件”、iCloud Drive、Android 文档提供方、第三方文件提供方、Obsidian 知识库、已配对的 Mac 或 CLI，或用户配置的 API 端点</li>
+<li>不会上传到 Health.md 健康数据数据库，也不会由 Health.md 保留以供日后查询</li>
+</ul>
+<h2>Android Health Connect 医疗记录</h2>
+<p>
+          Health.md 是一款只读的健康数据可移植和个人记录管理应用。在受支持的 Android 设备上，用户可以使用其 <strong>医疗记录（FHIR）</strong> 导出功能，读取用户在 Health Connect 中明确授权的医疗资源。Health.md 会分别请求各类别的读取权限，因为 Health Connect 将可移植个人医疗记录划分为以下类别：
+        </p>
+<ul>
+<li><strong>疫苗：</strong> 免疫接种史</li>
+<li><strong>过敏与不耐受：</strong> AllergyIntolerance 记录</li>
+<li><strong>疾病状况：</strong> 诊断和问题列表历史</li>
+<li><strong>实验室结果：</strong> 实验室 Observation 记录</li>
+<li><strong>药物：</strong> Medication、MedicationRequest 和 MedicationStatement 记录</li>
+<li><strong>个人信息：</strong> 用于识别用户记录并提供人口统计背景的 Patient 记录</li>
+<li><strong>医疗从业者信息：</strong> 护理记录引用的 Practitioner 和 PractitionerRole 记录</li>
+<li><strong>孕期：</strong> 与孕期相关的医疗记录</li>
+<li><strong>医疗操作：</strong> Procedure 历史</li>
+<li><strong>社会史：</strong> 来源系统记录的生活方式和临床背景观测值</li>
+<li><strong>就诊：</strong> Encounter 和护理就诊历史</li>
+<li><strong>生命体征：</strong> 病历中存储的临床生命体征观测值</li>
+</ul>
+<p>
+          这些权限仅用于在用户手动或计划执行的导出中包含已授权类别。JSON 和提供方原生导出会保留 Health Connect 提供的 FHIR 资源数据和来源元数据；Markdown 和 CSV 摘要会按类别报告医疗资源数量。Health.md 不会诊断疾病、建议治疗、向 Health Connect 写入数据，也不会将健康数据用于广告、用户画像、信贷、保险或就业决策。
+        </p>
+<p>
+          每个 Health Connect 类别均可选。用户可以随时拒绝或撤销某个类别的权限，其他已授权导出不受影响。Health.md 不会在服务器上保留 Android Health Connect 数据副本。导出的记录会保留在文件夹、文档提供方、知识库、已配对设备或用户配置的 HTTPS 端点中，直到用户通过该目标位置提供的控制功能将其删除。
+        </p>
+<h2>数据存储</h2>
+<p>
+          Health.md 不会在 Health.md 服务器上存储 Apple Health、Health Connect 或其他健康数据：
+        </p>
+<ul>
+<li><strong>来源数据：</strong> Apple Health 数据保留在 HealthKit 中，Android 健康数据保留在 Health Connect 中</li>
+<li><strong>导出数据：</strong> Markdown、Obsidian、CSV 和 JSON 文件会写入您选择的目标位置</li>
+<li><strong>直接传输：</strong> 已配对的 Mac 和 CLI 工作流直接从移动端来源接收数据，并分别保留本地作业状态</li>
+<li><strong>文件提供方同步：</strong> 如果所选文件夹由 iCloud Drive、Dropbox、Google Drive、Working Copy、Syncthing、OneDrive 或其他提供方支持，该提供方会按照其自身条款处理存储和同步</li>
+<li><strong>API 端点：</strong> 配置后，所选导出会直接发送到该端点，并遵循该端点的安全、日志记录、保留和删除控制</li>
+<li><strong>应用偏好设置：</strong> 计划、文件夹、模板、连接和解锁设置通过平台存储、StoreKit 或 Google Play Billing 保存</li>
+</ul>
+<p>
+          我们无法访问来源健康数据库、本地导出文件或您控制的目标位置。上文单独说明的产品分析和营销活动归因记录不包含健康数据或导出内容。
+        </p>
+<h2>第三方服务</h2>
+<p>
+          Health.md 应用内不含广告 SDK、第三方分析/归因 SDK 或第三方跟踪。应用会与平台服务、第一方产品/营销活动基础设施，以及您选择的目标位置交互：
+        </p>
+<ul>
+<li><strong>Apple HealthKit：</strong> 在获得您的明确授权后，在设备本地读取 Apple Health 数据</li>
+<li><strong>Android Health Connect：</strong> 在获得您的明确授权后，在设备本地读取 Android 健康记录</li>
+<li><strong>可选健康数据提供方 API：</strong> 如果您明确启用直接提供方导入，应用可能会使用提供方 OAuth 流程并在设备上存储提供方令牌，以便直接请求该提供方的数据。只有在您主动连接后，Health.md 才会使用这些提供方。</li>
+<li><strong>Apple“文件”、Android Storage Access Framework 和文件提供方：</strong> 将导出文件写入您选择的文件夹</li>
+<li><strong>StoreKit、App Store 和 Google Play Billing：</strong> 购买或恢复一次性 Full Access 解锁</li>
+<li><strong>Google Play Install Referrer：</strong> 在 Android 上，将有效 Health.md 营销活动链接带来的安装与经过清理的第一方营销活动元数据关联</li>
+<li><strong>Cloudflare：</strong> 接收列入允许列表的第一方产品分析数据、运行营销活动重定向、在 D1 中存储经过最小化处理的产品/点击/安装记录、执行保留清理、实施汇总级防滥用限流，并提供网站交付和分析</li>
+<li><strong>本地网络 / Nearby Connectivity：</strong> 启用 Mac 同步后，发现可选 Mac 目标位置并向其写入数据</li>
+</ul>
+<h2>网站分析</h2>
+<p>
+          healthmd.app 网站会在执行简短的分析开关检查后使用 Cloudflare Web Analytics，用于了解网站的汇总流量、性能和热门页面。本网站不使用客户端 Cookie；网站分析也不会连接到您的 Apple Health 数据、Health Connect 数据、导出文件、StoreKit 或 Google Play 购买状态，或应用内设置。
+        </p>
+<p>
+          网站页面还可能从 Google Fonts 或 jsDelivr 等第三方 CDN 请求字体或资源。这些提供方可能会按照其自身政策接收标准 Web 请求信息，例如您的 IP 地址、浏览器、来源页面和请求的 URL。
+        </p>
+<h2>网络活动</h2>
+<p>
+<strong>本地导出工作流不会将健康数据发送给 Health.md。</strong> 网络活动仅限于您主动使用的功能或平台服务，例如：
+        </p>
+<ul>
+<li>通过 StoreKit、App Store 和 Google Play 购买或恢复 Full Access</li>
+<li>启用 Mac 目标位置时进行本地网络发现和传输</li>
+<li>如果您为导出文件选择了相应文件夹，则通过 iCloud Drive、Android 文档提供方或第三方文件提供方同步</li>
+<li>如果您明确连接受支持的直接健康数据来源，则发起可选的提供方 OAuth 或 API 请求</li>
+<li>移动端来源可用时，由明确配对的 CLI 或 MCP 客户端发起实时直连查询；Health.md 不会在服务器上保留这些结果</li>
+<li>如果您明确配置并选择 HTTPS API 端点，则向该端点传送用户请求的导出</li>
+<li>由 App Store 或 Google Play 提供应用更新</li>
+<li>上文所述且列入允许列表的第一方新手引导、激活、导出、付费墙和购买流程分析</li>
+<li>上文所述的第一方营销活动重定向和 Android 营销活动安装归因</li>
+<li>您通过浏览器访问 healthmd.app 时产生的网站分析和 CDN 请求</li>
+</ul>
+<h2>权限</h2>
+<p>
+          Health.md 可能会请求以下平台权限：
+        </p>
+<ul>
+<li><strong>健康数据（HealthKit）：</strong> 用于读取您为自主导出和直连查询选择的 Apple Health 类别。您可以在 iOS“设置”→“健康”→“数据访问与设备”→ Health.md 中授予或撤销类别权限。</li>
+<li><strong>Health Connect 健身和健康数据：</strong> 用于读取您授权用于自主导出的特定 Android 健身、健康、活动、身体、营养、生殖健康和生命体征数据类别。</li>
+<li><strong>Health Connect 医疗记录：</strong> 用于读取上文医疗记录（FHIR）导出功能中分别授权的疫苗、过敏/不耐受、疾病状况、实验室结果、药物、个人信息、医疗从业者信息、孕期、医疗操作、社会史、就诊和医疗生命体征类别。</li>
+<li><strong>文件系统访问：</strong> 用于将导出文件写入您选择的文件系统位置。您可以通过 Apple 文件选择器或 Android Storage Access Framework 选择器选择该位置。</li>
+<li><strong>本地网络：</strong> 启用 Mac 同步后，用于发现 Mac 配套设备并向其发送导出作业。</li>
+<li><strong>通知：</strong> 用于在计划导出需要手动处理或已经完成时通知您。</li>
+</ul>
+<p>
+          这些权限只用于所述目的，您可以随时在 iOS、iPadOS、macOS 或 Android 设置中撤销。
+        </p>
+<h2>儿童隐私</h2>
+<p>
+          Health.md 不会为了广告或面向儿童的用户画像而索取姓名、联系方式、健康数据或账户资料。上文所述的网站和营销活动衡量只用于评估整体表现，不用于面向儿童的用户画像或广告。
+        </p>
+<h2>数据安全</h2>
+<p>
+          Health.md 会根据不同存储路径采用相应的技术和组织保障措施：
+        </p>
+<ul>
+<li>Apple HealthKit 数据受 Apple 设备安全机制和 HealthKit 权限保护；Android 健康数据受 Android 设备安全机制和 Health Connect 权限保护</li>
+<li>导出文件由其所在的文件系统、知识库、云端硬盘、Android 文档提供方或 Mac 文件夹提供保护</li>
+<li>Health.md 的受保护 API 端点导出模式要求使用 HTTPS；目标服务自行控制存储和保留策略</li>
+<li>Mac 直连和 CLI 传输使用经过身份验证的加密通道、有界帧、完整性检查和明确配对</li>
+<li>建议设置设备密码，及时更新 iOS、iPadOS、macOS 和 Android，并检查所有同步提供方的权限</li>
+</ul>
+<h2>您的权利与控制</h2>
+<p>
+          产品分析和营销活动记录均采用假名化标识，并会在 13 个月内自动过期。您可以控制来源权限、本地归因状态、直连配对和导出文件：
+        </p>
+<ul>
+<li><strong>访问：</strong> 通过 Apple Health 管理 Apple Health 数据，通过 Health Connect 管理 Android 数据，并在您选择的目标位置管理导出文件</li>
+<li><strong>权限变更：</strong> 通过相关应用或平台控制撤销 HealthKit、Health Connect、提供方、文件、本地网络、通知或配对访问权限</li>
+<li><strong>产品分析：</strong> 有限的产品事件会按照上文严格的字段排除规则自动收集，并在 13 个月内过期</li>
+<li><strong>删除：</strong> 请通过对应目标位置删除文件。卸载 Health.md 会删除本地应用状态，但不会删除已经写入文件提供方、已配对计算机、知识库或 API 端点的文件。已提交的分析记录会按照保留策略自动过期。</li>
+<li><strong>可移植性：</strong> 导出的 Markdown、Obsidian、CSV 和 JSON 文件可以脱离 Health.md 使用</li>
+<li><strong>营销活动相关问题：</strong> 第一方营销活动记录会在上文所述期限内过期；如有隐私问题或请求，请联系我们</li>
+</ul>
+<h2>本政策的变更</h2>
+<p>
+          如果我们的隐私做法发生重大变化，我们会更新本政策，并通过应用更新或网站更新通知用户。本政策顶部的“最后更新时间”反映政策变更时间。
+        </p>
+<h2>开源</h2>
+<p>
+          Health.md 的部分数据处理逻辑可能以开源代码或文档形式提供，供用户审查导出内容的生成方式。请查看文档或项目仓库，了解当前源代码的开放情况。
+        </p>
+<h2>联系我们</h2>
+<p>
+          如果您对本隐私政策或 Health.md 的工作方式有疑问，可以通过以下方式联系我们：
+        </p>
+<p>
+<strong>电子邮件：</strong> privacy@isolated.tech<br/>
+<strong>网站：</strong> https://isolated.tech
+        </p>
+<h2>管辖权</h2>
+<p>
+          本隐私政策受 Health.md 运营所在地司法管辖区的法律管辖。根据您所在的位置，上文所述的假名化产品分析、营销活动归因、网站分析、提供方 OAuth/CDN 请求和其他非健康数据处理，可能受适用隐私法律约束。
+        </p>
+</div>
+</div>
+</main>
+<footer>
+<div class="container">
+<div class="footer-inner">
+<p class="footer-text">© 2026 health.md。精心打造。</p>
+<div class="footer-links">
+<a href="privacy-policy.html">隐私政策</a>
+<a href="terms-of-service.html">条款</a>
+<a href="mailto:cody@isolated.tech">支持</a>
+</div>
+</div>
+</div>
+</footer>
+<script defer="" src="../assets/analytics.js"></script>
+</body>
+</html>

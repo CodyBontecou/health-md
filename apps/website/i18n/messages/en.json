@@ -94,7 +94,13 @@
       "contextLabel": "Example answer context",
       "coverage": "Coverage: 14 of 14 days",
       "observations": "14 observations",
-      "evidence": "Evidence available"
+      "evidence": "Evidence available",
+      "downloadTitle": "Take your health data with you.",
+      "downloadOffer": "Try 10 exports free. Full Access is a one-time purchase. No subscription.",
+      "footerNavLabel": "Footer navigation",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "support": "Support"
     },
     "runtime": {
       "intlLocale": "en-US",

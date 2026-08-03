@@ -2,21 +2,26 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { publishedLocales } from '../../i18n/locales.mjs';
+import { routePath } from '../../i18n/routes.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const CANONICAL_ORIGIN = 'https://healthmd.app';
 const SITE_ORIGINS = new Set([CANONICAL_ORIGIN, 'https://healthmd.isolated.tech']);
-const BUILT_PREFIXES = ['/docs/', '/es/docs/', '/_astro/', '/pagefind/'];
+const BUILT_PREFIXES = [
+  ...publishedLocales('docs').map(({ code }) => routePath('docsHome', code)),
+  '/_astro/',
+  '/pagefind/',
+];
 const BUILT_PATHS = new Set(['/sitemap-index.xml', '/sitemap-0.xml', '/favicon.png']);
 const ALLOWED_SITE_PATHS = new Set([
-  '/',
   '/404/',
-  '/es/',
-  '/privacy-policy.html',
-  '/terms-of-service.html',
-  '/es/privacy-policy.html',
-  '/es/terms-of-service.html',
+  ...publishedLocales('landing').map(({ code }) => routePath('home', code)),
+  ...publishedLocales('legal').flatMap(({ code }) => [
+    routePath('privacy', code),
+    routePath('terms', code),
+  ]),
 ]);
 const ALLOWED_SITE_PREFIXES = ['/assets/', '/visualizations/', '/blog/'];
 

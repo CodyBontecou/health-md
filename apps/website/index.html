@@ -30,43 +30,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="assets/app-icon/icon_192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="assets/app-icon/icon_180x180.png">
   <script id="healthmd-locale-redirect">
-    (() => {
-      const { location, navigator } = window;
-      if (!["http:", "https:"].includes(location.protocol)) return;
-
-      const localeSessionKey = "healthmd-locale-detected";
-      const isSpanishEntry = location.pathname === "/es/" || location.pathname === "/es/index.html";
-      let localeWasDetected = false;
-
-      try {
-        localeWasDetected = window.sessionStorage.getItem(localeSessionKey) === "1";
-        if (isSpanishEntry) window.sessionStorage.setItem(localeSessionKey, "1");
-      } catch {
-        // Language detection still works when browser storage is unavailable.
-      }
-
-      if (isSpanishEntry) return;
-
-      const isCanonicalEnglishEntry = location.pathname === "/" || location.pathname === "/index.html";
-      if (!isCanonicalEnglishEntry || localeWasDetected) return;
-
-      try {
-        window.sessionStorage.setItem(localeSessionKey, "1");
-      } catch {
-        // Keep the default locale behavior when browser storage is unavailable.
-      }
-
-      const browserLanguages = navigator.languages?.length
-        ? navigator.languages
-        : [navigator.language];
-      const preferredLocale = browserLanguages
-        .map((language) => String(language || "").toLowerCase().split(/[-_]/, 1)[0])
-        .find((language) => language === "en" || language === "es");
-
-      if (preferredLocale === "es") {
-        location.replace(`/es/${location.search}${location.hash}`);
-      }
-    })();
+    /* Generated from i18n/locales.mjs by scripts/build-localized-pages.mjs. */
   </script>
   <script>document.documentElement.classList.add("has-js");</script>
   <link rel="stylesheet" href="assets/landing.css">
@@ -116,9 +80,10 @@
         <span class="brand-name">health.md</span>
       </a>
 
-      <nav class="header-nav" aria-label="Documentation">
-        <a class="header-docs-link" href="docs/">Docs</a>
-      </nav>
+      <div class="header-nav">
+        <nav aria-label="Documentation"><a class="header-docs-link" href="docs/">Docs</a></nav>
+        <!-- HEALTHMD_LANGUAGE_SELECTOR -->
+      </div>
     </div>
   </header>
 
@@ -514,7 +479,40 @@
         </div>
       </div>
     </section>
+
+    <section class="download-cta" id="download" aria-labelledby="download-title">
+      <div class="download-cta-inner reveal">
+        <div class="download-cta-mark" aria-hidden="true">
+          <img src="assets/app-icon/icon_80x80.png" width="72" height="72" loading="lazy" decoding="async" alt="">
+        </div>
+        <h2 id="download-title">Take your health data with you.</h2>
+        <p class="download-offer">Try 10 exports free. Full Access is a one-time purchase. No subscription.</p>
+        <div class="download-actions" aria-label="Download Health.md">
+          <a class="hero-store-badge hero-store-badge-apple" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">
+            <img src="assets/store-badges/download-on-app-store.svg" width="120" height="40" decoding="async" alt="Download Health.md on the App Store">
+          </a>
+          <a class="hero-store-badge hero-store-badge-google" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">
+            <img src="assets/store-badges/get-it-on-google-play.png" width="646" height="250" decoding="async" alt="Get Health.md on Google Play">
+          </a>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="footer-shell">
+      <a class="footer-brand" href="#top" aria-label="Health.md home">health.md</a>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="docs/">Docs</a>
+        <a href="privacy-policy.html">Privacy</a>
+        <a href="terms-of-service.html">Terms</a>
+        <a href="mailto:cody@isolated.tech">Support</a>
+      </nav>
+      <div class="footer-language">
+        <!-- HEALTHMD_FOOTER_LANGUAGE_SELECTOR -->
+      </div>
+    </div>
+  </footer>
 
   <script src="assets/analytics.js" defer></script>
 </body>

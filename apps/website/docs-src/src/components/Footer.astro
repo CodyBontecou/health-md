@@ -1,14 +1,17 @@
 ---
 import Default from '@astrojs/starlight/components/Footer.astro';
+import { defaultLocale, localeFor } from '../../../i18n/locales.mjs';
+import { localeFromPathname, routePath } from '../../../i18n/routes.mjs';
 
-const { lang } = Astro.locals.starlightRoute;
-const isSpanish = lang === 'es' || lang.startsWith('es-');
+const localeCode = localeFromPathname(Astro.url.pathname);
+const locale = localeFor(localeCode);
+const legalLocale = locale.surfaces.legal ? localeCode : defaultLocale;
 ---
 <Default><slot /></Default>
 <div class="healthmd-footer-note">
   <p>
-    © 2026 health.md · {isSpanish ? 'Creado por' : 'Built by'} <a href="https://isolated.tech">isolated.tech</a>
-    · <a href={isSpanish ? '/es/privacy-policy.html' : '/privacy-policy.html'}>{isSpanish ? 'Privacidad' : 'Privacy'}</a>
-    · <a href={isSpanish ? '/es/terms-of-service.html' : '/terms-of-service.html'}>{isSpanish ? 'Términos' : 'Terms'}</a>
+    © 2026 health.md · {locale.ui.builtBy} <a href="https://isolated.tech">isolated.tech</a>
+    · <a href={routePath('privacy', legalLocale)}>{locale.ui.privacy}</a>
+    · <a href={routePath('terms', legalLocale)}>{locale.ui.terms}</a>
   </p>
 </div>
