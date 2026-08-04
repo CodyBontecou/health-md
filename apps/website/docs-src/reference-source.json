@@ -2,11 +2,11 @@
   "format": "healthmd.reference-source",
   "format_version": 1,
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
-  "source_app_commit": "3e7d64867c7cd28c339d12187de12f7b1c4c1e7f",
-  "docs_reference_git_tree": "481ae60dcae160e95e3c0a9e8bf7ac4b81ffa44a",
+  "source_app_commit": "9f89f8845f153116106bbc0ac0eaf653fbf34505",
+  "docs_reference_git_tree": "4ba54e22a7e1499e8669ad164a5be2cd3442cc10",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "e4531d60abcf7fb4773d4e326fa2014e44cfadeae39a623fa4aea72c683b7aeb",
+    "digest": "5069950f624fe968fe5f9a1172743f2ee4b61777d75d9091ed0f7c3369f6d9a4",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -82,7 +82,7 @@
     {
       "path": "api-and-cli.md",
       "bytes": 28624,
-      "sha256": "8c6a00e71ca3ebe4ec691fcba9e0aca13bcedba036a4d39a7afb4459f9c903f7",
+      "sha256": "59b8f4d7637a07968a8a0bfeaa0a747d0358e6fc461c082afb28003254b48302",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/api-and-cli/",
@@ -1676,7 +1676,7 @@
     {
       "path": "src/content/docs/reference/api-and-cli.md",
       "bytes": 28975,
-      "sha256": "f609b14af328f3bd32bd7a84841d86f538261868e985806101db04ced8b676dd",
+      "sha256": "4af3cee3d75e693d6d6b59ef7b288cb44dcc636dc8fd155721aa4a46c8d6e2e7",
       "classification": "rendered-page",
       "route": "/docs/reference/api-and-cli/"
     },

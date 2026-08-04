@@ -8,7 +8,7 @@ Health.md exposes three independent automation boundaries:
 
 1. **API Endpoint export** sends daily records from iPhone to a configured HTTP(S) service.
 2. **Bundled Swift Mac CLI** uses the Mac-app loopback backend or an explicit authenticated direct-iPhone backend to request files or strict canonical JSON.
-3. **Query surfaces** are either the bundled Mac helper's loopback encrypted-context API or the standalone Rust CLI's 19-tool direct iPhone v3 MCP server. Portable MCP does not use the Mac app or localhost.
+3. **Query surfaces** are either the bundled Mac helper's loopback encrypted-context API or the standalone Rust CLI's 17-tool direct iPhone v3 MCP server. Portable MCP does not use the Mac app or localhost.
 
 `healthmd.health_data` v7 is the single public health-data source of truth. Export/API/job/query wrappers may have protocol versions for compatibility, paging, receipts, and failures, but they are not alternative health schemas. Direct CLI extraction emits canonical daily documents or selected canonical subtrees; typed sleep/alignment/comparison results are explicitly derived protocol views with source evidence.
 
