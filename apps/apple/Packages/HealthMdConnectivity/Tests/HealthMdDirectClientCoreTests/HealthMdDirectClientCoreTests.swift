@@ -804,16 +804,17 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
             // Expected.
         }
 
-        for unsafePath in [
+        for (index, unsafePath) in [
             "Health\\alias.json",
             "Health/./alias.json",
             "Health//alias.json",
             "C:\\alias.json",
             "Health/alias.json/",
-        ] {
+        ].enumerated() {
+            let fileID = UUID()
             let unsafeAlias = try DirectExportFileManifest(
                 jobID: request.jobID,
-                fileID: UUID(),
+                fileID: fileID,
                 relativePath: unsafePath,
                 byteCount: 0,
                 sha256: DirectTransferFile.sha256Hex(Data()),
@@ -823,9 +824,26 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
                 try await receiver.store(manifest: unsafeAlias)
                 XCTFail("Expected noncanonical direct path rejection for \(unsafePath)")
             } catch DirectFileReceiverError.unsafeRelativePath {
-                // Expected.
+                // Expected before the manifest journal or any destination file is committed.
             }
+
+            let safePath = "Health/admission-safe-\(index).json"
+            let safeReplacement = try DirectExportFileManifest(
+                jobID: request.jobID,
+                fileID: fileID,
+                relativePath: safePath,
+                byteCount: 0,
+                sha256: DirectTransferFile.sha256Hex(Data()),
+                writeMode: .overwrite
+            )
+            try await receiver.store(manifest: safeReplacement)
+            XCTAssertFalse(FileManager.default.fileExists(
+                atPath: destination.appendingPathComponent(safePath).path
+            ))
         }
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: destination.appendingPathComponent("Health\\alias.json").path
+        ))
 
         let portableAlias = try DirectExportFileManifest(
             jobID: request.jobID,

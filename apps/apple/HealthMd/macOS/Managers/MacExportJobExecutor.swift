@@ -1848,7 +1848,8 @@ final class MacExportJobExecutor {
                     reason: .accessDenied,
                     errorDetails: exportError.localizedDescription
                 )
-            case .noFormatsSelected, .dailyNotePathConflict, .dataDictionaryPathConflict:
+            case .noFormatsSelected, .dailyNotePathConflict, .dataDictionaryPathConflict,
+                 .invalidExportPath:
                 return FailedDateDetail(date: date, reason: .fileWriteError, errorDetails: exportError.localizedDescription)
             }
         }

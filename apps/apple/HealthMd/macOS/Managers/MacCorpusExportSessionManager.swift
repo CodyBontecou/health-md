@@ -1964,7 +1964,8 @@ final class MacCorpusExportSessionManager {
                     } catch let error as ExportError {
                         switch error {
                         case .noVaultSelected, .noHealthData, .accessDenied, .noFormatsSelected,
-                             .dailyNotePathConflict, .dataDictionaryPathConflict:
+                             .dailyNotePathConflict, .dataDictionaryPathConflict,
+                             .invalidExportPath:
                             break
                         case .destinationChanged:
                             markFileAccountingUncertain(session: session)

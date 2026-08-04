@@ -81,6 +81,44 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             vaultManager: realVault
         )
         XCTAssertEqual(disposition.disposition, .reject)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outside.path).isEmpty)
+        XCTAssertEqual(
+            try FileManager.default.contentsOfDirectory(atPath: vaultRoot.path),
+            ["Health"]
+        )
+    }
+
+    func testOpenRejectsBackslashArtifactPathBeforeAnyDestinationWrite() throws {
+        let date = Self.day(2026, 1, 2)
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = "Unsafe\\Alias"
+        settings.includeDataDictionary = false
+        let context = try makeContext(requestedDates: [date], settings: settings)
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+
+        let disposition = MacCorpusExportSessionManager(rootURL: sessionRoot).open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        )
+
+        XCTAssertEqual(disposition.disposition, .reject)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertTrue(fileSystem.writeCounts.isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: sessionRoot.appendingPathComponent(context.session.sessionID.uuidString).path
+        ))
     }
 
     func testOpenRejectsDictionaryArtifactCollisionBeforeAnyDestinationWrite() throws {
@@ -763,6 +801,95 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertTrue(rollupContent.contains(
             HealthRollupDateFormatting.timestampString(context.manifest.createdAt)
         ))
+    }
+
+    func testPinnedConnectedRangeRevalidatesSymlinkBeforeFirstDestinationWrite() async throws {
+        let outside = FileManager.default.temporaryDirectory
+            .appendingPathComponent("corpus-finalize-outside-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outside) }
+        let realVault = VaultManager(
+            defaults: defaults,
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: bookmarkResolver
+        )
+        realVault.setVaultFolder(vaultRoot)
+
+        let requestedDate = Self.day(2026, 1, 5)
+        let record = HealthData(date: requestedDate, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .shadow,
+            settings: settings,
+            record: record
+        )
+        let context = try makeContext(
+            requestedDates: [requestedDate],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
+            transferDates: [requestedDate]
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: requestedDate))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: realVault).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: realVault
+        )
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outside.path).isEmpty)
+
+        let healthURL = vaultRoot.appendingPathComponent("Health", isDirectory: true)
+        if FileManager.default.fileExists(atPath: healthURL.path) {
+            XCTAssertTrue(
+                try FileManager.default.contentsOfDirectory(atPath: healthURL.path).isEmpty,
+                "range partition admission must not write a destination artifact"
+            )
+            try FileManager.default.removeItem(at: healthURL)
+        }
+        try FileManager.default.createSymbolicLink(
+            at: healthURL,
+            withDestinationURL: outside
+        )
+        do {
+            _ = try await manager.finalize(
+                ConnectedCorpusTransferFinalize(
+                    sessionID: context.session.sessionID,
+                    jobID: context.session.jobID,
+                    requestFingerprint: context.session.requestFingerprint,
+                    partitionCount: 1,
+                    totalByteCount: partition.descriptor.byteCount,
+                    finalPartitionSHA256: partition.descriptor.sha256
+                ),
+                vaultManager: realVault
+            )
+            XCTFail("Expected destination revalidation to reject the late symlink")
+        } catch let error as ConnectedCorpusTransferModelError {
+            XCTAssertEqual(error, .invalidJournal)
+        }
+
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outside.path).isEmpty)
+        XCTAssertEqual(
+            try FileManager.default.contentsOfDirectory(atPath: vaultRoot.path),
+            ["Health"]
+        )
     }
 
     func testPinnedConnectedSummaryOnlyRangeFinalizesWithoutDailyArtifacts() async throws {

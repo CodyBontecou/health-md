@@ -1758,6 +1758,11 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: healthURL.appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
         ))
+        let healthChildren = try FileManager.default.contentsOfDirectory(
+            at: healthURL,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(healthChildren.map(\.lastPathComponent), ["Alias"])
     }
 
     func testManualExportRejectsArtifactSymlinkOutsideVaultWithoutDictionary() async throws {
@@ -1792,6 +1797,11 @@ final class VaultManagerTests: XCTestCase {
         }
 
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outsideURL.path).isEmpty)
+        let healthChildren = try FileManager.default.contentsOfDirectory(
+            at: healthURL,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(healthChildren.map(\.lastPathComponent), ["Alias"])
     }
 
     #if os(macOS)
