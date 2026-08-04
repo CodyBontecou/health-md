@@ -423,12 +423,11 @@ private fun renderCustomTemplatePreview(template: String, emptyPreview: String):
         "reproductive_health", "mindfulness", "workouts",
     )
     for (section in allSections) {
-        val pattern = Regex("\\{\\{#$section}}(.*?)\\{\\{/$section}}", RegexOption.DOT_MATCHES_ALL)
-        rendered = if (section in sampleSections) {
-            pattern.replace(rendered) { it.groupValues[1] }
-        } else {
-            pattern.replace(rendered, "")
-        }
+        rendered = applyMarkdownConditionalSection(
+            template = rendered,
+            section = section,
+            include = section in sampleSections,
+        )
     }
 
     val sampleMetrics = """

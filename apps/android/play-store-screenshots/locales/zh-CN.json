@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "zh-CN",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "你的健康数据，你的文件",
+      "supportingLine": "将已授权的 Health Connect 记录导出为由你掌控的文件。"
+    },
+    {
+      "id": "export-formats",
+      "headline": "按你的方式导出",
+      "supportingLine": "支持 Markdown、Obsidian Bases、JSON 和 CSV。"
+    },
+    {
+      "id": "health-metrics",
+      "headline": "100 多项健康指标任你选择",
+      "supportingLine": "涵盖睡眠、活动、心脏、生命体征、营养等。"
+    },
+    {
+      "id": "private-by-design",
+      "headline": "只读，隐私优先",
+      "supportingLine": "无需帐户，也没有 Health.md 健康数据云服务。"
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "让归档始终保持最新",
+      "supportingLine": "安排导出到你选择的目标位置。"
+    },
+    {
+      "id": "file-preview",
+      "headline": "导出前先预览",
+      "supportingLine": "写入前查看文件名、路径和内容。"
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "健康信息一目了然",
+      "supportingLine": "活动、睡眠、心脏和摘要小组件。"
+    },
+    {
+      "id": "direct-cli",
+      "headline": "直接导出到电脑",
+      "supportingLine": "与 Health.md CLI 配对，无需云端中转即可进行经过身份验证的加密导出。"
+    }
+  ]
+}

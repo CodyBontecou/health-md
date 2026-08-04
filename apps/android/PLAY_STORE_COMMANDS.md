@@ -1,5 +1,15 @@
 # gradle-play-publisher Commands Reference
 
+## Offline listing validation
+
+The files under `play-console/` use an authored layout. Prepare the canonical Fastlane layout before passing metadata to `gplay` or another publisher:
+
+```bash
+./scripts/validate-play-listing.sh
+```
+
+This validates all draft locales, then prepares reviewed-only input at `build/play-metadata/reviewed/`. It does not authenticate, upload, publish or change Play Console. Do not run `gplay validate` directly against `play-console/listing/` or `play-console/screenshots/`; those custom paths can produce incomplete results.
+
 ## Authentication
 Before using any commands, ensure `play-console-key.json` is in the project root.
 

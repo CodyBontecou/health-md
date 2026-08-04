@@ -1,0 +1,1 @@
+Экспорт данных Health Connect в ваши файлы Markdown, CSV, JSON или Obsidian.

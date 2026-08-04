@@ -1,237 +1,105 @@
-# Google Play Console Setup Prompt
+# Google Play Console setup prompt
 
-Use this prompt verbatim when working with Claude in the browser at https://play.google.com/console
-
----
-
-## PROMPT
-
-You are helping me set up a Google Play Store listing for my Android app. I'll guide you through each section of the Play Console. Here is everything you need to know about the app — use this as the source of truth for every form field, text box, and decision.
+Use this prompt when working in the browser at <https://play.google.com/console>. Repository files, not this document, are the source of truth for listing copy and release numbers.
 
 ---
 
-### APP IDENTITY
+## Prompt
 
-- **App name**: Health.md
-- **Package name**: com.healthmd.android
-- **Version**: 1.5.2 (versionCode 20)
-- **Default language**: English (United States) — en-US
+You are helping me prepare the Google Play listing for Health.md. Work through one section at a time, save drafts, and report what changed. Do not publish, submit for review, change production availability or upload a release without my explicit approval.
 
----
+### App identity
 
-### STORE LISTING — MAIN DETAILS
+- Package: `com.healthmd.android`
+- Store title: `Health.md – Health Data Export`
+- Default language: English (United States), `en-US`
+- Category: Health & Fitness
+- Contains ads: No
+- Privacy policy: <https://healthmd.app/privacy-policy.html>
 
-**App name (max 50 chars):**
-```
-Health.md – Health Data Export
-```
+Read the current `versionName` and `versionCode` from `app/build.gradle.kts`. Do not copy an old release number from a document or screenshot.
 
-**Short description (max 80 chars):**
-```
-Export 60+ health metrics locally to Markdown, Obsidian, JSON & CSV.
-```
+### Listing metadata
 
-**Full description (max 4000 chars):**
-```
-Health.md exports your Health Connect data to destinations you control — no Health.md health-data cloud, no subscription, no lock-in.
+The authored listing is under `play-console/listing/<locale>/`. The locale review state is in `play-console/locales.json`:
 
-EXPORT YOUR HEALTH DATA, YOUR WAY
-Choose from Markdown, Obsidian Bases, JSON, or CSV. Folder exports land in storage you pick; an API Endpoint export leaves the device only when you explicitly select a service you configured.
+- Upload only locales marked `reviewed`.
+- Treat every locale marked `draft` as awaiting native-speaker review.
+- Keep the English title exactly `Health.md – Health Data Export`.
+- Preserve the FHIR category list, privacy disclosures, permission explanation and medical disclaimer in each full description.
+- The offer is 10 free manual exports followed by a one-time lifetime unlock; there is no subscription.
 
-TRACK 60+ HEALTH METRICS
-Sleep, heart rate, steps, active calories, blood pressure, blood glucose, body fat, weight, oxygen saturation, respiratory rate, HRV, nutrition, hydration, floors climbed, workouts, and much more — all categories from Health Connect in one place.
+Before entering metadata, prepare and validate the canonical files:
 
-AUTOMATE DAILY EXPORTS
-Set a schedule and forget it. Health.md runs exports automatically in the background — every 15 minutes, hourly, daily, or on your own cadence. Check the History screen to see every successful run with timestamps.
-
-SEAMLESS OBSIDIAN INTEGRATION
-Export directly to your Obsidian vault. Use Obsidian Bases format to build your own health dashboard, link health data to daily notes, or run your own analysis. The only health-to-Obsidian pipeline on Android.
-
-OWN YOUR DATA, FULLY
-No account or Health.md health-data cloud is required. Health.md uses no third-party analytics or attribution SDK. Separate first-party systems send limited campaign attribution and coarse onboarding/pricing milestones with random app-generated install/event UUIDs. They never include health data or permission details, folder URI/name/path, raw referrers, Advertising ID, Android ID, hardware identifiers, exports, account/user text, prices, or raw errors. You control what's exported, which metrics are included, and where exports go.
-
-HIGHLY CONFIGURABLE
-- Enable or disable any of the 60+ individual metrics
-- Choose write mode: Overwrite, Append, or Update
-- Organize exports into category subfolders
-- Set custom date ranges or export everything at once
-- Pick your folder with the system file picker
-
-FREEMIUM — TRY BEFORE YOU BUY
-Get 10 free exports to test every feature. Unlock unlimited exports and automated scheduling with a single one-time payment. No subscription, ever.
-
-WHAT USERS SAY
-★★★★★ "Extremely fast export, high polished design"
-★★★★★ "Works great, I needed a solution to export my health file to markdown locally"
-★★★★★ "For anybody who uses Obsidian and collects/tracks health data this is indispensable. Other apps export Health data but not in markdown to Obsidian."
-
-PRIVACY
-Health.md reads Health Connect data solely to create exports the user requests. Device Folder exports are written to local or provider-backed storage. If the user explicitly configures and selects API Endpoint, selected JSON records are sent directly to the HTTP or HTTPS URL they configure; HTTP connections are not encrypted in transit. Health.md does not proxy or store the request. Separate first-party systems record limited campaign attribution and coarse onboarding/pricing interactions using random app-generated install/event UUIDs. Onboarding properties are limited to app version/build, Android platform, coarse onboarding step/context, bounded local free-export counts when safely available, and an allowlisted product ID on purchase taps. No third-party analytics SDK, health data or permission detail, folder URI/name/path, raw referrer, Advertising ID, Android ID, hardware identifier, export content, account/user text, price, or raw error is included. Your privacy policy URL must be set in the Play Console — use: https://healthmd.app/privacy-policy.html
+```bash
+cd apps/android
+./scripts/validate-play-listing.sh
 ```
 
----
+Use `build/play-metadata/reviewed/` as the reviewed Console input. Do not validate or upload directly from the custom authored directory structure.
 
-### STORE LISTING — CATEGORIZATION
+### Store assets
 
-- **App category**: Health & Fitness
-- **Tags / keywords** (use all that apply): health data, health export, Obsidian, markdown, Health Connect, fitness tracker, data privacy, self-quantified, health metrics, CSV export
-- **Content rating**: Everyone (no mature content, no violence, no user-generated content)
+- Phone screenshots: `play-console/screenshots/en-US/phone/`. The user owns the pending phone-creative refresh; do not replace or upload these without approval.
+- Seven-inch tablet screenshots: `play-console/screenshots/en-US/sevenInch/` — four genuine 1200×1920 API 35 captures.
+- Ten-inch tablet screenshots: `play-console/screenshots/en-US/tenInch/` — four genuine 2560×1600 API 35 captures.
+- Icon: `play-console/graphics/en-US/icon.png`.
+- Feature and promotional graphics remain user-owned work unless current files exist and pass validation.
 
----
+Keep the screenshot order recorded in `docs/aso-screenshot-pairings.md`. Do not use old `60+`, `61/61` or `99/99` claims; use `100+`.
 
-### PRICING & DISTRIBUTION
+### Pricing and in-app product
 
-- **Paid or Free**: Free (with in-app purchase)
-- **In-app product**: `health_md_premium_lifetime` — One-time purchase, $9.99 USD
-  - Title: Unlock Health.md
-  - Description: Unlimited exports, automated scheduling, and all future features. One-time payment — no subscription.
-- **Countries**: All countries where Google Play is available
-- **Contains ads**: No
+- App price: Free with an in-app purchase
+- Product ID: `health_md_premium_lifetime`
+- Type: One-time product, not a subscription
+- Name: `Unlock Health.md`
+- Description: `Unlimited exports and automated scheduling — one-time payment, no subscription.`
 
----
+Confirm the current price and regional pricing in Play Console rather than assuming an old USD amount from documentation.
 
-### IN-APP PRODUCTS SETUP
+### Content rating
 
-When you reach the "Monetize > Products > In-app products" section, create one product:
+- Violence, sexual content, profanity and controlled substances: No
+- User-generated content, social features and location sharing: No
+- Health or medical functionality: Yes; the app reads user-authorized Health Connect data
+- Target audience: Adults using Health Connect exports and related health-data tools
 
-| Field | Value |
-|---|---|
-| Product ID | `health_md_premium_lifetime` |
-| Name | Unlock Health.md |
-| Description | Unlimited exports and automated scheduling — one-time payment, no subscription. |
-| Price | $9.99 USD |
-| Type | One-time (not subscription) |
-| Status | Active |
+### Data safety and privacy
 
----
+Do not infer answers from the listing description. Keep Play Console answers synchronized with:
 
-### CONTENT RATING QUESTIONNAIRE
+- `docs/campaign-attribution.md`
+- `docs/onboarding-analytics.md`
+- the hosted privacy policy
+- the current Android manifest and implementation
 
-Answer all questions as follows:
-- Violence: No
-- Sexual content: No
-- Profanity: No
-- Controlled substances: No
-- User-generated content: No
-- Social features: No
-- Location sharing: No
-- **Health or medical**: **Yes** — reads health data from Health Connect
-- Data collection: health data is processed for user-selected exports; limited first-party campaign attribution and coarse onboarding/pricing analytics are transmitted separately and never contain health data
-- **Target age group**: 18+ (adults — self-quantifiers, Obsidian users, health enthusiasts)
+Health records are never sent to campaign-attribution or onboarding-analytics systems. User-selected API endpoint and paired-CLI exports are separate, intentional destinations and must not be described as first-party analytics.
 
----
+### Health Connect permissions
 
-### APP CONTENT — DATA SAFETY
+Use the current manifest and generated Health Connect declarations as the complete permission list. The rationale is:
 
-The form was updated and submitted for review on July 15, 2026 for first-party campaign attribution. The onboarding analytics addition requires another Play Console and hosted privacy-policy review before release. Keep the answers synchronized with [`docs/campaign-attribution.md`](docs/campaign-attribution.md) and [`docs/onboarding-analytics.md`](docs/onboarding-analytics.md), and recheck Google’s current taxonomy whenever either implementation changes.
+> Health.md reads user-authorized Health Connect metrics only to create exports requested by the user. The user chooses the metrics and destination. Device-folder exports go to user-selected storage. If the user explicitly configures an API endpoint or pairs the desktop CLI, selected records are sent directly to that destination. Health.md does not proxy or store those requests in a Health.md health-data cloud.
 
-Current answers:
+Do not paste an old hand-maintained permission list if it differs from the manifest.
 
-- The app collects required user data types: **Yes**
-- Data encrypted in transit: **Yes**
-- Health.md account creation/login: **No**
-- User deletion-request mechanism: **No**
-- Collected, not shared, not ephemeral, and not user-disableable:
-  - **App activity → App interactions**
-  - **Device or other IDs**
-- Purpose for onboarding app interactions and app-generated IDs:
-  - **Analytics**
-- Campaign attribution additionally uses the same disclosed types for:
-  - **Advertising or marketing**
+### Foreground service declaration
 
-Onboarding milestone collection occurs while a user goes through onboarding; campaign collection is conditional on a valid campaign install. “Required” means affected users cannot disable the applicable collection. Keep Health Connect disclosures separate because health records are never included in either system.
+For `FOREGROUND_SERVICE_DATA_SYNC`, the task is local processing for importing/exporting. Scheduled exports read user-authorized records and write user-selected formats to a user-selected Android document-provider folder. On Android versions where expedited WorkManager jobs use a foreground service, this keeps a user-noticeable export running reliably.
 
-**Does your app use Health Connect?** Yes — check this box and provide the Health Connect permission rationale:
-> Health.md reads health metrics from Health Connect to create user-requested exports. Exports stay in user-selected storage unless the user explicitly selects API Endpoint, which sends selected JSON records directly to the HTTP or HTTPS URL they configure. Separately, first-party campaign attribution and coarse onboarding/pricing analytics never include Health Connect data.
+Confirm that any evidence-video URL still resolves before submitting the declaration.
 
----
+### Release handling
 
-### HEALTH CONNECT PERMISSIONS DECLARATION
+Read the current version, bundle and release notes from the repository and Play Console. Do not assume that an old internal-testing release is current. Do not upload an AAB, create a release, promote a track or submit anything for review without explicit approval.
 
-In the "App content > Health Connect permissions" section, list every permission the app uses:
+### Working order
 
-```
-READ_STEPS, READ_HEART_RATE, READ_SLEEP, READ_EXERCISE, READ_DISTANCE,
-READ_ACTIVE_CALORIES_BURNED, READ_TOTAL_CALORIES_BURNED,
-READ_BASAL_METABOLIC_RATE, READ_BLOOD_PRESSURE, READ_BLOOD_GLUCOSE,
-READ_BODY_FAT, READ_BODY_TEMPERATURE, READ_HEIGHT, READ_WEIGHT,
-READ_OXYGEN_SATURATION, READ_RESPIRATORY_RATE,
-READ_HEART_RATE_VARIABILITY, READ_NUTRITION, READ_HYDRATION,
-READ_FLOORS_CLIMBED
-```
+1. Store presence → Main store listing
+2. Store presence → Store settings
+3. Monetize → In-app products
+4. Policy → App content
+5. Release → Testing or production, only after explicit approval
 
-**Rationale for each permission group:**
-> Health.md reads these metrics only when creating an export requested by the user. The user chooses which metrics to include and whether to write them to selected storage or send JSON directly to an HTTP or HTTPS endpoint they explicitly configure. Health.md does not proxy or store API Endpoint requests.
-
----
-
-### FOREGROUND SERVICE PERMISSIONS
-
-The declaration was updated and submitted for review on July 15, 2026:
-
-- Permission: `FOREGROUND_SERVICE_DATA_SYNC`
-- Task: **Local processing → Importing, exporting**
-- Evidence video: `https://healthmd.app/assets/android/foreground-service-data-sync.mp4`
-- Rationale: scheduled exports read user-authorized Health Connect records and write user-selected formats to a user-selected Android document-provider folder. On Android versions where expedited WorkManager jobs use a foreground service, this keeps the user-noticeable export running reliably.
-
----
-
-### SCREENSHOTS
-
-All 5 screenshots are ready at **1290×2796px** (portrait phone) in:
-`play-console/screenshots/en-US/phone/`
-
-Upload them in this order:
-
-1. `1.png` — **Export Health Data Locally** (Export dialog with format options)
-2. `2.png` — **Own Your Health Data** (Settings / configure your app)
-3. `3.png` — **Track 60+ Health Metrics** (Health metrics selection, 61/61)
-4. `4.png` — **Automate Daily Exports** (Schedule screen, SCHEDULE ACTIVE)
-5. `5.png` — **Sync to Obsidian Seamlessly** (Export settings, Obsidian Bases format)
-
-**Feature graphic**: 1024×500px — not yet generated; skip this field for now.
-**App icon**: 512×512px PNG is ready at `play-console/graphics/en-US/icon.png`.
-
----
-
-### RELEASE TRACK
-
-The current Internal Testing release is **1.5.2 (versionCode 20)**. The AAB is built at `app/build/outputs/bundle/release/app-release.aab` with these release notes:
-
-```
-v1.5.2 — Privacy-preserving campaign attribution
-
-• Measures installs from Health.md campaign links using Google Play Install Referrer.
-• Never sends health data, export content, raw referrers, Advertising ID, Android ID, or hardware identifiers.
-• Keeps attribution delivery reliable when offline.
-```
-
----
-
-### THINGS TO WATCH FOR AS YOU NAVIGATE
-
-1. **Privacy policy URL** — `https://healthmd.app/privacy-policy.html`
-
-2. **Health Connect opt-in** — The manifest already contains `<meta-data android:name="android.health.connect.DATA_TYPES_USED" ...>`. Play Console may still ask you to confirm Health Connect usage in the App Content section — answer Yes.
-
-3. **Target API level** — The app targets SDK 35 (Android 15), which satisfies Google Play's current requirements.
-
-4. **App signing** — Google Play handles signing for AAB uploads. The app is built with release signing locally, but Google will re-sign with Play App Signing. Enroll in Play App Signing when prompted.
-
-5. **Rating questionnaire** — Complete the IARC content rating questionnaire when prompted. It's found under "Policy > App content > Content rating".
-
-6. **Billing declaration** — Under "Policy > App content > Ads", confirm the app has no ads. Under monetization, confirm the in-app purchase type is a one-time purchase (not a subscription or consumable that repeats).
-
----
-
-### ITERATION INSTRUCTIONS
-
-Work through the Play Console left-nav in order:
-1. Dashboard → Set up your app
-2. Store presence → Main store listing (fill title, descriptions, screenshots, graphics)
-3. Store presence → Store settings (category, tags, contact details)
-4. Monetize → In-app products (create `health_md_premium_lifetime`)
-5. Policy → App content (complete all sections: privacy policy, ads, content rating, data safety, Health Connect)
-6. Release → Internal testing → Create release (upload AAB, set release notes)
-
-After each section is saved, tell me what's done and what's still missing so we can track progress together.
+After each section, state what was saved, what remains a draft, which locale or asset was used, and whether any action would affect users or trigger review.

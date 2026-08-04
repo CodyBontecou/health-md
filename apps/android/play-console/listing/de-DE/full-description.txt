@@ -1,0 +1,45 @@
+Health.md verwandelt autorisierte Android Health Connect-Daten in Dateien unter deiner Kontrolle.
+
+HEALTH CONNECT-DATEN NACH DEINEN WÜNSCHEN EXPORTIEREN
+Erstelle lesbare Zusammenfassungen als Markdown, Obsidian Bases, CSV und JSON oder anbieter-native Schnappschüsse als JSON/NDJSON. Wähle Messwerte, Zeitraum und Ziel, sieh Dateinamen und Inhalte vorab und exportiere in einen lokalen Ordner, einen Obsidian-Tresor, zu einem anderen Android-Dokumentanbieter, an deinen API-Endpunkt oder eine gekoppelte Health.md CLI. Health.md benötigt kein Konto und betreibt keine Cloud für Gesundheitsdaten.
+
+AUS ÜBER 100 GESUNDHEITSWERTEN WÄHLEN
+Exportiere autorisierte Daten zu Schlaf, Schritten, Trainings, Herzfrequenz, HRV, Blutdruck, Blutzucker, Sauerstoffsättigung, Atemfrequenz, Gewicht, Körperzusammensetzung, Ernährung, Flüssigkeitszufuhr, Mobilität, Achtsamkeit, reproduktiver Gesundheit und weiteren Health Connect-Datensätzen. Wenn du eine Kategorie ablehnst, kannst du andere autorisierte Kategorien weiterhin exportieren.
+
+VORSCHAU, ANPASSUNG UND AUTOMATISIERUNG
+Wähle Einheiten, Formate, Schreibmodi, Ordnerstruktur und detaillierte Messwerte. Sieh genaue Pfade und Inhalte vor dem Schreiben. Exportiere manuell oder nach Zeitplan an dein gewähltes Ziel. Abgeschlossene und fehlgeschlagene Vorgänge findest du im Exportverlauf.
+
+GESUNDHEIT AUF EINEN BLICK
+Vier optionale Startbildschirm-Widgets zeigen autorisierte Aktivitäts-, Schlaf- und Herzübersichten aus einem Cache auf dem Gerät. Du behältst die Kontrolle über Widget-Zugriff und Aktualisierungen im Hintergrund.
+
+PERSÖNLICHE MEDIZINISCHE DATEN (FHIR)
+Wenn das Gerät persönliche Gesundheitsakten unterstützt, kannst du mit „Medizinische Daten (FHIR)“ autorisierte medizinische Ressourcen im selben benutzerkontrollierten Archiv sichern. Unterstützte Kategorien:
+
+• Impfungen und Immunisierungen
+• Allergien und Unverträglichkeiten
+• Erkrankungen und Vorgeschichte der Problemliste
+• Laborergebnisse
+• Medikamente und Verschreibungen
+• Persönliche Angaben zur Identifizierung der Akte
+• Angaben zu Behandelnden und deren Rollen
+• Schwangerschaftsdaten
+• Eingriffe
+• Sozialanamnese
+• Besuche und Begegnungen
+• Klinische Vitalzeichen
+
+Jede medizinische Berechtigung ist schreibgeschützt. Sie wird angefordert, damit ein von dir veranlasster Export medizinischer Daten die jeweilige FHIR-Kategorie enthält, statt sie unbemerkt auszulassen. Exporte als JSON und anbieter-native Exporte bewahren die von Health Connect bereitgestellten FHIR-Ressourcendaten und Quellmetadaten. Zusammenfassungen als Markdown und CSV nennen die Anzahl medizinischer Ressourcen pro Kategorie. Du kannst jede Kategorie in Health Connect ablehnen oder widerrufen; andere autorisierte Exporte funktionieren weiterhin.
+
+Health.md diagnostiziert keine Krankheiten, empfiehlt keine Behandlungen, übernimmt keine klinische Versorgung und verändert Health Connect nicht. Medizinische Daten werden ausschließlich zur benutzerkontrollierten Übertragbarkeit und persönlichen Archivverwaltung gelesen.
+
+DATENSCHUTZ UND KONTROLLE
+• Schreibgeschützter Health Connect-Zugriff; Health.md schreibt niemals Gesundheitsdaten
+• Kein Health.md-Konto und keine Cloud für Gesundheitsdaten
+• Keine Nutzung von Gesundheitsdaten für Werbung, Profiling, Kredite, Versicherungen oder Beschäftigung
+• Keine Analyse- oder Attributions-SDKs von Drittanbietern
+• Gesundheitsdaten werden auf dem Gerät verarbeitet und nur an ein von dir gewähltes Ziel exportiert
+• Benutzerdefinierte Endpunkte werden nur für ausdrücklich von dir gesendete Exporte kontaktiert
+• Berechtigungen können jederzeit in Health Connect geprüft oder widerrufen werden
+• Begrenzte eigene Analysen zu Installationsattribution, Einführung oder Preisen enthalten niemals Gesundheitsdaten, Details zu Health Connect-Berechtigungen, Exportinhalte, Kontotexte oder Dateipfade
+
+Health.md enthält 10 kostenlose manuelle Exportaktionen. Ein einmaliger Kauf schaltet unbegrenzte Exporte und Zeitpläne frei; es gibt kein Abonnement.

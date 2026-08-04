@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "de-DE",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "Deine Gesundheitsdaten. Deine Dateien.",
+      "supportingLine": "Exportiere autorisierte Health Connect-Daten in Dateien, die du kontrollierst."
+    },
+    {
+      "id": "export-formats",
+      "headline": "Exportiere, wie du willst",
+      "supportingLine": "Markdown, Obsidian Bases, JSON und CSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "Wähle aus über 100 Gesundheitswerten",
+      "supportingLine": "Schlaf, Aktivität, Herz, Vitalwerte, Ernährung und mehr."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "Nur Lesen. Datenschutz als Prinzip.",
+      "supportingLine": "Kein Konto. Keine Health.md-Cloud für Gesundheitsdaten."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "Halte dein Archiv aktuell",
+      "supportingLine": "Plane Exporte an dein ausgewähltes Ziel."
+    },
+    {
+      "id": "file-preview",
+      "headline": "Vorschau vor dem Export",
+      "supportingLine": "Sieh Dateinamen, Pfade und Inhalte, bevor etwas geschrieben wird."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "Gesundheit auf einen Blick",
+      "supportingLine": "Widgets für Aktivität, Schlaf, Herz und Zusammenfassung."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "Direkt auf deinen Computer",
+      "supportingLine": "Kopple die Health.md CLI für authentifizierte, verschlüsselte Exporte ohne Cloud-Relay."
+    }
+  ]
+}

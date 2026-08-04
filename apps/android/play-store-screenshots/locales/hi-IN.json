@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "hi-IN",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "आपका स्वास्थ्य डेटा। आपकी फ़ाइलें।",
+      "supportingLine": "अधिकृत Health Connect रिकॉर्ड को अपने नियंत्रण वाली फ़ाइलों में निर्यात करें।"
+    },
+    {
+      "id": "export-formats",
+      "headline": "अपने तरीके से निर्यात करें",
+      "supportingLine": "Markdown, Obsidian Bases, JSON और CSV।"
+    },
+    {
+      "id": "health-metrics",
+      "headline": "100+ स्वास्थ्य मेट्रिक में से चुनें",
+      "supportingLine": "नींद, गतिविधि, हृदय, जीवन-संकेत, पोषण और बहुत कुछ।"
+    },
+    {
+      "id": "private-by-design",
+      "headline": "केवल पढ़ने योग्य। गोपनीयता के लिए बनाया गया।",
+      "supportingLine": "कोई खाता नहीं। कोई Health.md स्वास्थ्य-डेटा क्लाउड नहीं।"
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "अपने संग्रह को नया बनाए रखें",
+      "supportingLine": "अपने चुने हुए गंतव्य के लिए निर्यात शेड्यूल करें।"
+    },
+    {
+      "id": "file-preview",
+      "headline": "निर्यात से पहले पूर्वावलोकन करें",
+      "supportingLine": "कुछ भी लिखे जाने से पहले फ़ाइल नाम, पथ और सामग्री देखें।"
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "एक नज़र में स्वास्थ्य",
+      "supportingLine": "गतिविधि, नींद, हृदय और सारांश विजेट।"
+    },
+    {
+      "id": "direct-cli",
+      "headline": "सीधे अपने कंप्यूटर पर",
+      "supportingLine": "बिना क्लाउड रिले के प्रमाणित, एन्क्रिप्टेड निर्यात के लिए Health.md CLI से युग्मित करें।"
+    }
+  ]
+}

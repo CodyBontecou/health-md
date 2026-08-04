@@ -38,8 +38,8 @@ interface SettingsRepository {
     // In-app review tracking
     suspend fun getSuccessfulExportCount(): Int
     suspend fun incrementSuccessfulExportCount()
-    suspend fun hasRequestedReview(): Boolean
-    suspend fun setReviewRequested()
+    suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long?
+    suspend fun recordReviewAttempt(epochMillis: Long)
 
     // Health provider selection / direct-provider connection state
     val selectedHealthProviderId: Flow<String>

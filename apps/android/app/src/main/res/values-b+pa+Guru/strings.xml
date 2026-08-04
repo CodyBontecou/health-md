@@ -2,14 +2,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
     <!-- Common -->
-    <string name="ok">ਠੀਕ</string>
     <string name="cancel">ਰੱਦ ਕਰੋ</string>
     <string name="back">ਪਿੱਛੇ</string>
     <string name="close">ਬੰਦ ਕਰੋ</string>
     <string name="refresh">ਤਾਜ਼ਾ ਕਰੋ</string>
     <string name="add">ਸ਼ਾਮਲ ਕਰੋ</string>
-    <string name="increase">ਵਧਾਓ</string>
-    <string name="decrease">ਘਟਾਓ</string>
     <string name="action_cancel_export">ਨਿਰਯਾਤ ਰੱਦ ਕਰੋ</string>
     <string name="action_close_options">ਵਿਕਲਪ ਬੰਦ ਕਰੋ</string>
     <string name="action_set_start_date">ਸ਼ੁਰੂਆਤੀ ਤਾਰੀਖ ਸੈੱਟ ਕਰੋ</string>
@@ -20,7 +17,7 @@
     <string name="action_clear_history">ਇਤਿਹਾਸ ਸਾਫ਼ ਕਰੋ</string>
     <string name="action_keep_history">ਇਤਿਹਾਸ ਰੱਖੋ</string>
     <string name="action_retry_export">ਨਿਰਯਾਤ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
-    <string name="action_retrying_export">ਨਿਰਯਾਤ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...</string>
+    <string name="action_retrying_export">ਨਿਰਯਾਤ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ…</string>
     <string name="action_delete_field">ਫੀਲਡ ਮਿਟਾਓ</string>
     <!-- Export Screen -->
     <string name="export_subtitle">ਆਪਣਾ ਵੈਲਨੈੱਸ ਡਾਟਾ ਕਨਫਿਗਰ ਕਰੋ ਅਤੇ ਨਿਰਯਾਤ ਕਰੋ</string>
@@ -130,11 +127,6 @@
     </plurals>
     <!-- Date range -->
     <string name="section_date_range">ਤਾਰੀਖ ਦੀ ਰੇਂਜ</string>
-    <string name="date_shortcut_1d">1 ਦਿਨ</string>
-    <string name="date_shortcut_7d">7 ਦਿਨ</string>
-    <string name="date_shortcut_30d">30 ਦਿਨ</string>
-    <string name="date_shortcut_90d">90 ਦਿਨ</string>
-    <string name="date_shortcut_all">ਸਭ</string>
     <string name="date_option_today">ਅੱਜ</string>
     <string name="date_option_yesterday">ਕੱਲ੍ਹ</string>
     <string name="date_option_all_time">ਸਾਰੀ ਮਿਆਦ</string>
@@ -158,8 +150,6 @@
     <string name="export_preview_api_destination">API ਐਂਡਪੌਇੰਟ</string>
     <string name="export_preview_complete_file">ਨਿਰਯਾਤ ਕੀਤੀ ਜਾਣ ਵਾਲੀ ਪੂਰੀ %1$s ਫਾਈਲ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ।</string>
     <string name="export_preview_truncated_file">ਇਸ %1$s ਫਾਈਲ ਦੀ ਸੰਖੇਪ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰੇ ਨਿਰਯਾਤ ਵਿੱਚ ਸਾਰਾ ਡੇਟਾ ਸ਼ਾਮਲ ਰਹੇਗਾ।</string>
-    <string name="export_preview_limited_one">ਡੇਟਾ ਵਾਲੇ ਸਭ ਤੋਂ ਹਾਲੀਆ ਦਿਨ ਦੀ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰਾ ਨਿਰਯਾਤ ਹਰ ਚੁਣੀ ਤਾਰੀਖ ਲਈ ਚੱਲੇਗਾ।</string>
-    <string name="export_preview_limited_other">ਡੇਟਾ ਵਾਲੇ ਸਭ ਤੋਂ ਹਾਲੀਆ %1$d ਦਿਨਾਂ ਦੀ ਝਲਕ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ। ਪੂਰਾ ਨਿਰਯਾਤ ਹਰ ਚੁਣੀ ਤਾਰੀਖ ਲਈ ਚੱਲੇਗਾ।</string>
     <string name="export_preview_no_data_title">ਝਲਕ ਲਈ ਕੋਈ ਡੇਟਾ ਨਹੀਂ</string>
     <string name="export_preview_no_data_message">ਚੁਣੀਆਂ ਤਾਰੀਖਾਂ ਲਈ ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਨਹੀਂ ਹੈ, ਜਾਂ ਕੋਈ ਫਾਰਮੈਟ ਨਹੀਂ ਚੁਣਿਆ ਗਿਆ।</string>
     <plurals name="free_exports_remaining">
@@ -167,7 +157,6 @@
         <item quantity="other">%1$d ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਬਾਕੀ</item>
     </plurals>
     <string name="unlock_button">Health.md ਅਨਲਾਕ ਕਰੋ</string>
-    <string name="export_result_days">%1$d/%2$d ਦਿਨ ਨਿਰਯਾਤ ਕੀਤੇ</string>
     <string name="open_folder">ਫੋਲਡਰ ਖੋਲੋ</string>
     <string name="open_with_files">ਫਾਈਲਾਂ</string>
     <string name="open_with_obsidian">Obsidian</string>
@@ -186,7 +175,6 @@
         <item quantity="other">%1$s: %2$d ਦਿਨ</item>
     </plurals>
     <string name="export_diagnostics_date_list">ਅਸਫਲ ਮਿਤੀਆਂ: %s</string>
-    <string name="export_diagnostics_date_list_more">ਅਸਫਲ ਮਿਤੀਆਂ: %1$s, +%2$d ਹੋਰ</string>
     <string name="export_diagnostics_no_details">ਕੋਈ ਪ੍ਰਤੀ-ਦਿਨ ਵੇਰਵੇ ਦਰਜ ਨਹੀਂ ਕੀਤੇ ਗਏ ਸਨ। ਇੱਕ ਛੋਟੀ ਸੀਮਾ ਦੀ ਕੋਸ਼ਿਸ਼ ਕਰੋ ਅਤੇ Health Connect ਅਨੁਮਤੀਆਂ ਦੀ ਜਾਂਚ ਕਰੋ।</string>
     <string name="export_diagnostics_use_failed_range">ਅਸਫਲ ਰੇਂਜ ਦੀ ਵਰਤੋਂ ਕਰੋ</string>
     <string name="export_failure_no_folder_label">ਕੋਈ ਫੋਲਡਰ ਨਹੀਂ ਚੁਣਿਆ ਗਿਆ</string>
@@ -213,16 +201,6 @@
     <string name="export_guidance_network">ਆਪਣੇ ਕਨੈਕਸ਼ਨ ਅਤੇ ਐਂਡਪੁਆਇੰਟ ਦੇ TLS ਸਰਟੀਫਿਕੇਟ ਦੀ ਜਾਂਚ ਕਰੋ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="export_guidance_api_rejected">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਐਂਡਪੌਇੰਟ ਪਾਥ, ਸੰਭਾਲਿਆ Authorization ਜਾਂ ਕਸਟਮ ਹੈਡਰ, ਬੇਨਤੀ ਸੀਮਾਵਾਂ ਅਤੇ ਸਰਵਰ ਲੌਗ ਜਾਂਚੋ।</string>
     <string name="export_guidance_unknown">ਇੱਕ ਛੋਟੀ ਰੇਂਜ ਨਾਲ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ। ਜੇਕਰ ਇਹ ਅਸਫਲ ਹੁੰਦਾ ਰਹਿੰਦਾ ਹੈ, ਤਾਂ ਇਸ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਨਾਲ ਫੀਡਬੈਕ ਭੇਜੋ।</string>
-    <!-- Export failure messages -->
-    <string name="error_no_health_data">ਇਸ ਤਾਰੀਖ ਦੀ ਰੇਂਜ ਲਈ ਕੋਈ ਸਿਹਤ ਡੇਟਾ ਨਹੀਂ ਮਿਲਿਆ</string>
-    <string name="error_file_write">ਫਾਈਲ ਲਿਖਣ ਵਿੱਚ ਫੇਲ \u2014 ਫੋਲਡਰ ਐਕਸੈਸ ਚੈਕ ਕਰੋ</string>
-    <string name="error_access_denied">ਨਿਰਯਾਤ ਫੋਲਡਰ ਤੱਕ ਪਹੁੰਚ ਨਕਾਰੀ</string>
-    <string name="error_no_folder">ਕੋਈ ਨਿਰਯਾਤ ਫੋਲਡਰ ਚੁਣਿਆ ਨਹੀਂ</string>
-    <string name="error_health_connect">Health Connect ਗਲਤੀ \u2014 ਅਨੁਮਤੀਆਂ ਚੈਕ ਕਰੋ</string>
-    <string name="error_device_locked">ਪਿਛਲੀ ਵਾਰ ਰੀਬੂਟ ਹੋਣ ਤੋਂ ਬਾਅਦ ਫ਼ੋਨ ਅਨਲੌਕ ਨਹੀਂ ਕੀਤਾ ਗਿਆ — ਇਸਨੂੰ ਅਨਲੌਕ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
-    <string name="error_background_permission_denied">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ Health Connect ਬੈਕਗ੍ਰਾਊਂਡ ਐਕਸੈਸ ਦੀ ਲੋੜ ਹੁੰਦੀ ਹੈ</string>
-    <string name="error_rate_limited">Health Connect ਨਿਰਯਾਤਾਂ ਦੀ ਦਰ ਸੀਮਤ ਕਰ ਰਿਹਾ ਹੈ — ਥੋੜ੍ਹੀ ਦੇਰ ਉਡੀਕੋ, ਫਿਰ ਬਾਕੀ ਮਿਤੀਆਂ ਲਈ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
-    <string name="error_unknown">ਇੱਕ ਅਚਾਨਕ ਗਲਤੀ ਆਈ</string>
     <!-- Debug panel -->
     <string name="debug_panel_title">ਡੀਬੱਗ ਜਾਣਕਾਰੀ</string>
     <string name="debug_loading">ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ\u2026</string>
@@ -240,7 +218,6 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
-    <string name="settings_title">ਆਪਣੀ ਐਪ\nਕੌਂਫਿਗਰ ਕਰੋ</string>
     <string name="settings_subtitle">ਪ੍ਰੀਮੀਅਮ ਅਤੇ ਸਹਾਇਤਾ ਦਾ ਪ੍ਰਬੰਧ ਕਰੋ</string>
     <string name="section_health_sources">ਸਿਹਤ ਸਰੋਤ</string>
     <string name="health_sources_description">Health Connect ਡਿਫੌਲਟ ਨਿਰਯਾਤ ਮਾਰਗ ਬਣਿਆ ਰਹਿੰਦਾ ਹੈ। ਇਹ ਸਮਰਥਿਤ ਈਕੋਸਿਸਟਮ ਅੱਜ Health Connect ਰਾਹੀਂ Health.md ਨੂੰ ਡੇਟਾ ਭੇਜ ਸਕਦੇ ਹਨ, ਜਾਂ ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ/ਭਾਈਵਾਲ ਪਹੁੰਚ ਕੌਂਫਿਗਰ ਹੋਣ ਤੋਂ ਬਾਅਦ ਸਿੱਧੇ SDK/OAuth ਅਡਾਪਟਰਾਂ ਰਾਹੀਂ।</string>
@@ -250,12 +227,12 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">ਸਿਹਤ ਸਰੋਤ ਸਾਈਨ-ਇਨ ਅਸਫਲ ਰਿਹਾ</string>
     <string name="health_provider_connected">ਜੁੜਿਆ %s</string>
-    <string name="section_health_diagnostics">ਸਿਹਤ ਡਾਇਗਨੌਸਟਿਕਸ</string>
+    <string name="section_health_diagnostics">ਸਿਹਤ ਡਾਟਾ ਸਰੋਤ ਦੀ ਡਾਇਗਨੌਸਟਿਕ ਜਾਣਕਾਰੀ</string>
     <string name="health_diagnostics_description">ਬੀਟਾ ਟੈਸਟਰਾਂ ਜਾਂ ਸਹਾਇਤਾ ਨਾਲ ਰੀਡੈਕਟ ਕੀਤੀ ਪ੍ਰਦਾਤਾ ਰਿਪੋਰਟ ਸਾਂਝੀ ਕਰੋ। ਇਸ ਵਿੱਚ ਪ੍ਰਦਾਤਾ ਸੈੱਟਅੱਪ, ਅਨੁਮਤੀ, OAuth ਸੰਰਚਿਤ/ਟੋਕਨ-ਮੌਜੂਦਾ ਫਲੈਗ, ਅਤੇ ਸਿਹਤ ਮਾਪਾਂ ਜਾਂ ਟੋਕਨ ਮੁੱਲਾਂ ਤੋਂ ਬਿਨਾਂ ਆਖਰੀ ਨਿਰਯਾਤ ਗਲਤੀ ਸ਼੍ਰੇਣੀਆਂ ਸ਼ਾਮਲ ਹਨ।</string>
-    <string name="health_diagnostics_share_title">ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ ਹਟਾ ਕੇ ਡਾਇਗਨੌਸਟਿਕਸ ਸਾਂਝੇ ਕਰੋ</string>
+    <string name="health_diagnostics_share_title">ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ-ਰਹਿਤ ਤਕਨੀਕੀ ਰਿਪੋਰਟ ਸਾਂਝੀ ਕਰੋ</string>
     <string name="health_diagnostics_share_subtitle">ਕੋਈ ਟੋਕਨ, ਪ੍ਰਦਾਤਾ ਦੀ ਗੁਪਤ ਜਾਣਕਾਰੀ, ਰਾਅ ਫਾਈਲ ਪਾਥ ਜਾਂ ਸਿਹਤ ਮਾਪ ਨਹੀਂ</string>
-    <string name="health_diagnostics_share_subject">Health.md ਡਾਇਗਨੌਸਟਿਕਸ (ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ ਹਟਾਈ ਗਈ)</string>
-    <string name="health_diagnostics_share_chooser">ਨਿਦਾਨ ਸਾਂਝੇ ਕਰੋ</string>
+    <string name="health_diagnostics_share_subject">Health.md ਦੀ ਸੰਵੇਦਨਸ਼ੀਲ ਜਾਣਕਾਰੀ-ਰਹਿਤ ਤਕਨੀਕੀ ਰਿਪੋਰਟ</string>
+    <string name="health_diagnostics_share_chooser">ਤਕਨੀਕੀ ਰਿਪੋਰਟ ਸਾਂਝੀ ਕਰੋ</string>
     <string name="section_write_mode">ਲਿਖਤ ਢੰਗ</string>
     <string name="section_filename_template">ਫਾਈਲ ਨਾਮ ਟੈਮਪਲੇਟ</string>
     <string name="filename_template_hint">{date}</string>
@@ -270,8 +247,6 @@
     <!-- Settings upgrade -->
     <string name="settings_upgrade_title">ਪ੍ਰੀਮੀਅਮ \'ਤੇ ਅੱਪਗ੍ਰੇਡ ਕਰੋ</string>
     <string name="settings_upgrade_subtitle">ਅਸੀਮਤ ਨਿਰਯਾਤ, ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਅਤੇ ਹੋਰ ਬਹੁਤ ਕੁਝ</string>
-    <string name="settings_premium_active">ਪ੍ਰੀਮੀਅਮ ਐਕਟਿਵ</string>
-    <string name="settings_premium_active_subtitle">ਤੁਹਾਡੇ ਕੋਲ ਬੇਅੰਤ ਨਿਰਯਾਤ ਹਨ</string>
     <string name="section_feedback">ਰਾਏ</string>
     <string name="feedback_send_title">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
     <string name="feedback_send_subtitle">ਆਪਣਾ ਈਮੇਲ ਕਲਾਈਂਟ ਖੋਲਦਾ ਹੈ</string>
@@ -303,7 +278,7 @@
     <string name="granular_data_description">ਅਨੁਕੂਲਤਾ ਨਿਰਯਾਤ ਲਈ ਟਾਈਮਸਟੈਂਪ ਕੀਤੇ ਨਮੂਨੇ ਸ਼ਾਮਲ ਕਰੋ ਜਿਵੇਂ ਕਿ ਦਿਲ ਦੀ ਗਤੀ ਅਤੇ ਨੀਂਦ ਦੇ ਪੜਾਅ। ਇੱਕ API-ਪੂਰੀ ਕਾਪੀ ਲਈ, Raw API Snapshot ਦੀ ਵਰਤੋਂ ਕਰੋ।</string>
     <!-- Metric selection screen -->
     <string name="metric_selection_title">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>
-    <string name="search_metrics_hint">ਮੈਟ੍ਰਿਕਸ ਖੋਜੋ...</string>
+    <string name="search_metrics_hint">ਮੈਟ੍ਰਿਕਸ ਖੋਜੋ…</string>
     <string name="select_all">ਸਭ ਚੁਣੋ</string>
     <string name="deselect_all">ਸਭ ਦੀ ਚੋਣ ਹਟਾਓ</string>
     <string name="metrics_enabled_category">%1$d/%2$d ਚਾਲੂ</string>
@@ -427,7 +402,7 @@
     <string name="metric_name_mindful_sessions">ਸਚੇਤਨ ਸੈਸ਼ਨ</string>
     <string name="metric_name_menstrual_flow">ਮਾਹਵਾਰੀ ਦਾ ਵਹਾਅ</string>
     <string name="metric_name_cervical_mucus">ਸਰਵਾਈਕਲ ਮਿਊਕਸ ਦੀ ਗੁਣਵੱਤਾ</string>
-    <string name="metric_name_ovulation_test">ਓਵੁਲਿਸ਼ਨ ਟੈਸਟ</string>
+    <string name="metric_name_ovulation_test">ਓਵੂਲੇਸ਼ਨ ਟੈਸਟ</string>
     <string name="metric_name_sexual_activity">ਜਿਨਸੀ ਗਤੀਵਿਧੀ</string>
     <string name="metric_name_intermenstrual_bleeding">ਮਾਹਵਾਰੀਆਂ ਦੇ ਵਿਚਕਾਰ ਖ਼ੂਨ ਵਗਣਾ</string>
     <string name="metric_name_workouts">ਵਰਜ਼ਿਸ਼</string>
@@ -475,11 +450,6 @@
     <string name="action_suggested">ਸੁਝਾਇਆ</string>
     <string name="action_all">ਸਭ</string>
     <string name="action_none">ਕੋਈ ਨਹੀਂ</string>
-    <string name="section_tracked_metrics">ਟ੍ਰੈਕ ਕੀਤੇ ਮੈਟ੍ਰਿਕਸ</string>
-    <string name="metric_workouts">ਵਰਜ਼ਿਸ਼</string>
-    <string name="metric_blood_pressure">ਬਲਡ ਪ੍ਰੈਸ਼ਰ</string>
-    <string name="metric_blood_glucose">ਖ਼ੂਨ ਗਲੂਕੋਜ</string>
-    <string name="metric_weight">ਵਜ਼ਨ</string>
     <string name="section_entries_folder">ਐਂਟਰੀਆਂ ਦੇ ਫੋਲਡਰ ਦਾ ਨਾਮ</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
@@ -503,64 +473,23 @@
     <string name="export_source_scheduled">ਅਨੁਸੂਚਿਤ</string>
     <!-- Schedule screen -->
     <string name="section_schedule">ਸਮਾਂ-ਸਾਰਣੀ</string>
-    <string name="schedule_active">ਸਮਾਂ-ਸਾਰਣੀ\nਚਾਲੂ</string>
-    <string name="schedule_not_set">ਕੋਈ ਸਮਾਂ-ਸਾਰਣੀ\nਸੈੱਟ ਨਹੀਂ</string>
     <string name="automatic_export_title">ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ</string>
     <string name="automatic_export_subtitle">ਆਪਣੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਸਵੈਚਲਿਤ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="schedule_enable_scheduled_exports">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਸਮਰੱਥ ਬਣਾਓ</string>
     <string name="schedule_automatic_export_body">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਤੁਹਾਡੇ ਚੁਣੇ Android ਨਿਰਯਾਤ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖੇ ਜਾਂਦੇ ਹਨ। ਨਿਰਯਾਤ ਟੈਬ ਤੋਂ ਹੱਥੀਂ ਨਿਰਯਾਤ ਵੀ ਉਪਲਬਧ ਰਹਿੰਦੇ ਹਨ।</string>
-    <string name="schedule_background_note">ਨੋਟ: Android ਸਹੀ ਬੈਕਗ੍ਰਾਊਂਡ ਟਾਈਮਿੰਗ ਨੂੰ ਕੰਟਰੋਲ ਕਰਦਾ ਹੈ। ਭਰੋਸੇਯੋਗ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ Health Connect ਬੈਕਗ੍ਰਾਉਂਡ ਪਹੁੰਚ ਨੂੰ ਸਮਰੱਥ ਰੱਖੋ ਅਤੇ Health.md ਨੂੰ ਬੈਟਰੀ ਓਪਟੀਮਾਈਜੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਰੱਖੋ।</string>
     <string name="schedule_exact_background_note">ਸਹੀ ਸਮੇਂ ਲਈ Android ਦੀ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਪਹੁੰਚ ਵਰਤੀ ਜਾਂਦੀ ਹੈ। Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਹਾਲੇ ਵੀ ਲੋੜੀਂਦੀ ਹੈ, ਅਤੇ ਨੈੱਟਵਰਕ ਨਾ ਹੋਣ ਜਾਂ ਫ਼ੋਨ ਬੰਦ ਹੋਣ ਨਾਲ ਕੰਮ ਪੂਰਾ ਹੋਣ ਵਿੱਚ ਦੇਰੀ ਹੋ ਸਕਦੀ ਹੈ।</string>
     <string name="exact_timing_needed_title">ਸਹੀ ਸਮਾਂ ਬੰਦ ਹੈ</string>
     <string name="exact_timing_needed_body">ਚੁਣੇ ਸਮੇਂ ’ਤੇ ਨਿਰਯਾਤ ਚਲਾਉਣ ਲਈ ਅਲਾਰਮ ਅਤੇ ਰਿਮਾਈਂਡਰ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ। ਇਸ ਪਹੁੰਚ ਤੋਂ ਬਿਨਾਂ Android ਦੇਰੀ ਵਾਲੇ ਵਿਕਲਪ ਵਜੋਂ WorkManager ਵਰਤਦਾ ਹੈ।</string>
     <string name="exact_timing_enable_button">ਸਹੀ ਸਮੇਂ ਦੀ ਇਜਾਜ਼ਤ ਦਿਓ</string>
-    <string name="section_cadence">ਅੰਤਰਾਲ</string>
-    <string name="cadence_unit_minutes">ਮਿੰਟ</string>
-    <string name="cadence_unit_hours">ਘੰਟੇ</string>
-    <string name="cadence_unit_days">ਦਿਨ</string>
-    <string name="cadence_unit_weeks">ਹਫਤੇ</string>
     <string name="cadence_minutes_minimum">ਘੱਟੋ-ਘੱਟ ਅੰਤਰਾਲ 15 ਮਿੰਟ ਹੈ।</string>
-    <string name="section_export_time">ਨਿਰਯਾਤ ਸਮਾਂ</string>
-    <string name="label_hour">ਘੰਟਾ</string>
-    <string name="label_minute">ਮਿੰਟ</string>
     <string name="schedule_frequency">ਬਾਰੰਬਾਰਤਾ</string>
-    <string name="schedule_frequency_15_minutes">ਹਰ 15 ਮਿੰਟ</string>
-    <string name="schedule_frequency_every_minutes">ਹਰ %1$d ਮਿੰਟ</string>
-    <string name="schedule_frequency_hourly">ਹਰ ਘੰਟੇ</string>
-    <string name="schedule_frequency_every_hours">ਹਰ %1$d ਘੰਟੇ</string>
-    <string name="schedule_frequency_daily">ਰੋਜ਼ਾਨਾ</string>
-    <string name="schedule_frequency_every_days">ਹਰ %1$d ਦਿਨ</string>
-    <string name="schedule_frequency_weekly">ਹਫਤਾਵਾਰੀ</string>
-    <string name="schedule_frequency_every_weeks">ਹਰ %1$d ਹਫ਼ਤੇ</string>
     <string name="schedule_time">ਸਮਾਂ</string>
-    <string name="schedule_time_period_am">ਪੂ.ਦੁ.</string>
-    <string name="schedule_time_period_pm">ਬਾ.ਦੁ.</string>
     <string name="schedule_date_window">ਮਿਤੀਆਂ</string>
     <string name="schedule_date_window_past_complete_days">ਪਿਛਲੇ ਪੂਰੇ ਦਿਨ</string>
     <string name="schedule_date_window_today">ਅੱਜ</string>
     <string name="schedule_export_past_days">ਪਿਛਲੇ ਦਿਨਾਂ ਨੂੰ ਨਿਰਯਾਤ ਕਰੋ</string>
-    <string name="schedule_lookback_ios_single">ਹਰ ਵਾਰ ਕੱਲ੍ਹ ਤੱਕ ਦੇ ਪਿਛਲੇ 1 ਦਿਨ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ।</string>
-    <string name="schedule_lookback_ios_plural">ਹਰ ਵਾਰ ਕੱਲ੍ਹ ਤੱਕ ਦੇ ਪਿਛਲੇ %1$d ਦਿਨਾਂ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ।</string>
     <string name="schedule_today_summary">ਹਰ ਵਾਰ ਅੱਜ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ, ਤਾਂ ਜੋ ਮੌਜੂਦਾ ਰੋਜ਼ਾਨਾ ਫਾਈਲ ਅੱਪ-ਟੂ-ਡੇਟ ਰਹੇ। ਇੱਕੋ ਦਿਨ ਦੀ ਸਮੱਗਰੀ ਦੋ ਵਾਰ ਜੁੜਨ ਤੋਂ ਬਚਾਉਣ ਲਈ Overwrite ਜਾਂ Update ਲਿਖਣ ਮੋਡ ਵਰਤੋ।</string>
-    <string name="schedule_next_export_every">ਅਗਲਾ ਨਿਰਯਾਤ: ਹਰ %1$s</string>
-    <string name="schedule_next_export_every_at">ਅਗਲਾ ਨਿਰਯਾਤ: ਹਰ %1$s ਨੂੰ %2$s ਵਜੇ</string>
     <string name="schedule_next_export_at_datetime">ਅਗਲਾ ਨਿਰਯਾਤ: %1$s</string>
-    <plurals name="schedule_cadence_minutes_count">
-        <item quantity="one">%d ਮਿੰਟ</item>
-        <item quantity="other">%d ਮਿੰਟ</item>
-    </plurals>
-    <plurals name="schedule_cadence_hours_count">
-        <item quantity="one">%d ਘੰਟਾ</item>
-        <item quantity="other">%d ਘੰਟੇ</item>
-    </plurals>
-    <plurals name="schedule_cadence_days_count">
-        <item quantity="one">%d ਦਿਨ</item>
-        <item quantity="other">%d ਦਿਨ</item>
-    </plurals>
-    <plurals name="schedule_cadence_weeks_count">
-        <item quantity="one">%d ਹਫ਼ਤਾ</item>
-        <item quantity="other">%d ਹਫਤੇ</item>
-    </plurals>
     <string name="notifications_needed_title">ਸੂਚਨਾਵਾਂ ਬੰਦ ਹਨ</string>
     <string name="notifications_needed_body">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਹਾਲੇ ਵੀ ਚੱਲ ਰਹੇ ਹਨ, ਪਰ ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਹੋਣ ਤੱਕ ਉਹ ਪੂਰੇ ਹੋਣ ’ਤੇ ਤੁਹਾਨੂੰ ਸੂਚਨਾ ਨਹੀਂ ਮਿਲੇਗੀ।</string>
     <string name="notifications_enable_button">ਚਾਲੂ ਕਰੋ</string>
@@ -568,14 +497,13 @@
     <string name="background_health_permission_needed_title">Health Connect ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ</string>
     <string name="background_health_permission_needed_body">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ Health Connect ਦੀ "ਬੈਕਗ੍ਰਾਉਂਡ ਵਿੱਚ ਡੇਟਾ ਐਕਸੈਸ" ਅਨੁਮਤੀ ਦੀ ਲੋੜ ਹੁੰਦੀ ਹੈ ਤਾਂ ਜੋ WorkManager ਐਪ ਦੇ ਬੰਦ ਹੋਣ \'ਤੇ ਸਿਹਤ ਡੇਟਾ ਨੂੰ ਪੜ੍ਹ ਸਕੇ।</string>
     <string name="background_health_permission_enable_button">ਬੈਕਗ੍ਰਾਊਂਡ ਐਕਸੈਸ ਨੂੰ ਸਮਰੱਥ ਬਣਾਓ</string>
-    <string name="schedule_workmanager_notice">ਨਿਰਯਾਤ WorkManager ਦੀ ਵਰਤੋਂ ਕਰਕੇ ਬੈਕਗ੍ਰਾਊਂਡ ਵਿੱਚ ਚੱਲਦੇ ਹਨ। ਭਰੋਸੇਯੋਗ ਸਮਾਂ-ਸਾਰਣੀ ਲਈ Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਦਿਓ ਅਤੇ Health.md ਨੂੰ ਬੈਟਰੀ ਆਪਟੀਮਾਈਜ਼ੇਸ਼ਨ ਤੋਂ ਬਾਹਰ ਰੱਖੋ।</string>
     <string name="scheduled_recovery_title">ਖੁੰਝੇ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨੇ ਹਨ?</string>
     <plurals name="scheduled_recovery_body">
         <item quantity="one">Health.md ਨੂੰ %1$d ਬਕਾਇਆ ਅਨੁਸੂਚਿਤ ਮਿਤੀ ਮਿਲੀ: %2$s। ਜੇ ਰੀਬੂਟ ਤੋਂ ਬਾਅਦ ਫ਼ੋਨ ਲੌਕ ਹੋਣ, ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਨਾ ਹੋਣ ਜਾਂ Health Connect ਉਪਲਬਧ ਨਾ ਹੋਣ ਕਰਕੇ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਖੁੰਝ ਗਿਆ, ਤਾਂ ਐਪ ਖੁੱਲ੍ਹੀ ਅਤੇ ਅਨਲੌਕ ਹੋਣ ’ਤੇ Health.md ਹੁਣ ਉਸੇ ਮਿਤੀ ਲਈ ਦੁਬਾਰਾ ਨਿਰਯਾਤ ਕਰ ਸਕਦਾ ਹੈ। ਅੱਗੇ ਅਜਿਹੀਆਂ ਚੂਕਾਂ ਤੋਂ ਬਚਣ ਲਈ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਦਿਓ।</item>
         <item quantity="other">Health.md ਨੂੰ %1$d ਬਕਾਇਆ ਅਨੁਸੂਚਿਤ ਮਿਤੀਆਂ ਮਿਲੀਆਂ: %2$s। ਜੇ ਰੀਬੂਟ ਤੋਂ ਬਾਅਦ ਫ਼ੋਨ ਲੌਕ ਹੋਣ, ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਨਾ ਹੋਣ ਜਾਂ Health Connect ਉਪਲਬਧ ਨਾ ਹੋਣ ਕਰਕੇ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਖੁੰਝ ਗਏ, ਤਾਂ ਐਪ ਖੁੱਲ੍ਹੀ ਅਤੇ ਅਨਲੌਕ ਹੋਣ ’ਤੇ Health.md ਹੁਣ ਉਹਨਾਂ ਮਿਤੀਆਂ ਲਈ ਦੁਬਾਰਾ ਨਿਰਯਾਤ ਕਰ ਸਕਦਾ ਹੈ। ਅੱਗੇ ਅਜਿਹੀਆਂ ਚੂਕਾਂ ਤੋਂ ਬਚਣ ਲਈ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਦਿਓ।</item>
     </plurals>
     <string name="scheduled_recovery_retry_button">ਬਕਾਇਆ ਮਿਤੀਆਂ ਲਈ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
-    <string name="scheduled_recovery_running_button">ਮੁੜ ਪ੍ਰਾਪਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ...</string>
+    <string name="scheduled_recovery_running_button">ਮੁੜ ਪ੍ਰਾਪਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ…</string>
     <string name="scheduled_recovery_blocked_paywall">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ Health.md ਨੂੰ ਅਨਲੌਕ ਕਰੋ।</string>
     <string name="scheduled_recovery_blocked_folder">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਇੱਕ ਨਿਰਯਾਤ ਫੋਲਡਰ ਚੁਣੋ।</string>
     <string name="scheduled_recovery_blocked_api">ਅਨੁਸੂਚਿਤ API ਨਿਰਯਾਤ ਮੁੜ ਪ੍ਰਾਪਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ API ਐਂਡਪੌਇੰਟ ਕੌਂਫਿਗਰ ਕਰੋ।</string>
@@ -585,7 +513,6 @@
     <string name="scheduled_recovery_blocked_running">ਇੱਕ ਨਿਯਤ ਰਿਕਵਰੀ ਨਿਰਯਾਤ ਪਹਿਲਾਂ ਹੀ ਚੱਲ ਰਿਹਾ ਹੈ।</string>
     <string name="scheduled_recovery_no_pending">ਕੋਈ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਮਿਤੀ ਰਿਕਵਰੀ ਲਈ ਬਕਾਇਆ ਨਹੀਂ ਹੈ।</string>
     <string name="scheduled_recovery_result_complete">ਨਿਯਤ ਰਿਕਵਰੀ ਪੂਰੀ ਹੋਈ।</string>
-    <string name="scheduled_recovery_result_partial">ਰਿਕਵਰੀ ਨੇ %2$d ਮਿਤੀਆਂ ਵਿੱਚੋਂ %1$d ਨਿਰਯਾਤ ਕੀਤੀਆਂ; %3$d ਹਾਲੇ ਬਕਾਇਆ ਹਨ।</string>
     <string name="scheduled_recovery_result_blocked">ਅਨੁਸੂਚਿਤ ਰਿਕਵਰੀ ਅਜੇ ਤਿਆਰ ਨਹੀਂ ਹੈ।</string>
     <string name="not_now">ਹੁਣ ਨਹੀਂ</string>
     <!-- Release notes -->
@@ -597,14 +524,12 @@
     <string name="release_notes_highlight_export_parity">ਨਵੇਂ Android-ਵਿਸ਼ੇਸ਼ ਵੇਰਵਿਆਂ ਵਿੱਚ ਗਤੀਵਿਧੀ ਦੀ ਤੀਬਰਤਾ, ਭੋਜਨ ਦਾ ਪੋਸ਼ਣ ਡੇਟਾ, ਮਾਹਵਾਰੀ ਦੀ ਮਿਆਦ, ਯੋਜਨਾਬੱਧ ਵਰਕਆਉਟ ਅਤੇ ਉਪਲਬਧ ਹੋਣ ’ਤੇ ਟਾਈਮਸਟੈਂਪ ਵਾਲੇ ਵਿਸਤ੍ਰਿਤ ਨਮੂਨੇ ਸ਼ਾਮਲ ਹਨ।</string>
     <string name="release_notes_highlight_templates">Markdown, JSON, CSV ਅਤੇ Obsidian ਨਿਰਯਾਤਾਂ ਵਿੱਚ ਹੁਣ ਵੱਡੇ ਕੈਟਾਲਾਗ ਦੇ ਹੋਰ ਵਿਸਤ੍ਰਿਤ ਮੈਟ੍ਰਿਕ ਮੁੱਲ ਸ਼ਾਮਲ ਹਨ।</string>
     <string name="release_notes_highlight_workouts">ਵਿਸਤ੍ਰਿਤ, ਸਿਰਫ਼ ਪੜ੍ਹਨ ਵਾਲੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਨੂੰ ਸਮਝਾਉਣ ਲਈ Health Connect ਇਜਾਜ਼ਤਾਂ ਦੀ ਜਾਣਕਾਰੀ ਅੱਪਡੇਟ ਕੀਤੀ ਗਈ ਹੈ।</string>
-    <string name="release_notes_highlight_accessibility">ਨਿਰਯਾਤ, ਸਮਾਂ-ਸਾਰਣੀ ਅਤੇ ਸੈਟਿੰਗਾਂ ਦੇ ਸਾਰੇ ਪੜਾਵਾਂ ਵਿੱਚ TalkBack ਲੇਬਲ ਅਤੇ ਟੱਚ ਟਾਰਗੇਟ ਸੁਧਾਰੇ ਗਏ ਹਨ।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
     <string name="notification_channel_scheduled_exports_description">ਅਨੁਸੂਚਿਤ ਸਿਹਤ ਨਿਰਯਾਤ ਪੂਰੇ ਹੋਣ ਜਾਂ ਅਸਫਲ ਹੋਣ ’ਤੇ ਸੂਚਨਾਵਾਂ</string>
     <string name="export_notification_title_complete">ਨਿਰਯਾਤ ਸਮਾਪਤ</string>
     <string name="export_notification_title_partial">ਨਿਰਯਾਤ ਅੰਸ਼ਕ</string>
     <string name="export_notification_title_failed">ਨਿਰਯਾਤ ਫੇਲ</string>
-    <string name="export_notification_message_days_exported">%1$d/%2$d ਦਿਨ %3$s ਲਈ ਨਿਰਯਾਤ ਕੀਤੇ ਗਏ</string>
     <string name="export_notification_background_permission_required">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਲਈ Health Connect ਦੀ ਬੈਕਗ੍ਰਾਊਂਡ ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ। ਇਸਨੂੰ ਚਾਲੂ ਕਰਨ ਲਈ Health.md &gt; ਸਮਾਂ-ਸਾਰਣੀ ਖੋਲ੍ਹੋ।</string>
     <string name="export_notification_unknown_error">ਅਣਜਾਣ ਗਲਤੀ</string>
     <!-- Paywall screen -->
@@ -629,7 +554,6 @@
     <string name="debug_reset_state">ਸਥਿਤੀ ਰੀਸੈਟ ਕਰੋ</string>
     <!-- Export progress dialog -->
     <string name="export_progress_title">ਸਿਹਤ ਡੇਟਾ ਨਿਰਯਾਤ ਕੀਤਾ ਜਾ ਰਿਹਾ ਹੈ</string>
-    <string name="export_progress_days">%1$d / %2$d ਦਿਨ</string>
     <!-- Navigation labels -->
     <string name="nav_export">ਨਿਰਯਾਤ</string>
     <string name="nav_schedule">ਸਮਾਂ-ਸਾਰਣੀ</string>
@@ -654,7 +578,7 @@
     <string name="privacy_category_heart">ਦਿਲ</string>
     <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
     <string name="privacy_category_heart_exports">ਨਿਰਯਾਤ ਫੀਲਡ: ਆਰਾਮ ਵੇਲੇ ਦਿਲ ਦੀ ਧੜਕਣ, ਔਸਤ/ਘੱਟੋ-ਘੱਟ/ਵੱਧ ਤੋਂ ਵੱਧ ਦਿਲ ਦੀ ਧੜਕਣ, ਤੁਰਦੇ ਸਮੇਂ ਦਿਲ ਦੀ ਔਸਤ ਧੜਕਣ, ਦਿਲ ਦੀ ਧੜਕਣ ਵਿੱਚ ਵੱਖਰਾਪਣ (HRV)</string>
-    <string name="privacy_category_vitals">ਵਾਇਟਲਸ</string>
+    <string name="privacy_category_vitals">ਜ਼ਰੂਰੀ ਸੰਕੇਤ</string>
     <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
     <string name="privacy_category_vitals_exports">ਨਿਰਯਾਤ ਖੇਤਰ: ਸਾਹ ਦੀ ਦਰ, ਖੂਨ ਦੀ ਆਕਸੀਜਨ, ਸਰੀਰ ਦਾ ਤਾਪਮਾਨ, ਬਲੱਡ ਪ੍ਰੈਸ਼ਰ (ਸਿਸਟੋਲਿਕ/ਡਾਇਆਸਟੋਲਿਕ), ਖੂਨ ਵਿੱਚ ਗਲੂਕੋਜ਼, ਬੇਸਲ ਸਰੀਰ ਦਾ ਤਾਪਮਾਨ, ਚਮੜੀ ਦਾ ਤਾਪਮਾਨ</string>
     <string name="privacy_category_body">ਸਰੀਰ</string>
@@ -683,16 +607,9 @@
     <string name="privacy_category_history_exports">ਸਿਰਫ਼ ਵੱਡੇ ਦਸਤੀ ਨਿਰਯਾਤਾਂ ਲਈ ਵਰਤਿਆ ਜਾਂਦਾ ਹੈ, ਜਿਵੇਂ 90 ਦਿਨ ਜਾਂ ਸਾਰੀ ਮਿਆਦ, ਤਾਂ ਜੋ Health.md ਮਿਆਰੀ 30-ਦਿਨ ਦੀ ਸੀਮਾ ਤੋਂ ਪੁਰਾਣਾ Health Connect ਡੇਟਾ ਪੜ੍ਹ ਸਕੇ</string>
     <string name="privacy_policy_direct_cli">Direct CLI ਨਿਰਯਾਤ ਉਦੋਂ ਹੀ ਹੁੰਦਾ ਹੈ ਜਦੋਂ ਤੁਸੀਂ ਸਪਸ਼ਟ ਤੌਰ ’ਤੇ ਆਪਣੇ ਕੰਪਿਊਟਰ ਨਾਲ ਪੇਅਰ ਅਤੇ ਕਨੈਕਟ ਕਰਦੇ ਹੋ। ਸਿਹਤ ਰਿਕਾਰਡ ਪ੍ਰਮਾਣਿਤ, ਇਨਕ੍ਰਿਪਟਡ ਕਨੈਕਸ਼ਨ ਰਾਹੀਂ ਭੇਜੇ ਜਾਂਦੇ ਹਨ। ਟ੍ਰਾਂਸਫਰ ਦੁਬਾਰਾ ਸ਼ੁਰੂ ਕੀਤਾ ਜਾ ਸਕੇ, ਇਸ ਲਈ ਉਹ ਵੱਧ ਤੋਂ ਵੱਧ ਸੱਤ ਦਿਨ ਨਿੱਜੀ ਤੌਰ ’ਤੇ ਰੱਖੇ ਜਾਂਦੇ ਹਨ; ਰੱਦ ਕਰਨ ਜਾਂ ਪੇਅਰਿੰਗ ਹਟਾਉਣ ’ਤੇ ਉਹ ਇਸ ਤੋਂ ਪਹਿਲਾਂ ਹੀ ਮਿਟਾ ਦਿੱਤੇ ਜਾਂਦੇ ਹਨ।</string>
     <string name="privacy_policy_footer">Health.md ਕੋਈ ਸਿਹਤ-ਡੇਟਾ ਕਲਾਊਡ ਨਹੀਂ ਚਲਾਉਂਦਾ। ਮੁਹਿੰਮ ਐਟ੍ਰਿਬਿਊਸ਼ਨ ਐਪ ਵੱਲੋਂ ਬਣਾਏ ਬੇਤਰਤੀਬ ਇੰਸਟਾਲ/ਇਵੈਂਟ UUIDs ਅਤੇ ਪ੍ਰਮਾਣਿਤ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਭੇਜ ਸਕਦੀ ਹੈ। ਇਹ ਕਦੇ ਸਿਹਤ ਡੇਟਾ, ਰਾਅ ਰੈਫਰਰ, ਡਿਵਾਈਸ IDs, ਨਿਰਯਾਤ, ਖਾਤੇ ਜਾਂ ਪਾਥ ਨਹੀਂ ਭੇਜਦੀ।</string>
-    <!-- Legacy body string kept for locale fallback -->
-    <string name="privacy_policy_body">Health.md ਸਿਰਫ਼ ਤੁਹਾਡੇ ਮੰਗੇ ਨਿਰਯਾਤ ਬਣਾਉਣ ਲਈ Health Connect ਡੇਟਾ ਪੜ੍ਹਦਾ ਹੈ। ਫੋਲਡਰ ਨਿਰਯਾਤ ਚੁਣੀ ਸਟੋਰੇਜ ਵਿੱਚ ਜਾਂਦੇ ਹਨ, API Endpoint ਨਿਰਯਾਤ ਸਿੱਧੇ ਤੁਹਾਡੀ ਕੌਂਫਿਗਰ ਕੀਤੀ ਸੇਵਾ ਨੂੰ ਜਾਂਦੇ ਹਨ ਅਤੇ ਸਪਸ਼ਟ ਤੌਰ ’ਤੇ ਕਨੈਕਟ ਕੀਤਾ Direct CLI ਨਿਰਯਾਤ ਪ੍ਰਮਾਣਿਤ ਇਨਕ੍ਰਿਪਸ਼ਨ ਰਾਹੀਂ ਤੁਹਾਡੇ ਪੇਅਰ ਕੀਤੇ ਕੰਪਿਊਟਰ ਨੂੰ ਜਾਂਦਾ ਹੈ। ਵੱਖਰੇ ਤੌਰ ’ਤੇ, ਪਹਿਲੀ-ਧਿਰ ਦੀ ਮੁਹਿੰਮ ਐਟ੍ਰਿਬਿਊਸ਼ਨ ਐਪ ਵੱਲੋਂ ਬਣਾਏ ਬੇਤਰਤੀਬ UUIDs ਅਤੇ ਸੈਨੀਟਾਈਜ਼ ਕੀਤੇ ਮੁਹਿੰਮ ਮੈਟਾਡੇਟਾ ਨਾਲ Play ਇੰਸਟਾਲ ਨੂੰ ਕਿਸੇ ਮੁਹਿੰਮ ਨਾਲ ਜੋੜ ਸਕਦੀ ਹੈ। ਇਸ ਵਿੱਚ ਕੋਈ ਸਿਹਤ ਡੇਟਾ, ਰਾਅ ਰੈਫਰਰ, ਡਿਵਾਈਸ ਪਛਾਣਕਰਤਾ, ਨਿਰਯਾਤ ਸਮੱਗਰੀ, ਖਾਤਾ ਡੇਟਾ ਜਾਂ ਫਾਈਲ ਪਾਥ ਸ਼ਾਮਲ ਨਹੀਂ ਹੁੰਦਾ।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md ਪ੍ਰਤੀਕ੍ਰਿਆ</string>
     <string name="feedback_send_chooser">ਪ੍ਰਤੀਕ੍ਰਿਆ ਭੇਜੋ</string>
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
     <!-- Raw snapshot product controls -->
     <string name="section_export_type">ਨਿਰਯਾਤ ਦੀ ਕਿਸਮ</string>
     <string name="export_type_compatibility">ਅਨੁਕੂਲਤਾ ਨਿਰਯਾਤ</string>
@@ -723,9 +640,6 @@
     <string name="raw_snapshot_cancelled_label">ਰਾਅ ਸਨੈਪਸ਼ਾਟ ਰੱਦ ਕੀਤਾ ਗਿਆ</string>
     <string name="raw_snapshot_result_created">ਰਾਅ ਸਨੈਪਸ਼ਾਟ ਬਣਾਇਆ ਗਿਆ</string>
     <string name="raw_snapshot_result_uploaded">ਰਾਅ ਸਨੈਪਸ਼ਾਟ ਅੱਪਲੋਡ ਕੀਤਾ ਗਿਆ</string>
-    <string name="raw_snapshot_result_count">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ ਪੂਰੀਆਂ ਹੋਈਆਂ: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count">ਅਧੂਰੀ ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %d</string>
     <plurals name="raw_snapshot_diagnostics_reason_count">
         <item quantity="one">%1$s: %2$d ਕਾਰਵਾਈ</item>
         <item quantity="other">%1$s: %2$d ਕਾਰਵਾਈਆਂ</item>
@@ -734,7 +648,6 @@
     <string name="raw_snapshot_diagnostics_no_details">ਕੋਈ ਸਨੈਪਸ਼ਾਟ ਡਾਇਗਨੌਸਟਿਕਸ ਰਿਕਾਰਡ ਨਹੀਂ ਕੀਤੇ ਗਏ ਸਨ। ਪ੍ਰਦਾਤਾ ਪਹੁੰਚ ਦੀ ਜਾਂਚ ਕਰੋ ਅਤੇ ਰੇਂਜ ਦੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="raw_snapshot_guidance_provider">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਚੁਣੇ ਪ੍ਰਦਾਤਾ ਦੀ ਪਹੁੰਚ ਅਤੇ ਰਾਅ ਆਰਟੀਫੈਕਟ ਮੈਨੀਫੈਸਟ ਜਾਂਚੋ।</string>
     <string name="raw_snapshot_guidance_cancelled">ਕੋਈ ਰਾਅ ਆਰਟੀਫੈਕਟ ਪ੍ਰਕਾਸ਼ਿਤ ਨਹੀਂ ਕੀਤਾ ਗਿਆ। ਤਿਆਰ ਹੋਣ ’ਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
-    <string name="raw_snapshot_history_entry">ਸਨੈਪਸ਼ਾਟ ਕਾਰਵਾਈਆਂ: %1$d/%2$d \u2022 %3$s ਤੋਂ %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">ਸਨੈਪਸ਼ਾਟ ਡਾਇਗਨੌਸਟਿਕਸ</string>
     <string name="raw_snapshot_notification_message">%1$s ਨੂੰ ਸਮਾਪਤ ਹੋਣ ਵਾਲੀ ਰਾਅ ਸਨੈਪਸ਼ਾਟ ਰੇਂਜ: %2$s</string>
     <string name="raw_snapshot_status_complete">ਪੂਰਾ</string>
@@ -752,7 +665,7 @@
     <string name="write_mode_display_update">ਅਪਡੇਟ ਕਰੋ</string>
     <string name="write_mode_desc_update">ਆਪਣੀ ਕਸਟਮ ਸਮੱਗਰੀ ਸੁਰੱਖਿਅਤ ਰੱਖਦੇ ਹੋਏ ਐਪ-ਪ੍ਰਬੰਧਿਤ ਭਾਗ ਅੱਪਡੇਟ ਕਰੋ</string>
     <!-- DateFormatPreference display names -->
-    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US ਛੋਟਾ (01/13/2026)</string>
     <string name="date_format_display_us_long">US ਲੰਬਾ (ਜਨਵਰੀ 13, 2026)</string>
     <string name="date_format_display_eu_short">EU ਛੋਟਾ (13/01/2026)</string>
@@ -819,8 +732,6 @@
     <string name="schedule_unlock_required_title">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਅਨਲੌਕ ਕਰੋ</string>
     <string name="schedule_unlock_required_body">ਦਸਤੀ ਨਿਰਯਾਤ 10 ਵਾਰ ਮੁਫ਼ਤ ਚਲਾਏ ਜਾ ਸਕਦੇ ਹਨ। ਆਟੋਮੈਟਿਕ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਇੱਕ-ਵਾਰ ਦੇ ਜੀਵਨ ਭਰ ਅਨਲੌਕ ਵਿੱਚ ਸ਼ਾਮਲ ਹਨ।</string>
     <string name="schedule_unlock_required_short">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਨੂੰ ਸਮਰੱਥ ਬਣਾਉਣ ਲਈ Health.md ਨੂੰ ਅਨਲੌਕ ਕਰੋ।</string>
-    <string name="section_schedule_lookback">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਦੀ ਪਿਛਲੀ ਮਿਆਦ</string>
-    <string name="schedule_lookback_summary">ਹਰ ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਵਿੱਚ ਕੱਲ੍ਹ ਤੱਕ ਦੇ ਪਿਛਲੇ %1$d ਪੂਰੇ ਦਿਨ ਅਤੇ ਬਕਾਇਆ ਅਸਫਲ ਮਿਤੀਆਂ ਨਿਰਯਾਤ ਹੁੰਦੀਆਂ ਹਨ।</string>
     <string name="export_folder_root_label">ਨਿਰਯਾਤ ਫੋਲਡਰ</string>
     <string name="history_clear_title">ਕੀ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਸਾਫ਼ ਕਰਨਾ ਹੈ?</string>
     <string name="history_clear_body">ਇਸ ਨਾਲ ਸਾਰੀਆਂ ਸਥਾਨਕ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਐਂਟਰੀਆਂ ਹਟ ਜਾਂਦੀਆਂ ਹਨ। ਨਿਰਯਾਤ ਕੀਤੀਆਂ ਫਾਈਲਾਂ ਨਹੀਂ ਮਿਟਾਈਆਂ ਜਾਂਦੀਆਂ।</string>
@@ -840,10 +751,6 @@
     <string name="history_detail_failure">ਅਸਫਲਤਾ</string>
     <string name="history_detail_warning">ਚੇਤਾਵਨੀ</string>
     <string name="history_detail_failed_dates">ਅਸਫਲ ਮਿਤੀਆਂ</string>
-    <string name="clear">ਸਾਫ਼ ਕਰੋ</string>
-    <string name="retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
-    <string name="retrying">ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ...</string>
-    <string name="delete">ਮਿਟਾਓ</string>
     <string name="section_file_organization">ਫਾਈਲ ਸੰਗਠਨ</string>
     <string name="health_subfolder_label">ਸਿਹਤ ਸਬਫੋਲਡਰ</string>
     <string name="folder_organization_label">ਆਟੋਮੈਟਿਕ ਫੋਲਡਰ</string>
@@ -990,7 +897,7 @@
     <string name="health_provider_polar_summary">Polar ਸਿਖਲਾਈ, ਦਿਲ ਦੀ ਧੜਕਣ ਵਾਲੇ ਡਿਵਾਈਸ ਅਤੇ AccessLink ਰਾਹੀਂ ਨੀਂਦ/ਗਤੀਵਿਧੀ।</string>
     <string name="health_provider_polar_setup_description">Polar ਦਾ ਇਤਿਹਾਸਕ ਇਮਪੋਰਟ Polar AccessLink OAuth ਰਾਹੀਂ ਕਰੋ। BLE ਸੈਂਸਰ ਸਹਾਇਤਾ ਭਵਿੱਖ ਦਾ ਵੱਖਰਾ ਲਾਈਵ-ਸੈਸ਼ਨ ਫੀਚਰ ਹੈ, ਇਤਿਹਾਸ ਨਿਰਯਾਤ ਦਾ ਬਦਲ ਨਹੀਂ।</string>
     <string name="health_provider_whoop_summary">WHOOP ਰਿਕਵਰੀ, Strain, ਨੀਂਦ, ਵਰਕਆਉਟ ਅਤੇ ਸਰੀਰਕ ਡੇਟਾ।</string>
-    <string name="health_provider_whoop_setup_description">ਸਿੱਧਾ WHOOP ਇਮਪੋਰਟ cycle, recovery, sleep, workout ਅਤੇ profile ਡੇਟੇ ਲਈ OAuth ਸਕੋਪਾਂ ਨਾਲ WHOOP API ਵਰਤਦਾ ਹੈ।</string>
+    <string name="health_provider_whoop_setup_description">ਸਿੱਧਾ WHOOP ਆਯਾਤ ਚੱਕਰਾਂ, ਸਿਹਤਯਾਬੀ, ਨੀਂਦ, ਕਸਰਤਾਂ ਅਤੇ ਪ੍ਰੋਫ਼ਾਈਲ ਡੇਟਾ ਲਈ OAuth ਸਕੋਪਾਂ ਨਾਲ WHOOP API ਵਰਤਦਾ ਹੈ।</string>
     <string name="health_provider_integration_android_system">Android ਸਿਸਟਮ</string>
     <string name="health_provider_integration_health_connect_source">Health Connect ਸਰੋਤ</string>
     <string name="health_provider_integration_vendor_sdk">ਵਿਕਰੇਤਾ SDK</string>
@@ -1032,11 +939,6 @@
     <string name="feedback_issue_steps_heading">ਸਮੱਸਿਆ ਦੁਹਰਾਉਣ ਦੇ ਕਦਮ</string>
     <string name="feedback_issue_expected_heading">ਉਮੀਦ ਕੀਤਾ ਗਿਆ ਵਿਹਾਰ</string>
     <string name="feedback_issue_expected_hint">ਤੁਸੀਂ ਕੀ ਹੋਣ ਦੀ ਉਮੀਦ ਕਰਦੇ ਸੀ</string>
-    <string name="automation_history_permissions_missing">Health Connect ਇਜਾਜ਼ਤਾਂ ਮੌਜੂਦ ਨਹੀਂ ਹਨ</string>
-    <plurals name="automation_history_failed_dates">
-        <item quantity="one">%1$d ਅਸਫਲ ਮਿਤੀ</item>
-        <item quantity="other">%1$d ਅਸਫਲ ਮਿਤੀਆਂ</item>
-    </plurals>
     <string name="action_edit_endpoint">API ਐਂਡਪੌਇੰਟ ਸੋਧੋ</string>
     <string name="history_date_range">%1$s – %2$s</string>
     <string name="history_failed_date_reason">%1$s: %2$s</string>
@@ -1066,12 +968,7 @@
     <string name="schedule_target_folder_choose">ਨਿਰਯਾਤ ਸਕ੍ਰੀਨ ਤੋਂ ਇੱਕ ਫੋਲਡਰ ਚੁਣੋ</string>
     <string name="schedule_target_folder_ready">ਤਹਿ ਕੀਤੀਆਂ ਫ਼ਾਈਲਾਂ ਚੁਣੇ ਹੋਏ ਡਿਵਾਈਸ ਫੋਲਡਰ ਵਿੱਚ ਲਿਖੋ</string>
     <string name="schedule_toggle_time_period">ਪੂ.ਦੁ. ਜਾਂ ਬਾ.ਦੁ. ਬਦਲੋ</string>
-    <string name="scheduled_recovery_history_cancelled">ਰਿਕਵਰੀ ਰੱਦ ਕੀਤੀ ਗਈ; ਅਧੂਰੀਆਂ ਮਿਤੀਆਂ ਬਕਾਇਆ ਰਹਿਣਗੀਆਂ।</string>
     <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
-    <plurals name="export_history_failed_dates_pending_retry">
-        <item quantity="one">%1$d ਅਸਫਲ ਮਿਤੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਦੀ ਉਡੀਕ ਵਿੱਚ</item>
-        <item quantity="other">%1$d ਅਸਫਲ ਮਿਤੀਆਂ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਦੀ ਉਡੀਕ ਵਿੱਚ</item>
-    </plurals>
     <plurals name="export_notification_days_exported">
         <item quantity="one">%3$s ਲਈ %1$d/%2$d ਦਿਨ ਨਿਰਯਾਤ ਕੀਤਾ ਗਿਆ</item>
         <item quantity="other">%3$s ਲਈ %1$d/%2$d ਦਿਨ ਨਿਰਯਾਤ ਕੀਤੇ ਗਏ</item>
@@ -1127,10 +1024,6 @@
     <plurals name="schedule_lookback_days_summary">
         <item quantity="one">ਹਰ ਵਾਰ ਕੱਲ੍ਹ ਤੱਕ ਦੇ ਪਿਛਲੇ %1$d ਦਿਨ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ।</item>
         <item quantity="other">ਹਰ ਵਾਰ ਕੱਲ੍ਹ ਤੱਕ ਦੇ ਪਿਛਲੇ %1$d ਦਿਨਾਂ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ।</item>
-    </plurals>
-    <plurals name="scheduled_recovery_history_failed_dates">
-        <item quantity="one">ਰਿਕਵਰੀ ਪੂਰੀ ਹੋਈ; %1$d ਅਸਫਲ ਮਿਤੀ ਹਾਲੇ ਵੀ ਬਕਾਇਆ ਹੈ।</item>
-        <item quantity="other">ਰਿਕਵਰੀ ਪੂਰੀ ਹੋਈ; %1$d ਅਸਫਲ ਮਿਤੀਆਂ ਹਾਲੇ ਵੀ ਬਕਾਇਆ ਹਨ।</item>
     </plurals>
     <plurals name="scheduled_recovery_result_exported_dates">
         <item quantity="one">ਰੀਕਵਰੀ ਨੇ %1$d/%2$d ਮਿਤੀ ਨਿਰਯਾਤ ਕੀਤੀ।</item>

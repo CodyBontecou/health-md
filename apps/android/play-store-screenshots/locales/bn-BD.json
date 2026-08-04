@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "bn-BD",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "আপনার স্বাস্থ্য ডেটা। আপনার ফাইল।",
+      "supportingLine": "অনুমোদিত Health Connect রেকর্ড আপনার নিয়ন্ত্রণে থাকা ফাইলে রপ্তানি করুন।"
+    },
+    {
+      "id": "export-formats",
+      "headline": "নিজের মতো করে রপ্তানি করুন",
+      "supportingLine": "Markdown, Obsidian Bases, JSON ও CSV।"
+    },
+    {
+      "id": "health-metrics",
+      "headline": "১০০টির বেশি স্বাস্থ্য মেট্রিক বেছে নিন",
+      "supportingLine": "ঘুম, কার্যকলাপ, হৃদ্‌যন্ত্র, ভাইটাল, পুষ্টি এবং আরও অনেক কিছু।"
+    },
+    {
+      "id": "private-by-design",
+      "headline": "শুধু পড়া। নকশাতেই গোপনীয়তা।",
+      "supportingLine": "কোনো অ্যাকাউন্ট নেই। Health.md স্বাস্থ্য-ডেটা ক্লাউড নেই।"
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "আপনার আর্কাইভ হালনাগাদ রাখুন",
+      "supportingLine": "আপনার নির্বাচিত গন্তব্যে রপ্তানির সময়সূচি দিন।"
+    },
+    {
+      "id": "file-preview",
+      "headline": "রপ্তানির আগে প্রিভিউ করুন",
+      "supportingLine": "কিছু লেখার আগে ফাইলের নাম, পাথ ও কনটেন্ট দেখুন।"
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "এক নজরে স্বাস্থ্য",
+      "supportingLine": "কার্যকলাপ, ঘুম, হৃদ্‌যন্ত্র ও সারাংশের উইজেট।"
+    },
+    {
+      "id": "direct-cli",
+      "headline": "সরাসরি আপনার কম্পিউটারে",
+      "supportingLine": "ক্লাউড রিলে ছাড়াই প্রমাণীকৃত, এনক্রিপ্ট করা রপ্তানির জন্য Health.md CLI-র সঙ্গে পেয়ার করুন।"
+    }
+  ]
+}

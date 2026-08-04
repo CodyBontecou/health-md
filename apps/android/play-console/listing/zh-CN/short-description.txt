@@ -1,0 +1,1 @@
+将 Health Connect 数据导出为由你掌控的 Markdown、CSV、JSON 或 Obsidian 文件。

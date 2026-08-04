@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
-    <string name="ok">موافق</string>
     <string name="cancel">إلغاء</string>
     <string name="back">رجوع</string>
     <string name="close">إغلاق</string>
@@ -28,11 +27,6 @@
 
     <!-- Date range -->
     <string name="section_date_range">نطاق التواريخ</string>
-    <string name="date_shortcut_1d">يوم واحد</string>
-    <string name="date_shortcut_7d">7 أيام</string>
-    <string name="date_shortcut_30d">30 يومًا</string>
-    <string name="date_shortcut_90d">90 يومًا</string>
-    <string name="date_shortcut_all">الكل</string>
 
     <!-- Export format -->
     <string name="section_export_format">صيغة التصدير</string>
@@ -52,8 +46,6 @@
     <string name="export_preview_device_destination">مجلد الجهاز</string>
     <string name="export_preview_complete_file">تُعرض النسخة الكاملة من ملف %1$s الذي سيُصدَّر.</string>
     <string name="export_preview_truncated_file">تُعرض معاينة مختصرة لملف %1$s هذا. وسيظل التصدير الكامل متضمنًا جميع البيانات.</string>
-    <string name="export_preview_limited_one">تتم معاينة أحدث يوم يحتوي على بيانات. سيتم تشغيل التصدير الكامل لكل تاريخ محدد.</string>
-    <string name="export_preview_limited_other">تتم معاينة أحدث الأيام التي تحتوي على بيانات، وعددها %1$d. وسيُجرى التصدير الكامل لكل تاريخ محدد.</string>
     <string name="export_preview_no_data_title">لا توجد بيانات للمعاينة</string>
     <string name="export_preview_no_data_message">لا توجد بيانات صحية للتواريخ المحددة، أو لم تُحدَّد أي صيغ.</string>
     <plurals name="free_exports_remaining">
@@ -65,19 +57,10 @@
         <item quantity="other">يتبقى %1$d تصدير مجاني</item>
     </plurals>
     <string name="unlock_button">إلغاء قفل Health.md</string>
-    <string name="export_result_days">الأيام المصدّرة: %1$d/%2$d</string>
     <string name="open_folder">افتح المجلد</string>
     <string name="open_with_files">الملفات</string>
     <string name="open_with_obsidian">Obsidian</string>
 
-    <!-- Export failure messages -->
-    <string name="error_no_health_data">لم يُعثر على بيانات صحية ضمن نطاق التواريخ هذا</string>
-    <string name="error_file_write">فشلت كتابة الملف \u2014 تحقق من إمكانية الوصول إلى المجلد</string>
-    <string name="error_access_denied">تم رفض الوصول إلى مجلد التصدير</string>
-    <string name="error_no_folder">لم يتم اختيار مجلد تصدير</string>
-    <string name="error_health_connect">خطأ في Health Connect \u2014 تحقق من الأذونات</string>
-    <string name="error_device_locked">لم يُفتح قفل الهاتف منذ آخر إعادة تشغيل — يُرجى فتحه وإعادة المحاولة</string>
-    <string name="error_unknown">حدث خطأ غير متوقع</string>
 
     <!-- Debug panel -->
     <string name="debug_panel_title">معلومات تصحيح الأخطاء</string>
@@ -94,7 +77,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">إعداد\nتطبيقك</string>
     <string name="settings_subtitle">إدارة الميزات المميزة والدعم</string>
     <string name="section_write_mode">وضع الكتابة</string>
     <string name="section_filename_template">قالب اسم الملف</string>
@@ -143,7 +125,7 @@
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">المقاييس الصحية</string>
-    <string name="search_metrics_hint">ابحث عن المقاييس...</string>
+    <string name="search_metrics_hint">ابحث عن المقاييس…</string>
     <string name="select_all">اختر الكل</string>
     <string name="deselect_all">ألغِ اختيار الكل</string>
     <string name="metrics_enabled_category">المقاييس المفعّلة: %1$d/%2$d</string>
@@ -266,11 +248,6 @@
     <string name="action_suggested">مقترح</string>
     <string name="action_all">الكل</string>
     <string name="action_none">لا شيء</string>
-    <string name="section_tracked_metrics">المقاييس المتتبعة</string>
-    <string name="metric_workouts">التمارين</string>
-    <string name="metric_blood_pressure">ضغط الدم</string>
-    <string name="metric_blood_glucose">غلوكوز الدم</string>
-    <string name="metric_weight">الوزن</string>
     <string name="section_entries_folder">اسم مجلد الإدخالات</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
@@ -300,62 +277,17 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">الجدولة</string>
-    <string name="schedule_active">الجدولة\nمفعّلة</string>
-    <string name="schedule_not_set">لم تُضبط\nالجدولة</string>
     <string name="automatic_export_title">تصدير تلقائي</string>
     <string name="automatic_export_subtitle">صدّر بياناتك الصحية تلقائيًا</string>
     <string name="schedule_exact_background_note">يستخدم التوقيت الدقيق إذن «المنبّهات والتذكيرات» في Android. يظل الوصول إلى Health Connect في الخلفية مطلوبًا، وقد يؤدي عدم توفر الشبكة أو إيقاف تشغيل الهاتف إلى تأخير الاكتمال.</string>
     <string name="exact_timing_needed_title">التوقيت الدقيق متوقف</string>
     <string name="exact_timing_needed_body">اسمح للمنبّهات والتذكيرات بتشغيل عمليات التصدير في الوقت المحدد. ومن دون هذا الإذن، يستخدم Android نظام WorkManager كخيار احتياطي قد يتأخر.</string>
     <string name="exact_timing_enable_button">السماح بالتوقيت الدقيق</string>
-    <string name="section_cadence">التكرار</string>
-    <string name="cadence_unit_minutes">دقائق</string>
-    <string name="cadence_unit_hours">ساعات</string>
-    <string name="cadence_unit_days">أيام</string>
-    <string name="cadence_unit_weeks">أسابيع</string>
     <string name="cadence_minutes_minimum">الحد الأدنى للتكرار هو 15 دقيقة.</string>
-    <string name="section_export_time">وقت التصدير</string>
-    <string name="label_hour">الساعة</string>
-    <string name="label_minute">الدقيقة</string>
-    <string name="schedule_next_export_every">التصدير التالي: كل %1$s</string>
-    <string name="schedule_next_export_every_at">التصدير التالي: كل %1$s عند %2$s</string>
-    <plurals name="schedule_cadence_minutes_count">
-        <item quantity="zero">%d دقيقة</item>
-        <item quantity="one">%d دقيقة</item>
-        <item quantity="two">دقيقتان (%d)</item>
-        <item quantity="few">%d دقائق</item>
-        <item quantity="many">%d دقيقةً</item>
-        <item quantity="other">%d دقيقة</item>
-    </plurals>
-    <plurals name="schedule_cadence_hours_count">
-        <item quantity="zero">%d ساعة</item>
-        <item quantity="one">%d ساعة</item>
-        <item quantity="two">ساعتان (%d)</item>
-        <item quantity="few">%d ساعات</item>
-        <item quantity="many">%d ساعةً</item>
-        <item quantity="other">%d ساعة</item>
-    </plurals>
-    <plurals name="schedule_cadence_days_count">
-        <item quantity="zero">%d يوم</item>
-        <item quantity="one">%d يوم</item>
-        <item quantity="two">يومان (%d)</item>
-        <item quantity="few">%d أيام</item>
-        <item quantity="many">%d يومًا</item>
-        <item quantity="other">%d يوم</item>
-    </plurals>
-    <plurals name="schedule_cadence_weeks_count">
-        <item quantity="zero">%d أسبوع</item>
-        <item quantity="one">%d أسبوع</item>
-        <item quantity="two">أسبوعان (%d)</item>
-        <item quantity="few">%d أسابيع</item>
-        <item quantity="many">%d أسبوعًا</item>
-        <item quantity="other">%d أسبوع</item>
-    </plurals>
     <string name="notifications_needed_title">الإشعارات معطّلة</string>
     <string name="notifications_needed_body">ستظل عمليات التصدير المجدولة تعمل، لكنك لن تتلقى إشعارًا عند اكتمالها حتى تفعّل الإشعارات.</string>
     <string name="notifications_enable_button">فعّل</string>
     <string name="notifications_open_settings_button">افتح الإعدادات</string>
-    <string name="schedule_workmanager_notice">تعمل التصديرات في الخلفية باستخدام WorkManager. لضمان جدولة موثوقة، اسمح لـ Health Connect بالوصول في الخلفية واستبعد Health.md من تحسين البطارية.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">التصديرات المجدولة</string>
@@ -363,7 +295,6 @@
     <string name="export_notification_title_complete">انتهى التصدير</string>
     <string name="export_notification_title_partial">تصدير جزئي</string>
     <string name="export_notification_title_failed">فشل التصدير</string>
-    <string name="export_notification_message_days_exported">الأيام المصدّرة لـ %3$s: %1$d/%2$d</string>
     <string name="export_notification_unknown_error">خطأ غير معروف</string>
 
     <!-- Paywall screen -->
@@ -378,7 +309,6 @@
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">جارٍ تصدير البيانات الصحية</string>
-    <string name="export_progress_days">الأيام: %1$d / %2$d</string>
 
     <!-- Navigation labels -->
     <string name="nav_export">تصدير</string>
@@ -393,11 +323,6 @@
     <string name="feedback_email_subject">ملاحظات حول Health.md</string>
     <string name="feedback_send_chooser">إرسال ملاحظات</string>
 
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
 
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">Markdown</string>
@@ -414,7 +339,7 @@
     <string name="write_mode_desc_update">حدّث الأقسام المدارة من التطبيق مع الحفاظ على محتواك المخصص</string>
 
     <!-- DateFormatPreference display names -->
-    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">أمريكي قصير (01/13/2026)</string>
     <string name="date_format_display_us_long">أمريكي طويل (يناير 13، 2026)</string>
     <string name="date_format_display_eu_short">أوروبي قصير (13/01/2026)</string>
@@ -451,8 +376,6 @@
 
     <!-- Complete canonical localization -->
     <string name="add">أضف</string>
-    <string name="increase">زيادة</string>
-    <string name="decrease">إنقاص</string>
     <string name="action_cancel_export">إلغاء التصدير</string>
     <string name="action_close_options">إغلاق الخيارات</string>
     <string name="action_set_start_date">ضبط تاريخ البدء</string>
@@ -597,7 +520,6 @@
         <item quantity="other">%1$s: %2$d يوم</item>
     </plurals>
     <string name="export_diagnostics_date_list">التواريخ التي فشل تصديرها: %s</string>
-    <string name="export_diagnostics_date_list_more">التواريخ التي فشل تصديرها: %1$s، العدد الإضافي: %2$d</string>
     <string name="export_diagnostics_no_details">لم تُسجَّل أي تفاصيل لكل يوم. جرّب نطاقًا أصغر وتحقق من أذونات Health Connect.</string>
     <string name="export_diagnostics_use_failed_range">استخدم نطاق التواريخ المتعذّرة</string>
     <string name="export_failure_no_folder_label">لم يتم تحديد أي مجلد</string>
@@ -624,8 +546,6 @@
     <string name="export_guidance_network">تحقق من اتصالك وشهادة TLS الخاصة بنقطة النهاية، ثم أعد المحاولة.</string>
     <string name="export_guidance_api_rejected">تحقق من مسار نقطة النهاية وبيانات التفويض المحفوظة أو الرؤوس المخصّصة وحدود الطلبات وسجلات الخادم قبل إعادة المحاولة.</string>
     <string name="export_guidance_unknown">أعد المحاولة باستخدام نطاق أصغر. وإذا استمر الفشل، فأرسل ملاحظات وأرفق سجل التصدير هذا.</string>
-    <string name="error_background_permission_denied">تحتاج عمليات التصدير المجدولة إلى الوصول إلى Health Connect في الخلفية</string>
-    <string name="error_rate_limited">يفرض Health Connect حدًا على معدل التصدير — انتظر قليلًا، ثم أعد محاولة التواريخ المتبقية</string>
     <string name="debug_has_history_permission">إذن السجل ممنوح</string>
     <string name="debug_requires_history_permission">النطاق يحتاج إلى إذن السجل</string>
     <string name="debug_first_permission_grant">أول منح للإذن</string>
@@ -637,16 +557,14 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">فشل تسجيل الدخول إلى مصدر البيانات الصحية</string>
     <string name="health_provider_connected">متصل: %s</string>
-    <string name="section_health_diagnostics">تشخيصات مصادر البيانات الصحية</string>
+    <string name="section_health_diagnostics">تشخيص مصدر البيانات الصحية</string>
     <string name="health_diagnostics_description">شارك مع مختبري الإصدار التجريبي أو فريق الدعم تقريرًا عن الموفّر بعد حجب البيانات الحساسة منه. يتضمن التقرير إعداد الموفّر والأذونات ومؤشرات إعداد OAuth ووجود رمز الوصول وفئات أحدث أخطاء التصدير، من دون قياسات صحية أو قيم لرموز الوصول.</string>
-    <string name="health_diagnostics_share_title">مشاركة التشخيصات بعد حجب البيانات الحساسة</string>
+    <string name="health_diagnostics_share_title">مشاركة تقرير تقني بعد حجب البيانات الحساسة</string>
     <string name="health_diagnostics_share_subtitle">بلا رموز وصول أو أسرار للموفّر أو مسارات ملفات خام أو قياسات صحية</string>
-    <string name="health_diagnostics_share_subject">تشخيصات Health.md بعد حجب البيانات الحساسة</string>
-    <string name="health_diagnostics_share_chooser">مشاركة التشخيص</string>
+    <string name="health_diagnostics_share_subject">تقرير تقني من Health.md بعد حجب البيانات الحساسة</string>
+    <string name="health_diagnostics_share_chooser">مشاركة التقرير التقني</string>
     <string name="settings_upgrade_title">الترقية إلى Premium</string>
     <string name="settings_upgrade_subtitle">عمليات تصدير غير محدودة، وتصدير مجدول، والمزيد</string>
-    <string name="settings_premium_active">Premium مفعّل</string>
-    <string name="settings_premium_active_subtitle">لديك عمليات تصدير غير محدودة</string>
     <string name="feedback_discord_title">انضم إلى Discord</string>
     <string name="feedback_discord_subtitle">دردش مع مجتمع Health.md</string>
     <string name="feedback_no_app_available">لا يوجد تطبيق متاح لفتح هذا الرابط</string>
@@ -712,25 +630,12 @@
     <string name="toggle_legacy_android_aliases">إنشاء نسخة مكررة من مفاتيح Android وتسمياته القديمة</string>
     <string name="schedule_enable_scheduled_exports">تمكين عمليات التصدير المجدولة</string>
     <string name="schedule_automatic_export_body">تكتب عمليات التصدير المجدولة الملفات في مجلد تصدير Android الذي حددته. وتظل عمليات التصدير اليدوية متاحة من علامة تبويب «التصدير».</string>
-    <string name="schedule_background_note">ملاحظة: يتحكم Android في التوقيت الدقيق للمهام التي تعمل في الخلفية. أبقِ إمكانية وصول Health Connect في الخلفية مفعّلة، واستثنِ Health.md من تحسين البطارية لضمان موثوقية عمليات التصدير المجدولة.</string>
     <string name="schedule_frequency">التكرار</string>
-    <string name="schedule_frequency_15_minutes">كل 15 دقيقة</string>
-    <string name="schedule_frequency_every_minutes">كل %1$d دقيقة</string>
-    <string name="schedule_frequency_hourly">كل ساعة</string>
-    <string name="schedule_frequency_every_hours">كل %1$d ساعة</string>
-    <string name="schedule_frequency_daily">يوميًا</string>
-    <string name="schedule_frequency_every_days">كل %1$d يوم</string>
-    <string name="schedule_frequency_weekly">أسبوعيًا</string>
-    <string name="schedule_frequency_every_weeks">كل %1$d أسبوع</string>
     <string name="schedule_time">الوقت</string>
-    <string name="schedule_time_period_am">صباحًا</string>
-    <string name="schedule_time_period_pm">مساءً</string>
     <string name="schedule_date_window">التواريخ</string>
     <string name="schedule_date_window_past_complete_days">الأيام السابقة المكتملة</string>
     <string name="schedule_date_window_today">اليوم</string>
     <string name="schedule_export_past_days">تصدير الأيام الماضية</string>
-    <string name="schedule_lookback_ios_single">يصدّر كل تشغيل بيانات اليوم السابق، أي أمس.</string>
-    <string name="schedule_lookback_ios_plural">يصدّر كل تشغيل بيانات الأيام الـ %1$d السابقة حتى يوم أمس.</string>
     <string name="schedule_today_summary">يصدّر كل تشغيل بيانات اليوم ليظل ملفك اليومي الحالي محدّثًا. استخدم وضع «الاستبدال» أو «التحديث» لتجنّب تكرار محتوى اليوم نفسه.</string>
     <string name="schedule_next_export_at_datetime">التصدير التالي: %1$s</string>
     <string name="background_health_permission_needed_title">يلزم وصول Health Connect في الخلفية</string>
@@ -756,7 +661,6 @@
     <string name="scheduled_recovery_blocked_running">تعمل بالفعل عملية استعادة لتصدير مجدول.</string>
     <string name="scheduled_recovery_no_pending">لا توجد تواريخ تصدير مجدولة في انتظار الاستعادة.</string>
     <string name="scheduled_recovery_result_complete">اكتملت استعادة عمليات التصدير المجدولة.</string>
-    <string name="scheduled_recovery_result_partial">صدّرت عملية الاستعادة %1$d من أصل %2$d من التواريخ، ولا يزال %3$d منها معلّقًا.</string>
     <string name="scheduled_recovery_result_blocked">استعادة عمليات التصدير المجدولة غير جاهزة بعد.</string>
     <string name="not_now">ليس الآن</string>
     <string name="release_notes_title">ما الجديد في %s</string>
@@ -767,7 +671,6 @@
     <string name="release_notes_highlight_export_parity">تتضمن التفاصيل الجديدة الخاصة بـ Android شدة النشاط والوجبات الغذائية وفترات الحيض والتمارين المخططة والعينات التفصيلية عند توفرها.</string>
     <string name="release_notes_highlight_templates">تتضمن الآن عمليات تصدير Markdown وJSON وCSV وObsidian قيمًا أغنى للمقاييس ضمن الفهرس الموسّع.</string>
     <string name="release_notes_highlight_workouts">حُدّثت مبررات أذونات Health Connect لتوضيح أذونات التصدير الموسّعة والمخصّصة للقراءة فقط.</string>
-    <string name="release_notes_highlight_accessibility">حُسّنت تسميات TalkBack وأهداف اللمس في مسارات التصدير والجدولة والإعدادات.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
     <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
     <string name="paywall_purchasing">جارٍ إتمام الشراء\u2026</string>
@@ -824,7 +727,6 @@
     <string name="privacy_category_history_exports">يُستخدم فقط لعمليات التصدير اليدوية الكبيرة، مثل 90 يومًا أو كل المدة، كي يتمكن Health.md من قراءة بيانات Health Connect الأقدم من النافذة القياسية البالغة 30 يومًا</string>
     <string name="privacy_policy_direct_cli">لا تحدث عمليات تصدير Direct CLI إلا بعد أن تقرن جهازك بالكمبيوتر وتتصل به صراحةً. تُرسل السجلات الصحية عبر اتصال مشفّر ومصادق عليه، وتُحفظ بصورة خاصة لإتاحة استئناف النقل لمدة لا تتجاوز سبعة أيام، وتُحذف قبل ذلك إذا ألغيت العملية أو نسيت الاقتران.</string>
     <string name="privacy_policy_footer">لا يشغّل Health.md سحابة للبيانات الصحية. قد ترسل إحالة الحملات معرّفات UUID عشوائية ينشئها التطبيق للتثبيتات أو الأحداث وبيانات وصفية للحملة تم التحقق منها. ولا ترسل أبدًا بيانات صحية أو بيانات إحالة خام أو معرّفات أجهزة أو عمليات تصدير أو حسابات أو مسارات.</string>
-    <string name="privacy_policy_body">لا يقرأ Health.md بيانات Health Connect إلا لإنشاء عمليات التصدير التي تطلبها. تُحفظ عمليات التصدير إلى المجلد في مساحة التخزين التي تحددها، وتنتقل عمليات التصدير إلى نقطة نهاية API مباشرةً إلى خدمة تضبطها، ويُنقل تصدير Direct CLI المتصل صراحةً إلى الكمبيوتر المقترن عبر تشفير مصادق عليه. وبصورة منفصلة، يمكن لإحالة حملات الطرف الأول ربط تثبيت من Play بحملة باستخدام معرّفات UUID عشوائية ينشئها التطبيق وبيانات وصفية منقّحة للحملة. ولا يتضمن ذلك أي بيانات صحية أو بيانات إحالة خام أو معرّف جهاز أو محتوى تصدير أو بيانات حساب أو مسار ملف.</string>
     <string name="section_export_type">نوع التصدير</string>
     <string name="export_type_compatibility">تصدير التوافق</string>
     <string name="export_type_compatibility_description">ملفات Markdown أو Obsidian Bases أو JSON أو CSV يومية لمسارات عمل Health.md الحالية</string>
@@ -854,9 +756,6 @@
     <string name="raw_snapshot_cancelled_label">أُلغيت اللقطة الخام</string>
     <string name="raw_snapshot_result_created">أُنشئت لقطة خام</string>
     <string name="raw_snapshot_result_uploaded">رُفعت اللقطة الخام</string>
-    <string name="raw_snapshot_result_count">اكتملت إجراءات اللقطة: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count">إجراءات اللقطة: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count">إجراءات اللقطة غير المكتملة: %d</string>
     <plurals name="raw_snapshot_diagnostics_reason_count">
         <item quantity="zero">%1$s: لا إجراءات (%2$d)</item>
         <item quantity="one">%1$s: إجراء واحد (%2$d)</item>
@@ -869,7 +768,6 @@
     <string name="raw_snapshot_diagnostics_no_details">لم تُسجَّل أي تشخيصات للقطة. تحقق من إمكانية الوصول إلى الموفّر وأعد محاولة النطاق.</string>
     <string name="raw_snapshot_guidance_provider">راجع إمكانية الوصول إلى الموفّر المحدد وبيان الملف الخام الناتج قبل إعادة المحاولة.</string>
     <string name="raw_snapshot_guidance_cancelled">لم يُنشر أي ملف خام ناتج. أعد المحاولة عندما تكون جاهزًا.</string>
-    <string name="raw_snapshot_history_entry">إجراءات اللقطة: %1$d/%2$d \u2022 من %3$s إلى %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">تشخيصات اللقطة</string>
     <string name="raw_snapshot_notification_message">نطاق اللقطة الخام المنتهي في %1$s: %2$s</string>
     <string name="raw_snapshot_status_complete">مكتمل</string>
@@ -909,8 +807,6 @@
     <string name="schedule_unlock_required_title">إلغاء قفل عمليات التصدير المجدولة</string>
     <string name="schedule_unlock_required_body">تتضمن عمليات التصدير اليدوية 10 مرات مجانية. وتصبح عمليات التصدير التلقائية المجدولة متاحة مع إلغاء القفل الدائم لمرة واحدة.</string>
     <string name="schedule_unlock_required_short">قم بإلغاء قفل Health.md لتمكين عمليات التصدير المجدولة.</string>
-    <string name="section_schedule_lookback">نطاق الأيام السابقة للجدولة</string>
-    <string name="schedule_lookback_summary">يصدّر كل تشغيل مجدول بيانات آخر %1$d من الأيام المكتملة حتى أمس، بالإضافة إلى أي تواريخ معلّقة فشل تصديرها.</string>
     <string name="export_folder_root_label">مجلد التصدير</string>
     <string name="history_clear_title">هل تريد محو سجل التصدير؟</string>
     <string name="history_clear_body">يؤدي هذا إلى إزالة كافة إدخالات سجل التصدير المحلي. لا يتم حذف الملفات المصدرة.</string>
@@ -934,10 +830,6 @@
     <string name="history_detail_failure">الفشل</string>
     <string name="history_detail_warning">تحذير</string>
     <string name="history_detail_failed_dates">التواريخ التي فشل تصديرها</string>
-    <string name="clear">مسح</string>
-    <string name="retry">أعد المحاولة</string>
-    <string name="retrying">جارٍ إعادة المحاولة…</string>
-    <string name="delete">حذف</string>
     <string name="section_file_organization">تنظيم الملفات</string>
     <string name="health_subfolder_label">المجلد الفرعي للصحة</string>
     <string name="folder_organization_label">المجلدات التلقائية</string>
@@ -1130,15 +1022,6 @@
     <string name="feedback_issue_steps_heading">خطوات إعادة حدوث المشكلة</string>
     <string name="feedback_issue_expected_heading">السلوك المتوقع</string>
     <string name="feedback_issue_expected_hint">ما توقعت حدوثه</string>
-    <string name="automation_history_permissions_missing">أذونات Health Connect غير ممنوحة</string>
-    <plurals name="automation_history_failed_dates">
-        <item quantity="zero">لا تواريخ فشل تصديرها (%1$d)</item>
-        <item quantity="one">تاريخ واحد فشل تصديره (%1$d)</item>
-        <item quantity="two">تاريخان فشل تصديرهما (%1$d)</item>
-        <item quantity="few">%1$d تواريخ فشل تصديرها</item>
-        <item quantity="many">%1$d تاريخًا فشل تصديره</item>
-        <item quantity="other">%1$d تاريخ فشل تصديره</item>
-    </plurals>
     <string name="action_edit_endpoint">تعديل نقطة نهاية API</string>
     <string name="history_date_range">%1$s – %2$s</string>
     <string name="history_failed_date_reason">%1$s: %2$s</string>
@@ -1168,16 +1051,7 @@
     <string name="schedule_target_folder_choose">اختر مجلدًا من شاشة التصدير</string>
     <string name="schedule_target_folder_ready">اكتب ملفات التصدير المجدول في مجلد الجهاز المحدد</string>
     <string name="schedule_toggle_time_period">التبديل بين ص وم</string>
-    <string name="scheduled_recovery_history_cancelled">أُلغيت الاستعادة؛ وتبقى التواريخ التي لم يكتمل تصديرها معلّقة.</string>
     <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
-    <plurals name="export_history_failed_dates_pending_retry">
-        <item quantity="zero">لا تواريخ بانتظار إعادة المحاولة (%1$d)</item>
-        <item quantity="one">تاريخ واحد فشل تصديره بانتظار إعادة المحاولة (%1$d)</item>
-        <item quantity="two">تاريخان فشل تصديرهما بانتظار إعادة المحاولة (%1$d)</item>
-        <item quantity="few">%1$d تواريخ فشل تصديرها بانتظار إعادة المحاولة</item>
-        <item quantity="many">%1$d تاريخًا فشل تصديره بانتظار إعادة المحاولة</item>
-        <item quantity="other">%1$d تاريخ فشل تصديره بانتظار إعادة المحاولة</item>
-    </plurals>
     <plurals name="export_notification_days_exported">
         <item quantity="zero">لم تُحدَّد أيام للتصدير (%1$d/%2$d) لـ %3$s</item>
         <item quantity="one">تم تصدير %1$d من يوم واحد (%2$d) لـ %3$s</item>
@@ -1289,14 +1163,6 @@
         <item quantity="few">يصدّر كل تشغيل بيانات %1$d أيام سابقة حتى أمس.</item>
         <item quantity="many">يصدّر كل تشغيل بيانات %1$d يومًا سابقًا حتى أمس.</item>
         <item quantity="other">يصدّر كل تشغيل بيانات %1$d يوم سابق حتى أمس.</item>
-    </plurals>
-    <plurals name="scheduled_recovery_history_failed_dates">
-        <item quantity="zero">انتهت الاستعادة بلا تواريخ معلّقة فشل تصديرها (%1$d).</item>
-        <item quantity="one">انتهت الاستعادة مع بقاء تاريخ واحد معلّق فشل تصديره (%1$d).</item>
-        <item quantity="two">انتهت الاستعادة مع بقاء تاريخين معلّقين فشل تصديرهما (%1$d).</item>
-        <item quantity="few">انتهت الاستعادة مع بقاء %1$d تواريخ معلّقة فشل تصديرها.</item>
-        <item quantity="many">انتهت الاستعادة مع بقاء %1$d تاريخًا معلّقًا فشل تصديره.</item>
-        <item quantity="other">انتهت الاستعادة مع بقاء %1$d تاريخ معلّق فشل تصديره.</item>
     </plurals>
     <plurals name="scheduled_recovery_result_exported_dates">
         <item quantity="zero">لم تصدّر عملية الاستعادة أي تواريخ (%1$d/%2$d).</item>

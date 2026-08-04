@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
-    <string name="ok">Aceptar</string>
     <string name="cancel">Cancelar</string>
     <string name="back">Atrás</string>
     <string name="close">Cerrar</string>
@@ -111,11 +110,6 @@
 
     <!-- Date range -->
     <string name="section_date_range">Rango de Fechas</string>
-    <string name="date_shortcut_1d">1d</string>
-    <string name="date_shortcut_7d">7d</string>
-    <string name="date_shortcut_30d">30d</string>
-    <string name="date_shortcut_90d">90d</string>
-    <string name="date_shortcut_all">Todo</string>
 
     <!-- Export format -->
     <string name="section_export_format">Formato de Exportación</string>
@@ -135,8 +129,6 @@
     <string name="export_preview_device_destination">Carpeta del dispositivo</string>
     <string name="export_preview_complete_file">Se muestra el archivo completo de %1$s que se exportará.</string>
     <string name="export_preview_truncated_file">Se muestra una vista previa reducida de este archivo de %1$s. La exportación completa seguirá incluyendo todos los datos.</string>
-    <string name="export_preview_limited_one">Vista previa del día más reciente con datos. La exportación completa se ejecutará para cada fecha seleccionada.</string>
-    <string name="export_preview_limited_other">Vista previa de los %1$d días más recientes con datos. La exportación completa se ejecutará para cada fecha seleccionada.</string>
     <string name="export_preview_no_data_title">No hay datos para previsualizar</string>
     <string name="export_preview_no_data_message">No hay datos de salud para las fechas seleccionadas o no se seleccionó ningún formato.</string>
     <plurals name="free_exports_remaining">
@@ -145,19 +137,10 @@
         <item quantity="other">Quedan %1$d exportaciones gratuitas</item>
     </plurals>
     <string name="unlock_button">Desbloquear Health.md</string>
-    <string name="export_result_days">%1$d/%2$d días exportados</string>
     <string name="open_folder">Abrir carpeta</string>
     <string name="open_with_files">Archivos</string>
     <string name="open_with_obsidian">Obsidian</string>
 
-    <!-- Export failure messages -->
-    <string name="error_no_health_data">No se encontraron datos de salud para este rango de fechas</string>
-    <string name="error_file_write">No se pudo escribir el archivo \u2014 verifica el acceso a la carpeta</string>
-    <string name="error_access_denied">Acceso denegado a la carpeta de exportación</string>
-    <string name="error_no_folder">No se ha seleccionado carpeta de exportación</string>
-    <string name="error_health_connect">Error de Health Connect \u2014 verifica los permisos</string>
-    <string name="error_device_locked">El teléfono no se ha desbloqueado desde el último reinicio; desbloquéelo y vuelva a intentarlo</string>
-    <string name="error_unknown">Ocurrió un error inesperado</string>
 
     <!-- Debug panel -->
     <string name="debug_panel_title">Información de Depuración</string>
@@ -174,7 +157,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">Configura\nTu App</string>
     <string name="settings_subtitle">Gestiona Premium y soporte</string>
     <string name="section_write_mode">Modo de Escritura</string>
     <string name="section_filename_template">Plantilla de Nombre de Archivo</string>
@@ -217,7 +199,7 @@
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Métricas de Salud</string>
-    <string name="search_metrics_hint">Buscar métricas...</string>
+    <string name="search_metrics_hint">Buscar métricas…</string>
     <string name="select_all">Seleccionar Todo</string>
     <string name="deselect_all">Deseleccionar Todo</string>
     <string name="metrics_enabled_category">%1$d/%2$d habilitadas</string>
@@ -337,11 +319,6 @@
     <string name="action_suggested">Sugeridas</string>
     <string name="action_all">Todas</string>
     <string name="action_none">Ninguna</string>
-    <string name="section_tracked_metrics">Métricas Rastreadas</string>
-    <string name="metric_workouts">Entrenamientos</string>
-    <string name="metric_blood_pressure">Presión Arterial</string>
-    <string name="metric_blood_glucose">Glucosa en Sangre</string>
-    <string name="metric_weight">Peso</string>
     <string name="section_entries_folder">Nombre de la Carpeta de Entradas</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
@@ -368,50 +345,17 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Programación</string>
-    <string name="schedule_active">Programación\nActiva</string>
-    <string name="schedule_not_set">Sin Programación\nConfigurada</string>
     <string name="automatic_export_title">Exportación Automática</string>
     <string name="automatic_export_subtitle">Exporta tus datos de salud automáticamente</string>
     <string name="schedule_exact_background_note">La programación exacta usa el acceso a Alarmas y recordatorios de Android. El acceso en segundo plano a Health Connect sigue siendo necesario; si no hay red o el teléfono está apagado, la finalización puede retrasarse.</string>
     <string name="exact_timing_needed_title">La programación exacta está desactivada</string>
     <string name="exact_timing_needed_body">Permite Alarmas y recordatorios para activar las exportaciones a la hora seleccionada. Sin este acceso, Android usa WorkManager como alternativa con retraso.</string>
     <string name="exact_timing_enable_button">Permitir programación exacta</string>
-    <string name="section_cadence">Cadencia</string>
-    <string name="cadence_unit_minutes">Minutos</string>
-    <string name="cadence_unit_hours">Horas</string>
-    <string name="cadence_unit_days">Días</string>
-    <string name="cadence_unit_weeks">Semanas</string>
     <string name="cadence_minutes_minimum">La cadencia mínima es de 15 minutos.</string>
-    <string name="section_export_time">Hora de Exportación</string>
-    <string name="label_hour">Hora</string>
-    <string name="label_minute">Minuto</string>
-    <string name="schedule_next_export_every">Próxima exportación: cada %1$s</string>
-    <string name="schedule_next_export_every_at">Próxima exportación: cada %1$s a las %2$s</string>
-    <plurals name="schedule_cadence_minutes_count">
-        <item quantity="one">%d minuto</item>
-        <item quantity="many">%d minutos</item>
-        <item quantity="other">%d minutos</item>
-    </plurals>
-    <plurals name="schedule_cadence_hours_count">
-        <item quantity="one">%d hora</item>
-        <item quantity="many">%d horas</item>
-        <item quantity="other">%d horas</item>
-    </plurals>
-    <plurals name="schedule_cadence_days_count">
-        <item quantity="one">%d día</item>
-        <item quantity="many">%d días</item>
-        <item quantity="other">%d días</item>
-    </plurals>
-    <plurals name="schedule_cadence_weeks_count">
-        <item quantity="one">%d semana</item>
-        <item quantity="many">%d semanas</item>
-        <item quantity="other">%d semanas</item>
-    </plurals>
     <string name="notifications_needed_title">Las notificaciones están desactivadas</string>
     <string name="notifications_needed_body">Las exportaciones programadas siguen ejecutándose, pero no recibirás notificaciones cuando se completen hasta que habilites las notificaciones.</string>
     <string name="notifications_enable_button">Habilitar</string>
     <string name="notifications_open_settings_button">Abrir configuración</string>
-    <string name="schedule_workmanager_notice">Las exportaciones se ejecutan en segundo plano mediante WorkManager. Para una programación fiable, permita el acceso en segundo plano de Health Connect y excluya Health.md de la optimización de la batería.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Exportaciones Programadas</string>
@@ -419,7 +363,6 @@
     <string name="export_notification_title_complete">Exportación Completa</string>
     <string name="export_notification_title_partial">Exportación Parcial</string>
     <string name="export_notification_title_failed">Exportación Fallida</string>
-    <string name="export_notification_message_days_exported">%1$d/%2$d días exportados para %3$s</string>
     <string name="export_notification_unknown_error">Error desconocido</string>
 
     <!-- Paywall screen -->
@@ -434,7 +377,6 @@
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Exportando Datos de Salud</string>
-    <string name="export_progress_days">%1$d / %2$d días</string>
 
     <!-- Navigation labels -->
     <string name="nav_export">Exportar</string>
@@ -449,11 +391,6 @@
     <string name="feedback_email_subject">Comentarios de Health.md</string>
     <string name="feedback_send_chooser">Enviar Comentarios</string>
 
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
 
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">Markdown</string>
@@ -470,7 +407,7 @@
     <string name="write_mode_desc_update">Actualiza las secciones administradas por la aplicación mientras preserva tu contenido personalizado</string>
 
     <!-- DateFormatPreference display names -->
-    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US Corto (01/13/2026)</string>
     <string name="date_format_display_us_long">US Largo (enero 13, 2026)</string>
     <string name="date_format_display_eu_short">EU Corto (13/01/2026)</string>
@@ -507,8 +444,6 @@
 
     <!-- Complete localization resources -->
     <string name="add">Agregar</string>
-    <string name="increase">Aumentar</string>
-    <string name="decrease">Disminuir</string>
     <string name="action_cancel_export">Cancelar exportación</string>
     <string name="action_close_options">Cerrar opciones</string>
     <string name="action_set_start_date">Establecer fecha de inicio</string>
@@ -555,7 +490,6 @@
         <item quantity="other">%1$s: %2$d días</item>
     </plurals>
     <string name="export_diagnostics_date_list">Fechas fallidas: %s</string>
-    <string name="export_diagnostics_date_list_more">Fechas fallidas: %1$s, +%2$d más</string>
     <string name="export_diagnostics_no_details">No se registraron detalles por día. Pruebe con un rango más pequeño y verifique los permisos Health Connect.</string>
     <string name="export_diagnostics_use_failed_range">Usar rango fallido</string>
     <string name="export_failure_no_folder_label">Ninguna carpeta seleccionada</string>
@@ -582,8 +516,6 @@
     <string name="export_guidance_network">Verifique su conexión y el certificado TLS del endpoint, luego vuelva a intentarlo.</string>
     <string name="export_guidance_api_rejected">Verifique la ruta del endpoint, la autorización guardada o los encabezados personalizados, los límites de solicitudes y los registros del servidor antes de volver a intentarlo.</string>
     <string name="export_guidance_unknown">Vuelva a intentarlo con un rango más pequeño. Si sigue fallando, envíe comentarios con este historial de exportación.</string>
-    <string name="error_background_permission_denied">Las exportaciones programadas necesitan acceso en segundo plano a Health Connect</string>
-    <string name="error_rate_limited">Health Connect está limitando la tasa de exportación: espere un poco y luego vuelva a intentarlo en las fechas restantes.</string>
     <string name="debug_has_history_permission">Tiene permiso de historial</string>
     <string name="debug_requires_history_permission">El intervalo requiere historial</string>
     <string name="debug_first_permission_grant">Primera concesión de permiso</string>
@@ -595,16 +527,14 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">Error al iniciar sesión en la fuente de salud</string>
     <string name="health_provider_connected">Conectado %s</string>
-    <string name="section_health_diagnostics">Diagnóstico de salud</string>
+    <string name="section_health_diagnostics">Diagnóstico de la fuente de datos de salud</string>
     <string name="health_diagnostics_description">Comparta con los evaluadores beta o el equipo de soporte un informe del proveedor con los datos sensibles ocultos. Incluye la configuración y los permisos del proveedor, indica si OAuth está configurado y si hay un token, y muestra las categorías del último error de exportación, sin incluir mediciones de salud ni valores de tokens.</string>
-    <string name="health_diagnostics_share_title">Compartir diagnóstico sin datos sensibles</string>
+    <string name="health_diagnostics_share_title">Compartir informe técnico con datos sensibles ocultos</string>
     <string name="health_diagnostics_share_subtitle">Sin tokens, secretos del proveedor, rutas de archivo sin ocultar ni mediciones de salud</string>
-    <string name="health_diagnostics_share_subject">Diagnóstico de Health.md sin datos sensibles</string>
-    <string name="health_diagnostics_share_chooser">Compartir diagnósticos</string>
+    <string name="health_diagnostics_share_subject">Informe técnico de Health.md con datos sensibles ocultos</string>
+    <string name="health_diagnostics_share_chooser">Compartir informe técnico</string>
     <string name="settings_upgrade_title">Pasar a Premium</string>
     <string name="settings_upgrade_subtitle">Exportaciones ilimitadas, exportaciones programadas y más</string>
-    <string name="settings_premium_active">Premium activo</string>
-    <string name="settings_premium_active_subtitle">Tienes exportaciones ilimitadas</string>
     <string name="feedback_discord_title">Únete a nuestro Discord</string>
     <string name="feedback_discord_subtitle">Chatea con la comunidad Health.md</string>
     <string name="feedback_no_app_available">No hay ninguna aplicación disponible para abrir este enlace.</string>
@@ -670,25 +600,12 @@
     <string name="toggle_legacy_android_aliases">Duplicar claves y etiquetas heredadas de Android</string>
     <string name="schedule_enable_scheduled_exports">Habilitar exportaciones programadas</string>
     <string name="schedule_automatic_export_body">Las exportaciones programadas se escriben en la carpeta de exportación Android seleccionada. Las exportaciones manuales permanecen disponibles desde la pestaña Exportar.</string>
-    <string name="schedule_background_note">Nota: Android controla el momento exacto de la ejecución en segundo plano. Mantenga habilitado el acceso en segundo plano a Health Connect y excluya Health.md de la optimización de batería para que las exportaciones programadas sean fiables.</string>
     <string name="schedule_frequency">Frecuencia</string>
-    <string name="schedule_frequency_15_minutes">Cada 15 minutos</string>
-    <string name="schedule_frequency_every_minutes">Cada %1$d min</string>
-    <string name="schedule_frequency_hourly">Cada hora</string>
-    <string name="schedule_frequency_every_hours">Cada %1$d h</string>
-    <string name="schedule_frequency_daily">A diario</string>
-    <string name="schedule_frequency_every_days">Cada %1$d días</string>
-    <string name="schedule_frequency_weekly">Semanalmente</string>
-    <string name="schedule_frequency_every_weeks">Cada %1$d semanas</string>
     <string name="schedule_time">Hora</string>
-    <string name="schedule_time_period_am">AM</string>
-    <string name="schedule_time_period_pm">PM</string>
     <string name="schedule_date_window">Fechas</string>
     <string name="schedule_date_window_past_complete_days">Días completos anteriores</string>
     <string name="schedule_date_window_today">Hoy</string>
     <string name="schedule_export_past_days">Exportar días pasados</string>
-    <string name="schedule_lookback_ios_single">Cada ejecución exporta el último día completo, hasta ayer.</string>
-    <string name="schedule_lookback_ios_plural">Cada ejecución exporta los últimos %1$d días completos, hasta ayer.</string>
     <string name="schedule_today_summary">Cada ejecución exporta los datos de hoy para que su archivo diario actual pueda mantenerse actualizado. Utilice el modo de escritura Sobrescribir o Actualizar para evitar duplicar contenido del mismo día.</string>
     <string name="schedule_next_export_at_datetime">Próxima exportación: %1$s</string>
     <string name="background_health_permission_needed_title">Se necesita acceso en segundo plano a Health Connect</string>
@@ -711,7 +628,6 @@
     <string name="scheduled_recovery_blocked_running">Ya se está ejecutando una exportación de recuperación programada.</string>
     <string name="scheduled_recovery_no_pending">No hay fechas de exportación programadas pendientes de recuperación.</string>
     <string name="scheduled_recovery_result_complete">Recuperación programada completada.</string>
-    <string name="scheduled_recovery_result_partial">La recuperación exportó %1$d/%2$d fechas. Quedan %3$d fechas pendientes.</string>
     <string name="scheduled_recovery_result_blocked">La recuperación programada aún no está lista.</string>
     <string name="not_now">Ahora no</string>
     <string name="release_notes_title">Novedades de %s</string>
@@ -722,7 +638,6 @@
     <string name="release_notes_highlight_export_parity">Los nuevos detalles exclusivos de Android incluyen intensidad de actividad, comidas, periodos menstruales, entrenamientos planificados y muestras detalladas cuando estén disponibles.</string>
     <string name="release_notes_highlight_templates">Las exportaciones Markdown, JSON, CSV y Obsidian ahora incluyen valores de métricas más completos en todo el catálogo ampliado.</string>
     <string name="release_notes_highlight_workouts">Se actualizó la explicación de los permisos de Health Connect para describir los permisos ampliados de exportación de solo lectura.</string>
-    <string name="release_notes_highlight_accessibility">Se mejoraron las etiquetas de TalkBack y las áreas táctiles en los flujos de exportación, programación y configuración.</string>
     <string name="export_notification_background_permission_required">Las exportaciones programadas necesitan acceso en segundo plano a Health Connect. Abra Health.md &gt; Programación para habilitarlo.</string>
     <string name="paywall_unlock_button_price">Desbloquear por %s</string>
     <string name="paywall_purchasing">Procesando\u2026</string>
@@ -779,7 +694,6 @@
     <string name="privacy_category_history_exports">Se usa solo para exportaciones manuales grandes, como las de 90 días o de todo el historial, para que Health.md pueda leer datos de Health Connect anteriores al intervalo estándar de 30 días.</string>
     <string name="privacy_policy_direct_cli">Las exportaciones de Direct CLI solo se realizan después de emparejar y conectar explícitamente su computadora. Los registros de salud se envían mediante una conexión autenticada y cifrada, se conservan de forma privada durante un máximo de siete días para permitir reanudar la transferencia y se eliminan antes si cancela u olvida el emparejamiento.</string>
     <string name="privacy_policy_footer">Health.md no opera una nube de datos de salud. La atribución de campañas propia de Health.md puede enviar UUID aleatorios de instalación o evento generados por la aplicación y metadatos de campaña validados, pero nunca datos de salud, referentes sin procesar, identificadores de dispositivo, exportaciones, cuentas ni rutas.</string>
-    <string name="privacy_policy_body">Health.md lee los datos de Health Connect únicamente para crear las exportaciones que usted solicite. Las exportaciones a carpetas se guardan en el almacenamiento seleccionado, las exportaciones a un endpoint de API se envían directamente al servicio que usted configure y las exportaciones de Direct CLI se transmiten, tras una conexión explícita, con cifrado autenticado a la computadora emparejada. Por separado, la atribución de campañas propia de Health.md puede asociar una instalación de Play con una campaña mediante UUID aleatorios generados por la aplicación y metadatos de campaña depurados. No se incluyen datos de salud, referentes sin procesar, identificadores de dispositivo, contenido exportado, datos de cuentas ni rutas de archivos.</string>
     <string name="section_export_type">Tipo de exportación</string>
     <string name="export_type_compatibility">Exportación de compatibilidad</string>
     <string name="export_type_compatibility_description">Archivos diarios Markdown, Bases, JSON o CSV para flujos de trabajo Health.md existentes</string>
@@ -809,9 +723,6 @@
     <string name="raw_snapshot_cancelled_label">Instantánea bruta cancelada</string>
     <string name="raw_snapshot_result_created">Instantánea bruta creada</string>
     <string name="raw_snapshot_result_uploaded">Instantánea bruta subida</string>
-    <string name="raw_snapshot_result_count">Acciones de instantánea completadas: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count">Acciones de instantánea: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count">Acciones de instantánea incompletas: %d</string>
     <plurals name="raw_snapshot_diagnostics_reason_count">
         <item quantity="one">%1$s: %2$d acción</item>
         <item quantity="many">%1$s: %2$d acciones</item>
@@ -821,7 +732,6 @@
     <string name="raw_snapshot_diagnostics_no_details">No se registró ningún diagnóstico de la instantánea. Compruebe el acceso al proveedor y vuelva a intentar el intervalo.</string>
     <string name="raw_snapshot_guidance_provider">Revise el acceso del proveedor seleccionado y el manifiesto del artefacto bruto antes de volver a intentarlo.</string>
     <string name="raw_snapshot_guidance_cancelled">No se publicó ningún artefacto bruto. Vuelva a intentarlo cuando esté listo.</string>
-    <string name="raw_snapshot_history_entry">Acciones de instantánea: %1$d/%2$d \u2022 %3$s a %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">Diagnóstico de la instantánea</string>
     <string name="raw_snapshot_notification_message">Intervalo de la instantánea bruta que finaliza el %1$s: %2$s</string>
     <string name="raw_snapshot_status_complete">completo</string>
@@ -861,8 +771,6 @@
     <string name="schedule_unlock_required_title">Desbloquear exportaciones programadas</string>
     <string name="schedule_unlock_required_body">Las exportaciones manuales incluyen 10 ejecuciones gratuitas. Las exportaciones programadas automáticas se incluyen con el desbloqueo de por vida mediante un único pago.</string>
     <string name="schedule_unlock_required_short">Desbloquee Health.md para habilitar las exportaciones programadas.</string>
-    <string name="section_schedule_lookback">Intervalo retrospectivo programado</string>
-    <string name="schedule_lookback_summary">Cada ejecución programada exporta los últimos %1$d días completos que finalizaron ayer, más cualquier fecha fallida pendiente.</string>
     <string name="export_folder_root_label">Carpeta de exportación</string>
     <string name="history_clear_title">¿Borrar historial de exportaciones?</string>
     <string name="history_clear_body">Esto elimina todas las entradas del historial de exportación local. Los archivos exportados no se eliminan.</string>
@@ -883,10 +791,6 @@
     <string name="history_detail_failure">Falla</string>
     <string name="history_detail_warning">Advertencia</string>
     <string name="history_detail_failed_dates">Fechas fallidas</string>
-    <string name="clear">Borrar</string>
-    <string name="retry">Reintentar</string>
-    <string name="retrying">Reintentando…</string>
-    <string name="delete">Eliminar</string>
     <string name="section_file_organization">Organización de archivos</string>
     <string name="health_subfolder_label">subcarpeta de salud</string>
     <string name="folder_organization_label">Carpetas automáticas</string>
@@ -1075,12 +979,6 @@
     <string name="feedback_issue_steps_heading">Pasos para reproducir</string>
     <string name="feedback_issue_expected_heading">Comportamiento esperado</string>
     <string name="feedback_issue_expected_hint">Lo que esperabas que sucediera</string>
-    <string name="automation_history_permissions_missing">Faltan permisos de Health Connect</string>
-    <plurals name="automation_history_failed_dates">
-        <item quantity="one">%1$d fecha fallida</item>
-        <item quantity="many">%1$d fechas fallidas</item>
-        <item quantity="other">%1$d fechas fallidas</item>
-    </plurals>
     <string name="action_edit_endpoint">Editar endpoint de API</string>
     <string name="history_date_range">%1$s – %2$s</string>
     <string name="history_failed_date_reason">%1$s: %2$s</string>
@@ -1110,13 +1008,7 @@
     <string name="schedule_target_folder_choose">Elija una carpeta en la pantalla Exportar</string>
     <string name="schedule_target_folder_ready">Escribir los archivos programados en la carpeta seleccionada del dispositivo</string>
     <string name="schedule_toggle_time_period">Cambiar entre AM y PM</string>
-    <string name="scheduled_recovery_history_cancelled">Recuperación cancelada; las fechas sin completar siguen pendientes.</string>
     <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
-    <plurals name="export_history_failed_dates_pending_retry">
-        <item quantity="one">%1$d fecha fallida pendiente de reintento</item>
-        <item quantity="many">%1$d fechas fallidas pendientes de reintento</item>
-        <item quantity="other">%1$d fechas fallidas pendientes de reintento</item>
-    </plurals>
     <plurals name="export_notification_days_exported">
         <item quantity="one">%1$d/%2$d día exportado para %3$s</item>
         <item quantity="many">%1$d/%2$d días exportados para %3$s</item>
@@ -1186,11 +1078,6 @@
         <item quantity="one">Cada ejecución exporta %1$d día anterior, hasta ayer.</item>
         <item quantity="many">Cada ejecución exporta los %1$d días anteriores, hasta ayer.</item>
         <item quantity="other">Cada ejecución exporta los %1$d días anteriores, hasta ayer.</item>
-    </plurals>
-    <plurals name="scheduled_recovery_history_failed_dates">
-        <item quantity="one">La recuperación finalizó con %1$d fecha fallida aún pendiente.</item>
-        <item quantity="many">La recuperación finalizó con %1$d fechas fallidas aún pendientes.</item>
-        <item quantity="other">La recuperación finalizó con %1$d fechas fallidas aún pendientes.</item>
     </plurals>
     <plurals name="scheduled_recovery_result_exported_dates">
         <item quantity="one">La recuperación exportó %1$d/%2$d fecha.</item>

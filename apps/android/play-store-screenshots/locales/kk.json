@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "kk",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "Денсаулық деректеріңіз. Өз файлдарыңыз.",
+      "supportingLine": "Рұқсат етілген Health Connect жазбаларын өзіңіз басқаратын файлдарға экспорттаңыз."
+    },
+    {
+      "id": "export-formats",
+      "headline": "Өз қалауыңызша экспорттаңыз",
+      "supportingLine": "Markdown, Obsidian Bases, JSON және CSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "100-ден астам денсаулық көрсеткішін таңдаңыз",
+      "supportingLine": "Ұйқы, белсенділік, жүрек, өмірлік көрсеткіштер, тамақтану және тағы басқа."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "Тек оқу. Құпиялық негізге алынған.",
+      "supportingLine": "Есептік жазба жоқ. Health.md денсаулық деректерінің бұлты жоқ."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "Мұрағатыңызды жаңартып отырыңыз",
+      "supportingLine": "Экспорттарды таңдаған межелі орынға жоспарлаңыз."
+    },
+    {
+      "id": "file-preview",
+      "headline": "Экспорттау алдында қараңыз",
+      "supportingLine": "Ештеңе жазылмай тұрып, файл атауларын, жолдарын және мазмұнын көріңіз."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "Денсаулық бір қарағанда",
+      "supportingLine": "Белсенділік, ұйқы, жүрек және қорытынды виджеттері."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "Тікелей компьютеріңізге",
+      "supportingLine": "Бұлттық делдалсыз, расталған әрі шифрланған экспорттар үшін Health.md CLI құралымен жұптастырыңыз."
+    }
+  ]
+}

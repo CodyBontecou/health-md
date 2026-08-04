@@ -1,39 +1,39 @@
-# Health MD — ASO Benefits
+# Android store-listing benefits
 
-## Confirmed Benefits (5)
+This file records the approved positioning themes. The canonical listing copy lives under [`play-console/listing/`](../play-console/listing/), and the current audit lives in [`aso-audit-2026-08-04.md`](aso-audit-2026-08-04.md). Do not copy metric counts or pricing from old screenshots.
 
-1. **EXPORT HEALTH DATA LOCALLY**
-   - Your data, your device, your control. No cloud dependency.
+## Core benefits
 
-2. **OWN YOUR HEALTH DATA**
-   - Privacy-first. You decide what happens to your personal health information.
+1. **Export Health Connect data**
+   - Export to Markdown, CSV, JSON, NDJSON, Obsidian Bases or FHIR files.
 
-3. **TRACK 60+ HEALTH METRICS**
-   - Sleep, heart rate, steps, calories, blood pressure, glucose, nutrition, and more — all in one app.
+2. **Keep control of each export**
+   - Choose the metrics, date range and destination. Preview files before saving them.
 
-4. **AUTOMATE DAILY EXPORTS**
-   - Set it and forget it. Exports run automatically to your file system on your schedule.
+3. **Choose from 100+ metrics**
+   - Cover activity, sleep, heart, vitals, nutrition, body measurements, cycle tracking and medical records.
 
-5. **SYNC TO OBSIDIAN SEAMLESSLY**
-   - Export directly to your Obsidian vault. Build your own health analysis system.
+4. **Automate a private health archive**
+   - Run scheduled exports to a selected folder and review export history.
 
-## App Context
+5. **Use health data in your own tools**
+   - Write to an Obsidian vault, a local or provider-backed folder, a configured API endpoint or a paired desktop CLI.
 
-- **Platform**: Android
-- **Bundle ID**: com.healthmd.android
-- **Target Audience**: Obsidian users, self-quantifiers, data privacy-conscious health enthusiasts
-- **Unique Value**: Only app that exports health data locally to file system; seamless Obsidian integration
-- **Key Features**: 60+ health metrics tracking, multiple export formats (Markdown, JSON, CSV), scheduled/automated exports, Obsidian sync, Health Connect integration
-- **Pricing**: Freemium (10 free exports, then $9.99 one-time)
-- **Design**: Dark theme, purple accent (#9B6DD7), glass morphism, minimalist
+6. **See useful summaries at a glance**
+   - Add activity, sleep, heart or combined Health.md widgets to the home screen.
 
-## User Reviews Highlight
+## Product facts
 
-- "Extremely fast export, high polished design" — pasadental
-- "Works great, I needed a solution to export my health file to markdown locally" — Manjil
-- "For anybody who uses Obsidian and collects/tracks health data this is indispensable. Other apps export Health data but not in markdown to Obsidian." — dlangendorf
+- Package: `com.healthmd.android`
+- Category: Health & Fitness
+- Pricing: 10 free manual exports, then a one-time lifetime unlock; no subscription
+- Privacy: no Health.md health-data cloud; Health Connect records are read only for user-requested exports
+- Audience: people who want portable health records, Obsidian users, self-quantifiers and privacy-conscious users
 
-## ASO Phase Status
+## Claims to avoid
 
-✅ Benefits: Confirmed (5 core benefits)
-⏳ Screenshots: Next — need to collect simulator screenshots showing these features
+- Do not call Health.md the only local health exporter or the only Obsidian integration.
+- Do not promise a complete Health Connect backup.
+- Do not use brittle exact totals such as `61/61`, `99/99` or `106/106`; use `100+`.
+- Do not say every export remains on-device: a user-configured API endpoint or paired CLI intentionally sends selected data elsewhere.
+- Preserve the full privacy, permissions, FHIR and medical disclaimers in the canonical listing.

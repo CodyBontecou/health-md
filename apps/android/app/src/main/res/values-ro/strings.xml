@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
-    <string name="ok">OK</string>
     <string name="cancel">Anulați</string>
     <string name="back">Înapoi</string>
     <string name="close">Închideți</string>
@@ -28,11 +27,6 @@
 
     <!-- Date range -->
     <string name="section_date_range">Interval de Date</string>
-    <string name="date_shortcut_1d">1z</string>
-    <string name="date_shortcut_7d">7z</string>
-    <string name="date_shortcut_30d">30z</string>
-    <string name="date_shortcut_90d">90z</string>
-    <string name="date_shortcut_all">Toate</string>
 
     <!-- Export format -->
     <string name="section_export_format">Format de export</string>
@@ -52,8 +46,6 @@
     <string name="export_preview_device_destination">Dosarul dispozitivului</string>
     <string name="export_preview_complete_file">Se afișează fișierul complet de %1$s care va fi exportat.</string>
     <string name="export_preview_truncated_file">Se afișează o previzualizare redusă a acestui fișier de %1$s. Exportul complet va include în continuare toate datele.</string>
-    <string name="export_preview_limited_one">Se previzualizează cea mai recentă zi cu date. Exportul complet va rula pentru fiecare dată selectată.</string>
-    <string name="export_preview_limited_other">Se previzualizează cele mai recente %1$d zile cu date. Exportul complet va rula pentru fiecare dată selectată.</string>
     <string name="export_preview_no_data_title">Nu există date de previzualizat</string>
     <string name="export_preview_no_data_message">Nu există date de sănătate pentru zilele selectate sau nu a fost selectat niciun format.</string>
     <plurals name="free_exports_remaining">
@@ -62,19 +54,10 @@
         <item quantity="other">Au mai rămas %1$d de exporturi gratuite</item>
     </plurals>
     <string name="unlock_button">Deblocați Health.md</string>
-    <string name="export_result_days">%1$d/%2$d zile exportate</string>
     <string name="open_folder">Deschideți dosarul</string>
     <string name="open_with_files">Fișiere</string>
     <string name="open_with_obsidian">Obsidian</string>
 
-    <!-- Export failure messages -->
-    <string name="error_no_health_data">Nu au fost găsite date de sănătate pentru acest interval de date</string>
-    <string name="error_file_write">Nu s-a putut scrie fișierul — verificați accesul la dosar</string>
-    <string name="error_access_denied">Acces refuzat la dosarul de export</string>
-    <string name="error_no_folder">Niciun dosar de export selectat</string>
-    <string name="error_health_connect">Eroare Health Connect — verificați permisiunile</string>
-    <string name="error_device_locked">Telefonul nu a fost deblocat de la ultima repornire — deblocați-l și încercați din nou</string>
-    <string name="error_unknown">A apărut o eroare neașteptată</string>
 
     <!-- Debug panel -->
     <string name="debug_panel_title">Informații de depanare</string>
@@ -91,7 +74,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">Configurați\nAplicația</string>
     <string name="settings_subtitle">Gestionați Premium și asistența</string>
     <string name="section_write_mode">Mod de scriere</string>
     <string name="section_filename_template">Șablon pentru numele fișierului</string>
@@ -254,11 +236,6 @@
     <string name="action_suggested">Sugerat</string>
     <string name="action_all">Toate</string>
     <string name="action_none">Niciuna</string>
-    <string name="section_tracked_metrics">Metrici Urmărite</string>
-    <string name="metric_workouts">Antrenamente</string>
-    <string name="metric_blood_pressure">Tensiune arterială</string>
-    <string name="metric_blood_glucose">Glicemie</string>
-    <string name="metric_weight">Greutate</string>
     <string name="section_entries_folder">Numele dosarului de intrări</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
@@ -285,50 +262,17 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Programare</string>
-    <string name="schedule_active">Programare\nactivă</string>
-    <string name="schedule_not_set">Nicio programare\nconfigurată</string>
     <string name="automatic_export_title">Export automat</string>
     <string name="automatic_export_subtitle">Exportați datele dvs. de sănătate automat</string>
     <string name="schedule_exact_background_note">Programarea exactă folosește accesul Android pentru Alarme și mementouri. Accesul în fundal la Health Connect rămâne necesar. O rețea indisponibilă sau un telefon oprit poate întârzia finalizarea.</string>
     <string name="exact_timing_needed_title">Programarea exactă este dezactivată</string>
     <string name="exact_timing_needed_body">Permiteți Alarme și mementouri pentru a porni exporturile la ora selectată. Fără acest acces, Android folosește WorkManager ca alternativă întârziată.</string>
     <string name="exact_timing_enable_button">Permiteți programarea exactă</string>
-    <string name="section_cadence">Cadență</string>
-    <string name="cadence_unit_minutes">Minute</string>
-    <string name="cadence_unit_hours">Ore</string>
-    <string name="cadence_unit_days">Zile</string>
-    <string name="cadence_unit_weeks">Săptămâni</string>
     <string name="cadence_minutes_minimum">Cadența minimă este de 15 minute.</string>
-    <string name="section_export_time">Ora exportului</string>
-    <string name="label_hour">Oră</string>
-    <string name="label_minute">Minut</string>
-    <string name="schedule_next_export_every">Următorul export: la fiecare %1$s</string>
-    <string name="schedule_next_export_every_at">Următorul export: la fiecare %1$s la %2$s</string>
-    <plurals name="schedule_cadence_minutes_count">
-        <item quantity="one">%d minut</item>
-        <item quantity="few">%d minute</item>
-        <item quantity="other">%d de minute</item>
-    </plurals>
-    <plurals name="schedule_cadence_hours_count">
-        <item quantity="one">%d oră</item>
-        <item quantity="few">%d ore</item>
-        <item quantity="other">%d de ore</item>
-    </plurals>
-    <plurals name="schedule_cadence_days_count">
-        <item quantity="one">%d zi</item>
-        <item quantity="few">%d zile</item>
-        <item quantity="other">%d de zile</item>
-    </plurals>
-    <plurals name="schedule_cadence_weeks_count">
-        <item quantity="one">%d săptămână</item>
-        <item quantity="few">%d săptămâni</item>
-        <item quantity="other">%d de săptămâni</item>
-    </plurals>
     <string name="notifications_needed_title">Notificările sunt dezactivate</string>
     <string name="notifications_needed_body">Exporturile programate se execută în continuare, dar nu veți fi notificat când se finalizează până când notificările nu sunt activate.</string>
     <string name="notifications_enable_button">Activați</string>
     <string name="notifications_open_settings_button">Deschideți setările</string>
-    <string name="schedule_workmanager_notice">Exporturile se execută în fundal folosind WorkManager. Pentru o programare fiabilă, permiteți accesul în fundal la Health Connect și excludeți Health.md de la optimizarea bateriei.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Exporturi Programate</string>
@@ -336,7 +280,6 @@
     <string name="export_notification_title_complete">Export Complet</string>
     <string name="export_notification_title_partial">Export Parțial</string>
     <string name="export_notification_title_failed">Export Eșuat</string>
-    <string name="export_notification_message_days_exported">%1$d/%2$d zile exportate pentru %3$s</string>
     <string name="export_notification_unknown_error">Eroare necunoscută</string>
 
     <!-- Paywall screen -->
@@ -351,7 +294,6 @@
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Se exportă datele de sănătate</string>
-    <string name="export_progress_days">%1$d / %2$d zile</string>
 
     <!-- Navigation labels -->
     <string name="nav_export">Export</string>
@@ -366,11 +308,6 @@
     <string name="feedback_email_subject">Feedback Health.md</string>
     <string name="feedback_send_chooser">Trimiteți Feedback</string>
 
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
 
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">Markdown</string>
@@ -387,7 +324,7 @@
     <string name="write_mode_desc_update">Actualizați secțiunile gestionate de aplicație în timp ce vă păstrați conținutul personalizat</string>
 
     <!-- DateFormatPreference display names -->
-    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">Format scurt SUA (01/13/2026)</string>
     <string name="date_format_display_us_long">Format lung SUA (ianuarie 13, 2026)</string>
     <string name="date_format_display_eu_short">Format scurt UE (13/01/2026)</string>
@@ -424,8 +361,6 @@
 
     <!-- Complete canonical localization -->
     <string name="add">Adăugați</string>
-    <string name="increase">Creșteți</string>
-    <string name="decrease">Scădeți</string>
     <string name="action_cancel_export">Anulați exportul</string>
     <string name="action_close_options">Închideți opțiunile</string>
     <string name="action_set_start_date">Stabiliți data de începere</string>
@@ -455,7 +390,7 @@
     <string name="widget_health_summary_description">Activitatea, somnul, ritmul cardiac și recuperarea de astăzi din Health.md.</string>
     <string name="widget_activity_name">Activitate</string>
     <string name="widget_activity_description">Pașii, caloriile active și progresul exercițiilor din Health.md.</string>
-    <string name="widget_heart_range_name">Interval cardiac</string>
+    <string name="widget_heart_range_name">Interval de frecvență cardiacă</string>
     <string name="widget_heart_range_description">Ritmul cardiac minim, mediu și maxim din ultimele șapte zile, din Health.md.</string>
     <string name="widget_sleep_name">Somn</string>
     <string name="widget_sleep_description">Somnul de azi-noapte și graficul somnului din ultimele șapte zile, din Health.md.</string>
@@ -464,7 +399,7 @@
     <string name="widget_label_exercise">Exercițiu</string>
     <string name="widget_label_sleep">Somn</string>
     <string name="widget_label_resting">În repaus</string>
-    <string name="widget_label_heart_range">Interval cardiac</string>
+    <string name="widget_label_heart_range">Interval de frecvență cardiacă</string>
     <string name="widget_label_average">Medie</string>
     <string name="widget_label_minimum">Min. %1$s</string>
     <string name="widget_label_maximum">Max. %1$s</string>
@@ -555,7 +490,6 @@
         <item quantity="other">%1$s: %2$d de zile</item>
     </plurals>
     <string name="export_diagnostics_date_list">Date cu erori: %s</string>
-    <string name="export_diagnostics_date_list_more">Date cu erori: %1$s și încă %2$d</string>
     <string name="export_diagnostics_no_details">Nu au fost înregistrate detalii pe zi. Încercați un interval mai mic și verificați permisiunile Health Connect.</string>
     <string name="export_diagnostics_use_failed_range">Utilizați intervalul cu erori</string>
     <string name="export_failure_no_folder_label">Niciun dosar selectat</string>
@@ -582,8 +516,6 @@
     <string name="export_guidance_network">Verificați conexiunea și certificatul TLS al punctului final, apoi reîncercați.</string>
     <string name="export_guidance_api_rejected">Verificați calea punctului final, autorizarea salvată sau anteturile personalizate, limitele cererilor și jurnalele serverului înainte de a reîncerca.</string>
     <string name="export_guidance_unknown">Reîncercați cu un interval mai mic. Dacă tot eșuează, trimiteți feedback cu acest istoric de export.</string>
-    <string name="error_background_permission_denied">Exporturile programate necesită acces în fundal la Health Connect</string>
-    <string name="error_rate_limited">Health Connect limitează rata exporturilor — așteptați puțin, apoi încercați din nou datele rămase</string>
     <string name="debug_has_history_permission">Are permisiune pentru istoric</string>
     <string name="debug_requires_history_permission">Intervalul necesită acces la istoric</string>
     <string name="debug_first_permission_grant">Prima acordare a permisiunii</string>
@@ -595,16 +527,14 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">Conectarea la sursa de sănătate nu a reușit</string>
     <string name="health_provider_connected">Conectat %s</string>
-    <string name="section_health_diagnostics">Diagnosticarea sănătății</string>
+    <string name="section_health_diagnostics">Diagnosticarea sursei de date de sănătate</string>
     <string name="health_diagnostics_description">Partajați cu testerii beta sau cu echipa de asistență un raport al furnizorului din care au fost eliminate datele sensibile. Acesta include configurarea furnizorului, permisiunile, indicatoare pentru configurarea OAuth și prezența tokenului, precum și categoriile ultimei erori de export, fără măsurători de sănătate sau valori ale tokenului.</string>
-    <string name="health_diagnostics_share_title">Partajați diagnostice fără date sensibile</string>
+    <string name="health_diagnostics_share_title">Partajați raportul tehnic cu date mascate</string>
     <string name="health_diagnostics_share_subtitle">Fără tokenuri, secrete ale furnizorului, căi complete ale fișierelor sau măsurători de sănătate</string>
-    <string name="health_diagnostics_share_subject">Diagnostice Health.md fără date sensibile</string>
-    <string name="health_diagnostics_share_chooser">Partajați diagnostice</string>
+    <string name="health_diagnostics_share_subject">Raport tehnic Health.md cu date mascate</string>
+    <string name="health_diagnostics_share_chooser">Partajați raportul tehnic</string>
     <string name="settings_upgrade_title">Treceți la Premium</string>
     <string name="settings_upgrade_subtitle">Exporturi nelimitate, exporturi programate și multe altele</string>
-    <string name="settings_premium_active">Premium Activ</string>
-    <string name="settings_premium_active_subtitle">Aveți exporturi nelimitate</string>
     <string name="feedback_discord_title">Alăturați-vă comunității noastre pe Discord</string>
     <string name="feedback_discord_subtitle">Discutați cu comunitatea Health.md</string>
     <string name="feedback_no_app_available">Nicio aplicație disponibilă pentru a deschide acest link</string>
@@ -642,13 +572,13 @@
     <string name="metric_name_vitamin_d">Vitamina D</string>
     <string name="metric_name_vitamin_e">Vitamina E</string>
     <string name="metric_name_vitamin_k">Vitamina K</string>
-    <string name="metric_name_thiamin">Tiamina</string>
+    <string name="metric_name_thiamin">Tiamină</string>
     <string name="metric_name_riboflavin">Riboflavină</string>
     <string name="metric_name_niacin">Niacină</string>
     <string name="metric_name_folate">Folat</string>
     <string name="metric_name_folic_acid">Acid folic</string>
     <string name="metric_name_pantothenic_acid">Acid pantotenic</string>
-    <string name="metric_name_biotin">Biotina</string>
+    <string name="metric_name_biotin">Biotină</string>
     <string name="metric_name_running_speed">Viteza de alergare</string>
     <string name="metric_name_running_power">Putere de alergare</string>
     <string name="metric_name_activity_intensity_minutes">Minute de intensitate a activității</string>
@@ -670,25 +600,12 @@
     <string name="toggle_legacy_android_aliases">Duplicați cheile și etichetele Android vechi</string>
     <string name="schedule_enable_scheduled_exports">Activați exporturile programate</string>
     <string name="schedule_automatic_export_body">Exporturile programate scriu în dosarul de export Android selectat. Exporturile manuale rămân disponibile în fila Export.</string>
-    <string name="schedule_background_note">Notă: Android controlează momentul exact al executării în fundal. Mențineți activat accesul în fundal la Health Connect și excludeți Health.md de la optimizarea bateriei pentru exporturi programate fiabile.</string>
     <string name="schedule_frequency">Frecvența</string>
-    <string name="schedule_frequency_15_minutes">La fiecare 15 min</string>
-    <string name="schedule_frequency_every_minutes">La fiecare %1$d min</string>
-    <string name="schedule_frequency_hourly">La fiecare oră</string>
-    <string name="schedule_frequency_every_hours">La fiecare %1$d h</string>
-    <string name="schedule_frequency_daily">Zilnic</string>
-    <string name="schedule_frequency_every_days">La fiecare %1$d zile</string>
-    <string name="schedule_frequency_weekly">Săptămânal</string>
-    <string name="schedule_frequency_every_weeks">La fiecare %1$d săptămâni</string>
     <string name="schedule_time">Ora</string>
-    <string name="schedule_time_period_am">AM</string>
-    <string name="schedule_time_period_pm">PM</string>
     <string name="schedule_date_window">Date</string>
     <string name="schedule_date_window_past_complete_days">Ultimele zile complete</string>
     <string name="schedule_date_window_today">Astăzi</string>
     <string name="schedule_export_past_days">Exportați zilele trecute</string>
-    <string name="schedule_lookback_ios_single">Fiecare executare exportă ultima zi completă, adică ziua de ieri.</string>
-    <string name="schedule_lookback_ios_plural">Fiecare executare exportă ultimele %1$d zile, până la ziua de ieri inclusiv.</string>
     <string name="schedule_today_summary">Fiecare executare exportă datele de astăzi, astfel încât fișierul zilnic curent să rămână actualizat. Utilizați modul de scriere Suprascriere sau Actualizare pentru a evita conținutul duplicat din aceeași zi.</string>
     <string name="schedule_next_export_at_datetime">Următorul export: %1$s</string>
     <string name="background_health_permission_needed_title">Este necesar accesul în fundal la Health Connect</string>
@@ -711,7 +628,6 @@
     <string name="scheduled_recovery_blocked_running">O recuperare a exporturilor programate este deja în curs.</string>
     <string name="scheduled_recovery_no_pending">Nu există date de export programate în așteptarea recuperării.</string>
     <string name="scheduled_recovery_result_complete">Recuperarea exporturilor programate s-a încheiat.</string>
-    <string name="scheduled_recovery_result_partial">Progresul recuperării: %1$d/%2$d exportate. Au rămas %3$d în așteptare.</string>
     <string name="scheduled_recovery_result_blocked">Recuperarea exporturilor programate nu este încă disponibilă.</string>
     <string name="not_now">Nu acum</string>
     <string name="release_notes_title">Ce este nou în %s</string>
@@ -722,7 +638,6 @@
     <string name="release_notes_highlight_export_parity">Noile detalii disponibile doar pe Android includ intensitatea activității, mesele din datele de nutriție, perioadele menstruale, antrenamentele planificate și mostrele granulare, atunci când sunt disponibile.</string>
     <string name="release_notes_highlight_templates">Exporturile Markdown, JSON, CSV și Obsidian includ acum valori mai detaliate ale metricilor din catalogul extins.</string>
     <string name="release_notes_highlight_workouts">Explicația permisiunilor Health Connect a fost actualizată pentru a descrie permisiunile extinse de export numai pentru citire.</string>
-    <string name="release_notes_highlight_accessibility">Etichetele TalkBack și zonele tactile au fost îmbunătățite în fluxurile de export, programare și setări.</string>
     <string name="export_notification_background_permission_required">Exporturile programate necesită acces în fundal la Health Connect. Deschideți Health.md &gt; Programare pentru a-l activa.</string>
     <string name="paywall_unlock_button_price">Deblocați pentru %s</string>
     <string name="paywall_purchasing">Se procesează\u2026</string>
@@ -769,7 +684,7 @@
     <string name="privacy_category_mindfulness_permissions">MindfulnessSession</string>
     <string name="privacy_category_mindfulness_exports">Câmpuri exportate: minute de atenție conștientă și numărul de sesiuni</string>
     <string name="privacy_category_medical">Resurse medicale</string>
-    <string name="privacy_category_medical_permissions">Alergii/intoleranțe medicale, afecțiuni, rezultate de laborator, medicamente, detalii personale, detalii despre medic, sarcină, proceduri, istoric social, vaccinuri, vizite și semne vitale</string>
+    <string name="privacy_category_medical_permissions">Alergii/intoleranțe medicale, afecțiuni, rezultate de laborator, medicamente, detalii personale, detalii despre cadrele medicale, sarcină, proceduri, istoric social, vaccinuri, vizite și semne vitale</string>
     <string name="privacy_category_medical_exports">Câmpuri exportate: numărul resurselor Personal Health Record locale, tipurile resurselor, numele afișate, codurile, marcajele temporale și metadatele despre sursă, când Health Connect le furnizează</string>
     <string name="privacy_category_background">Acces programat în fundal</string>
     <string name="privacy_category_background_permissions">READ_HEALTH_DATA_IN_BACKGROUND</string>
@@ -779,7 +694,6 @@
     <string name="privacy_category_history_exports">Folosit numai pentru exporturi manuale mari, cum ar fi 90 de zile sau întreaga perioadă, astfel încât Health.md să poată citi date Health Connect mai vechi decât intervalul standard de 30 de zile</string>
     <string name="privacy_policy_direct_cli">Exporturile Direct CLI au loc numai după ce asociați și conectați explicit computerul. Înregistrările de sănătate sunt trimise printr-o conexiune autentificată și criptată, păstrate privat pentru reluarea transferului timp de cel mult șapte zile și șterse mai devreme când anulați sau eliminați asocierea.</string>
     <string name="privacy_policy_footer">Health.md nu operează un cloud pentru date de sănătate. Atribuirea proprie a campaniilor poate trimite UUID-uri aleatorii de instalare/eveniment generate de aplicație și metadate de campanie validate, dar niciodată date de sănătate, informații brute despre sursa instalării, ID-uri de dispozitiv, exporturi, conturi sau căi.</string>
-    <string name="privacy_policy_body">Health.md citește datele Health Connect numai pentru a crea exporturile solicitate. Exporturile în dosare sunt salvate în spațiul de stocare selectat, exporturile API Endpoint sunt trimise direct către un serviciu configurat de dvs., iar exporturile printr-un Direct CLI conectat explicit sunt trimise către computerul asociat folosind criptare autentificată. Separat, atribuirea proprie a campaniilor poate asocia o instalare din Play Store cu o campanie, folosind UUID-uri aleatorii generate de aplicație și metadate de campanie filtrate. Nu sunt incluse date de sănătate, informații brute despre sursa instalării, identificatori de dispozitiv, conținutul exporturilor, date despre cont sau căi de fișiere.</string>
     <string name="section_export_type">Tip de export</string>
     <string name="export_type_compatibility">Export de compatibilitate</string>
     <string name="export_type_compatibility_description">Fișiere zilnice Markdown, Bases, JSON sau CSV pentru fluxurile de lucru Health.md existente</string>
@@ -809,9 +723,6 @@
     <string name="raw_snapshot_cancelled_label">Raw Snapshot anulat</string>
     <string name="raw_snapshot_result_created">Raw Snapshot creat</string>
     <string name="raw_snapshot_result_uploaded">Raw Snapshot încărcat</string>
-    <string name="raw_snapshot_result_count">Acțiuni Raw Snapshot finalizate: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count">Acțiuni Raw Snapshot: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count">Acțiuni Raw Snapshot incomplete: %d</string>
     <plurals name="raw_snapshot_diagnostics_reason_count">
         <item quantity="one">%1$s: %2$d acțiune</item>
         <item quantity="few">%1$s: %2$d acțiuni</item>
@@ -821,7 +732,6 @@
     <string name="raw_snapshot_diagnostics_no_details">Nu au fost înregistrate diagnostice pentru Raw Snapshot. Verificați accesul furnizorului și reîncercați intervalul.</string>
     <string name="raw_snapshot_guidance_provider">Examinați accesul furnizorului selectat și manifestul artefactului brut înainte de a reîncerca.</string>
     <string name="raw_snapshot_guidance_cancelled">Nu a fost pus la dispoziție niciun artefact brut. Reîncercați când sunteți gata.</string>
-    <string name="raw_snapshot_history_entry">Acțiuni Raw Snapshot: %1$d/%2$d \u2022 %3$s–%4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">Diagnosticare Raw Snapshot</string>
     <string name="raw_snapshot_notification_message">Interval Raw Snapshot cu data finală %1$s: %2$s</string>
     <string name="raw_snapshot_status_complete">finalizat</string>
@@ -861,8 +771,6 @@
     <string name="schedule_unlock_required_title">Deblocați exporturile programate</string>
     <string name="schedule_unlock_required_body">Exporturile manuale includ 10 rulări gratuite. Exporturile automate programate sunt incluse cu deblocarea unică pe viață.</string>
     <string name="schedule_unlock_required_short">Deblocați Health.md pentru a activa exporturile programate.</string>
-    <string name="section_schedule_lookback">Perioadă retroactivă</string>
-    <string name="schedule_lookback_summary">Fiecare executare programată exportă zilele complete până la ieri (%1$d în total), plus datele cu erori aflate în așteptare.</string>
     <string name="export_folder_root_label">Dosar de export</string>
     <string name="history_clear_title">Ștergeți istoricul exporturilor?</string>
     <string name="history_clear_body">Aceasta elimină toate intrările locale din istoricul exporturilor. Fișierele exportate nu sunt șterse.</string>
@@ -883,10 +791,6 @@
     <string name="history_detail_failure">Eșec</string>
     <string name="history_detail_warning">Avertisment</string>
     <string name="history_detail_failed_dates">Date cu erori</string>
-    <string name="clear">Ștergeți</string>
-    <string name="retry">Reîncercați</string>
-    <string name="retrying">Se reîncercă…</string>
-    <string name="delete">Ștergeți</string>
     <string name="section_file_organization">Organizarea fișierelor</string>
     <string name="health_subfolder_label">Subdosar pentru sănătate</string>
     <string name="folder_organization_label">Dosare automate</string>
@@ -1075,12 +979,6 @@
     <string name="feedback_issue_steps_heading">Pași pentru reproducere</string>
     <string name="feedback_issue_expected_heading">Comportament așteptat</string>
     <string name="feedback_issue_expected_hint">Ce vă așteptați să se întâmple</string>
-    <string name="automation_history_permissions_missing">Permisiunile Health Connect lipsesc</string>
-    <plurals name="automation_history_failed_dates">
-        <item quantity="one">%1$d dată cu eroare</item>
-        <item quantity="few">%1$d date cu erori</item>
-        <item quantity="other">%1$d de date cu erori</item>
-    </plurals>
     <string name="action_edit_endpoint">Editați punctul final API</string>
     <string name="history_date_range">%1$s – %2$s</string>
     <string name="history_failed_date_reason">%1$s: %2$s</string>
@@ -1110,13 +1008,7 @@
     <string name="schedule_target_folder_choose">Alegeți un dosar din ecranul Export</string>
     <string name="schedule_target_folder_ready">Scrieți fișierele programate în dosarul selectat de pe dispozitiv</string>
     <string name="schedule_toggle_time_period">Comutați AM sau PM</string>
-    <string name="scheduled_recovery_history_cancelled">Recuperare anulată; datele încă neprocesate rămân în așteptare.</string>
     <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
-    <plurals name="export_history_failed_dates_pending_retry">
-        <item quantity="one">%1$d dată cu eroare în așteptarea reîncercării</item>
-        <item quantity="few">%1$d date cu erori în așteptarea reîncercării</item>
-        <item quantity="other">%1$d de date cu erori în așteptarea reîncercării</item>
-    </plurals>
     <plurals name="export_notification_days_exported">
         <item quantity="one">%1$d/%2$d zi exportată pentru %3$s</item>
         <item quantity="few">%1$d/%2$d zile exportate pentru %3$s</item>
@@ -1187,11 +1079,6 @@
         <item quantity="few">Fiecare executare exportă ultimele %1$d zile, până la ieri inclusiv.</item>
         <item quantity="other">Fiecare executare exportă ultimele %1$d de zile, până la ieri inclusiv.</item>
     </plurals>
-    <plurals name="scheduled_recovery_history_failed_dates">
-        <item quantity="one">Recuperarea s-a încheiat cu %1$d dată cu eroare încă în așteptare.</item>
-        <item quantity="few">Recuperarea s-a încheiat cu %1$d date cu erori încă în așteptare.</item>
-        <item quantity="other">Recuperarea s-a încheiat cu %1$d de date cu erori încă în așteptare.</item>
-    </plurals>
     <plurals name="scheduled_recovery_result_exported_dates">
         <item quantity="one">Dată exportată prin recuperare: %1$d/%2$d.</item>
         <item quantity="few">Date exportate prin recuperare: %1$d/%2$d.</item>
@@ -1203,7 +1090,7 @@
         <item quantity="other">%1$d de date rămân în așteptare.</item>
     </plurals>
     <string name="export_api_action_edit">Editați</string>
-    <string name="export_api_authorization_secure">Authorization stocat în siguranță</string>
+    <string name="export_api_authorization_secure">Autorizare stocată în siguranță</string>
     <string name="export_api_compatibility_mode_description">Exporturile API trimit întotdeauna JSON. Se aplică setările pentru metrici și serii de timp; căile fișierelor și modurile de scriere nu.</string>
     <string name="export_api_configure_endpoint">Configurați un punct final API</string>
     <string name="export_api_error_invalid_endpoint">Introduceți o adresă URL HTTP sau HTTPS validă fără un fragment sau un nume de utilizator/parolă încorporat.</string>

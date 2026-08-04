@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "ru-RU",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "Ваши данные о здоровье. Ваши файлы.",
+      "supportingLine": "Экспортируйте разрешённые записи Health Connect в подконтрольные вам файлы."
+    },
+    {
+      "id": "export-formats",
+      "headline": "Экспортируйте по-своему",
+      "supportingLine": "Markdown, Obsidian Bases, JSON и CSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "Более 100 показателей здоровья",
+      "supportingLine": "Сон, активность, сердце, жизненные показатели, питание и другое."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "Только чтение. Конфиденциальность по умолчанию.",
+      "supportingLine": "Без учётной записи. Без облака медицинских данных Health.md."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "Поддерживайте актуальность архива",
+      "supportingLine": "Экспортируйте по расписанию в выбранное место."
+    },
+    {
+      "id": "file-preview",
+      "headline": "Просмотрите перед экспортом",
+      "supportingLine": "Проверьте имена, пути и содержимое файлов до начала записи."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "Здоровье как на ладони",
+      "supportingLine": "Виджеты активности, сна, сердца и общей сводки."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "Прямо на ваш компьютер",
+      "supportingLine": "Подключите Health.md CLI для аутентифицированного шифрованного экспорта без облачного посредника."
+    }
+  ]
+}

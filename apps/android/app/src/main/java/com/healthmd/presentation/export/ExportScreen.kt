@@ -247,18 +247,33 @@ fun ExportScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // In-app review flow
+    // In-app review flow. Persist the attempt only after Play accepts and completes the
+    // launch task; a request failure remains eligible for a later meaningful success.
     val activity = context as? Activity
     LaunchedEffect(Unit) {
         viewModel.requestReview.collect {
-            activity?.let { act ->
-                val reviewManager = ReviewManagerFactory.create(act)
-                reviewManager.requestReviewFlow().addOnSuccessListener { reviewInfo ->
-                    reviewManager.launchReviewFlow(act, reviewInfo)
-                }.addOnFailureListener { e ->
-                    Timber.e(e, "Failed to request in-app review")
-                }
+            val act = activity
+            if (act == null) {
+                viewModel.onReviewRequestFailed()
+                return@collect
             }
+            val reviewManager = ReviewManagerFactory.create(act)
+            reviewManager.requestReviewFlow()
+                .addOnSuccessListener { reviewInfo ->
+                    reviewManager.launchReviewFlow(act, reviewInfo)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                viewModel.onReviewFlowCompleted()
+                            } else {
+                                Timber.e(task.exception, "Failed to launch in-app review")
+                                viewModel.onReviewRequestFailed()
+                            }
+                        }
+                }
+                .addOnFailureListener { error ->
+                    Timber.e(error, "Failed to request in-app review")
+                    viewModel.onReviewRequestFailed()
+                }
         }
     }
 
