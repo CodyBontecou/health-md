@@ -127,19 +127,20 @@ struct ExportHistoryOutputBreakdown: Codable, Equatable {
     let successfulDataDayCount: Int
     let looseAggregateFileCount: Int
     let individualEntryFileCount: Int
+    let dataDictionaryFileCount: Int
     let zipArchiveFileCount: Int
     let rollupFileCount: Int
     let providerSidecarFileCount: Int
     let dailyNoteUpdateCount: Int
     let dailyNoteSkipCount: Int
-    /// Preserves an authoritative legacy total when its categories were not recorded.
+    /// Preserves an authoritative total when its categories were not recorded.
     let unclassifiedFileCount: Int
     let isFileCategoryBreakdownComplete: Bool
 
     enum CodingKeys: String, CodingKey {
         case requestedDataDayCount, successfulDataDayCount
-        case looseAggregateFileCount, individualEntryFileCount, zipArchiveFileCount
-        case rollupFileCount, providerSidecarFileCount
+        case looseAggregateFileCount, individualEntryFileCount, dataDictionaryFileCount
+        case zipArchiveFileCount, rollupFileCount, providerSidecarFileCount
         case dailyNoteUpdateCount, dailyNoteSkipCount
         case unclassifiedFileCount, isFileCategoryBreakdownComplete
     }
@@ -149,6 +150,7 @@ struct ExportHistoryOutputBreakdown: Codable, Equatable {
         successfulDataDayCount: Int,
         looseAggregateFileCount: Int = 0,
         individualEntryFileCount: Int = 0,
+        dataDictionaryFileCount: Int = 0,
         zipArchiveFileCount: Int = 0,
         rollupFileCount: Int = 0,
         providerSidecarFileCount: Int = 0,
@@ -159,44 +161,95 @@ struct ExportHistoryOutputBreakdown: Codable, Equatable {
     ) {
         self.requestedDataDayCount = Self.boundedCount(requestedDataDayCount)
         self.successfulDataDayCount = Self.boundedCount(successfulDataDayCount)
-        self.looseAggregateFileCount = Self.boundedCount(looseAggregateFileCount)
-        self.individualEntryFileCount = Self.boundedCount(individualEntryFileCount)
-        self.zipArchiveFileCount = Self.boundedCount(zipArchiveFileCount)
-        self.rollupFileCount = Self.boundedCount(rollupFileCount)
-        self.providerSidecarFileCount = Self.boundedCount(providerSidecarFileCount)
         self.dailyNoteUpdateCount = Self.boundedCount(dailyNoteUpdateCount)
         self.dailyNoteSkipCount = Self.boundedCount(dailyNoteSkipCount)
-        self.unclassifiedFileCount = Self.boundedCount(unclassifiedFileCount)
+
+        var remaining = Self.maximumPersistedCount
+        var wasTruncated = false
+        func allocate(_ value: Int) -> Int {
+            let bounded = Self.boundedCount(value)
+            let allocated = min(bounded, remaining)
+            if allocated != bounded { wasTruncated = true }
+            remaining -= allocated
+            return allocated
+        }
+
+        self.looseAggregateFileCount = allocate(looseAggregateFileCount)
+        self.individualEntryFileCount = allocate(individualEntryFileCount)
+        self.dataDictionaryFileCount = allocate(dataDictionaryFileCount)
+        self.zipArchiveFileCount = allocate(zipArchiveFileCount)
+        self.rollupFileCount = allocate(rollupFileCount)
+        self.providerSidecarFileCount = allocate(providerSidecarFileCount)
+        self.unclassifiedFileCount = allocate(unclassifiedFileCount)
         self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
+            && !wasTruncated
+            && self.unclassifiedFileCount == 0
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let hasDictionaryCategory = container.contains(.dataDictionaryFileCount)
         self.init(
             requestedDataDayCount: try container.decodeIfPresent(Int.self, forKey: .requestedDataDayCount) ?? 0,
             successfulDataDayCount: try container.decodeIfPresent(Int.self, forKey: .successfulDataDayCount) ?? 0,
             looseAggregateFileCount: try container.decodeIfPresent(Int.self, forKey: .looseAggregateFileCount) ?? 0,
             individualEntryFileCount: try container.decodeIfPresent(Int.self, forKey: .individualEntryFileCount) ?? 0,
+            dataDictionaryFileCount: try container.decodeIfPresent(Int.self, forKey: .dataDictionaryFileCount) ?? 0,
             zipArchiveFileCount: try container.decodeIfPresent(Int.self, forKey: .zipArchiveFileCount) ?? 0,
             rollupFileCount: try container.decodeIfPresent(Int.self, forKey: .rollupFileCount) ?? 0,
             providerSidecarFileCount: try container.decodeIfPresent(Int.self, forKey: .providerSidecarFileCount) ?? 0,
             dailyNoteUpdateCount: try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0,
             dailyNoteSkipCount: try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0,
             unclassifiedFileCount: try container.decodeIfPresent(Int.self, forKey: .unclassifiedFileCount) ?? 0,
-            isFileCategoryBreakdownComplete: try container.decodeIfPresent(
+            isFileCategoryBreakdownComplete: hasDictionaryCategory && (try container.decodeIfPresent(
                 Bool.self,
                 forKey: .isFileCategoryBreakdownComplete
-            ) ?? true
+            ) ?? false)
         )
     }
 
-    var generatedFileCount: Int {
+    var categorizedFileCount: Int {
         looseAggregateFileCount
             + individualEntryFileCount
+            + dataDictionaryFileCount
             + zipArchiveFileCount
             + rollupFileCount
             + providerSidecarFileCount
-            + unclassifiedFileCount
+    }
+
+    var generatedFileCount: Int {
+        categorizedFileCount + unclassifiedFileCount
+    }
+
+    func reconciled(toAuthoritativeFileCount fileCount: Int) -> ExportHistoryOutputBreakdown {
+        let authoritativeCount = Self.boundedCount(fileCount)
+        guard authoritativeCount != generatedFileCount else { return self }
+
+        guard authoritativeCount >= categorizedFileCount else {
+            return ExportHistoryOutputBreakdown(
+                requestedDataDayCount: requestedDataDayCount,
+                successfulDataDayCount: successfulDataDayCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                unclassifiedFileCount: authoritativeCount,
+                isFileCategoryBreakdownComplete: false
+            )
+        }
+
+        return ExportHistoryOutputBreakdown(
+            requestedDataDayCount: requestedDataDayCount,
+            successfulDataDayCount: successfulDataDayCount,
+            looseAggregateFileCount: looseAggregateFileCount,
+            individualEntryFileCount: individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
+            zipArchiveFileCount: zipArchiveFileCount,
+            rollupFileCount: rollupFileCount,
+            providerSidecarFileCount: providerSidecarFileCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
+            unclassifiedFileCount: authoritativeCount - categorizedFileCount,
+            isFileCategoryBreakdownComplete: false
+        )
     }
 
     static func legacyFallback(
@@ -290,17 +343,22 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.failedDateDetails = failedDateDetails
         self.targetLabel = targetLabel
         self.exportTarget = exportTarget
-        self.fileCount = fileCount
-        self.outputBreakdown = outputBreakdown ?? .legacyFallback(
+        let normalizedFileCount = fileCount.map(Self.boundedHistoryCount)
+        let initialBreakdown = outputBreakdown ?? .legacyFallback(
             requestedDataDayCount: totalCount,
             successfulDataDayCount: successCount,
-            fileCount: fileCount,
+            fileCount: normalizedFileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount
         )
+        let normalizedBreakdown = normalizedFileCount.map {
+            initialBreakdown.reconciled(toAuthoritativeFileCount: $0)
+        } ?? initialBreakdown
+        self.fileCount = normalizedFileCount.map { _ in normalizedBreakdown.generatedFileCount }
+        self.outputBreakdown = normalizedBreakdown
         self.pendingRecoveryDayCount = Self.boundedHistoryCount(pendingRecoveryDayCount)
-        self.dailyNoteUpdateCount = dailyNoteUpdateCount
-        self.dailyNoteSkipCount = dailyNoteSkipCount
+        self.dailyNoteUpdateCount = Self.boundedHistoryCount(dailyNoteUpdateCount)
+        self.dailyNoteSkipCount = Self.boundedHistoryCount(dailyNoteSkipCount)
         self.partialFailures = partialFailures
         self.appleExportEnginePin = appleExportEnginePin
         self.operationDetails = operationDetails
@@ -308,42 +366,56 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        timestamp = try container.decode(Date.self, forKey: .timestamp)
-        source = try container.decode(ExportSource.self, forKey: .source)
-        success = try container.decode(Bool.self, forKey: .success)
-        dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
-        dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
-        successCount = try container.decode(Int.self, forKey: .successCount)
-        totalCount = try container.decode(Int.self, forKey: .totalCount)
-        failureReason = try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason)
-        failedDateDetails = try container.decodeIfPresent([FailedDateDetail].self, forKey: .failedDateDetails) ?? []
-        targetLabel = try container.decodeIfPresent(String.self, forKey: .targetLabel)
-        exportTarget = try container.decodeIfPresent(ExportTargetSelection.self, forKey: .exportTarget)
-        fileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
-        dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
-        dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
-        outputBreakdown = try container.decodeIfPresent(
-            ExportHistoryOutputBreakdown.self,
-            forKey: .outputBreakdown
-        ) ?? .legacyFallback(
-            requestedDataDayCount: totalCount,
-            successfulDataDayCount: successCount,
-            fileCount: fileCount,
-            dailyNoteUpdateCount: dailyNoteUpdateCount,
-            dailyNoteSkipCount: dailyNoteSkipCount
-        )
-        pendingRecoveryDayCount = Self.boundedHistoryCount(
-            try container.decodeIfPresent(Int.self, forKey: .pendingRecoveryDayCount) ?? 0
-        )
-        partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
-        appleExportEnginePin = try container.decodeIfPresent(
-            AppleExportEnginePin.self,
-            forKey: .appleExportEnginePin
-        )
-        operationDetails = try container.decodeIfPresent(
-            ExportHistoryOperationDetails.self,
-            forKey: .operationDetails
+        let decodedSuccessCount = try container.decode(Int.self, forKey: .successCount)
+        let decodedTotalCount = try container.decode(Int.self, forKey: .totalCount)
+        let decodedFileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
+        let decodedDailyNoteUpdateCount = try container.decodeIfPresent(
+            Int.self,
+            forKey: .dailyNoteUpdateCount
+        ) ?? 0
+        let decodedDailyNoteSkipCount = try container.decodeIfPresent(
+            Int.self,
+            forKey: .dailyNoteSkipCount
+        ) ?? 0
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            timestamp: try container.decode(Date.self, forKey: .timestamp),
+            source: try container.decode(ExportSource.self, forKey: .source),
+            success: try container.decode(Bool.self, forKey: .success),
+            dateRangeStart: try container.decode(Date.self, forKey: .dateRangeStart),
+            dateRangeEnd: try container.decode(Date.self, forKey: .dateRangeEnd),
+            successCount: decodedSuccessCount,
+            totalCount: decodedTotalCount,
+            failureReason: try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason),
+            failedDateDetails: try container.decodeIfPresent(
+                [FailedDateDetail].self,
+                forKey: .failedDateDetails
+            ) ?? [],
+            targetLabel: try container.decodeIfPresent(String.self, forKey: .targetLabel),
+            exportTarget: try container.decodeIfPresent(ExportTargetSelection.self, forKey: .exportTarget),
+            fileCount: decodedFileCount,
+            outputBreakdown: try container.decodeIfPresent(
+                ExportHistoryOutputBreakdown.self,
+                forKey: .outputBreakdown
+            ),
+            pendingRecoveryDayCount: try container.decodeIfPresent(
+                Int.self,
+                forKey: .pendingRecoveryDayCount
+            ) ?? 0,
+            dailyNoteUpdateCount: decodedDailyNoteUpdateCount,
+            dailyNoteSkipCount: decodedDailyNoteSkipCount,
+            partialFailures: try container.decodeIfPresent(
+                [ExportPartialFailure].self,
+                forKey: .partialFailures
+            ) ?? [],
+            appleExportEnginePin: try container.decodeIfPresent(
+                AppleExportEnginePin.self,
+                forKey: .appleExportEnginePin
+            ),
+            operationDetails: try container.decodeIfPresent(
+                ExportHistoryOperationDetails.self,
+                forKey: .operationDetails
+            )
         )
     }
 
@@ -444,7 +516,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
     }
 
     var generatedFileCountForDisplay: Int {
-        max(fileCount ?? outputBreakdown.generatedFileCount, 0)
+        outputBreakdown.generatedFileCount
     }
 
     var isPendingRecovery: Bool {
@@ -456,18 +528,29 @@ struct ExportHistoryEntry: Codable, Identifiable {
     }
 
     var dataDayCountDescription: String {
-        "\(successCount) of \(totalCount) data day\(totalCount == 1 ? "" : "s")"
+        totalCount == 1
+            ? String(localized: "\(successCount) of 1 data day", comment: "Export history successful data-day count when one day was requested")
+            : String(localized: "\(successCount) of \(totalCount) data days", comment: "Export history successful data-day count when multiple days were requested")
     }
 
     var generatedFileCountDescription: String {
         let count = generatedFileCountForDisplay
-        return "\(count) generated file\(count == 1 ? "" : "s")"
+        return count == 1
+            ? String(localized: "1 generated file", comment: "Export history generated-file count when singular")
+            : String(localized: "\(count) generated files", comment: "Export history generated-file count when plural or zero")
+    }
+
+    var pendingRecoveryCountDescription: String {
+        pendingRecoveryDayCount == 1
+            ? String(localized: "1 pending recovery data day", comment: "Export history pending recovery count when singular")
+            : String(localized: "\(pendingRecoveryDayCount) pending recovery data days", comment: "Export history pending recovery count when plural")
     }
 
     var pendingRecoveryDescription: String? {
         guard isPendingRecovery else { return nil }
-        let suffix = pendingRecoveryDayCount == 1 ? "" : "s"
-        return "Processed \(pendingRecoveryDayCount) pending recovery data day\(suffix) from an earlier scheduled occurrence."
+        return pendingRecoveryDayCount == 1
+            ? String(localized: "Retried 1 pending recovery data day from an earlier scheduled occurrence.", comment: "Export history recovery detail when one pending day was attempted")
+            : String(localized: "Retried \(pendingRecoveryDayCount) pending recovery data days from an earlier scheduled occurrence.", comment: "Export history recovery detail when multiple pending days were attempted")
     }
 
     var resultCountLabel: String {
@@ -485,68 +568,105 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     var resultCountDescription: String {
         if isDailyNoteOnlyResult {
-            return "\(dailyNoteUpdateCount) note\(dailyNoteUpdateCount == 1 ? "" : "s") (\(successCount)/\(totalCount) days)"
+            let notes = dailyNoteUpdateCount == 1
+                ? String(localized: "1 note", comment: "Export history updated-note count when singular")
+                : String(localized: "\(dailyNoteUpdateCount) notes", comment: "Export history updated-note count when plural or zero")
+            return String(localized: "\(notes) (\(dataDayCountDescription))", comment: "Export history daily-note result and data-day coverage")
         }
         if isCLIRawDelivery || isAPIEndpointDelivery {
-            return "\(successCount) of \(totalCount)"
+            return String(localized: "\(successCount) of \(totalCount)", comment: "Export history delivered-day fraction")
         }
-        return "\(generatedFileCountDescription) from \(dataDayCountDescription)"
+        return String(localized: "\(generatedFileCountDescription) from \(dataDayCountDescription)", comment: "Export history generated-file total and data-day coverage")
     }
 
     var resultCountAccessibilityDescription: String {
         if isDailyNoteOnlyResult {
-            return "\(dailyNoteUpdateCount) daily notes updated across \(successCount) of \(totalCount) data days"
+            if dailyNoteUpdateCount == 1 {
+                return String(localized: "1 daily note updated across \(dataDayCountDescription)", comment: "Accessible daily-note export count when singular")
+            }
+            return String(localized: "\(dailyNoteUpdateCount) daily notes updated across \(dataDayCountDescription)", comment: "Accessible daily-note export count when plural or zero")
         }
         if isCLIRawDelivery {
-            return "\(successCount) of \(totalCount) data days sent to the CLI"
+            return String(localized: "\(dataDayCountDescription) sent to the CLI", comment: "Accessible CLI delivery data-day count")
         }
         if isAPIEndpointDelivery {
-            return "\(successCount) of \(totalCount) data days uploaded"
+            return String(localized: "\(dataDayCountDescription) uploaded", comment: "Accessible API delivery data-day count")
         }
-        return "\(generatedFileCountDescription) exported from \(dataDayCountDescription)"
+        return String(localized: "\(generatedFileCountDescription) exported from \(dataDayCountDescription)", comment: "Accessible generated-file total and data-day coverage")
     }
 
     var summaryAccessibilityDescription: String {
         guard let pendingRecoveryDescription else { return summaryDescription }
-        return "\(summaryDescription). \(pendingRecoveryDescription)"
+        return String(localized: "\(summaryDescription). \(pendingRecoveryDescription)", comment: "Accessible export history summary with pending recovery context")
     }
 
     /// Summary description for display
     var summaryDescription: String {
-        let displayedFileCount = generatedFileCountForDisplay
-        let fileNoun = "file\(displayedFileCount == 1 ? "" : "s")"
-        let successfulDayNoun = "data day\(successCount == 1 ? "" : "s")"
         if isDailyNoteOnlyResult {
             if dailyNoteSkipCount == 0 {
-                return String(localized: "Updated \(dailyNoteUpdateCount) daily note(s)", comment: "Daily note only export success summary")
+                return dailyNoteUpdateCount == 1
+                    ? String(localized: "Updated 1 daily note", comment: "Daily-note-only export success summary when singular")
+                    : String(localized: "Updated \(dailyNoteUpdateCount) daily notes", comment: "Daily-note-only export success summary when plural or zero")
             }
             if dailyNoteUpdateCount == 0 {
-                return String(localized: "Skipped \(dailyNoteSkipCount) missing daily note(s)", comment: "Daily note only terminal skip summary")
+                return dailyNoteSkipCount == 1
+                    ? String(localized: "Skipped 1 missing daily note", comment: "Daily-note-only skip summary when singular")
+                    : String(localized: "Skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only skip summary when plural")
             }
-            return String(localized: "Updated \(dailyNoteUpdateCount) and skipped \(dailyNoteSkipCount) daily note(s)", comment: "Daily note only mixed outcome summary")
+            switch (dailyNoteUpdateCount == 1, dailyNoteSkipCount == 1) {
+            case (true, true):
+                return String(localized: "Updated 1 daily note and skipped 1 missing daily note", comment: "Daily-note-only mixed summary with singular updated and skipped counts")
+            case (true, false):
+                return String(localized: "Updated 1 daily note and skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only mixed summary with one update and multiple skips")
+            case (false, true):
+                return String(localized: "Updated \(dailyNoteUpdateCount) daily notes and skipped 1 missing daily note", comment: "Daily-note-only mixed summary with multiple updates and one skip")
+            case (false, false):
+                return String(localized: "Updated \(dailyNoteUpdateCount) daily notes and skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only mixed summary with multiple updated and skipped counts")
+            }
         } else if isCLIRawDelivery && isFullSuccess {
-            return String(localized: "Sent \(successCount) day(s) to CLI", comment: "CLI raw export success summary")
+            return successCount == 1
+                ? String(localized: "Sent 1 data day to CLI", comment: "CLI raw export success summary when singular")
+                : String(localized: "Sent \(successCount) data days to CLI", comment: "CLI raw export success summary when plural")
         } else if isCLIRawDelivery && isPartialSuccess {
-            return String(localized: "Partial: sent \(successCount)/\(totalCount) days to CLI", comment: "Partial CLI raw export summary")
+            return String(localized: "Partial: sent \(dataDayCountDescription) to CLI", comment: "Partial CLI raw export summary")
         } else if isAPIEndpointDelivery && isFullSuccess {
-            return String(localized: "Uploaded \(successCount) day(s) to API", comment: "API export success summary")
+            return successCount == 1
+                ? String(localized: "Uploaded 1 data day to API", comment: "API export success summary when singular")
+                : String(localized: "Uploaded \(successCount) data days to API", comment: "API export success summary when plural")
         } else if isAPIEndpointDelivery && isPartialSuccess {
-            if !partialFailures.isEmpty {
-                return String(localized: "Partial: uploaded \(successCount)/\(totalCount) days with \(partialFailures.count) metric warning(s)", comment: "Partial API export metric warning summary")
+            if partialFailures.count == 1 {
+                return String(localized: "Partial: uploaded \(dataDayCountDescription) with 1 metric warning", comment: "Partial API export summary with one metric warning")
             }
-            return String(localized: "Partial: uploaded \(successCount)/\(totalCount) days", comment: "Partial API export summary")
+            if partialFailures.count > 1 {
+                return String(localized: "Partial: uploaded \(dataDayCountDescription) with \(partialFailures.count) metric warnings", comment: "Partial API export summary with multiple metric warnings")
+            }
+            return String(localized: "Partial: uploaded \(dataDayCountDescription)", comment: "Partial API export summary without metric warnings")
         } else if isFullSuccess {
-            return String(localized: "Exported \(displayedFileCount) \(fileNoun) from \(successCount) \(successfulDayNoun)", comment: "Export success summary distinguishing files from data days")
+            return String(localized: "Exported \(plainFileCountDescription) from \(successfulDataDayDescription)", comment: "Export success summary distinguishing files from data days")
         } else if isPartialSuccess {
-            let base = "Partial: \(displayedFileCount) \(fileNoun) from \(successCount) of \(totalCount) data days"
-            if !partialFailures.isEmpty {
-                return String(localized: "\(base), \(partialFailures.count) metric warning(s)", comment: "Partial export metric warning summary distinguishing files from data days")
+            if partialFailures.count == 1 {
+                return String(localized: "Partial: \(plainFileCountDescription) from \(dataDayCountDescription), 1 metric warning", comment: "Partial export summary with one metric warning")
             }
-            return String(localized: "\(base)", comment: "Partial export summary distinguishing files from data days")
+            if partialFailures.count > 1 {
+                return String(localized: "Partial: \(plainFileCountDescription) from \(dataDayCountDescription), \(partialFailures.count) metric warnings", comment: "Partial export summary with multiple metric warnings")
+            }
+            return String(localized: "Partial: \(plainFileCountDescription) from \(dataDayCountDescription)", comment: "Partial export summary without metric warnings")
         } else {
             let reason = failureReasonForDisplay ?? .unknown
             return String(localized: "Export failed: \(reason.shortDescription)", comment: "Export failure summary with explicit reason")
         }
+    }
+
+    private var plainFileCountDescription: String {
+        generatedFileCountForDisplay == 1
+            ? String(localized: "1 file", comment: "Export history file count when singular")
+            : String(localized: "\(generatedFileCountForDisplay) files", comment: "Export history file count when plural or zero")
+    }
+
+    private var successfulDataDayDescription: String {
+        successCount == 1
+            ? String(localized: "1 data day", comment: "Export history successful data-day count when singular")
+            : String(localized: "\(successCount) data days", comment: "Export history successful data-day count when plural or zero")
     }
 
     private static func boundedHistoryCount(_ value: Int) -> Int {
