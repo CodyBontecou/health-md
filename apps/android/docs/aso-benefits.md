@@ -24,7 +24,7 @@
 - **Target Audience**: Obsidian users, self-quantifiers, data privacy-conscious health enthusiasts
 - **Unique Value**: Only app that exports health data locally to file system; seamless Obsidian integration
 - **Key Features**: 60+ health metrics tracking, multiple export formats (Markdown, JSON, CSV), scheduled/automated exports, Obsidian sync, Health Connect integration
-- **Pricing**: Freemium (3 free exports, then $9.99 one-time)
+- **Pricing**: Freemium (10 free exports, then $9.99 one-time)
 - **Design**: Dark theme, purple accent (#9B6DD7), glass morphism, minimalist
 
 ## User Reviews Highlight

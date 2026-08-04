@@ -677,7 +677,6 @@ private class FakeBillingRepository : BillingRepository {
     override suspend fun restorePurchase(): Boolean = false
     override suspend fun acknowledgePurchase(purchaseToken: String) = Unit
     override fun clearError() = Unit
-    override fun endConnection() = Unit
     override fun debugSetUnlocked(unlocked: Boolean) = Unit
     override fun debugResetPurchaseState() = Unit
 }

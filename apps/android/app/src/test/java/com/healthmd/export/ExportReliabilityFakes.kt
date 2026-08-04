@@ -283,8 +283,6 @@ class FakeBillingRepository(initialUnlocked: Boolean = false) : BillingRepositor
         purchaseError.value = null
     }
 
-    override fun endConnection() = Unit
-
     override fun debugSetUnlocked(unlocked: Boolean) {
         isUnlocked.value = unlocked
     }

@@ -58,7 +58,7 @@ HIGHLY CONFIGURABLE
 - Pick your folder with the system file picker
 
 FREEMIUM — TRY BEFORE YOU BUY
-Get 3 free exports to test every feature. Unlock unlimited exports and automated scheduling with a single one-time payment. No subscription, ever.
+Get 10 free exports to test every feature. Unlock unlimited exports and automated scheduling with a single one-time payment. No subscription, ever.
 
 WHAT USERS SAY
 ★★★★★ "Extremely fast export, high polished design"

@@ -24,7 +24,8 @@ import kotlin.coroutines.resume
  * PurchaseManager implementation for Google Play Billing.
  * 
  * Architecture:
- * - Singleton (Hilt-injected)
+ * - Application-scoped singleton (Hilt-injected)
+ * - Owns one process-lifetime BillingClient; screen ViewModels must not close it
  * - Uses BillingClient v7.1.1 with pending purchases enabled
  * - Caches unlock state in SharedPreferences (healthmd_purchase_prefs)
  * - Supports Auto Backup for purchase state persistence
@@ -342,13 +343,6 @@ class BillingRepositoryImpl(
 
     override fun clearError() {
         _purchaseError.value = null
-    }
-
-    override fun endConnection() {
-        if (billingClient.isReady) {
-            billingClient.endConnection()
-            Timber.d("Billing connection ended")
-        }
     }
 
     // PurchasesUpdatedListener implementation
