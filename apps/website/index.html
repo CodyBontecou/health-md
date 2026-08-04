@@ -94,7 +94,7 @@
         <p>Your data. Your rules.</p>
       </div>
 
-      <div class="flow-map reveal" role="img" aria-label="Health data flowing privately through Health.md into files, your doctor, scripts, and AI">
+      <div class="flow-map reveal" role="img" aria-label="Health data from Apple Health, Health Connect, WHOOP, Oura, Strava, and Garmin flowing privately through Health.md into files, your doctor, scripts, and AI">
         <svg class="flow-art" viewBox="0 0 1010 430" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <linearGradient id="thread-gradient" x1="0" y1="0" x2="1" y2="0">
@@ -118,54 +118,36 @@
           <g class="thread-field" data-thread-field></g>
           <g class="thread-particles" data-thread-particles></g>
           <g class="route-lines">
-            <path d="M720 218 C792 212 824 34 900 34"></path>
-            <path d="M720 218 C792 216 828 155 900 155"></path>
-            <path d="M720 218 C792 220 828 275 900 275"></path>
-            <path d="M720 218 C792 224 824 396 900 396"></path>
+            <path d="M692 218 C792 212 824 34 900 34"></path>
+            <path d="M692 218 C792 216 828 155 900 155"></path>
+            <path d="M692 218 C792 220 828 275 900 275"></path>
+            <path d="M692 218 C792 224 824 396 900 396"></path>
           </g>
         </svg>
 
         <div class="source-list" aria-hidden="true">
-          <span class="source-node source-heart">
-            <svg class="lucide lucide-heart-pulse" viewBox="0 0 24 24">
-              <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path>
-              <path d="M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"></path>
-            </svg>
+          <span class="source-node source-apple-health">
+            <img src="assets/brand-icons/apple-health.png" width="32" height="32" decoding="async" alt="">
           </span>
-          <span class="source-node source-moon">
-            <svg class="lucide lucide-moon-star" viewBox="0 0 24 24">
-              <path d="M18 5h4"></path>
-              <path d="M20 3v4"></path>
-              <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path>
-            </svg>
+          <span class="source-node source-health-connect">
+            <img src="assets/brand-icons/health-connect.png" width="32" height="32" decoding="async" alt="">
           </span>
-          <span class="source-node source-activity">
-            <svg class="lucide lucide-footprints" viewBox="0 0 24 24">
-              <path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"></path>
-              <path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"></path>
-              <path d="M16 17h4"></path>
-              <path d="M4 13h4"></path>
-            </svg>
+          <span class="source-node source-whoop">
+            <img src="https://img.logo.dev/whoop.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
           </span>
-          <span class="source-node source-pulse">
-            <svg class="lucide lucide-activity" viewBox="0 0 24 24">
-              <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"></path>
-            </svg>
+          <span class="source-node source-oura">
+            <img src="https://img.logo.dev/ouraring.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
           </span>
-          <span class="source-node source-drop">
-            <svg class="lucide lucide-droplet" viewBox="0 0 24 24">
-              <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7Z"></path>
-            </svg>
+          <span class="source-node source-strava">
+            <img src="https://img.logo.dev/strava.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
           </span>
-          <span class="source-node source-medical">
-            <svg class="lucide lucide-cross" viewBox="0 0 24 24">
-              <path d="M4 9a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4a1 1 0 0 1 1 1v4a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-4a1 1 0 0 1 1-1h4a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-4a1 1 0 0 1-1-1V4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4a1 1 0 0 1-1 1Z"></path>
-            </svg>
+          <span class="source-node source-garmin">
+            <img src="https://img.logo.dev/garmin.com?token=pk_O_ZGdx4QSLCUENuM4MHPlg&amp;size=96&amp;format=png&amp;retina=true" width="32" height="32" decoding="async" referrerpolicy="origin" alt="">
           </span>
         </div>
 
         <div class="flow-core" aria-hidden="true">
-          <img src="assets/app-icon/icon_80x80.png" width="58" height="58" decoding="async" alt="">
+          <img src="assets/app-icon/healthmd-mark.png" width="58" height="58" decoding="async" alt="">
         </div>
 
         <div class="outcome outcome-files">

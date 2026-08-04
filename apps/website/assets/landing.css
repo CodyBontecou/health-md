@@ -380,57 +380,44 @@ main {
   height: 50px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(31, 30, 34, 0.025);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.73);
-  color: #8b8b91;
-  box-shadow: 0 9px 28px rgba(24, 20, 35, 0.055);
+  overflow: hidden;
+  border: 1px solid rgba(99, 73, 159, 0.045);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 9px 28px rgba(24, 20, 35, 0.065),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
 }
 
-.source-node svg {
-  width: 22px;
-  height: 22px;
-  overflow: visible;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.source-node img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: contain;
 }
 
-.source-activity svg,
-.source-pulse svg {
-  width: 23px;
-  height: 23px;
+.source-apple-health {
+  top: 3%;
 }
 
-.source-medical svg {
-  width: 20px;
-  height: 20px;
-}
-
-.source-heart {
-  top: 4%;
-}
-
-.source-moon {
+.source-health-connect {
   top: 19%;
 }
 
-.source-activity {
-  top: 34%;
+.source-whoop {
+  top: 35%;
 }
 
-.source-pulse {
-  top: 49%;
+.source-oura {
+  top: 51%;
 }
 
-.source-drop {
-  top: 64%;
+.source-strava {
+  top: 67%;
 }
 
-.source-medical {
-  top: 79%;
+.source-garmin {
+  top: 83%;
 }
 
 .flow-core {
@@ -440,17 +427,14 @@ main {
   z-index: 4;
   width: 62px;
   height: 62px;
-  border-radius: 12px;
-  box-shadow:
-    0 0 0 1px rgba(20, 15, 29, 0.04),
-    0 12px 32px rgba(42, 24, 67, 0.1),
-    0 0 70px rgba(142, 98, 255, 0.13);
+  background: transparent;
+  box-shadow: none;
 }
 
 .flow-core img {
+  display: block;
   width: 62px;
   height: 62px;
-  border-radius: inherit;
 }
 
 .outcome {
@@ -992,32 +976,13 @@ html:lang(zh-Hans) .hero-intro p {
   .source-node {
     width: 38px;
     height: 38px;
+    border-radius: 10px;
   }
 
-  .source-node svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .source-pulse,
-  .source-drop {
-    display: none;
-  }
-
-  .source-heart {
-    top: 8%;
-  }
-
-  .source-moon {
-    top: 32%;
-  }
-
-  .source-activity {
-    top: 56%;
-  }
-
-  .source-medical {
-    top: 80%;
+  .source-node img {
+    width: 27px;
+    height: 27px;
+    border-radius: 5px;
   }
 
   .flow-core,
@@ -1029,7 +994,6 @@ html:lang(zh-Hans) .hero-intro p {
   .flow-core {
     top: calc(50.7% - 25px);
     left: calc(50.6% - 25px);
-    border-radius: 10px;
   }
 
   .outcome {

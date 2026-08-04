@@ -249,19 +249,31 @@ test("hero uses official store badges with direct marketplace links", () => {
 test("hero visual routes health signals through Health.md to useful destinations", () => {
   const sources = index.match(/<div class="source-list"[\s\S]*?<\/div>/)?.[0] ?? "";
   assert.equal((sources.match(/class="source-node/g) ?? []).length, 6);
-  assert.match(sources, /source-heart/);
-  assert.match(sources, /source-moon/);
-  assert.match(sources, /source-activity/);
-  assert.match(sources, /source-pulse/);
-  assert.match(sources, /source-drop/);
-  assert.match(sources, /source-medical/);
   assert.deepEqual(
-    [...sources.matchAll(/class="lucide (lucide-[^"]+)"/g)].map((match) => match[1]),
-    ["lucide-heart-pulse", "lucide-moon-star", "lucide-footprints", "lucide-activity", "lucide-droplet", "lucide-cross"],
+    [...sources.matchAll(/class="source-node (source-[^"]+)"/g)].map((match) => match[1]),
+    [
+      "source-apple-health",
+      "source-health-connect",
+      "source-whoop",
+      "source-oura",
+      "source-strava",
+      "source-garmin",
+    ],
   );
-  assert.doesNotMatch(sources, /source-more/);
+  assert.deepEqual(
+    [...sources.matchAll(/<img src="https:\/\/img\.logo\.dev\/([^?"]+)\?/g)].map((match) => match[1]),
+    ["whoop.com", "ouraring.com", "strava.com", "garmin.com"],
+  );
+  assert.match(sources, /src="assets\/brand-icons\/apple-health\.png"/);
+  assert.match(sources, /src="assets\/brand-icons\/health-connect\.png"/);
+  assert.doesNotMatch(sources, /<svg|source-more|withings/i);
+  assert.match(index, /aria-label="Health data from Apple Health, Health Connect, WHOOP, Oura, Strava, and Garmin flowing privately through Health\.md/);
+  assert.match(styles, /\.source-apple-health\s*{\s*top:\s*3%/);
+  assert.match(styles, /\.source-garmin\s*{\s*top:\s*83%/);
   assert.match(index, /data-thread-field/);
   const routes = index.match(/<g class="route-lines">([\s\S]*?)<\/g>/)?.[1] ?? "";
+  const routeStarts = [...routes.matchAll(/<path d="M(\d+) (\d+)/g)].map((match) => [Number(match[1]), Number(match[2])]);
+  assert.deepEqual(routeStarts, [[692, 218], [692, 218], [692, 218], [692, 218]]);
   const destinationYs = [...routes.matchAll(/900 (\d+)"><\/path>/g)].map((match) => Number(match[1]));
   assert.deepEqual(destinationYs, [34, 155, 275, 396]);
   const destinationGaps = destinationYs.slice(1).map((value, index) => value - destinationYs[index]);
@@ -291,8 +303,12 @@ test("hero uses official brand marks and licensed Lucide icons", async () => {
     .map((match) => match[1].replaceAll("&amp;", "&"));
   const logoPaths = logoSources.map((source) => new URL(source).pathname);
 
-  assert.equal(logoSources.length, 12);
+  assert.equal(logoSources.length, 16);
   assert.deepEqual(logoPaths, [
+    "/whoop.com",
+    "/ouraring.com",
+    "/strava.com",
+    "/garmin.com",
     "/dropbox.com",
     "/google.com",
     "/icloud.com",
@@ -313,8 +329,12 @@ test("hero uses official brand marks and licensed Lucide icons", async () => {
     assert.equal(url.searchParams.get("retina"), "true");
   }
   assert.equal((index.match(/referrerpolicy="origin"/g) ?? []).length, logoSources.length);
-  assert.match(index, /<img src="assets\/brand-icons\/apple-health\.png" width="32" height="32" decoding="async" alt="">/);
-  await access(path.join(ROOT, "assets/brand-icons/apple-health.png"));
+  assert.equal((index.match(/<img src="assets\/brand-icons\/apple-health\.png" width="32" height="32" decoding="async" alt="">/g) ?? []).length, 2);
+  assert.match(index, /<img src="assets\/brand-icons\/health-connect\.png" width="32" height="32" decoding="async" alt="">/);
+  await Promise.all([
+    access(path.join(ROOT, "assets/brand-icons/apple-health.png")),
+    access(path.join(ROOT, "assets/brand-icons/health-connect.png")),
+  ]);
   assert.equal((index.match(/class="outcome-logo-card/g) ?? []).length, 14);
   assert.match(index, /lucide-square-terminal/);
   assert.match(styles, /\.outcome-icon-card\s*{[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.92\);[\s\S]*?color:\s*#101012/);
@@ -326,6 +346,8 @@ test("hero uses official brand marks and licensed Lucide icons", async () => {
   assert.match(styles, /\.outcome-logo-card\s*{[\s\S]*?width:\s*46px;[\s\S]*?height:\s*46px/);
   assert.match(styles, /\n\.outcome-logo-card img\s*{[\s\S]*?width:\s*30px;[\s\S]*?height:\s*30px/);
   assert.match(styles, /\.outcome-logo-card img/);
+  assert.match(styles, /\.source-node\s*{[\s\S]*?border-radius:\s*13px;[\s\S]*?background:\s*rgba\(255, 255, 255, 0\.9\)/);
+  assert.match(styles, /\.source-node img\s*{[\s\S]*?width:\s*32px;[\s\S]*?height:\s*32px;[\s\S]*?object-fit:\s*contain/);
   await access(path.join(ROOT, "assets/icons/lucide.LICENSE.txt"));
 });
 
@@ -341,11 +363,8 @@ test("mobile landing leads with the pitch before a compact flow map", () => {
   assert.match(mobileStyles, /\.hero-description\s*{[\s\S]*?font-size:\s*22px/);
   assert.match(mobileStyles, /\.hero-actions\s*{[\s\S]*?margin-top:\s*20px/);
   assert.match(mobileStyles, /\.flow-map\s*{[\s\S]*?order:\s*3;[\s\S]*?margin-top:\s*24px/);
-  assert.match(mobileStyles, /\.source-pulse,\s*\.source-drop\s*{[\s\S]*?display:\s*none/);
-  assert.match(mobileStyles, /\.source-heart\s*{\s*top:\s*8%/);
-  assert.match(mobileStyles, /\.source-moon\s*{\s*top:\s*32%/);
-  assert.match(mobileStyles, /\.source-activity\s*{\s*top:\s*56%/);
-  assert.match(mobileStyles, /\.source-medical\s*{\s*top:\s*80%/);
+  assert.match(mobileStyles, /\.source-node img\s*{[\s\S]*?width:\s*27px;[\s\S]*?height:\s*27px/);
+  assert.doesNotMatch(mobileStyles, /\.source-(?:apple-health|health-connect|whoop|oura|strava|garmin)[^{]*\{[^}]*display:\s*none/);
   assert.match(mobileStyles, /\.flow-art\s*{\s*transform:\s*translateX\(-18%\)/);
   assert.match(mobileStyles, /\.route-lines\s*{[\s\S]*?transform:\s*scaleY\(0\.67\)/);
   assert.match(mobileStyles, /\.outcome\s*{\s*right:\s*0;\s*left:\s*auto/);
@@ -390,12 +409,13 @@ test("documentation Three.js is bundled once and deferred behind a static first 
   assert.doesNotMatch(buildScript, /three\.module\.min\.js|three\.core\.min\.js/);
 });
 
-test("landing page keeps a restrained light design with the app icon in the flow", () => {
+test("landing page keeps a restrained light design with the transparent app mark in the flow", () => {
   assert.match(styles, /color-scheme:\s*light/);
   assert.match(styles, /--paper:\s*#fafaf8/);
   assert.doesNotMatch(index, /class="brand-icon"/);
   assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px[\s\S]*?13\.7%/);
-  assert.match(index, /class="flow-core"[\s\S]*?assets\/app-icon\/icon_80x80\.png/);
+  assert.match(index, /class="flow-core"[\s\S]*?assets\/app-icon\/healthmd-mark\.png/);
+  assert.match(styles, /\.flow-core\s*{[^}]*background:\s*transparent;[^}]*box-shadow:\s*none/);
   assert.match(styles, /--purple:\s*#9465ff/);
   assert.doesNotMatch(index, /brand-mark|hero-axis|hero-route|data-theme-option|assets\/landing-minimal\.css/);
 });
