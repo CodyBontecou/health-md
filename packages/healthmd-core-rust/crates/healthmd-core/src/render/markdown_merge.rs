@@ -1,6 +1,9 @@
 //! Profile-exact managed Markdown merge behavior.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Range,
+};
 
 use super::RenderError;
 use crate::semantic::SemanticProfile;
@@ -38,6 +41,32 @@ fn validate(existing: &str, generated: &str) -> Result<(), RenderError> {
         return Err(RenderError::ArtifactTooLarge);
     }
     Ok(())
+}
+
+#[derive(Clone)]
+struct PhysicalLine {
+    content: String,
+    ending: &'static str,
+}
+
+impl PhysicalLine {
+    fn append_to(&self, output: &mut String) {
+        output.push_str(&self.content);
+        output.push_str(self.ending);
+    }
+}
+
+#[derive(Clone)]
+struct FrontmatterPropertyBlock {
+    key: String,
+    range: Range<usize>,
+}
+
+struct FrontmatterDocument {
+    opening: PhysicalLine,
+    content: Vec<PhysicalLine>,
+    closing: PhysicalLine,
+    suffix: Vec<PhysicalLine>,
 }
 
 #[derive(Clone)]
@@ -93,49 +122,44 @@ fn apple_merge(existing: &str, generated: &str, preserve_preamble: bool) -> Stri
 }
 
 fn apple_parse(content: &str, section_level: usize) -> AppleDocument {
-    let lines = content.split('\n').collect::<Vec<_>>();
-    let mut frontmatter = String::new();
-    let mut start = 0;
-    if lines.first().is_some_and(|line| line.trim() == "---") {
-        if let Some(index) = lines
-            .iter()
-            .enumerate()
-            .skip(1)
-            .find_map(|(index, line)| (line.trim() == "---").then_some(index))
-        {
-            frontmatter = format!("{}\n", lines[..=index].join("\n"));
-            start = index + 1;
-        }
-    }
+    let (frontmatter, lines) = if let Some(document) = frontmatter_document(content) {
+        let frontmatter = render_frontmatter_envelope(&document);
+        (frontmatter, document.suffix)
+    } else {
+        (String::new(), physical_lines(content))
+    };
+
     let mut preamble = String::new();
     let mut sections = Vec::new();
     let mut heading: Option<String> = None;
     let mut name: Option<String> = None;
-    let mut body = Vec::new();
-    for line in &lines[start..] {
-        if apple_heading_level(line) == section_level {
+    let mut body = String::new();
+
+    for line in lines {
+        if apple_heading_level(&line.content) == section_level {
             if let (Some(heading), Some(name)) = (heading.take(), name.take()) {
                 sections.push(AppleSection {
                     heading,
                     name,
-                    body: lines_with_newlines(&body),
+                    body: std::mem::take(&mut body),
                 });
-                body.clear();
             }
-            heading = Some(format!("{line}\n"));
-            name = Some(apple_heading_name(line));
+            let mut raw = String::new();
+            line.append_to(&mut raw);
+            heading = Some(raw);
+            name = Some(apple_heading_name(&line.content));
         } else if heading.is_none() {
-            preamble.push_str(line);
-            preamble.push('\n');
+            line.append_to(&mut preamble);
         } else {
-            body.push(*line);
+            line.append_to(&mut body);
         }
     }
+
     if let (Some(heading), Some(name)) = (heading, name) {
         sections.push(AppleSection {
             heading,
             name,
-            body: lines_with_newlines(&body),
+            body,
         });
     }
     AppleDocument {
@@ -143,15 +167,6 @@ fn apple_parse(content: &str, section_level: usize) -> AppleDocument {
         preamble,
         sections,
     }
-}
-
-fn lines_with_newlines(lines: &[&str]) -> String {
-    let mut output = String::new();
-    for line in lines {
-        output.push_str(line);
-        output.push('\n');
-    }
-    output
 }
 
 fn apple_heading_level(line: &str) -> usize {
@@ -199,89 +214,270 @@ fn apple_section_level(content: &str) -> usize {
 }
 
 fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
-    let existing_values = apple_frontmatter_properties(existing);
-    let generated_values = apple_frontmatter_properties(generated);
-    if existing_values.is_empty() && generated_values.is_empty() {
-        return String::new();
-    }
-    if existing_values.is_empty() {
-        return generated.to_owned();
-    }
-    if generated_values.is_empty() {
+    let existing_document = frontmatter_document(existing);
+    let generated_document = frontmatter_document(generated);
+
+    let Some(existing_document) = existing_document else {
+        return generated_document.map_or_else(String::new, |_| generated.to_owned());
+    };
+    let Some(generated_document) = generated_document else {
+        return existing.to_owned();
+    };
+
+    let incoming_blocks = property_blocks(&generated_document.content);
+    if incoming_blocks.is_empty() {
         return existing.to_owned();
     }
-    let mut order = Vec::new();
-    let mut values = HashMap::new();
-    for (key, value) in existing_values.into_iter().chain(generated_values) {
-        if !order.contains(&key) {
-            order.push(key.clone());
+
+    let line_ending = preferred_line_ending(&existing_document);
+    let mut incoming_order = Vec::new();
+    let mut incoming_by_key: HashMap<String, Vec<PhysicalLine>> = HashMap::new();
+    for block in incoming_blocks {
+        if !incoming_by_key.contains_key(&block.key) {
+            incoming_order.push(block.key.clone());
         }
-        values.insert(key, value);
+        let lines = generated_document.content[block.range]
+            .iter()
+            .map(|line| PhysicalLine {
+                content: line.content.clone(),
+                ending: line_ending,
+            })
+            .collect();
+        incoming_by_key.insert(block.key, lines);
     }
-    let mut output = String::from("---\n");
-    for key in order {
-        if let Some(value) = values.get(&key) {
-            output.push_str(&apple_frontmatter_property(&key, value));
+
+    let existing_by_start = property_blocks(&existing_document.content)
+        .into_iter()
+        .map(|block| (block.range.start, block))
+        .collect::<HashMap<_, _>>();
+    let mut merged = Vec::new();
+    let mut emitted = HashSet::new();
+    let mut index = 0;
+
+    while index < existing_document.content.len() {
+        let Some(block) = existing_by_start.get(&index) else {
+            merged.push(existing_document.content[index].clone());
+            index += 1;
+            continue;
+        };
+
+        if let Some(replacement) = incoming_by_key.get(&block.key) {
+            if emitted.insert(block.key.clone()) {
+                merged.extend(replacement.iter().cloned());
+            }
+        } else {
+            merged.extend(
+                existing_document.content[block.range.clone()]
+                    .iter()
+                    .cloned(),
+            );
+        }
+        index = block.range.end;
+    }
+
+    for key in incoming_order {
+        if emitted.insert(key.clone()) {
+            if let Some(lines) = incoming_by_key.get(&key) {
+                merged.extend(lines.iter().cloned());
+            }
         }
     }
-    output.push_str("---\n");
+
+    let mut output = String::new();
+    existing_document.opening.append_to(&mut output);
+    append_lines(&mut output, &merged);
+    existing_document.closing.append_to(&mut output);
+    append_lines(&mut output, &existing_document.suffix);
     output
 }
 
-fn apple_frontmatter_properties(frontmatter: &str) -> Vec<(String, String)> {
-    let mut properties = Vec::new();
-    let mut current_key: Option<String> = None;
-    let mut current_value = String::new();
-    let mut multiline = false;
-    for line in frontmatter.split('\n') {
-        let trimmed = line.trim();
-        if trimmed == "---" {
-            continue;
-        }
-        if trimmed.is_empty() && !multiline {
-            continue;
-        }
-        if let Some(colon) = line
-            .find(':')
-            .filter(|_| !multiline || !line.starts_with(' '))
-        {
-            if let Some(key) = current_key.take() {
-                properties.push((key, current_value.trim_matches('\n').to_owned()));
-            }
-            let key = line[..colon].trim().to_owned();
-            let value = line[colon + 1..].trim().to_owned();
-            multiline = value.is_empty()
-                || value == "|"
-                || value == ">"
-                || value.starts_with('[') && !value.ends_with(']');
-            current_key = Some(key);
-            current_value = value;
-        } else if multiline && current_key.is_some() {
-            if !current_value.is_empty() {
-                current_value.push('\n');
-            }
-            current_value.push_str(line);
-            if current_value.starts_with('[') && line.contains(']') {
-                multiline = false;
-            }
-        }
+fn frontmatter_document(text: &str) -> Option<FrontmatterDocument> {
+    let lines = physical_lines(text);
+    if lines.len() < 2 || !is_frontmatter_delimiter(&lines[0].content) {
+        return None;
     }
-    if let Some(key) = current_key {
-        properties.push((key, current_value.trim_matches('\n').to_owned()));
-    }
-    properties
+    let closing_index = lines
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find_map(|(index, line)| is_frontmatter_delimiter(&line.content).then_some(index))?;
+    Some(FrontmatterDocument {
+        opening: lines[0].clone(),
+        content: lines[1..closing_index].to_vec(),
+        closing: lines[closing_index].clone(),
+        suffix: lines[closing_index + 1..].to_vec(),
+    })
 }
 
-fn apple_frontmatter_property(key: &str, value: &str) -> String {
-    if !value.contains('\n') {
-        return format!("{key}: {value}\n");
+fn property_blocks(lines: &[PhysicalLine]) -> Vec<FrontmatterPropertyBlock> {
+    let mut blocks = Vec::new();
+    let mut index = 0;
+
+    while index < lines.len() {
+        let Some(key) = top_level_key(&lines[index].content) else {
+            index += 1;
+            continue;
+        };
+
+        let mut end = index + 1;
+        while end < lines.len() {
+            if is_indented(&lines[end].content) {
+                end += 1;
+                continue;
+            }
+            if lines[end].content.is_empty() {
+                let mut next_nonempty = end + 1;
+                while next_nonempty < lines.len() && lines[next_nonempty].content.is_empty() {
+                    next_nonempty += 1;
+                }
+                if next_nonempty < lines.len() && is_indented(&lines[next_nonempty].content) {
+                    end += 1;
+                    continue;
+                }
+            }
+            break;
+        }
+
+        blocks.push(FrontmatterPropertyBlock {
+            key,
+            range: index..end,
+        });
+        index = end;
     }
-    let mut lines = value.split('\n');
-    let first = lines.next().unwrap_or_default();
-    if matches!(first, "|" | ">") {
-        format!("{key}: {first}\n{}\n", lines.collect::<Vec<_>>().join("\n"))
-    } else {
-        format!("{key}:\n{value}\n")
+    blocks
+}
+
+fn top_level_key(line: &str) -> Option<String> {
+    let first = line.chars().next()?;
+    if first.is_whitespace()
+        || line.starts_with('#')
+        || line.starts_with('%')
+        || is_frontmatter_delimiter(line)
+    {
+        return None;
+    }
+
+    let bytes = line.as_bytes();
+    let mut in_single_quote = false;
+    let mut in_double_quote = false;
+    let mut escaped = false;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if in_double_quote {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_double_quote = false;
+            }
+        } else if in_single_quote {
+            if byte == b'\'' {
+                in_single_quote = false;
+            }
+        } else if byte == b'"' {
+            in_double_quote = true;
+        } else if byte == b'\'' {
+            in_single_quote = true;
+        } else if byte == b':' {
+            let value = &line[index + 1..];
+            if value.is_empty() || value.chars().next().is_some_and(char::is_whitespace) {
+                let key = line[..index].trim();
+                if key.is_empty()
+                    || key == "-"
+                    || key.starts_with("- ")
+                    || key.starts_with("-\t")
+                    || key == "?"
+                    || key.starts_with("? ")
+                    || key.starts_with("?\t")
+                {
+                    return None;
+                }
+                return Some(key.to_owned());
+            }
+        }
+        index += 1;
+    }
+    None
+}
+
+fn is_indented(line: &str) -> bool {
+    line.chars().next().is_some_and(char::is_whitespace)
+}
+
+fn is_frontmatter_delimiter(line: &str) -> bool {
+    line.strip_prefix("---").is_some_and(|suffix| {
+        suffix
+            .chars()
+            .all(|character| matches!(character, ' ' | '\t'))
+    })
+}
+
+fn preferred_line_ending(document: &FrontmatterDocument) -> &'static str {
+    std::iter::once(&document.opening)
+        .chain(document.content.iter())
+        .chain(std::iter::once(&document.closing))
+        .find_map(|line| (!line.ending.is_empty()).then_some(line.ending))
+        .unwrap_or("\n")
+}
+
+fn physical_lines(text: &str) -> Vec<PhysicalLine> {
+    let bytes = text.as_bytes();
+    let mut lines = Vec::new();
+    let mut start = 0;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] == b'\r' {
+            let content = text[start..index].to_owned();
+            if index + 1 < bytes.len() && bytes[index + 1] == b'\n' {
+                lines.push(PhysicalLine {
+                    content,
+                    ending: "\r\n",
+                });
+                index += 2;
+            } else {
+                lines.push(PhysicalLine {
+                    content,
+                    ending: "\r",
+                });
+                index += 1;
+            }
+            start = index;
+        } else if bytes[index] == b'\n' {
+            lines.push(PhysicalLine {
+                content: text[start..index].to_owned(),
+                ending: "\n",
+            });
+            index += 1;
+            start = index;
+        } else {
+            index += 1;
+        }
+    }
+
+    if start < bytes.len() {
+        lines.push(PhysicalLine {
+            content: text[start..].to_owned(),
+            ending: "",
+        });
+    }
+    lines
+}
+
+fn render_frontmatter_envelope(document: &FrontmatterDocument) -> String {
+    let mut output = String::new();
+    document.opening.append_to(&mut output);
+    append_lines(&mut output, &document.content);
+    document.closing.append_to(&mut output);
+    output
+}
+
+fn append_lines(output: &mut String, lines: &[PhysicalLine]) {
+    for line in lines {
+        line.append_to(output);
     }
 }
 
@@ -523,5 +719,61 @@ mod tests {
         assert!(android.contains("# User title"));
         assert!(android.contains("# Health Data — new"));
         assert!(android.contains("## Notes\nkeep"));
+    }
+
+    #[test]
+    fn apple_frontmatter_splice_preserves_physical_yaml_blocks() {
+        let existing = "---\ndate: 2026-08-03\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\n---\n";
+        let generated = "---\ndate: 2026-07-30\nsteps: 2119\n---\n";
+        let expected = "---\ndate: 2026-07-30\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\nsteps: 2119\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_splice_removes_only_colliding_duplicates() {
+        let existing = "---\nsteps: 100\ncustom: first\n# Keep this comment.\nsteps: 200\ncustom: second\n---\n";
+        let generated = "---\nsteps: 300\n---\n";
+        let expected =
+            "---\nsteps: 300\ncustom: first\n# Keep this comment.\ncustom: second\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_splice_preserves_crlf_scalars_delimiters_and_body() {
+        let frontmatter = "---\r\nsummary: |-\r\n  first line\r\n  ---\r\n  last line\r\n\r\nfolded: >+\r\n  one folded\r\n  paragraph\r\n---\r\n";
+        let body = "# My Daily Note\r\n\r\nUser prose with no final newline";
+        let generated = "---\nsteps: 42\n---\n";
+        let expected_frontmatter = "---\r\nsummary: |-\r\n  first line\r\n  ---\r\n  last line\r\n\r\nfolded: >+\r\n  one folded\r\n  paragraph\r\nsteps: 42\r\n---\r\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                &(frontmatter.to_owned() + body),
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected_frontmatter.to_owned() + body
+        );
     }
 }

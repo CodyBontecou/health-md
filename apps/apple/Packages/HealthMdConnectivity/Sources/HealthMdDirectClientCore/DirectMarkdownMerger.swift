@@ -105,146 +105,288 @@ struct MarkdownMerger {
 
     // MARK: - Frontmatter Merging
 
-    /// Merge two frontmatter blocks, preserving existing properties and adding/updating with new ones.
+    /// One physical line, retaining its original terminator so untouched YAML can be emitted byte-for-byte.
+    private struct PhysicalLine {
+        let content: String
+        let ending: String
+
+        var raw: String { content + ending }
+    }
+
+    private struct FrontmatterPropertyBlock {
+        let key: String
+        let range: Range<Int>
+    }
+
+    private struct FrontmatterDocument {
+        let opening: PhysicalLine
+        let content: [PhysicalLine]
+        let closing: PhysicalLine
+        let suffix: [PhysicalLine]
+    }
+
+    /// Merge two frontmatter blocks by splicing complete top-level YAML property blocks.
     ///
-    /// - Parameters:
-    ///   - existing: The existing frontmatter block (including `---` delimiters).
-    ///   - new: The new frontmatter block (including `---` delimiters).
-    /// - Returns: A merged frontmatter block with all properties.
+    /// Existing physical lines are never parsed into values or reserialized. An incoming property replaces
+    /// every existing block with the same key at the first block's position; genuinely new blocks are
+    /// appended immediately before the closing delimiter.
     static func mergeFrontmatter(existing: String, new: String) -> String {
-        let existingProps = parseFrontmatterProperties(existing)
-        let newProps = parseFrontmatterProperties(new)
+        let existingDocument = frontmatterDocument(from: existing)
+        let newDocument = frontmatterDocument(from: new)
 
-        // If both are empty, return empty string
-        if existingProps.isEmpty && newProps.isEmpty {
-            return ""
+        guard let existingDocument else {
+            return newDocument == nil ? "" : new
         }
-
-        // If only new has content, return new as-is
-        if existingProps.isEmpty {
-            return new
-        }
-
-        // If only existing has content but new is empty, return existing
-        if newProps.isEmpty {
+        guard let newDocument else {
             return existing
         }
 
-        // Merge: start with existing, then add/overwrite with new
-        var mergedKeys: [String] = []
-        var mergedValues: [String: String] = [:]
-
-        // First, add all existing properties (preserving order)
-        for (key, value) in existingProps {
-            if !mergedKeys.contains(key) {
-                mergedKeys.append(key)
-            }
-            mergedValues[key] = value
+        let incomingBlocks = propertyBlocks(in: newDocument.content)
+        guard !incomingBlocks.isEmpty else {
+            return existing
         }
 
-        // Then, add/overwrite with new properties
-        for (key, value) in newProps {
-            if !mergedKeys.contains(key) {
-                mergedKeys.append(key)
-            }
-            mergedValues[key] = value
-        }
+        let lineEnding = preferredLineEnding(in: existingDocument)
+        var incomingOrder: [String] = []
+        var incomingLinesByKey: [String: [PhysicalLine]] = [:]
 
-        // Build the merged frontmatter
-        var result = "---\n"
-        for key in mergedKeys {
-            if let value = mergedValues[key] {
-                result += formatFrontmatterProperty(key: key, value: value)
+        for block in incomingBlocks {
+            if incomingLinesByKey[block.key] == nil {
+                incomingOrder.append(block.key)
+            }
+            // Generated frontmatter should not contain duplicate keys. If it does, retain its last value,
+            // matching the previous merge policy while still emitting one authoritative block.
+            incomingLinesByKey[block.key] = newDocument.content[block.range].map {
+                PhysicalLine(content: $0.content, ending: lineEnding)
             }
         }
-        result += "---\n"
 
-        return result
-    }
+        let existingBlocks = propertyBlocks(in: existingDocument.content)
+        let existingBlocksByStart = Dictionary(uniqueKeysWithValues: existingBlocks.map {
+            ($0.range.lowerBound, $0)
+        })
 
-    private static func formatFrontmatterProperty(key: String, value: String) -> String {
-        guard value.contains("\n") else {
-            return "\(key): \(value)\n"
-        }
+        var mergedContent: [PhysicalLine] = []
+        var emittedIncomingKeys: Set<String> = []
+        var index = 0
 
-        let valueLines = value.components(separatedBy: "\n")
-        guard let firstLine = valueLines.first else {
-            return "\(key): \(value)\n"
-        }
-
-        if firstLine == "|" || firstLine == ">" {
-            let rest = valueLines.dropFirst().joined(separator: "\n")
-            return "\(key): \(firstLine)\n\(rest)\n"
-        }
-
-        return "\(key):\n\(value)\n"
-    }
-
-    /// Parse frontmatter into an ordered list of key-value pairs.
-    ///
-    /// Returns an array of tuples to preserve the original order of keys.
-    /// Handles multi-line values (arrays, objects) by detecting continuation lines.
-    static func parseFrontmatterProperties(_ frontmatter: String) -> [(key: String, value: String)] {
-        // Strip the --- delimiters
-        let lines = frontmatter.components(separatedBy: "\n")
-        guard lines.count >= 2 else { return [] }
-
-        var properties: [(key: String, value: String)] = []
-        var currentKey: String?
-        var currentValue: String = ""
-        var inMultilineValue = false
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-
-            // Skip delimiter lines
-            if trimmed == "---" {
+        while index < existingDocument.content.count {
+            guard let block = existingBlocksByStart[index] else {
+                mergedContent.append(existingDocument.content[index])
+                index += 1
                 continue
             }
 
-            // Skip empty lines unless we're in a multiline value
-            if trimmed.isEmpty && !inMultilineValue {
+            if let replacement = incomingLinesByKey[block.key] {
+                if !emittedIncomingKeys.contains(block.key) {
+                    mergedContent.append(contentsOf: replacement)
+                    emittedIncomingKeys.insert(block.key)
+                }
+                // Skip every stale occurrence of an incoming key after replacing the first one.
+            } else {
+                mergedContent.append(contentsOf: existingDocument.content[block.range])
+            }
+            index = block.range.upperBound
+        }
+
+        for key in incomingOrder where !emittedIncomingKeys.contains(key) {
+            if let lines = incomingLinesByKey[key] {
+                mergedContent.append(contentsOf: lines)
+                emittedIncomingKeys.insert(key)
+            }
+        }
+
+        return render(
+            [existingDocument.opening]
+                + mergedContent
+                + [existingDocument.closing]
+                + existingDocument.suffix
+        )
+    }
+
+    /// Split a complete Markdown document at a valid column-zero frontmatter envelope.
+    /// The returned strings retain every original line ending.
+    static func splitFrontmatter(from content: String) -> (frontmatter: String, body: String)? {
+        guard let document = frontmatterDocument(from: content) else { return nil }
+        return (
+            render([document.opening] + document.content + [document.closing]),
+            render(document.suffix)
+        )
+    }
+
+    private static func frontmatterDocument(from text: String) -> FrontmatterDocument? {
+        let lines = physicalLines(in: text)
+        guard lines.count >= 2, isFrontmatterDelimiter(lines[0].content) else { return nil }
+        guard let closingIndex = lines.indices.dropFirst().first(where: {
+            isFrontmatterDelimiter(lines[$0].content)
+        }) else {
+            return nil
+        }
+
+        let content = closingIndex > 1 ? Array(lines[1..<closingIndex]) : []
+        let suffixStart = closingIndex + 1
+        let suffix = suffixStart < lines.count ? Array(lines[suffixStart...]) : []
+        return FrontmatterDocument(
+            opening: lines[0],
+            content: content,
+            closing: lines[closingIndex],
+            suffix: suffix
+        )
+    }
+
+    private static func propertyBlocks(in lines: [PhysicalLine]) -> [FrontmatterPropertyBlock] {
+        var blocks: [FrontmatterPropertyBlock] = []
+        var index = 0
+
+        while index < lines.count {
+            guard let key = topLevelKey(in: lines[index].content) else {
+                index += 1
                 continue
             }
 
-            // Check if this line starts a new key-value pair
-            if let colonIndex = line.firstIndex(of: ":"), !inMultilineValue || !line.hasPrefix(" ") {
-                // Save the previous key-value pair if exists
-                if let key = currentKey {
-                    properties.append((key: key, value: currentValue.trimmingCharacters(in: .newlines)))
+            var end = index + 1
+            while end < lines.count {
+                if isIndented(lines[end].content) {
+                    end += 1
+                    continue
                 }
 
-                // Start a new key-value pair
-                let key = String(line[..<colonIndex]).trimmingCharacters(in: .whitespaces)
-                let valueStart = line.index(after: colonIndex)
-                let value = String(line[valueStart...]).trimmingCharacters(in: .whitespaces)
+                // YAML permits physically empty lines inside an indented block scalar. Keep them in the
+                // property block when another indented continuation follows.
+                if lines[end].content.isEmpty {
+                    var nextNonempty = end + 1
+                    while nextNonempty < lines.count, lines[nextNonempty].content.isEmpty {
+                        nextNonempty += 1
+                    }
+                    if nextNonempty < lines.count, isIndented(lines[nextNonempty].content) {
+                        end += 1
+                        continue
+                    }
+                }
+                break
+            }
 
-                currentKey = key
-                currentValue = value
+            blocks.append(FrontmatterPropertyBlock(key: key, range: index..<end))
+            index = end
+        }
 
-                // Check if this starts a multiline value (array or object)
-                inMultilineValue = value.isEmpty || value == "|" || value == ">" || value.hasPrefix("[") && !value.hasSuffix("]")
-            } else if inMultilineValue && currentKey != nil {
-                // Continuation of a multiline value
-                if currentValue.isEmpty {
-                    currentValue = line
+        return blocks
+    }
+
+    private static func topLevelKey(in line: String) -> String? {
+        guard let firstScalar = line.unicodeScalars.first,
+              !CharacterSet.whitespaces.contains(firstScalar),
+              !line.hasPrefix("#"),
+              !line.hasPrefix("%"),
+              !isFrontmatterDelimiter(line) else {
+            return nil
+        }
+
+        var inSingleQuote = false
+        var inDoubleQuote = false
+        var escaped = false
+        var index = line.startIndex
+
+        while index < line.endIndex {
+            let character = line[index]
+
+            if inDoubleQuote {
+                if escaped {
+                    escaped = false
+                } else if character == "\\" {
+                    escaped = true
+                } else if character == "\"" {
+                    inDoubleQuote = false
+                }
+            } else if inSingleQuote {
+                if character == "'" {
+                    inSingleQuote = false
+                }
+            } else if character == "\"" {
+                inDoubleQuote = true
+            } else if character == "'" {
+                inSingleQuote = true
+            } else if character == ":" {
+                let valueStart = line.index(after: index)
+                if valueStart == line.endIndex || isWhitespace(line[valueStart]) {
+                    let key = String(line[..<index]).trimmingCharacters(in: .whitespaces)
+                    guard !key.isEmpty,
+                          key != "-", !key.hasPrefix("- "), !key.hasPrefix("-\t"),
+                          key != "?", !key.hasPrefix("? "), !key.hasPrefix("?\t") else {
+                        return nil
+                    }
+                    return key
+                }
+            }
+
+            index = line.index(after: index)
+        }
+
+        return nil
+    }
+
+    private static func isWhitespace(_ character: Character) -> Bool {
+        character.unicodeScalars.allSatisfy { CharacterSet.whitespaces.contains($0) }
+    }
+
+    private static func isIndented(_ line: String) -> Bool {
+        guard let first = line.unicodeScalars.first else { return false }
+        return CharacterSet.whitespaces.contains(first)
+    }
+
+    private static func isFrontmatterDelimiter(_ line: String) -> Bool {
+        guard line.hasPrefix("---") else { return false }
+        return line.dropFirst(3).allSatisfy { $0 == " " || $0 == "\t" }
+    }
+
+    private static func preferredLineEnding(in document: FrontmatterDocument) -> String {
+        for line in [document.opening] + document.content + [document.closing] where !line.ending.isEmpty {
+            return line.ending
+        }
+        return "\n"
+    }
+
+    private static func physicalLines(in text: String) -> [PhysicalLine] {
+        let bytes = Array(text.utf8)
+        guard !bytes.isEmpty else { return [] }
+
+        var lines: [PhysicalLine] = []
+        var start = 0
+        var index = 0
+
+        while index < bytes.count {
+            if bytes[index] == 0x0D {
+                let content = String(decoding: bytes[start..<index], as: UTF8.self)
+                if index + 1 < bytes.count, bytes[index + 1] == 0x0A {
+                    lines.append(PhysicalLine(content: content, ending: "\r\n"))
+                    index += 2
                 } else {
-                    currentValue += "\n" + line
+                    lines.append(PhysicalLine(content: content, ending: "\r"))
+                    index += 1
                 }
-
-                // Check if multiline value is complete (for inline arrays)
-                if currentValue.hasPrefix("[") && line.contains("]") {
-                    inMultilineValue = false
-                }
+                start = index
+            } else if bytes[index] == 0x0A {
+                let content = String(decoding: bytes[start..<index], as: UTF8.self)
+                lines.append(PhysicalLine(content: content, ending: "\n"))
+                index += 1
+                start = index
+            } else {
+                index += 1
             }
         }
 
-        // Don't forget the last key-value pair
-        if let key = currentKey {
-            properties.append((key: key, value: currentValue.trimmingCharacters(in: .newlines)))
+        if start < bytes.count {
+            lines.append(PhysicalLine(
+                content: String(decoding: bytes[start...], as: UTF8.self),
+                ending: ""
+            ))
         }
 
-        return properties
+        return lines
+    }
+
+    private static func render(_ lines: [PhysicalLine]) -> String {
+        lines.map(\.raw).joined()
     }
 
     // MARK: - Parsing
@@ -254,62 +396,52 @@ struct MarkdownMerger {
     /// Only headings at exactly `sectionLevel` start a new section.
     /// Sub-headings (higher level numbers, e.g. ### under ##) remain part of the parent section body.
     static func parse(_ content: String, sectionLevel: Int) -> ParsedDocument {
-        let lines = content.components(separatedBy: "\n")
+        let document = frontmatterDocument(from: content)
+        let lines: [PhysicalLine]
+        let frontmatter: String
 
-        // --- Extract frontmatter ---
-        var frontmatter = ""
-        var contentStartIndex = 0
-
-        if let firstLine = lines.first, firstLine.trimmingCharacters(in: .whitespaces) == "---" {
-            // Look for the closing ---
-            for i in 1..<lines.count {
-                if lines[i].trimmingCharacters(in: .whitespaces) == "---" {
-                    // Include everything from start through closing --- plus the trailing newline
-                    frontmatter = lines[0...i].joined(separator: "\n") + "\n"
-                    contentStartIndex = i + 1
-                    break
-                }
-            }
+        if let document {
+            frontmatter = render([document.opening] + document.content + [document.closing])
+            lines = document.suffix
+        } else {
+            frontmatter = ""
+            lines = physicalLines(in: content)
         }
 
-        // --- Split remaining content into preamble and sections ---
         var preamble = ""
         var sections: [Section] = []
         var currentHeadingLine: String?
         var currentNormalizedName: String?
-        var bodyLines: [String] = []
+        var bodyLines: [PhysicalLine] = []
 
-        for i in contentStartIndex..<lines.count {
-            let line = lines[i]
-            let level = headingLevel(of: line)
+        for line in lines {
+            let level = headingLevel(of: line.content)
 
             if level == sectionLevel {
-                // Flush the previous section, if any.
                 if let heading = currentHeadingLine, let name = currentNormalizedName {
-                    // Rejoin body lines preserving each line's trailing newline.
-                    // Using map { $0 + "\n" }.joined() instead of joined(separator: "\n")
-                    // ensures the blank line before the next heading is preserved.
-                    let body = bodyLines.map { $0 + "\n" }.joined()
-                    sections.append(Section(headingLine: heading, normalizedName: name, body: body))
+                    sections.append(Section(
+                        headingLine: heading,
+                        normalizedName: name,
+                        body: render(bodyLines)
+                    ))
                     bodyLines = []
                 }
 
-                // Start a new section. The heading line includes a trailing newline.
-                currentHeadingLine = line + "\n"
-                currentNormalizedName = normalizeHeadingText(line)
+                currentHeadingLine = line.raw
+                currentNormalizedName = normalizeHeadingText(line.content)
             } else if currentHeadingLine == nil {
-                // Still in the preamble.
-                preamble += line + "\n"
+                preamble += line.raw
             } else {
-                // Part of the current section's body.
                 bodyLines.append(line)
             }
         }
 
-        // Flush the last section.
         if let heading = currentHeadingLine, let name = currentNormalizedName {
-            let body = bodyLines.map { $0 + "\n" }.joined()
-            sections.append(Section(headingLine: heading, normalizedName: name, body: body))
+            sections.append(Section(
+                headingLine: heading,
+                normalizedName: name,
+                body: render(bodyLines)
+            ))
         }
 
         return ParsedDocument(frontmatter: frontmatter, preamble: preamble, sections: sections)

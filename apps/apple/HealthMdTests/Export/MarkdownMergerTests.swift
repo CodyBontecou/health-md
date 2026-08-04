@@ -445,6 +445,52 @@ final class MarkdownMergerTests: XCTestCase {
         XCTAssertFalse(result.contains("name: \"Old\""), result)
     }
 
+    func testMergeFrontmatter_preservesOneItemListAndUnrelatedPhysicalBlocksExactly() {
+        let existing = "---\ndate: 2026-08-03\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\n---\n"
+        let incoming = "---\ndate: 2026-07-30\nsteps: 2119\n---\n"
+        let expected = "---\ndate: 2026-07-30\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\nsteps: 2119\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatter_replacesCompleteNestedBlockAtItsFirstPosition() {
+        let existing = "---\nmetadata:\n  source: old\n  labels:\n    - stale\nkeep: unchanged\n---\n"
+        let incoming = "---\nmetadata:\n  source: healthmd\n  labels:\n    - first\n    - second\n---\n"
+        let expected = "---\nmetadata:\n  source: healthmd\n  labels:\n    - first\n    - second\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatter_removesCollidingDuplicatesButPreservesUnrelatedDuplicates() {
+        let existing = "---\nsteps: 100\ncustom: first\n# Keep this comment.\nsteps: 200\ncustom: second\n---\n"
+        let incoming = "---\nsteps: 300\n---\n"
+        let expected = "---\nsteps: 300\ncustom: first\n# Keep this comment.\ncustom: second\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatter_preservesCRLFAndUsesItForIncomingBlocks() {
+        let existing = "---\r\ntags:\r\n  - daily-notes\r\ncustom: keep\r\n---\r\n"
+        let incoming = "---\ntags:\n  - healthmd\n  - synced\nsteps: 42\n---\n"
+        let expected = "---\r\ntags:\r\n  - healthmd\r\n  - synced\r\ncustom: keep\r\nsteps: 42\r\n---\r\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergePreservingPreamble_keepsBlockScalarsIndentedDelimiterAndBodyExact() {
+        let frontmatter = "---\nsummary: |-\n  first line\n  ---\n  last line\n\nfolded: >+\n  one folded\n  paragraph\n---\n"
+        let body = "# My Daily Note\n\nUser prose with no final newline"
+        let incoming = "---\nsteps: 42\n---\n"
+        let expectedFrontmatter = "---\nsummary: |-\n  first line\n  ---\n  last line\n\nfolded: >+\n  one folded\n  paragraph\nsteps: 42\n---\n"
+
+        let result = MarkdownMerger.mergePreservingPreamble(
+            existing: frontmatter + body,
+            new: incoming
+        )
+
+        XCTAssertEqual(result, expectedFrontmatter + body)
+    }
+
     func testMerge_preservesUserFrontmatterProperties() {
         let existing = """
         ---
