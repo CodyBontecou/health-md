@@ -559,6 +559,52 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDatesDoesNotLeaveOrCountDictionaryWhenDailyArtifactFailsFirst() async {
+        UserDefaults.standard.set(
+            "legacy",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+
+        let vaultPath = "/tmp/DeferredDictionaryVault"
+        let vaultURL = URL(fileURLWithPath: vaultPath)
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(vaultPath: vaultPath)
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [])
+        settings.includeGranularData = false
+        let dailyPath = ExportPathPlanner.aggregateFileURL(
+            vaultURL: vaultURL,
+            healthSubfolder: "Health",
+            settings: settings,
+            date: HealthKitFixtures.referenceDate,
+            format: .markdown
+        ).path
+        let dictionaryPath = vaultURL
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        fileSystem.failBeforeWritingPathOnce = dailyPath
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.dataDictionaryFileCount, 0)
+        XCTAssertEqual(result.outputBreakdown.dataDictionaryFileCount, 0)
+        XCTAssertNil(fileSystem.files[dictionaryPath])
+        XCTAssertNil(fileSystem.writeCounts[dictionaryPath])
+        XCTAssertFalse(result.outputBreakdown.isFileCategoryBreakdownComplete)
+    }
+
+    @MainActor
     func testExportDates_archiveModePacksRollupsIntoZip() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveTests-\(UUID().uuidString)", isDirectory: true)

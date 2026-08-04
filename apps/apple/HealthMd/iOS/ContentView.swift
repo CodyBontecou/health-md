@@ -2008,8 +2008,7 @@ struct ContentView: View {
             source: .macAgent,
             dateRangeStart: normalizedStartDate,
             dateRangeEnd: normalizedEndDate,
-            targetLabel: syncService.macDestinationStatus?.destinationDisplayName ?? syncService.connectedPeerName ?? "Mac",
-            fileCount: 0
+            targetLabel: syncService.macDestinationStatus?.destinationDisplayName ?? syncService.connectedPeerName ?? "Mac"
         )
 
         isExporting = false

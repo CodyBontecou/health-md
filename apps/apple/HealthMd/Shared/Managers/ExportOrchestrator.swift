@@ -1717,8 +1717,22 @@ struct ExportOrchestrator {
         operationDetails: ExportHistoryOperationDetails? = nil
     ) {
         let history = ExportHistoryManager.shared
-        let resolvedFileCount = fileCount ?? result.totalFilesWritten
-        let outputBreakdown = result.outputBreakdown(resolvedFileCount: resolvedFileCount)
+        // An omitted count is authoritative only when the producer supplied an exact total or
+        // measured every physical category. Incomplete producers retain known category counters
+        // without turning their lower bound into a false authoritative total.
+        let resolvedFileCount: Int?
+        if let fileCount {
+            resolvedFileCount = fileCount
+        } else if let authoritativeFileCount = result.authoritativeFileCount {
+            resolvedFileCount = authoritativeFileCount
+        } else if result.isFileCategoryBreakdownComplete {
+            resolvedFileCount = result.categorizedFileCount
+        } else {
+            resolvedFileCount = nil
+        }
+        let outputBreakdown = resolvedFileCount.map {
+            result.outputBreakdown(resolvedFileCount: $0)
+        } ?? result.outputBreakdown
 
         if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
             history.recordSuccess(

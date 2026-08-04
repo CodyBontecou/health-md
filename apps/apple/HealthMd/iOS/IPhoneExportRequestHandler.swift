@@ -661,8 +661,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             source: .macAgent,
             dateRangeStart: pending.request.dateRangeStart,
             dateRangeEnd: pending.request.dateRangeEnd,
-            targetLabel: "Mac",
-            fileCount: 0
+            targetLabel: "Mac"
         )
         finishCLIActivity(
             for: pending.request,

@@ -73,6 +73,37 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(breakdown.isFileCategoryBreakdownComplete)
     }
 
+    func testRecordResultPreservesUnknownMacFailureTotalAndKnownPartialCategories() throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let date = Date()
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: 1,
+            failedDateDetails: [
+                FailedDateDetail(date: date, reason: .fileWriteError)
+            ],
+            formatsPerDate: 1,
+            looseAggregateFileCount: 2,
+            isFileCategoryBreakdownComplete: false
+        )
+
+        ExportOrchestrator.recordResult(
+            result,
+            source: .macAgent,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            targetLabel: "Mac"
+        )
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertNil(entry.fileCount)
+        XCTAssertEqual(entry.outputBreakdown.looseAggregateFileCount, 2)
+        XCTAssertEqual(entry.outputBreakdown.generatedFileCount, 2)
+        XCTAssertFalse(entry.outputBreakdown.isFileCategoryBreakdownComplete)
+    }
+
     func testRecordResultPersistsTerminalCLIJobWithNoSuccessfulDays() {
         let history = ExportHistoryManager.shared
         history.clearHistory()

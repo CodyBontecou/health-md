@@ -1837,7 +1837,9 @@ struct ExportHistoryDetailView: View {
     }
 
     private func dataDayDescription(_ count: Int) -> String {
-        "\(count) data day\(count == 1 ? "" : "s")"
+        count == 1
+            ? String(localized: "1 data day", comment: "Export history detail count for one data day")
+            : String(localized: "\(count) data days", comment: "Export history detail count for multiple or zero data days")
     }
 
     private func historyValueRow(

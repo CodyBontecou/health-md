@@ -1354,8 +1354,7 @@ struct HealthMdApp: App {
             source: .macAgent,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
-            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
-            fileCount: 0
+            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac"
         )
     }
 
