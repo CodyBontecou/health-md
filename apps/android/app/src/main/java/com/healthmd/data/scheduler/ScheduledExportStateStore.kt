@@ -32,6 +32,10 @@ class ScheduledExportStateStore @Inject constructor(
             )
             .putString(ScheduledExportOccurrence.KEY_ZONE_ID, preferences.getString(KEY_ZONE_ID, null))
             .putString(
+                ScheduledExportOccurrence.KEY_GENERATION,
+                preferences.getString(KEY_GENERATION, null),
+            )
+            .putString(
                 ScheduledExportOccurrence.KEY_ENGINE_PIN_JSON,
                 preferences.getString(KEY_ENGINE_PIN_JSON, null),
             )
@@ -62,6 +66,11 @@ class ScheduledExportStateStore @Inject constructor(
                 putString(KEY_DESTINATION_FINGERPRINT, configuration.destinationFingerprint)
             }
             putString(KEY_ZONE_ID, configuration.zoneId)
+            if (occurrence.generation == null) {
+                remove(KEY_GENERATION)
+            } else {
+                putString(KEY_GENERATION, occurrence.generation)
+            }
             if (configuration.canonicalEnginePinJson == null) {
                 remove(KEY_ENGINE_PIN_JSON)
             } else {
@@ -76,7 +85,19 @@ class ScheduledExportStateStore @Inject constructor(
     }
 
     fun clear() = synchronized(lock) {
-        preferences.edit(commit = true) { clear() }
+        preferences.edit(commit = true) {
+            OCCURRENCE_KEYS.forEach(::remove)
+        }
+    }
+
+    fun isGenerationMigrationComplete(): Boolean = synchronized(lock) {
+        preferences.getBoolean(KEY_GENERATION_MIGRATION_COMPLETE, false)
+    }
+
+    fun markGenerationMigrationComplete() = synchronized(lock) {
+        preferences.edit(commit = true) {
+            putBoolean(KEY_GENERATION_MIGRATION_COMPLETE, true)
+        }
     }
 
     private companion object {
@@ -93,7 +114,27 @@ class ScheduledExportStateStore @Inject constructor(
         const val KEY_TARGET = "target"
         const val KEY_DESTINATION_FINGERPRINT = "destination_fingerprint"
         const val KEY_ZONE_ID = "zone_id"
+        const val KEY_GENERATION = "generation"
         const val KEY_ENGINE_PIN_JSON = "engine_pin_json"
         const val KEY_SETTINGS_SNAPSHOT_JSON = "settings_snapshot_json"
+        const val KEY_GENERATION_MIGRATION_COMPLETE = "generation_migration_complete_v1"
+
+        val OCCURRENCE_KEYS = setOf(
+            KEY_SIGNATURE,
+            KEY_TRIGGER_AT_MILLIS,
+            KEY_INTENDED_LOCAL_DATE,
+            KEY_CADENCE_VALUE,
+            KEY_CADENCE_UNIT,
+            KEY_HOUR,
+            KEY_MINUTE,
+            KEY_LOOKBACK_DAYS,
+            KEY_DATE_WINDOW,
+            KEY_TARGET,
+            KEY_DESTINATION_FINGERPRINT,
+            KEY_ZONE_ID,
+            KEY_GENERATION,
+            KEY_ENGINE_PIN_JSON,
+            KEY_SETTINGS_SNAPSHOT_JSON,
+        )
     }
 }

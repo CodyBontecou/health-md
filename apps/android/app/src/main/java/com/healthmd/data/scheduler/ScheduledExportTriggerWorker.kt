@@ -18,7 +18,11 @@ class ScheduledExportTriggerWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val occurrence = ScheduledExportOccurrence.fromWorkData(inputData) ?: return Result.failure()
         return try {
-            exportScheduler.handleOccurrence(occurrence, expedited = true)
+            exportScheduler.handleOccurrence(
+                occurrence = occurrence,
+                expedited = true,
+                isFallbackDelivery = true,
+            )
             Result.success()
         } catch (_: Exception) {
             if (runAttemptCount < MAX_ATTEMPTS) Result.retry() else Result.failure()
