@@ -231,6 +231,28 @@ class SleepJournalSummaryTest {
     }
 
     @Test
+    fun `longer source remains authoritative when clipped at opening noon`() {
+        val longerAcrossNoon = session(
+            id = "longer-across-noon",
+            start = local(journalDay, 10, 0),
+            end = local(journalDay, 13, 0),
+            stages = listOf(stage(local(journalDay, 10, 0), local(journalDay, 13, 0), "deep")),
+        )
+        val shorterDuplicate = session(
+            id = "shorter-duplicate",
+            start = local(journalDay, 12, 0),
+            end = local(journalDay, 13, 30),
+            stages = listOf(stage(local(journalDay, 12, 0), local(journalDay, 13, 30), "rem")),
+        )
+
+        val sleep = summarize(journalDay, listOf(shorterDuplicate, longerAcrossNoon))
+
+        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(90)
+        assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(60)
+        assertThat(sleep.remSleep.inWholeMinutes).isEqualTo(30)
+    }
+
+    @Test
     fun `spring DST uses elapsed duration while retaining local bedtime and wake`() {
         val zone = ZoneId.of("America/Los_Angeles")
         val day = LocalDate.of(2026, 3, 7)

@@ -170,7 +170,10 @@ internal object SleepJournalSummary {
                     start = start,
                     end = end,
                     bucket = bucket,
-                    parentDurationMilliseconds = Duration.between(slice.start, slice.end).toMillis(),
+                    parentDurationMilliseconds = Duration.between(
+                        slice.source.start,
+                        slice.source.end,
+                    ).toMillis(),
                     parentStart = slice.start,
                     parentEnd = slice.end,
                     sourceKey = slice.source.stableKey(),
