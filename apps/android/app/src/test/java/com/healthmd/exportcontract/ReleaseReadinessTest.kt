@@ -22,15 +22,15 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForHealthConnectReliabilityRelease() {
+    fun appVersion_isBumpedForWidgetsAndBillingReliabilityRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 25"))
-        assertTrue(buildGradle.contains("versionName = \"1.5.4\""))
+        assertTrue(buildGradle.contains("versionCode = 26"))
+        assertTrue(buildGradle.contains("versionName = \"1.6.0\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeHealthConnectReliabilityRelease() {
+    fun playStoreReleaseNotes_describeWidgetsAndBillingReliabilityRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
@@ -39,10 +39,10 @@ class ReleaseReadinessTest {
         releaseNotePaths.forEach { path ->
             val releaseNotes = readRepoFile(path)
 
-            assertTrue(releaseNotes.contains("v1.5.4"))
-            assertTrue(releaseNotes.contains("3 to 10"))
-            assertTrue(releaseNotes.contains("Health Connect"))
-            assertTrue(releaseNotes.contains("Android 13"))
+            assertTrue(releaseNotes.contains("v1.6.0"))
+            assertTrue(releaseNotes.contains("home-screen health widgets"))
+            assertTrue(releaseNotes.contains("mobile previews"))
+            assertTrue(releaseNotes.contains("Google Play Billing"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }

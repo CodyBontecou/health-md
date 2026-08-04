@@ -1,7 +1,8 @@
-v1.5.4 — More free exports and reliable Health Connect
+v1.6.0 — Widgets, previews, and reliable upgrades
 
-• Increases free manual exports from 3 to 10.
-• Fixes Health Connect setup and permissions on Android 13 and newer.
-• Improves permission, scheduling, and export error handling.
-• Adds raw API snapshot previews before export.
-• Adds clearer guidance across all supported languages.
+• Adds four configurable home-screen health widgets with light/dark and accessibility support.
+• Lets you export directly from mobile previews.
+• Improves onboarding and guidance across all supported languages.
+• Keeps Google Play Billing available after onboarding and navigation.
+• Adds 16 KB page-size compatibility for newer Android devices.
+• Strengthens Direct CLI, scheduling, and export reliability.
