@@ -153,8 +153,18 @@ final class IndividualEntryExporter {
                     }
                     try fileSystem.writeString(content, to: coordinatedURL, atomically: true)
                 }
-            } catch FileCoordinationError.destinationChanged {
-                throw ExportError.destinationChanged
+            } catch {
+                let resolvedError: Error = error as? FileCoordinationError == .destinationChanged
+                    ? ExportError.destinationChanged
+                    : error
+                let tracked = ExportPartialWriteError(
+                    underlyingError: resolvedError,
+                    kind: .daily,
+                    individualEntryFileCount: filesWritten
+                )
+                if tracked.hasCommittedOutput { throw tracked }
+                if tracked.wasCancelled { throw CancellationError() }
+                throw resolvedError
             }
             filesWritten += 1
         }

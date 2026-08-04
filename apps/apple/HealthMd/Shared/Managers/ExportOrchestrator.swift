@@ -247,7 +247,7 @@ struct ExportOrchestrator {
                 0
             )
             self.init(
-                successCount: 0,
+                successCount: breakdown?.successfulDataDayCount ?? 0,
                 totalCount: totalCount,
                 failedDateDetails: failedDateDetails,
                 formatsPerDate: formatsPerDate,
@@ -296,12 +296,19 @@ struct ExportOrchestrator {
                 .filter { !completedDays.contains($0) }
         }
         var isFullSuccess: Bool {
-            successCount == totalCount && didCompleteAllRequestedDates && !hasPartialFailures
+            successCount == totalCount
+                && didCompleteAllRequestedDates
+                && failedDateDetails.isEmpty
+                && !hasPartialFailures
         }
         var isPartialSuccess: Bool {
-            ((successCount > 0 || dailyNoteSkipCount > 0) && successCount < totalCount) ||
-            ((successCount > 0 || dailyNoteSkipCount > 0) && wasCancelled) ||
-            ((successCount > 0 || dailyNoteSkipCount > 0) && hasPartialFailures)
+            let hasConfirmedSuccess = successCount > 0 || dailyNoteSkipCount > 0
+            return hasConfirmedSuccess && (
+                successCount < totalCount
+                    || wasCancelled
+                    || !failedDateDetails.isEmpty
+                    || hasPartialFailures
+            )
         }
         var isFailure: Bool {
             successCount == 0 && dailyNoteSkipCount == 0 && totalCount > 0
@@ -734,6 +741,19 @@ struct ExportOrchestrator {
                     let externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
                     do {
                         externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)
+                    } catch let error as ExportPartialWriteError {
+                        externalRecordFileCount += error.providerSidecarFileCount
+                        isFileAccountingComplete = false
+                        if error.wasCancelled { throw CancellationError() }
+                        partialFailures.append(ExportPartialFailure(
+                            date: date,
+                            dataType: "External integrations",
+                            dateRangeDescription: dateString,
+                            errorDescription: error.diagnostic
+                        ))
+                    } catch is CancellationError {
+                        isFileAccountingComplete = false
+                        throw CancellationError()
                     } catch {
                         isFileAccountingComplete = false
                         partialFailures.append(ExportPartialFailure(
@@ -783,8 +803,30 @@ struct ExportOrchestrator {
                 looseAggregateFileCount += error.looseAggregateFileCount
                 individualEntryFileCount += error.individualEntryFileCount
                 dataDictionaryFileCount += error.dataDictionaryFileCount
+                externalRecordFileCount += error.providerSidecarFileCount
                 dailyNoteUpdateCount += error.dailyNoteUpdateCount
                 dailyNoteSkipCount += error.dailyNoteSkipCount
+                isFileAccountingComplete = false
+                if error.wasCancelled {
+                    return ExportResult(
+                        successCount: successCount,
+                        totalCount: totalDays,
+                        failedDateDetails: failedDateDetails,
+                        partialFailures: partialFailures,
+                        formatsPerDate: formatsPerDate,
+                        looseAggregateFileCount: looseAggregateFileCount,
+                        individualEntryFileCount: individualEntryFileCount,
+                        dataDictionaryFileCount: dataDictionaryFileCount,
+                        externalRecordFileCount: externalRecordFileCount,
+                        isFileCategoryBreakdownComplete: false,
+                        dailyNoteUpdateCount: dailyNoteUpdateCount,
+                        dailyNoteSkipCount: dailyNoteSkipCount,
+                        wasCancelled: true,
+                        completedDates: settings.archiveModeEnabled
+                            ? terminalNoDataDates(in: failedDateDetails)
+                            : completedDates
+                    )
+                }
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
                     reason: .fileWriteError,
@@ -1105,26 +1147,28 @@ struct ExportOrchestrator {
                 completedDates: completedDates
             )
         } catch let error as ExportPartialWriteError {
-            if isSummaryOnly {
-                let sortedDates = records.map(\.date).sorted()
-                let firstDate = sortedDates.first ?? dates.first ?? Date()
-                let lastDate = sortedDates.last ?? firstDate
-                let first = formatter.string(from: firstDate)
-                let last = formatter.string(from: lastDate)
-                partialFailures.append(ExportPartialFailure(
-                    date: firstDate,
-                    dataType: "Roll-up summaries",
-                    dateRangeDescription: first == last ? first : "\(first) – \(last)",
-                    errorDescription: error.diagnostic
-                ))
-            } else {
-                failures.append(contentsOf: selectedRecordDates.map {
-                    FailedDateDetail(
-                        date: $0,
-                        reason: .fileWriteError,
-                        errorDetails: error.diagnostic
-                    )
-                })
+            if !error.wasCancelled {
+                if isSummaryOnly {
+                    let sortedDates = records.map(\.date).sorted()
+                    let firstDate = sortedDates.first ?? dates.first ?? Date()
+                    let lastDate = sortedDates.last ?? firstDate
+                    let first = formatter.string(from: firstDate)
+                    let last = formatter.string(from: lastDate)
+                    partialFailures.append(ExportPartialFailure(
+                        date: firstDate,
+                        dataType: "Roll-up summaries",
+                        dateRangeDescription: first == last ? first : "\(first) – \(last)",
+                        errorDescription: error.diagnostic
+                    ))
+                } else {
+                    failures.append(contentsOf: selectedRecordDates.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .fileWriteError,
+                            errorDetails: error.diagnostic
+                        )
+                    })
+                }
             }
             return ExportResult(
                 successCount: isSummaryOnly && error.rollupFileCount > 0 ? totalCount : 0,
@@ -1136,9 +1180,12 @@ struct ExportOrchestrator {
                 individualEntryFileCount: error.individualEntryFileCount,
                 dataDictionaryFileCount: error.dataDictionaryFileCount,
                 rollupFileCount: error.rollupFileCount,
-                isFileCategoryBreakdownComplete: true,
+                archiveCount: error.zipArchiveFileCount,
+                externalRecordFileCount: error.providerSidecarFileCount,
+                isFileCategoryBreakdownComplete: false,
                 dailyNoteUpdateCount: error.dailyNoteUpdateCount,
                 dailyNoteSkipCount: error.dailyNoteSkipCount,
+                wasCancelled: error.wasCancelled,
                 completedDates: completedDates
             )
         } catch {
@@ -1434,6 +1481,26 @@ struct ExportOrchestrator {
                 dataDictionaryFileCount += error.dataDictionaryFileCount
                 dailyNoteUpdateCount += error.dailyNoteUpdateCount
                 dailyNoteSkipCount += error.dailyNoteSkipCount
+                isFileAccountingComplete = false
+                if error.wasCancelled {
+                    return ExportResult(
+                        successCount: successCount,
+                        totalCount: dates.count,
+                        failedDateDetails: failedDateDetails,
+                        partialFailures: partialFailures,
+                        formatsPerDate: formatsPerDate,
+                        looseAggregateFileCount: looseAggregateFileCount,
+                        individualEntryFileCount: individualEntryFileCount,
+                        dataDictionaryFileCount: dataDictionaryFileCount,
+                        isFileCategoryBreakdownComplete: false,
+                        dailyNoteUpdateCount: dailyNoteUpdateCount,
+                        dailyNoteSkipCount: dailyNoteSkipCount,
+                        wasCancelled: true,
+                        completedDates: settings.archiveModeEnabled
+                            ? terminalNoDataDates(in: failedDateDetails)
+                            : completedDates
+                    )
+                }
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
                     reason: .fileWriteError,
@@ -1625,21 +1692,47 @@ struct ExportOrchestrator {
             )
         } catch is CancellationError {
             return .cancelled
-        } catch {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            partialFailures.append(
-                ExportPartialFailure(
-                    date: startDate,
-                    dataType: "ZIP archive",
-                    dateRangeDescription: formatter.string(from: startDate) == formatter.string(from: endDate)
-                        ? formatter.string(from: startDate)
-                        : "\(formatter.string(from: startDate)) – \(formatter.string(from: endDate))",
-                    errorDescription: error.localizedDescription
+        } catch let error as ExportPartialWriteError {
+            if !error.wasCancelled {
+                appendArchiveFailure(
+                    error.diagnostic,
+                    startDate: startDate,
+                    endDate: endDate,
+                    partialFailures: &partialFailures
                 )
+            }
+            return ArchiveWriteResult(
+                archiveCount: error.zipArchiveFileCount,
+                wasCancelled: error.wasCancelled,
+                isFileAccountingComplete: false
+            )
+        } catch {
+            appendArchiveFailure(
+                error.localizedDescription,
+                startDate: startDate,
+                endDate: endDate,
+                partialFailures: &partialFailures
             )
             return .failed
         }
+    }
+
+    private static func appendArchiveFailure(
+        _ description: String,
+        startDate: Date,
+        endDate: Date,
+        partialFailures: inout [ExportPartialFailure]
+    ) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        partialFailures.append(ExportPartialFailure(
+            date: startDate,
+            dataType: "ZIP archive",
+            dateRangeDescription: formatter.string(from: startDate) == formatter.string(from: endDate)
+                ? formatter.string(from: startDate)
+                : "\(formatter.string(from: startDate)) – \(formatter.string(from: endDate))",
+            errorDescription: description
+        ))
     }
 
     // MARK: - Roll-up Summary Export
@@ -1845,37 +1938,49 @@ struct ExportOrchestrator {
             )
         } catch is CancellationError {
             return .cancelled
-        } catch {
-            let sortedDates = rollupHealthData.map(\.date).sorted()
-            let firstDate = sortedDates.first ?? Date()
-            let lastDate = sortedDates.last ?? firstDate
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            let rangeDescription: String
-            if formatter.string(from: firstDate) == formatter.string(from: lastDate) {
-                rangeDescription = formatter.string(from: firstDate)
-            } else {
-                rangeDescription = "\(formatter.string(from: firstDate)) – \(formatter.string(from: lastDate))"
-            }
-
-            partialFailures.append(
-                ExportPartialFailure(
-                    date: firstDate,
-                    dataType: "Roll-up summaries",
-                    dateRangeDescription: rangeDescription,
-                    errorDescription: error.localizedDescription
+        } catch let error as ExportPartialWriteError {
+            if !error.wasCancelled {
+                appendRollupFailure(
+                    error.diagnostic,
+                    rollupHealthData: rollupHealthData,
+                    partialFailures: &partialFailures
                 )
+            }
+            return RollupWriteAccountingResult(
+                rollupFileCount: error.rollupFileCount,
+                dataDictionaryFileCount: error.dataDictionaryFileCount,
+                isFileAccountingComplete: false,
+                wasCancelled: error.wasCancelled
             )
-            if let partial = error as? ExportPartialWriteError {
-                return RollupWriteAccountingResult(
-                    rollupFileCount: partial.rollupFileCount,
-                    dataDictionaryFileCount: partial.dataDictionaryFileCount,
-                    isFileAccountingComplete: true,
-                    wasCancelled: false
-                )
-            }
+        } catch {
+            appendRollupFailure(
+                error.localizedDescription,
+                rollupHealthData: rollupHealthData,
+                partialFailures: &partialFailures
+            )
             return .failed
         }
+    }
+
+    private static func appendRollupFailure(
+        _ description: String,
+        rollupHealthData: [HealthData],
+        partialFailures: inout [ExportPartialFailure]
+    ) {
+        let sortedDates = rollupHealthData.map(\.date).sorted()
+        let firstDate = sortedDates.first ?? Date()
+        let lastDate = sortedDates.last ?? firstDate
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let rangeDescription = formatter.string(from: firstDate) == formatter.string(from: lastDate)
+            ? formatter.string(from: firstDate)
+            : "\(formatter.string(from: firstDate)) – \(formatter.string(from: lastDate))"
+        partialFailures.append(ExportPartialFailure(
+            date: firstDate,
+            dataType: "Roll-up summaries",
+            dateRangeDescription: rangeDescription,
+            errorDescription: description
+        ))
     }
 
     // MARK: - Failure Mapping
@@ -1951,6 +2056,7 @@ struct ExportOrchestrator {
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,
+                wasCancelled: result.wasCancelled,
                 appleExportEnginePin: appleExportEnginePin,
                 operationDetails: operationDetails
             )
@@ -1972,6 +2078,7 @@ struct ExportOrchestrator {
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,
+                wasCancelled: result.wasCancelled,
                 appleExportEnginePin: appleExportEnginePin,
                 operationDetails: operationDetails
             )

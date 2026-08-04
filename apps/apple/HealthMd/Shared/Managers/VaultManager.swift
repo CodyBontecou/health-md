@@ -994,6 +994,8 @@ nonisolated struct ExportPartialWriteError: Error, LocalizedError, Equatable, Se
         case daily
         case range
         case rollup
+        case providerSidecar
+        case archive
     }
 
     let kind: Kind
@@ -1002,14 +1004,23 @@ nonisolated struct ExportPartialWriteError: Error, LocalizedError, Equatable, Se
     let individualEntryFileCount: Int
     let dataDictionaryFileCount: Int
     let rollupFileCount: Int
+    let zipArchiveFileCount: Int
+    let providerSidecarFileCount: Int
     let dailyNoteUpdateCount: Int
     let dailyNoteSkipCount: Int
+    /// A cancellation that occurs after a confirmed commit must keep both facts:
+    /// the exact committed lower bound and cancellation as the terminal outcome.
+    let wasCancelled: Bool
 
     var committedFileCount: Int {
-        looseAggregateFileCount
-            + individualEntryFileCount
-            + dataDictionaryFileCount
-            + rollupFileCount
+        [
+            looseAggregateFileCount,
+            individualEntryFileCount,
+            dataDictionaryFileCount,
+            rollupFileCount,
+            zipArchiveFileCount,
+            providerSidecarFileCount
+        ].reduce(0, Self.saturatingAdd)
     }
 
     var hasCommittedOutput: Bool {
@@ -1025,17 +1036,47 @@ nonisolated struct ExportPartialWriteError: Error, LocalizedError, Equatable, Se
         individualEntryFileCount: Int = 0,
         dataDictionaryFileCount: Int = 0,
         rollupFileCount: Int = 0,
+        zipArchiveFileCount: Int = 0,
+        providerSidecarFileCount: Int = 0,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0
     ) {
+        let nested = underlyingError as? ExportPartialWriteError
         self.kind = kind
-        diagnostic = underlyingError.localizedDescription
-        self.looseAggregateFileCount = max(looseAggregateFileCount, 0)
-        self.individualEntryFileCount = max(individualEntryFileCount, 0)
-        self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
-        self.rollupFileCount = max(rollupFileCount, 0)
-        self.dailyNoteUpdateCount = max(dailyNoteUpdateCount, 0)
-        self.dailyNoteSkipCount = max(dailyNoteSkipCount, 0)
+        diagnostic = nested?.diagnostic ?? underlyingError.localizedDescription
+        self.looseAggregateFileCount = Self.saturatingAdd(
+            max(looseAggregateFileCount, 0),
+            nested?.looseAggregateFileCount ?? 0
+        )
+        self.individualEntryFileCount = Self.saturatingAdd(
+            max(individualEntryFileCount, 0),
+            nested?.individualEntryFileCount ?? 0
+        )
+        self.dataDictionaryFileCount = Self.saturatingAdd(
+            max(dataDictionaryFileCount, 0),
+            nested?.dataDictionaryFileCount ?? 0
+        )
+        self.rollupFileCount = Self.saturatingAdd(
+            max(rollupFileCount, 0),
+            nested?.rollupFileCount ?? 0
+        )
+        self.zipArchiveFileCount = Self.saturatingAdd(
+            max(zipArchiveFileCount, 0),
+            nested?.zipArchiveFileCount ?? 0
+        )
+        self.providerSidecarFileCount = Self.saturatingAdd(
+            max(providerSidecarFileCount, 0),
+            nested?.providerSidecarFileCount ?? 0
+        )
+        self.dailyNoteUpdateCount = Self.saturatingAdd(
+            max(dailyNoteUpdateCount, 0),
+            nested?.dailyNoteUpdateCount ?? 0
+        )
+        self.dailyNoteSkipCount = Self.saturatingAdd(
+            max(dailyNoteSkipCount, 0),
+            nested?.dailyNoteSkipCount ?? 0
+        )
+        wasCancelled = nested?.wasCancelled ?? (underlyingError is CancellationError)
     }
 
     init(underlyingError: Error, dailyResult: DailyExportWriteResult) {
@@ -1067,6 +1108,11 @@ nonisolated struct ExportPartialWriteError: Error, LocalizedError, Equatable, Se
             dataDictionaryFileCount: rollupResult.dataDictionaryFileCount,
             rollupFileCount: rollupResult.count
         )
+    }
+
+    private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
+        let sum = lhs.addingReportingOverflow(rhs)
+        return sum.overflow ? Int.max : sum.partialValue
     }
 }
 
@@ -1778,14 +1824,34 @@ final class VaultManager: ObservableObject {
         do {
             try await barrier.transition(to: .committing)
             var writtenFiles: [WrittenAggregateFile] = []
+            var committedResult = AppleLooseDailyRangeWriteResult(
+                dailyFileCount: 0,
+                rollupFileCount: 0
+            )
             for (planned, request) in aggregateRequests {
-                let outcome = try await aggregateFileWriter.write(request)
+                let outcome: AggregateFileWriteOutcome
+                do {
+                    outcome = try await aggregateFileWriter.write(request)
+                } catch {
+                    try rethrowTrackedWriteFailure(error) {
+                        ExportPartialWriteError(
+                            underlyingError: $0,
+                            rangeResult: committedResult
+                        )
+                    }
+                }
                 writtenFiles.append(WrittenAggregateFile(
                     fileURL: outcome.fileURL,
                     filename: outcome.filename,
                     relativePath: planned.artifact.relativePath,
                     format: planned.format
                 ))
+                committedResult = AppleLooseDailyRangeWriteResult(
+                    dailyFileCount: committedResult.dailyFileCount
+                        + (planned.kind == .daily ? 1 : 0),
+                    rollupFileCount: committedResult.rollupFileCount
+                        + (planned.kind == .rollup ? 1 : 0)
+                )
             }
             // Keep the shared dictionary as the final fallible artifact write. If it fails, every
             // previously committed daily and roll-up artifact remains exactly accounted for.
@@ -1796,12 +1862,26 @@ final class VaultManager: ObservableObject {
                     try rethrowTrackedWriteFailure(error) {
                         ExportPartialWriteError(
                             underlyingError: $0,
-                            rangeResult: materialized.result
+                            rangeResult: committedResult
                         )
                     }
                 }
+                committedResult = AppleLooseDailyRangeWriteResult(
+                    dailyFileCount: committedResult.dailyFileCount,
+                    rollupFileCount: committedResult.rollupFileCount,
+                    dataDictionaryFileCount: 1
+                )
             }
-            try await barrier.transition(to: .completed)
+            do {
+                try await barrier.transition(to: .completed)
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        rangeResult: committedResult
+                    )
+                }
+            }
             lastExportStatus = "Exported \(writtenFiles.count) files from one frozen range plan"
             if let previewFile = preferredPresentationFile(in: writtenFiles) {
                 recordExportPresentationTarget(
@@ -1809,11 +1889,7 @@ final class VaultManager: ObservableObject {
                     securityScopedRootURL: vaultURL
                 )
             }
-            return AppleLooseDailyRangeWriteResult(
-                dailyFileCount: materialized.result.dailyFileCount,
-                rollupFileCount: materialized.result.rollupFileCount,
-                dataDictionaryFileCount: dictionaryRequest == nil ? 0 : 1
-            )
+            return committedResult
         } catch {
             try? await barrier.transition(to: .failed)
             throw error
@@ -2154,13 +2230,24 @@ final class VaultManager: ObservableObject {
                 date: date,
                 format: format
             )
-            let result = try writeOneFormat(
-                preparedExport: preparedExport,
-                date: date,
-                format: format,
-                targetFolderURL: targetFolderURL,
-                settings: settings
-            )
+            let result: AggregateFileWriteOutcome
+            do {
+                result = try writeOneFormat(
+                    preparedExport: preparedExport,
+                    date: date,
+                    format: format,
+                    targetFolderURL: targetFolderURL,
+                    settings: settings
+                )
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .daily,
+                        looseAggregateFileCount: writtenFiles.count
+                    )
+                }
+            }
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: result.fileURL,
                 filename: result.filename,
@@ -2175,13 +2262,27 @@ final class VaultManager: ObservableObject {
             if index == 0 { leadingAction = result.action }
         }
 
-        let sideEffects = try performHealthDataOutputSideEffects(
-            healthData,
-            date: date,
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
-            settings: settings
+        let sideEffects: (
+            individualEntryFileCount: Int,
+            dailyNoteResult: DailyNoteInjector.InjectionResult?
         )
+        do {
+            sideEffects = try performHealthDataOutputSideEffects(
+                healthData,
+                date: date,
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings
+            )
+        } catch {
+            try rethrowTrackedWriteFailure(error) {
+                ExportPartialWriteError(
+                    underlyingError: $0,
+                    kind: .daily,
+                    looseAggregateFileCount: writtenFiles.count
+                )
+            }
+        }
         let dataDictionaryFileCount: Int
         if let dictionaryRequest {
             do {
@@ -2282,13 +2383,24 @@ final class VaultManager: ObservableObject {
                 date: date,
                 format: format
             )
-            let result = try await writeOneFormatOffMain(
-                preparedExport: preparedExport,
-                date: date,
-                format: format,
-                targetFolderURL: targetFolderURL,
-                settings: settings
-            )
+            let result: AggregateFileWriteOutcome
+            do {
+                result = try await writeOneFormatOffMain(
+                    preparedExport: preparedExport,
+                    date: date,
+                    format: format,
+                    targetFolderURL: targetFolderURL,
+                    settings: settings
+                )
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .daily,
+                        looseAggregateFileCount: writtenFiles.count
+                    )
+                }
+            }
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: result.fileURL,
                 filename: result.filename,
@@ -2303,13 +2415,27 @@ final class VaultManager: ObservableObject {
             if index == 0 { leadingAction = result.action }
         }
 
-        let sideEffects = try performHealthDataOutputSideEffects(
-            healthData,
-            date: date,
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
-            settings: settings
+        let sideEffects: (
+            individualEntryFileCount: Int,
+            dailyNoteResult: DailyNoteInjector.InjectionResult?
         )
+        do {
+            sideEffects = try performHealthDataOutputSideEffects(
+                healthData,
+                date: date,
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings
+            )
+        } catch {
+            try rethrowTrackedWriteFailure(error) {
+                ExportPartialWriteError(
+                    underlyingError: $0,
+                    kind: .daily,
+                    looseAggregateFileCount: writtenFiles.count
+                )
+            }
+        }
         let dataDictionaryFileCount: Int
         if let dictionaryRequest {
             do {
@@ -2418,7 +2544,18 @@ final class VaultManager: ObservableObject {
             var writtenFiles: [WrittenAggregateFile] = []
             var leadingAction = "Exported to"
             for (index, pair) in aggregateRequests.enumerated() {
-                let outcome = try await aggregateFileWriter.write(pair.1)
+                let outcome: AggregateFileWriteOutcome
+                do {
+                    outcome = try await aggregateFileWriter.write(pair.1)
+                } catch {
+                    try rethrowTrackedWriteFailure(error) {
+                        ExportPartialWriteError(
+                            underlyingError: $0,
+                            kind: .daily,
+                            looseAggregateFileCount: writtenFiles.count
+                        )
+                    }
+                }
                 writtenFiles.append(WrittenAggregateFile(
                     fileURL: outcome.fileURL,
                     filename: outcome.filename,
@@ -2428,13 +2565,27 @@ final class VaultManager: ObservableObject {
                 if index == 0 { leadingAction = outcome.action }
             }
 
-            let sideEffects = try performHealthDataOutputSideEffects(
-                healthData,
-                date: date,
-                vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                settings: settings
+            let sideEffects: (
+                individualEntryFileCount: Int,
+                dailyNoteResult: DailyNoteInjector.InjectionResult?
             )
+            do {
+                sideEffects = try performHealthDataOutputSideEffects(
+                    healthData,
+                    date: date,
+                    vaultURL: vaultURL,
+                    healthSubfolder: healthSubfolder,
+                    settings: settings
+                )
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .daily,
+                        looseAggregateFileCount: writtenFiles.count
+                    )
+                }
+            }
             let dataDictionaryFileCount: Int
             if let dictionaryRequest {
                 do {
@@ -2464,7 +2615,13 @@ final class VaultManager: ObservableObject {
                 dailyNoteResult: sideEffects.dailyNoteResult,
                 leadingAction: leadingAction
             )
-            try await barrier.transition(to: .completed)
+            do {
+                try await barrier.transition(to: .completed)
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, dailyResult: result)
+                }
+            }
             #if DEBUG
             ExportPerformanceInstrumentation.completed(
                 pipeline: "local-files",
@@ -2509,23 +2666,33 @@ final class VaultManager: ObservableObject {
 
         var writtenCount = 0
         for record in records where record.shouldExport {
-            guard record.hasValidExportDate else {
-                throw ExternalProviderExportError.invalidDate(record.date)
+            do {
+                guard record.hasValidExportDate else {
+                    throw ExternalProviderExportError.invalidDate(record.date)
+                }
+                let providerFolderURL = integrationsFolderURL.appendingPathComponent(
+                    record.provider.exportFolderName,
+                    isDirectory: true
+                )
+                let data = try encoder.encode(record)
+                guard let json = String(data: data, encoding: .utf8) else { continue }
+                let fileURL = providerFolderURL.appendingPathComponent("\(record.date).json")
+                _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
+                    fileURL: fileURL,
+                    filename: fileURL.lastPathComponent,
+                    newContent: json,
+                    behavior: .overwrite
+                ))
+                writtenCount += 1
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .providerSidecar,
+                        providerSidecarFileCount: writtenCount
+                    )
+                }
             }
-            let providerFolderURL = integrationsFolderURL.appendingPathComponent(
-                record.provider.exportFolderName,
-                isDirectory: true
-            )
-            let data = try encoder.encode(record)
-            guard let json = String(data: data, encoding: .utf8) else { continue }
-            let fileURL = providerFolderURL.appendingPathComponent("\(record.date).json")
-            _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: fileURL.lastPathComponent,
-                newContent: json,
-                behavior: .overwrite
-            ))
-            writtenCount += 1
         }
 
         return writtenCount
@@ -3276,7 +3443,6 @@ final class VaultManager: ObservableObject {
         }
         var writtenTargets: [HealthRollupWriteResult] = []
         for target in targets {
-            try checkCancellation()
             let folderURL = HealthRollupExporter.folderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3286,6 +3452,7 @@ final class VaultManager: ObservableObject {
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
             do {
+                try checkCancellation()
                 _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
                     fileURL: fileURL,
                     filename: target.filename,
@@ -3305,10 +3472,10 @@ final class VaultManager: ObservableObject {
             progress?(finalizedUnits, estimatedUnits, target.summary.window.endDate)
             await Task.yield()
         }
-        try checkCancellation()
         let dataDictionaryFileCount: Int
         if let dictionaryRequest {
             do {
+                try checkCancellation()
                 _ = try await aggregateFileWriter.write(dictionaryRequest)
                 dataDictionaryFileCount = 1
             } catch {
@@ -3468,9 +3635,11 @@ final class VaultManager: ObservableObject {
         _ error: Error,
         accounting: (Error) -> ExportPartialWriteError
     ) throws -> Never {
-        if error is CancellationError { throw error }
+        let tracked = accounting(error)
+        if tracked.hasCommittedOutput { throw tracked }
+        if tracked.wasCancelled { throw CancellationError() }
         if let partial = error as? ExportPartialWriteError { throw partial }
-        throw accounting(error)
+        throw error
     }
 
     // MARK: - Per-Format Writer
