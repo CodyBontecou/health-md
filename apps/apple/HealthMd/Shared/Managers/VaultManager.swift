@@ -2614,7 +2614,7 @@ final class VaultManager: ObservableObject {
         }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        let dictionaryRequest = if shouldWriteDataDictionary {
+        let dictionaryRequest: AggregateFileWriteRequest? = if shouldWriteDataDictionary {
             try makeDataDictionaryWriteRequest(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3025,7 +3025,7 @@ final class VaultManager: ObservableObject {
         guard !summaries.isEmpty else {
             return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
         }
-        let dictionaryRequest = if shouldWriteDataDictionary {
+        let dictionaryRequest: AggregateFileWriteRequest? = if shouldWriteDataDictionary {
             try makeDataDictionaryWriteRequest(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,

@@ -2051,7 +2051,12 @@ final class MacCorpusExportSessionManager {
             throw ReceivedRangeCommitError.invalid
         }
 
-        if let dictionary = initialPlan.dataDictionary {
+        // Older resumable journals may already have acknowledged the dictionary under the
+        // previous commit order. Validate that checkpoint before performing any new writes.
+        if initialPlan.dataDictionaryAcknowledged {
+            guard let dictionary = initialPlan.dataDictionary else {
+                throw ReceivedRangeCommitError.invalid
+            }
             let data: Data
             do {
                 data = try protectedFinalizationData(
@@ -2068,45 +2073,7 @@ final class MacCorpusExportSessionManager {
                 vaultManager: vaultManager
             )
             try ensureFinalizationIsActive(session)
-            guard let current = session.journal.receivedRangePlan else {
-                throw ReceivedRangeCommitError.invalid
-            }
-            if current.dataDictionaryAcknowledged {
-                guard state == .exact else { throw ReceivedRangeCommitError.invalid }
-            } else {
-                try await withDestinationCommitTransaction(session: session) {
-                    let transactionalState = try await exactDestinationState(
-                        relativePath: dictionary.relativePath,
-                        data: data,
-                        binding: initialPlan.destinationBinding,
-                        vaultManager: vaultManager
-                    )
-                    try ensureFinalizationIsActive(session)
-                    if transactionalState != .exact {
-                        try await overwriteExactDestination(
-                            relativePath: dictionary.relativePath,
-                            data: data,
-                            binding: initialPlan.destinationBinding,
-                            session: session,
-                            vaultManager: vaultManager
-                        )
-                        try ensureFinalizationIsActive(session)
-                    }
-                    let readback = try await exactDestinationState(
-                        relativePath: dictionary.relativePath,
-                        data: data,
-                        binding: initialPlan.destinationBinding,
-                        vaultManager: vaultManager
-                    )
-                    try ensureFinalizationIsActive(session)
-                    guard readback == .exact else { throw ReceivedRangeCommitError.invalid }
-                    try advanceReceivedRangePlan(session: session) { plan in
-                        plan.dataDictionaryAcknowledged = true
-                    }
-                }
-            }
-        } else if initialPlan.dataDictionaryAcknowledged {
-            throw ReceivedRangeCommitError.invalid
+            guard state == .exact else { throw ReceivedRangeCommitError.invalid }
         }
 
         for index in initialPlan.artifacts.indices {
@@ -2169,6 +2136,66 @@ final class MacCorpusExportSessionManager {
                 }
             }
         }
+
+        // For new and unacknowledged plans, keep the data dictionary as the terminal destination
+        // write so a prior daily or roll-up artifact failure cannot leave it uncounted.
+        if let dictionary = initialPlan.dataDictionary,
+           !initialPlan.dataDictionaryAcknowledged {
+            let data: Data
+            do {
+                data = try protectedFinalizationData(
+                    dictionary,
+                    sessionDirectoryURL: session.directoryURL
+                )
+            } catch {
+                throw ReceivedRangeCommitError.invalid
+            }
+            let state = try await exactDestinationState(
+                relativePath: dictionary.relativePath,
+                data: data,
+                binding: initialPlan.destinationBinding,
+                vaultManager: vaultManager
+            )
+            try ensureFinalizationIsActive(session)
+            guard let current = session.journal.receivedRangePlan else {
+                throw ReceivedRangeCommitError.invalid
+            }
+            if current.dataDictionaryAcknowledged {
+                guard state == .exact else { throw ReceivedRangeCommitError.invalid }
+            } else {
+                try await withDestinationCommitTransaction(session: session) {
+                    let transactionalState = try await exactDestinationState(
+                        relativePath: dictionary.relativePath,
+                        data: data,
+                        binding: initialPlan.destinationBinding,
+                        vaultManager: vaultManager
+                    )
+                    try ensureFinalizationIsActive(session)
+                    if transactionalState != .exact {
+                        try await overwriteExactDestination(
+                            relativePath: dictionary.relativePath,
+                            data: data,
+                            binding: initialPlan.destinationBinding,
+                            session: session,
+                            vaultManager: vaultManager
+                        )
+                        try ensureFinalizationIsActive(session)
+                    }
+                    let readback = try await exactDestinationState(
+                        relativePath: dictionary.relativePath,
+                        data: data,
+                        binding: initialPlan.destinationBinding,
+                        vaultManager: vaultManager
+                    )
+                    try ensureFinalizationIsActive(session)
+                    guard readback == .exact else { throw ReceivedRangeCommitError.invalid }
+                    try advanceReceivedRangePlan(session: session) { plan in
+                        plan.dataDictionaryAcknowledged = true
+                    }
+                }
+            }
+        }
+
         guard let completedPlan = session.journal.receivedRangePlan,
               completedPlan.dataDictionary == nil || completedPlan.dataDictionaryAcknowledged,
               completedPlan.nextArtifactIndex == completedPlan.artifacts.count else {

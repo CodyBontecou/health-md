@@ -803,6 +803,37 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         )
     }
 
+    func testPinnedConnectedRangeDefersDictionaryUntilAllArtifactsSucceed() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(
+            failAfterDictionaryWrite: false,
+            failBeforeFirstArtifactWrite: true
+        )
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        XCTAssertNil(fileSystem.files[dictionaryPath])
+        XCTAssertNil(fileSystem.writeCounts[dictionaryPath])
+
+        let rejectingPlanner = RejectingConnectedRangePlanner()
+        let resumedVault = VaultManager(
+            defaults: defaults,
+            fileSystem: fileSystem,
+            bookmarkResolver: bookmarkResolver,
+            appleLooseDailyPlanner: rejectingPlanner
+        )
+        resumedVault.setVaultFolder(vaultRoot)
+        let outcome = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+            interrupted.finalize,
+            vaultManager: resumedVault
+        )
+        guard case .files(let result, _) = outcome else {
+            return XCTFail("Expected resumed exact range completion")
+        }
+        XCTAssertEqual(result.totalFilesWritten, 3)
+        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1)
+        XCTAssertEqual(rejectingPlanner.callCount, 0)
+    }
+
     func testPinnedConnectedRangeRetainsPublishedPlanAfterPostRenameSyncFailure() async throws {
         let interrupted = try await prepareInterruptedPinnedRange(
             failAfterDictionaryWrite: false,
@@ -1154,9 +1185,10 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let readbackStarted = expectation(description: "dictionary readback started")
         let readbackBlocker = DispatchSemaphore(value: 0)
         fileSystem.readStarted = { url in
-            if url.path == dictionaryPath { readbackStarted.fulfill() }
+            guard url.path == dictionaryPath else { return }
+            self.fileSystem.readBlocker = readbackBlocker
+            readbackStarted.fulfill()
         }
-        fileSystem.readBlocker = readbackBlocker
         defer {
             fileSystem.readStarted = nil
             fileSystem.readBlocker = nil
@@ -1198,7 +1230,23 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             .appendingPathComponent("Health")
             .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
         let dailyPath = vaultRoot.appendingPathComponent("Health/2026-03-02.json").path
-        fileSystem.failBeforeWritingPathOnce = dailyPath
+        let journalURL = sessionRoot
+            .appendingPathComponent(interrupted.sessionID.uuidString)
+            .appendingPathComponent("journal.json")
+        var journalObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(contentsOf: journalURL)) as? [String: Any]
+        )
+        var rangePlan = try XCTUnwrap(journalObject["receivedRangePlan"] as? [String: Any])
+        // Simulate a journal produced by the earlier dictionary-first commit order: the
+        // dictionary is acknowledged while destination artifacts still need to resume.
+        rangePlan["dataDictionaryAcknowledged"] = true
+        rangePlan["nextArtifactIndex"] = 0
+        journalObject["receivedRangePlan"] = rangePlan
+        try JSONSerialization.data(withJSONObject: journalObject, options: [.sortedKeys])
+            .write(to: journalURL, options: .atomic)
+        fileSystem.files.removeValue(forKey: dailyPath)
+        fileSystem.files[dictionaryPath] = "user changed acknowledged bytes"
+        let writesBeforeDriftCheck = fileSystem.writeCounts
 
         let rejectingPlanner = RejectingConnectedRangePlanner()
         let resumedVault = VaultManager(
@@ -1208,17 +1256,6 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             appleLooseDailyPlanner: rejectingPlanner
         )
         resumedVault.setVaultFolder(vaultRoot)
-        let firstResume = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
-            interrupted.finalize,
-            vaultManager: resumedVault
-        )
-        guard case .inProgress = firstResume else {
-            return XCTFail("Expected failure after dictionary acknowledgement")
-        }
-        XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1)
-        fileSystem.files[dictionaryPath] = "user changed acknowledged bytes"
-        let writesBeforeDriftCheck = fileSystem.writeCounts
-
         do {
             _ = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
                 interrupted.finalize,
@@ -1231,6 +1268,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
         XCTAssertEqual(fileSystem.writeCounts, writesBeforeDriftCheck)
+        XCTAssertNil(fileSystem.files[dailyPath], "Drift must fail before resumed artifact writes")
         XCTAssertEqual(rejectingPlanner.callCount, 0)
     }
 
@@ -1281,6 +1319,10 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         object.removeValue(forKey: "protectedSessionInode")
         try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
             .write(to: journalURL, options: .atomic)
+        let writesBeforeResume = fileSystem.writeCounts
+        let dictionaryPath = vaultRoot
+            .appendingPathComponent("Health")
+            .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
 
         let rejectingPlanner = RejectingConnectedRangePlanner()
         let resumedVault = VaultManager(
@@ -1302,7 +1344,8 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             XCTFail("Unexpected error: \(error)")
         }
         XCTAssertEqual(rejectingPlanner.callCount, 0)
-        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertEqual(fileSystem.writeCounts, writesBeforeResume)
+        XCTAssertNil(fileSystem.files[dictionaryPath])
     }
 
     func testPinnedConnectedRangeWithMissingSupportDayFailsBeforeDestinationWrite() async throws {
@@ -2927,6 +2970,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
 
     private func prepareInterruptedPinnedRange(
         failAfterDictionaryWrite: Bool,
+        failBeforeFirstArtifactWrite: Bool = false,
         failAfterRangePlanJournalPublication: Bool = false
     ) async throws -> (
         finalize: ConnectedCorpusTransferFinalize,
@@ -2982,6 +3026,9 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
         if failAfterRangePlanJournalPublication {
             manager.failNextPostRenameRangePlanSyncForTesting = true
+        } else if failBeforeFirstArtifactWrite {
+            fileSystem.failBeforeWritingPathOnce = vaultRoot
+                .appendingPathComponent("Health/2026-03-02.json").path
         } else if failAfterDictionaryWrite {
             fileSystem.failAfterWritingPathOnce = dictionaryPath
         } else {

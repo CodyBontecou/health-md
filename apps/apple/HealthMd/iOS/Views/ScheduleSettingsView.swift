@@ -1457,11 +1457,11 @@ struct ExportHistoryDetailView: View {
                     )
                     historyValueRow(
                         "Requested",
-                        value: dataDayDescription(entry.outputBreakdown.requestedDataDayCount)
+                        value: Self.dataDayDescription(entry.outputBreakdown.requestedDataDayCount)
                     )
                     historyValueRow(
                         "Successful",
-                        value: dataDayDescription(entry.outputBreakdown.successfulDataDayCount)
+                        value: Self.dataDayDescription(entry.outputBreakdown.successfulDataDayCount)
                     )
                 } header: {
                     Text("Data days")
@@ -1836,7 +1836,7 @@ struct ExportHistoryDetailView: View {
         }
     }
 
-    private func dataDayDescription(_ count: Int) -> String {
+    static func dataDayDescription(_ count: Int) -> String {
         count == 1
             ? String(localized: "1 data day", comment: "Export history detail count for one data day")
             : String(localized: "\(count) data days", comment: "Export history detail count for multiple or zero data days")
