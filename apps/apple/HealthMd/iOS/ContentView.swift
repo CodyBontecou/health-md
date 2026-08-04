@@ -1048,7 +1048,9 @@ struct ContentView: View {
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
-                    exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
+                    exportStatusMessage = GeneratedFileCountText.localizedDailyNotesUpdated(
+                        count: result.dailyNoteUpdateCount
+                    )
                     vaultManager.lastExportStatus = exportStatusMessage
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = GeneratedFileCountText.localizedSuccessfulExport(
@@ -1080,7 +1082,14 @@ struct ContentView: View {
                 }
                 let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                let suffix = warning ?? "Failed: \(failedDatesStr)"
+                let suffix = warning ?? {
+                    if result.hadTerminalFailure {
+                        return GeneratedFileCountText.localizedTerminalFailure
+                    }
+                    return failedDatesStr.isEmpty
+                        ? GeneratedFileCountText.localizedIncompleteDataDays
+                        : GeneratedFileCountText.localizedFailedDates(failedDatesStr)
+                }()
                 if isCompletedDailyNoteSkip {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
                     vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
@@ -1228,7 +1237,9 @@ struct ContentView: View {
                 partialExportNotice = PartialExportNotice(result: result)
                 let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                let suffix = warning ?? "Failed: \(failedDatesStr)"
+                let suffix = warning ?? (failedDatesStr.isEmpty
+                    ? GeneratedFileCountText.localizedIncompleteDataDays
+                    : GeneratedFileCountText.localizedFailedDates(failedDatesStr))
                 let uploadedDaySentence = totalDays == 1
                     ? String(localized: "Uploaded \(result.successCount) of 1 data day to API.", comment: "Partial API export status when one data day was requested")
                     : String(localized: "Uploaded \(result.successCount) of \(totalDays) data days to API.", comment: "Partial API export status when multiple data days were requested")
@@ -1964,7 +1975,10 @@ struct ContentView: View {
         switch result.status {
         case .success:
             if completionSettings.dailyNotesOnlyModeEnabled {
-                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)"
+                exportStatusMessage = GeneratedFileCountText.localizedDailyNotesUpdated(
+                    count: result.dailyNoteUpdateCount,
+                    destination: destinationName
+                )
                 vaultManager.lastExportStatus = exportStatusMessage
             } else if result.formatsPerDate > 1 || result.totalFilesWritten > 0 {
                 exportStatusMessage = GeneratedFileCountText.localizedSuccessfulExport(
@@ -1998,15 +2012,19 @@ struct ContentView: View {
             }
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
             let failureDescription = failedDatesStr.isEmpty
-                ? String(localized: "The Mac export did not finish successfully.", comment: "Connected Mac terminal failure without failed data dates")
-                : String(localized: "Failed dates: \(failedDatesStr).", comment: "Connected Mac partial export failed-date summary")
+                ? GeneratedFileCountText.localizedTerminalFailure
+                : GeneratedFileCountText.localizedFailedDates(failedDatesStr)
             if isCompletedDailyNoteSkip {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes on \(destinationName). No export files were created."
                 vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
                 startStatusDismissTimer()
             } else if completionSettings.dailyNotesOnlyModeEnabled {
-                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). Failed: \(failedDatesStr)"
-                vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
+                exportStatusMessage = GeneratedFileCountText.localizedPartialDailyNoteUpdate(
+                    updatedCount: result.dailyNoteUpdateCount,
+                    totalCount: result.totalCount,
+                    destination: destinationName
+                ) + " " + failureDescription
+                vaultManager.lastExportStatus = exportStatusMessage
             } else if result.formatsPerDate > 1 || result.totalFilesWritten > 0 {
                 exportStatusMessage = GeneratedFileCountText.localizedExported(
                     count: exportResult.totalFilesWritten,

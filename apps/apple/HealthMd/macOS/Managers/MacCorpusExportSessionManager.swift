@@ -4029,17 +4029,23 @@ final class MacCorpusExportSessionManager {
             successfulDates.contains($0)
                 && (!settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled || durableDates.contains($0))
         }.count
-        let status: MacExportResultStatus = forcedStatus ?? {
-            if successCount == requestedDates.count && session.journal.failedDateDetails.isEmpty { return .success }
-            if successCount > 0 || (session.journal.dailyNoteSkipCount ?? 0) > 0 { return .partialSuccess }
-            return .failure
-        }()
-        let formatsPerDate = settings.looseFormatsPerDate
         let accounting = session.journal.fileAccounting
             ?? .legacy(
                 totalFilesWritten: session.journal.totalFilesWritten,
                 providerSidecarFileCount: session.journal.externalRecordFileCount
             )
+        let status: MacExportResultStatus = forcedStatus ?? {
+            if successCount == requestedDates.count,
+               session.journal.failedDateDetails.isEmpty,
+               accounting.isTotalFileCountAuthoritative {
+                return .success
+            }
+            if successCount > 0 || (session.journal.dailyNoteSkipCount ?? 0) > 0 {
+                return .partialSuccess
+            }
+            return .failure
+        }()
+        let formatsPerDate = settings.looseFormatsPerDate
         let outputBreakdown = accounting.breakdown(
             requestedDataDayCount: requestedDates.count,
             successfulDataDayCount: successCount,

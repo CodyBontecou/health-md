@@ -485,12 +485,12 @@ final class MacExportJobExecutor {
             do {
                 let dateKey = Self.displayDate(record.date)
                 let externalRecordsForDate = externalRecordsByDate[dateKey] ?? []
-                if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
-                    try vaultManager.preflightExternalDailyRecordDestinations(
+                let externalRecordPlan = settings.writesExternalProviderSidecars
+                    ? try vaultManager.planExternalDailyRecordDestinations(
                         externalRecordsForDate,
                         healthSubfolder: job.settingsSnapshot.healthSubfolder
                     )
-                }
+                    : nil
                 let writeResult = try await vaultManager.exportHealthData(
                     record,
                     settings: settings,
@@ -537,11 +537,10 @@ final class MacExportJobExecutor {
                 totalFilesWritten += writeResult.totalGeneratedFileCount
 
                 var writtenSidecarsForDate = 0
-                if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
+                if let externalRecordPlan {
                     do {
                         writtenSidecarsForDate = try await vaultManager.exportExternalDailyRecords(
-                            externalRecordsForDate,
-                            healthSubfolder: job.settingsSnapshot.healthSubfolder
+                            externalRecordPlan
                         )
                         externalRecordFileCount += writtenSidecarsForDate
                         fileAccounting.externalRecordFileCount += writtenSidecarsForDate
@@ -769,7 +768,9 @@ final class MacExportJobExecutor {
         }
 
         let status: MacExportResultStatus
-        if successCount == totalDays && failedDateDetails.isEmpty {
+        if successCount == totalDays,
+           failedDateDetails.isEmpty,
+           fileAccounting.isComplete {
             status = .success
         } else if successCount > 0 || dailyNoteSkipCount > 0 {
             status = .partialSuccess
@@ -1031,12 +1032,12 @@ final class MacExportJobExecutor {
                 do {
                     let stringDateKey = Self.displayDate(record.date)
                     let externalRecordsForDate = externalRecordsByDate[stringDateKey] ?? []
-                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
-                        try vaultManager.preflightExternalDailyRecordDestinations(
+                    let externalRecordPlan = settings.writesExternalProviderSidecars
+                        ? try vaultManager.planExternalDailyRecordDestinations(
                             externalRecordsForDate,
                             healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                         )
-                    }
+                        : nil
                     let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
@@ -1082,11 +1083,10 @@ final class MacExportJobExecutor {
                     session.fileAccounting.add(writeResult)
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
 
-                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
+                    if let externalRecordPlan {
                         do {
                             let sidecarCount = try await vaultManager.exportExternalDailyRecords(
-                                externalRecordsForDate,
-                                healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                                externalRecordPlan
                             )
                             session.externalRecordFileCount += sidecarCount
                             session.fileAccounting.externalRecordFileCount += sidecarCount
@@ -1303,12 +1303,12 @@ final class MacExportJobExecutor {
                 do {
                     let dateKey = Self.displayDate(record.date)
                     let externalRecordsForDate = externalRecordsByDate[dateKey] ?? []
-                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
-                        try vaultManager.preflightExternalDailyRecordDestinations(
+                    let externalRecordPlan = settings.writesExternalProviderSidecars
+                        ? try vaultManager.planExternalDailyRecordDestinations(
                             externalRecordsForDate,
                             healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                         )
-                    }
+                        : nil
                     let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
@@ -1326,10 +1326,9 @@ final class MacExportJobExecutor {
                     session.successfulRecords.append(record)
                     session.fileAccounting.add(writeResult)
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
-                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
+                    if let externalRecordPlan {
                         let sidecarCount = try await vaultManager.exportExternalDailyRecords(
-                            externalRecordsForDate,
-                            healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                            externalRecordPlan
                         )
                         session.externalRecordFileCount += sidecarCount
                         session.fileAccounting.externalRecordFileCount += sidecarCount
@@ -1504,7 +1503,9 @@ final class MacExportJobExecutor {
 
         let totalDays = session.start.totalRequestedDays
         let status: MacExportResultStatus
-        if session.successCount == totalDays && session.failedDateDetails.isEmpty {
+        if session.successCount == totalDays,
+           session.failedDateDetails.isEmpty,
+           session.fileAccounting.isComplete {
             status = .success
         } else if session.successCount > 0 || session.dailyNoteSkipCount > 0 {
             status = .partialSuccess

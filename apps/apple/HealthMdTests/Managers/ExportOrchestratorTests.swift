@@ -253,6 +253,102 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(cliZero.generatedFileCountDescription, "0 files")
     }
 
+    func testLocalizedLiveStatusesUseCompleteExactLowerBoundAndUnknownSentences() {
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedSuccessfulExport(count: 1, isAuthoritative: true),
+            "Successfully exported 1 file."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedSuccessfulExport(count: 3, isAuthoritative: true),
+            "Successfully exported 3 files."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedSuccessfulExport(count: 1, isAuthoritative: false),
+            "Successfully exported at least 1 file."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedSuccessfulExport(count: 3, isAuthoritative: false),
+            "Successfully exported at least 3 files."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedSuccessfulExport(count: 0, isAuthoritative: false),
+            "The export succeeded, but the generated-file count is unknown."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedSuccessfulExport(
+                count: 1,
+                isAuthoritative: true,
+                destination: "Cody’s Mac"
+            ),
+            "Successfully exported 1 file to Cody’s Mac."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedExported(
+                count: 0,
+                isAuthoritative: false,
+                destination: "Cody’s Mac"
+            ),
+            "Exported files to Cody’s Mac, but the generated-file count is unknown."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedDailyNotesUpdated(count: 1),
+            "Updated 1 daily note."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedDailyNotesUpdated(
+                count: 2,
+                destination: "Cody’s Mac"
+            ),
+            "Updated 2 daily notes on Cody’s Mac."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedPartialDailyNoteUpdate(
+                updatedCount: 1,
+                totalCount: 2,
+                destination: "Cody’s Mac"
+            ),
+            "Updated 1 of 2 daily notes on Cody’s Mac."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedTerminalFailure,
+            "The export did not finish successfully after writing confirmed output."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedFailedDates("2026-03-14, 2026-03-15"),
+            "Failed dates: 2026-03-14, 2026-03-15."
+        )
+    }
+
+    func testIPadLiveStatusUsesGeneratedFilesAndKeepsDataDaysSeparate() {
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedCompletedStatus(
+                count: 7,
+                isAuthoritative: true,
+                successfulDataDayCount: 2,
+                totalDataDayCount: 2
+            ),
+            "Successfully exported 7 files. 2 of 2 data days completed."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedPartialStatus(
+                count: 4,
+                isAuthoritative: false,
+                successfulDataDayCount: 2,
+                totalDataDayCount: 3
+            ),
+            "Exported at least 4 files. 2 of 3 data days completed."
+        )
+        XCTAssertEqual(
+            GeneratedFileCountText.localizedStoppedStatus(
+                count: 0,
+                isAuthoritative: false,
+                successfulDataDayCount: 1,
+                totalDataDayCount: 3
+            ),
+            "Export stopped after writing files, but the generated-file count is unknown. 1 of 3 data days completed."
+        )
+    }
+
     @MainActor
     func testExportDates_foregroundMapsDeviceLockedHealthKitError() async {
         let store = FakeHealthStore()

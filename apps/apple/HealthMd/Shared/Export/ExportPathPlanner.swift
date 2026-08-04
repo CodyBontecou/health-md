@@ -37,7 +37,7 @@ enum ExportPathPlanner {
     }
 
     private struct ResolvedDestinationTarget {
-        struct Identity: Equatable {
+        struct Identity: Hashable {
             let device: UInt64
             let inode: UInt64
         }
@@ -266,6 +266,19 @@ enum ExportPathPlanner {
         return normalized
     }
 
+    /// Requires canonical portable spellings and rejects path aliases within one frozen plan.
+    /// This catches exact duplicates plus case-, width-, and Unicode-normalization aliases before
+    /// any destination entry is created.
+    nonisolated static func validatePortableArtifactPaths(_ relativePaths: [String]) throws {
+        var keys = Set<String>()
+        for relativePath in relativePaths {
+            _ = try validatedPortableRelativePath(relativePath)
+            guard keys.insert(try canonicalPortablePathKey(relativePath)).inserted else {
+                throw PathValidationError.invalidRelativePath(relativePath)
+            }
+        }
+    }
+
     /// Detects future/nonexistent aliases on case-insensitive, width-insensitive, or
     /// Unicode-normalizing destinations. Invalid paths throw so callers cannot interpret an
     /// unsafe path as "no collision."
@@ -324,7 +337,7 @@ enum ExportPathPlanner {
         return nil
     }
 
-    static func canonicalPortablePathKey(_ relativePath: String) throws -> String {
+    nonisolated static func canonicalPortablePathKey(_ relativePath: String) throws -> String {
         try normalizedPortableRelativePath(relativePath)
             .precomposedStringWithCompatibilityMapping
             .folding(
@@ -346,6 +359,27 @@ enum ExportPathPlanner {
                 vaultURL: vaultURL,
                 relativePath: relativePath
             )
+        }
+    }
+
+    /// Applies portable uniqueness plus resolved-path and existing-file identity uniqueness to a
+    /// frozen dynamic write plan. Static compatibility checks retain their historical alias rules.
+    static func validateUniqueDestinationArtifactPaths(
+        vaultURL: URL,
+        artifactRelativePaths: [String]
+    ) throws {
+        try validatePortableArtifactPaths(artifactRelativePaths)
+        var resolvedPaths = Set<String>()
+        var resolvedIdentities = Set<ResolvedDestinationTarget.Identity>()
+        for relativePath in artifactRelativePaths {
+            let target = try resolvedDestinationTarget(
+                vaultURL: vaultURL,
+                relativePath: relativePath
+            )
+            guard resolvedPaths.insert(target.path).inserted,
+                  target.identity.map({ resolvedIdentities.insert($0).inserted }) ?? true else {
+                throw PathValidationError.invalidRelativePath(relativePath)
+            }
         }
     }
 

@@ -2069,24 +2069,15 @@ final class VaultManager: ObservableObject {
         _ healthData: HealthData,
         date: Date,
         vaultURL: URL,
-        healthSubfolder: String,
-        settings: AdvancedExportSettings
+        settings: AdvancedExportSettings,
+        individualEntryPlan: IndividualEntryExporter.ExportPlan?
     ) throws -> (
         individualEntryFileCount: Int,
         dailyNoteResult: DailyNoteInjector.InjectionResult?
     ) {
-        let individualEntryFileCount: Int
-        if settings.writesIndividualEntryFiles {
-            individualEntryFileCount = try exportIndividualEntries(
-                from: healthData,
-                vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                date: date,
-                settings: settings
-            )
-        } else {
-            individualEntryFileCount = 0
-        }
+        let individualEntryFileCount = try individualEntryPlan.map {
+            try individualExporter.exportIndividualEntries($0)
+        } ?? 0
 
         let dailyNoteResult: DailyNoteInjector.InjectionResult? = settings.dailyNoteInjection.enabled
             ? DailyNoteInjector.inject(
@@ -2189,7 +2180,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             dates: [date]
         )
-        try preflightHealthDataDynamicDestinations(
+        let individualEntryPlan = try planHealthDataDynamicDestinations(
             healthData,
             date: date,
             vaultURL: vaultURL,
@@ -2280,8 +2271,8 @@ final class VaultManager: ObservableObject {
                 healthData,
                 date: date,
                 vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                settings: settings
+                settings: settings,
+                individualEntryPlan: individualEntryPlan
             )
         } catch {
             try rethrowTrackedWriteFailure(error) {
@@ -2349,7 +2340,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             dates: [date]
         )
-        try preflightHealthDataDynamicDestinations(
+        let individualEntryPlan = try planHealthDataDynamicDestinations(
             healthData,
             date: date,
             vaultURL: vaultURL,
@@ -2440,8 +2431,8 @@ final class VaultManager: ObservableObject {
                 healthData,
                 date: date,
                 vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
-                settings: settings
+                settings: settings,
+                individualEntryPlan: individualEntryPlan
             )
         } catch {
             try rethrowTrackedWriteFailure(error) {
@@ -2516,7 +2507,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             artifactRelativePaths: operation.artifacts.map(\.artifact.relativePath)
         )
-        try preflightHealthDataDynamicDestinations(
+        let individualEntryPlan = try planHealthDataDynamicDestinations(
             healthData,
             date: date,
             vaultURL: vaultURL,
@@ -2595,8 +2586,8 @@ final class VaultManager: ObservableObject {
                     healthData,
                     date: date,
                     vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    settings: settings
+                    settings: settings,
+                    individualEntryPlan: individualEntryPlan
                 )
             } catch {
                 try rethrowTrackedWriteFailure(error) {
@@ -2660,11 +2651,25 @@ final class VaultManager: ObservableObject {
 
     // MARK: - External Provider Sidecar Exports
 
-    func preflightExternalDailyRecordDestinations(
+    struct ExternalDailyRecordWritePlan {
+        fileprivate struct Entry {
+            let relativePath: String
+            let fileURL: URL
+            let json: String
+        }
+
+        fileprivate let vaultURL: URL
+        fileprivate let healthSubfolder: String
+        fileprivate let entries: [Entry]
+    }
+
+    /// Freezes and validates the complete provider-sidecar loop without mutating the destination.
+    /// Nil means no record requested an export.
+    func planExternalDailyRecordDestinations(
         _ records: [ExternalDailyRecord],
         healthSubfolder: String? = nil
-    ) throws {
-        guard !records.isEmpty else { return }
+    ) throws -> ExternalDailyRecordWritePlan? {
+        guard !records.isEmpty else { return nil }
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
         }
@@ -2674,41 +2679,10 @@ final class VaultManager: ObservableObject {
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        let relativePaths = try records.compactMap {
-            try externalRecordRelativePath(
-                for: $0,
-                healthSubfolder: effectiveHealthSubfolder
-            )
-        }
-        try validateDynamicDestinationPaths(
-            vaultURL: vaultURL,
-            healthSubfolder: effectiveHealthSubfolder,
-            artifactRelativePaths: relativePaths,
-            checkDataDictionaryCollision: true
-        )
-    }
-
-    @discardableResult
-    func exportExternalDailyRecords(
-        _ records: [ExternalDailyRecord],
-        healthSubfolder: String? = nil
-    ) async throws -> Int {
-        guard !records.isEmpty else { return 0 }
-        guard destinationState == .available, let vaultURL else {
-            throw unavailableExportError
-        }
-
-        guard bookmarkResolver.startAccessing(vaultURL) else {
-            throw ExportError.accessDenied
-        }
-        defer { bookmarkResolver.stopAccessing(vaultURL) }
-
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-
-        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        let plans: [(relativePath: String, fileURL: URL, json: String)] = try records.compactMap { record in
+        let entries: [ExternalDailyRecordWritePlan.Entry] = try records.compactMap { record in
             guard let relativePath = try externalRecordRelativePath(
                 for: record,
                 healthSubfolder: effectiveHealthSubfolder
@@ -2717,40 +2691,71 @@ final class VaultManager: ObservableObject {
             guard let json = String(data: data, encoding: .utf8) else {
                 throw CocoaError(.fileWriteInapplicableStringEncoding)
             }
-            return (
-                relativePath,
-                ExportPathPlanner.appendingRelativePath(
+            return ExternalDailyRecordWritePlan.Entry(
+                relativePath: relativePath,
+                fileURL: ExportPathPlanner.appendingRelativePath(
                     relativePath,
                     to: vaultURL,
                     isDirectory: false
                 ),
-                json
+                json: json
             )
         }
-
-        // Freeze and resolve the whole sidecar loop before its first destination mutation. The
-        // FileCoordinator-backed compatibility writer is retained; each deterministic path is
-        // resolved again immediately before its atomic write.
+        guard !entries.isEmpty else { return nil }
         try validateDynamicDestinationPaths(
             vaultURL: vaultURL,
             healthSubfolder: effectiveHealthSubfolder,
-            artifactRelativePaths: plans.map(\.relativePath),
-            checkDataDictionaryCollision: true
+            artifactRelativePaths: entries.map(\.relativePath)
         )
+        return ExternalDailyRecordWritePlan(
+            vaultURL: vaultURL,
+            healthSubfolder: effectiveHealthSubfolder,
+            entries: entries
+        )
+    }
 
+    @discardableResult
+    func exportExternalDailyRecords(
+        _ records: [ExternalDailyRecord],
+        healthSubfolder: String? = nil
+    ) async throws -> Int {
+        guard let plan = try planExternalDailyRecordDestinations(
+            records,
+            healthSubfolder: healthSubfolder
+        ) else { return 0 }
+        return try await exportExternalDailyRecords(plan)
+    }
+
+    @discardableResult
+    func exportExternalDailyRecords(_ plan: ExternalDailyRecordWritePlan) async throws -> Int {
+        guard destinationState == .available,
+              vaultURL?.standardizedFileURL == plan.vaultURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(plan.vaultURL) else {
+            throw ExportError.accessDenied
+        }
+        defer { bookmarkResolver.stopAccessing(plan.vaultURL) }
+
+        // The compatibility writer remains FileCoordinator-backed. Revalidate the full frozen plan
+        // before its first commit and each path immediately before its atomic write.
+        try validateDynamicDestinationPaths(
+            vaultURL: plan.vaultURL,
+            healthSubfolder: plan.healthSubfolder,
+            artifactRelativePaths: plan.entries.map(\.relativePath)
+        )
         var writtenCount = 0
-        for plan in plans {
+        for entry in plan.entries {
             do {
                 try validateDynamicDestinationPaths(
-                    vaultURL: vaultURL,
-                    healthSubfolder: effectiveHealthSubfolder,
-                    artifactRelativePaths: [plan.relativePath],
-                    checkDataDictionaryCollision: true
+                    vaultURL: plan.vaultURL,
+                    healthSubfolder: plan.healthSubfolder,
+                    artifactRelativePaths: [entry.relativePath]
                 )
                 _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
-                    fileURL: plan.fileURL,
-                    filename: plan.fileURL.lastPathComponent,
-                    newContent: plan.json,
+                    fileURL: entry.fileURL,
+                    filename: entry.fileURL.lastPathComponent,
+                    newContent: entry.json,
                     behavior: .overwrite
                 ))
                 writtenCount += 1
@@ -2764,7 +2769,6 @@ final class VaultManager: ObservableObject {
                 }
             }
         }
-
         return writtenCount
     }
 
@@ -3701,35 +3705,28 @@ final class VaultManager: ObservableObject {
     private func validateDynamicDestinationPaths(
         vaultURL: URL,
         healthSubfolder: String,
-        artifactRelativePaths: [String],
-        checkDataDictionaryCollision: Bool
+        artifactRelativePaths: [String]
     ) throws {
         guard !artifactRelativePaths.isEmpty else { return }
         let collision: ExportPathPlanner.DataDictionaryCollision?
         do {
-            for path in artifactRelativePaths {
-                _ = try ExportPathPlanner.validatedPortableRelativePath(path)
+            try ExportPathPlanner.validatePortableArtifactPaths(artifactRelativePaths)
+            if fileSystem is SystemFileSystem {
+                try ExportPathPlanner.validateUniqueDestinationArtifactPaths(
+                    vaultURL: vaultURL,
+                    artifactRelativePaths: artifactRelativePaths
+                )
             }
-            if checkDataDictionaryCollision {
-                collision = fileSystem is SystemFileSystem
-                    ? try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
-                        vaultURL: vaultURL,
-                        healthSubfolder: healthSubfolder,
-                        artifactRelativePaths: artifactRelativePaths
-                    )
-                    : try ExportPathPlanner.dataDictionaryArtifactCollision(
-                        healthSubfolder: healthSubfolder,
-                        artifactRelativePaths: artifactRelativePaths
-                    )
-            } else {
-                if fileSystem is SystemFileSystem {
-                    try ExportPathPlanner.validateDestinationArtifactPaths(
-                        vaultURL: vaultURL,
-                        artifactRelativePaths: artifactRelativePaths
-                    )
-                }
-                collision = nil
-            }
+            collision = fileSystem is SystemFileSystem
+                ? try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
+                    vaultURL: vaultURL,
+                    healthSubfolder: healthSubfolder,
+                    artifactRelativePaths: artifactRelativePaths
+                )
+                : try ExportPathPlanner.dataDictionaryArtifactCollision(
+                    healthSubfolder: healthSubfolder,
+                    artifactRelativePaths: artifactRelativePaths
+                )
         } catch let error as ExportPathPlanner.PathValidationError {
             let path: String
             switch error {
@@ -3965,21 +3962,22 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Individual Entry Export
 
-    /// Export individual timestamped entries for configured metrics
-    private func preflightHealthDataDynamicDestinations(
+    /// Freezes every individual-entry path and byte before aggregate output starts.
+    private func planHealthDataDynamicDestinations(
         _ healthData: HealthData,
         date: Date,
         vaultURL: URL,
         healthSubfolder: String,
         settings: AdvancedExportSettings
-    ) throws {
-        guard settings.writesIndividualEntryFiles else { return }
+    ) throws -> IndividualEntryExporter.ExportPlan? {
+        guard settings.writesIndividualEntryFiles else { return nil }
         let trackingSettings = settings.individualTracking
         let samples = individualExporter.extractIndividualSamples(
             from: healthData,
             settings: trackingSettings
         )
-        try individualExporter.preflightIndividualEntries(
+        guard !samples.isEmpty else { return nil }
+        return try individualExporter.planIndividualEntries(
             samples: samples,
             to: vaultURL,
             settings: trackingSettings,
@@ -3989,39 +3987,7 @@ final class VaultManager: ObservableObject {
                 date: date,
                 settings: settings
             ),
-            dataDictionaryHealthSubfolder: settings.writesDataDictionary
-                ? healthSubfolder
-                : nil
-        )
-    }
-
-    private func exportIndividualEntries(
-        from healthData: HealthData,
-        vaultURL: URL,
-        healthSubfolder: String,
-        date: Date,
-        settings: AdvancedExportSettings
-    ) throws -> Int {
-        let trackingSettings = settings.individualTracking
-        let samples = individualExporter.extractIndividualSamples(
-            from: healthData,
-            settings: trackingSettings
-        )
-        guard !samples.isEmpty else { return 0 }
-
-        return try individualExporter.exportIndividualEntries(
-            samples: samples,
-            to: vaultURL,
-            settings: trackingSettings,
-            formatSettings: settings.formatCustomization,
-            baseRelativePath: individualEntriesBaseFolderRelativePath(
-                healthSubfolder: healthSubfolder,
-                date: date,
-                settings: settings
-            ),
-            dataDictionaryHealthSubfolder: settings.writesDataDictionary
-                ? healthSubfolder
-                : nil
+            dataDictionaryHealthSubfolder: healthSubfolder
         )
     }
 }

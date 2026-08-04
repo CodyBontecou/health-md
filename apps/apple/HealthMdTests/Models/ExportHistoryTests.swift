@@ -197,6 +197,103 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(entry.generatedFileCountDescription, "At least 2 generated files")
     }
 
+    func testMacPayloadTerminalFailureCannotBecomeFullSuccessAfterEveryDataDayCompleted() throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let date = Date()
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .failure,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            failedDateDetails: [],
+            completedDates: [date],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: date
+        )
+
+        XCTAssertTrue(payload.hadTerminalFailure)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertTrue(result.hadTerminalFailure)
+        XCTAssertFalse(result.wasCancelled)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+
+        ExportOrchestrator.recordResult(
+            result,
+            source: .macAgent,
+            dateRangeStart: date,
+            dateRangeEnd: date
+        )
+        let entry = try XCTUnwrap(history.history.first)
+        let decoded = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONEncoder().encode(entry)
+        )
+        XCTAssertTrue(decoded.hadTerminalFailure)
+        XCTAssertFalse(decoded.isFullSuccess)
+        XCTAssertTrue(decoded.isPartialSuccess)
+        XCTAssertTrue(decoded.summaryDescription.hasPrefix("Partial:"))
+        XCTAssertEqual(
+            decoded.failureListMessage,
+            "The export did not finish successfully after writing confirmed output."
+        )
+    }
+
+    func testSuccessfulMacPayloadStillProducesFullDailyCompletion() {
+        let date = Date()
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            failedDateDetails: [],
+            completedDates: [date],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: date
+        )
+
+        XCTAssertFalse(payload.hadTerminalFailure)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertFalse(result.hadTerminalFailure)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        XCTAssertTrue(result.isFullSuccess)
+        XCTAssertFalse(result.isPartialSuccess)
+    }
+
+    func testLegacyHistoryWithoutTerminalFailureFieldDefaultsFalseAndRemainsFullSuccess() throws {
+        let date = Date()
+        let entry = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 1,
+            hadTerminalFailure: true
+        )
+        let encoded = try JSONEncoder().encode(entry)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object.removeValue(forKey: "hadTerminalFailure")
+
+        let legacy = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertFalse(legacy.hadTerminalFailure)
+        XCTAssertTrue(legacy.isFullSuccess)
+        XCTAssertFalse(legacy.isPartialSuccess)
+    }
+
     func testMacExportFailureCarriesExactCommittedCategoriesIntoFailureHistory() throws {
         let history = ExportHistoryManager.shared
         history.clearHistory()

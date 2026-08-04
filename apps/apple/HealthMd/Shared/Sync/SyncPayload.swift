@@ -1043,6 +1043,12 @@ struct MacExportResultPayload: Codable {
         )
     }
 
+    /// The wire status itself preserves a non-cancelled terminal failure without adding a new
+    /// required payload field for older peers.
+    var hadTerminalFailure: Bool {
+        status == .partialSuccess || status == .failure
+    }
+
     var hasConsistentFileAccounting: Bool {
         guard totalCount >= 0,
               successCount >= 0,

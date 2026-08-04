@@ -1569,6 +1569,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             return XCTFail("Expected final result payload")
         }
         XCTAssertEqual(payload.status, .partialSuccess)
+        XCTAssertTrue(payload.hadTerminalFailure)
         XCTAssertEqual(payload.completedDates, [])
         XCTAssertTrue(payload.failedDateDetails.contains { $0.reason == .fileWriteError })
     }

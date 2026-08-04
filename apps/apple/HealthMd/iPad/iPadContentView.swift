@@ -457,25 +457,25 @@ struct iPadContentView: View {
                         ? "Daily note update stopped — \(result.dailyNoteUpdateCount) of \(result.totalCount) notes updated"
                         : "Daily note update cancelled"
                 } else if result.successCount > 0 {
-                    exportStatusMessage = GeneratedFileCountText.localizedStoppedExport(
+                    exportStatusMessage = GeneratedFileCountText.localizedStoppedStatus(
                         count: result.totalFilesWritten,
-                        isAuthoritative: result.hasAuthoritativeFileCount
-                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
-                        successfulCount: result.successCount,
-                        totalCount: result.totalCount
+                        isAuthoritative: result.hasAuthoritativeFileCount,
+                        successfulDataDayCount: result.successCount,
+                        totalDataDayCount: result.totalCount
                     )
                 } else {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
-                    ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    : GeneratedFileCountText.localizedSuccessfulExport(
+                    ? GeneratedFileCountText.localizedDailyNotesUpdated(
+                        count: result.dailyNoteUpdateCount
+                    )
+                    : GeneratedFileCountText.localizedCompletedStatus(
                         count: result.totalFilesWritten,
-                        isAuthoritative: result.hasAuthoritativeFileCount
-                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
-                        successfulCount: result.successCount,
-                        totalCount: result.totalCount
+                        isAuthoritative: result.hasAuthoritativeFileCount,
+                        successfulDataDayCount: result.successCount,
+                        totalDataDayCount: result.totalCount
                     )
             } else if result.isPartialSuccess {
                 let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
@@ -485,18 +485,26 @@ struct iPadContentView: View {
                     partialExportNotice = PartialExportNotice(result: result)
                 }
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
-                let suffix = result.hasPartialFailures ? result.partialFailureSummary : "Failed: \(failedDatesStr)"
+                let suffix: String
+                if result.hasPartialFailures {
+                    suffix = result.partialFailureSummary
+                } else if result.hadTerminalFailure {
+                    suffix = GeneratedFileCountText.localizedTerminalFailure
+                } else {
+                    suffix = failedDatesStr.isEmpty
+                        ? GeneratedFileCountText.localizedIncompleteDataDays
+                        : GeneratedFileCountText.localizedFailedDates(failedDatesStr)
+                }
                 if isCompletedDailyNoteSkip {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
                 } else {
                     exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                         ? "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes. \(suffix)"
-                        : GeneratedFileCountText.localizedExported(
+                        : GeneratedFileCountText.localizedPartialStatus(
                             count: result.totalFilesWritten,
-                            isAuthoritative: result.hasAuthoritativeFileCount
-                        ) + " " + GeneratedFileCountText.localizedDataDayProgress(
-                            successfulCount: result.successCount,
-                            totalCount: result.totalCount
+                            isAuthoritative: result.hasAuthoritativeFileCount,
+                            successfulDataDayCount: result.successCount,
+                            totalDataDayCount: result.totalCount
                         ) + " " + suffix
                 }
             } else {

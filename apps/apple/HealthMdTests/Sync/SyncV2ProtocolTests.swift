@@ -944,6 +944,48 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertEqual(payload(count: 0, authoritative: false).generatedFileCountDescription, "an unknown number of files")
     }
 
+    func testMacResultWireStatusPreservesTerminalFailureAfterFullDailyCompletion() throws {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        for status in [MacExportResultStatus.partialSuccess, .failure] {
+            let payload = MacExportResultPayload(
+                jobID: UUID(),
+                status: status,
+                successCount: 1,
+                totalCount: 1,
+                formatsPerDate: 1,
+                totalFilesWritten: 1,
+                failedDateDetails: [],
+                completedDates: [date],
+                destinationDisplayName: "Mac",
+                destinationPathForDisplay: nil,
+                completedAt: date
+            )
+            let decoded = try JSONDecoder().decode(
+                MacExportResultPayload.self,
+                from: JSONEncoder().encode(payload)
+            )
+            XCTAssertEqual(decoded.status, status)
+            XCTAssertTrue(decoded.hadTerminalFailure)
+            XCTAssertEqual(decoded.successCount, decoded.totalCount)
+            XCTAssertEqual(decoded.completedDates, [date])
+        }
+
+        let success = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            failedDateDetails: [],
+            completedDates: [date],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: date
+        )
+        XCTAssertFalse(success.hadTerminalFailure)
+    }
+
     func testLegacyMacAccountingPayloadsDecodeWithConservativeDefaults() throws {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let result = MacExportResultPayload(

@@ -2136,7 +2136,12 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         switch payload.status {
         case .success:
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
-                return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
+                return GeneratedFileCountText.localizedDailyNotesUpdated(
+                    count: payload.dailyNoteUpdateCount
+                ) + " " + String(
+                    localized: "No additional export files were written.",
+                    comment: "Connected Mac daily-note completion without generated files"
+                )
             }
             return [
                 GeneratedFileCountText.localizedSuccessfulExport(
@@ -2151,10 +2156,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             ].filter { !$0.isEmpty }.joined(separator: " ")
         case .partialSuccess:
             if payload.dailyNoteSkipCount > 0 && payload.totalFilesWritten == 0 {
-                return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
+                return String(
+                    localized: "Daily-note results: \(payload.dailyNoteUpdateCount) updated; \(payload.dailyNoteSkipCount) skipped because no matching note existed. No additional export files were written.",
+                    comment: "Connected Mac daily-note completion with missing-note skips"
+                )
             }
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
-                return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
+                return GeneratedFileCountText.localizedPartialDailyNoteUpdate(
+                    updatedCount: payload.dailyNoteUpdateCount,
+                    totalCount: payload.totalCount
+                ) + " " + String(
+                    localized: "No additional export files were written.",
+                    comment: "Connected Mac partial daily-note completion without generated files"
+                )
             }
             return [
                 GeneratedFileCountText.localizedExported(

@@ -60,10 +60,16 @@ final class IndividualEntryExporter {
     private let timeFormatter: DateFormatter
     private let filenameCollisionFormatter: DateFormatter
     private let datetimeFormatter: ISO8601DateFormatter
-    private struct PlannedEntry {
+    fileprivate struct PlannedEntry {
         let relativePath: String
         let fileURL: URL
         let content: String
+    }
+
+    struct ExportPlan {
+        fileprivate let entries: [PlannedEntry]
+        fileprivate let destinationRootURL: URL
+        fileprivate let dataDictionaryHealthSubfolder: String?
     }
 
     private let fileSystem: FileSystemAccessing
@@ -90,18 +96,17 @@ final class IndividualEntryExporter {
 
     // MARK: - Export Individual Entries
 
-    /// Validates the complete dynamic path plan without mutating the destination. VaultManager
-    /// calls this before aggregate or dictionary output begins; the writer repeats it immediately
-    /// before its own first commit.
-    func preflightIndividualEntries(
+    /// Freezes, materializes, and validates every dynamic individual-entry destination without
+    /// mutating the vault. VaultManager retains this exact plan across aggregate writes.
+    func planIndividualEntries(
         samples: [IndividualHealthSample],
         to destinationRootURL: URL,
         settings: IndividualTrackingSettings,
         formatSettings: FormatCustomization,
         baseRelativePath: String = "",
         dataDictionaryHealthSubfolder: String? = nil
-    ) throws {
-        let plans = makePlans(
+    ) throws -> ExportPlan {
+        let entries = makePlans(
             samples: samples,
             destinationRootURL: destinationRootURL,
             baseRelativePath: baseRelativePath,
@@ -109,7 +114,12 @@ final class IndividualEntryExporter {
             formatSettings: formatSettings
         )
         try validateDestinationPlans(
-            plans,
+            entries,
+            destinationRootURL: destinationRootURL,
+            dataDictionaryHealthSubfolder: dataDictionaryHealthSubfolder
+        )
+        return ExportPlan(
+            entries: entries,
             destinationRootURL: destinationRootURL,
             dataDictionaryHealthSubfolder: dataDictionaryHealthSubfolder
         )
@@ -125,34 +135,37 @@ final class IndividualEntryExporter {
         baseRelativePath: String = "",
         dataDictionaryHealthSubfolder: String? = nil
     ) throws -> Int {
-        let plans = makePlans(
+        let plan = try planIndividualEntries(
             samples: samples,
-            destinationRootURL: destinationRootURL,
-            baseRelativePath: baseRelativePath,
+            to: destinationRootURL,
             settings: settings,
-            formatSettings: formatSettings
-        )
-        try validateDestinationPlans(
-            plans,
-            destinationRootURL: destinationRootURL,
+            formatSettings: formatSettings,
+            baseRelativePath: baseRelativePath,
             dataDictionaryHealthSubfolder: dataDictionaryHealthSubfolder
+        )
+        return try exportIndividualEntries(plan)
+    }
+
+    func exportIndividualEntries(_ plan: ExportPlan) throws -> Int {
+        try validateDestinationPlans(
+            plan.entries,
+            destinationRootURL: plan.destinationRootURL,
+            dataDictionaryHealthSubfolder: plan.dataDictionaryHealthSubfolder
         )
 
         var filesWritten = 0
-        for plan in plans {
+        for entry in plan.entries {
             // SecureExactArtifactIO is intentionally bound to frozen exact range artifacts and
             // cannot preserve this legacy FileCoordinator/custom-filesystem contract. Revalidate
-            // the deterministic path immediately before each coordinated write; this blocks every
-            // pre-existing traversal or symlink alias without widening this issue into an I/O
-            // redesign for a malicious concurrent namespace swap.
+            // each deterministic path immediately before its coordinated atomic write.
             try validateDestinationPlans(
-                [plan],
-                destinationRootURL: destinationRootURL,
-                dataDictionaryHealthSubfolder: dataDictionaryHealthSubfolder
+                [entry],
+                destinationRootURL: plan.destinationRootURL,
+                dataDictionaryHealthSubfolder: plan.dataDictionaryHealthSubfolder
             )
             do {
                 try fileCoordinator.coordinateWriting(
-                    at: plan.fileURL,
+                    at: entry.fileURL,
                     intent: .replace,
                     cancellationCheck: { try Task.checkCancellation() }
                 ) { coordinatedURL in
@@ -163,7 +176,7 @@ final class IndividualEntryExporter {
                             withIntermediateDirectories: true
                         )
                     }
-                    try fileSystem.writeString(plan.content, to: coordinatedURL, atomically: true)
+                    try fileSystem.writeString(entry.content, to: coordinatedURL, atomically: true)
                 }
             } catch {
                 let resolvedError: Error = error as? FileCoordinationError == .destinationChanged
@@ -241,8 +254,12 @@ final class IndividualEntryExporter {
         let relativePaths = plans.map(\.relativePath)
         guard !relativePaths.isEmpty else { return }
         do {
-            for relativePath in relativePaths {
-                _ = try ExportPathPlanner.validatedPortableRelativePath(relativePath)
+            try ExportPathPlanner.validatePortableArtifactPaths(relativePaths)
+            if fileSystem is SystemFileSystem {
+                try ExportPathPlanner.validateUniqueDestinationArtifactPaths(
+                    vaultURL: destinationRootURL,
+                    artifactRelativePaths: relativePaths
+                )
             }
             let collision: ExportPathPlanner.DataDictionaryCollision?
             if let dataDictionaryHealthSubfolder {
@@ -257,12 +274,6 @@ final class IndividualEntryExporter {
                         artifactRelativePaths: relativePaths
                     )
             } else {
-                if fileSystem is SystemFileSystem {
-                    try ExportPathPlanner.validateDestinationArtifactPaths(
-                        vaultURL: destinationRootURL,
-                        artifactRelativePaths: relativePaths
-                    )
-                }
                 collision = nil
             }
             if let collision {

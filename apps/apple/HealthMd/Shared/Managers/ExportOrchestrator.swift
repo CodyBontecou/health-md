@@ -130,6 +130,95 @@ nonisolated enum GeneratedFileCountText {
             : String(localized: "\(successfulCount) of \(totalCount) data days completed.", comment: "Live export data-day progress when multiple days were requested")
     }
 
+    static func localizedCompletedStatus(
+        count: Int,
+        isAuthoritative: Bool,
+        successfulDataDayCount: Int,
+        totalDataDayCount: Int
+    ) -> String {
+        localizedSuccessfulExport(count: count, isAuthoritative: isAuthoritative)
+            + " "
+            + localizedDataDayProgress(
+                successfulCount: successfulDataDayCount,
+                totalCount: totalDataDayCount
+            )
+    }
+
+    static func localizedPartialStatus(
+        count: Int,
+        isAuthoritative: Bool,
+        successfulDataDayCount: Int,
+        totalDataDayCount: Int
+    ) -> String {
+        localizedExported(count: count, isAuthoritative: isAuthoritative)
+            + " "
+            + localizedDataDayProgress(
+                successfulCount: successfulDataDayCount,
+                totalCount: totalDataDayCount
+            )
+    }
+
+    static func localizedStoppedStatus(
+        count: Int,
+        isAuthoritative: Bool,
+        successfulDataDayCount: Int,
+        totalDataDayCount: Int
+    ) -> String {
+        localizedStoppedExport(count: count, isAuthoritative: isAuthoritative)
+            + " "
+            + localizedDataDayProgress(
+                successfulCount: successfulDataDayCount,
+                totalCount: totalDataDayCount
+            )
+    }
+
+    static func localizedDailyNotesUpdated(
+        count: Int,
+        destination: String? = nil
+    ) -> String {
+        if let destination {
+            return count == 1
+                ? String(localized: "Updated 1 daily note on \(destination).", comment: "One daily note updated on a named destination")
+                : String(localized: "Updated \(count) daily notes on \(destination).", comment: "Daily notes updated on a named destination, plural or zero")
+        }
+        return count == 1
+            ? String(localized: "Updated 1 daily note.", comment: "One daily note updated")
+            : String(localized: "Updated \(count) daily notes.", comment: "Daily notes updated, plural or zero")
+    }
+
+    static func localizedPartialDailyNoteUpdate(
+        updatedCount: Int,
+        totalCount: Int,
+        destination: String? = nil
+    ) -> String {
+        if let destination {
+            return totalCount == 1
+                ? String(localized: "Updated \(updatedCount) of 1 daily note on \(destination).", comment: "Partial daily-note update on a named destination when one note was requested")
+                : String(localized: "Updated \(updatedCount) of \(totalCount) daily notes on \(destination).", comment: "Partial daily-note update on a named destination")
+        }
+        return totalCount == 1
+            ? String(localized: "Updated \(updatedCount) of 1 daily note.", comment: "Partial daily-note update when one note was requested")
+            : String(localized: "Updated \(updatedCount) of \(totalCount) daily notes.", comment: "Partial daily-note update")
+    }
+
+    static var localizedTerminalFailure: String {
+        String(
+            localized: "The export did not finish successfully after writing confirmed output.",
+            comment: "Export terminal failure after confirmed output"
+        )
+    }
+
+    static var localizedIncompleteDataDays: String {
+        String(
+            localized: "Some data days did not complete.",
+            comment: "Partial export without explicit failed-date details"
+        )
+    }
+
+    static func localizedFailedDates(_ dates: String) -> String {
+        String(localized: "Failed dates: \(dates).", comment: "Partial export failed-date summary")
+    }
+
     static func localizedBreakdown(_ breakdown: String) -> String {
         String(localized: "Generated files: \(breakdown).", comment: "Live export generated-file category breakdown")
     }
@@ -402,7 +491,7 @@ struct ExportOrchestrator {
                 dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
                 dailyNoteSkipCount: payload.dailyNoteSkipCount,
                 wasCancelled: payload.status == .cancelled,
-                hadTerminalFailure: payload.status == .failure || payload.status == .partialSuccess,
+                hadTerminalFailure: payload.hadTerminalFailure,
                 completedDates: payload.completedDates
             )
         }
@@ -759,6 +848,8 @@ struct ExportOrchestrator {
         var shouldWriteDataDictionary = true
         let hasProviderSideEffects = ConnectedAppsFeature.isEnabled
             && (externalIntegrations?.connectedProviderCount ?? 0) > 0
+        let shouldWriteExternalRecords = settings.writesExternalProviderSidecars
+            && hasProviderSideEffects
         let operationSurface: AppleExportOperationSurface = hasProviderSideEffects
             ? .legacyOnly
             : .localVaultRangeWithoutSideEffects
@@ -863,16 +954,15 @@ struct ExportOrchestrator {
                 let preparedExport = healthData.preparedExportAssumingSelectionApplied(
                     settings: frozenOperationSettings
                 )
-                let shouldWriteExternalRecords = settings.writesExternalProviderSidecars
-                    && ConnectedAppsFeature.isEnabled
-                    && externalIntegrations != nil
-                    && (externalIntegrations?.connectedProviderCount ?? 0) > 0
-                let externalRecords: [ExternalDailyRecord]
+                let externalRecordPlan: VaultManager.ExternalDailyRecordWritePlan?
                 if shouldWriteExternalRecords, let externalIntegrations {
-                    externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
-                    try vaultManager.preflightExternalDailyRecordDestinations(externalRecords)
+                    let externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
+                    externalRecordPlan = try vaultManager.planExternalDailyRecordDestinations(
+                        externalRecords,
+                        healthSubfolder: operationSettingsSnapshot.healthSubfolder
+                    )
                 } else {
-                    externalRecords = []
+                    externalRecordPlan = nil
                 }
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
@@ -920,9 +1010,11 @@ struct ExportOrchestrator {
                     }
                 }
 
-                if shouldWriteExternalRecords {
+                if let externalRecordPlan {
                     do {
-                        externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)
+                        externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(
+                            externalRecordPlan
+                        )
                     } catch let error as ExportPartialWriteError {
                         externalRecordFileCount += error.providerSidecarFileCount
                         isFileAccountingComplete = false
@@ -1107,7 +1199,8 @@ struct ExportOrchestrator {
             wasCancelled: rollupResult.wasCancelled || archiveResult.wasCancelled,
             hadTerminalFailure: !rollupResult.wasCancelled
                 && !archiveResult.wasCancelled
-                && (!rollupResult.isFileAccountingComplete
+                && (!isFileAccountingComplete
+                    || !rollupResult.isFileAccountingComplete
                     || !archiveResult.isFileAccountingComplete),
             completedDates: durableCompletedDates
         )
@@ -1781,7 +1874,8 @@ struct ExportOrchestrator {
             wasCancelled: rollupResult.wasCancelled || archiveResult.wasCancelled,
             hadTerminalFailure: !rollupResult.wasCancelled
                 && !archiveResult.wasCancelled
-                && (!rollupResult.isFileAccountingComplete
+                && (!isFileAccountingComplete
+                    || !rollupResult.isFileAccountingComplete
                     || !archiveResult.isFileAccountingComplete),
             completedDates: durableCompletedDates
         )

@@ -1092,6 +1092,33 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), ["entries"])
     }
 
+    func testFrozenEntryPlanRevalidatesPreexistingNamespaceBeforeFirstWrite() throws {
+        let vaultURL = makeTempDir()
+        let outsideURL = makeTempDir()
+        defer {
+            cleanup(vaultURL)
+            cleanup(outsideURL)
+        }
+        let plan = try exporter.planIndividualEntries(
+            samples: [weightSample()],
+            to: vaultURL,
+            settings: Self.flatWeightSettings,
+            formatSettings: Self.formatSettings
+        )
+        try FileManager.default.createSymbolicLink(
+            at: vaultURL.appendingPathComponent("entries", isDirectory: true),
+            withDestinationURL: outsideURL
+        )
+
+        XCTAssertThrowsError(try exporter.exportIndividualEntries(plan)) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: outsideURL.path), [])
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), ["entries"])
+    }
+
     func testExportEntriesRejectsPortableBackslashPathBeforeWriting() throws {
         let vaultURL = makeTempDir()
         defer { cleanup(vaultURL) }
@@ -1112,6 +1139,13 @@ final class IndividualEntryExporterTests: XCTestCase {
     func testExportEntriesRejectsDataDictionaryAliasBeforeWriting() throws {
         let vaultURL = makeTempDir()
         defer { cleanup(vaultURL) }
+        let dictionaryURL = vaultURL.appendingPathComponent("_healthmd_data_dictionary.json")
+        let aliasURL = vaultURL.appendingPathComponent("_healthmd_data_dictionary.md")
+        try "existing dictionary".write(to: dictionaryURL, atomically: true, encoding: .utf8)
+        try FileManager.default.createSymbolicLink(
+            at: aliasURL,
+            withDestinationURL: dictionaryURL
+        )
 
         XCTAssertThrowsError(try exporter.exportIndividualEntries(
             samples: [weightSample()],
@@ -1122,6 +1156,52 @@ final class IndividualEntryExporterTests: XCTestCase {
         )) { error in
             guard case ExportError.dataDictionaryPathConflict = error else {
                 return XCTFail("Expected dataDictionaryPathConflict, got \(error)")
+            }
+        }
+        XCTAssertEqual(try String(contentsOf: dictionaryURL, encoding: .utf8), "existing dictionary")
+        XCTAssertEqual(
+            Set(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path)),
+            ["_healthmd_data_dictionary.json", "_healthmd_data_dictionary.md"]
+        )
+    }
+
+    func testExportEntriesRejectsPortableAliasesBeforeWriting() throws {
+        let vaultURL = makeTempDir()
+        defer { cleanup(vaultURL) }
+        let settings = IndividualTrackingSettings()
+        settings.globalEnabled = true
+        settings.useCategoryFolders = false
+        settings.entriesFolder = "entries"
+        settings.filenameTemplate = "{metric}"
+        settings.setTrackIndividually("Case", enabled: true)
+        settings.setTrackIndividually("case", enabled: true)
+        let samples = [
+            IndividualHealthSample(
+                metricId: "Case",
+                metricName: "Upper",
+                category: .bodyMeasurements,
+                timestamp: Self.testDate,
+                value: 1.0,
+                unit: "count"
+            ),
+            IndividualHealthSample(
+                metricId: "case",
+                metricName: "Lower",
+                category: .bodyMeasurements,
+                timestamp: Self.testDate,
+                value: 2.0,
+                unit: "count"
+            )
+        ]
+
+        XCTAssertThrowsError(try exporter.exportIndividualEntries(
+            samples: samples,
+            to: vaultURL,
+            settings: settings,
+            formatSettings: Self.formatSettings
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
             }
         }
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), [])

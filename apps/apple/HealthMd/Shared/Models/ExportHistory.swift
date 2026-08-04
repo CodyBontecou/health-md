@@ -512,6 +512,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
     /// Keeps the history list useful at a glance. Generic and write failures use
     /// the captured error when one exists; known failures lead with the fix.
     var failureListMessage: String? {
+        if hadTerminalFailure, failureReasonForDisplay == nil {
+            return GeneratedFileCountText.localizedTerminalFailure
+        }
         guard let reason = failureReasonForDisplay else { return nil }
         if reason == .unknown || reason == .fileWriteError,
            let diagnostic = failureDiagnosticDetails.first {

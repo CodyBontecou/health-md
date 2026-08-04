@@ -903,7 +903,9 @@ struct MacExportView: View {
             if result.isFullSuccess {
                 resultIsError = false
                 if advancedSettings.dailyNotesOnlyModeEnabled {
-                    resultMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")."
+                    resultMessage = GeneratedFileCountText.localizedDailyNotesUpdated(
+                        count: result.dailyNoteUpdateCount
+                    )
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = GeneratedFileCountText.localizedSuccessfulExport(
                         count: result.totalFilesWritten,
@@ -919,9 +921,14 @@ struct MacExportView: View {
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
-                let suffix = result.hasPartialFailures
-                    ? result.partialFailureSummary
-                    : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
+                let suffix: String
+                if result.hasPartialFailures {
+                    suffix = result.partialFailureSummary
+                } else if result.hadTerminalFailure {
+                    suffix = GeneratedFileCountText.localizedTerminalFailure
+                } else {
+                    suffix = GeneratedFileCountText.localizedIncompleteDataDays
+                }
                 if advancedSettings.dailyNotesOnlyModeEnabled && result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
