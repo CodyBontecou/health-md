@@ -50,6 +50,28 @@ class SleepJournalSummaryTest {
     }
 
     @Test
+    fun `tiny midnight crossing cannot beat disconnected seven hour sleep`() {
+        val midnightFragment = session(
+            id = "midnight-fragment",
+            start = local(journalDay, 23, 50),
+            end = local(journalDay.plusDays(1), 0, 10),
+        )
+        val sevenHourSleep = session(
+            id = "seven-hour-sleep",
+            start = local(journalDay.plusDays(1), 2, 0),
+            end = local(journalDay.plusDays(1), 9, 0),
+        )
+
+        val sleep = summarize(journalDay, listOf(midnightFragment, sevenHourSleep))
+
+        assertThat(sleep.sessionStart).isEqualTo(local(journalDay.plusDays(1), 2, 0))
+        assertThat(sleep.sessionEnd).isEqualTo(local(journalDay.plusDays(1), 9, 0))
+        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(420)
+        assertThat(sleep.sessions.map { it.identity?.nativeId })
+            .containsExactly("midnight-fragment", "seven-hour-sleep")
+    }
+
+    @Test
     fun `sleep query looks back one journal day and reaches following noon`() {
         val interval = SleepJournalSummary.queryInterval(listOf(journalDay), utc)
 

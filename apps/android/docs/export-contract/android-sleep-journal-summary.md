@@ -31,9 +31,9 @@ The compatibility headline is selected by the named `principal-overnight-sleep-v
 2. Clip valid candidate coverage to the journal window. The source record itself remains unclipped.
 3. Put overlapping sessions, contiguous sessions, and split sessions separated by no more than 90
    elapsed minutes into one cluster.
-4. Prefer a cluster spanning the journal night's local midnight. If no cluster spans midnight,
-   select the cluster with the greatest de-duplicated coverage.
-5. Break ties by stable start/end/source ordering.
+4. Select the cluster with the greatest de-duplicated coverage.
+5. If coverage is tied, prefer a cluster spanning the journal night's local midnight, then break
+   remaining ties by stable start/end/source ordering.
 6. Set bedtime and wake to the selected cluster's first and last covered instants. Compute total and
    in-bed time from the union of its session intervals, so overlaps and duplicate fragments count
    once and split-sleep gaps do not count.
@@ -41,8 +41,10 @@ The compatibility headline is selected by the named `principal-overnight-sleep-v
    where a short duplicate fragment conflicts; stable source and explicit stage precedence break
    exact ties. Granular stages are not rewritten to match the summary.
 
-A disconnected daytime nap therefore remains available as detail but cannot pull an overnight
-headline earlier or later. Stage-less sessions can still be the principal period.
+A shorter disconnected daytime nap therefore remains available as detail but cannot pull the
+headline earlier or later. Likewise, a tiny midnight-crossing fragment cannot outrank a
+substantially longer disconnected sleep period. Stage-less sessions can still be the principal
+period.
 
 ## Detailed and raw fidelity
 
@@ -65,9 +67,10 @@ change still requires a new explicit profile/version under the existing guardrai
 
 ## Verification and device QA
 
-Pure JVM tests cover the issue reproduction, first-day lookback, naps, split and overlapping
-sessions, duplicate fragments, stage-less records, exact-noon ownership, invalid intervals,
-spring/fall DST, differing source offsets, deterministic ordering and single/range parity. Existing
+Pure JVM tests cover the issue reproduction, a tiny midnight-crossing fragment versus a
+disconnected seven-hour sleep, first-day lookback, naps, split and overlapping sessions, duplicate
+fragments, stage-less records, exact-noon ownership, invalid intervals, spring/fall DST, differing
+source offsets, deterministic ordering and single/range parity. Existing
 Markdown/Bases, JSON, CSV and schema-signature contract tests remain the exporter gate.
 
 Physical Health Connect QA remains a release smoke test: on the Pixel 7, import or sync an overnight

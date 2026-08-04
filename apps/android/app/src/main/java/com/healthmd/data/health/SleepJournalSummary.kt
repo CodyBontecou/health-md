@@ -17,8 +17,8 @@ import kotlin.time.Duration.Companion.milliseconds
  * Product rule `principal-overnight-sleep-v1`:
  * - a journal day is the half-open local interval [noon, following noon);
  * - valid sessions separated by at most [SPLIT_SLEEP_CONTINUITY_GAP] form one cluster;
- * - an overnight cluster outranks a daytime cluster, then the greatest de-duplicated session
- *   coverage wins, with stable timestamp/source tie-breakers;
+ * - the greatest de-duplicated session coverage wins; spanning local midnight is a tie-breaker,
+ *   followed by stable timestamp/source ordering;
  * - overlapping session and stage time is counted once. A longer source session supplies the
  *   stage label when a shorter duplicate fragment disagrees.
  *
@@ -141,8 +141,8 @@ internal object SleepJournalSummary {
         return clusters
             .map { SessionCluster(it) }
             .sortedWith(
-                compareByDescending<SessionCluster> { cluster -> cluster.spans(midnight) }
-                    .thenByDescending { cluster -> cluster.coverageMilliseconds }
+                compareByDescending<SessionCluster> { cluster -> cluster.coverageMilliseconds }
+                    .thenByDescending { cluster -> cluster.spans(midnight) }
                     .thenBy { cluster -> cluster.start }
                     .thenByDescending { cluster -> cluster.end }
                     .thenBy { cluster -> cluster.stableKey },
