@@ -2126,14 +2126,29 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func completionMessage(for payload: MacExportResultPayload) -> String {
-        let suffix = payload.externalRecordFileCount > 0
-            ? " including \(payload.externalRecordFileCount) provider sidecar(s)" : ""
+        let sidecarDescription: String = if payload.externalRecordFileCount == 1 {
+            String(localized: "This includes 1 provider sidecar.", comment: "Connected Mac completion with one provider sidecar")
+        } else if payload.externalRecordFileCount > 1 {
+            String(localized: "This includes \(payload.externalRecordFileCount) provider sidecars.", comment: "Connected Mac completion with multiple provider sidecars")
+        } else {
+            ""
+        }
         switch payload.status {
         case .success:
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount) day(s), wrote \(payload.generatedFileCountDescription)\(suffix)."
+            return [
+                GeneratedFileCountText.localizedSuccessfulExport(
+                    count: payload.totalFilesWritten,
+                    isAuthoritative: payload.isTotalFilesWrittenAuthoritative
+                ),
+                GeneratedFileCountText.localizedDataDayProgress(
+                    successfulCount: payload.successCount,
+                    totalCount: payload.totalCount
+                ),
+                sidecarDescription
+            ].filter { !$0.isEmpty }.joined(separator: " ")
         case .partialSuccess:
             if payload.dailyNoteSkipCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
@@ -2141,7 +2156,17 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.generatedFileCountDescription)\(suffix)."
+            return [
+                GeneratedFileCountText.localizedExported(
+                    count: payload.totalFilesWritten,
+                    isAuthoritative: payload.isTotalFilesWrittenAuthoritative
+                ),
+                GeneratedFileCountText.localizedDataDayProgress(
+                    successfulCount: payload.successCount,
+                    totalCount: payload.totalCount
+                ),
+                sidecarDescription
+            ].filter { !$0.isEmpty }.joined(separator: " ")
         case .failure:
             return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."
         case .cancelled:

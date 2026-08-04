@@ -483,6 +483,14 @@ final class MacExportJobExecutor {
             }
 
             do {
+                let dateKey = Self.displayDate(record.date)
+                let externalRecordsForDate = externalRecordsByDate[dateKey] ?? []
+                if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
+                    try vaultManager.preflightExternalDailyRecordDestinations(
+                        externalRecordsForDate,
+                        healthSubfolder: job.settingsSnapshot.healthSubfolder
+                    )
+                }
                 let writeResult = try await vaultManager.exportHealthData(
                     record,
                     settings: settings,
@@ -528,14 +536,11 @@ final class MacExportJobExecutor {
                 fileAccounting.add(writeResult)
                 totalFilesWritten += writeResult.totalGeneratedFileCount
 
-                let dateKey = Self.displayDate(record.date)
                 var writtenSidecarsForDate = 0
-                if settings.writesExternalProviderSidecars,
-                   let externalRecords = externalRecordsByDate[dateKey],
-                   !externalRecords.isEmpty {
+                if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
                     do {
                         writtenSidecarsForDate = try await vaultManager.exportExternalDailyRecords(
-                            externalRecords,
+                            externalRecordsForDate,
                             healthSubfolder: job.settingsSnapshot.healthSubfolder
                         )
                         externalRecordFileCount += writtenSidecarsForDate
@@ -1024,6 +1029,14 @@ final class MacExportJobExecutor {
 
             if shouldWriteDailyAsChunksArrive && isRequestedDay {
                 do {
+                    let stringDateKey = Self.displayDate(record.date)
+                    let externalRecordsForDate = externalRecordsByDate[stringDateKey] ?? []
+                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
+                        try vaultManager.preflightExternalDailyRecordDestinations(
+                            externalRecordsForDate,
+                            healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                        )
+                    }
                     let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
@@ -1069,13 +1082,10 @@ final class MacExportJobExecutor {
                     session.fileAccounting.add(writeResult)
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
 
-                    let stringDateKey = Self.displayDate(record.date)
-                    if settings.writesExternalProviderSidecars,
-                       let externalRecords = externalRecordsByDate[stringDateKey],
-                       !externalRecords.isEmpty {
+                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
                         do {
                             let sidecarCount = try await vaultManager.exportExternalDailyRecords(
-                                externalRecords,
+                                externalRecordsForDate,
                                 healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                             )
                             session.externalRecordFileCount += sidecarCount
@@ -1291,6 +1301,14 @@ final class MacExportJobExecutor {
                     continue
                 }
                 do {
+                    let dateKey = Self.displayDate(record.date)
+                    let externalRecordsForDate = externalRecordsByDate[dateKey] ?? []
+                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
+                        try vaultManager.preflightExternalDailyRecordDestinations(
+                            externalRecordsForDate,
+                            healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                        )
+                    }
                     let writeResult = try await vaultManager.exportHealthData(
                         record,
                         settings: settings,
@@ -1308,12 +1326,9 @@ final class MacExportJobExecutor {
                     session.successfulRecords.append(record)
                     session.fileAccounting.add(writeResult)
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
-                    let dateKey = Self.displayDate(record.date)
-                    if settings.writesExternalProviderSidecars,
-                       let externalRecords = externalRecordsByDate[dateKey],
-                       !externalRecords.isEmpty {
+                    if settings.writesExternalProviderSidecars, !externalRecordsForDate.isEmpty {
                         let sidecarCount = try await vaultManager.exportExternalDailyRecords(
-                            externalRecords,
+                            externalRecordsForDate,
                             healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                         )
                         session.externalRecordFileCount += sidecarCount

@@ -628,9 +628,19 @@ struct MacExportView: View {
                     dateRangeEnd: dates.last ?? endDate
                 )
                 resultIsError = false
-                resultMessage = advancedSettings.dailyNotesOnlyModeEnabled
-                    ? "Daily note update cancelled."
-                    : String(localized: "Export cancelled.", comment: "Export was cancelled")
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    resultMessage = "Daily note update cancelled."
+                } else if result.successCount > 0 {
+                    resultMessage = GeneratedFileCountText.localizedStoppedExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    )
+                } else {
+                    resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
+                }
                 showResult = true
             }
 
@@ -698,7 +708,13 @@ struct MacExportView: View {
                             ? "Daily note update stopped — \(dailyNoteUpdateCount) of \(totalCount) notes updated."
                             : "Daily note update cancelled."
                     } else if successCount > 0 {
-                        resultMessage = String(localized: "Export stopped — \(successCount) of \(totalCount) files exported.", comment: "Export cancelled with partial success")
+                        resultMessage = GeneratedFileCountText.localizedStoppedExport(
+                            count: result.totalFilesWritten,
+                            isAuthoritative: result.hasAuthoritativeFileCount
+                        ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                            successfulCount: result.successCount,
+                            totalCount: result.totalCount
+                        )
                     } else {
                         resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
                     }
@@ -873,6 +889,7 @@ struct MacExportView: View {
                 isFileCategoryBreakdownComplete: isFileAccountingComplete,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
+                hadTerminalFailure: !isFileAccountingComplete,
                 completedDates: completedDates
             )
 
@@ -888,9 +905,17 @@ struct MacExportView: View {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")."
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Successfully exported \(result.generatedFileCountDescription) (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message with an exact, lower-bound, or unknown generated-file count")
+                    resultMessage = GeneratedFileCountText.localizedSuccessfulExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedBreakdown(
+                        result.fileBreakdownDescription
+                    )
                 } else {
-                    resultMessage = String(localized: "Successfully exported \(result.generatedFileCountDescription).", comment: "Export success message with an exact, lower-bound, or unknown generated-file count")
+                    resultMessage = GeneratedFileCountText.localizedSuccessfulExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    )
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
@@ -902,9 +927,23 @@ struct MacExportView: View {
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)"
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Exported \(result.generatedFileCountDescription) (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message with an exact, lower-bound, or unknown generated-file count")
+                    resultMessage = GeneratedFileCountText.localizedExported(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    ) + " " + GeneratedFileCountText.localizedBreakdown(
+                        result.fileBreakdownDescription
+                    ) + " " + suffix
                 } else {
-                    resultMessage = String(localized: "Exported \(result.generatedFileCountDescription). \(suffix)", comment: "Partial export message with an exact, lower-bound, or unknown generated-file count")
+                    resultMessage = GeneratedFileCountText.localizedExported(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    ) + " " + suffix
                 }
             } else {
                 resultIsError = true

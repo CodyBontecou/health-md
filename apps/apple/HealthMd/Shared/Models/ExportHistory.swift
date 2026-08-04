@@ -300,6 +300,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
     /// Terminal cancellation is persisted separately from confirmed successful output.
     /// Missing on older entries decodes as false.
     let wasCancelled: Bool
+    /// A producer reported a non-success terminal state after any confirmed output. This is
+    /// separate from cancellation and defaults to false for pre-field history entries.
+    let hadTerminalFailure: Bool
     /// Health-free renderer provenance for diagnostics and rollback analysis.
     let appleExportEnginePin: AppleExportEnginePin?
     /// Bounded CLI request/transfer facts. Never contains exported health values.
@@ -310,7 +313,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         case successCount, totalCount, failureReason, failedDateDetails
         case targetLabel, exportTarget, fileCount, outputBreakdown, pendingRecoveryDayCount
         case dailyNoteUpdateCount, dailyNoteSkipCount, partialFailures, wasCancelled
-        case appleExportEnginePin, operationDetails
+        case hadTerminalFailure, appleExportEnginePin, operationDetails
     }
 
     init(
@@ -333,6 +336,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         wasCancelled: Bool = false,
+        hadTerminalFailure: Bool = false,
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil
     ) {
@@ -396,6 +400,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.dailyNoteSkipCount = normalizedDailyNoteSkipCount
         self.partialFailures = partialFailures
         self.wasCancelled = wasCancelled
+        self.hadTerminalFailure = hadTerminalFailure
         self.appleExportEnginePin = appleExportEnginePin
         self.operationDetails = operationDetails
     }
@@ -445,6 +450,10 @@ struct ExportHistoryEntry: Codable, Identifiable {
                 forKey: .partialFailures
             ) ?? [],
             wasCancelled: try container.decodeIfPresent(Bool.self, forKey: .wasCancelled) ?? false,
+            hadTerminalFailure: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .hadTerminalFailure
+            ) ?? false,
             appleExportEnginePin: try container.decodeIfPresent(
                 AppleExportEnginePin.self,
                 forKey: .appleExportEnginePin
@@ -460,6 +469,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
     var isFullSuccess: Bool {
         success
             && !wasCancelled
+            && !hadTerminalFailure
             && successCount == totalCount
             && totalCount > 0
             && failedDateDetails.isEmpty
@@ -472,6 +482,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         success && (successCount > 0 || dailyNoteSkipCount > 0)
             && (successCount < totalCount
                 || wasCancelled
+                || hadTerminalFailure
                 || !failedDateDetails.isEmpty
                 || !partialFailures.isEmpty
                 || operationDetails?.hasWarnings == true)
@@ -1082,6 +1093,7 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         wasCancelled: Bool = false,
+        hadTerminalFailure: Bool = false,
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil
     ) {
@@ -1103,6 +1115,7 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
             wasCancelled: wasCancelled,
+            hadTerminalFailure: hadTerminalFailure,
             appleExportEnginePin: appleExportEnginePin,
             operationDetails: operationDetails
         )
@@ -1128,6 +1141,7 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         wasCancelled: Bool = false,
+        hadTerminalFailure: Bool = false,
         appleExportEnginePin: AppleExportEnginePin? = nil,
         operationDetails: ExportHistoryOperationDetails? = nil
     ) {
@@ -1150,6 +1164,7 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
             wasCancelled: wasCancelled,
+            hadTerminalFailure: hadTerminalFailure,
             appleExportEnginePin: appleExportEnginePin,
             operationDetails: operationDetails
         )

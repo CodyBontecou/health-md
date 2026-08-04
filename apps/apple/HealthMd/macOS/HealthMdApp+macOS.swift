@@ -1408,15 +1408,25 @@ struct HealthMdApp: App {
                result.completedDates?.count == result.totalCount {
                 return "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created."
             }
+            let fileDescription = GeneratedFileCountText.localizedMacWrite(
+                count: result.totalFilesWritten,
+                isAuthoritative: result.isTotalFilesWrittenAuthoritative
+            )
             if result.failedDateDetails.count == 1 {
-                return String(localized: "Mac export wrote \(result.generatedFileCountDescription); 1 date needs attention.", comment: "Partial Mac export activity message with one failed date")
+                return fileDescription + " " + String(localized: "1 date needs attention.", comment: "Partial Mac export activity with one failed date")
             }
-            return String(localized: "Mac export wrote \(result.generatedFileCountDescription); \(result.failedDateDetails.count) dates need attention.", comment: "Partial Mac export activity message with multiple failed dates")
+            return fileDescription + " " + String(localized: "\(result.failedDateDetails.count) dates need attention.", comment: "Partial Mac export activity with multiple failed dates")
         case .failure:
             return result.failedDateDetails.first?.reason.shortDescription ?? "Mac export failed"
         case .cancelled:
             return result.successCount > 0
-                ? String(localized: "Mac export stopped after writing \(result.generatedFileCountDescription).", comment: "Cancelled Mac export after writing an exact, lower-bound, or unknown generated-file count")
+                ? GeneratedFileCountText.localizedStoppedExport(
+                    count: result.totalFilesWritten,
+                    isAuthoritative: result.isTotalFilesWrittenAuthoritative
+                ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                    successfulCount: result.successCount,
+                    totalCount: result.totalCount
+                )
                 : String(localized: "Mac export cancelled", comment: "Cancelled Mac export with no successful data days")
         }
     }

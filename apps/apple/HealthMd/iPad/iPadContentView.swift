@@ -457,14 +457,26 @@ struct iPadContentView: View {
                         ? "Daily note update stopped — \(result.dailyNoteUpdateCount) of \(result.totalCount) notes updated"
                         : "Daily note update cancelled"
                 } else if result.successCount > 0 {
-                    exportStatusMessage = String(localized: "Export stopped — \(result.successCount) of \(result.totalCount) files exported", comment: "Export cancelled with partial success")
+                    exportStatusMessage = GeneratedFileCountText.localizedStoppedExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    )
                 } else {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    : String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
+                    : GeneratedFileCountText.localizedSuccessfulExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    )
             } else if result.isPartialSuccess {
                 let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
                     && result.dailyNoteSkipCount > 0
@@ -479,7 +491,13 @@ struct iPadContentView: View {
                 } else {
                     exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                         ? "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes. \(suffix)"
-                        : String(localized: "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)", comment: "Partial export with failures")
+                        : GeneratedFileCountText.localizedExported(
+                            count: result.totalFilesWritten,
+                            isAuthoritative: result.hasAuthoritativeFileCount
+                        ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                            successfulCount: result.successCount,
+                            totalCount: result.totalCount
+                        ) + " " + suffix
                 }
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown

@@ -18,6 +18,151 @@ nonisolated enum GeneratedFileCountText {
         }
         return String(localized: "an unknown number of files", comment: "Unknown generated-file count")
     }
+
+    /// Complete localized sentences for live status. Count fragments remain available for compact
+    /// rows, but live iPhone, iPad, and Mac copy must not ask translators to embed one localized
+    /// fragment inside another sentence.
+    static func localizedSuccessfulExport(
+        count: Int,
+        isAuthoritative: Bool,
+        destination: String? = nil
+    ) -> String {
+        if let destination {
+            if isAuthoritative {
+                return count == 1
+                    ? String(localized: "Successfully exported 1 file to \(destination).", comment: "Successful generated-file export to a named destination, singular")
+                    : String(localized: "Successfully exported \(count) files to \(destination).", comment: "Successful generated-file export to a named destination, plural or zero")
+            }
+            if count == 1 {
+                return String(localized: "Successfully exported at least 1 file to \(destination).", comment: "Successful generated-file export to a named destination with a singular lower bound")
+            }
+            if count > 1 {
+                return String(localized: "Successfully exported at least \(count) files to \(destination).", comment: "Successful generated-file export to a named destination with a lower bound")
+            }
+            return String(localized: "Successfully exported files to \(destination), but the generated-file count is unknown.", comment: "Successful generated-file export to a named destination with an unknown count")
+        }
+
+        if isAuthoritative {
+            return count == 1
+                ? String(localized: "Successfully exported 1 file.", comment: "Successful generated-file export, singular")
+                : String(localized: "Successfully exported \(count) files.", comment: "Successful generated-file export, plural or zero")
+        }
+        if count == 1 {
+            return String(localized: "Successfully exported at least 1 file.", comment: "Successful generated-file export with a singular lower bound")
+        }
+        if count > 1 {
+            return String(localized: "Successfully exported at least \(count) files.", comment: "Successful generated-file export with a lower bound")
+        }
+        return String(localized: "The export succeeded, but the generated-file count is unknown.", comment: "Successful generated-file export with an unknown count")
+    }
+
+    static func localizedExported(
+        count: Int,
+        isAuthoritative: Bool,
+        destination: String? = nil
+    ) -> String {
+        if let destination {
+            if isAuthoritative {
+                return count == 1
+                    ? String(localized: "Exported 1 file to \(destination).", comment: "Generated-file export to a named destination, singular")
+                    : String(localized: "Exported \(count) files to \(destination).", comment: "Generated-file export to a named destination, plural or zero")
+            }
+            if count == 1 {
+                return String(localized: "Exported at least 1 file to \(destination).", comment: "Generated-file export to a named destination with a singular lower bound")
+            }
+            if count > 1 {
+                return String(localized: "Exported at least \(count) files to \(destination).", comment: "Generated-file export to a named destination with a lower bound")
+            }
+            return String(localized: "Exported files to \(destination), but the generated-file count is unknown.", comment: "Generated-file export to a named destination with an unknown count")
+        }
+
+        if isAuthoritative {
+            return count == 1
+                ? String(localized: "Exported 1 file.", comment: "Generated-file export, singular")
+                : String(localized: "Exported \(count) files.", comment: "Generated-file export, plural or zero")
+        }
+        if count == 1 {
+            return String(localized: "Exported at least 1 file.", comment: "Generated-file export with a singular lower bound")
+        }
+        if count > 1 {
+            return String(localized: "Exported at least \(count) files.", comment: "Generated-file export with a lower bound")
+        }
+        return String(localized: "Files were exported, but the generated-file count is unknown.", comment: "Generated-file export with an unknown count")
+    }
+
+    static func localizedStoppedExport(count: Int, isAuthoritative: Bool) -> String {
+        if isAuthoritative {
+            return count == 1
+                ? String(localized: "Export stopped after exporting 1 file.", comment: "Stopped generated-file export, singular")
+                : String(localized: "Export stopped after exporting \(count) files.", comment: "Stopped generated-file export, plural or zero")
+        }
+        if count == 1 {
+            return String(localized: "Export stopped after exporting at least 1 file.", comment: "Stopped generated-file export with a singular lower bound")
+        }
+        if count > 1 {
+            return String(localized: "Export stopped after exporting at least \(count) files.", comment: "Stopped generated-file export with a lower bound")
+        }
+        return String(localized: "Export stopped after writing files, but the generated-file count is unknown.", comment: "Stopped generated-file export with an unknown count")
+    }
+
+    static func localizedFailedExport(
+        count: Int,
+        isAuthoritative: Bool,
+        destination: String
+    ) -> String {
+        if isAuthoritative {
+            return count == 1
+                ? String(localized: "The export to \(destination) failed after exporting 1 file.", comment: "Failed generated-file export to a named destination, singular")
+                : String(localized: "The export to \(destination) failed after exporting \(count) files.", comment: "Failed generated-file export to a named destination, plural or zero")
+        }
+        if count == 1 {
+            return String(localized: "The export to \(destination) failed after exporting at least 1 file.", comment: "Failed generated-file export to a named destination with a singular lower bound")
+        }
+        if count > 1 {
+            return String(localized: "The export to \(destination) failed after exporting at least \(count) files.", comment: "Failed generated-file export to a named destination with a lower bound")
+        }
+        return String(localized: "The export to \(destination) failed after writing files, but the generated-file count is unknown.", comment: "Failed generated-file export to a named destination with an unknown count")
+    }
+
+    static func localizedDataDayProgress(successfulCount: Int, totalCount: Int) -> String {
+        totalCount == 1
+            ? String(localized: "\(successfulCount) of 1 data day completed.", comment: "Live export data-day progress when one day was requested")
+            : String(localized: "\(successfulCount) of \(totalCount) data days completed.", comment: "Live export data-day progress when multiple days were requested")
+    }
+
+    static func localizedBreakdown(_ breakdown: String) -> String {
+        String(localized: "Generated files: \(breakdown).", comment: "Live export generated-file category breakdown")
+    }
+
+    static func localizedMacWrite(count: Int, isAuthoritative: Bool) -> String {
+        if isAuthoritative {
+            return count == 1
+                ? String(localized: "Mac export wrote 1 file.", comment: "Mac activity generated-file count, singular")
+                : String(localized: "Mac export wrote \(count) files.", comment: "Mac activity generated-file count, plural or zero")
+        }
+        if count == 1 {
+            return String(localized: "Mac export wrote at least 1 file.", comment: "Mac activity generated-file count with a singular lower bound")
+        }
+        if count > 1 {
+            return String(localized: "Mac export wrote at least \(count) files.", comment: "Mac activity generated-file count with a lower bound")
+        }
+        return String(localized: "Mac export wrote files, but the generated-file count is unknown.", comment: "Mac activity generated-file count when unknown")
+    }
+
+    static func localizedPartialCompact(count: Int, isAuthoritative: Bool) -> String {
+        if isAuthoritative {
+            return count == 1
+                ? String(localized: "Partial: 1 file", comment: "Compact partial Connected Mac result, singular")
+                : String(localized: "Partial: \(count) files", comment: "Compact partial Connected Mac result, plural or zero")
+        }
+        if count == 1 {
+            return String(localized: "Partial: at least 1 file", comment: "Compact partial Connected Mac result with a singular lower bound")
+        }
+        if count > 1 {
+            return String(localized: "Partial: at least \(count) files", comment: "Compact partial Connected Mac result with a lower bound")
+        }
+        return String(localized: "Partial: file count unknown", comment: "Compact partial Connected Mac result with an unknown count")
+    }
 }
 
 @MainActor
@@ -118,6 +263,10 @@ struct ExportOrchestrator {
         let failedDateDetails: [FailedDateDetail]
         let partialFailures: [ExportPartialFailure]
         let wasCancelled: Bool
+        /// A producer reached a non-success terminal state other than cancellation. This remains
+        /// distinct from confirmed output and prevents all committed data days from masquerading
+        /// as full success when a final roll-up, archive, or remote finalizer fails.
+        let hadTerminalFailure: Bool
         /// Number of loose formats configured per successful date.
         let formatsPerDate: Int
         /// Exact number of loose aggregate files written across successful dates.
@@ -166,6 +315,7 @@ struct ExportOrchestrator {
             dailyNoteUpdateCount: Int = 0,
             dailyNoteSkipCount: Int = 0,
             wasCancelled: Bool = false,
+            hadTerminalFailure: Bool = false,
             completedDates: [Date]? = nil,
             completedDateCount: Int? = nil
         ) {
@@ -216,6 +366,7 @@ struct ExportOrchestrator {
             self.dailyNoteUpdateCount = normalizedBreakdown.dailyNoteUpdateCount
             self.dailyNoteSkipCount = normalizedBreakdown.dailyNoteSkipCount
             self.wasCancelled = wasCancelled
+            self.hadTerminalFailure = hadTerminalFailure
         }
 
         /// Builds a conservative history result from the connected-Mac payload. Older peers keep
@@ -251,6 +402,7 @@ struct ExportOrchestrator {
                 dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
                 dailyNoteSkipCount: payload.dailyNoteSkipCount,
                 wasCancelled: payload.status == .cancelled,
+                hadTerminalFailure: payload.status == .failure || payload.status == .partialSuccess,
                 completedDates: payload.completedDates
             )
         }
@@ -284,7 +436,8 @@ struct ExportOrchestrator {
                     ?? false,
                 dailyNoteUpdateCount: breakdown?.dailyNoteUpdateCount ?? 0,
                 dailyNoteSkipCount: breakdown?.dailyNoteSkipCount ?? 0,
-                wasCancelled: failure.reason == .cancelled
+                wasCancelled: failure.reason == .cancelled,
+                hadTerminalFailure: failure.reason != .cancelled
             )
         }
 
@@ -320,12 +473,14 @@ struct ExportOrchestrator {
                 && didCompleteAllRequestedDates
                 && failedDateDetails.isEmpty
                 && !hasPartialFailures
+                && !hadTerminalFailure
         }
         var isPartialSuccess: Bool {
             let hasConfirmedSuccess = successCount > 0 || dailyNoteSkipCount > 0
             return hasConfirmedSuccess && (
                 successCount < totalCount
                     || wasCancelled
+                    || hadTerminalFailure
                     || !failedDateDetails.isEmpty
                     || hasPartialFailures
             )
@@ -708,6 +863,17 @@ struct ExportOrchestrator {
                 let preparedExport = healthData.preparedExportAssumingSelectionApplied(
                     settings: frozenOperationSettings
                 )
+                let shouldWriteExternalRecords = settings.writesExternalProviderSidecars
+                    && ConnectedAppsFeature.isEnabled
+                    && externalIntegrations != nil
+                    && (externalIntegrations?.connectedProviderCount ?? 0) > 0
+                let externalRecords: [ExternalDailyRecord]
+                if shouldWriteExternalRecords, let externalIntegrations {
+                    externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
+                    try vaultManager.preflightExternalDailyRecordDestinations(externalRecords)
+                } else {
+                    externalRecords = []
+                }
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
                     settings: settings,
@@ -754,11 +920,7 @@ struct ExportOrchestrator {
                     }
                 }
 
-                if settings.writesExternalProviderSidecars,
-                   ConnectedAppsFeature.isEnabled,
-                   let externalIntegrations,
-                   externalIntegrations.connectedProviderCount > 0 {
-                    let externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
+                if shouldWriteExternalRecords {
                     do {
                         externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)
                     } catch let error as ExportPartialWriteError {
@@ -943,6 +1105,10 @@ struct ExportOrchestrator {
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: rollupResult.wasCancelled || archiveResult.wasCancelled,
+            hadTerminalFailure: !rollupResult.wasCancelled
+                && !archiveResult.wasCancelled
+                && (!rollupResult.isFileAccountingComplete
+                    || !archiveResult.isFileAccountingComplete),
             completedDates: durableCompletedDates
         )
     }
@@ -1613,6 +1779,10 @@ struct ExportOrchestrator {
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: rollupResult.wasCancelled || archiveResult.wasCancelled,
+            hadTerminalFailure: !rollupResult.wasCancelled
+                && !archiveResult.wasCancelled
+                && (!rollupResult.isFileAccountingComplete
+                    || !archiveResult.isFileAccountingComplete),
             completedDates: durableCompletedDates
         )
     }
@@ -1845,6 +2015,9 @@ struct ExportOrchestrator {
             isFileCategoryBreakdownComplete: rollupResult.isFileAccountingComplete
                 && archiveResult.isFileAccountingComplete,
             wasCancelled: wasCancelled,
+            hadTerminalFailure: !wasCancelled
+                && (!rollupResult.isFileAccountingComplete
+                    || !archiveResult.isFileAccountingComplete),
             completedDates: wasCancelled
                 ? []
                 : (outputArtifactCount > 0 || isTerminalNoData ? dates : [])
@@ -2077,6 +2250,7 @@ struct ExportOrchestrator {
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,
                 wasCancelled: result.wasCancelled,
+                hadTerminalFailure: result.hadTerminalFailure,
                 appleExportEnginePin: appleExportEnginePin,
                 operationDetails: operationDetails
             )
@@ -2099,6 +2273,7 @@ struct ExportOrchestrator {
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,
                 wasCancelled: result.wasCancelled,
+                hadTerminalFailure: result.hadTerminalFailure,
                 appleExportEnginePin: appleExportEnginePin,
                 operationDetails: operationDetails
             )

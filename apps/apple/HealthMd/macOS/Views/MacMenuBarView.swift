@@ -247,7 +247,10 @@ struct MacMenuBarView: View {
                 if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
                     return "Partial: \(result.dailyNoteUpdateCount) daily note(s) updated"
                 }
-                return String(localized: "Partial: \(result.generatedFileCountDescription)", comment: "Partial Connected Mac export with an exact, lower-bound, or unknown generated-file count")
+                return GeneratedFileCountText.localizedPartialCompact(
+                    count: result.totalFilesWritten,
+                    isAuthoritative: result.isTotalFilesWrittenAuthoritative
+                )
             case .failure:
                 return "Failed"
             case .cancelled:
