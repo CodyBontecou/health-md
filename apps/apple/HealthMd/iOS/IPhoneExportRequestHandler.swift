@@ -615,8 +615,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             source: .macAgent,
             dateRangeStart: pending.request.dateRangeStart,
             dateRangeEnd: pending.request.dateRangeEnd,
-            targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.totalFilesWritten
+            targetLabel: payload.destinationDisplayName ?? "Mac"
         )
 
         if payload.successCount > 0 {
@@ -651,11 +650,16 @@ final class IPhoneExportRequestHandler: ObservableObject {
             errorDetails: failure.underlyingError ?? failure.message
         )
         let result = ExportOrchestrator.ExportResult(
-            successCount: 0,
-            totalCount: max(ExportOrchestrator.dateRange(from: pending.request.dateRangeStart, to: pending.request.dateRangeEnd).count, 1),
-            failedDateDetails: [failedDetail],
+            macExportFailure: failure,
+            totalCount: max(
+                ExportOrchestrator.dateRange(
+                    from: pending.request.dateRangeStart,
+                    to: pending.request.dateRangeEnd
+                ).count,
+                1
+            ),
             formatsPerDate: pending.settings.looseFormatsPerDate,
-            wasCancelled: failure.reason == .cancelled
+            failedDateDetails: [failedDetail]
         )
         ExportOrchestrator.recordResult(
             result,

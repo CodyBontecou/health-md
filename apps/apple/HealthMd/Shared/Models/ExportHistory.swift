@@ -120,7 +120,7 @@ struct ExportHistoryOperationDetails: Codable, Equatable {
 
 /// Bounded, health-free accounting for one export attempt. Counts describe days and
 /// destination side effects only; filenames and exported health values are never stored.
-struct ExportHistoryOutputBreakdown: Codable, Equatable {
+nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
     nonisolated static let maximumPersistedCount = 10_000_000
 
     let requestedDataDayCount: Int
@@ -510,7 +510,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
     }
 
     var isDailyNoteOnlyResult: Bool {
-        (dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0) && generatedFileCountForDisplay == 0
+        (dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0) && fileCount == 0
     }
 
     /// Raw CLI responses transfer daily data rather than generated files. The
@@ -546,8 +546,23 @@ struct ExportHistoryEntry: Codable, Identifiable {
         return targetLabel == "localhost" || targetLabel.contains(".")
     }
 
+    /// Known generated files. This is an exact total only when `fileCount` is non-nil;
+    /// otherwise it is a lower bound assembled from confirmed category writes.
     var generatedFileCountForDisplay: Int {
         outputBreakdown.generatedFileCount
+    }
+
+    var hasAuthoritativeGeneratedFileCount: Bool {
+        fileCount != nil
+    }
+
+    var generatedFileCountCompactDescription: String {
+        if let fileCount { return "\(fileCount)" }
+        let lowerBound = generatedFileCountForDisplay
+        if lowerBound == 0 {
+            return String(localized: "Unknown", comment: "Export history compact generated-file total when no authoritative total or lower bound is available")
+        }
+        return String(localized: "At least \(lowerBound)", comment: "Export history compact generated-file lower bound when no authoritative total is available")
     }
 
     var isPendingRecovery: Bool {
@@ -565,10 +580,18 @@ struct ExportHistoryEntry: Codable, Identifiable {
     }
 
     var generatedFileCountDescription: String {
-        let count = generatedFileCountForDisplay
-        return count == 1
-            ? String(localized: "1 generated file", comment: "Export history generated-file count when singular")
-            : String(localized: "\(count) generated files", comment: "Export history generated-file count when plural or zero")
+        if let fileCount {
+            return fileCount == 1
+                ? String(localized: "1 generated file", comment: "Export history authoritative generated-file count when singular")
+                : String(localized: "\(fileCount) generated files", comment: "Export history authoritative generated-file count when plural or zero")
+        }
+        let lowerBound = generatedFileCountForDisplay
+        if lowerBound == 0 {
+            return String(localized: "Unknown", comment: "Export history generated-file total when no authoritative total or lower bound is available")
+        }
+        return lowerBound == 1
+            ? String(localized: "At least 1 generated file", comment: "Export history generated-file lower bound when singular")
+            : String(localized: "At least \(lowerBound) generated files", comment: "Export history generated-file lower bound when plural")
     }
 
     var pendingRecoveryCountDescription: String {
@@ -619,6 +642,12 @@ struct ExportHistoryEntry: Codable, Identifiable {
         if isCLIRawDelivery || isAPIEndpointDelivery {
             return String(localized: "\(successCount) of \(totalCount)", comment: "Export history delivered-day fraction")
         }
+        if fileCount == nil {
+            let count = generatedFileCountDescription
+            return totalCount == 1
+                ? String(localized: "\(count) from \(successCount) of 1 data day", comment: "Export history non-authoritative generated-file result with one requested data day")
+                : String(localized: "\(count) from \(successCount) of \(totalCount) data days", comment: "Export history non-authoritative generated-file result with multiple requested data days")
+        }
         switch (generatedFileCountForDisplay == 1, totalCount == 1) {
         case (true, true):
             return String(localized: "1 generated file from \(successCount) of 1 data day", comment: "Export history result with one generated file and one requested data day")
@@ -653,6 +682,22 @@ struct ExportHistoryEntry: Codable, Identifiable {
             return totalCount == 1
                 ? String(localized: "\(successCount) of 1 data day uploaded", comment: "Accessible API delivery count when one data day was requested")
                 : String(localized: "\(successCount) of \(totalCount) data days uploaded", comment: "Accessible API delivery count when multiple data days were requested")
+        }
+        if fileCount == nil {
+            let lowerBound = generatedFileCountForDisplay
+            if lowerBound == 0 {
+                return totalCount == 1
+                    ? String(localized: "Generated file count unknown from \(successCount) of 1 data day", comment: "Accessible export count when the file total is unknown and one data day was requested")
+                    : String(localized: "Generated file count unknown from \(successCount) of \(totalCount) data days", comment: "Accessible export count when the file total is unknown and multiple data days were requested")
+            }
+            if lowerBound == 1 {
+                return totalCount == 1
+                    ? String(localized: "At least 1 generated file exported from \(successCount) of 1 data day", comment: "Accessible export lower bound with one file and one requested data day")
+                    : String(localized: "At least 1 generated file exported from \(successCount) of \(totalCount) data days", comment: "Accessible export lower bound with one file and multiple requested data days")
+            }
+            return totalCount == 1
+                ? String(localized: "At least \(lowerBound) generated files exported from \(successCount) of 1 data day", comment: "Accessible export lower bound with multiple files and one requested data day")
+                : String(localized: "At least \(lowerBound) generated files exported from \(successCount) of \(totalCount) data days", comment: "Accessible export lower bound with multiple files and requested data days")
         }
         switch (generatedFileCountForDisplay == 1, totalCount == 1) {
         case (true, true):
@@ -747,6 +792,22 @@ struct ExportHistoryEntry: Codable, Identifiable {
     }
 
     private var fullGeneratedFileSummaryDescription: String {
+        if fileCount == nil {
+            let lowerBound = generatedFileCountForDisplay
+            if lowerBound == 0 {
+                return successCount == 1
+                    ? String(localized: "Exported files from 1 data day (Unknown total)", comment: "Export success summary when the generated-file total is unknown and one data day succeeded")
+                    : String(localized: "Exported files from \(successCount) data days (Unknown total)", comment: "Export success summary when the generated-file total is unknown and multiple data days succeeded")
+            }
+            if lowerBound == 1 {
+                return successCount == 1
+                    ? String(localized: "Exported at least 1 file from 1 data day", comment: "Export success summary with a one-file lower bound and one successful data day")
+                    : String(localized: "Exported at least 1 file from \(successCount) data days", comment: "Export success summary with a one-file lower bound and multiple successful data days")
+            }
+            return successCount == 1
+                ? String(localized: "Exported at least \(lowerBound) files from 1 data day", comment: "Export success summary with a multiple-file lower bound and one successful data day")
+                : String(localized: "Exported at least \(lowerBound) files from \(successCount) data days", comment: "Export success summary with a multiple-file lower bound and successful data days")
+        }
         switch (generatedFileCountForDisplay == 1, successCount == 1) {
         case (true, true):
             return String(localized: "Exported 1 file from 1 data day", comment: "Export success summary with one file and one successful data day")
@@ -760,6 +821,30 @@ struct ExportHistoryEntry: Codable, Identifiable {
     }
 
     private var partialGeneratedFileSummaryDescription: String {
+        if fileCount == nil {
+            let lowerBound = generatedFileCountForDisplay
+            let base: String
+            if lowerBound == 0 {
+                base = totalCount == 1
+                    ? String(localized: "Partial: files from \(successCount) of 1 data day (Unknown total)", comment: "Partial export summary when the generated-file total is unknown and one data day was requested")
+                    : String(localized: "Partial: files from \(successCount) of \(totalCount) data days (Unknown total)", comment: "Partial export summary when the generated-file total is unknown and multiple data days were requested")
+            } else if lowerBound == 1 {
+                base = totalCount == 1
+                    ? String(localized: "Partial: at least 1 file from \(successCount) of 1 data day", comment: "Partial export summary with a one-file lower bound and one requested data day")
+                    : String(localized: "Partial: at least 1 file from \(successCount) of \(totalCount) data days", comment: "Partial export summary with a one-file lower bound and requested data days")
+            } else {
+                base = totalCount == 1
+                    ? String(localized: "Partial: at least \(lowerBound) files from \(successCount) of 1 data day", comment: "Partial export summary with a multiple-file lower bound and one requested data day")
+                    : String(localized: "Partial: at least \(lowerBound) files from \(successCount) of \(totalCount) data days", comment: "Partial export summary with a multiple-file lower bound and requested data days")
+            }
+            if partialFailures.count == 1 {
+                return base + String(localized: ", 1 metric warning", comment: "Suffix for a partial export with one metric warning")
+            }
+            if partialFailures.count > 1 {
+                return base + String(localized: ", \(partialFailures.count) metric warnings", comment: "Suffix for a partial export with multiple metric warnings")
+            }
+            return base
+        }
         if partialFailures.count == 1 {
             switch (generatedFileCountForDisplay == 1, totalCount == 1) {
             case (true, true):

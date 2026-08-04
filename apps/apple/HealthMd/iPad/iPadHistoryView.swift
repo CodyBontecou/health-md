@@ -133,7 +133,9 @@ struct iPadHistoryView: View {
 
                 Spacer()
 
-                Text("\(entry.successCount)/\(entry.totalCount)")
+                Text(entry.isAPIEndpointDelivery || entry.isCLIRawDelivery
+                    ? "\(entry.successCount)/\(entry.totalCount)"
+                    : entry.generatedFileCountCompactDescription)
                     .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textMuted)
             }

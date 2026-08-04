@@ -711,7 +711,16 @@ final class SyncV2ProtocolTests: XCTestCase {
             totalCount: 2,
             formatsPerDate: 4,
             totalFilesWritten: 5,
+            isTotalFilesWrittenAuthoritative: false,
             externalRecordFileCount: 1,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 2,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 3,
+                providerSidecarFileCount: 1,
+                unclassifiedFileCount: 1,
+                isFileCategoryBreakdownComplete: false
+            ),
             dailyNoteUpdateCount: 1,
             dailyNoteSkipCount: 1,
             failedDateDetails: [FailedDateDetail(date: date, reason: .noHealthData, errorDetails: "No samples")],
@@ -725,6 +734,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(result.successCount, 1)
             XCTAssertEqual(result.failedDateDetails.count, 1)
             XCTAssertEqual(result.totalFilesWritten, 5)
+            XCTAssertFalse(result.isTotalFilesWrittenAuthoritative)
+            XCTAssertEqual(result.outputBreakdown?.looseAggregateFileCount, 3)
             XCTAssertEqual(result.externalRecordFileCount, 1)
             XCTAssertEqual(result.dailyNoteUpdateCount, 1)
             XCTAssertEqual(result.dailyNoteSkipCount, 1)
@@ -742,12 +753,21 @@ final class SyncV2ProtocolTests: XCTestCase {
             reason: .macFolderAccessDenied,
             message: "Cannot access the selected folder.",
             underlyingError: "Bookmark stale",
+            totalFilesWritten: 2,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 2,
+                successfulDataDayCount: 0,
+                looseAggregateFileCount: 2,
+                isFileCategoryBreakdownComplete: true
+            ),
             occurredAt: date
         ))) { decoded in
             guard case .macExportFailed(let failure) = decoded else { return XCTFail("Expected macExportFailed") }
             XCTAssertEqual(failure.jobID, jobID)
             XCTAssertEqual(failure.reason, .macFolderAccessDenied)
             XCTAssertEqual(failure.underlyingError, "Bookmark stale")
+            XCTAssertEqual(failure.totalFilesWritten, 2)
+            XCTAssertEqual(failure.outputBreakdown?.looseAggregateFileCount, 2)
         }
 
         try assertRoundTrip(.iphoneExportRequest(IPhoneExportRequest(
@@ -897,6 +917,65 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(failure.reason, .macDestinationUnavailable)
             XCTAssertEqual(failure.underlyingError, "No folder")
         }
+    }
+
+    func testLegacyMacAccountingPayloadsDecodeWithConservativeDefaults() throws {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let result = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 2,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 1,
+                dataDictionaryFileCount: 1
+            ),
+            failedDateDetails: [],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: date
+        )
+        var resultObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(result)) as? [String: Any]
+        )
+        resultObject.removeValue(forKey: "isTotalFilesWrittenAuthoritative")
+        resultObject.removeValue(forKey: "outputBreakdown")
+        let legacyResult = try JSONDecoder().decode(
+            MacExportResultPayload.self,
+            from: JSONSerialization.data(withJSONObject: resultObject)
+        )
+        XCTAssertTrue(legacyResult.isTotalFilesWrittenAuthoritative)
+        XCTAssertNil(legacyResult.outputBreakdown)
+        XCTAssertTrue(legacyResult.hasConsistentFileAccounting)
+
+        let failure = MacExportFailure(
+            jobID: UUID(),
+            reason: .exportWriteFailure,
+            message: "Failed",
+            totalFilesWritten: 1,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 0,
+                looseAggregateFileCount: 1,
+                isFileCategoryBreakdownComplete: true
+            ),
+            occurredAt: date
+        )
+        var failureObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(failure)) as? [String: Any]
+        )
+        failureObject.removeValue(forKey: "totalFilesWritten")
+        failureObject.removeValue(forKey: "outputBreakdown")
+        let legacyFailure = try JSONDecoder().decode(
+            MacExportFailure.self,
+            from: JSONSerialization.data(withJSONObject: failureObject)
+        )
+        XCTAssertNil(legacyFailure.totalFilesWritten)
+        XCTAssertNil(legacyFailure.outputBreakdown)
     }
 
     func testIPhoneExportRequestLegacyPayloadDefaultsToExplicitRange() throws {

@@ -59,7 +59,11 @@ final class ExportHistoryTests: XCTestCase {
             dateRangeEnd: Date()
         )
 
-        let breakdown = try XCTUnwrap(history.history.first?.outputBreakdown)
+        let entry = try XCTUnwrap(history.history.first)
+        let breakdown = entry.outputBreakdown
+        XCTAssertEqual(entry.generatedFileCountDescription, "41 generated files")
+        XCTAssertEqual(entry.generatedFileCountCompactDescription, "41")
+        XCTAssertFalse(entry.resultCountDescription.contains("At least"))
         XCTAssertEqual(breakdown.requestedDataDayCount, 1)
         XCTAssertEqual(breakdown.successfulDataDayCount, 1)
         XCTAssertEqual(breakdown.looseAggregateFileCount, 2)
@@ -104,6 +108,10 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertNil(decoded.fileCount)
         XCTAssertEqual(decoded.outputBreakdown.generatedFileCount, 0)
         XCTAssertFalse(decoded.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(decoded.generatedFileCountDescription, "Unknown")
+        XCTAssertEqual(decoded.generatedFileCountCompactDescription, "Unknown")
+        XCTAssertEqual(decoded.resultCountDescription, "Unknown from 0 of 1 data day")
+        XCTAssertTrue(decoded.resultCountAccessibilityDescription.contains("count unknown"))
     }
 
     func testRecordResultPreservesUnknownMacFailureTotalAndKnownPartialCategories() throws {
@@ -139,6 +147,99 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.outputBreakdown.looseAggregateFileCount, 2)
         XCTAssertEqual(decoded.outputBreakdown.generatedFileCount, 2)
         XCTAssertFalse(decoded.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(decoded.generatedFileCountDescription, "At least 2 generated files")
+        XCTAssertEqual(decoded.generatedFileCountCompactDescription, "At least 2")
+        XCTAssertEqual(
+            decoded.resultCountDescription,
+            "At least 2 generated files from 0 of 1 data day"
+        )
+        XCTAssertTrue(decoded.resultCountAccessibilityDescription.hasPrefix("At least 2"))
+    }
+
+    func testMacPayloadLowerBoundDoesNotBecomeAuthoritativeHistoryTotal() throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let date = Date()
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 0,
+            looseAggregateFileCount: 2,
+            isFileCategoryBreakdownComplete: false
+        )
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .failure,
+            successCount: 0,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 2,
+            isTotalFilesWrittenAuthoritative: false,
+            outputBreakdown: breakdown,
+            failedDateDetails: [
+                FailedDateDetail(date: date, reason: .fileWriteError)
+            ],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: date
+        )
+
+        ExportOrchestrator.recordResult(
+            ExportOrchestrator.ExportResult(macExportPayload: payload),
+            source: .macAgent,
+            dateRangeStart: date,
+            dateRangeEnd: date
+        )
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertNil(entry.fileCount)
+        XCTAssertEqual(entry.outputBreakdown.looseAggregateFileCount, 2)
+        XCTAssertEqual(entry.generatedFileCountDescription, "At least 2 generated files")
+    }
+
+    func testMacExportFailureCarriesExactCommittedCategoriesIntoFailureHistory() throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let date = Date()
+        let diagnostic = "Injected final dictionary failure"
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 0,
+            looseAggregateFileCount: 2,
+            isFileCategoryBreakdownComplete: true
+        )
+        let failure = MacExportFailure(
+            jobID: UUID(),
+            reason: .exportWriteFailure,
+            message: "Mac export failed.",
+            underlyingError: diagnostic,
+            totalFilesWritten: 2,
+            outputBreakdown: breakdown
+        )
+        let detail = FailedDateDetail(
+            date: date,
+            reason: .fileWriteError,
+            errorDetails: diagnostic
+        )
+
+        ExportOrchestrator.recordResult(
+            ExportOrchestrator.ExportResult(
+                macExportFailure: failure,
+                totalCount: 1,
+                formatsPerDate: 1,
+                failedDateDetails: [detail]
+            ),
+            source: .macAgent,
+            dateRangeStart: date,
+            dateRangeEnd: date
+        )
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertFalse(entry.success)
+        XCTAssertEqual(entry.fileCount, 2)
+        XCTAssertEqual(entry.outputBreakdown.looseAggregateFileCount, 2)
+        XCTAssertEqual(entry.failureDiagnosticDetails, [diagnostic])
     }
 
     #if os(iOS)

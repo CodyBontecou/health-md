@@ -114,6 +114,9 @@ struct ExportOrchestrator {
         let externalRecordFileCount: Int
         /// Provider records embedded in an API payload. These are not generated files.
         let externalRecordPayloadCount: Int
+        /// Confirmed generated files whose category was not available. This remains a lower
+        /// bound unless `authoritativeFileCount` is non-nil.
+        let unclassifiedFileCount: Int
         /// Authoritative total from a producer that cannot classify every generated file.
         let authoritativeFileCount: Int?
         /// True only when every physical generated-file category was measured by the writer.
@@ -137,6 +140,7 @@ struct ExportOrchestrator {
             archiveCount: Int = 0,
             externalRecordFileCount: Int = 0,
             externalRecordPayloadCount: Int = 0,
+            unclassifiedFileCount: Int = 0,
             authoritativeFileCount: Int? = nil,
             isFileCategoryBreakdownComplete: Bool = false,
             dailyNoteUpdateCount: Int = 0,
@@ -168,6 +172,7 @@ struct ExportOrchestrator {
                 providerSidecarFileCount: externalRecordFileCount,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
+                unclassifiedFileCount: unclassifiedFileCount,
                 isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
             )
             self.looseAggregateFileCount = normalizedBreakdown.looseAggregateFileCount
@@ -179,24 +184,31 @@ struct ExportOrchestrator {
             self.externalRecordPayloadCount = ExportHistoryOutputBreakdown.boundedCount(
                 externalRecordPayloadCount
             )
+            self.unclassifiedFileCount = normalizedBreakdown.unclassifiedFileCount
             let normalizedAuthoritativeFileCount = authoritativeFileCount.map(
                 ExportHistoryOutputBreakdown.boundedCount
             )
             self.authoritativeFileCount = normalizedAuthoritativeFileCount
             self.isFileCategoryBreakdownComplete = normalizedBreakdown.isFileCategoryBreakdownComplete
                 && (normalizedAuthoritativeFileCount.map {
-                    $0 == normalizedBreakdown.categorizedFileCount
+                    $0 == normalizedBreakdown.generatedFileCount
                 } ?? true)
             self.dailyNoteUpdateCount = normalizedBreakdown.dailyNoteUpdateCount
             self.dailyNoteSkipCount = normalizedBreakdown.dailyNoteSkipCount
             self.wasCancelled = wasCancelled
         }
 
-        /// Builds a conservative history result from the connected-Mac aggregate payload.
-        /// The payload has an authoritative total and an exact sidecar count, but does not carry
-        /// every writer category, so the remainder must stay unclassified.
+        /// Builds a conservative history result from the connected-Mac payload. Older peers keep
+        /// their aggregate total authoritative; interrupted current writers can explicitly mark
+        /// that total as a lower bound while retaining every confirmed category.
         init(macExportPayload payload: MacExportResultPayload) {
             let breakdown = payload.outputBreakdown
+            let measuredGeneratedFiles = breakdown?.generatedFileCount
+                ?? payload.externalRecordFileCount
+            let inferredUnclassifiedLowerBound = max(
+                payload.totalFilesWritten - measuredGeneratedFiles,
+                0
+            )
             self.init(
                 successCount: payload.successCount,
                 totalCount: payload.totalCount,
@@ -209,13 +221,50 @@ struct ExportOrchestrator {
                 archiveCount: breakdown?.zipArchiveFileCount ?? 0,
                 externalRecordFileCount: breakdown?.providerSidecarFileCount
                     ?? payload.externalRecordFileCount,
-                authoritativeFileCount: payload.totalFilesWritten,
+                unclassifiedFileCount: (breakdown?.unclassifiedFileCount ?? 0)
+                    + inferredUnclassifiedLowerBound,
+                authoritativeFileCount: payload.isTotalFilesWrittenAuthoritative
+                    ? payload.totalFilesWritten
+                    : nil,
                 isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete
                     ?? false,
                 dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
                 dailyNoteSkipCount: payload.dailyNoteSkipCount,
                 wasCancelled: payload.status == .cancelled,
                 completedDates: payload.completedDates
+            )
+        }
+
+        init(
+            macExportFailure failure: MacExportFailure,
+            totalCount: Int,
+            formatsPerDate: Int,
+            failedDateDetails: [FailedDateDetail]
+        ) {
+            let breakdown = failure.outputBreakdown
+            let inferredUnclassifiedCount = max(
+                (failure.totalFilesWritten ?? 0) - (breakdown?.generatedFileCount ?? 0),
+                0
+            )
+            self.init(
+                successCount: 0,
+                totalCount: totalCount,
+                failedDateDetails: failedDateDetails,
+                formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: breakdown?.looseAggregateFileCount ?? 0,
+                individualEntryFileCount: breakdown?.individualEntryFileCount ?? 0,
+                dataDictionaryFileCount: breakdown?.dataDictionaryFileCount ?? 0,
+                rollupFileCount: breakdown?.rollupFileCount ?? 0,
+                archiveCount: breakdown?.zipArchiveFileCount ?? 0,
+                externalRecordFileCount: breakdown?.providerSidecarFileCount ?? 0,
+                unclassifiedFileCount: (breakdown?.unclassifiedFileCount ?? 0)
+                    + inferredUnclassifiedCount,
+                authoritativeFileCount: failure.totalFilesWritten,
+                isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete
+                    ?? false,
+                dailyNoteUpdateCount: breakdown?.dailyNoteUpdateCount ?? 0,
+                dailyNoteSkipCount: breakdown?.dailyNoteSkipCount ?? 0,
+                wasCancelled: failure.reason == .cancelled
             )
         }
 
@@ -273,10 +322,26 @@ struct ExportOrchestrator {
             }
         }
 
-        /// Authoritative physical generated-file total. Daily-note updates and provider records
-        /// embedded in HTTP payloads are tracked separately.
+        var knownFileCount: Int {
+            let addition = categorizedFileCount.addingReportingOverflow(unclassifiedFileCount)
+            return addition.overflow ? Int.max : addition.partialValue
+        }
+
+        /// Authoritative physical generated-file total when available, otherwise the confirmed
+        /// lower bound. Daily-note updates and provider payload records are tracked separately.
         var totalFilesWritten: Int {
-            authoritativeFileCount ?? categorizedFileCount
+            authoritativeFileCount ?? knownFileCount
+        }
+
+        var hasAuthoritativeFileCount: Bool {
+            authoritativeFileCount != nil || isFileCategoryBreakdownComplete
+        }
+
+        var generatedFileCountDisplayValue: String {
+            if hasAuthoritativeFileCount { return "\(totalFilesWritten)" }
+            return totalFilesWritten > 0
+                ? "at least \(totalFilesWritten)"
+                : "an unknown number of"
         }
 
         var outputBreakdown: ExportHistoryOutputBreakdown {
@@ -298,6 +363,7 @@ struct ExportOrchestrator {
                 providerSidecarFileCount: externalRecordFileCount,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
+                unclassifiedFileCount: unclassifiedFileCount,
                 isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
             )
             return measuredBreakdown.reconciled(toAuthoritativeFileCount: resolvedFileCount)
@@ -526,6 +592,28 @@ struct ExportOrchestrator {
         )
         let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()
         frozenOperationSettings.exportTimeZoneOverride = sourceTimeZone
+        do {
+            try vaultManager.preflightDataDictionaryArtifactCollisions(
+                settings: frozenOperationSettings,
+                healthSubfolder: operationSettingsSnapshot.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalDays,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                isFileCategoryBreakdownComplete: true,
+                completedDates: []
+            )
+        }
         let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
         defer { archiveSpool?.cleanup() }
         let dateFormatter = DateFormatter()
@@ -717,6 +805,7 @@ struct ExportOrchestrator {
                     reason = .accessDenied
                     errorDetails = nil
                 case .destinationChanged:
+                    isFileAccountingComplete = false
                     reason = .accessDenied
                     errorDetails = error.localizedDescription
                 case .noFormatsSelected:
@@ -1152,6 +1241,28 @@ struct ExportOrchestrator {
         var shouldWriteDataDictionary = true
         let frozenOperationSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings()
             ?? settings
+        do {
+            try vaultManager.preflightDataDictionaryArtifactCollisions(
+                settings: frozenOperationSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                isFileCategoryBreakdownComplete: true,
+                completedDates: []
+            )
+        }
         let archiveSpool = frozenOperationSettings.archiveModeEnabled
             ? LocalArchiveSpool()
             : nil
@@ -1339,6 +1450,7 @@ struct ExportOrchestrator {
                 case .accessDenied:
                     reason = .accessDenied
                 case .destinationChanged:
+                    isFileAccountingComplete = false
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown

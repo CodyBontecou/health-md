@@ -539,6 +539,74 @@ final class MacExportJobExecutorTests: XCTestCase {
         ])
     }
 
+    func testExecute_dictionaryArtifactCollisionFailsBeforeAnyMacWrite() async throws {
+        let manager = makeManagerWithVault()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.exportFormats = [.json]
+            settings.folderStructure = ""
+            settings.filenameFormat = "_healthmd_data_dictionary"
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings, healthSubfolder: "Health")
+        )
+
+        guard case .failure(let failure) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected path collision failure")
+        }
+
+        XCTAssertEqual(failure.reason, .exportWriteFailure)
+        XCTAssertEqual(failure.totalFilesWritten, 0)
+        XCTAssertEqual(failure.outputBreakdown?.generatedFileCount, 0)
+        XCTAssertTrue(failure.outputBreakdown?.isFileCategoryBreakdownComplete == true)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertTrue(fileSystem.writeCounts.isEmpty)
+    }
+
+    func testExecute_finalDictionaryFailureRetainsExactCommittedCategoriesAndFailureStatus() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.exportFormats = [.markdown]
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let dictionaryPath = "/tmp/MacVault/Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+        fileSystem.failBeforeWritingPathOnce = dictionaryPath
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings, healthSubfolder: "Health")
+        )
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("A per-day writer failure must be represented by the result payload")
+        }
+
+        XCTAssertEqual(payload.status, .failure)
+        XCTAssertEqual(payload.successCount, 0)
+        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertTrue(payload.isTotalFilesWrittenAuthoritative)
+        let breakdown = try XCTUnwrap(payload.outputBreakdown)
+        XCTAssertEqual(breakdown.looseAggregateFileCount, 1)
+        XCTAssertEqual(breakdown.dataDictionaryFileCount, 0)
+        XCTAssertTrue(breakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(payload.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(payload.failedDateDetails.first?.errorDetails, "Injected failure before write")
+    }
+
     func testStream_usesIPhoneSubfolderInsteadOfMacLocalSubfolder() async throws {
         let manager = makeManagerWithVault()
         manager.healthSubfolder = "MacOnly"

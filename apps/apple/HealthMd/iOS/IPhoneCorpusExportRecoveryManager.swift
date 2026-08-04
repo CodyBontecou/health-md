@@ -313,7 +313,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     func recordRecoveredCompletion(_ payload: MacExportResultPayload) {
-        guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
+        guard payload.hasConsistentFileAccounting,
+              let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return }
         let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
@@ -324,7 +325,6 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             dateRangeEnd: journal.exportManifest.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
             exportTarget: .connectedMac,
-            fileCount: payload.totalFilesWritten,
             pendingRecoveryDayCount: journal.origin == .scheduledIPhone
                 ? journal.exportManifest.requestedDates.count
                 : 0,

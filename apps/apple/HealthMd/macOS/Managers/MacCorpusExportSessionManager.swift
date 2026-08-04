@@ -109,6 +109,9 @@ final class MacCorpusExportSessionManager {
         let requestedRecordDatesWithData: [Date]
         var dataDictionaryAcknowledged: Bool
         var nextArtifactIndex: Int
+        /// Persisted before an unacknowledged destination overwrite begins and cleared only
+        /// after exact readback plus frontier publication.
+        var hasUncertainDestinationWrite: Bool? = nil
     }
 
     private struct StoredStrictRawTerminalSpool: Codable, Equatable {
@@ -153,6 +156,88 @@ final class MacCorpusExportSessionManager {
         case postPublication
     }
 
+    private struct DurableFileAccounting: Codable, Equatable {
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
+        var rollupFileCount = 0
+        var archiveFileCount = 0
+        var providerSidecarFileCount = 0
+        var unclassifiedFileCount = 0
+        var isFileCategoryBreakdownComplete = true
+        var isTotalFileCountAuthoritative = true
+
+        static func legacy(
+            totalFilesWritten: Int,
+            providerSidecarFileCount: Int = 0
+        ) -> DurableFileAccounting {
+            let boundedSidecars = max(providerSidecarFileCount, 0)
+            return DurableFileAccounting(
+                providerSidecarFileCount: boundedSidecars,
+                unclassifiedFileCount: max(totalFilesWritten - boundedSidecars, 0),
+                isFileCategoryBreakdownComplete: false,
+                isTotalFileCountAuthoritative: true
+            )
+        }
+
+        mutating func add(_ result: DailyExportWriteResult) {
+            looseAggregateFileCount += result.aggregateFileCount
+            individualEntryFileCount += result.individualEntryFileCount
+            dataDictionaryFileCount += result.dataDictionaryFileCount
+        }
+
+        mutating func add(_ error: ExportPartialWriteError) {
+            looseAggregateFileCount += error.looseAggregateFileCount
+            individualEntryFileCount += error.individualEntryFileCount
+            dataDictionaryFileCount += error.dataDictionaryFileCount
+            rollupFileCount += error.rollupFileCount
+        }
+
+        mutating func add(_ result: AppleLooseDailyRangeWriteResult) {
+            looseAggregateFileCount += result.dailyFileCount
+            rollupFileCount += result.rollupFileCount
+            dataDictionaryFileCount += result.dataDictionaryFileCount
+        }
+
+        mutating func add(_ result: MacCorpusDerivedOutputResult) {
+            rollupFileCount += result.rollupFileCount
+            archiveFileCount += result.archiveFileCount
+            dataDictionaryFileCount += result.dataDictionaryFileCount
+        }
+
+        mutating func markUncertain() {
+            isFileCategoryBreakdownComplete = false
+            isTotalFileCountAuthoritative = false
+        }
+
+        func breakdown(
+            requestedDataDayCount: Int,
+            successfulDataDayCount: Int,
+            dailyNoteUpdateCount: Int,
+            dailyNoteSkipCount: Int
+        ) -> ExportHistoryOutputBreakdown {
+            ExportHistoryOutputBreakdown(
+                requestedDataDayCount: requestedDataDayCount,
+                successfulDataDayCount: successfulDataDayCount,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                zipArchiveFileCount: archiveFileCount,
+                rollupFileCount: rollupFileCount,
+                providerSidecarFileCount: providerSidecarFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                unclassifiedFileCount: unclassifiedFileCount,
+                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
+            )
+        }
+    }
+
+    private struct DurableDerivedFileCheckpoint: Codable, Equatable {
+        var rollupFileCount = 0
+        var dataDictionaryFileCount = 0
+    }
+
     private struct ProtectedSessionDirectoryBinding: Codable, Equatable {
         let deviceID: UInt64
         let inode: UInt64
@@ -184,6 +269,12 @@ final class MacCorpusExportSessionManager {
         var totalPartitionBytes: Int64
         var totalFilesWritten: Int
         var externalRecordFileCount: Int
+        var fileAccounting: DurableFileAccounting? = nil
+        /// Present only for journals created after operation-wide dictionary collision preflight
+        /// became mandatory. Legacy nil journals retain their original dictionary-first recovery.
+        var dataDictionaryCollisionPreflighted: Bool? = nil
+        /// Exact derived files already counted after an interrupted dictionary-last finalization.
+        var derivedFileCheckpoint: DurableDerivedFileCheckpoint? = nil
         var dailyNoteUpdateCount: Int?
         var dailyNoteSkipCount: Int?
         /// Canonical strict-raw retained-day result survives payload spool cleanup and restart.
@@ -194,6 +285,7 @@ final class MacCorpusExportSessionManager {
         /// that may already have performed destination writes without an exact persisted plan.
         var receivedRangePlanPersisted: Bool? = nil
         var receivedRangePlan: StoredReceivedRangePlan? = nil
+        var receivedRangePlanAccountingApplied: Bool? = nil
         var terminalResult: MacExportResultPayload? = nil
         var terminalAcknowledgement: ConnectedCorpusTransferFinalAck? = nil
         /// A protected strict-raw terminal result bridges process death between journal
@@ -431,6 +523,23 @@ final class MacCorpusExportSessionManager {
             }
         }
 
+        let passesDictionaryCollisionPreflight: () -> Bool = {
+            guard exportManifest.mode == .writeFiles else { return true }
+            let settings = exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+            settings.exportTimeZoneOverride = exportManifest.sourceTimeZoneIdentifier
+                .flatMap(TimeZone.init(identifier:))
+            do {
+                try vaultManager.preflightDataDictionaryArtifactCollisions(
+                    settings: settings,
+                    healthSubfolder: exportManifest.settingsSnapshot.healthSubfolder,
+                    dates: exportManifest.requestedDates
+                )
+                return true
+            } catch {
+                return false
+            }
+        }
+
         do {
             if exportManifest.mode == .writeFiles {
                 let operation = try ConnectedMacDailyExportOperation.resolve(
@@ -450,14 +559,25 @@ final class MacCorpusExportSessionManager {
                       session.journal.exportManifest == exportManifest else {
                     return rejected("Another corpus session is active or this request changed.")
                 }
+                guard session.journal.dataDictionaryCollisionPreflighted != true
+                        || passesDictionaryCollisionPreflight() else {
+                    return rejected("Data dictionary path conflicts with an export artifact. No files were written.")
+                }
             } else if let restored = try restoreSession(sessionID: open.session.sessionID) {
                 session = restored
                 guard session.journal.session == open.session,
                       session.journal.exportManifest == exportManifest else {
                     return rejected("Stored corpus session fingerprint does not match this request.")
                 }
+                guard session.journal.dataDictionaryCollisionPreflighted != true
+                        || passesDictionaryCollisionPreflight() else {
+                    return rejected("Data dictionary path conflicts with an export artifact. No files were written.")
+                }
                 activeSession = session
             } else {
+                guard passesDictionaryCollisionPreflight() else {
+                    return rejected("Data dictionary path conflicts with an export artifact. No files were written.")
+                }
                 let directory = sessionDirectory(sessionID: open.session.sessionID)
                 let protectedBinding = try prepareRootAndSessionDirectories(
                     sessionID: open.session.sessionID
@@ -479,9 +599,13 @@ final class MacCorpusExportSessionManager {
                     totalPartitionBytes: 0,
                     totalFilesWritten: 0,
                     externalRecordFileCount: 0,
+                    fileAccounting: DurableFileAccounting(),
+                    dataDictionaryCollisionPreflighted: true,
+                    derivedFileCheckpoint: DurableDerivedFileCheckpoint(),
                     dailyNoteUpdateCount: 0,
                     dailyNoteSkipCount: 0,
                     receivedRangePlanPersisted: false,
+                    receivedRangePlanAccountingApplied: false,
                     expiresAt: open.session.createdAt.addingTimeInterval(
                         ConnectedCorpusOutboundStore.retentionInterval
                     ),
@@ -781,7 +905,14 @@ final class MacCorpusExportSessionManager {
             try syncDirectory(at: session.directoryURL)
             try persist(session)
         } catch {
+            let mayHaveInterruptedDestinationWrite = error is CancellationError
+                && session.journal.exportManifest.mode == .writeFiles
             session.journal = journalBeforePartition
+            if mayHaveInterruptedDestinationWrite {
+                markFileAccountingUncertain(session: session)
+                session.journal.updatedAt = Date()
+                try? persist(session)
+            }
             throw error
         }
     }
@@ -1104,7 +1235,8 @@ final class MacCorpusExportSessionManager {
                         }
                     }
                     try ensureFinalizationIsActive(session)
-                    session.journal.totalFilesWritten += rangeResult.totalFileCount
+                    recordRangeWrite(rangeResult, session: session)
+                    session.journal.receivedRangePlanAccountingApplied = true
                     if rangeResult.dataDictionaryFileCount > 0 {
                         session.journal.dataDictionaryWritten = true
                     }
@@ -1125,29 +1257,54 @@ final class MacCorpusExportSessionManager {
                 let archiveWorkDirectoryURL = vaultManager.vaultURL.map {
                     Self.archiveWorkDirectoryURL(vaultURL: $0, sessionID: journal.session.sessionID)
                 }
-                derived = try await vaultManager.finalizeCorpusDerivedOutputs(
-                    recordPayloadFiles: derivedRecordItems.map {
-                        session.directoryURL.appendingPathComponent($0.relativePath)
-                    },
-                    recordSourceDates: derivedRecordItems.map(\.sourceDate),
-                    settings: derivedSettings,
-                    requestedDates: journal.exportManifest.requestedDates,
-                    startDate: journal.exportManifest.dateRangeStart,
-                    endDate: journal.exportManifest.dateRangeEnd,
-                    healthSubfolder: journal.exportManifest.settingsSnapshot.healthSubfolder,
-                    archiveWorkDirectoryURL: archiveWorkDirectoryURL,
-                    unavailableRollupDates: unavailableRollupDates,
-                    writeDataDictionary: session.journal.dataDictionaryWritten != true,
-                    corpusProtocolVersion: journal.session.protocolVersion,
-                    progress: progress,
-                    cancellationCheck: {
-                        self.activeSession !== session || session.journal.state == .cancelled
+                do {
+                    derived = try await vaultManager.finalizeCorpusDerivedOutputs(
+                        recordPayloadFiles: derivedRecordItems.map {
+                            session.directoryURL.appendingPathComponent($0.relativePath)
+                        },
+                        recordSourceDates: derivedRecordItems.map(\.sourceDate),
+                        settings: derivedSettings,
+                        requestedDates: journal.exportManifest.requestedDates,
+                        startDate: journal.exportManifest.dateRangeStart,
+                        endDate: journal.exportManifest.dateRangeEnd,
+                        healthSubfolder: journal.exportManifest.settingsSnapshot.healthSubfolder,
+                        archiveWorkDirectoryURL: archiveWorkDirectoryURL,
+                        unavailableRollupDates: unavailableRollupDates,
+                        writeDataDictionary: session.journal.dataDictionaryWritten != true,
+                        corpusProtocolVersion: journal.session.protocolVersion,
+                        progress: progress,
+                        cancellationCheck: {
+                            self.activeSession !== session || session.journal.state == .cancelled
+                        }
+                    )
+                } catch is CancellationError {
+                    markFileAccountingUncertain(session: session)
+                    session.journal.updatedAt = Date()
+                    try? persist(session)
+                    throw CancellationError()
+                } catch let error as ExportPartialWriteError {
+                    recordPartialDerivedWrite(error, session: session)
+                    if error.dataDictionaryFileCount > 0 {
+                        session.journal.dataDictionaryWritten = true
                     }
-                )
+                    session.journal.updatedAt = Date()
+                    try persist(session)
+                    throw error
+                } catch let error as ExportError {
+                    if error == .destinationChanged {
+                        markFileAccountingUncertain(session: session)
+                    }
+                    session.journal.updatedAt = Date()
+                    try persist(session)
+                    throw error
+                } catch {
+                    markFileAccountingUncertain(session: session)
+                    session.journal.updatedAt = Date()
+                    try persist(session)
+                    throw error
+                }
                 try ensureFinalizationIsActive(session)
-                session.journal.totalFilesWritten += derived.rollupFileCount
-                    + derived.archiveFileCount
-                    + derived.dataDictionaryFileCount
+                try recordDerivedWrite(derived, session: session)
                 if derived.dataDictionaryFileCount > 0 {
                     session.journal.dataDictionaryWritten = true
                 }
@@ -1519,6 +1676,7 @@ final class MacCorpusExportSessionManager {
         }
         suspendedExpiryTasks.removeValue(forKey: sessionID)?.cancel()
         let journalBeforeCancellation = session.journal
+        recordAcknowledgedRangePlanIfNeeded(session: session)
         session.journal.state = .cancelled
         session.journal.receivedRangePlan = nil
         session.journal.updatedAt = Date()
@@ -1714,6 +1872,7 @@ final class MacCorpusExportSessionManager {
                             (session.journal.dailyNoteUpdateCount ?? 0) + writeResult.dailyNoteUpdatedCount
                         session.journal.dailyNoteSkipCount =
                             (session.journal.dailyNoteSkipCount ?? 0) + writeResult.dailyNoteSkippedCount
+                        recordDailyWrite(writeResult, session: session)
 
                         if settings.dailyNotesOnlyModeEnabled {
                             switch writeResult.dailyNoteResult {
@@ -1747,7 +1906,6 @@ final class MacCorpusExportSessionManager {
                             }
                         }
 
-                        session.journal.totalFilesWritten += writeResult.totalGeneratedFileCount
                         if !settings.archiveModeEnabled {
                             session.journal.completedDates.append(payload.sourceDate)
                         }
@@ -1758,9 +1916,11 @@ final class MacCorpusExportSessionManager {
                                     payload.externalDailyRecords,
                                     healthSubfolder: session.journal.exportManifest.settingsSnapshot.healthSubfolder
                                 )
-                                session.journal.externalRecordFileCount += count
-                                session.journal.totalFilesWritten += count
+                                recordProviderSidecarWrites(count, session: session)
+                            } catch is CancellationError {
+                                throw CancellationError()
                             } catch {
+                                markFileAccountingUncertain(session: session)
                                 session.journal.completedDates.removeAll { $0 == payload.sourceDate }
                                 session.journal.failedDateDetails.append(FailedDateDetail(
                                     date: payload.sourceDate,
@@ -1769,7 +1929,37 @@ final class MacCorpusExportSessionManager {
                                 ))
                             }
                         }
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch let error as ExportPartialWriteError {
+                        recordPartialWrite(error, session: session)
+                        session.journal.dailyNoteUpdateCount =
+                            (session.journal.dailyNoteUpdateCount ?? 0) + error.dailyNoteUpdateCount
+                        session.journal.dailyNoteSkipCount =
+                            (session.journal.dailyNoteSkipCount ?? 0) + error.dailyNoteSkipCount
+                        if error.dataDictionaryFileCount > 0 {
+                            session.journal.dataDictionaryWritten = true
+                        }
+                        session.journal.failedDateDetails.append(FailedDateDetail(
+                            date: payload.sourceDate,
+                            reason: .fileWriteError,
+                            errorDetails: error.diagnostic
+                        ))
+                    } catch let error as ExportError {
+                        switch error {
+                        case .noVaultSelected, .noHealthData, .accessDenied, .noFormatsSelected,
+                             .dailyNotePathConflict, .dataDictionaryPathConflict:
+                            break
+                        case .destinationChanged:
+                            markFileAccountingUncertain(session: session)
+                        }
+                        session.journal.failedDateDetails.append(FailedDateDetail(
+                            date: payload.sourceDate,
+                            reason: .fileWriteError,
+                            errorDetails: error.localizedDescription
+                        ))
                     } catch {
+                        markFileAccountingUncertain(session: session)
                         session.journal.failedDateDetails.append(FailedDateDetail(
                             date: payload.sourceDate,
                             reason: .fileWriteError,
@@ -1880,6 +2070,19 @@ final class MacCorpusExportSessionManager {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
 
+        if let dictionary = materialized.dataDictionary {
+            guard let dictionaryPath = ExportPathPlanner.canonicalPortablePathKey(
+                dictionary.relativePath
+            ), materialized.operation.artifacts.allSatisfy({ artifact in
+                guard let artifactPath = ExportPathPlanner.canonicalPortablePathKey(
+                    artifact.artifact.relativePath
+                ) else { return false }
+                return artifactPath != dictionaryPath
+            }) else {
+                throw ConnectedCorpusTransferModelError.invalidJournal
+            }
+        }
+
         let dictionaryByteCount = UInt64(materialized.dataDictionary?.data.count ?? 0)
         let (spoolByteCount, spoolOverflow) = materialized.operation.selectedPlan.totalByteCount
             .addingReportingOverflow(dictionaryByteCount)
@@ -1982,7 +2185,8 @@ final class MacCorpusExportSessionManager {
                 rollupFileCount: materialized.result.rollupFileCount,
                 requestedRecordDatesWithData: orderedRequestedDates,
                 dataDictionaryAcknowledged: false,
-                nextArtifactIndex: 0
+                nextArtifactIndex: 0,
+                hasUncertainDestinationWrite: false
             )
             plan = StoredReceivedRangePlan(
                 schema: plan.schema,
@@ -2002,7 +2206,8 @@ final class MacCorpusExportSessionManager {
                 rollupFileCount: plan.rollupFileCount,
                 requestedRecordDatesWithData: plan.requestedRecordDatesWithData,
                 dataDictionaryAcknowledged: false,
-                nextArtifactIndex: 0
+                nextArtifactIndex: 0,
+                hasUncertainDestinationWrite: false
             )
             try validateStoredReceivedRangePlan(
                 plan,
@@ -2013,6 +2218,7 @@ final class MacCorpusExportSessionManager {
             let journalBeforePlan = session.journal
             session.journal.receivedRangePlan = plan
             session.journal.receivedRangePlanPersisted = true
+            session.journal.receivedRangePlanAccountingApplied = false
             do {
                 try persist(session)
             } catch JournalPersistenceError.postPublication {
@@ -2114,6 +2320,11 @@ final class MacCorpusExportSessionManager {
                 )
                 try ensureFinalizationIsActive(session)
                 if transactionalState != .exact {
+                    if session.journal.receivedRangePlan?.hasUncertainDestinationWrite != true {
+                        try advanceReceivedRangePlan(session: session) { plan in
+                            plan.hasUncertainDestinationWrite = true
+                        }
+                    }
                     try await overwriteExactDestination(
                         relativePath: artifact.relativePath,
                         data: data,
@@ -2133,6 +2344,7 @@ final class MacCorpusExportSessionManager {
                 guard readback == .exact else { throw ReceivedRangeCommitError.invalid }
                 try advanceReceivedRangePlan(session: session) { plan in
                     plan.nextArtifactIndex = index + 1
+                    plan.hasUncertainDestinationWrite = false
                 }
             }
         }
@@ -2172,6 +2384,11 @@ final class MacCorpusExportSessionManager {
                     )
                     try ensureFinalizationIsActive(session)
                     if transactionalState != .exact {
+                        if session.journal.receivedRangePlan?.hasUncertainDestinationWrite != true {
+                            try advanceReceivedRangePlan(session: session) { plan in
+                                plan.hasUncertainDestinationWrite = true
+                            }
+                        }
                         try await overwriteExactDestination(
                             relativePath: dictionary.relativePath,
                             data: data,
@@ -2191,6 +2408,7 @@ final class MacCorpusExportSessionManager {
                     guard readback == .exact else { throw ReceivedRangeCommitError.invalid }
                     try advanceReceivedRangePlan(session: session) { plan in
                         plan.dataDictionaryAcknowledged = true
+                        plan.hasUncertainDestinationWrite = false
                     }
                 }
             }
@@ -2350,6 +2568,7 @@ final class MacCorpusExportSessionManager {
               plan.rollupFileCount == plan.artifacts.count(where: { $0.kind == .rollup }),
               plan.nextArtifactIndex >= 0,
               plan.nextArtifactIndex <= plan.artifacts.count,
+              plan.hasUncertainDestinationWrite != nil,
               plan.dataDictionary != nil || !plan.dataDictionaryAcknowledged,
               Set(plan.requestedRecordDatesWithData).count
                 == plan.requestedRecordDatesWithData.count,
@@ -2364,12 +2583,21 @@ final class MacCorpusExportSessionManager {
         }
 
         if let dictionary = plan.dataDictionary {
-            let artifactPaths = Set(plan.artifacts.map {
-                Self.portableDestinationPathKey($0.relativePath)
-            })
-            guard !artifactPaths.contains(
-                Self.portableDestinationPathKey(dictionary.relativePath)
+            guard let dictionaryPath = ExportPathPlanner.canonicalPortablePathKey(
+                dictionary.relativePath
             ) else {
+                throw ConnectedCorpusTransferModelError.invalidJournal
+            }
+            var artifactPaths: Set<String> = []
+            for artifact in plan.artifacts {
+                guard let artifactPath = ExportPathPlanner.canonicalPortablePathKey(
+                    artifact.relativePath
+                ) else {
+                    throw ConnectedCorpusTransferModelError.invalidJournal
+                }
+                artifactPaths.insert(artifactPath)
+            }
+            guard !artifactPaths.contains(dictionaryPath) else {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
         }
@@ -3447,15 +3675,6 @@ final class MacCorpusExportSessionManager {
         }
     }
 
-    private static func portableDestinationPathKey(_ path: String) -> String {
-        path.precomposedStringWithCompatibilityMapping
-            .folding(
-                options: [.caseInsensitive, .widthInsensitive],
-                locale: Locale(identifier: "en_US_POSIX")
-            )
-            .precomposedStringWithCompatibilityMapping
-    }
-
     private static func expectedMediaType(for format: ExportFormat) -> String {
         switch format {
         case .markdown, .obsidianBases: "text/markdown; charset=utf-8"
@@ -3631,6 +3850,121 @@ final class MacCorpusExportSessionManager {
         session.journal.processedDates.append(payload.sourceDate)
     }
 
+    private func mutateFileAccounting(
+        session: Session,
+        _ mutation: (inout DurableFileAccounting) -> Void
+    ) {
+        var accounting = session.journal.fileAccounting
+            ?? .legacy(
+                totalFilesWritten: session.journal.totalFilesWritten,
+                providerSidecarFileCount: session.journal.externalRecordFileCount
+            )
+        mutation(&accounting)
+        session.journal.fileAccounting = accounting
+    }
+
+    private func recordDailyWrite(
+        _ result: DailyExportWriteResult,
+        session: Session
+    ) {
+        mutateFileAccounting(session: session) { $0.add(result) }
+        session.journal.totalFilesWritten += result.totalGeneratedFileCount
+    }
+
+    private func recordPartialWrite(
+        _ error: ExportPartialWriteError,
+        session: Session
+    ) {
+        mutateFileAccounting(session: session) { $0.add(error) }
+        session.journal.totalFilesWritten += error.committedFileCount
+    }
+
+    private func recordRangeWrite(
+        _ result: AppleLooseDailyRangeWriteResult,
+        session: Session
+    ) {
+        mutateFileAccounting(session: session) { $0.add(result) }
+        session.journal.totalFilesWritten += result.totalFileCount
+    }
+
+    private func recordPartialDerivedWrite(
+        _ error: ExportPartialWriteError,
+        session: Session
+    ) {
+        var checkpoint = session.journal.derivedFileCheckpoint
+            ?? DurableDerivedFileCheckpoint()
+        let rollupDelta = max(error.rollupFileCount - checkpoint.rollupFileCount, 0)
+        let dictionaryDelta = max(
+            error.dataDictionaryFileCount - checkpoint.dataDictionaryFileCount,
+            0
+        )
+        mutateFileAccounting(session: session) {
+            $0.rollupFileCount += rollupDelta
+            $0.dataDictionaryFileCount += dictionaryDelta
+        }
+        session.journal.totalFilesWritten += rollupDelta + dictionaryDelta
+        checkpoint.rollupFileCount = max(checkpoint.rollupFileCount, error.rollupFileCount)
+        checkpoint.dataDictionaryFileCount = max(
+            checkpoint.dataDictionaryFileCount,
+            error.dataDictionaryFileCount
+        )
+        session.journal.derivedFileCheckpoint = checkpoint
+    }
+
+    private func recordDerivedWrite(
+        _ result: MacCorpusDerivedOutputResult,
+        session: Session
+    ) throws {
+        let checkpoint = session.journal.derivedFileCheckpoint
+            ?? DurableDerivedFileCheckpoint()
+        guard result.rollupFileCount >= checkpoint.rollupFileCount,
+              result.dataDictionaryFileCount >= checkpoint.dataDictionaryFileCount else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+        let delta = MacCorpusDerivedOutputResult(
+            rollupFileCount: result.rollupFileCount - checkpoint.rollupFileCount,
+            archiveFileCount: result.archiveFileCount,
+            dataDictionaryFileCount: result.dataDictionaryFileCount
+                - checkpoint.dataDictionaryFileCount
+        )
+        mutateFileAccounting(session: session) { $0.add(delta) }
+        session.journal.totalFilesWritten += delta.rollupFileCount
+            + delta.archiveFileCount
+            + delta.dataDictionaryFileCount
+        session.journal.derivedFileCheckpoint = DurableDerivedFileCheckpoint()
+    }
+
+    private func recordProviderSidecarWrites(_ count: Int, session: Session) {
+        mutateFileAccounting(session: session) {
+            $0.providerSidecarFileCount += max(count, 0)
+        }
+        session.journal.externalRecordFileCount += count
+        session.journal.totalFilesWritten += count
+    }
+
+    private func markFileAccountingUncertain(session: Session) {
+        mutateFileAccounting(session: session) { $0.markUncertain() }
+    }
+
+    /// A durable range plan journals each exact destination readback. If cancellation or a
+    /// terminal validation failure arrives before the whole plan completes, fold those exact
+    /// checkpoints into history before discarding the resumable plan.
+    private func recordAcknowledgedRangePlanIfNeeded(session: Session) {
+        guard session.journal.receivedRangePlanAccountingApplied != true,
+              let plan = session.journal.receivedRangePlan else { return }
+        let acknowledgedArtifacts = plan.artifacts.prefix(plan.nextArtifactIndex)
+        let result = AppleLooseDailyRangeWriteResult(
+            dailyFileCount: acknowledgedArtifacts.count(where: { $0.kind == .daily }),
+            rollupFileCount: acknowledgedArtifacts.count(where: { $0.kind == .rollup }),
+            dataDictionaryFileCount: plan.dataDictionaryAcknowledged ? 1 : 0
+        )
+        recordRangeWrite(result, session: session)
+        if plan.hasUncertainDestinationWrite == true {
+            markFileAccountingUncertain(session: session)
+        }
+        session.journal.receivedRangePlanAccountingApplied = true
+    }
+
     private func makeFileResult(
         session: Session,
         forcedStatus: MacExportResultStatus? = nil
@@ -3649,6 +3983,17 @@ final class MacCorpusExportSessionManager {
             return .failure
         }()
         let formatsPerDate = settings.looseFormatsPerDate
+        let accounting = session.journal.fileAccounting
+            ?? .legacy(
+                totalFilesWritten: session.journal.totalFilesWritten,
+                providerSidecarFileCount: session.journal.externalRecordFileCount
+            )
+        let outputBreakdown = accounting.breakdown(
+            requestedDataDayCount: requestedDates.count,
+            successfulDataDayCount: successCount,
+            dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
+            dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0
+        )
         return MacExportResultPayload(
             jobID: session.journal.session.jobID,
             status: status,
@@ -3656,7 +4001,9 @@ final class MacCorpusExportSessionManager {
             totalCount: requestedDates.count,
             formatsPerDate: formatsPerDate,
             totalFilesWritten: session.journal.totalFilesWritten,
+            isTotalFilesWrittenAuthoritative: accounting.isTotalFileCountAuthoritative,
             externalRecordFileCount: session.journal.externalRecordFileCount,
+            outputBreakdown: outputBreakdown,
             dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
             dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0,
             failedDateDetails: session.journal.failedDateDetails,
@@ -4022,6 +4369,58 @@ final class MacCorpusExportSessionManager {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
         }
+        if storedVersion < 5 {
+            let accounting = DurableFileAccounting.legacy(
+                totalFilesWritten: journal.totalFilesWritten,
+                providerSidecarFileCount: journal.externalRecordFileCount
+            )
+            let legacyDestinationWritesMayHaveStarted = journal.totalFilesWritten > 0
+                || journal.dataDictionaryWritten == true
+                || (journal.receivedRangePlan?.nextArtifactIndex ?? 0) > 0
+                || journal.receivedRangePlan?.dataDictionaryAcknowledged == true
+                || journal.receivedRangePlan?.hasUncertainDestinationWrite == true
+            journal.fileAccounting = accounting
+            journal.dataDictionaryCollisionPreflighted = !legacyDestinationWritesMayHaveStarted
+            journal.derivedFileCheckpoint = DurableDerivedFileCheckpoint()
+            journal.receivedRangePlanAccountingApplied = false
+            if var plan = journal.receivedRangePlan {
+                plan.hasUncertainDestinationWrite = plan.nextArtifactIndex < plan.artifacts.count
+                    || (plan.dataDictionary != nil && !plan.dataDictionaryAcknowledged)
+                journal.receivedRangePlan = plan
+            }
+            if let result = journal.terminalResult {
+                journal.terminalResult = MacExportResultPayload(
+                    jobID: result.jobID,
+                    status: result.status,
+                    successCount: result.successCount,
+                    totalCount: result.totalCount,
+                    formatsPerDate: result.formatsPerDate,
+                    totalFilesWritten: result.totalFilesWritten,
+                    isTotalFilesWrittenAuthoritative: true,
+                    externalRecordFileCount: result.externalRecordFileCount,
+                    outputBreakdown: accounting.breakdown(
+                        requestedDataDayCount: result.totalCount,
+                        successfulDataDayCount: result.successCount,
+                        dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+                        dailyNoteSkipCount: result.dailyNoteSkipCount
+                    ),
+                    dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: result.dailyNoteSkipCount,
+                    failedDateDetails: result.failedDateDetails,
+                    completedDates: result.completedDates,
+                    destinationDisplayName: result.destinationDisplayName,
+                    destinationPathForDisplay: result.destinationPathForDisplay,
+                    completedAt: result.completedAt
+                )
+            }
+        } else {
+            guard journal.fileAccounting != nil,
+                  journal.dataDictionaryCollisionPreflighted != nil,
+                  journal.derivedFileCheckpoint != nil,
+                  journal.receivedRangePlanAccountingApplied != nil else {
+                throw ConnectedCorpusTransferModelError.invalidJournal
+            }
+        }
         journal.version = Journal.currentVersion
         try validateRestoredJournal(journal, sessionID: sessionID)
         if journal.state == .open
@@ -4064,6 +4463,43 @@ final class MacCorpusExportSessionManager {
         let canonicalExpiry = journal.session.createdAt.addingTimeInterval(
             ConnectedCorpusOutboundStore.retentionInterval
         )
+        let fileAccountingIsValid: Bool = {
+            guard let accounting = journal.fileAccounting else { return true }
+            let counts = [
+                accounting.looseAggregateFileCount,
+                accounting.individualEntryFileCount,
+                accounting.dataDictionaryFileCount,
+                accounting.rollupFileCount,
+                accounting.archiveFileCount,
+                accounting.providerSidecarFileCount,
+                accounting.unclassifiedFileCount
+            ]
+            guard counts.allSatisfy({
+                $0 >= 0 && $0 <= ExportHistoryOutputBreakdown.maximumPersistedCount
+            }), accounting.providerSidecarFileCount == journal.externalRecordFileCount,
+                !accounting.isFileCategoryBreakdownComplete
+                    || accounting.unclassifiedFileCount == 0 else {
+                return false
+            }
+            let total = counts.reduce(0) { partial, count in
+                let sum = partial.addingReportingOverflow(count)
+                return sum.overflow ? Int.max : sum.partialValue
+            }
+            return total <= journal.totalFilesWritten
+                && (!accounting.isTotalFileCountAuthoritative
+                    || total == journal.totalFilesWritten)
+        }()
+        let derivedCheckpointIsValid: Bool = {
+            guard let checkpoint = journal.derivedFileCheckpoint,
+                  let accounting = journal.fileAccounting else { return false }
+            return checkpoint.rollupFileCount >= 0
+                && checkpoint.dataDictionaryFileCount >= 0
+                && checkpoint.rollupFileCount <= accounting.rollupFileCount
+                && checkpoint.dataDictionaryFileCount <= accounting.dataDictionaryFileCount
+                && (journal.state != .completed
+                    || (checkpoint.rollupFileCount == 0
+                        && checkpoint.dataDictionaryFileCount == 0))
+        }()
         guard journal.session.createdAt.timeIntervalSinceReferenceDate.isFinite,
               journal.session.createdAt <= Date().addingTimeInterval(5 * 60),
               journal.version == Journal.currentVersion,
@@ -4078,6 +4514,8 @@ final class MacCorpusExportSessionManager {
               journal.totalPartitionBytes >= 0,
               journal.totalFilesWritten >= 0,
               journal.externalRecordFileCount >= 0,
+              fileAccountingIsValid,
+              derivedCheckpointIsValid,
               journal.strictRawRetainedDayCount.map({ $0 >= 0 }) ?? true,
               journal.protectedSessionDeviceID.map({ $0 > 0 }) ?? false,
               journal.protectedSessionInode.map({ $0 > 0 }) ?? false else {
@@ -4280,13 +4718,28 @@ final class MacCorpusExportSessionManager {
             let expectedMessage = journal.exportManifest.mode == .encryptedContext
                 ? "Encrypted query context finalized."
                 : "Corpus export finalized."
-            guard result.jobID == journal.session.jobID,
+            let fileAccounting = journal.fileAccounting
+                ?? .legacy(
+                    totalFilesWritten: journal.totalFilesWritten,
+                    providerSidecarFileCount: journal.externalRecordFileCount
+                )
+            let expectedBreakdown = fileAccounting.breakdown(
+                requestedDataDayCount: requestedDates.count,
+                successfulDataDayCount: successCount,
+                dailyNoteUpdateCount: journal.dailyNoteUpdateCount ?? 0,
+                dailyNoteSkipCount: journal.dailyNoteSkipCount ?? 0
+            )
+            guard result.hasConsistentFileAccounting,
+                  result.jobID == journal.session.jobID,
                   result.status == expectedStatus,
                   result.successCount == successCount,
                   result.totalCount == requestedDates.count,
                   result.formatsPerDate == settings.looseFormatsPerDate,
                   result.totalFilesWritten == journal.totalFilesWritten,
+                  result.isTotalFilesWrittenAuthoritative
+                    == fileAccounting.isTotalFileCountAuthoritative,
                   result.externalRecordFileCount == journal.externalRecordFileCount,
+                  result.outputBreakdown == expectedBreakdown,
                   result.dailyNoteUpdateCount == (journal.dailyNoteUpdateCount ?? 0),
                   result.dailyNoteSkipCount == (journal.dailyNoteSkipCount ?? 0),
                   failedDateDetailsMatch(result.failedDateDetails, journal.failedDateDetails),

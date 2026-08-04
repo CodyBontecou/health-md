@@ -1552,6 +1552,47 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(manager.lastExportStatus?.contains("Daily Note Injection target conflicts") == true)
     }
 
+    func testManualExport_dataDictionaryCollisionFailsBeforeCreatingAnyArtifact() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = ""
+        settings.filenameFormat = "_healthmd_data_dictionary"
+        settings.includeDataDictionary = true
+
+        do {
+            _ = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+            XCTFail("Expected the dictionary/artifact collision to fail")
+        } catch let error as ExportError {
+            guard case .dataDictionaryPathConflict(let path) = error else {
+                XCTFail("Expected dataDictionaryPathConflict, got \(error)")
+                return
+            }
+            XCTAssertEqual(path, "Health/_healthmd_data_dictionary.json")
+            XCTAssertTrue(error.localizedDescription.contains("Data dictionary"))
+        }
+
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), [])
+    }
+
+    func testDataDictionaryCollisionUsesPortableCaseUnicodeAndWidthFolding() {
+        let dictionary = "Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+        let fullWidth = dictionary.applyingTransform(.fullwidthToHalfwidth, reverse: true)
+            ?? dictionary.uppercased()
+        XCTAssertNotNil(ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: [dictionary.uppercased()]
+        ))
+        XCTAssertNotNil(ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: [fullWidth]
+        ))
+    }
+
     #if os(macOS)
     private func extractZIP(_ archiveURL: URL, to destinationURL: URL) throws {
         let process = Process()

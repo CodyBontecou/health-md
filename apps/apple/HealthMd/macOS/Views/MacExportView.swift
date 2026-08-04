@@ -603,6 +603,68 @@ struct MacExportView: View {
             var dailyNoteSkipCount = 0
             var completedDates: [Date] = []
 
+            @MainActor func finishCancelledExport() {
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: successCount,
+                    totalCount: totalCount,
+                    failedDateDetails: failedDateDetails,
+                    partialFailures: partialFailures,
+                    formatsPerDate: advancedSettings.looseFormatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
+                    isFileCategoryBreakdownComplete: isFileAccountingComplete,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
+                    wasCancelled: true,
+                    completedDates: completedDates
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: dates.first ?? startDate,
+                    dateRangeEnd: dates.last ?? endDate
+                )
+                resultIsError = false
+                resultMessage = advancedSettings.dailyNotesOnlyModeEnabled
+                    ? "Daily note update cancelled."
+                    : String(localized: "Export cancelled.", comment: "Export was cancelled")
+                showResult = true
+            }
+
+            do {
+                try vaultManager.preflightDataDictionaryArtifactCollisions(
+                    settings: advancedSettings,
+                    dates: dates
+                )
+            } catch {
+                let details = dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                }
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: 0,
+                    totalCount: totalCount,
+                    failedDateDetails: details,
+                    formatsPerDate: advancedSettings.looseFormatsPerDate,
+                    isFileCategoryBreakdownComplete: true,
+                    completedDates: []
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: dates.first ?? startDate,
+                    dateRangeEnd: dates.last ?? endDate
+                )
+                resultIsError = true
+                resultMessage = error.localizedDescription
+                showResult = true
+                return
+            }
+
             for (index, date) in dates.enumerated() {
                 // Check for cancellation before each date
                 if Task.isCancelled {
@@ -705,6 +767,30 @@ struct MacExportView: View {
                     successfulHealthData.append(healthData)
                     successCount += 1
                     completedDates.append(date)
+                } catch is CancellationError {
+                    isFileAccountingComplete = false
+                    finishCancelledExport()
+                    return
+                } catch let error as ExportPartialWriteError {
+                    looseAggregateFileCount += error.looseAggregateFileCount
+                    individualEntryFileCount += error.individualEntryFileCount
+                    dataDictionaryFileCount += error.dataDictionaryFileCount
+                    dailyNoteUpdateCount += error.dailyNoteUpdateCount
+                    dailyNoteSkipCount += error.dailyNoteSkipCount
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .fileWriteError,
+                        errorDetails: error.diagnostic
+                    ))
+                } catch let error as ExportError {
+                    if error == .destinationChanged {
+                        isFileAccountingComplete = false
+                    }
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    ))
                 } catch {
                     isFileAccountingComplete = false
                     failedDateDetails.append(FailedDateDetail(
@@ -724,6 +810,20 @@ struct MacExportView: View {
                     )
                     rollupFileCount = writeResult.count
                     dataDictionaryFileCount += writeResult.dataDictionaryFileCount
+                } catch is CancellationError {
+                    isFileAccountingComplete = false
+                    finishCancelledExport()
+                    return
+                } catch let error as ExportPartialWriteError {
+                    rollupFileCount += error.rollupFileCount
+                    dataDictionaryFileCount += error.dataDictionaryFileCount
+                    let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
+                    partialFailures.append(ExportPartialFailure(
+                        date: firstDate,
+                        dataType: "Roll-up summaries",
+                        dateRangeDescription: "selected range",
+                        errorDescription: error.diagnostic
+                    ))
                 } catch {
                     isFileAccountingComplete = false
                     let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
@@ -777,7 +877,7 @@ struct MacExportView: View {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")."
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
+                    resultMessage = String(localized: "Successfully exported \(result.generatedFileCountDisplayValue) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
                 } else {
                     resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
                 }
@@ -791,7 +891,7 @@ struct MacExportView: View {
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)"
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
+                    resultMessage = String(localized: "Exported \(result.generatedFileCountDisplayValue) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
                 } else {
                     resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")
                 }

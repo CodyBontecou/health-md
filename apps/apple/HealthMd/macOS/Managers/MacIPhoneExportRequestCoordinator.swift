@@ -928,7 +928,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
-        guard let record = records[payload.jobID], !record.state.isTerminal else { return false }
+        guard payload.hasConsistentFileAccounting,
+              let record = records[payload.jobID],
+              !record.state.isTerminal else { return false }
         let status: ExportResponse.Status
         switch payload.status {
         case .success: status = .success
@@ -2131,7 +2133,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(suffix)."
+            return "Exported \(payload.successCount) day(s), wrote \(payload.generatedFileCountDisplayValue) file(s)\(suffix)."
         case .partialSuccess:
             if payload.dailyNoteSkipCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
@@ -2139,7 +2141,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(suffix)."
+            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.generatedFileCountDisplayValue) file(s)\(suffix)."
         case .failure:
             return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."
         case .cancelled:

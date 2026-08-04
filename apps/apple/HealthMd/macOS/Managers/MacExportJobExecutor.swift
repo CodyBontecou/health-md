@@ -222,13 +222,25 @@ final class MacExportJobExecutor {
             progress: progress
         )
 
+        let cancelledSession = streamSession
         streamSession = nil
         activeJobID = nil
         cancelledJobIDs.remove(jobID)
         return MacExportFailure(
             jobID: jobID,
             reason: .cancelled,
-            message: message
+            message: message,
+            totalFilesWritten: cancelledSession?.fileAccounting.isComplete == true
+                ? cancelledSession?.totalFilesWritten
+                : nil,
+            outputBreakdown: cancelledSession.map {
+                $0.fileAccounting.breakdown(
+                    requestedDataDayCount: $0.start.totalRequestedDays,
+                    successfulDataDayCount: $0.successCount,
+                    dailyNoteUpdateCount: $0.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: $0.dailyNoteSkipCount
+                )
+            }
         )
     }
 
@@ -308,6 +320,27 @@ final class MacExportJobExecutor {
         }
 
         let settings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        do {
+            try vaultManager.preflightDataDictionaryArtifactCollisions(
+                settings: settings,
+                healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
+                dates: requestedDates
+            )
+        } catch {
+            return .failure(MacExportFailure(
+                jobID: job.jobID,
+                reason: .exportWriteFailure,
+                message: "Mac export paths conflict. No files were written.",
+                underlyingError: error.localizedDescription,
+                totalFilesWritten: 0,
+                outputBreakdown: FileAccounting().breakdown(
+                    requestedDataDayCount: totalDays,
+                    successfulDataDayCount: 0,
+                    dailyNoteUpdateCount: 0,
+                    dailyNoteSkipCount: 0
+                )
+            ))
+        }
         let recordsByDate = Self.recordsByStartOfDay(job.records)
         let externalRecordsByDate = Self.externalRecordsByDate(job.externalDailyRecords)
         var successCount = 0
@@ -321,6 +354,38 @@ final class MacExportJobExecutor {
         var dailyNoteSkipCount = 0
         var processedDays = 0
 
+        func currentCancellationResult() -> MacExportResultPayload {
+            MacExportResultPayload(
+                jobID: job.jobID,
+                status: .cancelled,
+                successCount: successCount,
+                totalCount: totalDays,
+                formatsPerDate: formatsPerDate,
+                totalFilesWritten: totalFilesWritten,
+                isTotalFilesWrittenAuthoritative: fileAccounting.isComplete,
+                externalRecordFileCount: externalRecordFileCount,
+                outputBreakdown: fileAccounting.breakdown(
+                    requestedDataDayCount: totalDays,
+                    successfulDataDayCount: successCount,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount
+                ),
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                failedDateDetails: failedDateDetails,
+                completedDates: Self.completedDates(
+                    successfulRecords: successfulRecords,
+                    failedDateDetails: failedDateDetails,
+                    requestedDates: requestedDates,
+                    includeSuccessfulRecords: !settings.archiveModeEnabled
+                        && !settings.summaryOnlyModeEnabled
+                ),
+                destinationDisplayName: vaultManager.vaultName,
+                destinationPathForDisplay: vaultManager.vaultURL?.path,
+                completedAt: Date()
+            )
+        }
+
         for date in requestedDates {
             if cancelledJobIDs.contains(job.jobID) || Task.isCancelled {
                 let result = MacExportResultPayload(
@@ -330,6 +395,7 @@ final class MacExportJobExecutor {
                     totalCount: totalDays,
                     formatsPerDate: formatsPerDate,
                     totalFilesWritten: totalFilesWritten,
+                    isTotalFilesWrittenAuthoritative: fileAccounting.isComplete,
                     externalRecordFileCount: externalRecordFileCount,
                     outputBreakdown: fileAccounting.breakdown(
                         requestedDataDayCount: totalDays,
@@ -494,9 +560,23 @@ final class MacExportJobExecutor {
                            : "Wrote \(Self.displayDate(record.date))"),
                     progress: progress
                 )
+            } catch is CancellationError {
+                fileAccounting.isComplete = false
+                sendProgress(
+                    jobID: job.jobID,
+                    phase: .cancelled,
+                    processedDays: processedDays,
+                    totalDays: totalDays,
+                    currentDate: record.date,
+                    filesWritten: totalFilesWritten,
+                    message: "Mac export cancelled.",
+                    progress: progress
+                )
+                return .success(currentCancellationResult())
             } catch let error as ExportPartialWriteError {
                 fileAccounting.add(error)
                 totalFilesWritten += error.committedFileCount
+                if error.dataDictionaryFileCount > 0 { dataDictionaryWritten = true }
                 dailyNoteUpdateCount += error.dailyNoteUpdateCount
                 dailyNoteSkipCount += error.dailyNoteSkipCount
                 failedDateDetails.append(FailedDateDetail(
@@ -561,6 +641,9 @@ final class MacExportJobExecutor {
                 }
                 fileAccounting.add(rollupResults)
                 totalFilesWritten += rollupResults.totalGeneratedFileCount
+            } catch is CancellationError {
+                fileAccounting.isComplete = false
+                return .success(currentCancellationResult())
             } catch let error as ExportPartialWriteError {
                 fileAccounting.add(error)
                 totalFilesWritten += error.committedFileCount
@@ -635,6 +718,7 @@ final class MacExportJobExecutor {
             totalCount: totalDays,
             formatsPerDate: formatsPerDate,
             totalFilesWritten: totalFilesWritten,
+            isTotalFilesWrittenAuthoritative: fileAccounting.isComplete,
             externalRecordFileCount: externalRecordFileCount,
             outputBreakdown: fileAccounting.breakdown(
                 requestedDataDayCount: totalDays,
@@ -733,6 +817,28 @@ final class MacExportJobExecutor {
             activeJobID = nil
             return .failure(Self.engineResolutionFailure(jobID: start.jobID, error: error))
         }
+        do {
+            try vaultManager.preflightDataDictionaryArtifactCollisions(
+                settings: dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings(),
+                healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
+                dates: requestedDates
+            )
+        } catch {
+            activeJobID = nil
+            return .failure(MacExportFailure(
+                jobID: start.jobID,
+                reason: .exportWriteFailure,
+                message: "Mac export paths conflict. No files were written.",
+                underlyingError: error.localizedDescription,
+                totalFilesWritten: 0,
+                outputBreakdown: FileAccounting().breakdown(
+                    requestedDataDayCount: start.totalRequestedDays,
+                    successfulDataDayCount: 0,
+                    dailyNoteUpdateCount: 0,
+                    dailyNoteSkipCount: 0
+                )
+            ))
+        }
         streamSession = StreamSession(
             start: start,
             requestedDates: requestedDates,
@@ -809,7 +915,16 @@ final class MacExportJobExecutor {
             return .failure(MacExportFailure(
                 jobID: chunk.jobID,
                 reason: .cancelled,
-                message: "Mac export cancelled."
+                message: "Mac export cancelled.",
+                totalFilesWritten: session.fileAccounting.isComplete
+                    ? session.totalFilesWritten
+                    : nil,
+                outputBreakdown: session.fileAccounting.breakdown(
+                    requestedDataDayCount: session.start.totalRequestedDays,
+                    successfulDataDayCount: session.successCount,
+                    dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: session.dailyNoteSkipCount
+                )
             ))
         }
 
@@ -914,9 +1029,24 @@ final class MacExportJobExecutor {
                             ))
                         }
                     }
+                } catch is CancellationError {
+                    session.fileAccounting.isComplete = false
+                    streamSession = session
+                    return .failure(MacExportFailure(
+                        jobID: chunk.jobID,
+                        reason: .cancelled,
+                        message: "Mac export stream was cancelled.",
+                        outputBreakdown: session.fileAccounting.breakdown(
+                            requestedDataDayCount: session.start.totalRequestedDays,
+                            successfulDataDayCount: session.successCount,
+                            dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                            dailyNoteSkipCount: session.dailyNoteSkipCount
+                        )
+                    ))
                 } catch let error as ExportPartialWriteError {
                     session.fileAccounting.add(error)
                     session.totalFilesWritten += error.committedFileCount
+                    if error.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.dailyNoteUpdateCount += error.dailyNoteUpdateCount
                     session.dailyNoteSkipCount += error.dailyNoteSkipCount
                     session.failedDateDetails.append(FailedDateDetail(
@@ -983,7 +1113,16 @@ final class MacExportJobExecutor {
             return .failure(MacExportFailure(
                 jobID: complete.jobID,
                 reason: .payloadDecodeFailure,
-                message: "Stream completed with \(complete.totalChunks) chunk(s), but Mac accepted \(acceptedChunkCount)."
+                message: "Stream completed with \(complete.totalChunks) chunk(s), but Mac accepted \(acceptedChunkCount).",
+                totalFilesWritten: session.fileAccounting.isComplete
+                    ? session.totalFilesWritten
+                    : nil,
+                outputBreakdown: session.fileAccounting.breakdown(
+                    requestedDataDayCount: session.start.totalRequestedDays,
+                    successfulDataDayCount: session.successCount,
+                    dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: session.dailyNoteSkipCount
+                )
             ))
         }
 
@@ -999,7 +1138,22 @@ final class MacExportJobExecutor {
                 )
             )
         } catch {
-            return .failure(Self.engineResolutionFailure(jobID: complete.jobID, error: error))
+            let failure = Self.engineResolutionFailure(jobID: complete.jobID, error: error)
+            return .failure(MacExportFailure(
+                jobID: complete.jobID,
+                reason: failure.reason,
+                message: failure.message,
+                underlyingError: failure.underlyingError,
+                totalFilesWritten: session.fileAccounting.isComplete
+                    ? session.totalFilesWritten
+                    : nil,
+                outputBreakdown: session.fileAccounting.breakdown(
+                    requestedDataDayCount: session.start.totalRequestedDays,
+                    successfulDataDayCount: session.successCount,
+                    dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: session.dailyNoteSkipCount
+                )
+            ))
         }
         session.failedDateDetails.append(contentsOf: complete.iphoneFailedDateDetails)
 
@@ -1053,9 +1207,24 @@ final class MacExportJobExecutor {
                         session.fileAccounting.externalRecordFileCount += sidecarCount
                         session.totalFilesWritten += sidecarCount
                     }
+                } catch is CancellationError {
+                    session.fileAccounting.isComplete = false
+                    streamSession = session
+                    return .failure(MacExportFailure(
+                        jobID: complete.jobID,
+                        reason: .cancelled,
+                        message: "Mac export stream was cancelled.",
+                        outputBreakdown: session.fileAccounting.breakdown(
+                            requestedDataDayCount: session.start.totalRequestedDays,
+                            successfulDataDayCount: session.successCount,
+                            dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                            dailyNoteSkipCount: session.dailyNoteSkipCount
+                        )
+                    ))
                 } catch let error as ExportPartialWriteError {
                     session.fileAccounting.add(error)
                     session.totalFilesWritten += error.committedFileCount
+                    if error.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.dailyNoteUpdateCount += error.dailyNoteUpdateCount
                     session.dailyNoteSkipCount += error.dailyNoteSkipCount
                     session.failedDateDetails.append(FailedDateDetail(
@@ -1090,6 +1259,20 @@ final class MacExportJobExecutor {
                 }
                 session.fileAccounting.add(rollupResults)
                 session.totalFilesWritten += rollupResults.totalGeneratedFileCount
+            } catch is CancellationError {
+                session.fileAccounting.isComplete = false
+                streamSession = session
+                return .failure(MacExportFailure(
+                    jobID: complete.jobID,
+                    reason: .cancelled,
+                    message: "Mac export stream was cancelled.",
+                    outputBreakdown: session.fileAccounting.breakdown(
+                        requestedDataDayCount: session.start.totalRequestedDays,
+                        successfulDataDayCount: session.successCount,
+                        dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                        dailyNoteSkipCount: session.dailyNoteSkipCount
+                    )
+                ))
             } catch let error as ExportPartialWriteError {
                 session.fileAccounting.add(error)
                 session.totalFilesWritten += error.committedFileCount
@@ -1157,6 +1340,7 @@ final class MacExportJobExecutor {
             totalCount: totalDays,
             formatsPerDate: session.formatsPerDate,
             totalFilesWritten: session.totalFilesWritten,
+            isTotalFilesWrittenAuthoritative: session.fileAccounting.isComplete,
             externalRecordFileCount: session.externalRecordFileCount,
             outputBreakdown: session.fileAccounting.breakdown(
                 requestedDataDayCount: totalDays,
@@ -1480,7 +1664,7 @@ final class MacExportJobExecutor {
                     reason: .accessDenied,
                     errorDetails: exportError.localizedDescription
                 )
-            case .noFormatsSelected, .dailyNotePathConflict:
+            case .noFormatsSelected, .dailyNotePathConflict, .dataDictionaryPathConflict:
                 return FailedDateDetail(date: date, reason: .fileWriteError, errorDetails: exportError.localizedDescription)
             }
         }

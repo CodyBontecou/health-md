@@ -939,6 +939,9 @@ struct MacExportResultPayload: Codable {
     let totalCount: Int
     let formatsPerDate: Int
     let totalFilesWritten: Int
+    /// False means `totalFilesWritten` is only the confirmed lower bound at the point
+    /// an interrupted writer stopped. Missing on older peers means authoritative.
+    let isTotalFilesWrittenAuthoritative: Bool
     let externalRecordFileCount: Int
     /// Exact known file categories when supplied by a current producer. Nil preserves
     /// compatibility with peers and durable journals that only carried the total.
@@ -959,6 +962,7 @@ struct MacExportResultPayload: Codable {
         case totalCount
         case formatsPerDate
         case totalFilesWritten
+        case isTotalFilesWrittenAuthoritative
         case externalRecordFileCount
         case outputBreakdown
         case dailyNoteUpdateCount
@@ -977,6 +981,7 @@ struct MacExportResultPayload: Codable {
         totalCount: Int,
         formatsPerDate: Int,
         totalFilesWritten: Int,
+        isTotalFilesWrittenAuthoritative: Bool = true,
         externalRecordFileCount: Int = 0,
         outputBreakdown: ExportHistoryOutputBreakdown? = nil,
         dailyNoteUpdateCount: Int = 0,
@@ -993,6 +998,7 @@ struct MacExportResultPayload: Codable {
         self.totalCount = totalCount
         self.formatsPerDate = formatsPerDate
         self.totalFilesWritten = totalFilesWritten
+        self.isTotalFilesWrittenAuthoritative = isTotalFilesWrittenAuthoritative
         self.externalRecordFileCount = externalRecordFileCount
         self.outputBreakdown = outputBreakdown
         self.dailyNoteUpdateCount = dailyNoteUpdateCount
@@ -1012,6 +1018,10 @@ struct MacExportResultPayload: Codable {
         totalCount = try container.decode(Int.self, forKey: .totalCount)
         formatsPerDate = try container.decode(Int.self, forKey: .formatsPerDate)
         totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
+        isTotalFilesWrittenAuthoritative = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .isTotalFilesWrittenAuthoritative
+        ) ?? true
         externalRecordFileCount = try container.decodeIfPresent(Int.self, forKey: .externalRecordFileCount) ?? 0
         outputBreakdown = try container.decodeIfPresent(
             ExportHistoryOutputBreakdown.self,
@@ -1026,9 +1036,27 @@ struct MacExportResultPayload: Codable {
         completedAt = try container.decode(Date.self, forKey: .completedAt)
     }
 
+    var generatedFileCountDisplayValue: String {
+        if isTotalFilesWrittenAuthoritative { return "\(totalFilesWritten)" }
+        return totalFilesWritten > 0
+            ? "at least \(totalFilesWritten)"
+            : "an unknown number of"
+    }
+
     var hasConsistentFileAccounting: Bool {
-        guard totalFilesWritten >= 0,
-              externalRecordFileCount >= 0 else { return false }
+        guard totalCount >= 0,
+              successCount >= 0,
+              successCount <= totalCount,
+              formatsPerDate >= 0,
+              totalFilesWritten >= 0,
+              externalRecordFileCount >= 0,
+              dailyNoteUpdateCount >= 0,
+              dailyNoteSkipCount >= 0,
+              dailyNoteUpdateCount <= totalCount,
+              dailyNoteSkipCount <= totalCount - dailyNoteUpdateCount,
+              completedDates.map({ Set($0).count <= totalCount }) ?? true else {
+            return false
+        }
         guard let outputBreakdown else { return true }
         guard outputBreakdown.requestedDataDayCount == totalCount,
               outputBreakdown.successfulDataDayCount == successCount,
@@ -1036,8 +1064,11 @@ struct MacExportResultPayload: Codable {
               outputBreakdown.generatedFileCount <= totalFilesWritten else {
             return false
         }
+        if isTotalFilesWrittenAuthoritative {
+            return !outputBreakdown.isFileCategoryBreakdownComplete
+                || outputBreakdown.generatedFileCount == totalFilesWritten
+        }
         return !outputBreakdown.isFileCategoryBreakdownComplete
-            || outputBreakdown.generatedFileCount == totalFilesWritten
     }
 }
 
@@ -1058,6 +1089,10 @@ struct MacExportFailure: Codable, Equatable, Error {
     let reason: MacExportFailureReason
     let message: String
     let underlyingError: String?
+    /// Exact total when known. Nil means `outputBreakdown.generatedFileCount` is only
+    /// a confirmed lower bound (or zero when no lower bound is available).
+    let totalFilesWritten: Int?
+    let outputBreakdown: ExportHistoryOutputBreakdown?
     let occurredAt: Date
 
     init(
@@ -1065,12 +1100,16 @@ struct MacExportFailure: Codable, Equatable, Error {
         reason: MacExportFailureReason,
         message: String,
         underlyingError: String? = nil,
+        totalFilesWritten: Int? = nil,
+        outputBreakdown: ExportHistoryOutputBreakdown? = nil,
         occurredAt: Date = Date()
     ) {
         self.jobID = jobID
         self.reason = reason
         self.message = message
         self.underlyingError = underlyingError
+        self.totalFilesWritten = totalFilesWritten
+        self.outputBreakdown = outputBreakdown
         self.occurredAt = occurredAt
     }
 }

@@ -552,10 +552,53 @@ final class ExportOrchestratorTests: XCTestCase {
             settings: settings
         )
 
+        XCTAssertEqual(result.successCount, 0, "A failed final dictionary write remains a failed day")
+        XCTAssertEqual(result.looseAggregateFileCount, 1)
         XCTAssertEqual(result.dataDictionaryFileCount, 0)
+        XCTAssertEqual(result.totalFilesWritten, 1)
         XCTAssertEqual(result.outputBreakdown.dataDictionaryFileCount, 0)
+        XCTAssertEqual(result.outputBreakdown.looseAggregateFileCount, 1)
         XCTAssertNil(fileSystem.writeCounts[dictionaryPath])
-        XCTAssertFalse(result.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(result.primaryFailureReason, .fileWriteError)
+        XCTAssertEqual(result.failedDateDetails.first?.errorDetails, "Injected failure before write")
+    }
+
+    @MainActor
+    func testExportDatesRejectsDictionaryArtifactCollisionBeforeFirstWrite() async {
+        UserDefaults.standard.set(
+            "legacy",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(vaultPath: "/tmp/DictionaryCollisionVault")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        settings.folderStructure = ""
+        settings.filenameFormat = "_healthmd_data_dictionary"
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(result.primaryFailureReason, .fileWriteError)
+        XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("Data dictionary") == true)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertTrue(fileSystem.writeCounts.isEmpty)
     }
 
     @MainActor

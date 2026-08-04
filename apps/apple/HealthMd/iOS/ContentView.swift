@@ -1033,8 +1033,8 @@ struct ContentView: View {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
                     vaultManager.lastExportStatus = exportStatusMessage
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    exportStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription))", comment: "Multi-format export success message")
-                    vaultManager.lastExportStatus = String(localized: "Exported \(result.totalFilesWritten) files", comment: "Multi-format export status message")
+                    exportStatusMessage = String(localized: "Successfully exported \(result.generatedFileCountDisplayValue) files (\(result.fileBreakdownDescription))", comment: "Multi-format export success message")
+                    vaultManager.lastExportStatus = String(localized: "Exported \(result.generatedFileCountDisplayValue) files", comment: "Multi-format export status message")
                 } else {
                     exportStatusMessage = String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
                     vaultManager.lastExportStatus = String(localized: "Exported \(result.successCount) files", comment: "Export status message")
@@ -1063,8 +1063,8 @@ struct ContentView: View {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes. \(suffix)"
                     vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    exportStatusMessage = "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)"
-                    vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
+                    exportStatusMessage = "Exported \(result.generatedFileCountDisplayValue) files (\(result.fileBreakdownDescription)). \(suffix)"
+                    vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.generatedFileCountDisplayValue) files)"
                 } else {
                     exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)"
                     vaultManager.lastExportStatus = "Partial export: \(result.successCount)/\(result.totalCount) succeeded"
@@ -1893,8 +1893,7 @@ struct ContentView: View {
                 source: .macAgent,
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate,
-                targetLabel: destinationName,
-                fileCount: result.totalFilesWritten
+                targetLabel: destinationName
             )
 
             if result.successCount > 0, !macExportQuotaRecorded {
@@ -1924,8 +1923,8 @@ struct ContentView: View {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)"
                 vaultManager.lastExportStatus = exportStatusMessage
             } else if result.formatsPerDate > 1 || result.totalFilesWritten > 0 {
-                exportStatusMessage = "Successfully exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription))"
-                vaultManager.lastExportStatus = "Exported \(result.totalFilesWritten) files to Mac"
+                exportStatusMessage = "Successfully exported \(exportResult.generatedFileCountDisplayValue) files to \(destinationName) (\(exportResult.fileBreakdownDescription))"
+                vaultManager.lastExportStatus = "Exported \(exportResult.generatedFileCountDisplayValue) files to Mac"
             } else {
                 exportStatusMessage = "Successfully exported \(result.successCount) files to \(destinationName)"
                 vaultManager.lastExportStatus = "Exported \(result.successCount) files to Mac"
@@ -1952,8 +1951,8 @@ struct ContentView: View {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
             } else if result.formatsPerDate > 1 || result.totalFilesWritten > 0 {
-                exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
-                vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
+                exportStatusMessage = "Exported \(exportResult.generatedFileCountDisplayValue) files to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
+                vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(exportResult.generatedFileCountDisplayValue) files)"
             } else {
                 exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files to \(destinationName). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) succeeded"
@@ -1996,11 +1995,10 @@ struct ContentView: View {
             errorDetails: failure.underlyingError ?? failure.message
         )
         let exportResult = ExportOrchestrator.ExportResult(
-            successCount: 0,
+            macExportFailure: failure,
             totalCount: totalCount,
-            failedDateDetails: [failedDetail],
             formatsPerDate: advancedSettings.looseFormatsPerDate,
-            wasCancelled: failure.reason == .cancelled
+            failedDateDetails: [failedDetail]
         )
 
         ExportOrchestrator.recordResult(

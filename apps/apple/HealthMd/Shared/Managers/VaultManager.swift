@@ -955,12 +955,12 @@ struct DailyExportWriteResult {
         aggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
     }
 
-    var dailyNoteUpdatedCount: Int {
+    nonisolated var dailyNoteUpdatedCount: Int {
         if case .updated = dailyNoteResult { return 1 }
         return 0
     }
 
-    var dailyNoteSkippedCount: Int {
+    nonisolated var dailyNoteSkippedCount: Int {
         if case .skipped = dailyNoteResult { return 1 }
         return 0
     }
@@ -982,7 +982,7 @@ struct RollupExportWriteResult {
     let files: [HealthRollupWriteResult]
     let dataDictionaryFileCount: Int
 
-    var count: Int { files.count }
+    nonisolated var count: Int { files.count }
     var isEmpty: Bool { files.isEmpty }
     var totalGeneratedFileCount: Int { files.count + dataDictionaryFileCount }
 }
@@ -1694,7 +1694,7 @@ final class VaultManager: ObservableObject {
         } else {
             dictionary = nil
         }
-        if dictionary != nil {
+        if frozenSettings.writesDataDictionary {
             try ensureNoDataDictionaryExportCollision(
                 healthSubfolder: settingsSnapshot.healthSubfolder ?? self.healthSubfolder,
                 settings: frozenSettings,
@@ -2106,6 +2106,11 @@ final class VaultManager: ObservableObject {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         #endif
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: [date]
+        )
         try prepareHealthDataOutputDestination(
             date: date,
             vaultURL: vaultURL,
@@ -2229,6 +2234,11 @@ final class VaultManager: ObservableObject {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         #endif
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: [date]
+        )
         try prepareHealthDataOutputDestination(
             date: date,
             vaultURL: vaultURL,
@@ -2354,6 +2364,11 @@ final class VaultManager: ObservableObject {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         #endif
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: [date]
+        )
         try prepareHealthDataOutputDestination(
             date: date,
             vaultURL: vaultURL,
@@ -2370,7 +2385,7 @@ final class VaultManager: ObservableObject {
         } else {
             nil
         }
-        if dictionaryRequest != nil {
+        if settings.writesDataDictionary {
             try ensureNoDataDictionaryExportCollision(
                 healthSubfolder: healthSubfolder,
                 settings: settings,
@@ -2580,6 +2595,12 @@ final class VaultManager: ObservableObject {
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
         guard !sources.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return nil }
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: sources.map(\.date),
+            rollupDates: rollupHealthData.map(\.date)
+        )
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
         }
@@ -2802,7 +2823,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         )
-        if dictionaryRequest != nil {
+        if settings.writesDataDictionary {
             try ensureNoDataDictionaryExportCollision(
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: settings,
@@ -2967,6 +2988,11 @@ final class VaultManager: ObservableObject {
         guard settings.archiveModeEnabled || HealthRollupExporter.isEnabled(settings: settings) else {
             return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
         }
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: requestedDates
+        )
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         defer {
@@ -3241,7 +3267,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         )
-        if dictionaryRequest != nil {
+        if settings.writesDataDictionary {
             try ensureNoDataDictionaryExportCollision(
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: settings,
@@ -3339,6 +3365,74 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Collision Safety
 
+    /// Validates every predictable destination artifact for one operation before callers begin
+    /// writing its first file. Explicit native plans are validated separately from their exact
+    /// materialized paths.
+    func preflightDataDictionaryArtifactCollisions(
+        settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil,
+        dates: [Date],
+        rollupDates: [Date]? = nil
+    ) throws {
+        guard settings.writesDataDictionary else { return }
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        var calendar = Calendar.current
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+
+        if settings.archiveModeEnabled {
+            var archivePaths: [String] = dates.flatMap { date in
+                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+                    archiveEntryPath(for: date, format: format, settings: settings)
+                }
+            }
+            archivePaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+                for: rollupDates ?? dates,
+                healthSubfolder: "",
+                settings: settings,
+                calendar: calendar
+            ))
+            try ensureNoDataDictionaryExportCollision(
+                healthSubfolder: "",
+                settings: settings,
+                artifactRelativePaths: archivePaths
+            )
+            return
+        }
+
+        var artifactPaths: [String] = []
+        if settings.writesDailyAggregateFiles {
+            artifactPaths.append(contentsOf: dates.flatMap { date in
+                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+                    ExportPathPlanner.aggregateRelativePath(
+                        healthSubfolder: effectiveHealthSubfolder,
+                        settings: settings,
+                        date: date,
+                        format: format
+                    )
+                }
+            })
+        }
+        if settings.dailyNoteInjection.enabled {
+            artifactPaths.append(contentsOf: dates.map {
+                ExportPathPlanner.dailyNoteRelativePath(
+                    settings: settings.dailyNoteInjection,
+                    date: $0
+                )
+            })
+        }
+        artifactPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+            for: rollupDates ?? dates,
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings,
+            calendar: calendar
+        ))
+        try ensureNoDataDictionaryExportCollision(
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings,
+            artifactRelativePaths: artifactPaths
+        )
+    }
+
     private func ensureNoDataDictionaryExportCollision(
         healthSubfolder: String,
         settings: AdvancedExportSettings,
@@ -3374,11 +3468,9 @@ final class VaultManager: ObservableObject {
         _ error: Error,
         accounting: (Error) -> ExportPartialWriteError
     ) throws -> Never {
-        if error is CancellationError { throw CancellationError() }
+        if error is CancellationError { throw error }
         if let partial = error as? ExportPartialWriteError { throw partial }
-        let partial = accounting(error)
-        guard partial.hasCommittedOutput else { throw error }
-        throw partial
+        throw accounting(error)
     }
 
     // MARK: - Per-Format Writer

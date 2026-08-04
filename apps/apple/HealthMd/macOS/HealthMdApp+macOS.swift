@@ -956,11 +956,12 @@ struct HealthMdApp: App {
             if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
                 syncService.isSyncing = false
             }
-            _ = macCorpusExportSessionManager.cancel(
+            let cancellation = macCorpusExportSessionManager.cancel(
                 sessionID: finalize.sessionID,
                 jobID: finalize.jobID,
                 vaultManager: vaultManager
             )
+            let accountingResult = cancellation.1
             syncService.isSyncing = false
             let acknowledgement = ConnectedCorpusTransferFinalAck(
                 sessionID: finalize.sessionID,
@@ -971,10 +972,18 @@ struct HealthMdApp: App {
                 message: "Mac could not finalize the partitioned corpus export."
             )
             syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+            let wasCancelled = error is CancellationError
             let failure = MacExportFailure(
                 jobID: finalize.jobID,
-                reason: .exportWriteFailure,
-                message: "Mac could not finalize the partitioned corpus export."
+                reason: wasCancelled ? .cancelled : .exportWriteFailure,
+                message: wasCancelled
+                    ? "Mac corpus finalization was cancelled."
+                    : "Mac could not finalize the partitioned corpus export.",
+                underlyingError: error.localizedDescription,
+                totalFilesWritten: accountingResult?.isTotalFilesWrittenAuthoritative == true
+                    ? accountingResult?.totalFilesWritten
+                    : nil,
+                outputBreakdown: accountingResult?.outputBreakdown
             )
             syncService.lastMacExportFailure = failure
             _ = iphoneExportRequestCoordinator.complete(with: failure)
@@ -1330,8 +1339,7 @@ struct HealthMdApp: App {
             source: .macAgent,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
-            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
-            fileCount: result.totalFilesWritten
+            targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac"
         )
     }
 
@@ -1343,11 +1351,10 @@ struct HealthMdApp: App {
         )
         let totalCount = max(ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd).count, 1)
         let exportResult = ExportOrchestrator.ExportResult(
-            successCount: 0,
+            macExportFailure: failure,
             totalCount: totalCount,
-            failedDateDetails: [failedDetail],
             formatsPerDate: job.settingsSnapshot.makeAdvancedExportSettings().looseFormatsPerDate,
-            wasCancelled: failure.reason == .cancelled
+            failedDateDetails: [failedDetail]
         )
         ExportOrchestrator.recordResult(
             exportResult,
@@ -1402,12 +1409,12 @@ struct HealthMdApp: App {
                result.completedDates?.count == result.totalCount {
                 return "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created."
             }
-            return "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention."
+            return "Mac export wrote \(result.generatedFileCountDisplayValue) file(s); \(result.failedDateDetails.count) date(s) need attention."
         case .failure:
             return result.failedDateDetails.first?.reason.shortDescription ?? "Mac export failed"
         case .cancelled:
             return result.successCount > 0
-                ? "Mac export stopped after writing \(result.totalFilesWritten) file(s)."
+                ? "Mac export stopped after writing \(result.generatedFileCountDisplayValue) file(s)."
                 : "Mac export cancelled"
         }
     }
