@@ -33,6 +33,42 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(history.history.map(\.id), [jobID])
     }
 
+    func testRecordResultPersistsCompleteGeneratedFileBreakdown() throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            formatsPerDate: 2,
+            individualEntryFileCount: 35,
+            rollupFileCount: 1,
+            archiveCount: 1,
+            externalRecordFileCount: 1,
+            dailyNoteUpdateCount: 1
+        )
+
+        ExportOrchestrator.recordResult(
+            result,
+            source: .scheduled,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date()
+        )
+
+        let breakdown = try XCTUnwrap(history.history.first?.outputBreakdown)
+        XCTAssertEqual(breakdown.requestedDataDayCount, 1)
+        XCTAssertEqual(breakdown.successfulDataDayCount, 1)
+        XCTAssertEqual(breakdown.looseAggregateFileCount, 2)
+        XCTAssertEqual(breakdown.individualEntryFileCount, 35)
+        XCTAssertEqual(breakdown.zipArchiveFileCount, 1)
+        XCTAssertEqual(breakdown.rollupFileCount, 1)
+        XCTAssertEqual(breakdown.providerSidecarFileCount, 1)
+        XCTAssertEqual(breakdown.dailyNoteUpdateCount, 1)
+        XCTAssertEqual(breakdown.generatedFileCount, result.totalFilesWritten)
+        XCTAssertTrue(breakdown.isFileCategoryBreakdownComplete)
+    }
+
     func testRecordResultPersistsTerminalCLIJobWithNoSuccessfulDays() {
         let history = ExportHistoryManager.shared
         history.clearHistory()
@@ -118,6 +154,7 @@ final class ExportHistoryTests: XCTestCase {
         )
 
         XCTAssertTrue(entry.isCLIRawDelivery)
+        XCTAssertFalse(entry.isGeneratedFileDelivery)
         XCTAssertTrue(entry.isFullSuccess)
         XCTAssertEqual(entry.resultCountLabel, "Days Sent")
         XCTAssertEqual(entry.resultCountDescription, "2 of 2")
@@ -205,6 +242,7 @@ final class ExportHistoryTests: XCTestCase {
         )
 
         XCTAssertTrue(entry.isAPIEndpointDelivery)
+        XCTAssertFalse(entry.isGeneratedFileDelivery)
         XCTAssertEqual(entry.resultCountLabel, "Days Uploaded")
         XCTAssertEqual(entry.resultCountDescription, "1 of 1")
         XCTAssertTrue(entry.summaryDescription.contains("Uploaded 1 day"))
@@ -240,6 +278,8 @@ final class ExportHistoryTests: XCTestCase {
             dailyNoteSkipCount: 0
         )
 
+        XCTAssertTrue(entry.isDailyNoteOnlyResult)
+        XCTAssertFalse(entry.isGeneratedFileDelivery)
         XCTAssertTrue(entry.summaryDescription.contains("Updated 2 daily note"))
         XCTAssertFalse(entry.summaryDescription.contains("0 file"))
 
@@ -280,8 +320,8 @@ final class ExportHistoryTests: XCTestCase {
         )
         XCTAssertFalse(entry.isFullSuccess)
         XCTAssertTrue(entry.isPartialSuccess)
-        XCTAssertTrue(entry.summaryDescription.contains("3"))
-        XCTAssertTrue(entry.summaryDescription.contains("5"))
+        XCTAssertTrue(entry.summaryDescription.contains("3 files"))
+        XCTAssertTrue(entry.summaryDescription.contains("3 of 5 data days"))
     }
 
     func testEntry_partialMetricFailure_isPartialAndSummarizesWarning() {
@@ -457,6 +497,129 @@ final class ExportHistoryTests: XCTestCase {
             from: JSONSerialization.data(withJSONObject: legacyObject)
         )
         XCTAssertNil(legacy.appleExportEnginePin)
+    }
+
+    func testEntry_codableRoundTripPreservesBoundedOutputAndRecoveryBreakdown() throws {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 2,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: 3,
+            individualEntryFileCount: 34,
+            zipArchiveFileCount: 1,
+            rollupFileCount: 2,
+            providerSidecarFileCount: 4,
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 1
+        )
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 2,
+            fileCount: breakdown.generatedFileCount,
+            outputBreakdown: breakdown,
+            pendingRecoveryDayCount: 2,
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 1
+        )
+
+        let decoded = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONEncoder().encode(entry)
+        )
+
+        XCTAssertEqual(decoded.outputBreakdown, breakdown)
+        XCTAssertEqual(decoded.pendingRecoveryDayCount, 2)
+        XCTAssertTrue(decoded.isPendingRecovery)
+        XCTAssertEqual(
+            decoded.pendingRecoveryDescription,
+            "Processed 2 pending recovery data days from an earlier scheduled occurrence."
+        )
+    }
+
+    func testEntry_decodesLegacyHistoryWithSensibleOutputFallbacks() throws {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 2,
+            totalCount: 3,
+            fileCount: 6,
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 0
+        )
+        let encoded = try JSONEncoder().encode(entry)
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        legacyObject.removeValue(forKey: "outputBreakdown")
+        legacyObject.removeValue(forKey: "pendingRecoveryDayCount")
+
+        let decoded = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONSerialization.data(withJSONObject: legacyObject)
+        )
+
+        XCTAssertEqual(decoded.outputBreakdown.requestedDataDayCount, 3)
+        XCTAssertEqual(decoded.outputBreakdown.successfulDataDayCount, 2)
+        XCTAssertEqual(decoded.outputBreakdown.generatedFileCount, 6)
+        XCTAssertEqual(decoded.outputBreakdown.unclassifiedFileCount, 6)
+        XCTAssertEqual(decoded.outputBreakdown.dailyNoteUpdateCount, 1)
+        XCTAssertFalse(decoded.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(decoded.pendingRecoveryDayCount, 0)
+        XCTAssertFalse(decoded.isPendingRecovery)
+    }
+
+    func testOutputBreakdownClampsPersistedCounts() {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: .max,
+            successfulDataDayCount: -1,
+            individualEntryFileCount: .max,
+            dailyNoteSkipCount: -10
+        )
+
+        XCTAssertEqual(
+            breakdown.requestedDataDayCount,
+            ExportHistoryOutputBreakdown.maximumPersistedCount
+        )
+        XCTAssertEqual(breakdown.successfulDataDayCount, 0)
+        XCTAssertEqual(
+            breakdown.individualEntryFileCount,
+            ExportHistoryOutputBreakdown.maximumPersistedCount
+        )
+        XCTAssertEqual(breakdown.dailyNoteSkipCount, 0)
+    }
+
+    func testGeneratedFileRowSummaryAndAccessibilityDistinguishFilesFromDataDays() {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: 4,
+            individualEntryFileCount: 35,
+            zipArchiveFileCount: 1
+        )
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 40,
+            outputBreakdown: breakdown,
+            pendingRecoveryDayCount: 1
+        )
+        XCTAssertEqual(entry.summaryDescription, "Exported 40 files from 1 data day")
+        XCTAssertEqual(entry.generatedFileCountDescription, "40 generated files")
+        XCTAssertEqual(entry.dataDayCountDescription, "1 of 1 data day")
+        XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("40 generated files"))
+        XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("1 of 1 data day"))
+        #if os(iOS)
+        let row = ExportHistoryRow(entry: entry)
+        XCTAssertTrue(row.accessibilityDescription.contains("Exported 40 files from 1 data day"))
+        XCTAssertTrue(row.accessibilityDescription.contains("pending recovery data day"))
+        #endif
     }
 
     func testEntry_codablePreservesCLIOperationDetails() throws {

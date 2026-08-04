@@ -11,6 +11,9 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
     }()
 
     func testPerformPendingExportWithRequestIDExportsStoredDatesAndClearsOnSuccess() async throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
         let request = pendingRequest(
             id: "11111111-1111-1111-1111-111111111111",
             dates: [
@@ -38,6 +41,10 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertTrue(notificationScheduler.canceledRequestIDs.contains(request.id))
         XCTAssertEqual(manager.schedule.lastExportDate, request.scheduledFireDate)
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 2))
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(entry.pendingRecoveryDayCount, 2)
+        XCTAssertTrue(entry.isPendingRecovery)
+        XCTAssertTrue(entry.pendingRecoveryDescription?.contains("2 pending recovery data days") == true)
     }
 
     func testNotificationTriggeredPendingExportShowsActivityBeforeRunnerStarts() async throws {
@@ -253,6 +260,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             historyEntry.failedDateDetails.first?.errorDetails,
             VaultManager.destinationChangedMessage
         )
+        XCTAssertEqual(historyEntry.pendingRecoveryDayCount, request.dates.count)
+        XCTAssertTrue(historyEntry.isPendingRecovery)
     }
 
     func testPerformPendingExportReportedNoDataClearsRequestAndAdvancesSchedule() async throws {
@@ -576,6 +585,9 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
     func testDelayedCustomSilentPushAdvancesLogicalOccurrenceMarker() async throws {
         let fireDate = date(year: 2026, month: 5, day: 17, hour: 8)
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
         let store = TestPendingExportStore()
         let notificationScheduler = InspectableExportNotificationScheduler()
         let schedule = ExportSchedule(
@@ -610,6 +622,48 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         XCTAssertEqual(manager.schedule.lastExportDate, fireDate)
         XCTAssertTrue(try store.loadAll().isEmpty)
+        let historyEntry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(historyEntry.pendingRecoveryDayCount, 0)
+        XCTAssertFalse(historyEntry.isPendingRecovery)
+    }
+
+    func testCurrentAutomaticScheduledOccurrenceIsNotMarkedAsPendingRecovery() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let store = TestPendingExportStore()
+        let manager = SchedulingManager(
+            pendingExportStore: store,
+            exportNotificationScheduler: InspectableExportNotificationScheduler(),
+            initialSchedule: ExportSchedule(
+                isEnabled: true,
+                frequency: .daily,
+                preferredHour: 8,
+                lookbackDays: 1,
+                enabledAt: date(year: 2026, month: 5, day: 17, hour: 8)
+            ),
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledTargetExportRunner: { dates, _ in
+                ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: [],
+                    completedDates: dates
+                )
+            },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
+        )
+
+        await manager.performSilentPushExport(fireDate: fireDate)
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(entry.outputBreakdown.requestedDataDayCount, 1)
+        XCTAssertEqual(entry.pendingRecoveryDayCount, 0)
+        XCTAssertFalse(entry.isPendingRecovery)
     }
 
     func testSilentPushScheduledExportUsesScheduleTargetAndPersistsItWhenDeviceLocked() async throws {

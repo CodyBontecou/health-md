@@ -174,6 +174,35 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.primaryFailureReason, .accessDenied)
     }
 
+    func testExportResultCountsEachGeneratedFileCategoryExactlyOnce() {
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 2,
+            totalCount: 2,
+            failedDateDetails: [],
+            formatsPerDate: 3,
+            individualEntryFileCount: 7,
+            rollupFileCount: 2,
+            archiveCount: 1,
+            externalRecordFileCount: 4,
+            dailyNoteUpdateCount: 2,
+            dailyNoteSkipCount: 0
+        )
+
+        XCTAssertEqual(result.looseAggregateFileCount, 6)
+        XCTAssertEqual(result.totalFilesWritten, 20)
+        XCTAssertEqual(result.outputBreakdown.generatedFileCount, 20)
+        XCTAssertEqual(result.outputBreakdown.looseAggregateFileCount, 6)
+        XCTAssertEqual(result.outputBreakdown.individualEntryFileCount, 7)
+        XCTAssertEqual(result.outputBreakdown.zipArchiveFileCount, 1)
+        XCTAssertEqual(result.outputBreakdown.rollupFileCount, 2)
+        XCTAssertEqual(result.outputBreakdown.providerSidecarFileCount, 4)
+        XCTAssertEqual(result.outputBreakdown.dailyNoteUpdateCount, 2)
+        XCTAssertEqual(
+            result.fileBreakdownDescription.components(separatedBy: "7 individual-entry files").count - 1,
+            1
+        )
+    }
+
     @MainActor
     func testExportDates_foregroundMapsDeviceLockedHealthKitError() async {
         let store = FakeHealthStore()
@@ -416,6 +445,45 @@ final class ExportOrchestratorTests: XCTestCase {
             settings: archiveSettings
         )
         XCTAssertNil(archiveRecord, "Archive source days are disk-backed instead of retained in memory")
+    }
+
+    @MainActor
+    func testExportDatesIncludesIndividualEntryFilesInPhysicalTotalAndBreakdown() async {
+        UserDefaults.standard.set(
+            "legacy",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/IndividualEntryAccountingVault")
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [])
+        settings.includeGranularData = false
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.setTrackIndividually("weight", enabled: true)
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.looseAggregateFileCount, 1)
+        XCTAssertEqual(result.individualEntryFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 2)
+        XCTAssertEqual(result.outputBreakdown.requestedDataDayCount, 1)
+        XCTAssertEqual(result.outputBreakdown.successfulDataDayCount, 1)
+        XCTAssertEqual(result.outputBreakdown.looseAggregateFileCount, 1)
+        XCTAssertEqual(result.outputBreakdown.individualEntryFileCount, 1)
+        XCTAssertTrue(result.fileBreakdownDescription.contains("1 individual-entry file"))
     }
 
     @MainActor

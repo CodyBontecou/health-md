@@ -588,9 +588,11 @@ struct ScheduleSettingsView: View {
 
     private var lookbackDescription: String {
         let days = schedulingManager.schedule.lookbackDays
-        return days == 1
-            ? String(localized: "Each run exports the past 1 day ending with yesterday.")
-            : String(localized: "Each run exports the past \(days) days ending with yesterday.")
+        let range = days == 1
+            ? String(localized: "Each occurrence uses yesterday only.")
+            : String(localized: "Each occurrence uses \(days) data days ending with yesterday.")
+        let outputNote = String(localized: "Formats, ZIP archives, roll-ups, individual entries, provider sidecars, and pending recovery can produce more files.")
+        return "\(range) \(outputNote)"
     }
 
     private var lookbackRow: some View {
@@ -603,7 +605,7 @@ struct ScheduleSettingsView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     HStack(spacing: Spacing.s2) {
-                        Text("Lookback Window")
+                        Text("Data days per scheduled occurrence")
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
 
@@ -623,9 +625,9 @@ struct ScheduleSettingsView: View {
         }
         .tint(Color.accent)
         .padding(.vertical, Spacing.s3)
-        .accessibilityLabel("Lookback window")
+        .accessibilityLabel("Data days per scheduled occurrence")
         .accessibilityValue(lookbackDayLabel)
-        .accessibilityHint("Adjusts how many past days each scheduled export includes")
+        .accessibilityHint("Uses completed data days ending with yesterday; output settings and pending recovery can produce more files")
     }
 
     private var todayRefreshRow: some View {
@@ -1378,6 +1380,15 @@ struct ExportHistoryRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                if entry.isPendingRecovery {
+                    Label(
+                        "Pending recovery · \(entry.pendingRecoveryDayCount) data day\(entry.pendingRecoveryDayCount == 1 ? "" : "s")",
+                        systemImage: "clock.arrow.circlepath"
+                    )
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.warning)
+                }
+
                 HStack(spacing: Spacing.s2) {
                     Label(entry.sourceLabelForDisplay, systemImage: entry.sourceIconForDisplay)
                         .labelStyle(.titleAndIcon)
@@ -1409,8 +1420,8 @@ struct ExportHistoryRow: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    private var accessibilityDescription: String {
-        let status = "\(statusDescription): \(entry.summaryDescription)"
+    var accessibilityDescription: String {
+        let status = "\(statusDescription): \(entry.summaryAccessibilityDescription)"
         guard let message = entry.failureListMessage else { return status }
         return "\(status). \(message)"
     }
@@ -1497,27 +1508,129 @@ struct ExportHistoryDetailView: View {
                         .foregroundStyle(Color.textSecondary)
                 }
 
-                // Export Details Section
                 Section {
-                    HStack {
-                        Text("Date Range")
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))
-                            .foregroundStyle(Color.textPrimary)
-                    }
-
-                    HStack {
-                        Text(entry.resultCountLabel)
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(entry.resultCountDescription)
-                            .foregroundStyle(Color.textPrimary)
-                    }
+                    historyValueRow(
+                        "Date range",
+                        value: formatDateRange(entry.dateRangeStart, entry.dateRangeEnd)
+                    )
+                    historyValueRow(
+                        "Requested",
+                        value: dataDayDescription(entry.outputBreakdown.requestedDataDayCount)
+                    )
+                    historyValueRow(
+                        "Successful",
+                        value: dataDayDescription(entry.outputBreakdown.successfulDataDayCount)
+                    )
                 } header: {
-                    Text("Details")
+                    Text("Data days")
                         .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
+                }
+
+                if entry.isGeneratedFileDelivery {
+                    Section {
+                        historyValueRow("Total", value: entry.generatedFileCountDescription)
+
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.looseAggregateFileCount > 0 {
+                            historyValueRow(
+                                "Loose aggregate files",
+                                value: "\(entry.outputBreakdown.looseAggregateFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.individualEntryFileCount > 0 {
+                            historyValueRow(
+                                "Individual-entry files",
+                                value: "\(entry.outputBreakdown.individualEntryFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.zipArchiveFileCount > 0 {
+                            historyValueRow(
+                                "ZIP archives",
+                                value: "\(entry.outputBreakdown.zipArchiveFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.rollupFileCount > 0 {
+                            historyValueRow(
+                                "Roll-up files",
+                                value: "\(entry.outputBreakdown.rollupFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.providerSidecarFileCount > 0 {
+                            historyValueRow(
+                                "Provider sidecars",
+                                value: "\(entry.outputBreakdown.providerSidecarFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.unclassifiedFileCount > 0 {
+                            historyValueRow(
+                                "Unclassified files",
+                                value: "\(entry.outputBreakdown.unclassifiedFileCount)"
+                            )
+                        }
+                    } header: {
+                        Text("Generated files")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    } footer: {
+                        if !entry.outputBreakdown.isFileCategoryBreakdownComplete {
+                            Text("This entry has a reliable file total, but its producer did not record every file category.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                } else if entry.isCLIRawDelivery {
+                    Section {
+                        historyValueRow("Days sent", value: "\(entry.successCount) of \(entry.totalCount)")
+                    } header: {
+                        Text("CLI delivery")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                } else if entry.isAPIEndpointDelivery {
+                    Section {
+                        historyValueRow("Days uploaded", value: "\(entry.successCount) of \(entry.totalCount)")
+                    } header: {
+                        Text("API delivery")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                if entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0 {
+                    Section {
+                        historyValueRow("Updated", value: "\(entry.dailyNoteUpdateCount)")
+                        historyValueRow("Skipped", value: "\(entry.dailyNoteSkipCount)")
+                    } header: {
+                        Text("Daily notes")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                if let recoveryDescription = entry.pendingRecoveryDescription {
+                    Section {
+                        Label {
+                            Text(recoveryDescription)
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .foregroundStyle(Color.warning)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Pending recovery")
+                        .accessibilityValue(recoveryDescription)
+                    } header: {
+                        Text("Pending recovery")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
                 }
 
                 if let details = entry.operationDetails {
@@ -1772,6 +1885,10 @@ struct ExportHistoryDetailView: View {
                 }
             }
         }
+    }
+
+    private func dataDayDescription(_ count: Int) -> String {
+        "\(count) data day\(count == 1 ? "" : "s")"
     }
 
     private func historyValueRow(

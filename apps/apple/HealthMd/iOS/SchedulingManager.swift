@@ -785,6 +785,7 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: range.end,
                 targetLabel: targetLabel,
                 exportTarget: target,
+                pendingRecoveryDayCount: request.dates.count,
                 appleExportEnginePin: request.settingsSnapshot?.appleExportEnginePin
             )
         }
@@ -1693,6 +1694,7 @@ class SchedulingManager: ObservableObject {
                     dateRangeStart: startDate, dateRangeEnd: endDate,
                     targetLabel: targetLabel,
                     exportTarget: target,
+                    pendingRecoveryDayCount: pendingRequest?.dates.count ?? 0,
                     appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
                 )
             }
