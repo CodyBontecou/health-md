@@ -997,9 +997,27 @@ final class MacExportJobExecutorTests: XCTestCase {
         let start = makeStreamStart(jobID: jobID, start: date, end: date, totalTransferDays: 1)
         _ = executor.startStream(start, vaultManager: manager)
         XCTAssertEqual(executor.currentJobID, jobID)
+        _ = await executor.receiveChunk(
+            MacExportStreamChunk(
+                jobID: jobID,
+                sequence: 1,
+                records: [Self.healthData(on: date)],
+                externalDailyRecords: [],
+                processedTransferDays: 1,
+                totalTransferDays: 1
+            ),
+            vaultManager: manager
+        )
 
-        executor.abortStream(MacExportStreamAbort(jobID: jobID, reason: .cancelled, message: "test abort"))
+        let failure = executor.abortStream(
+            MacExportStreamAbort(jobID: jobID, reason: .cancelled, message: "test abort")
+        )
 
+        XCTAssertEqual(failure?.totalFilesWritten, 2)
+        XCTAssertEqual(failure?.outputBreakdown?.looseAggregateFileCount, 1)
+        XCTAssertEqual(failure?.outputBreakdown?.dataDictionaryFileCount, 1)
+        XCTAssertEqual(failure?.outputBreakdown?.generatedFileCount, 2)
+        XCTAssertTrue(failure?.outputBreakdown?.isFileCategoryBreakdownComplete == true)
         XCTAssertNil(executor.currentJobID)
         XCTAssertFalse(executor.isBusy)
     }

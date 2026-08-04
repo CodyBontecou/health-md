@@ -666,6 +666,11 @@ final class IPhoneDirectFileExportProducer {
         settings.exportTimeZoneOverride = TimeZone(
             identifier: journal.accepted.sourceTimeZoneIdentifier
         )
+        try vault.preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: journal.healthSubfolder,
+            dates: journal.requestedDates
+        )
         let payloadURLs = try journal.capturedDays.map {
             try jobDirectory(journal.request.jobID).appendingPathComponent($0.relativePath)
         }

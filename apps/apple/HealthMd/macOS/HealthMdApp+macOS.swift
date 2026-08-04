@@ -528,18 +528,17 @@ struct HealthMdApp: App {
                     }
                     publishMacDestinationStatus()
                 case .macExportStreamAbort(let abort):
-                    macExportJobExecutor.abortStream(
+                    let failure = macExportJobExecutor.abortStream(
                         abort,
                         progress: { progress in
                             publishMacExportProgress(progress)
                         }
-                    )
-                    syncService.isSyncing = false
-                    let failure = MacExportFailure(
+                    ) ?? MacExportFailure(
                         jobID: abort.jobID,
                         reason: abort.reason,
                         message: abort.message
                     )
+                    syncService.isSyncing = false
                     syncService.lastMacExportFailure = failure
                     _ = iphoneExportRequestCoordinator.complete(with: failure)
                     syncService.send(.macExportFailed(failure))

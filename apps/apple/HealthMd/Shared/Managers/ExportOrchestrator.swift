@@ -880,7 +880,7 @@ struct ExportOrchestrator {
                 && archiveResult.isFileAccountingComplete,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
-            wasCancelled: archiveResult.wasCancelled,
+            wasCancelled: rollupResult.wasCancelled || archiveResult.wasCancelled,
             completedDates: durableCompletedDates
         )
     }
@@ -1525,7 +1525,7 @@ struct ExportOrchestrator {
                 && archiveResult.isFileAccountingComplete,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
-            wasCancelled: archiveResult.wasCancelled,
+            wasCancelled: rollupResult.wasCancelled || archiveResult.wasCancelled,
             completedDates: durableCompletedDates
         )
     }
@@ -1701,12 +1701,13 @@ struct ExportOrchestrator {
             partialFailures: &partialFailures
         )
         let archiveCount = archiveResult.archiveCount
-        if sourceDateCount > 0, !archiveResult.wasCancelled {
+        let wasCancelled = rollupResult.wasCancelled || archiveResult.wasCancelled
+        if sourceDateCount > 0, !wasCancelled {
             onProgress?(sourceDateCount + 1, sourceDateCount + 1, "summary files")
         }
         let outputArtifactCount = rollupResult.rollupFileCount + archiveCount
 
-        let isTerminalNoData = !archiveResult.wasCancelled
+        let isTerminalNoData = !wasCancelled
             && outputArtifactCount == 0
             && totalDays > 0
             && failedDateDetails.isEmpty
@@ -1730,8 +1731,8 @@ struct ExportOrchestrator {
             archiveCount: archiveCount,
             isFileCategoryBreakdownComplete: rollupResult.isFileAccountingComplete
                 && archiveResult.isFileAccountingComplete,
-            wasCancelled: archiveResult.wasCancelled,
-            completedDates: archiveResult.wasCancelled
+            wasCancelled: wasCancelled,
+            completedDates: wasCancelled
                 ? []
                 : (outputArtifactCount > 0 || isTerminalNoData ? dates : [])
         )
@@ -1798,16 +1799,25 @@ struct ExportOrchestrator {
         let rollupFileCount: Int
         let dataDictionaryFileCount: Int
         let isFileAccountingComplete: Bool
+        let wasCancelled: Bool
 
         static let noOutput = RollupWriteAccountingResult(
             rollupFileCount: 0,
             dataDictionaryFileCount: 0,
-            isFileAccountingComplete: true
+            isFileAccountingComplete: true,
+            wasCancelled: false
         )
         static let failed = RollupWriteAccountingResult(
             rollupFileCount: 0,
             dataDictionaryFileCount: 0,
-            isFileAccountingComplete: false
+            isFileAccountingComplete: false,
+            wasCancelled: false
+        )
+        static let cancelled = RollupWriteAccountingResult(
+            rollupFileCount: 0,
+            dataDictionaryFileCount: 0,
+            isFileAccountingComplete: false,
+            wasCancelled: true
         )
     }
 
@@ -1830,8 +1840,11 @@ struct ExportOrchestrator {
             return RollupWriteAccountingResult(
                 rollupFileCount: result.count,
                 dataDictionaryFileCount: result.dataDictionaryFileCount,
-                isFileAccountingComplete: true
+                isFileAccountingComplete: true,
+                wasCancelled: false
             )
+        } catch is CancellationError {
+            return .cancelled
         } catch {
             let sortedDates = rollupHealthData.map(\.date).sorted()
             let firstDate = sortedDates.first ?? Date()
@@ -1857,7 +1870,8 @@ struct ExportOrchestrator {
                 return RollupWriteAccountingResult(
                     rollupFileCount: partial.rollupFileCount,
                     dataDictionaryFileCount: partial.dataDictionaryFileCount,
-                    isFileAccountingComplete: true
+                    isFileAccountingComplete: true,
+                    wasCancelled: false
                 )
             }
             return .failed

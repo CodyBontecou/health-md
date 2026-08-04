@@ -676,15 +676,27 @@ final class MacExportJobExecutor {
                 message: "Writing ZIP archive…",
                 progress: progress
             )
-            archiveFileCount = await Self.writeArchive(
-                from: successfulRecords,
-                rollupHealthData: rollupRecords,
-                selectedDates: requestedDates,
-                vaultManager: vaultManager,
-                settings: settings,
-                healthSubfolder: job.settingsSnapshot.healthSubfolder,
-                failedDateDetails: &failedDateDetails
-            )
+            do {
+                archiveFileCount = try await Self.writeArchive(
+                    from: successfulRecords,
+                    rollupHealthData: rollupRecords,
+                    selectedDates: requestedDates,
+                    vaultManager: vaultManager,
+                    settings: settings,
+                    healthSubfolder: job.settingsSnapshot.healthSubfolder,
+                    failedDateDetails: &failedDateDetails
+                )
+            } catch is CancellationError {
+                fileAccounting.isComplete = false
+                return .success(currentCancellationResult())
+            } catch {
+                fileAccounting.isComplete = false
+                failedDateDetails.append(FailedDateDetail(
+                    date: requestedDates.first ?? Date(),
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                ))
+            }
             fileAccounting.archiveFileCount += archiveFileCount
             if archiveFileCount == 0,
                failedDateDetails.contains(where: { $0.reason == .fileWriteError }) {
@@ -1295,15 +1307,37 @@ final class MacExportJobExecutor {
 
         var archiveFileCount = 0
         if settings.archiveModeEnabled && !session.successfulRecords.isEmpty {
-            archiveFileCount = await Self.writeArchive(
-                from: session.successfulRecords,
-                rollupHealthData: rollupRecords,
-                selectedDates: session.requestedDates,
-                vaultManager: vaultManager,
-                settings: settings,
-                healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
-                failedDateDetails: &session.failedDateDetails
-            )
+            do {
+                archiveFileCount = try await Self.writeArchive(
+                    from: session.successfulRecords,
+                    rollupHealthData: rollupRecords,
+                    selectedDates: session.requestedDates,
+                    vaultManager: vaultManager,
+                    settings: settings,
+                    healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
+                    failedDateDetails: &session.failedDateDetails
+                )
+            } catch is CancellationError {
+                session.fileAccounting.isComplete = false
+                return .failure(MacExportFailure(
+                    jobID: complete.jobID,
+                    reason: .cancelled,
+                    message: "Mac export stream was cancelled.",
+                    outputBreakdown: session.fileAccounting.breakdown(
+                        requestedDataDayCount: session.start.totalRequestedDays,
+                        successfulDataDayCount: session.successCount,
+                        dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                        dailyNoteSkipCount: session.dailyNoteSkipCount
+                    )
+                ))
+            } catch {
+                session.fileAccounting.isComplete = false
+                session.failedDateDetails.append(FailedDateDetail(
+                    date: session.requestedDates.first ?? session.start.dateRangeStart,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                ))
+            }
             session.fileAccounting.archiveFileCount += archiveFileCount
             if archiveFileCount == 0 {
                 session.fileAccounting.isComplete = false
@@ -1379,11 +1413,13 @@ final class MacExportJobExecutor {
         return .success(result)
     }
 
+    @discardableResult
     func abortStream(
         _ abort: MacExportStreamAbort,
         progress: ProgressHandler? = nil
-    ) {
-        guard activeJobID == abort.jobID else { return }
+    ) -> MacExportFailure? {
+        guard activeJobID == abort.jobID else { return nil }
+        let abortedSession = streamSession
         sendProgress(
             jobID: abort.jobID,
             phase: .cancelled,
@@ -1397,6 +1433,22 @@ final class MacExportJobExecutor {
         cancelledJobIDs.remove(abort.jobID)
         streamSession = nil
         activeJobID = nil
+        return MacExportFailure(
+            jobID: abort.jobID,
+            reason: abort.reason,
+            message: abort.message,
+            totalFilesWritten: abortedSession?.fileAccounting.isComplete == true
+                ? abortedSession?.totalFilesWritten
+                : nil,
+            outputBreakdown: abortedSession.map {
+                $0.fileAccounting.breakdown(
+                    requestedDataDayCount: $0.start.totalRequestedDays,
+                    successfulDataDayCount: $0.successCount,
+                    dailyNoteUpdateCount: $0.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: $0.dailyNoteSkipCount
+                )
+            }
+        )
     }
 
     private func validate(_ job: MacExportJob, vaultManager: VaultManager) -> MacExportFailure? {
@@ -1605,7 +1657,7 @@ final class MacExportJobExecutor {
         settings: AdvancedExportSettings,
         healthSubfolder: String?,
         failedDateDetails: inout [FailedDateDetail]
-    ) async -> Int {
+    ) async throws -> Int {
         guard settings.archiveModeEnabled else { return 0 }
         guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
 
@@ -1622,6 +1674,8 @@ final class MacExportJobExecutor {
                 endDate: endDate,
                 healthSubfolder: healthSubfolder
             ) == nil ? 0 : 1
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             failedDateDetails.append(FailedDateDetail(
                 date: startDate,
