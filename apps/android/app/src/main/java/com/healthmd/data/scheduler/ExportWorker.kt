@@ -141,6 +141,10 @@ class ExportWorker @AssistedInject constructor(
             return Result.success()
         }
 
+        // handleOccurrence admitted this frozen snapshot before enqueue. This generation check,
+        // while holding runCoordinator, decides whether it won the race with a later replacement.
+        // Once it passes, a same-target run may finish despite mutable output preference writes.
+        // Target and endpoint identity remain fail-closed below.
         val persistedSettings = settingsRepository.getExportSettings()
         val enginePin = capturedOccurrence.enginePin
         val capturedSnapshot = capturedOccurrence.settingsSnapshot

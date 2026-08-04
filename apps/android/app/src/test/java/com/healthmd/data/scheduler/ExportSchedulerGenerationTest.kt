@@ -64,20 +64,20 @@ class ExportSchedulerGenerationTest {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun destinationReplacementAwaitsOccurrenceAndFallbackCancellationBeforeArming() = runTest {
+    fun destinationReplacementPersistsNewStateBeforeAwaitingGenerationCancellation() = runTest {
         val apiSettings = settings(ExportTarget.API_ENDPOINT)
         val folderSettings = settings(ExportTarget.DEVICE_FOLDER)
         stateStore.markGenerationMigrationComplete()
         stateStore.save(occurrence(apiSettings, "generation-api-a"))
 
-        val occurrenceCancellation = SettableFuture.create<Operation.State.SUCCESS>()
-        val fallbackCancellation = SettableFuture.create<Operation.State.SUCCESS>()
+        val cancellation = SettableFuture.create<Operation.State.SUCCESS>()
         val enqueued = mutableListOf<OneTimeWorkRequest>()
-        val workManager = workManager(
-            enqueued = enqueued,
-            occurrenceCancellation = pendingOperation(occurrenceCancellation),
-            fallbackCancellation = pendingOperation(fallbackCancellation),
-        )
+        val workManager = workManager(enqueued)
+        every {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-api-a",
+            )
+        } returns pendingOperation(cancellation)
         val scheduler = scheduler(
             workManager = workManager,
             currentSettings = { folderSettings },
@@ -89,28 +89,27 @@ class ExportSchedulerGenerationTest {
 
         assertThat(replacement.isCompleted).isFalse()
         assertThat(enqueued).isEmpty()
-        assertThat(stateStore.load()).isNull()
+        assertThat(stateStore.load()?.generation).isEqualTo("generation-folder-b")
+        assertThat(stateStore.loadTransition()?.phase)
+            .isEqualTo(ScheduledExportTransitionPhase.PREPARED)
         verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-api-a",
+            )
+        }
+        verify(exactly = 0) {
             workManager.cancelAllWorkByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG)
         }
         verify(exactly = 0) {
             workManager.cancelAllWorkByTag(ExportScheduler.FALLBACK_TRIGGER_TAG)
         }
 
-        occurrenceCancellation.set(Operation.SUCCESS)
-        runCurrent()
-
-        assertThat(replacement.isCompleted).isFalse()
-        assertThat(enqueued).isEmpty()
-        verify(exactly = 1) {
-            workManager.cancelAllWorkByTag(ExportScheduler.FALLBACK_TRIGGER_TAG)
-        }
-
-        fallbackCancellation.set(Operation.SUCCESS)
+        cancellation.set(Operation.SUCCESS)
         replacement.await()
 
         assertThat(enqueued).hasSize(1)
         assertThat(stateStore.load()?.generation).isEqualTo("generation-folder-b")
+        assertThat(stateStore.loadTransition()).isNull()
     }
 
     @Test
@@ -208,11 +207,21 @@ class ExportSchedulerGenerationTest {
         ).inOrder()
         assertThat(requests.last().tags)
             .contains(ExportScheduler.GENERATION_TAG_PREFIX + "generation-api-c")
-        verify(exactly = 3) {
+        verify(exactly = 0) {
             workManager.cancelAllWorkByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG)
         }
-        verify(exactly = 3) {
+        verify(exactly = 0) {
             workManager.cancelAllWorkByTag(ExportScheduler.FALLBACK_TRIGGER_TAG)
+        }
+        verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-api-a",
+            )
+        }
+        verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-folder-b",
+            )
         }
         verify(exactly = 0) { workManager.cancelAllWork() }
     }
@@ -233,8 +242,13 @@ class ExportSchedulerGenerationTest {
         scheduler.reconcile()
 
         assertThat(stateStore.load()?.generation).isEqualTo("generation-output-b")
-        verify(exactly = 2) {
+        verify(exactly = 0) {
             workManager.cancelAllWorkByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG)
+        }
+        verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-output-a",
+            )
         }
     }
 
@@ -264,6 +278,7 @@ class ExportSchedulerGenerationTest {
             enginePinPlanner = enginePinPlanner,
             generationFactory = generationFactory,
             runCoordinator = ScheduledExportRunCoordinator(),
+            transitionObserver = ScheduledExportTransitionObserver(),
         )
     }
 
@@ -310,8 +325,6 @@ class ExportSchedulerGenerationTest {
 
     private fun workManager(
         enqueued: MutableList<OneTimeWorkRequest> = mutableListOf(),
-        occurrenceCancellation: Operation = successfulOperation(),
-        fallbackCancellation: Operation = successfulOperation(),
     ): WorkManager = mockk(relaxed = true) {
         every {
             enqueueUniqueWork(
@@ -323,10 +336,7 @@ class ExportSchedulerGenerationTest {
             enqueued += thirdArg<OneTimeWorkRequest>()
             successfulOperation()
         }
-        every { cancelAllWorkByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG) } returns
-            occurrenceCancellation
-        every { cancelAllWorkByTag(ExportScheduler.FALLBACK_TRIGGER_TAG) } returns
-            fallbackCancellation
+        every { cancelAllWorkByTag(any<String>()) } returns successfulOperation()
         every { cancelUniqueWork(any<String>()) } returns successfulOperation()
     }
 

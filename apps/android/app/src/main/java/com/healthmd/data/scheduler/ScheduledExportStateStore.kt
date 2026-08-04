@@ -1,6 +1,7 @@
 package com.healthmd.data.scheduler
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -15,6 +16,93 @@ class ScheduledExportStateStore @Inject constructor(
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     fun load(): ScheduledExportOccurrence? = synchronized(lock) {
+        loadOccurrenceLocked()
+    }
+
+    fun save(occurrence: ScheduledExportOccurrence) = synchronized(lock) {
+        preferences.edit(commit = true) {
+            writeOccurrence(occurrence)
+        }
+    }
+
+    /**
+     * Atomically makes [transition.replacement] the admitted occurrence before any old alarm or
+     * WorkManager request is cancelled. Old workers therefore fail their generation check even if
+     * the process dies before external cleanup starts.
+     */
+    internal fun prepareTransition(transition: ScheduledExportTransition) = synchronized(lock) {
+        preferences.edit(commit = true) {
+            writeOccurrence(transition.replacement)
+            putString(KEY_TRANSITION_PHASE, transition.phase.name)
+            putString(KEY_TRANSITION_CLEANUP_SCOPE, transition.cleanupScope.name)
+            putString(KEY_TRANSITION_REASON, transition.reason)
+            if (transition.previousGeneration == null) {
+                remove(KEY_TRANSITION_PREVIOUS_GENERATION)
+            } else {
+                putString(KEY_TRANSITION_PREVIOUS_GENERATION, transition.previousGeneration)
+            }
+            if (transition.previousOccurrenceId == null) {
+                remove(KEY_TRANSITION_PREVIOUS_OCCURRENCE_ID)
+            } else {
+                putString(KEY_TRANSITION_PREVIOUS_OCCURRENCE_ID, transition.previousOccurrenceId)
+            }
+        }
+    }
+
+    internal fun loadTransition(): ScheduledExportTransition? = synchronized(lock) {
+        loadTransitionLocked()
+    }
+
+    internal fun updateTransitionPhase(
+        generation: String,
+        phase: ScheduledExportTransitionPhase,
+    ): Boolean = synchronized(lock) {
+        val transition = loadTransitionLocked()
+        if (transition?.replacement?.generation != generation) {
+            false
+        } else {
+            preferences.edit(commit = true) {
+                putString(KEY_TRANSITION_PHASE, phase.name)
+            }
+            true
+        }
+    }
+
+    /** Leaves the already-durable replacement occurrence in place and removes only transition data. */
+    internal fun finalizeTransition(generation: String): Boolean = synchronized(lock) {
+        val transition = loadTransitionLocked()
+        if (
+            transition?.replacement?.generation != generation ||
+            transition.phase != ScheduledExportTransitionPhase.NEW_OCCURRENCE_ARMED
+        ) {
+            false
+        } else {
+            preferences.edit(commit = true) {
+                TRANSITION_KEYS.forEach(::remove)
+                putBoolean(KEY_GENERATION_MIGRATION_COMPLETE, true)
+            }
+            true
+        }
+    }
+
+    fun clear() = synchronized(lock) {
+        preferences.edit(commit = true) {
+            OCCURRENCE_KEYS.forEach(::remove)
+            TRANSITION_KEYS.forEach(::remove)
+        }
+    }
+
+    fun isGenerationMigrationComplete(): Boolean = synchronized(lock) {
+        preferences.getBoolean(KEY_GENERATION_MIGRATION_COMPLETE, false)
+    }
+
+    fun markGenerationMigrationComplete() = synchronized(lock) {
+        preferences.edit(commit = true) {
+            putBoolean(KEY_GENERATION_MIGRATION_COMPLETE, true)
+        }
+    }
+
+    private fun loadOccurrenceLocked(): ScheduledExportOccurrence? {
         val data = androidx.work.Data.Builder()
             .putString(ScheduledExportOccurrence.KEY_SIGNATURE, preferences.getString(KEY_SIGNATURE, null))
             .putLong(ScheduledExportOccurrence.KEY_TRIGGER_AT_MILLIS, preferences.getLong(KEY_TRIGGER_AT_MILLIS, -1L))
@@ -44,59 +132,64 @@ class ScheduledExportStateStore @Inject constructor(
                 preferences.getString(KEY_SETTINGS_SNAPSHOT_JSON, null),
             )
             .build()
-        ScheduledExportOccurrence.fromWorkData(data)
+        return ScheduledExportOccurrence.fromWorkData(data)
     }
 
-    fun save(occurrence: ScheduledExportOccurrence) = synchronized(lock) {
+    private fun loadTransitionLocked(): ScheduledExportTransition? {
+        val phaseName = preferences.getString(KEY_TRANSITION_PHASE, null) ?: return null
+        val cleanupScopeName = preferences.getString(KEY_TRANSITION_CLEANUP_SCOPE, null) ?: return null
+        val reason = preferences.getString(KEY_TRANSITION_REASON, null) ?: return null
+        val replacement = loadOccurrenceLocked() ?: return null
+        return runCatching {
+            ScheduledExportTransition(
+                replacement = replacement,
+                previousGeneration = preferences.getString(
+                    KEY_TRANSITION_PREVIOUS_GENERATION,
+                    null,
+                ),
+                previousOccurrenceId = preferences.getString(
+                    KEY_TRANSITION_PREVIOUS_OCCURRENCE_ID,
+                    null,
+                ),
+                cleanupScope = ScheduledExportCleanupScope.valueOf(cleanupScopeName),
+                phase = ScheduledExportTransitionPhase.valueOf(phaseName),
+                reason = reason,
+            )
+        }.getOrNull()
+    }
+
+    private fun SharedPreferences.Editor.writeOccurrence(occurrence: ScheduledExportOccurrence) {
         val configuration = occurrence.configuration
-        preferences.edit(commit = true) {
-            putString(KEY_SIGNATURE, configuration.signature)
-            putLong(KEY_TRIGGER_AT_MILLIS, occurrence.triggerAtMillis)
-            putString(KEY_INTENDED_LOCAL_DATE, occurrence.intendedLocalDate.toString())
-            putInt(KEY_CADENCE_VALUE, configuration.cadenceValue)
-            putString(KEY_CADENCE_UNIT, configuration.cadenceUnit.name)
-            putInt(KEY_HOUR, configuration.hour)
-            putInt(KEY_MINUTE, configuration.minute)
-            putInt(KEY_LOOKBACK_DAYS, configuration.lookbackDays)
-            putString(KEY_DATE_WINDOW, configuration.dateWindow.name)
-            putString(KEY_TARGET, configuration.target.name)
-            if (configuration.destinationFingerprint == null) {
-                remove(KEY_DESTINATION_FINGERPRINT)
-            } else {
-                putString(KEY_DESTINATION_FINGERPRINT, configuration.destinationFingerprint)
-            }
-            putString(KEY_ZONE_ID, configuration.zoneId)
-            if (occurrence.generation == null) {
-                remove(KEY_GENERATION)
-            } else {
-                putString(KEY_GENERATION, occurrence.generation)
-            }
-            if (configuration.canonicalEnginePinJson == null) {
-                remove(KEY_ENGINE_PIN_JSON)
-            } else {
-                putString(KEY_ENGINE_PIN_JSON, configuration.canonicalEnginePinJson)
-            }
-            if (configuration.canonicalSettingsSnapshotJson == null) {
-                remove(KEY_SETTINGS_SNAPSHOT_JSON)
-            } else {
-                putString(KEY_SETTINGS_SNAPSHOT_JSON, configuration.canonicalSettingsSnapshotJson)
-            }
+        putString(KEY_SIGNATURE, configuration.signature)
+        putLong(KEY_TRIGGER_AT_MILLIS, occurrence.triggerAtMillis)
+        putString(KEY_INTENDED_LOCAL_DATE, occurrence.intendedLocalDate.toString())
+        putInt(KEY_CADENCE_VALUE, configuration.cadenceValue)
+        putString(KEY_CADENCE_UNIT, configuration.cadenceUnit.name)
+        putInt(KEY_HOUR, configuration.hour)
+        putInt(KEY_MINUTE, configuration.minute)
+        putInt(KEY_LOOKBACK_DAYS, configuration.lookbackDays)
+        putString(KEY_DATE_WINDOW, configuration.dateWindow.name)
+        putString(KEY_TARGET, configuration.target.name)
+        if (configuration.destinationFingerprint == null) {
+            remove(KEY_DESTINATION_FINGERPRINT)
+        } else {
+            putString(KEY_DESTINATION_FINGERPRINT, configuration.destinationFingerprint)
         }
-    }
-
-    fun clear() = synchronized(lock) {
-        preferences.edit(commit = true) {
-            OCCURRENCE_KEYS.forEach(::remove)
+        putString(KEY_ZONE_ID, configuration.zoneId)
+        if (occurrence.generation == null) {
+            remove(KEY_GENERATION)
+        } else {
+            putString(KEY_GENERATION, occurrence.generation)
         }
-    }
-
-    fun isGenerationMigrationComplete(): Boolean = synchronized(lock) {
-        preferences.getBoolean(KEY_GENERATION_MIGRATION_COMPLETE, false)
-    }
-
-    fun markGenerationMigrationComplete() = synchronized(lock) {
-        preferences.edit(commit = true) {
-            putBoolean(KEY_GENERATION_MIGRATION_COMPLETE, true)
+        if (configuration.canonicalEnginePinJson == null) {
+            remove(KEY_ENGINE_PIN_JSON)
+        } else {
+            putString(KEY_ENGINE_PIN_JSON, configuration.canonicalEnginePinJson)
+        }
+        if (configuration.canonicalSettingsSnapshotJson == null) {
+            remove(KEY_SETTINGS_SNAPSHOT_JSON)
+        } else {
+            putString(KEY_SETTINGS_SNAPSHOT_JSON, configuration.canonicalSettingsSnapshotJson)
         }
     }
 
@@ -118,6 +211,11 @@ class ScheduledExportStateStore @Inject constructor(
         const val KEY_ENGINE_PIN_JSON = "engine_pin_json"
         const val KEY_SETTINGS_SNAPSHOT_JSON = "settings_snapshot_json"
         const val KEY_GENERATION_MIGRATION_COMPLETE = "generation_migration_complete_v1"
+        const val KEY_TRANSITION_PHASE = "generation_transition_phase_v1"
+        const val KEY_TRANSITION_CLEANUP_SCOPE = "generation_transition_cleanup_scope_v1"
+        const val KEY_TRANSITION_PREVIOUS_GENERATION = "generation_transition_previous_generation_v1"
+        const val KEY_TRANSITION_PREVIOUS_OCCURRENCE_ID = "generation_transition_previous_occurrence_id_v1"
+        const val KEY_TRANSITION_REASON = "generation_transition_reason_v1"
 
         val OCCURRENCE_KEYS = setOf(
             KEY_SIGNATURE,
@@ -135,6 +233,13 @@ class ScheduledExportStateStore @Inject constructor(
             KEY_GENERATION,
             KEY_ENGINE_PIN_JSON,
             KEY_SETTINGS_SNAPSHOT_JSON,
+        )
+        val TRANSITION_KEYS = setOf(
+            KEY_TRANSITION_PHASE,
+            KEY_TRANSITION_CLEANUP_SCOPE,
+            KEY_TRANSITION_PREVIOUS_GENERATION,
+            KEY_TRANSITION_PREVIOUS_OCCURRENCE_ID,
+            KEY_TRANSITION_REASON,
         )
     }
 }

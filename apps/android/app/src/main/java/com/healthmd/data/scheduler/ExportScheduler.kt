@@ -39,6 +39,7 @@ class ExportScheduler @Inject constructor(
     private val enginePinPlanner: ExportEnginePinPlanner,
     private val generationFactory: ScheduledExportGeneration,
     private val runCoordinator: ScheduledExportRunCoordinator,
+    private val transitionObserver: ScheduledExportTransitionObserver,
 ) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
     private val mutex = Mutex()
@@ -49,15 +50,19 @@ class ExportScheduler @Inject constructor(
             val settings = settingsRepository.getExportSettings()
             val currentZone = ZoneId.systemDefault()
             val nowMillis = System.currentTimeMillis()
+
+            if (!settings.scheduleEnabled) {
+                cancelLocked(GenerationBoundaryReason.SCHEDULE_DISABLED)
+                return@withLock
+            }
+
+            // A replacement occurrence is the admitted state before old external work is touched.
+            // Every ordinary app/reboot reconciliation must finish that durable transition first.
+            resumePendingTransitionLocked()
             val existing = stateStore.load()
 
             if (!stateStore.isGenerationMigrationComplete()) {
                 migrateLegacyScheduleLocked(settings, currentZone, nowMillis)
-                return@withLock
-            }
-
-            if (!settings.scheduleEnabled) {
-                cancelLocked(GenerationBoundaryReason.SCHEDULE_DISABLED)
                 return@withLock
             }
 
@@ -147,13 +152,23 @@ class ExportScheduler @Inject constructor(
             val settings = settingsRepository.getExportSettings()
             val currentZone = ZoneId.systemDefault()
             val nowMillis = System.currentTimeMillis()
+            val currentFallback = occurrence.takeIf { isFallbackDelivery }
+
+            if (!settings.scheduleEnabled) {
+                cancelFromDeliveryLocked(occurrence, isFallbackDelivery)
+                return@withLock false
+            }
+
+            // Either an old or replacement fallback can be the first process to observe a crash.
+            // Recover before validating the delivery so the survivor can restore forward progress.
+            resumePendingTransitionLocked(currentFallback)
 
             if (!stateStore.isGenerationMigrationComplete()) {
                 migrateLegacyScheduleLocked(
                     settings = settings,
                     currentZone = currentZone,
                     nowMillis = nowMillis,
-                    currentFallbackOccurrenceId = occurrence.id.takeIf { isFallbackDelivery },
+                    currentFallback = currentFallback,
                 )
                 return@withLock false
             }
@@ -166,11 +181,6 @@ class ExportScheduler @Inject constructor(
                 deliveredGeneration != persisted.generation
             ) {
                 logStaleDelivery(deliveredGeneration, persisted?.generation, "generation_mismatch")
-                return@withLock false
-            }
-
-            if (!settings.scheduleEnabled) {
-                cancelFromDeliveryLocked(occurrence, isFallbackDelivery)
                 return@withLock false
             }
 
@@ -208,11 +218,15 @@ class ExportScheduler @Inject constructor(
                     configuration = currentConfiguration,
                     nowMillis = nowMillis,
                     reason = GenerationBoundaryReason.DELIVERY_CONFIGURATION_REPLACED,
-                    currentFallbackOccurrenceId = occurrence.id.takeIf { isFallbackDelivery },
+                    currentFallback = currentFallback,
                 )
                 return@withLock false
             }
 
+            // Admission boundary: generation, target plumbing, and frozen snapshot A are accepted.
+            // A same-target preference write may race after this point, and the admitted worker may
+            // finish A if it wins the run coordinator. Endpoint/target checks still fail closed in
+            // ExportWorker; UI persistence is intentionally not coupled to scheduler reconciliation.
             enqueueExport(
                 occurrence = occurrence,
                 expedited = expedited,
@@ -250,24 +264,17 @@ class ExportScheduler @Inject constructor(
         settings: ExportSettings,
         currentZone: ZoneId,
         nowMillis: Long,
-        currentFallbackOccurrenceId: String? = null,
+        currentFallback: ScheduledExportOccurrence? = null,
     ) {
         runCoordinator.mutex.withLock {
-            val previousGeneration = deactivateAndCancelScheduledWork(
+            startGenerationTransitionLocked(
+                configuration = configurationForNewOccurrence(settings, currentZone),
+                nowMillis = nowMillis,
                 reason = GenerationBoundaryReason.LEGACY_MIGRATION,
-                currentFallbackOccurrenceId = currentFallbackOccurrenceId,
+                cleanupScope = ScheduledExportCleanupScope.LEGACY,
+                currentFallback = currentFallback,
             )
-            stateStore.markGenerationMigrationComplete()
             Timber.i("Scheduled export generation migration completed")
-            if (settings.scheduleEnabled) {
-                val configuration = configurationForNewOccurrence(settings, currentZone)
-                armFreshGeneration(
-                    configuration = configuration,
-                    nowMillis = nowMillis,
-                    reason = GenerationBoundaryReason.LEGACY_MIGRATION,
-                    previousGeneration = previousGeneration,
-                )
-            }
         }
     }
 
@@ -275,42 +282,131 @@ class ExportScheduler @Inject constructor(
         configuration: ScheduledExportConfiguration,
         nowMillis: Long,
         reason: GenerationBoundaryReason,
-        currentFallbackOccurrenceId: String? = null,
+        currentFallback: ScheduledExportOccurrence? = null,
     ) {
         runCoordinator.mutex.withLock {
-            val previousGeneration = deactivateAndCancelScheduledWork(
-                reason,
-                currentFallbackOccurrenceId,
+            startGenerationTransitionLocked(
+                configuration = configuration,
+                nowMillis = nowMillis,
+                reason = reason,
+                currentFallback = currentFallback,
             )
-            stateStore.markGenerationMigrationComplete()
-            armFreshGeneration(configuration, nowMillis, reason, previousGeneration)
         }
     }
 
-    private suspend fun armFreshGeneration(
+    private suspend fun resumePendingTransitionLocked(
+        currentFallback: ScheduledExportOccurrence? = null,
+    ) {
+        if (stateStore.loadTransition() == null) return
+        runCoordinator.mutex.withLock {
+            stateStore.loadTransition()?.let { transition ->
+                finishGenerationTransitionLocked(transition, currentFallback)
+            }
+        }
+    }
+
+    /** Caller holds [ScheduledExportRunCoordinator.mutex]. */
+    private suspend fun startGenerationTransitionLocked(
         configuration: ScheduledExportConfiguration,
         nowMillis: Long,
         reason: GenerationBoundaryReason,
-        previousGeneration: String?,
+        cleanupScope: ScheduledExportCleanupScope? = null,
+        currentFallback: ScheduledExportOccurrence? = null,
     ) {
+        val previous = stateStore.load()
         val generation = generationFactory.create().also { generated ->
             require(ScheduledExportGeneration.isValid(generated)) {
                 "Scheduled export generation factory returned an invalid value."
             }
         }
-        val occurrence = timeCalculator.initialOccurrence(
+        val replacement = timeCalculator.initialOccurrence(
             configuration = configuration,
             nowMillis = nowMillis,
             generation = generation,
         )
-        armOccurrence(occurrence)
-        stateStore.save(occurrence)
-        Timber.i(
-            "Scheduled export generation armed old=%s new=%s reason=%s",
-            ScheduledExportGeneration.diagnosticId(previousGeneration),
-            ScheduledExportGeneration.diagnosticId(generation),
-            reason.name,
+        val transition = ScheduledExportTransition(
+            replacement = replacement,
+            previousGeneration = previous?.generation,
+            previousOccurrenceId = previous?.id,
+            cleanupScope = cleanupScope ?: when {
+                previous == null -> ScheduledExportCleanupScope.NONE
+                previous.generation?.let(ScheduledExportGeneration::isValid) == true -> {
+                    ScheduledExportCleanupScope.GENERATION
+                }
+                // With persisted pre-generation state, old rows have no narrower identity.
+                else -> ScheduledExportCleanupScope.LEGACY
+            },
+            phase = ScheduledExportTransitionPhase.PREPARED,
+            reason = reason.name,
         )
+
+        // This atomic write is the transition invariant: old work is stale before exact alarms or
+        // WorkManager are touched, and recovery retains the complete intended replacement.
+        stateStore.prepareTransition(transition)
+        transitionObserver.onCheckpoint(ScheduledExportTransitionCheckpoint.DURABLE_TRANSITION)
+        finishGenerationTransitionLocked(transition, currentFallback)
+    }
+
+    /** Caller holds [ScheduledExportRunCoordinator.mutex]. Every step is safe to repeat. */
+    private suspend fun finishGenerationTransitionLocked(
+        initial: ScheduledExportTransition,
+        currentFallback: ScheduledExportOccurrence?,
+    ) {
+        var transition = stateStore.loadTransition() ?: return
+        check(transition.replacement.generation == initial.replacement.generation) {
+            "Scheduled-export transition changed while its coordinator lock was held."
+        }
+        val generation = requireNotNull(transition.replacement.generation)
+
+        if (transition.phase == ScheduledExportTransitionPhase.PREPARED) {
+            cancelPreviousTransitionWork(transition, currentFallback)
+            // A crash here repeats only idempotent cancellation and can never lose the replacement.
+            transitionObserver.onCheckpoint(
+                ScheduledExportTransitionCheckpoint.OLD_WORK_CANCELLATION,
+            )
+            check(
+                stateStore.updateTransitionPhase(
+                    generation,
+                    ScheduledExportTransitionPhase.OLD_WORK_CANCELLED,
+                ),
+            ) { "Unable to persist scheduled-export cancellation progress." }
+            transition = transition.copy(
+                phase = ScheduledExportTransitionPhase.OLD_WORK_CANCELLED,
+            )
+        }
+
+        if (transition.phase == ScheduledExportTransitionPhase.OLD_WORK_CANCELLED) {
+            val fallbackProvesArm = currentFallback?.generation == generation &&
+                currentFallback.id == transition.replacement.id
+            if (!fallbackProvesArm) {
+                armOccurrence(transition.replacement)
+            }
+            // If the process dies after enqueue but before this phase write, recovery re-arms the
+            // same alarm and unique fallback. A running replacement fallback itself proves enqueue.
+            transitionObserver.onCheckpoint(ScheduledExportTransitionCheckpoint.NEW_OCCURRENCE_ARM)
+            check(
+                stateStore.updateTransitionPhase(
+                    generation,
+                    ScheduledExportTransitionPhase.NEW_OCCURRENCE_ARMED,
+                ),
+            ) { "Unable to persist scheduled-export arm progress." }
+            transition = transition.copy(
+                phase = ScheduledExportTransitionPhase.NEW_OCCURRENCE_ARMED,
+            )
+        }
+
+        if (transition.phase == ScheduledExportTransitionPhase.NEW_OCCURRENCE_ARMED) {
+            check(stateStore.finalizeTransition(generation)) {
+                "Unable to finalize scheduled-export generation transition."
+            }
+            transitionObserver.onCheckpoint(ScheduledExportTransitionCheckpoint.FINALIZATION)
+            Timber.i(
+                "Scheduled export generation armed old=%s new=%s reason=%s",
+                ScheduledExportGeneration.diagnosticId(transition.previousGeneration),
+                ScheduledExportGeneration.diagnosticId(generation),
+                transition.reason,
+            )
+        }
     }
 
     private suspend fun configurationForNewOccurrence(
@@ -434,7 +530,9 @@ class ExportScheduler @Inject constructor(
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
             .addTag(EXPORT_OCCURRENCE_TAG)
         occurrence.generation?.let { generation ->
-            requestBuilder.addTag(generationTag(generation))
+            requestBuilder
+                .addTag(generationTag(generation))
+                .addTag(exportGenerationTag(generation))
         }
         if (expedited) {
             requestBuilder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
@@ -478,6 +576,82 @@ class ExportScheduler @Inject constructor(
         workManager.cancelAllWorkByTag(FALLBACK_TRIGGER_TAG).await()
     }
 
+    /** Caller holds [ScheduledExportRunCoordinator.mutex]. */
+    private suspend fun cancelPreviousTransitionWork(
+        transition: ScheduledExportTransition,
+        currentFallback: ScheduledExportOccurrence?,
+    ) {
+        cancelExactAlarm()
+        Timber.i(
+            "Cancelling scheduled export work generation=%s reason=%s",
+            ScheduledExportGeneration.diagnosticId(transition.previousGeneration),
+            transition.reason,
+        )
+        cancelTransitionCleanup(transition, currentFallback)
+        // Remove the pre-one-shot periodic request without touching unrelated manual work.
+        workManager.cancelUniqueWork(ExportWorker.WORK_NAME).await()
+        Timber.i(
+            "Cancelled scheduled export work generation=%s reason=%s",
+            ScheduledExportGeneration.diagnosticId(transition.previousGeneration),
+            transition.reason,
+        )
+    }
+
+    private suspend fun cancelTransitionCleanup(
+        transition: ScheduledExportTransition,
+        currentFallback: ScheduledExportOccurrence?,
+    ) {
+        when (transition.cleanupScope) {
+            ScheduledExportCleanupScope.LEGACY -> cancelLegacyScheduledWork(
+                previousOccurrenceId = transition.previousOccurrenceId,
+                currentFallback = currentFallback,
+            )
+            ScheduledExportCleanupScope.GENERATION -> cancelGenerationScheduledWork(
+                generation = requireNotNull(transition.previousGeneration),
+                previousOccurrenceId = transition.previousOccurrenceId,
+                currentFallback = currentFallback,
+            )
+            ScheduledExportCleanupScope.NONE -> Unit
+        }
+    }
+
+    /**
+     * A fallback cannot cancel its own WorkManager row and still complete recovery. In that case,
+     * generation-scoped export work is cancelled separately and the current stale fallback exits
+     * after observing the already-durable replacement generation.
+     */
+    private suspend fun cancelGenerationScheduledWork(
+        generation: String,
+        previousOccurrenceId: String?,
+        currentFallback: ScheduledExportOccurrence?,
+    ) {
+        if (currentFallback?.generation == generation) {
+            workManager.cancelAllWorkByTag(exportGenerationTag(generation)).await()
+            if (previousOccurrenceId != null && previousOccurrenceId != currentFallback.id) {
+                workManager.cancelUniqueWork(
+                    "$FALLBACK_TRIGGER_WORK_PREFIX$previousOccurrenceId",
+                ).await()
+            }
+        } else {
+            workManager.cancelAllWorkByTag(generationTag(generation)).await()
+        }
+    }
+
+    /** Broad tags are reserved for pre-generation/unknown cleanup before replacement work is armed. */
+    private suspend fun cancelLegacyScheduledWork(
+        previousOccurrenceId: String?,
+        currentFallback: ScheduledExportOccurrence?,
+    ) {
+        workManager.cancelAllWorkByTag(EXPORT_OCCURRENCE_TAG).await()
+        if (currentFallback == null) {
+            cancelFallbackTriggers()
+        } else if (previousOccurrenceId != null && previousOccurrenceId != currentFallback.id) {
+            workManager.cancelUniqueWork(
+                "$FALLBACK_TRIGGER_WORK_PREFIX$previousOccurrenceId",
+            ).await()
+        }
+    }
+
     private suspend fun cancelLocked(reason: GenerationBoundaryReason) {
         runCoordinator.mutex.withLock {
             deactivateAndCancelScheduledWork(reason)
@@ -493,7 +667,7 @@ class ExportScheduler @Inject constructor(
         runCoordinator.mutex.withLock {
             deactivateAndCancelScheduledWork(
                 reason = GenerationBoundaryReason.SCHEDULE_DISABLED,
-                currentFallbackOccurrenceId = occurrence.id.takeIf { isFallbackDelivery },
+                currentFallback = occurrence.takeIf { isFallbackDelivery },
             )
             stateStore.markGenerationMigrationComplete()
         }
@@ -502,10 +676,12 @@ class ExportScheduler @Inject constructor(
     /** Caller holds [ScheduledExportRunCoordinator.mutex], closing the worker admission race. */
     private suspend fun deactivateAndCancelScheduledWork(
         reason: GenerationBoundaryReason,
-        currentFallbackOccurrenceId: String? = null,
-    ): String? {
+        currentFallback: ScheduledExportOccurrence? = null,
+    ) {
+        val transition = stateStore.loadTransition()
         val active = stateStore.load()
         val activeGeneration = active?.generation
+        // Clearing first is the disable invariant: surviving work fails closed even if cleanup dies.
         stateStore.clear()
         cancelExactAlarm()
         Timber.i(
@@ -513,13 +689,30 @@ class ExportScheduler @Inject constructor(
             ScheduledExportGeneration.diagnosticId(activeGeneration),
             reason.name,
         )
-        workManager.cancelAllWorkByTag(EXPORT_OCCURRENCE_TAG).await()
-        if (currentFallbackOccurrenceId == null) {
-            cancelFallbackTriggers()
-        } else if (active != null && active.id != currentFallbackOccurrenceId) {
-            workManager.cancelUniqueWork(
-                "$FALLBACK_TRIGGER_WORK_PREFIX${active.id}",
-            ).await()
+
+        if (transition != null) {
+            // PREPARED is the only phase in which broad legacy cleanup can still be required. Once
+            // arming may have happened, cancel only the replacement's generation-specific tags.
+            if (transition.phase == ScheduledExportTransitionPhase.PREPARED) {
+                cancelTransitionCleanup(transition, currentFallback)
+            }
+            requireNotNull(transition.replacement.generation).let { replacementGeneration ->
+                cancelGenerationScheduledWork(
+                    generation = replacementGeneration,
+                    previousOccurrenceId = transition.replacement.id,
+                    currentFallback = currentFallback,
+                )
+            }
+        } else if (activeGeneration?.let(ScheduledExportGeneration::isValid) == true) {
+            cancelGenerationScheduledWork(
+                generation = activeGeneration,
+                previousOccurrenceId = active.id,
+                currentFallback = currentFallback,
+            )
+        } else {
+            // No durable generation may mean interrupted legacy cleanup; scheduled-only tags remain
+            // safe, while manual export work has no such tags.
+            cancelLegacyScheduledWork(active?.id, currentFallback)
         }
         workManager.cancelUniqueWork(ExportWorker.WORK_NAME).await()
         Timber.i(
@@ -527,7 +720,6 @@ class ExportScheduler @Inject constructor(
             ScheduledExportGeneration.diagnosticId(activeGeneration),
             reason.name,
         )
-        return activeGeneration
     }
 
     private fun logStaleDelivery(
@@ -546,6 +738,9 @@ class ExportScheduler @Inject constructor(
     private fun generationTag(generation: String): String =
         "$GENERATION_TAG_PREFIX$generation"
 
+    private fun exportGenerationTag(generation: String): String =
+        "$EXPORT_GENERATION_TAG_PREFIX$generation"
+
     private enum class GenerationBoundaryReason {
         LEGACY_MIGRATION,
         SCHEDULE_ENABLED,
@@ -560,6 +755,7 @@ class ExportScheduler @Inject constructor(
         const val FALLBACK_TRIGGER_TAG = "scheduled_export_trigger"
         const val EXPORT_OCCURRENCE_TAG = "scheduled_export_occurrence"
         const val GENERATION_TAG_PREFIX = "scheduled_export_generation_"
+        const val EXPORT_GENERATION_TAG_PREFIX = "scheduled_export_occurrence_generation_"
         private const val FALLBACK_TRIGGER_WORK_PREFIX = "scheduled_export_trigger_"
         private const val EXPORT_OCCURRENCE_WORK_PREFIX = "scheduled_export_occurrence_"
         private const val EXACT_ALARM_BACKUP_DELAY_MILLIS = 15 * 60_000L
