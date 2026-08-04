@@ -1740,13 +1740,12 @@ final class VaultManager: ObservableObject {
         } else {
             dictionary = nil
         }
-        if frozenSettings.writesDataDictionary {
-            try ensureNoDataDictionaryExportCollision(
-                healthSubfolder: settingsSnapshot.healthSubfolder ?? self.healthSubfolder,
-                settings: frozenSettings,
-                artifactRelativePaths: operation.artifacts.map(\.artifact.relativePath)
-            )
-        }
+        try ensureNoDataDictionaryExportCollision(
+            healthSubfolder: settingsSnapshot.healthSubfolder ?? self.healthSubfolder,
+            settings: frozenSettings,
+            artifactRelativePaths: operation.artifacts.map(\.artifact.relativePath),
+            destinationAware: false
+        )
         let rollupFileCount = operation.artifacts.count { $0.kind == .rollup }
         return AppleLooseDailyRangeMaterialization(
             operation: operation,
@@ -1782,6 +1781,12 @@ final class VaultManager: ObservableObject {
             operationIdentity: operationIdentity,
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
+
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settingsSnapshot.makeAdvancedExportSettings(),
+            healthSubfolder: settingsSnapshot.healthSubfolder ?? self.healthSubfolder,
+            artifactRelativePaths: materialized.operation.artifacts.map(\.artifact.relativePath)
+        )
 
         let dictionaryRequest = try materialized.dataDictionary.map { file in
             guard let content = String(data: file.data, encoding: .utf8) else {
@@ -2495,6 +2500,11 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             dates: [date]
         )
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            artifactRelativePaths: operation.artifacts.map(\.artifact.relativePath)
+        )
         try prepareHealthDataOutputDestination(
             date: date,
             vaultURL: vaultURL,
@@ -2510,13 +2520,6 @@ final class VaultManager: ObservableObject {
             )
         } else {
             nil
-        }
-        if settings.writesDataDictionary {
-            try ensureNoDataDictionaryExportCollision(
-                healthSubfolder: healthSubfolder,
-                settings: settings,
-                artifactRelativePaths: operation.artifacts.map(\.artifact.relativePath)
-            )
         }
         let aggregateRequests: [(AppleLooseDailyPlannedArtifact, AggregateFileWriteRequest)] = try operation.artifacts.map { planned in
             guard let content = String(data: planned.artifact.inlineData, encoding: .utf8) else {
@@ -2990,13 +2993,11 @@ final class VaultManager: ObservableObject {
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         )
-        if settings.writesDataDictionary {
-            try ensureNoDataDictionaryExportCollision(
-                healthSubfolder: effectiveHealthSubfolder,
-                settings: settings,
-                artifactRelativePaths: targets.map(\.relativePath)
-            )
-        }
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: effectiveHealthSubfolder,
+            artifactRelativePaths: targets.map(\.relativePath)
+        )
 
         var results: [HealthRollupWriteResult] = []
         var writtenFiles: [WrittenAggregateFile] = []
@@ -3622,31 +3623,40 @@ final class VaultManager: ObservableObject {
     ) throws {
         let collision: ExportPathPlanner.DataDictionaryCollision?
         do {
-            if !settings.writesDataDictionary {
-                for path in artifactRelativePaths {
-                    _ = try ExportPathPlanner.validatedPortableRelativePath(path)
-                }
-                return
-            }
-
             if destinationAware,
                fileSystem is SystemFileSystem,
-               destinationState == .available,
                let vaultURL {
                 guard bookmarkResolver.startAccessing(vaultURL) else {
                     throw ExportError.accessDenied
                 }
                 defer { bookmarkResolver.stopAccessing(vaultURL) }
-                collision = try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
-                    vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    artifactRelativePaths: artifactRelativePaths
-                )
-            } else {
+                if settings.writesDataDictionary {
+                    collision = try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
+                        vaultURL: vaultURL,
+                        healthSubfolder: healthSubfolder,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+                } else {
+                    try ExportPathPlanner.validateDestinationArtifactPaths(
+                        vaultURL: vaultURL,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+                    collision = nil
+                }
+            } else if settings.writesDataDictionary {
                 collision = try ExportPathPlanner.dataDictionaryArtifactCollision(
                     healthSubfolder: healthSubfolder,
                     artifactRelativePaths: artifactRelativePaths
                 )
+            } else {
+                for path in artifactRelativePaths {
+                    if destinationAware {
+                        _ = try ExportPathPlanner.validatedPortableRelativePath(path)
+                    } else {
+                        _ = try ExportPathPlanner.normalizedPortableRelativePath(path)
+                    }
+                }
+                collision = nil
             }
         } catch let error as ExportPathPlanner.PathValidationError {
             let path: String

@@ -1408,13 +1408,16 @@ struct HealthMdApp: App {
                result.completedDates?.count == result.totalCount {
                 return "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created."
             }
-            return "Mac export wrote \(result.generatedFileCountDisplayValue) file(s); \(result.failedDateDetails.count) date(s) need attention."
+            if result.failedDateDetails.count == 1 {
+                return String(localized: "Mac export wrote \(result.generatedFileCountDescription); 1 date needs attention.", comment: "Partial Mac export activity message with one failed date")
+            }
+            return String(localized: "Mac export wrote \(result.generatedFileCountDescription); \(result.failedDateDetails.count) dates need attention.", comment: "Partial Mac export activity message with multiple failed dates")
         case .failure:
             return result.failedDateDetails.first?.reason.shortDescription ?? "Mac export failed"
         case .cancelled:
             return result.successCount > 0
-                ? "Mac export stopped after writing \(result.generatedFileCountDisplayValue) file(s)."
-                : "Mac export cancelled"
+                ? String(localized: "Mac export stopped after writing \(result.generatedFileCountDescription).", comment: "Cancelled Mac export after writing an exact, lower-bound, or unknown generated-file count")
+                : String(localized: "Mac export cancelled", comment: "Cancelled Mac export with no successful data days")
         }
     }
 

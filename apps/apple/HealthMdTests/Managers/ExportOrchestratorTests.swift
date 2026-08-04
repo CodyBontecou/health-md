@@ -222,6 +222,37 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertFalse(result.outputBreakdown.isFileCategoryBreakdownComplete)
     }
 
+    func testGeneratedFileCountDescriptionLocalizesExactLowerBoundAndUnknownPlurality() {
+        func result(
+            count: Int,
+            authoritative: Bool,
+            completeBreakdown: Bool = false
+        ) -> ExportOrchestrator.ExportResult {
+            ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: 1,
+                failedDateDetails: [],
+                unclassifiedFileCount: count,
+                authoritativeFileCount: authoritative ? count : nil,
+                isFileCategoryBreakdownComplete: completeBreakdown
+            )
+        }
+
+        XCTAssertEqual(result(count: 0, authoritative: true).generatedFileCountDescription, "0 files")
+        XCTAssertEqual(result(count: 1, authoritative: true).generatedFileCountDescription, "1 file")
+        XCTAssertEqual(result(count: 2, authoritative: true).generatedFileCountDescription, "2 files")
+        XCTAssertEqual(result(count: 1, authoritative: false).generatedFileCountDescription, "at least 1 file")
+        XCTAssertEqual(result(count: 2, authoritative: false).generatedFileCountDescription, "at least 2 files")
+        XCTAssertEqual(result(count: 0, authoritative: false).generatedFileCountDescription, "an unknown number of files")
+
+        let apiZero = result(count: 0, authoritative: false, completeBreakdown: true)
+        XCTAssertTrue(apiZero.hasAuthoritativeFileCount)
+        XCTAssertEqual(apiZero.generatedFileCountDescription, "0 files")
+        let cliZero = result(count: 0, authoritative: true)
+        XCTAssertTrue(cliZero.hasAuthoritativeFileCount)
+        XCTAssertEqual(cliZero.generatedFileCountDescription, "0 files")
+    }
+
     @MainActor
     func testExportDates_foregroundMapsDeviceLockedHealthKitError() async {
         let store = FakeHealthStore()

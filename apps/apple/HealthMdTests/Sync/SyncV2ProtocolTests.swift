@@ -919,6 +919,31 @@ final class SyncV2ProtocolTests: XCTestCase {
         }
     }
 
+    func testMacResultGeneratedFileDescriptionCoversExactLowerBoundAndUnknownCounts() {
+        func payload(count: Int, authoritative: Bool) -> MacExportResultPayload {
+            MacExportResultPayload(
+                jobID: UUID(),
+                status: .partialSuccess,
+                successCount: 1,
+                totalCount: 2,
+                formatsPerDate: 1,
+                totalFilesWritten: count,
+                isTotalFilesWrittenAuthoritative: authoritative,
+                failedDateDetails: [],
+                destinationDisplayName: "Mac",
+                destinationPathForDisplay: nil,
+                completedAt: Date()
+            )
+        }
+
+        XCTAssertEqual(payload(count: 0, authoritative: true).generatedFileCountDescription, "0 files")
+        XCTAssertEqual(payload(count: 1, authoritative: true).generatedFileCountDescription, "1 file")
+        XCTAssertEqual(payload(count: 2, authoritative: true).generatedFileCountDescription, "2 files")
+        XCTAssertEqual(payload(count: 1, authoritative: false).generatedFileCountDescription, "at least 1 file")
+        XCTAssertEqual(payload(count: 2, authoritative: false).generatedFileCountDescription, "at least 2 files")
+        XCTAssertEqual(payload(count: 0, authoritative: false).generatedFileCountDescription, "an unknown number of files")
+    }
+
     func testLegacyMacAccountingPayloadsDecodeWithConservativeDefaults() throws {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let result = MacExportResultPayload(

@@ -2133,7 +2133,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount) day(s), wrote \(payload.generatedFileCountDisplayValue) file(s)\(suffix)."
+            return "Exported \(payload.successCount) day(s), wrote \(payload.generatedFileCountDescription)\(suffix)."
         case .partialSuccess:
             if payload.dailyNoteSkipCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
@@ -2141,7 +2141,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.generatedFileCountDisplayValue) file(s)\(suffix)."
+            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.generatedFileCountDescription)\(suffix)."
         case .failure:
             return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."
         case .cancelled:

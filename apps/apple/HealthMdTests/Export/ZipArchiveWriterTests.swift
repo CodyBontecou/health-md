@@ -67,8 +67,12 @@ final class ZipArchiveWriterTests: XCTestCase {
         XCTAssertThrowsError(try writer.append(path: "folder/note.md", data: Data())) { error in
             XCTAssertEqual(error as? ZipArchiveWriter.ArchiveError, .duplicatePath("folder/note.md"))
         }
+        try writer.append(path: "windows\\alias.json", data: Data())
+        XCTAssertThrowsError(try writer.append(path: "windows/alias.json", data: Data())) { error in
+            XCTAssertEqual(error as? ZipArchiveWriter.ArchiveError, .duplicatePath("windows/alias.json"))
+        }
 
-        for unsafePath in ["", "../secret", "safe/../secret", "/absolute", "\\server\\share", "C:\\secret"] {
+        for unsafePath in ["", "../secret", "safe/../secret", "/absolute", "\\server\\share", "C:\\secret", "safe/\u{0001}secret"] {
             XCTAssertThrowsError(try writer.append(path: unsafePath, data: Data()), unsafePath) { error in
                 guard case .unsafePath = error as? ZipArchiveWriter.ArchiveError else {
                     return XCTFail("Expected unsafePath for \(unsafePath), got \(error)")

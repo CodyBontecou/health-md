@@ -888,9 +888,9 @@ struct MacExportView: View {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")."
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Successfully exported \(result.generatedFileCountDisplayValue) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
+                    resultMessage = String(localized: "Successfully exported \(result.generatedFileCountDescription) (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message with an exact, lower-bound, or unknown generated-file count")
                 } else {
-                    resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
+                    resultMessage = String(localized: "Successfully exported \(result.generatedFileCountDescription).", comment: "Export success message with an exact, lower-bound, or unknown generated-file count")
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
@@ -902,9 +902,9 @@ struct MacExportView: View {
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)"
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Exported \(result.generatedFileCountDisplayValue) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
+                    resultMessage = String(localized: "Exported \(result.generatedFileCountDescription) (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message with an exact, lower-bound, or unknown generated-file count")
                 } else {
-                    resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")
+                    resultMessage = String(localized: "Exported \(result.generatedFileCountDescription). \(suffix)", comment: "Partial export message with an exact, lower-bound, or unknown generated-file count")
                 }
             } else {
                 resultIsError = true

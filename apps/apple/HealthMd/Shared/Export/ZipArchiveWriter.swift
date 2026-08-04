@@ -833,10 +833,17 @@ nonisolated enum ZipArchiveWriter {
 
     private static func validatedEntryPath(_ path: String) throws -> String {
         do {
-            return try ExportPathPlanner.validatedPortableRelativePath(path)
+            return try ExportPathPlanner.normalizedPortableRelativePath(path)
         } catch {
             throw ArchiveError.unsafePath(path)
         }
+    }
+
+    /// Entry construction is intentionally nonthrowing; append remains the validation boundary.
+    /// Keeping this preview normalization identical to append also preserves checkpoint/path UI
+    /// behavior for callers that inspect an entry before writing it.
+    private static func normalizedEntryPath(_ path: String) -> String {
+        (try? ExportPathPlanner.normalizedPortableRelativePath(path)) ?? path
     }
 
     private static func dosTimestampComponents(for date: Date) -> (date: UInt16, time: UInt16) {

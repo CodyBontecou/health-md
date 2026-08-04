@@ -1694,18 +1694,104 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), [])
     }
 
-    func testDataDictionaryCollisionUsesPortableCaseUnicodeAndWidthFolding() {
+    func testDataDictionaryCollisionUsesPortableCaseUnicodeWidthAndZIPAliasNormalization() throws {
         let dictionary = "Health/\(HealthMdExportSchema.dataDictionaryFilename)"
         let fullWidth = dictionary.applyingTransform(.fullwidthToHalfwidth, reverse: true)
             ?? dictionary.uppercased()
-        XCTAssertNotNil(ExportPathPlanner.dataDictionaryArtifactCollision(
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
             healthSubfolder: "Health",
             artifactRelativePaths: [dictionary.uppercased()]
         ))
-        XCTAssertNotNil(ExportPathPlanner.dataDictionaryArtifactCollision(
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
             healthSubfolder: "Health",
             artifactRelativePaths: [fullWidth]
         ))
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: ["Health/./\(HealthMdExportSchema.dataDictionaryFilename)"]
+        ))
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: ["Health\\\(HealthMdExportSchema.dataDictionaryFilename)"]
+        ))
+
+        XCTAssertThrowsError(try ExportPathPlanner.validatedPortableRelativePath(
+            "Health/./\(HealthMdExportSchema.dataDictionaryFilename)"
+        ))
+        XCTAssertThrowsError(try ExportPathPlanner.validatedPortableRelativePath(
+            "Health\\\(HealthMdExportSchema.dataDictionaryFilename)"
+        ))
+        XCTAssertThrowsError(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: ["Health/../outside.json"]
+        ))
+    }
+
+    func testManualExportRejectsResolvedSymlinkAliasBeforeWritingDictionaryOrArtifact() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            at: healthURL.appendingPathComponent("Alias", isDirectory: true),
+            withDestinationURL: healthURL
+        )
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = "Alias"
+        settings.filenameFormat = "_healthmd_data_dictionary"
+        settings.includeDataDictionary = true
+
+        do {
+            _ = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+            XCTFail("Expected the resolved dictionary/artifact alias to fail")
+        } catch let error as ExportError {
+            guard case .dataDictionaryPathConflict(let path) = error else {
+                return XCTFail("Expected dataDictionaryPathConflict, got \(error)")
+            }
+            XCTAssertEqual(path, "Health/_healthmd_data_dictionary.json")
+        }
+
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: healthURL.appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        ))
+    }
+
+    func testManualExportRejectsArtifactSymlinkOutsideVaultWithoutDictionary() async throws {
+        let vaultURL = makeTempDir()
+        let outsideURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: outsideURL)
+        }
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            at: healthURL.appendingPathComponent("Alias", isDirectory: true),
+            withDestinationURL: outsideURL
+        )
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = "Alias"
+        settings.filenameFormat = "safe"
+        settings.includeDataDictionary = false
+
+        do {
+            _ = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+            XCTFail("Expected the out-of-root destination to fail")
+        } catch let error as ExportError {
+            guard case .invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outsideURL.path).isEmpty)
     }
 
     #if os(macOS)

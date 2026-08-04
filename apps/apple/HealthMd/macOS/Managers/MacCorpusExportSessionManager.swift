@@ -2087,14 +2087,18 @@ final class MacCorpusExportSessionManager {
         }
 
         if let dictionary = materialized.dataDictionary {
-            guard let dictionaryPath = ExportPathPlanner.canonicalPortablePathKey(
-                dictionary.relativePath
-            ), materialized.operation.artifacts.allSatisfy({ artifact in
-                guard let artifactPath = ExportPathPlanner.canonicalPortablePathKey(
-                    artifact.artifact.relativePath
-                ) else { return false }
-                return artifactPath != dictionaryPath
-            }) else {
+            do {
+                let dictionaryPath = try ExportPathPlanner.canonicalPortablePathKey(
+                    dictionary.relativePath
+                )
+                for artifact in materialized.operation.artifacts {
+                    guard try ExportPathPlanner.canonicalPortablePathKey(
+                        artifact.artifact.relativePath
+                    ) != dictionaryPath else {
+                        throw ConnectedCorpusTransferModelError.invalidJournal
+                    }
+                }
+            } catch {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
         }
@@ -2271,6 +2275,38 @@ final class MacCorpusExportSessionManager {
             )
         } catch {
             throw ReceivedRangeCommitError.invalid
+        }
+
+        // New and safely migratable journals revalidate their exact persisted paths against the
+        // live destination immediately before the first destination write. Older dictionary-first
+        // journals may already have committed output, so they retain their existing exact-readback
+        // recovery path instead of being reinterpreted by this newer admission rule.
+        if session.journal.dataDictionaryCollisionPreflighted == true,
+           initialPlan.nextArtifactIndex == 0,
+           !initialPlan.dataDictionaryAcknowledged,
+           initialPlan.hasUncertainDestinationWrite != true {
+            let settings = session.journal.exportManifest.settingsSnapshot
+                .makeAdvancedExportSettings()
+            settings.exportTimeZoneOverride = session.journal.exportManifest
+                .sourceTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
+            do {
+                try vaultManager.preflightDataDictionaryArtifactCollisions(
+                    settings: settings,
+                    healthSubfolder: session.journal.exportManifest.settingsSnapshot
+                        .healthSubfolder ?? "",
+                    artifactRelativePaths: initialPlan.artifacts.map(\.relativePath)
+                )
+            } catch let error as ExportError {
+                switch error {
+                case .accessDenied, .noVaultSelected, .destinationChanged:
+                    throw ReceivedRangeCommitError.transient
+                case .noHealthData, .noFormatsSelected, .dailyNotePathConflict,
+                     .dataDictionaryPathConflict, .invalidExportPath:
+                    throw ReceivedRangeCommitError.invalid
+                }
+            } catch {
+                throw ReceivedRangeCommitError.invalid
+            }
         }
 
         // Older resumable journals may already have acknowledged the dictionary under the
@@ -2599,21 +2635,20 @@ final class MacCorpusExportSessionManager {
         }
 
         if let dictionary = plan.dataDictionary {
-            guard let dictionaryPath = ExportPathPlanner.canonicalPortablePathKey(
-                dictionary.relativePath
-            ) else {
-                throw ConnectedCorpusTransferModelError.invalidJournal
-            }
-            var artifactPaths: Set<String> = []
-            for artifact in plan.artifacts {
-                guard let artifactPath = ExportPathPlanner.canonicalPortablePathKey(
-                    artifact.relativePath
-                ) else {
+            do {
+                let dictionaryPath = try ExportPathPlanner.canonicalPortablePathKey(
+                    dictionary.relativePath
+                )
+                var artifactPaths: Set<String> = []
+                for artifact in plan.artifacts {
+                    artifactPaths.insert(
+                        try ExportPathPlanner.canonicalPortablePathKey(artifact.relativePath)
+                    )
+                }
+                guard !artifactPaths.contains(dictionaryPath) else {
                     throw ConnectedCorpusTransferModelError.invalidJournal
                 }
-                artifactPaths.insert(artifactPath)
-            }
-            guard !artifactPaths.contains(dictionaryPath) else {
+            } catch {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
         }

@@ -218,10 +218,11 @@ enum ExportPathPlanner {
         relativePath([healthSubfolder, HealthMdExportSchema.dataDictionaryFilename])
     }
 
-    /// Validates the one canonical relative-path spelling shared by direct files, ZIP entries,
-    /// artifact plans, and collision checks. Backslashes and non-normal components are rejected
-    /// instead of being reinterpreted differently by another destination.
-    static func validatedPortableRelativePath(_ relativePath: String) throws -> String {
+    /// Produces the portable spelling used by ZIP entries and lexical collision checks. ZIP has
+    /// historically accepted slash aliases, so collision admission must interpret backslashes,
+    /// repeated separators, and `.` components exactly the same way. Traversal and absolute paths
+    /// are never normalized into something safe.
+    nonisolated static func normalizedPortableRelativePath(_ relativePath: String) throws -> String {
         let bytes = Array(relativePath.utf8)
         let windowsAbsolute = bytes.count >= 2
             && bytes[1] == 58
@@ -229,22 +230,40 @@ enum ExportPathPlanner {
         guard !relativePath.isEmpty,
               bytes.count <= 4_096,
               !relativePath.hasPrefix("/"),
-              !relativePath.hasSuffix("/"),
+              !relativePath.hasPrefix("\\"),
               !windowsAbsolute,
-              !relativePath.contains("\\"),
               !relativePath.contains("\0"),
               !relativePath.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
         else {
             throw PathValidationError.invalidRelativePath(relativePath)
         }
-        let components = relativePath
-            .split(separator: "/", omittingEmptySubsequences: false)
-            .map(String.init)
-        guard !components.isEmpty,
-              components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
+
+        let slashPath = relativePath.replacingOccurrences(of: "\\", with: "/")
+        let rawComponents = slashPath.split(
+            separator: "/",
+            omittingEmptySubsequences: false
+        )
+        guard !rawComponents.contains(where: { $0 == ".." }) else {
             throw PathValidationError.invalidRelativePath(relativePath)
         }
-        return components.joined(separator: "/")
+        let normalized = rawComponents
+            .filter { !$0.isEmpty && $0 != "." }
+            .map(String.init)
+            .joined(separator: "/")
+        guard !normalized.isEmpty else {
+            throw PathValidationError.invalidRelativePath(relativePath)
+        }
+        return normalized
+    }
+
+    /// Requires a canonical portable spelling for direct destination and artifact-plan paths.
+    /// Unlike ZIP entry names, destination paths must not depend on platform-specific alias rules.
+    nonisolated static func validatedPortableRelativePath(_ relativePath: String) throws -> String {
+        let normalized = try normalizedPortableRelativePath(relativePath)
+        guard normalized == relativePath else {
+            throw PathValidationError.invalidRelativePath(relativePath)
+        }
+        return normalized
     }
 
     /// Detects future/nonexistent aliases on case-insensitive, width-insensitive, or
@@ -306,13 +325,28 @@ enum ExportPathPlanner {
     }
 
     static func canonicalPortablePathKey(_ relativePath: String) throws -> String {
-        try validatedPortableRelativePath(relativePath)
+        try normalizedPortableRelativePath(relativePath)
             .precomposedStringWithCompatibilityMapping
             .folding(
                 options: [.caseInsensitive, .widthInsensitive],
                 locale: Locale(identifier: "en_US_POSIX")
             )
             .precomposedStringWithCompatibilityMapping
+    }
+
+    /// Verifies every canonical destination path against the resolved selected root, even when no
+    /// data dictionary is requested. Existing symlink parents may resolve within the vault, but
+    /// no target may resolve outside it.
+    static func validateDestinationArtifactPaths(
+        vaultURL: URL,
+        artifactRelativePaths: [String]
+    ) throws {
+        for relativePath in artifactRelativePaths {
+            _ = try resolvedDestinationTarget(
+                vaultURL: vaultURL,
+                relativePath: relativePath
+            )
+        }
     }
 
     private static func resolvedDestinationTarget(

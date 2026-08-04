@@ -1036,11 +1036,11 @@ struct MacExportResultPayload: Codable {
         completedAt = try container.decode(Date.self, forKey: .completedAt)
     }
 
-    var generatedFileCountDisplayValue: String {
-        if isTotalFilesWrittenAuthoritative { return "\(totalFilesWritten)" }
-        return totalFilesWritten > 0
-            ? "at least \(totalFilesWritten)"
-            : "an unknown number of"
+    var generatedFileCountDescription: String {
+        GeneratedFileCountText.localizedDescription(
+            count: totalFilesWritten,
+            isAuthoritative: isTotalFilesWrittenAuthoritative
+        )
     }
 
     var hasConsistentFileAccounting: Bool {

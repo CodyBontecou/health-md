@@ -804,6 +804,44 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
             // Expected.
         }
 
+        for unsafePath in [
+            "Health\\alias.json",
+            "Health/./alias.json",
+            "Health//alias.json",
+            "C:\\alias.json",
+            "Health/alias.json/",
+        ] {
+            let unsafeAlias = try DirectExportFileManifest(
+                jobID: request.jobID,
+                fileID: UUID(),
+                relativePath: unsafePath,
+                byteCount: 0,
+                sha256: DirectTransferFile.sha256Hex(Data()),
+                writeMode: .overwrite
+            )
+            do {
+                try await receiver.store(manifest: unsafeAlias)
+                XCTFail("Expected noncanonical direct path rejection for \(unsafePath)")
+            } catch DirectFileReceiverError.unsafeRelativePath {
+                // Expected.
+            }
+        }
+
+        let portableAlias = try DirectExportFileManifest(
+            jobID: request.jobID,
+            fileID: UUID(),
+            relativePath: "health/DAILY.MD",
+            byteCount: 0,
+            sha256: DirectTransferFile.sha256Hex(Data()),
+            writeMode: .overwrite
+        )
+        do {
+            try await receiver.store(manifest: portableAlias)
+            XCTFail("Expected portable alias collision rejection before final destination writes")
+        } catch DirectFileReceiverError.manifestChanged {
+            // Expected.
+        }
+
         let outside = root.appendingPathComponent("outside.md")
         try Data("outside".utf8).write(to: outside)
         try FileManager.default.removeItem(at: output)

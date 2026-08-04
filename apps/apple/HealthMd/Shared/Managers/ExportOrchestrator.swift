@@ -1,5 +1,25 @@
 import Foundation
 
+/// Complete, localized generated-file count text shared by live local and Connected Mac status.
+/// A non-authoritative zero is unknown rather than an exact zero; API/CLI producers preserve their
+/// explicit zero by marking their category accounting complete or supplying an authoritative total.
+nonisolated enum GeneratedFileCountText {
+    static func localizedDescription(count: Int, isAuthoritative: Bool) -> String {
+        if isAuthoritative {
+            return count == 1
+                ? String(localized: "1 file", comment: "Exact singular generated-file count")
+                : String(localized: "\(count) files", comment: "Exact generated-file count")
+        }
+        if count == 1 {
+            return String(localized: "at least 1 file", comment: "Singular generated-file lower bound")
+        }
+        if count > 1 {
+            return String(localized: "at least \(count) files", comment: "Generated-file lower bound")
+        }
+        return String(localized: "an unknown number of files", comment: "Unknown generated-file count")
+    }
+}
+
 @MainActor
 final class LocalArchiveSpool {
     private let directoryURL = FileManager.default.temporaryDirectory.appendingPathComponent(
@@ -344,11 +364,11 @@ struct ExportOrchestrator {
             authoritativeFileCount != nil || isFileCategoryBreakdownComplete
         }
 
-        var generatedFileCountDisplayValue: String {
-            if hasAuthoritativeFileCount { return "\(totalFilesWritten)" }
-            return totalFilesWritten > 0
-                ? "at least \(totalFilesWritten)"
-                : "an unknown number of"
+        var generatedFileCountDescription: String {
+            GeneratedFileCountText.localizedDescription(
+                count: totalFilesWritten,
+                isAuthoritative: hasAuthoritativeFileCount
+            )
         }
 
         var outputBreakdown: ExportHistoryOutputBreakdown {
@@ -853,7 +873,7 @@ struct ExportOrchestrator {
                 case .noFormatsSelected:
                     reason = .unknown
                     errorDetails = error.localizedDescription
-                case .dailyNotePathConflict, .dataDictionaryPathConflict:
+                case .dailyNotePathConflict, .dataDictionaryPathConflict, .invalidExportPath:
                     reason = .fileWriteError
                     errorDetails = error.localizedDescription
                 }
@@ -1521,7 +1541,7 @@ struct ExportOrchestrator {
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown
-                case .dailyNotePathConflict, .dataDictionaryPathConflict:
+                case .dailyNotePathConflict, .dataDictionaryPathConflict, .invalidExportPath:
                     reason = .fileWriteError
                 }
                 failedDateDetails.append(FailedDateDetail(

@@ -239,7 +239,7 @@ struct MacMenuBarView: View {
                 if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
                     return "\(result.dailyNoteUpdateCount) daily note(s) updated"
                 }
-                return "\(result.generatedFileCountDisplayValue) file(s)"
+                return result.generatedFileCountDescription
             case .partialSuccess:
                 if result.dailyNoteSkipCount > 0 && result.totalFilesWritten == 0 {
                     return "\(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) daily note(s) skipped"
@@ -247,7 +247,7 @@ struct MacMenuBarView: View {
                 if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
                     return "Partial: \(result.dailyNoteUpdateCount) daily note(s) updated"
                 }
-                return "Partial: \(result.generatedFileCountDisplayValue) file(s)"
+                return String(localized: "Partial: \(result.generatedFileCountDescription)", comment: "Partial Connected Mac export with an exact, lower-bound, or unknown generated-file count")
             case .failure:
                 return "Failed"
             case .cancelled:

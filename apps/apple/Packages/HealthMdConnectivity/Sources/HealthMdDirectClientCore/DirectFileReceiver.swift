@@ -221,14 +221,14 @@ public actor DirectFileReceiver {
         guard manifest.jobID == journal.request.jobID else {
             throw DirectFileReceiverError.manifestChanged
         }
-        _ = try safeRelativeComponents(manifest.relativePath)
+        let pathKey = try portablePathKey(manifest.relativePath)
         if let existing = journal.manifests[manifest.fileID], existing != manifest {
             throw DirectFileReceiverError.manifestChanged
         }
-        if journal.manifests.values.contains(where: {
-            $0.fileID != manifest.fileID && $0.relativePath == manifest.relativePath
-        }) {
-            throw DirectFileReceiverError.manifestChanged
+        for existing in journal.manifests.values where existing.fileID != manifest.fileID {
+            guard try portablePathKey(existing.relativePath) != pathKey else {
+                throw DirectFileReceiverError.manifestChanged
+            }
         }
         journal.manifests[manifest.fileID] = manifest
         journal.updatedAt = Date()
@@ -815,7 +815,18 @@ public actor DirectFileReceiver {
     }
 
     private func safeRelativeComponents(_ path: String) throws -> [String] {
-        guard !path.hasPrefix("/"), !path.contains("\0") else {
+        let bytes = Array(path.utf8)
+        let windowsAbsolute = bytes.count >= 2
+            && bytes[1] == 58
+            && ((65...90).contains(bytes[0]) || (97...122).contains(bytes[0]))
+        guard !path.isEmpty,
+              bytes.count <= 4_096,
+              !path.hasPrefix("/"),
+              !path.hasSuffix("/"),
+              !windowsAbsolute,
+              !path.contains("\\"),
+              !path.contains("\0"),
+              !path.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
             throw DirectFileReceiverError.unsafeRelativePath(path)
         }
         let components = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
@@ -824,6 +835,17 @@ public actor DirectFileReceiver {
             throw DirectFileReceiverError.unsafeRelativePath(path)
         }
         return components
+    }
+
+    private func portablePathKey(_ path: String) throws -> String {
+        try safeRelativeComponents(path)
+            .joined(separator: "/")
+            .precomposedStringWithCompatibilityMapping
+            .folding(
+                options: [.caseInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            .precomposedStringWithCompatibilityMapping
     }
 
     private func destinationURL(root: URL, relativePath: String) throws -> URL {
