@@ -940,6 +940,9 @@ struct MacExportResultPayload: Codable {
     let formatsPerDate: Int
     let totalFilesWritten: Int
     let externalRecordFileCount: Int
+    /// Exact known file categories when supplied by a current producer. Nil preserves
+    /// compatibility with peers and durable journals that only carried the total.
+    let outputBreakdown: ExportHistoryOutputBreakdown?
     let dailyNoteUpdateCount: Int
     let dailyNoteSkipCount: Int
     let failedDateDetails: [FailedDateDetail]
@@ -957,6 +960,7 @@ struct MacExportResultPayload: Codable {
         case formatsPerDate
         case totalFilesWritten
         case externalRecordFileCount
+        case outputBreakdown
         case dailyNoteUpdateCount
         case dailyNoteSkipCount
         case failedDateDetails
@@ -974,6 +978,7 @@ struct MacExportResultPayload: Codable {
         formatsPerDate: Int,
         totalFilesWritten: Int,
         externalRecordFileCount: Int = 0,
+        outputBreakdown: ExportHistoryOutputBreakdown? = nil,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         failedDateDetails: [FailedDateDetail],
@@ -989,6 +994,7 @@ struct MacExportResultPayload: Codable {
         self.formatsPerDate = formatsPerDate
         self.totalFilesWritten = totalFilesWritten
         self.externalRecordFileCount = externalRecordFileCount
+        self.outputBreakdown = outputBreakdown
         self.dailyNoteUpdateCount = dailyNoteUpdateCount
         self.dailyNoteSkipCount = dailyNoteSkipCount
         self.failedDateDetails = failedDateDetails
@@ -1007,6 +1013,10 @@ struct MacExportResultPayload: Codable {
         formatsPerDate = try container.decode(Int.self, forKey: .formatsPerDate)
         totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
         externalRecordFileCount = try container.decodeIfPresent(Int.self, forKey: .externalRecordFileCount) ?? 0
+        outputBreakdown = try container.decodeIfPresent(
+            ExportHistoryOutputBreakdown.self,
+            forKey: .outputBreakdown
+        )
         dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
         dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
         failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
@@ -1014,6 +1024,20 @@ struct MacExportResultPayload: Codable {
         destinationDisplayName = try container.decodeIfPresent(String.self, forKey: .destinationDisplayName)
         destinationPathForDisplay = try container.decodeIfPresent(String.self, forKey: .destinationPathForDisplay)
         completedAt = try container.decode(Date.self, forKey: .completedAt)
+    }
+
+    var hasConsistentFileAccounting: Bool {
+        guard totalFilesWritten >= 0,
+              externalRecordFileCount >= 0 else { return false }
+        guard let outputBreakdown else { return true }
+        guard outputBreakdown.requestedDataDayCount == totalCount,
+              outputBreakdown.successfulDataDayCount == successCount,
+              outputBreakdown.providerSidecarFileCount == externalRecordFileCount,
+              outputBreakdown.generatedFileCount <= totalFilesWritten else {
+            return false
+        }
+        return !outputBreakdown.isFileCategoryBreakdownComplete
+            || outputBreakdown.generatedFileCount == totalFilesWritten
     }
 }
 

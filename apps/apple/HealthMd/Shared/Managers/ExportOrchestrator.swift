@@ -196,14 +196,22 @@ struct ExportOrchestrator {
         /// The payload has an authoritative total and an exact sidecar count, but does not carry
         /// every writer category, so the remainder must stay unclassified.
         init(macExportPayload payload: MacExportResultPayload) {
+            let breakdown = payload.outputBreakdown
             self.init(
                 successCount: payload.successCount,
                 totalCount: payload.totalCount,
                 failedDateDetails: payload.failedDateDetails,
                 formatsPerDate: payload.formatsPerDate,
-                externalRecordFileCount: payload.externalRecordFileCount,
+                looseAggregateFileCount: breakdown?.looseAggregateFileCount ?? 0,
+                individualEntryFileCount: breakdown?.individualEntryFileCount ?? 0,
+                dataDictionaryFileCount: breakdown?.dataDictionaryFileCount ?? 0,
+                rollupFileCount: breakdown?.rollupFileCount ?? 0,
+                archiveCount: breakdown?.zipArchiveFileCount ?? 0,
+                externalRecordFileCount: breakdown?.providerSidecarFileCount
+                    ?? payload.externalRecordFileCount,
                 authoritativeFileCount: payload.totalFilesWritten,
-                isFileCategoryBreakdownComplete: false,
+                isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete
+                    ?? false,
                 dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
                 dailyNoteSkipCount: payload.dailyNoteSkipCount,
                 wasCancelled: payload.status == .cancelled,
@@ -683,6 +691,17 @@ struct ExportOrchestrator {
                         ? terminalNoDataDates(in: failedDateDetails)
                         : completedDates
                 )
+            } catch let error as ExportPartialWriteError {
+                looseAggregateFileCount += error.looseAggregateFileCount
+                individualEntryFileCount += error.individualEntryFileCount
+                dataDictionaryFileCount += error.dataDictionaryFileCount
+                dailyNoteUpdateCount += error.dailyNoteUpdateCount
+                dailyNoteSkipCount += error.dailyNoteSkipCount
+                failedDateDetails.append(FailedDateDetail(
+                    date: date,
+                    reason: .fileWriteError,
+                    errorDetails: error.diagnostic
+                ))
             } catch let error as ExportError {
                 let reason: ExportFailureReason
                 let errorDetails: String?
@@ -703,7 +722,7 @@ struct ExportOrchestrator {
                 case .noFormatsSelected:
                     reason = .unknown
                     errorDetails = error.localizedDescription
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .dataDictionaryPathConflict:
                     reason = .fileWriteError
                     errorDetails = error.localizedDescription
                 }
@@ -996,6 +1015,43 @@ struct ExportOrchestrator {
                 wasCancelled: true,
                 completedDates: completedDates
             )
+        } catch let error as ExportPartialWriteError {
+            if isSummaryOnly {
+                let sortedDates = records.map(\.date).sorted()
+                let firstDate = sortedDates.first ?? dates.first ?? Date()
+                let lastDate = sortedDates.last ?? firstDate
+                let first = formatter.string(from: firstDate)
+                let last = formatter.string(from: lastDate)
+                partialFailures.append(ExportPartialFailure(
+                    date: firstDate,
+                    dataType: "Roll-up summaries",
+                    dateRangeDescription: first == last ? first : "\(first) – \(last)",
+                    errorDescription: error.diagnostic
+                ))
+            } else {
+                failures.append(contentsOf: selectedRecordDates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.diagnostic
+                    )
+                })
+            }
+            return ExportResult(
+                successCount: isSummaryOnly && error.rollupFileCount > 0 ? totalCount : 0,
+                totalCount: totalCount,
+                failedDateDetails: failures,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                looseAggregateFileCount: error.looseAggregateFileCount,
+                individualEntryFileCount: error.individualEntryFileCount,
+                dataDictionaryFileCount: error.dataDictionaryFileCount,
+                rollupFileCount: error.rollupFileCount,
+                isFileCategoryBreakdownComplete: true,
+                dailyNoteUpdateCount: error.dailyNoteUpdateCount,
+                dailyNoteSkipCount: error.dailyNoteSkipCount,
+                completedDates: completedDates
+            )
         } catch {
             if isSummaryOnly {
                 let sortedDates = records.map(\.date).sorted()
@@ -1261,6 +1317,17 @@ struct ExportOrchestrator {
                         ? terminalNoDataDates(in: failedDateDetails)
                         : completedDates
                 )
+            } catch let error as ExportPartialWriteError {
+                looseAggregateFileCount += error.looseAggregateFileCount
+                individualEntryFileCount += error.individualEntryFileCount
+                dataDictionaryFileCount += error.dataDictionaryFileCount
+                dailyNoteUpdateCount += error.dailyNoteUpdateCount
+                dailyNoteSkipCount += error.dailyNoteSkipCount
+                failedDateDetails.append(FailedDateDetail(
+                    date: date,
+                    reason: .fileWriteError,
+                    errorDetails: error.diagnostic
+                ))
             } catch let error as ExportError {
                 let reason: ExportFailureReason
                 switch error {
@@ -1275,7 +1342,7 @@ struct ExportOrchestrator {
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .dataDictionaryPathConflict:
                     reason = .fileWriteError
                 }
                 failedDateDetails.append(FailedDateDetail(
@@ -1674,6 +1741,13 @@ struct ExportOrchestrator {
                     errorDescription: error.localizedDescription
                 )
             )
+            if let partial = error as? ExportPartialWriteError {
+                return RollupWriteAccountingResult(
+                    rollupFileCount: partial.rollupFileCount,
+                    dataDictionaryFileCount: partial.dataDictionaryFileCount,
+                    isFileAccountingComplete: true
+                )
+            }
             return .failed
         }
     }

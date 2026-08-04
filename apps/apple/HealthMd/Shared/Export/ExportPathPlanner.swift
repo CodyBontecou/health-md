@@ -24,6 +24,11 @@ enum ExportPathPlanner {
         }
     }
 
+    struct DataDictionaryCollision: Equatable {
+        let dataDictionaryRelativePath: String
+        let artifactRelativePath: String
+    }
+
     static func normalizedRelativePath(_ rawPath: String) -> String {
         relativePath([rawPath])
     }
@@ -190,6 +195,51 @@ enum ExportPathPlanner {
             settings: settings,
             date: date
         )
+    }
+
+    static func dataDictionaryRelativePath(healthSubfolder: String) -> String {
+        relativePath([healthSubfolder, HealthMdExportSchema.dataDictionaryFilename])
+    }
+
+    /// Detects aliases that resolve to the same destination on common case-insensitive,
+    /// Unicode-normalizing filesystems. Standardization also catches syntactically different
+    /// relative paths that resolve to the same file before a destination is opened.
+    static func dataDictionaryArtifactCollision(
+        healthSubfolder: String,
+        artifactRelativePaths: [String]
+    ) -> DataDictionaryCollision? {
+        let dictionaryPath = dataDictionaryRelativePath(healthSubfolder: healthSubfolder)
+        guard let dictionaryKey = canonicalPortablePathKey(dictionaryPath) else { return nil }
+        for artifactPath in artifactRelativePaths {
+            guard let artifactKey = canonicalPortablePathKey(artifactPath),
+                  artifactKey == dictionaryKey else { continue }
+            return DataDictionaryCollision(
+                dataDictionaryRelativePath: dictionaryPath,
+                artifactRelativePath: artifactPath
+            )
+        }
+        return nil
+    }
+
+    static func canonicalPortablePathKey(_ relativePath: String) -> String? {
+        let root = URL(fileURLWithPath: "/__HealthMdCollisionRoot__", isDirectory: true)
+            .standardizedFileURL
+        let candidate = appendingRelativePath(
+            relativePath,
+            to: root,
+            isDirectory: false
+        ).standardizedFileURL
+        let rootPath = root.path.hasSuffix("/") ? root.path : root.path + "/"
+        guard candidate.path.hasPrefix(rootPath) else { return nil }
+        let standardizedRelativePath = String(candidate.path.dropFirst(rootPath.count))
+        guard !standardizedRelativePath.isEmpty else { return nil }
+        return standardizedRelativePath
+            .precomposedStringWithCompatibilityMapping
+            .folding(
+                options: [.caseInsensitive, .widthInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            .precomposedStringWithCompatibilityMapping
     }
 
     static func fileURL(in folderURL: URL, filename: String) -> URL {
