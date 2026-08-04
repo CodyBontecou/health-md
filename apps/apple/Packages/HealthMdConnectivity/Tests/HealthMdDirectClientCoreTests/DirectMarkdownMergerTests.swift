@@ -39,4 +39,58 @@ final class DirectMarkdownMergerTests: XCTestCase {
 
         XCTAssertEqual(result, expectedFrontmatter + body)
     }
+
+    func testMergeAddsOnlyRequiredLineBoundaries() {
+        let frontmatterOnly = "---\r\nuser: keep\r\n---"
+        let userProse = "## Notes\nUser prose with no final newline"
+        let appendedSection = "## Sleep\nfresh"
+
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: frontmatterOnly, new: appendedSection),
+            frontmatterOnly + "\r\n" + appendedSection
+        )
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: userProse, new: appendedSection),
+            userProse + "\n" + appendedSection
+        )
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: frontmatterOnly, new: ""),
+            frontmatterOnly
+        )
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: userProse, new: ""),
+            userProse
+        )
+    }
+
+    func testMergeFrontmatterOwnsCommentsAndMultilineFlowContinuations() {
+        let existing = "---\nmetadata:\n  source: old\n# This comment interrupts the nested mapping.\n  labels:\n    - stale\nsteps: [\n  100,\n  200\n]\nkeep: unchanged\n---\n"
+        let incoming = "---\nmetadata: refreshed\nsteps: 300\n---\n"
+        let expected = "---\nmetadata: refreshed\nsteps: 300\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterCanonicalizesQuotedScalarKeys() {
+        let existing = "---\n\"steps\": 100\n'steps': 200\n\"st\\u0065ps\": 250\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 300\n---\n"
+        let expected = "---\nsteps: 300\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterReplacesKeepChompedScalarBlankLines() {
+        let existing = "---\nnotes: |2+\n  old\n\n\nkeep: unchanged\n---\n"
+        let incoming = "---\nnotes: >+2\n  fresh\n\n---\n"
+        let expected = "---\nnotes: >+2\n  fresh\n\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterFailsClosedForUnsupportedComplexKeys() {
+        let existing = "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 300\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
 }

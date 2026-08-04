@@ -72,10 +72,13 @@ nonisolated struct MarkdownMerger {
 
         // Merge frontmatter: preserve existing properties, add/update with new properties.
         let mergedFrontmatter = mergeFrontmatter(existing: existingDoc.frontmatter, new: newDoc.frontmatter)
+        let boundaryLineEnding = firstLineEnding(in: existing) ?? firstLineEnding(in: new) ?? "\n"
 
         // Choose preamble: existing (daily-note injection) or new (full export rewrite).
         let preamble = preservingPreamble ? existingDoc.preamble : newDoc.preamble
-        var result = mergedFrontmatter + preamble
+        var result = ""
+        appendMarkdownFragment(mergedFrontmatter, to: &result, lineEnding: boundaryLineEnding)
+        appendMarkdownFragment(preamble, to: &result, lineEnding: boundaryLineEnding)
 
         // Track which new sections have been placed into the result.
         var placed: Set<String> = []
@@ -85,22 +88,48 @@ nonisolated struct MarkdownMerger {
             let key = section.normalizedName
             if let newSection = newSectionMap[key] {
                 // App-managed section → replace with fresh data.
-                result += newSection.headingLine + newSection.body
+                appendMarkdownFragment(newSection.headingLine, to: &result, lineEnding: boundaryLineEnding)
+                appendMarkdownFragment(newSection.body, to: &result, lineEnding: boundaryLineEnding)
                 placed.insert(key)
             } else {
                 // User-added section → preserve as-is.
-                result += section.headingLine + section.body
+                appendMarkdownFragment(section.headingLine, to: &result, lineEnding: boundaryLineEnding)
+                appendMarkdownFragment(section.body, to: &result, lineEnding: boundaryLineEnding)
             }
         }
 
         // Append any new sections that weren't present in the existing file.
         for key in newSectionOrder {
             if !placed.contains(key), let section = newSectionMap[key] {
-                result += section.headingLine + section.body
+                appendMarkdownFragment(section.headingLine, to: &result, lineEnding: boundaryLineEnding)
+                appendMarkdownFragment(section.body, to: &result, lineEnding: boundaryLineEnding)
             }
         }
 
         return result
+    }
+
+    /// Join independently parsed Markdown fragments without changing a fragment's EOF bytes unless
+    /// another nonempty fragment follows it. A single boundary is enough to keep the next heading or
+    /// preamble from being glued to an unterminated delimiter/body line.
+    private static func appendMarkdownFragment(
+        _ fragment: String,
+        to output: inout String,
+        lineEnding: String
+    ) {
+        guard !fragment.isEmpty else { return }
+        if !output.isEmpty,
+           output.utf8.last != 0x0A,
+           output.utf8.last != 0x0D,
+           fragment.utf8.first != 0x0A,
+           fragment.utf8.first != 0x0D {
+            output += lineEnding
+        }
+        output += fragment
+    }
+
+    private static func firstLineEnding(in text: String) -> String? {
+        physicalLines(in: text).first(where: { !$0.ending.isEmpty })?.ending
     }
 
     // MARK: - Frontmatter Merging
@@ -141,8 +170,8 @@ nonisolated struct MarkdownMerger {
             return existing
         }
 
-        let incomingBlocks = propertyBlocks(in: newDocument.content)
-        guard !incomingBlocks.isEmpty else {
+        guard let incomingBlocks = propertyBlocks(in: newDocument.content),
+              !incomingBlocks.isEmpty else {
             return existing
         }
 
@@ -161,7 +190,11 @@ nonisolated struct MarkdownMerger {
             }
         }
 
-        let existingBlocks = propertyBlocks(in: existingDocument.content)
+        guard let existingBlocks = propertyBlocks(in: existingDocument.content) else {
+            // Unsupported or ambiguous YAML must remain byte-for-byte intact rather than risk a
+            // partial replacement that leaves continuations attached to the wrong property.
+            return existing
+        }
         let existingBlocksByStart = Dictionary(uniqueKeysWithValues: existingBlocks.map {
             ($0.range.lowerBound, $0)
         })
@@ -234,95 +267,457 @@ nonisolated struct MarkdownMerger {
         )
     }
 
-    private static func propertyBlocks(in lines: [PhysicalLine]) -> [FrontmatterPropertyBlock] {
+    private struct FrontmatterPropertyHeader {
+        let key: String
+        let value: String
+    }
+
+    private struct BlockScalarHeader {
+        let indentation: Int?
+        let keepsTrailingBlankLines: Bool
+    }
+
+    private enum BlockScalarHeaderParse {
+        case notBlockScalar
+        case header(BlockScalarHeader)
+        case invalid
+    }
+
+    /// Minimal YAML flow lexer used only to prove where a top-level property's physical block ends.
+    /// It deliberately rejects mismatched or trailing syntax instead of guessing ownership.
+    private struct FlowCollectionState {
+        private var expectedClosers: [Character] = []
+        private var quote: Character?
+        private var escaped = false
+
+        var isOpen: Bool { !expectedClosers.isEmpty }
+
+        mutating func scan(_ text: Substring) -> Bool {
+            var index = text.startIndex
+
+            while index < text.endIndex {
+                let character = text[index]
+                let nextIndex = text.index(after: index)
+
+                if quote == "\"" {
+                    if escaped {
+                        escaped = false
+                    } else if character == "\\" {
+                        escaped = true
+                    } else if character == "\"" {
+                        quote = nil
+                    }
+                    index = nextIndex
+                    continue
+                }
+
+                if quote == "'" {
+                    if character == "'" {
+                        if nextIndex < text.endIndex, text[nextIndex] == "'" {
+                            index = text.index(after: nextIndex)
+                            continue
+                        }
+                        quote = nil
+                    }
+                    index = nextIndex
+                    continue
+                }
+
+                if character == "#" {
+                    let previous = index == text.startIndex ? nil : text[text.index(before: index)]
+                    if previous == nil || previous == " " || previous == "\t"
+                        || previous == "," || previous == "[" || previous == "{" {
+                        break
+                    }
+                } else if character == "\"" || character == "'" {
+                    quote = character
+                } else if character == "[" {
+                    expectedClosers.append("]")
+                } else if character == "{" {
+                    expectedClosers.append("}")
+                } else if character == "]" || character == "}" {
+                    guard expectedClosers.last == character else { return false }
+                    expectedClosers.removeLast()
+                    if expectedClosers.isEmpty {
+                        let remainder = text[nextIndex...].drop(while: {
+                            $0 == " " || $0 == "\t"
+                        })
+                        return remainder.isEmpty || remainder.first == "#"
+                    }
+                }
+
+                index = nextIndex
+            }
+
+            // A backslash at the end of a double-quoted flow line escapes the physical line break,
+            // not the first character on the continuation line.
+            escaped = false
+            return true
+        }
+    }
+
+    /// Discover complete top-level property blocks. Returning nil means some non-trivia line could
+    /// not be assigned safely, so callers must preserve the original frontmatter unchanged.
+    private static func propertyBlocks(in lines: [PhysicalLine]) -> [FrontmatterPropertyBlock]? {
         var blocks: [FrontmatterPropertyBlock] = []
         var index = 0
 
         while index < lines.count {
-            guard let key = topLevelKey(in: lines[index].content) else {
+            let line = lines[index].content
+            if isYAMLTrivia(line) {
                 index += 1
                 continue
             }
-
-            var end = index + 1
-            while end < lines.count {
-                if isIndented(lines[end].content) {
-                    end += 1
-                    continue
-                }
-
-                // YAML permits physically empty lines inside an indented block scalar. Keep them in the
-                // property block when another indented continuation follows.
-                if lines[end].content.isEmpty {
-                    var nextNonempty = end + 1
-                    while nextNonempty < lines.count, lines[nextNonempty].content.isEmpty {
-                        nextNonempty += 1
-                    }
-                    if nextNonempty < lines.count, isIndented(lines[nextNonempty].content) {
-                        end += 1
-                        continue
-                    }
-                }
-                break
+            guard !isIndented(line), let header = propertyHeader(in: line) else {
+                return nil
             }
 
-            blocks.append(FrontmatterPropertyBlock(key: key, range: index..<end))
+            let end: Int
+            switch blockScalarHeader(in: header.value) {
+            case .invalid:
+                return nil
+            case .header(let scalarHeader):
+                guard let scalarEnd = blockScalarEnd(
+                    in: lines,
+                    startingAt: index + 1,
+                    header: scalarHeader
+                ) else {
+                    return nil
+                }
+                end = scalarEnd
+            case .notBlockScalar:
+                var flowState = FlowCollectionState()
+                guard let initialNode = yamlNode(in: header.value[...]) else { return nil }
+                if initialNode.first == "[" || initialNode.first == "{" {
+                    guard flowState.scan(initialNode) else { return nil }
+                }
+
+                var continuationEnd = index + 1
+                while continuationEnd < lines.count {
+                    let continuation = lines[continuationEnd].content
+
+                    if flowState.isOpen {
+                        guard flowState.scan(continuation[...]) else { return nil }
+                        continuationEnd += 1
+                        continue
+                    }
+
+                    if isIndented(continuation), !isYAMLTrivia(continuation) {
+                        if let node = flowCollectionNode(inIndentedLine: continuation) {
+                            guard flowState.scan(node) else { return nil }
+                        }
+                        continuationEnd += 1
+                        continue
+                    }
+
+                    if isYAMLTrivia(continuation) {
+                        // Column-zero comments and blank lines can interrupt an indented mapping/list.
+                        // Attach them only when another indented, non-trivia continuation follows.
+                        var nextContent = continuationEnd + 1
+                        while nextContent < lines.count,
+                              isYAMLTrivia(lines[nextContent].content) {
+                            nextContent += 1
+                        }
+                        if nextContent < lines.count,
+                           isIndented(lines[nextContent].content) {
+                            continuationEnd = nextContent
+                            continue
+                        }
+                        break
+                    }
+
+                    if propertyHeader(in: continuation) != nil {
+                        break
+                    }
+
+                    // A column-zero closer, explicit complex key, directive, or other unsupported
+                    // construct has ambiguous ownership. Preserve instead of emitting partial YAML.
+                    return nil
+                }
+
+                guard !flowState.isOpen else { return nil }
+                end = continuationEnd
+            }
+
+            blocks.append(FrontmatterPropertyBlock(key: header.key, range: index..<end))
             index = end
         }
 
         return blocks
     }
 
-    private static func topLevelKey(in line: String) -> String? {
-        guard let firstScalar = line.unicodeScalars.first,
-              !CharacterSet.whitespaces.contains(firstScalar),
+    private static func propertyHeader(in line: String) -> FrontmatterPropertyHeader? {
+        guard let first = line.first,
+              !isWhitespace(first),
               !line.hasPrefix("#"),
               !line.hasPrefix("%"),
               !isFrontmatterDelimiter(line) else {
             return nil
         }
 
-        var inSingleQuote = false
-        var inDoubleQuote = false
-        var escaped = false
-        var index = line.startIndex
+        if first == "'" || first == "\"" {
+            guard let quoted = decodedQuotedKey(in: line, quote: first) else { return nil }
+            var separator = quoted.nextIndex
+            while separator < line.endIndex,
+                  line[separator] == " " || line[separator] == "\t" {
+                separator = line.index(after: separator)
+            }
+            guard separator < line.endIndex, line[separator] == ":" else { return nil }
+            let valueStart = line.index(after: separator)
+            guard valueStart == line.endIndex || isWhitespace(line[valueStart]) else { return nil }
+            return FrontmatterPropertyHeader(
+                key: quoted.key,
+                value: String(line[valueStart...])
+            )
+        }
+
+        var separator = line.startIndex
+        while separator < line.endIndex {
+            if line[separator] == ":" {
+                let valueStart = line.index(after: separator)
+                if valueStart == line.endIndex || isWhitespace(line[valueStart]) {
+                    let key = String(line[..<separator]).trimmingCharacters(in: .whitespaces)
+                    guard isSupportedPlainKey(key) else { return nil }
+                    return FrontmatterPropertyHeader(
+                        key: key,
+                        value: String(line[valueStart...])
+                    )
+                }
+            }
+            separator = line.index(after: separator)
+        }
+        return nil
+    }
+
+    private static func decodedQuotedKey(
+        in line: String,
+        quote: Character
+    ) -> (key: String, nextIndex: String.Index)? {
+        var key = ""
+        var index = line.index(after: line.startIndex)
 
         while index < line.endIndex {
             let character = line[index]
+            let nextIndex = line.index(after: index)
 
-            if inDoubleQuote {
-                if escaped {
-                    escaped = false
-                } else if character == "\\" {
-                    escaped = true
-                } else if character == "\"" {
-                    inDoubleQuote = false
-                }
-            } else if inSingleQuote {
+            if quote == "'" {
                 if character == "'" {
-                    inSingleQuote = false
-                }
-            } else if character == "\"" {
-                inDoubleQuote = true
-            } else if character == "'" {
-                inSingleQuote = true
-            } else if character == ":" {
-                let valueStart = line.index(after: index)
-                if valueStart == line.endIndex || isWhitespace(line[valueStart]) {
-                    let key = String(line[..<index]).trimmingCharacters(in: .whitespaces)
-                    guard !key.isEmpty,
-                          key != "-", !key.hasPrefix("- "), !key.hasPrefix("-\t"),
-                          key != "?", !key.hasPrefix("? "), !key.hasPrefix("?\t") else {
-                        return nil
+                    if nextIndex < line.endIndex, line[nextIndex] == "'" {
+                        key.append("'")
+                        index = line.index(after: nextIndex)
+                        continue
                     }
-                    return key
+                    return (key, nextIndex)
                 }
+                key.append(character)
+                index = nextIndex
+                continue
             }
 
-            index = line.index(after: index)
+            if character == "\"" {
+                return (key, nextIndex)
+            }
+            guard character == "\\" else {
+                key.append(character)
+                index = nextIndex
+                continue
+            }
+
+            guard nextIndex < line.endIndex else { return nil }
+            let escape = line[nextIndex]
+            let afterEscape = line.index(after: nextIndex)
+            switch escape {
+            case "0": key.append("\0")
+            case "a": key.append("\u{0007}")
+            case "b": key.append("\u{0008}")
+            case "t", "\t": key.append("\t")
+            case "n": key.append("\n")
+            case "v": key.append("\u{000B}")
+            case "f": key.append("\u{000C}")
+            case "r": key.append("\r")
+            case "e": key.append("\u{001B}")
+            case " ": key.append(" ")
+            case "\"": key.append("\"")
+            case "/": key.append("/")
+            case "\\": key.append("\\")
+            case "N": key.append("\u{0085}")
+            case "_": key.append("\u{00A0}")
+            case "L": key.append("\u{2028}")
+            case "P": key.append("\u{2029}")
+            case "x", "u", "U":
+                let count = escape == "x" ? 2 : (escape == "u" ? 4 : 8)
+                var digitsEnd = afterEscape
+                for _ in 0..<count {
+                    guard digitsEnd < line.endIndex else { return nil }
+                    digitsEnd = line.index(after: digitsEnd)
+                }
+                let digits = String(line[afterEscape..<digitsEnd])
+                guard digits.unicodeScalars.allSatisfy({
+                    CharacterSet(charactersIn: "0123456789abcdefABCDEF").contains($0)
+                }),
+                let value = UInt32(digits, radix: 16),
+                let scalar = UnicodeScalar(value) else {
+                    return nil
+                }
+                key.unicodeScalars.append(scalar)
+                index = digitsEnd
+                continue
+            default:
+                return nil
+            }
+            index = afterEscape
+        }
+        return nil
+    }
+
+    private static func isSupportedPlainKey(_ key: String) -> Bool {
+        guard let first = key.first,
+              !key.isEmpty,
+              !"[]{},&*#!|>%@`".contains(first),
+              key != "-", !key.hasPrefix("- "), !key.hasPrefix("-\t"),
+              key != "?", !key.hasPrefix("? "), !key.hasPrefix("?\t") else {
+            return false
         }
 
-        return nil
+        var previousWasWhitespace = false
+        for character in key {
+            if character == "#", previousWasWhitespace { return false }
+            previousWasWhitespace = isWhitespace(character)
+        }
+        return true
+    }
+
+    private static func blockScalarHeader(in value: String) -> BlockScalarHeaderParse {
+        guard let node = yamlNode(in: value[...]) else { return .invalid }
+        guard node.first == "|" || node.first == ">" else { return .notBlockScalar }
+
+        var indentation: Int?
+        var chomping: Character?
+        var index = node.index(after: node.startIndex)
+
+        while index < node.endIndex {
+            let character = node[index]
+            if character == " " || character == "\t" {
+                let remainder = node[index...].drop(while: { $0 == " " || $0 == "\t" })
+                guard remainder.isEmpty || remainder.first == "#" else { return .invalid }
+                return .header(BlockScalarHeader(
+                    indentation: indentation,
+                    keepsTrailingBlankLines: chomping == "+"
+                ))
+            }
+            if character == "+" || character == "-" {
+                guard chomping == nil else { return .invalid }
+                chomping = character
+            } else if "123456789".contains(character),
+                      let digit = character.wholeNumberValue {
+                guard indentation == nil else { return .invalid }
+                indentation = digit
+            } else {
+                return .invalid
+            }
+            index = node.index(after: index)
+        }
+
+        return .header(BlockScalarHeader(
+            indentation: indentation,
+            keepsTrailingBlankLines: chomping == "+"
+        ))
+    }
+
+    private static func blockScalarEnd(
+        in lines: [PhysicalLine],
+        startingAt start: Int,
+        header: BlockScalarHeader
+    ) -> Int? {
+        var contentIndent = header.indentation
+        var consumedEnd = start
+        var lastNonblankEnd: Int?
+        var index = start
+
+        while index < lines.count {
+            let line = lines[index].content
+            if isBlankYAMLLine(line) {
+                consumedEnd = index + 1
+                index += 1
+                continue
+            }
+
+            guard let indentation = leadingSpaceCount(in: line) else { return nil }
+            if contentIndent == nil {
+                guard indentation > 0 else { break }
+                contentIndent = indentation
+            }
+            guard indentation >= contentIndent! else { break }
+
+            consumedEnd = index + 1
+            lastNonblankEnd = index + 1
+            index += 1
+        }
+
+        return header.keepsTrailingBlankLines ? consumedEnd : (lastNonblankEnd ?? start)
+    }
+
+    private static func flowCollectionNode(inIndentedLine line: String) -> Substring? {
+        var candidate = line[...].drop(while: { $0 == " " || $0 == "\t" })
+        if candidate.first == "-" {
+            let afterDash = candidate.index(after: candidate.startIndex)
+            if afterDash == candidate.endIndex
+                || candidate[afterDash] == " " || candidate[afterDash] == "\t" {
+                candidate = candidate[afterDash...].drop(while: { $0 == " " || $0 == "\t" })
+            }
+        }
+
+        if candidate.first != "[", candidate.first != "{",
+           let nested = propertyHeader(in: String(candidate)) {
+            candidate = nested.value[...]
+        }
+        guard let node = yamlNode(in: candidate),
+              node.first == "[" || node.first == "{" else {
+            return nil
+        }
+        return node
+    }
+
+    /// Skip supported YAML tag/anchor node properties before a scalar or flow collection.
+    private static func yamlNode(in text: Substring) -> Substring? {
+        var node = text.drop(while: { $0 == " " || $0 == "\t" })
+
+        while node.first == "!" || node.first == "&" {
+            let marker = node.first!
+            let tokenEnd: Substring.Index
+            if marker == "!", node.hasPrefix("!<") {
+                guard let closing = node.firstIndex(of: ">") else { return nil }
+                tokenEnd = node.index(after: closing)
+            } else {
+                tokenEnd = node.firstIndex(where: { $0 == " " || $0 == "\t" }) ?? node.endIndex
+                guard tokenEnd != node.index(after: node.startIndex) else { return nil }
+            }
+            node = node[tokenEnd...].drop(while: { $0 == " " || $0 == "\t" })
+        }
+
+        return node
+    }
+
+    private static func isYAMLTrivia(_ line: String) -> Bool {
+        isBlankYAMLLine(line) || line.drop(while: { $0 == " " || $0 == "\t" }).first == "#"
+    }
+
+    private static func isBlankYAMLLine(_ line: String) -> Bool {
+        line.allSatisfy { $0 == " " || $0 == "\t" }
+    }
+
+    private static func leadingSpaceCount(in line: String) -> Int? {
+        var count = 0
+        for character in line {
+            if character == " " {
+                count += 1
+            } else if character == "\t" {
+                return nil
+            } else {
+                break
+            }
+        }
+        return count
     }
 
     private static func isWhitespace(_ character: Character) -> Bool {
