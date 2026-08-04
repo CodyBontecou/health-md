@@ -191,6 +191,9 @@ final class MacCorpusExportSessionManager {
             individualEntryFileCount += error.individualEntryFileCount
             dataDictionaryFileCount += error.dataDictionaryFileCount
             rollupFileCount += error.rollupFileCount
+            archiveFileCount += error.zipArchiveFileCount
+            providerSidecarFileCount += error.providerSidecarFileCount
+            markUncertain()
         }
 
         mutating func add(_ result: AppleLooseDailyRangeWriteResult) {
@@ -1284,11 +1287,13 @@ final class MacCorpusExportSessionManager {
                     throw CancellationError()
                 } catch let error as ExportPartialWriteError {
                     recordPartialDerivedWrite(error, session: session)
+                    markFileAccountingUncertain(session: session)
                     if error.dataDictionaryFileCount > 0 {
                         session.journal.dataDictionaryWritten = true
                     }
                     session.journal.updatedAt = Date()
                     try persist(session)
+                    if error.wasCancelled { throw CancellationError() }
                     throw error
                 } catch let error as ExportError {
                     if error == .destinationChanged {
@@ -1917,7 +1922,17 @@ final class MacCorpusExportSessionManager {
                                     healthSubfolder: session.journal.exportManifest.settingsSnapshot.healthSubfolder
                                 )
                                 recordProviderSidecarWrites(count, session: session)
+                            } catch let error as ExportPartialWriteError {
+                                recordPartialWrite(error, session: session)
+                                session.journal.completedDates.removeAll { $0 == payload.sourceDate }
+                                if error.wasCancelled { throw CancellationError() }
+                                session.journal.failedDateDetails.append(FailedDateDetail(
+                                    date: payload.sourceDate,
+                                    reason: .fileWriteError,
+                                    errorDetails: "External provider sidecar export failed: \(error.diagnostic)"
+                                ))
                             } catch is CancellationError {
+                                markFileAccountingUncertain(session: session)
                                 throw CancellationError()
                             } catch {
                                 markFileAccountingUncertain(session: session)
@@ -1940,6 +1955,7 @@ final class MacCorpusExportSessionManager {
                         if error.dataDictionaryFileCount > 0 {
                             session.journal.dataDictionaryWritten = true
                         }
+                        if error.wasCancelled { throw CancellationError() }
                         session.journal.failedDateDetails.append(FailedDateDetail(
                             date: payload.sourceDate,
                             reason: .fileWriteError,

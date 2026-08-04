@@ -5,6 +5,18 @@ import Combine
 import QuickLook
 import os.log
 
+enum ConnectedMacInteractiveResultValidator {
+    static func failure(for payload: MacExportResultPayload) -> MacExportFailure? {
+        guard !payload.hasConsistentFileAccounting else { return nil }
+        return MacExportFailure(
+            jobID: payload.jobID,
+            reason: .payloadDecodeFailure,
+            message: "Mac export returned inconsistent file accounting.",
+            underlyingError: "The connected Mac result was rejected before export history was recorded."
+        )
+    }
+}
+
 struct ContentView: View {
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "Export")
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1872,6 +1884,10 @@ struct ContentView: View {
     }
 
     private func completeMacExport(with result: MacExportResultPayload) {
+        if let validationFailure = ConnectedMacInteractiveResultValidator.failure(for: result) {
+            completeMacExport(with: validationFailure)
+            return
+        }
         let durableJournal = corpusRecoveryManager.journal(jobID: result.jobID)
         let completionSettings = durableJournal?.exportManifest.settingsSnapshot
             .makeAdvancedExportSettings() ?? advancedSettings

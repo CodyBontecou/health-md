@@ -132,6 +132,11 @@ final class MacExportJobExecutor {
             individualEntryFileCount += error.individualEntryFileCount
             dataDictionaryFileCount += error.dataDictionaryFileCount
             rollupFileCount += error.rollupFileCount
+            archiveFileCount += error.zipArchiveFileCount
+            externalRecordFileCount += error.providerSidecarFileCount
+            // The write that threw is deliberately excluded, so these exact categories
+            // remain a lower bound rather than an authoritative final total.
+            isComplete = false
         }
 
         mutating func add(_ result: RollupExportWriteResult) {
@@ -536,6 +541,32 @@ final class MacExportJobExecutor {
                         externalRecordFileCount += writtenSidecarsForDate
                         fileAccounting.externalRecordFileCount += writtenSidecarsForDate
                         totalFilesWritten += writtenSidecarsForDate
+                    } catch let error as ExportPartialWriteError {
+                        fileAccounting.add(error)
+                        writtenSidecarsForDate = error.providerSidecarFileCount
+                        externalRecordFileCount += error.providerSidecarFileCount
+                        totalFilesWritten += error.committedFileCount
+                        if error.wasCancelled {
+                            sendProgress(
+                                jobID: job.jobID,
+                                phase: .cancelled,
+                                processedDays: processedDays,
+                                totalDays: totalDays,
+                                currentDate: record.date,
+                                filesWritten: totalFilesWritten,
+                                message: "Mac export cancelled.",
+                                progress: progress
+                            )
+                            return .success(currentCancellationResult())
+                        }
+                        failedDateDetails.append(FailedDateDetail(
+                            date: record.date,
+                            reason: .fileWriteError,
+                            errorDetails: "External provider sidecar export failed: \(error.diagnostic)"
+                        ))
+                    } catch is CancellationError {
+                        fileAccounting.isComplete = false
+                        return .success(currentCancellationResult())
                     } catch {
                         fileAccounting.isComplete = false
                         failedDateDetails.append(FailedDateDetail(
@@ -576,9 +607,23 @@ final class MacExportJobExecutor {
             } catch let error as ExportPartialWriteError {
                 fileAccounting.add(error)
                 totalFilesWritten += error.committedFileCount
+                externalRecordFileCount += error.providerSidecarFileCount
                 if error.dataDictionaryFileCount > 0 { dataDictionaryWritten = true }
                 dailyNoteUpdateCount += error.dailyNoteUpdateCount
                 dailyNoteSkipCount += error.dailyNoteSkipCount
+                if error.wasCancelled {
+                    sendProgress(
+                        jobID: job.jobID,
+                        phase: .cancelled,
+                        processedDays: processedDays,
+                        totalDays: totalDays,
+                        currentDate: record.date,
+                        filesWritten: totalFilesWritten,
+                        message: "Mac export cancelled.",
+                        progress: progress
+                    )
+                    return .success(currentCancellationResult())
+                }
                 failedDateDetails.append(FailedDateDetail(
                     date: record.date,
                     reason: .fileWriteError,
@@ -647,6 +692,10 @@ final class MacExportJobExecutor {
             } catch let error as ExportPartialWriteError {
                 fileAccounting.add(error)
                 totalFilesWritten += error.committedFileCount
+                externalRecordFileCount += error.providerSidecarFileCount
+                if error.wasCancelled {
+                    return .success(currentCancellationResult())
+                }
                 let sortedDates = rollupRecords.map(\.date).sorted()
                 failedDateDetails.append(FailedDateDetail(
                     date: sortedDates.first ?? Date(),
@@ -1032,6 +1081,43 @@ final class MacExportJobExecutor {
                             session.externalRecordFileCount += sidecarCount
                             session.fileAccounting.externalRecordFileCount += sidecarCount
                             session.totalFilesWritten += sidecarCount
+                        } catch let error as ExportPartialWriteError {
+                            session.fileAccounting.add(error)
+                            session.externalRecordFileCount += error.providerSidecarFileCount
+                            session.totalFilesWritten += error.committedFileCount
+                            if error.wasCancelled {
+                                streamSession = session
+                                return .failure(MacExportFailure(
+                                    jobID: chunk.jobID,
+                                    reason: .cancelled,
+                                    message: "Mac export stream was cancelled.",
+                                    outputBreakdown: session.fileAccounting.breakdown(
+                                        requestedDataDayCount: session.start.totalRequestedDays,
+                                        successfulDataDayCount: session.successCount,
+                                        dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                                        dailyNoteSkipCount: session.dailyNoteSkipCount
+                                    )
+                                ))
+                            }
+                            session.failedDateDetails.append(FailedDateDetail(
+                                date: record.date,
+                                reason: .fileWriteError,
+                                errorDetails: "External provider sidecar export failed: \(error.diagnostic)"
+                            ))
+                        } catch is CancellationError {
+                            session.fileAccounting.isComplete = false
+                            streamSession = session
+                            return .failure(MacExportFailure(
+                                jobID: chunk.jobID,
+                                reason: .cancelled,
+                                message: "Mac export stream was cancelled.",
+                                outputBreakdown: session.fileAccounting.breakdown(
+                                    requestedDataDayCount: session.start.totalRequestedDays,
+                                    successfulDataDayCount: session.successCount,
+                                    dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                                    dailyNoteSkipCount: session.dailyNoteSkipCount
+                                )
+                            ))
                         } catch {
                             session.fileAccounting.isComplete = false
                             session.failedDateDetails.append(FailedDateDetail(
@@ -1058,9 +1144,24 @@ final class MacExportJobExecutor {
                 } catch let error as ExportPartialWriteError {
                     session.fileAccounting.add(error)
                     session.totalFilesWritten += error.committedFileCount
+                    session.externalRecordFileCount += error.providerSidecarFileCount
                     if error.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.dailyNoteUpdateCount += error.dailyNoteUpdateCount
                     session.dailyNoteSkipCount += error.dailyNoteSkipCount
+                    if error.wasCancelled {
+                        streamSession = session
+                        return .failure(MacExportFailure(
+                            jobID: chunk.jobID,
+                            reason: .cancelled,
+                            message: "Mac export stream was cancelled.",
+                            outputBreakdown: session.fileAccounting.breakdown(
+                                requestedDataDayCount: session.start.totalRequestedDays,
+                                successfulDataDayCount: session.successCount,
+                                dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                                dailyNoteSkipCount: session.dailyNoteSkipCount
+                            )
+                        ))
+                    }
                     session.failedDateDetails.append(FailedDateDetail(
                         date: record.date,
                         reason: .fileWriteError,
@@ -1236,9 +1337,24 @@ final class MacExportJobExecutor {
                 } catch let error as ExportPartialWriteError {
                     session.fileAccounting.add(error)
                     session.totalFilesWritten += error.committedFileCount
+                    session.externalRecordFileCount += error.providerSidecarFileCount
                     if error.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.dailyNoteUpdateCount += error.dailyNoteUpdateCount
                     session.dailyNoteSkipCount += error.dailyNoteSkipCount
+                    if error.wasCancelled {
+                        streamSession = session
+                        return .failure(MacExportFailure(
+                            jobID: complete.jobID,
+                            reason: .cancelled,
+                            message: "Mac export stream was cancelled.",
+                            outputBreakdown: session.fileAccounting.breakdown(
+                                requestedDataDayCount: session.start.totalRequestedDays,
+                                successfulDataDayCount: session.successCount,
+                                dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                                dailyNoteSkipCount: session.dailyNoteSkipCount
+                            )
+                        ))
+                    }
                     session.failedDateDetails.append(FailedDateDetail(
                         date: record.date,
                         reason: .fileWriteError,
@@ -1288,6 +1404,20 @@ final class MacExportJobExecutor {
             } catch let error as ExportPartialWriteError {
                 session.fileAccounting.add(error)
                 session.totalFilesWritten += error.committedFileCount
+                session.externalRecordFileCount += error.providerSidecarFileCount
+                if error.wasCancelled {
+                    return .failure(MacExportFailure(
+                        jobID: complete.jobID,
+                        reason: .cancelled,
+                        message: "Mac export stream was cancelled.",
+                        outputBreakdown: session.fileAccounting.breakdown(
+                            requestedDataDayCount: session.start.totalRequestedDays,
+                            successfulDataDayCount: session.successCount,
+                            dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                            dailyNoteSkipCount: session.dailyNoteSkipCount
+                        )
+                    ))
+                }
                 let sortedDates = rollupRecords.map(\.date).sorted()
                 session.failedDateDetails.append(FailedDateDetail(
                     date: sortedDates.first ?? session.start.dateRangeStart,

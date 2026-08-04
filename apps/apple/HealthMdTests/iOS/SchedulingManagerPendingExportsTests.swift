@@ -843,6 +843,84 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertNil(manager.schedule.lastTodayRefreshDate)
     }
 
+    func testScheduledMacFailurePreservesBreakdownSuccessfulDaysAndConservativeRetrySet() {
+        let manager = LifecycleHarness.retain(makeManager(
+            store: TestPendingExportStore(),
+            notificationScheduler: InspectableExportNotificationScheduler()
+        ) { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        })
+        let suite = "SchedulingManagerMacFailure.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+        settings.exportFormats = [.csv, .json]
+        let start = date(year: 2026, month: 5, day: 15)
+        let end = date(year: 2026, month: 5, day: 17)
+        let requestedDates = ExportOrchestrator.dateRange(from: start, to: end)
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 3,
+            successfulDataDayCount: 2,
+            looseAggregateFileCount: 4,
+            providerSidecarFileCount: 1,
+            isFileCategoryBreakdownComplete: false
+        )
+        let failure = MacExportFailure(
+            jobID: UUID(),
+            reason: .cancelled,
+            message: "Cancelled during final roll-up.",
+            outputBreakdown: breakdown
+        )
+
+        let result = manager.scheduledMacFailureResult(
+            failure,
+            dateRangeStart: start,
+            dateRangeEnd: end,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(result.totalCount, 3)
+        XCTAssertEqual(result.looseAggregateFileCount, 4)
+        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.failedDateDetails.count, 3)
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertNil(result.remainingDates(from: requestedDates))
+    }
+
+    func testInteractiveMacResultValidatorRejectsInconsistentAccounting() {
+        let date = date(year: 2026, month: 5, day: 17)
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 2
+            ),
+            failedDateDetails: [],
+            completedDates: [date],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: date
+        )
+
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+        let failure = ConnectedMacInteractiveResultValidator.failure(for: payload)
+        XCTAssertEqual(failure?.jobID, payload.jobID)
+        XCTAssertEqual(failure?.reason, .payloadDecodeFailure)
+    }
+
     func testRecoveredConnectedMacCompletionConsumesQuotaOnceAndClearsPendingRequest() async throws {
         let exportDate = date(year: 2026, month: 5, day: 17)
         let recoveredDates = [

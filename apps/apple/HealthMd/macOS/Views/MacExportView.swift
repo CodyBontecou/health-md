@@ -598,6 +598,7 @@ struct MacExportView: View {
             var looseAggregateFileCount = 0
             var individualEntryFileCount = 0
             var dataDictionaryFileCount = 0
+            var rollupFileCount = 0
             var isFileAccountingComplete = true
             var dailyNoteUpdateCount = 0
             var dailyNoteSkipCount = 0
@@ -613,6 +614,7 @@ struct MacExportView: View {
                     looseAggregateFileCount: looseAggregateFileCount,
                     individualEntryFileCount: individualEntryFileCount,
                     dataDictionaryFileCount: dataDictionaryFileCount,
+                    rollupFileCount: rollupFileCount,
                     isFileCategoryBreakdownComplete: isFileAccountingComplete,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
                     dailyNoteSkipCount: dailyNoteSkipCount,
@@ -777,6 +779,11 @@ struct MacExportView: View {
                     dataDictionaryFileCount += error.dataDictionaryFileCount
                     dailyNoteUpdateCount += error.dailyNoteUpdateCount
                     dailyNoteSkipCount += error.dailyNoteSkipCount
+                    isFileAccountingComplete = false
+                    if error.wasCancelled {
+                        finishCancelledExport()
+                        return
+                    }
                     failedDateDetails.append(FailedDateDetail(
                         date: date,
                         reason: .fileWriteError,
@@ -799,7 +806,6 @@ struct MacExportView: View {
                 }
             }
 
-            var rollupFileCount = 0
             let rollupHealthData = rollupHealthData(for: dates, seedData: successfulHealthData)
             if !rollupHealthData.isEmpty && HealthRollupExporter.isEnabled(settings: advancedSettings) {
                 do {
@@ -817,6 +823,11 @@ struct MacExportView: View {
                 } catch let error as ExportPartialWriteError {
                     rollupFileCount += error.rollupFileCount
                     dataDictionaryFileCount += error.dataDictionaryFileCount
+                    isFileAccountingComplete = false
+                    if error.wasCancelled {
+                        finishCancelledExport()
+                        return
+                    }
                     let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
                     partialFailures.append(ExportPartialFailure(
                         date: firstDate,

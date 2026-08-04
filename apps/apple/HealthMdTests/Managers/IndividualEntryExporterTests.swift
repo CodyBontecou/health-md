@@ -1073,6 +1073,48 @@ final class IndividualEntryExporterTests: XCTestCase {
         XCTAssertEqual(fileSystem.files.count, 1)
     }
 
+    func testExportEntries_reportsConfirmedFilesWhenLaterEntryFails() throws {
+        let fileSystem = FakeFileSystem()
+        let coordinatedExporter = IndividualEntryExporter(
+            fileSystem: fileSystem,
+            fileCoordinator: RecordingFileCoordinator()
+        )
+        Self.retainedExporters.append(coordinatedExporter)
+        var writeCount = 0
+        fileSystem.writeStarted = { url in
+            writeCount += 1
+            if writeCount == 2 {
+                fileSystem.failBeforeWritingPathOnce = url.path
+            }
+        }
+        let samples = [Self.testDate, Self.testDate.addingTimeInterval(60)].map { timestamp in
+            IndividualHealthSample(
+                metricId: "weight",
+                metricName: "Weight",
+                category: .bodyMeasurements,
+                timestamp: timestamp,
+                value: 72.5,
+                unit: "kg"
+            )
+        }
+
+        do {
+            _ = try coordinatedExporter.exportIndividualEntries(
+                samples: samples,
+                to: URL(fileURLWithPath: "/tmp/PartialIndividualEntries"),
+                settings: Self.weightSettings,
+                formatSettings: Self.formatSettings
+            )
+            XCTFail("Expected the second individual-entry write to fail")
+        } catch let error as ExportPartialWriteError {
+            XCTAssertEqual(error.kind, .daily)
+            XCTAssertEqual(error.individualEntryFileCount, 1)
+            XCTAssertEqual(error.committedFileCount, 1)
+            XCTAssertFalse(error.wasCancelled)
+        }
+        XCTAssertEqual(fileSystem.files.count, 1)
+    }
+
     func testExportEntries_preservesBloodPressureReadingsWithinSameMinute() throws {
         let tmpDir = makeTempDir()
         defer { cleanup(tmpDir) }

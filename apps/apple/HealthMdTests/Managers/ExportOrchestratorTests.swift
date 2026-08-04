@@ -559,7 +559,10 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.outputBreakdown.dataDictionaryFileCount, 0)
         XCTAssertEqual(result.outputBreakdown.looseAggregateFileCount, 1)
         XCTAssertNil(fileSystem.writeCounts[dictionaryPath])
-        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertFalse(
+            result.outputBreakdown.isFileCategoryBreakdownComplete,
+            "A rejected atomic write leaves the attempted dictionary commit non-authoritative"
+        )
         XCTAssertEqual(result.primaryFailureReason, .fileWriteError)
         XCTAssertEqual(result.failedDateDetails.first?.errorDetails, "Injected failure before write")
     }
@@ -753,6 +756,60 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDates_rollupCancellationKeepsDailyAndPriorRollupAccountingButIsNotFullSuccess() async throws {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorRollupCancellation"
+        )
+        let settings = makeExportSettings(formats: [.csv, .json], rollupPeriods: [.weekly])
+        settings.includeGranularData = false
+        settings.includeDataDictionary = false
+        var rollupWrites = 0
+        fileSystem.writeStarted = { url in
+            guard url.path.contains("/Rollups/") else { return }
+            rollupWrites += 1
+            if rollupWrites == 2 {
+                fileSystem.injectedErrorBeforeWritingPathOnce = (url.path, CancellationError())
+            }
+        }
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.totalCount, 1)
+        XCTAssertEqual(result.looseAggregateFileCount, 2)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 3)
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertFalse(result.isFileCategoryBreakdownComplete)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        ExportOrchestrator.recordResult(
+            result,
+            source: .manual,
+            dateRangeStart: HealthKitFixtures.referenceDate,
+            dateRangeEnd: HealthKitFixtures.referenceDate
+        )
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertTrue(entry.wasCancelled)
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertNil(entry.fileCount)
+        XCTAssertEqual(entry.outputBreakdown.generatedFileCount, 3)
+    }
+
+    @MainActor
     func testExportDates_archiveCancellationIsTerminalAndNotAPartialFailure() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveCancellation-\(UUID().uuidString)", isDirectory: true)
@@ -791,6 +848,8 @@ final class ExportOrchestratorTests: XCTestCase {
 
         XCTAssertTrue(result.wasCancelled)
         XCTAssertEqual(result.archiveCount, 0)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
         XCTAssertTrue(result.completedDates?.isEmpty == true)
         XCTAssertFalse(result.partialFailures.contains { $0.dataType == "ZIP archive" })
         XCTAssertFalse(FileManager.default.fileExists(

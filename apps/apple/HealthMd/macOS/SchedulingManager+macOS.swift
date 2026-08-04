@@ -384,6 +384,11 @@ class SchedulingManager: ObservableObject {
                     looseAggregateFileCount += error.looseAggregateFileCount
                     dataDictionaryFileCount += error.dataDictionaryFileCount
                     rollupFileCount += error.rollupFileCount
+                    isFileAccountingComplete = false
+                    if error.wasCancelled {
+                        vaultManager.stopVaultAccess()
+                        return
+                    }
                     failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
                         FailedDateDetail(
                             date: $0,
@@ -483,6 +488,11 @@ class SchedulingManager: ObservableObject {
                 dataDictionaryFileCount += error.dataDictionaryFileCount
                 dailyNoteUpdateCount += error.dailyNoteUpdateCount
                 dailyNoteSkipCount += error.dailyNoteSkipCount
+                isFileAccountingComplete = false
+                if error.wasCancelled {
+                    vaultManager.stopVaultAccess()
+                    return
+                }
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
                     reason: .fileWriteError,
@@ -554,6 +564,11 @@ class SchedulingManager: ObservableObject {
             } catch let error as ExportPartialWriteError {
                 rollupFileCount += error.rollupFileCount
                 dataDictionaryFileCount += error.dataDictionaryFileCount
+                isFileAccountingComplete = false
+                if error.wasCancelled {
+                    vaultManager.stopVaultAccess()
+                    return
+                }
                 failedDateDetails.append(contentsOf: successfulHealthData.map {
                     FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.diagnostic)
                 })

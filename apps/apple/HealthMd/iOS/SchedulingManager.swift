@@ -1537,7 +1537,7 @@ class SchedulingManager: ObservableObject {
         ExportOrchestrator.ExportResult(macExportPayload: payload)
     }
 
-    private func scheduledMacFailureResult(
+    func scheduledMacFailureResult(
         _ failure: MacExportFailure,
         dateRangeStart: Date,
         dateRangeEnd: Date,
@@ -1547,17 +1547,16 @@ class SchedulingManager: ObservableObject {
         let fallbackDates = dates.isEmpty ? [dateRangeStart] : dates
         let reason = scheduledFailureReason(for: failure.reason)
         return ExportOrchestrator.ExportResult(
-            successCount: 0,
+            macExportFailure: failure,
             totalCount: max(fallbackDates.count, 1),
+            formatsPerDate: settings.looseFormatsPerDate,
             failedDateDetails: fallbackDates.map {
                 FailedDateDetail(
                     date: $0,
                     reason: reason,
                     errorDetails: failure.underlyingError ?? failure.message
                 )
-            },
-            formatsPerDate: settings.looseFormatsPerDate,
-            wasCancelled: failure.reason == .cancelled
+            }
         )
     }
 

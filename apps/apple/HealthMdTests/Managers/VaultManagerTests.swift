@@ -1139,6 +1139,121 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(healthPathFiles.isEmpty, "Should write file under vault/Health/")
     }
 
+    func testLegacySyncExportReportsFirstFormatWhenLaterFormatFails() throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SequentialSyncVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.csv, .json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let jsonPath = ExportPathPlanner.aggregateFileURL(
+            vaultURL: vaultURL,
+            healthSubfolder: "Health",
+            settings: settings,
+            date: ExportFixtures.fullDay.date,
+            format: .json
+        ).path
+        fileSystem.failBeforeWritingPathOnce = jsonPath
+
+        do {
+            _ = try manager.exportHealthDataResult(
+                ExportFixtures.fullDay,
+                for: ExportFixtures.fullDay.date,
+                settings: settings,
+                writeDataDictionary: false
+            )
+            XCTFail("Expected the later JSON write to fail")
+        } catch let error as ExportPartialWriteError {
+            XCTAssertEqual(error.looseAggregateFileCount, 1)
+            XCTAssertEqual(error.committedFileCount, 1)
+            XCTAssertFalse(error.wasCancelled)
+        }
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.hasSuffix(".csv") }.count, 1)
+        XCTAssertNil(fileSystem.files[jsonPath])
+    }
+
+    func testLegacyAsyncExportReportsFirstFormatWhenLaterFormatIsCancelled() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SequentialAsyncVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.csv, .json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let jsonPath = ExportPathPlanner.aggregateFileURL(
+            vaultURL: vaultURL,
+            healthSubfolder: "Health",
+            settings: settings,
+            date: ExportFixtures.fullDay.date,
+            format: .json
+        ).path
+        fileSystem.injectedErrorBeforeWritingPathOnce = (jsonPath, CancellationError())
+
+        do {
+            _ = try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false
+            )
+            XCTFail("Expected the later JSON write to be cancelled")
+        } catch let error as ExportPartialWriteError {
+            XCTAssertEqual(error.looseAggregateFileCount, 1)
+            XCTAssertEqual(error.committedFileCount, 1)
+            XCTAssertTrue(error.wasCancelled)
+        }
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.hasSuffix(".csv") }.count, 1)
+        XCTAssertNil(fileSystem.files[jsonPath])
+    }
+
+    func testExternalSidecarLoopReportsOnlyConfirmedPriorWrites() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SequentialSidecarVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        var sidecarWrites = 0
+        let testFileSystem = fileSystem!
+        testFileSystem.writeStarted = { url in
+            guard url.path.contains("/integrations/") else { return }
+            sidecarWrites += 1
+            if sidecarWrites == 2 {
+                testFileSystem.failBeforeWritingPathOnce = url.path
+            }
+        }
+        let records = [ExternalIntegrationProvider.whoop, .strava].map { provider in
+            ExternalDailyRecord(
+                provider: provider,
+                date: "2026-03-15",
+                payloads: [ExternalProviderPayload(
+                    name: "fixture",
+                    endpoint: "https://example.invalid/fixture",
+                    statusCode: 500,
+                    error: "fixture"
+                )]
+            )
+        }
+
+        do {
+            _ = try await manager.exportExternalDailyRecords(records)
+            XCTFail("Expected the second sidecar write to fail")
+        } catch let error as ExportPartialWriteError {
+            XCTAssertEqual(error.kind, .providerSidecar)
+            XCTAssertEqual(error.providerSidecarFileCount, 1)
+            XCTAssertEqual(error.committedFileCount, 1)
+            XCTAssertFalse(error.wasCancelled)
+        }
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.contains("/integrations/") }.count, 1)
+    }
+
     func testAsyncExportAppendRetryDoesNotDuplicateIdenticalAggregate() async throws {
         let vaultURL = URL(fileURLWithPath: "/tmp/AsyncAppendVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)

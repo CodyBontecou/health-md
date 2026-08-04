@@ -242,6 +242,110 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(entry.failureDiagnosticDetails, [diagnostic])
     }
 
+    func testMacExportFailurePreservesPriorSuccessfulDataDaysAndExactCategories() throws {
+        let date = Date()
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 3,
+            successfulDataDayCount: 2,
+            looseAggregateFileCount: 4,
+            providerSidecarFileCount: 1,
+            isFileCategoryBreakdownComplete: false
+        )
+        let failure = MacExportFailure(
+            jobID: UUID(),
+            reason: .exportWriteFailure,
+            message: "Final roll-up failed.",
+            totalFilesWritten: nil,
+            outputBreakdown: breakdown
+        )
+        let detail = FailedDateDetail(
+            date: date,
+            reason: .fileWriteError,
+            errorDetails: failure.message
+        )
+        let result = ExportOrchestrator.ExportResult(
+            macExportFailure: failure,
+            totalCount: 3,
+            formatsPerDate: 2,
+            failedDateDetails: [detail]
+        )
+
+        XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(result.looseAggregateFileCount, 4)
+        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 5)
+        XCTAssertFalse(result.hasAuthoritativeFileCount)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertNil(result.remainingDates(from: [date]))
+
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        ExportOrchestrator.recordResult(
+            result,
+            source: .macAgent,
+            dateRangeStart: date,
+            dateRangeEnd: date
+        )
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(entry.successCount, 2)
+        XCTAssertEqual(entry.outputBreakdown.successfulDataDayCount, 2)
+        XCTAssertEqual(entry.outputBreakdown.generatedFileCount, 5)
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+    }
+
+    func testRecordResultPersistsCancellationAndNeverPromotesAllDaysToFullSuccess() throws {
+        let date = Date()
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            formatsPerDate: 1,
+            looseAggregateFileCount: 1,
+            isFileCategoryBreakdownComplete: true,
+            wasCancelled: true,
+            completedDates: [date]
+        )
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+
+        ExportOrchestrator.recordResult(
+            result,
+            source: .manual,
+            dateRangeStart: date,
+            dateRangeEnd: date
+        )
+
+        let entry = try XCTUnwrap(history.history.first)
+        let decoded = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONEncoder().encode(entry)
+        )
+        XCTAssertTrue(decoded.wasCancelled)
+        XCTAssertFalse(decoded.isFullSuccess)
+        XCTAssertTrue(decoded.isPartialSuccess)
+        XCTAssertEqual(decoded.successCount, decoded.totalCount)
+    }
+
+    func testFailedDateDetailPreventsOtherwiseCompleteHistoryFromFullSuccess() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [FailedDateDetail(date: Date(), reason: .fileWriteError)],
+            fileCount: 1
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+    }
+
     #if os(iOS)
     @MainActor
     func testExportHistoryDetailDataDayDescriptionUsesCompleteLocalizedLiterals() {
@@ -739,6 +843,7 @@ final class ExportHistoryTests: XCTestCase {
         var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
         legacyObject.removeValue(forKey: "outputBreakdown")
         legacyObject.removeValue(forKey: "pendingRecoveryDayCount")
+        legacyObject.removeValue(forKey: "wasCancelled")
 
         let decoded = try JSONDecoder().decode(
             ExportHistoryEntry.self,
@@ -753,6 +858,7 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertFalse(decoded.outputBreakdown.isFileCategoryBreakdownComplete)
         XCTAssertEqual(decoded.pendingRecoveryDayCount, 0)
         XCTAssertFalse(decoded.isPendingRecovery)
+        XCTAssertFalse(decoded.wasCancelled)
     }
 
     func testEntryDecodesPreDictionaryBreakdownAsIncomplete() throws {
