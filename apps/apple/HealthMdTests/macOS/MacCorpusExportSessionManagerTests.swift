@@ -792,7 +792,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             return XCTFail("Expected summary-only connected range result")
         }
         XCTAssertEqual(result.status, .success)
-        XCTAssertEqual(result.totalFilesWritten, 1)
+        XCTAssertEqual(result.totalFilesWritten, 2)
         XCTAssertEqual(result.completedDates, [requestedDate])
         XCTAssertNil(fileSystem.files[
             vaultRoot.appendingPathComponent("Health/2026-02-10.json").path
@@ -896,7 +896,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         }
         XCTAssertEqual(rejectingPlanner.callCount, 0, "resume must not invoke either renderer")
         XCTAssertEqual(fileSystem.writeCounts[dictionaryPath], 1, "exact uncertain write is adopted")
-        XCTAssertEqual(result.totalFilesWritten, 2)
+        XCTAssertEqual(result.totalFilesWritten, 3)
         XCTAssertEqual(result.completedDates, [interrupted.requestedDate])
         XCTAssertEqual(acknowledgement.completedDates, [interrupted.requestedDate])
 

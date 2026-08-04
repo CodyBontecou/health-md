@@ -1043,7 +1043,12 @@ class SchedulingManager: ObservableObject {
         let normalizedDates = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
         guard let startDate = normalizedDates.first,
               let endDate = normalizedDates.last else {
-            return ExportOrchestrator.ExportResult(successCount: 0, totalCount: 0, failedDateDetails: [])
+            return ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: 0,
+                failedDateDetails: [],
+                isFileCategoryBreakdownComplete: true
+            )
         }
 
         guard let syncService = scheduledSyncService else {
@@ -1362,11 +1367,12 @@ class SchedulingManager: ObservableObject {
             context.continuation.resume(returning: scheduledFailureResult(
                 dates: context.requestedDates,
                 reason: .unknown,
-                message: "The Mac returned inconsistent completion dates or counters."
+                message: "The Mac returned inconsistent completion dates or counters.",
+                isFileCategoryBreakdownComplete: false
             ))
             return true
         }
-        context.continuation.resume(returning: scheduledMacExportResult(from: payload, settings: context.settings))
+        context.continuation.resume(returning: scheduledMacExportResult(from: payload))
         return true
     }
 
@@ -1396,9 +1402,7 @@ class SchedulingManager: ObservableObject {
             return false
         }
 
-        let settings = request.settingsSnapshot?.makeAdvancedExportSettings()
-            ?? AdvancedExportSettings()
-        let result = scheduledMacExportResult(from: payload, settings: settings)
+        let result = scheduledMacExportResult(from: payload)
         recordScheduledExportQuotaUseIfNeeded(for: result, jobID: request.id)
 
         let range = scheduledExportHistoryRange(for: request)
@@ -1409,7 +1413,8 @@ class SchedulingManager: ObservableObject {
             dateRangeStart: range.start,
             dateRangeEnd: range.end,
             fallbackDaysToExport: range.totalCount,
-            scheduledFireDate: request.scheduledFireDate ?? now()
+            scheduledFireDate: request.scheduledFireDate ?? now(),
+            pendingRecoveryDayCount: request.dates.count
         )
         return true
     }
@@ -1461,7 +1466,8 @@ class SchedulingManager: ObservableObject {
             context.continuation.resume(returning: scheduledFailureResult(
                 dates: context.requestedDates,
                 reason: .unknown,
-                message: "Scheduled export paused and will resume when the same Mac reconnects."
+                message: "Scheduled export paused and will resume when the same Mac reconnects.",
+                isFileCategoryBreakdownComplete: false
             ))
             return
         }
@@ -1491,7 +1497,8 @@ class SchedulingManager: ObservableObject {
         context.continuation.resume(returning: scheduledFailureResult(
             dates: context.requestedDates,
             reason: .unknown,
-            message: "Timed out waiting for the Mac to finish the scheduled export."
+            message: "Timed out waiting for the Mac to finish the scheduled export.",
+            isFileCategoryBreakdownComplete: false
         ))
     }
 
@@ -1526,29 +1533,9 @@ class SchedulingManager: ObservableObject {
     }
 
     private func scheduledMacExportResult(
-        from payload: MacExportResultPayload,
-        settings: AdvancedExportSettings
+        from payload: MacExportResultPayload
     ) -> ExportOrchestrator.ExportResult {
-        let externalRecordFileCount = payload.externalRecordFileCount
-        let derivedFileCount = max(payload.totalFilesWritten - (payload.successCount * payload.formatsPerDate) - externalRecordFileCount, 0)
-        let archiveCount = settings.archiveModeEnabled && payload.successCount > 0
-            ? min(derivedFileCount, 1)
-            : 0
-        let rollupFileCount = max(derivedFileCount - archiveCount, 0)
-
-        return ExportOrchestrator.ExportResult(
-            successCount: payload.successCount,
-            totalCount: payload.totalCount,
-            failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: payload.formatsPerDate,
-            rollupFileCount: rollupFileCount,
-            archiveCount: archiveCount,
-            externalRecordFileCount: externalRecordFileCount,
-            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
-            dailyNoteSkipCount: payload.dailyNoteSkipCount,
-            wasCancelled: payload.status == .cancelled,
-            completedDates: payload.completedDates
-        )
+        ExportOrchestrator.ExportResult(macExportPayload: payload)
     }
 
     private func scheduledMacFailureResult(
@@ -1579,7 +1566,8 @@ class SchedulingManager: ObservableObject {
         dates: [Date],
         reason: ExportFailureReason,
         message: String,
-        formatsPerDate: Int = 0
+        formatsPerDate: Int = 0,
+        isFileCategoryBreakdownComplete: Bool = true
     ) -> ExportOrchestrator.ExportResult {
         let failedDates = dates.isEmpty ? [Date()] : dates
         return ExportOrchestrator.ExportResult(
@@ -1588,7 +1576,8 @@ class SchedulingManager: ObservableObject {
             failedDateDetails: failedDates.map {
                 FailedDateDetail(date: $0, reason: reason, errorDetails: message)
             },
-            formatsPerDate: formatsPerDate
+            formatsPerDate: formatsPerDate,
+            isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
         )
     }
 
@@ -1931,7 +1920,8 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: reason) },
-                formatsPerDate: advancedSettings.looseFormatsPerDate
+                formatsPerDate: advancedSettings.looseFormatsPerDate,
+                isFileCategoryBreakdownComplete: true
             )
         }
 
@@ -1940,7 +1930,8 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .accessDenied) },
-                formatsPerDate: advancedSettings.looseFormatsPerDate
+                formatsPerDate: advancedSettings.looseFormatsPerDate,
+                isFileCategoryBreakdownComplete: true
             )
         }
 
@@ -2042,7 +2033,8 @@ class SchedulingManager: ObservableObject {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: 0,
-                failedDateDetails: []
+                failedDateDetails: [],
+                isFileCategoryBreakdownComplete: true
             )
         }
 
@@ -2070,7 +2062,8 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: reason) },
-                formatsPerDate: advancedSettings.looseFormatsPerDate
+                formatsPerDate: advancedSettings.looseFormatsPerDate,
+                isFileCategoryBreakdownComplete: true
             )
         }
 
@@ -2083,7 +2076,8 @@ class SchedulingManager: ObservableObject {
                 successCount: 0,
                 totalCount: dates.count,
                 failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .accessDenied) },
-                formatsPerDate: advancedSettings.looseFormatsPerDate
+                formatsPerDate: advancedSettings.looseFormatsPerDate,
+                isFileCategoryBreakdownComplete: true
             )
         }
 
@@ -2237,7 +2231,8 @@ class SchedulingManager: ObservableObject {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         fallbackDaysToExport: Int,
-        scheduledFireDate: Date
+        scheduledFireDate: Date,
+        pendingRecoveryDayCount: Int = 0
     ) async {
         let completion = await completePendingScheduledExport(pendingRequest, result: result)
         let targetLabel = scheduledTargetLabel(for: target)
@@ -2288,6 +2283,7 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: dateRangeEnd,
                 targetLabel: targetLabel,
                 exportTarget: target,
+                pendingRecoveryDayCount: pendingRecoveryDayCount,
                 appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
             )
         } else if result.totalCount > 0 {
@@ -2311,6 +2307,7 @@ class SchedulingManager: ObservableObject {
                     dateRangeEnd: dateRangeEnd,
                     targetLabel: targetLabel,
                     exportTarget: target,
+                    pendingRecoveryDayCount: pendingRecoveryDayCount,
                     appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
                 )
             }

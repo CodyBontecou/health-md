@@ -666,6 +666,51 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertFalse(entry.isPendingRecovery)
     }
 
+    func testSuccessfulScheduledAPIHistoryRecordsZeroGeneratedFiles() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .daily,
+            preferredHour: 8,
+            target: .apiEndpoint,
+            lookbackDays: 1,
+            enabledAt: date(year: 2026, month: 5, day: 17, hour: 8)
+        )
+        let manager = SchedulingManager(
+            pendingExportStore: TestPendingExportStore(),
+            exportNotificationScheduler: InspectableExportNotificationScheduler(),
+            initialSchedule: schedule,
+            persistScheduleChanges: false,
+            systemSideEffectsEnabled: false,
+            scheduledTargetExportRunner: { dates, target in
+                XCTAssertEqual(target, .apiEndpoint)
+                return ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: [],
+                    formatsPerDate: 2,
+                    externalRecordPayloadCount: 2,
+                    isFileCategoryBreakdownComplete: true,
+                    completedDates: dates
+                )
+            },
+            scheduledExportQuotaAccess: { _ in true },
+            scheduledExportQuotaRecorder: { _ in },
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
+        )
+
+        await manager.performSilentPushExport(fireDate: fireDate)
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(entry.exportTarget, .apiEndpoint)
+        XCTAssertEqual(entry.fileCount, 0)
+        XCTAssertEqual(entry.outputBreakdown.generatedFileCount, 0)
+        XCTAssertTrue(entry.outputBreakdown.isFileCategoryBreakdownComplete)
+    }
+
     func testSilentPushScheduledExportUsesScheduleTargetAndPersistsItWhenDeviceLocked() async throws {
         let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
         let store = TestPendingExportStore()
@@ -800,9 +845,14 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
     func testRecoveredConnectedMacCompletionConsumesQuotaOnceAndClearsPendingRequest() async throws {
         let exportDate = date(year: 2026, month: 5, day: 17)
+        let recoveredDates = [
+            date(year: 2026, month: 5, day: 15),
+            date(year: 2026, month: 5, day: 16),
+            exportDate
+        ]
         let request = pendingRequest(
             id: "14141414-1414-1414-1414-141414141414",
-            dates: [exportDate],
+            dates: recoveredDates,
             source: .scheduled,
             exportTarget: .connectedMac
         )
@@ -829,15 +879,15 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         let payload = MacExportResultPayload(
             jobID: request.id,
             status: .success,
-            successCount: 1,
-            totalCount: 1,
+            successCount: 3,
+            totalCount: 3,
             formatsPerDate: 1,
-            totalFilesWritten: 1,
+            totalFilesWritten: 4,
             externalRecordFileCount: 0,
             dailyNoteUpdateCount: 0,
             dailyNoteSkipCount: 0,
             failedDateDetails: [],
-            completedDates: [exportDate],
+            completedDates: recoveredDates,
             destinationDisplayName: "Mac Vault",
             destinationPathForDisplay: nil,
             completedAt: date(year: 2026, month: 5, day: 18, hour: 9)
@@ -849,6 +899,9 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [])
         XCTAssertEqual(recordedQuotaJobIDs, [request.id])
         XCTAssertEqual(manager.schedule.lastExportDate, request.scheduledFireDate)
+        let historyEntry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(historyEntry.pendingRecoveryDayCount, 3)
+        XCTAssertEqual(historyEntry.pendingRecoveryBadgeDescription, "Pending recovery · 3 data days")
 
         let replayHandled = await manager.completeRecoveredScheduledMacExport(with: payload)
         XCTAssertFalse(replayHandled)

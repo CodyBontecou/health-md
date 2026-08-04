@@ -57,7 +57,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
 
     init(
         store: ConnectedCorpusOutboundStore,
-        cliActivityTracker: CLIExportActivityTracker = .shared,
+        cliActivityTracker: CLIExportActivityTracker? = nil,
         transportProvider: @escaping @MainActor (SyncService) -> ConnectedCorpusSender.Transport = {
             .syncService($0)
         },
@@ -66,7 +66,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         }
     ) {
         self.store = store
-        self.cliActivityTracker = cliActivityTracker
+        self.cliActivityTracker = cliActivityTracker ?? .shared
         self.transportProvider = transportProvider
         self.connectedPeerProvider = connectedPeerProvider
         self.activeSnapshot = nil
@@ -316,23 +316,18 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return }
-        let result = ExportOrchestrator.ExportResult(
-            successCount: payload.successCount,
-            totalCount: payload.totalCount,
-            failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: payload.formatsPerDate,
-            externalRecordFileCount: payload.externalRecordFileCount,
-            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
-            dailyNoteSkipCount: payload.dailyNoteSkipCount,
-            wasCancelled: payload.status == .cancelled
-        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
         ExportOrchestrator.recordResult(
             result,
             source: journal.origin == .scheduledIPhone ? .scheduled : .macAgent,
             dateRangeStart: journal.exportManifest.dateRangeStart,
             dateRangeEnd: journal.exportManifest.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
+            exportTarget: .connectedMac,
             fileCount: payload.totalFilesWritten,
+            pendingRecoveryDayCount: journal.origin == .scheduledIPhone
+                ? journal.exportManifest.requestedDates.count
+                : 0,
             appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
         )
         if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }

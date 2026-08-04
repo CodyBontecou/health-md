@@ -123,6 +123,7 @@ final class MacExportJobExecutor {
         var retainedExternalDailyRecords: [ExternalDailyRecord] = []
         var totalFilesWritten: Int = 0
         var externalRecordFileCount: Int = 0
+        var dataDictionaryWritten = false
         var dailyNoteUpdateCount: Int = 0
         var dailyNoteSkipCount: Int = 0
         var processedDays: Int = 0
@@ -255,6 +256,7 @@ final class MacExportJobExecutor {
         var successfulRecords: [HealthData] = []
         var totalFilesWritten = 0
         var externalRecordFileCount = 0
+        var dataDictionaryWritten = false
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var processedDays = 0
@@ -348,9 +350,13 @@ final class MacExportJobExecutor {
                     record,
                     settings: settings,
                     healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
+                    writeDataDictionary: !dataDictionaryWritten,
                     operationSurface: dailyExportOperation.surface,
                     frozenSettingsSnapshot: dailyExportOperation.settingsSnapshot
                 )
+                if writeResult.dataDictionaryFileCount > 0 {
+                    dataDictionaryWritten = true
+                }
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                 if settings.dailyNotesOnlyModeEnabled {
@@ -382,7 +388,7 @@ final class MacExportJobExecutor {
                 }
                 successCount += 1
                 successfulRecords.append(record)
-                totalFilesWritten += formatsPerDate
+                totalFilesWritten += writeResult.totalGeneratedFileCount
 
                 let dateKey = Self.displayDate(record.date)
                 var writtenSidecarsForDate = 0
@@ -457,9 +463,13 @@ final class MacExportJobExecutor {
                 let rollupResults = try vaultManager.exportRollupSummaries(
                     from: rollupRecords,
                     settings: settings,
-                    healthSubfolder: job.settingsSnapshot.healthSubfolder
+                    healthSubfolder: job.settingsSnapshot.healthSubfolder,
+                    writeDataDictionary: !dataDictionaryWritten
                 )
-                totalFilesWritten += rollupResults.count
+                if rollupResults.dataDictionaryFileCount > 0 {
+                    dataDictionaryWritten = true
+                }
+                totalFilesWritten += rollupResults.totalGeneratedFileCount
             } catch {
                 let sortedDates = rollupRecords.map(\.date).sorted()
                 failedDateDetails.append(FailedDateDetail(
@@ -730,9 +740,13 @@ final class MacExportJobExecutor {
                         record,
                         settings: settings,
                         healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
+                        writeDataDictionary: !session.dataDictionaryWritten,
                         operationSurface: session.dailyExportOperation.surface,
                         frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )
+                    if writeResult.dataDictionaryFileCount > 0 {
+                        session.dataDictionaryWritten = true
+                    }
                     session.dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     if settings.dailyNotesOnlyModeEnabled {
@@ -764,7 +778,7 @@ final class MacExportJobExecutor {
                     }
                     session.successCount += 1
                     session.successfulRecords.append(record)
-                    session.totalFilesWritten += session.formatsPerDate
+                    session.totalFilesWritten += writeResult.totalGeneratedFileCount
 
                     let stringDateKey = Self.displayDate(record.date)
                     if settings.writesExternalProviderSidecars,
@@ -888,14 +902,18 @@ final class MacExportJobExecutor {
                         record,
                         settings: settings,
                         healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
+                        writeDataDictionary: !session.dataDictionaryWritten,
                         operationSurface: session.dailyExportOperation.surface,
                         frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )
+                    if writeResult.dataDictionaryFileCount > 0 {
+                        session.dataDictionaryWritten = true
+                    }
                     session.dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     session.successCount += 1
                     session.successfulRecords.append(record)
-                    session.totalFilesWritten += session.formatsPerDate
+                    session.totalFilesWritten += writeResult.totalGeneratedFileCount
                     let dateKey = Self.displayDate(record.date)
                     if settings.writesExternalProviderSidecars,
                        let externalRecords = externalRecordsByDate[dateKey],
@@ -925,9 +943,13 @@ final class MacExportJobExecutor {
                 let rollupResults = try vaultManager.exportRollupSummaries(
                     from: rollupRecords,
                     settings: settings,
-                    healthSubfolder: session.start.settingsSnapshot.healthSubfolder
+                    healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
+                    writeDataDictionary: !session.dataDictionaryWritten
                 )
-                session.totalFilesWritten += rollupResults.count
+                if rollupResults.dataDictionaryFileCount > 0 {
+                    session.dataDictionaryWritten = true
+                }
+                session.totalFilesWritten += rollupResults.totalGeneratedFileCount
             } catch {
                 let sortedDates = rollupRecords.map(\.date).sorted()
                 session.failedDateDetails.append(FailedDateDetail(

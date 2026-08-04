@@ -1105,7 +1105,7 @@ final class MacCorpusExportSessionManager {
                     }
                     try ensureFinalizationIsActive(session)
                     session.journal.totalFilesWritten += rangeResult.totalFileCount
-                    if rangeResult.totalFileCount > 0 {
+                    if rangeResult.dataDictionaryFileCount > 0 {
                         session.journal.dataDictionaryWritten = true
                     }
                     if !derivedSettings.summaryOnlyModeEnabled,
@@ -1117,7 +1117,8 @@ final class MacCorpusExportSessionManager {
                     }
                     derived = MacCorpusDerivedOutputResult(
                         rollupFileCount: rangeResult.rollupFileCount,
-                        archiveFileCount: 0
+                        archiveFileCount: 0,
+                        dataDictionaryFileCount: rangeResult.dataDictionaryFileCount
                     )
                 }
             } else {
@@ -1144,8 +1145,12 @@ final class MacCorpusExportSessionManager {
                     }
                 )
                 try ensureFinalizationIsActive(session)
-                session.journal.totalFilesWritten += derived.rollupFileCount + derived.archiveFileCount
-                if derived.rollupFileCount > 0 { session.journal.dataDictionaryWritten = true }
+                session.journal.totalFilesWritten += derived.rollupFileCount
+                    + derived.archiveFileCount
+                    + derived.dataDictionaryFileCount
+                if derived.dataDictionaryFileCount > 0 {
+                    session.journal.dataDictionaryWritten = true
+                }
                 if let archiveWorkDirectoryURL {
                     try? fileManager.removeItem(at: archiveWorkDirectoryURL)
                     let parent = archiveWorkDirectoryURL.deletingLastPathComponent()
@@ -1702,7 +1707,7 @@ final class MacCorpusExportSessionManager {
                             operationSurface: dailyExportOperation.surface,
                             frozenSettingsSnapshot: dailyExportOperation.settingsSnapshot
                         )
-                        if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
+                        if writeResult.dataDictionaryFileCount > 0 {
                             session.journal.dataDictionaryWritten = true
                         }
                         session.journal.dailyNoteUpdateCount =
@@ -1742,8 +1747,8 @@ final class MacCorpusExportSessionManager {
                             }
                         }
 
+                        session.journal.totalFilesWritten += writeResult.totalGeneratedFileCount
                         if !settings.archiveModeEnabled {
-                            session.journal.totalFilesWritten += settings.looseFormatsPerDate
                             session.journal.completedDates.append(payload.sourceDate)
                         }
                         session.journal.successfulRequestedDates.append(payload.sourceDate)
@@ -2171,7 +2176,8 @@ final class MacCorpusExportSessionManager {
         }
         return AppleLooseDailyRangeWriteResult(
             dailyFileCount: completedPlan.dailyFileCount,
-            rollupFileCount: completedPlan.rollupFileCount
+            rollupFileCount: completedPlan.rollupFileCount,
+            dataDictionaryFileCount: completedPlan.dataDictionary == nil ? 0 : 1
         )
     }
 

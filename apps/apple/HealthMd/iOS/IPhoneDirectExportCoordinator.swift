@@ -386,7 +386,8 @@ final class IPhoneDirectExportCoordinator {
                 successCount: successCount,
                 totalCount: current.days.count,
                 failedDateDetails: failedDateDetails,
-                formatsPerDate: 0
+                formatsPerDate: 0,
+                isFileCategoryBreakdownComplete: true
             )
             ExportOrchestrator.recordResult(
                 result,

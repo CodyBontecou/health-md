@@ -607,16 +607,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return true
         }
 
-        let result = ExportOrchestrator.ExportResult(
-            successCount: payload.successCount,
-            totalCount: payload.totalCount,
-            failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: payload.formatsPerDate,
-            externalRecordFileCount: payload.externalRecordFileCount,
-            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
-            dailyNoteSkipCount: payload.dailyNoteSkipCount,
-            wasCancelled: payload.status == .cancelled
-        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
 
         ExportOrchestrator.recordResult(
             result,
@@ -1175,7 +1166,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             successCount: successCount,
             totalCount: totalCount,
             failedDateDetails: [],
-            formatsPerDate: 0
+            formatsPerDate: 0,
+            isFileCategoryBreakdownComplete: true
         )
         ExportOrchestrator.recordResult(
             result,
@@ -1702,7 +1694,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             totalCount: payload.totalDays,
             failedDateDetails: payload.failedDateDetails,
             formatsPerDate: 0,
-            externalRecordFileCount: payload.externalDailyRecords.filter(\.shouldExport).count
+            externalRecordPayloadCount: payload.externalDailyRecords.filter(\.shouldExport).count,
+            isFileCategoryBreakdownComplete: true
         )
         ExportOrchestrator.recordResult(
             result,

@@ -121,7 +121,7 @@ struct ExportHistoryOperationDetails: Codable, Equatable {
 /// Bounded, health-free accounting for one export attempt. Counts describe days and
 /// destination side effects only; filenames and exported health values are never stored.
 struct ExportHistoryOutputBreakdown: Codable, Equatable {
-    static let maximumPersistedCount = 10_000_000
+    nonisolated static let maximumPersistedCount = 10_000_000
 
     let requestedDataDayCount: Int
     let successfulDataDayCount: Int
@@ -189,6 +189,10 @@ struct ExportHistoryOutputBreakdown: Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let hasDictionaryCategory = container.contains(.dataDictionaryFileCount)
+        let decodedCompleteness = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .isFileCategoryBreakdownComplete
+        ) ?? false
         self.init(
             requestedDataDayCount: try container.decodeIfPresent(Int.self, forKey: .requestedDataDayCount) ?? 0,
             successfulDataDayCount: try container.decodeIfPresent(Int.self, forKey: .successfulDataDayCount) ?? 0,
@@ -201,10 +205,7 @@ struct ExportHistoryOutputBreakdown: Codable, Equatable {
             dailyNoteUpdateCount: try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0,
             dailyNoteSkipCount: try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0,
             unclassifiedFileCount: try container.decodeIfPresent(Int.self, forKey: .unclassifiedFileCount) ?? 0,
-            isFileCategoryBreakdownComplete: hasDictionaryCategory && (try container.decodeIfPresent(
-                Bool.self,
-                forKey: .isFileCategoryBreakdownComplete
-            ) ?? false)
+            isFileCategoryBreakdownComplete: hasDictionaryCategory && decodedCompleteness
         )
     }
 
@@ -269,7 +270,7 @@ struct ExportHistoryOutputBreakdown: Codable, Equatable {
         )
     }
 
-    static func boundedCount(_ value: Int) -> Int {
+    nonisolated static func boundedCount(_ value: Int) -> Int {
         min(max(value, 0), maximumPersistedCount)
     }
 }
@@ -333,32 +334,62 @@ struct ExportHistoryEntry: Codable, Identifiable {
     ) {
         self.id = id
         self.timestamp = timestamp
+        let normalizedTotalCount = ExportHistoryOutputBreakdown.boundedCount(totalCount)
+        let normalizedSuccessCount = min(
+            ExportHistoryOutputBreakdown.boundedCount(successCount),
+            normalizedTotalCount
+        )
+        let normalizedDailyNoteUpdateCount = min(
+            ExportHistoryOutputBreakdown.boundedCount(dailyNoteUpdateCount),
+            normalizedTotalCount
+        )
+        let normalizedDailyNoteSkipCount = min(
+            ExportHistoryOutputBreakdown.boundedCount(dailyNoteSkipCount),
+            normalizedTotalCount - normalizedDailyNoteUpdateCount
+        )
         self.source = source
         self.success = success
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
-        self.successCount = successCount
-        self.totalCount = totalCount
+        self.successCount = normalizedSuccessCount
+        self.totalCount = normalizedTotalCount
         self.failureReason = failureReason
         self.failedDateDetails = failedDateDetails
         self.targetLabel = targetLabel
         self.exportTarget = exportTarget
-        let normalizedFileCount = fileCount.map(Self.boundedHistoryCount)
+        let normalizedFileCount = fileCount.map(ExportHistoryOutputBreakdown.boundedCount)
         let initialBreakdown = outputBreakdown ?? .legacyFallback(
-            requestedDataDayCount: totalCount,
-            successfulDataDayCount: successCount,
+            requestedDataDayCount: normalizedTotalCount,
+            successfulDataDayCount: normalizedSuccessCount,
             fileCount: normalizedFileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount
         )
-        let normalizedBreakdown = normalizedFileCount.map {
+        let fileReconciledBreakdown = normalizedFileCount.map {
             initialBreakdown.reconciled(toAuthoritativeFileCount: $0)
         } ?? initialBreakdown
+        let normalizedBreakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: normalizedTotalCount,
+            successfulDataDayCount: normalizedSuccessCount,
+            looseAggregateFileCount: fileReconciledBreakdown.looseAggregateFileCount,
+            individualEntryFileCount: fileReconciledBreakdown.individualEntryFileCount,
+            dataDictionaryFileCount: fileReconciledBreakdown.dataDictionaryFileCount,
+            zipArchiveFileCount: fileReconciledBreakdown.zipArchiveFileCount,
+            rollupFileCount: fileReconciledBreakdown.rollupFileCount,
+            providerSidecarFileCount: fileReconciledBreakdown.providerSidecarFileCount,
+            dailyNoteUpdateCount: normalizedDailyNoteUpdateCount,
+            dailyNoteSkipCount: normalizedDailyNoteSkipCount,
+            unclassifiedFileCount: fileReconciledBreakdown.unclassifiedFileCount,
+            isFileCategoryBreakdownComplete: fileReconciledBreakdown.isFileCategoryBreakdownComplete
+        )
         self.fileCount = normalizedFileCount.map { _ in normalizedBreakdown.generatedFileCount }
         self.outputBreakdown = normalizedBreakdown
-        self.pendingRecoveryDayCount = Self.boundedHistoryCount(pendingRecoveryDayCount)
-        self.dailyNoteUpdateCount = Self.boundedHistoryCount(dailyNoteUpdateCount)
-        self.dailyNoteSkipCount = Self.boundedHistoryCount(dailyNoteSkipCount)
+        self.pendingRecoveryDayCount = min(
+            ExportHistoryOutputBreakdown.boundedCount(pendingRecoveryDayCount),
+            normalizedTotalCount
+        )
+        self.dailyNoteUpdateCount = normalizedDailyNoteUpdateCount
+        self.dailyNoteSkipCount = normalizedDailyNoteSkipCount
         self.partialFailures = partialFailures
         self.appleExportEnginePin = appleExportEnginePin
         self.operationDetails = operationDetails
@@ -546,6 +577,12 @@ struct ExportHistoryEntry: Codable, Identifiable {
             : String(localized: "\(pendingRecoveryDayCount) pending recovery data days", comment: "Export history pending recovery count when plural")
     }
 
+    var pendingRecoveryBadgeDescription: String {
+        pendingRecoveryDayCount == 1
+            ? String(localized: "Pending recovery · 1 data day", comment: "Export history pending recovery badge when singular")
+            : String(localized: "Pending recovery · \(pendingRecoveryDayCount) data days", comment: "Export history pending recovery badge when plural")
+    }
+
     var pendingRecoveryDescription: String? {
         guard isPendingRecovery else { return nil }
         return pendingRecoveryDayCount == 1
@@ -568,110 +605,218 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     var resultCountDescription: String {
         if isDailyNoteOnlyResult {
-            let notes = dailyNoteUpdateCount == 1
-                ? String(localized: "1 note", comment: "Export history updated-note count when singular")
-                : String(localized: "\(dailyNoteUpdateCount) notes", comment: "Export history updated-note count when plural or zero")
-            return String(localized: "\(notes) (\(dataDayCountDescription))", comment: "Export history daily-note result and data-day coverage")
+            switch (dailyNoteUpdateCount == 1, totalCount == 1) {
+            case (true, true):
+                return String(localized: "1 note (\(successCount) of 1 data day)", comment: "Export history daily-note result when one note and one data day were requested")
+            case (true, false):
+                return String(localized: "1 note (\(successCount) of \(totalCount) data days)", comment: "Export history daily-note result when one note and multiple data days were requested")
+            case (false, true):
+                return String(localized: "\(dailyNoteUpdateCount) notes (\(successCount) of 1 data day)", comment: "Export history daily-note result when multiple notes and one data day were requested")
+            case (false, false):
+                return String(localized: "\(dailyNoteUpdateCount) notes (\(successCount) of \(totalCount) data days)", comment: "Export history daily-note result when multiple notes and data days were requested")
+            }
         }
         if isCLIRawDelivery || isAPIEndpointDelivery {
             return String(localized: "\(successCount) of \(totalCount)", comment: "Export history delivered-day fraction")
         }
-        return String(localized: "\(generatedFileCountDescription) from \(dataDayCountDescription)", comment: "Export history generated-file total and data-day coverage")
+        switch (generatedFileCountForDisplay == 1, totalCount == 1) {
+        case (true, true):
+            return String(localized: "1 generated file from \(successCount) of 1 data day", comment: "Export history result with one generated file and one requested data day")
+        case (true, false):
+            return String(localized: "1 generated file from \(successCount) of \(totalCount) data days", comment: "Export history result with one generated file and multiple requested data days")
+        case (false, true):
+            return String(localized: "\(generatedFileCountForDisplay) generated files from \(successCount) of 1 data day", comment: "Export history result with multiple generated files and one requested data day")
+        case (false, false):
+            return String(localized: "\(generatedFileCountForDisplay) generated files from \(successCount) of \(totalCount) data days", comment: "Export history result with multiple generated files and requested data days")
+        }
     }
 
     var resultCountAccessibilityDescription: String {
         if isDailyNoteOnlyResult {
-            if dailyNoteUpdateCount == 1 {
-                return String(localized: "1 daily note updated across \(dataDayCountDescription)", comment: "Accessible daily-note export count when singular")
+            switch (dailyNoteUpdateCount == 1, totalCount == 1) {
+            case (true, true):
+                return String(localized: "1 daily note updated across \(successCount) of 1 data day", comment: "Accessible daily-note export count with one note and one requested data day")
+            case (true, false):
+                return String(localized: "1 daily note updated across \(successCount) of \(totalCount) data days", comment: "Accessible daily-note export count with one note and multiple requested data days")
+            case (false, true):
+                return String(localized: "\(dailyNoteUpdateCount) daily notes updated across \(successCount) of 1 data day", comment: "Accessible daily-note export count with multiple notes and one requested data day")
+            case (false, false):
+                return String(localized: "\(dailyNoteUpdateCount) daily notes updated across \(successCount) of \(totalCount) data days", comment: "Accessible daily-note export count with multiple notes and requested data days")
             }
-            return String(localized: "\(dailyNoteUpdateCount) daily notes updated across \(dataDayCountDescription)", comment: "Accessible daily-note export count when plural or zero")
         }
         if isCLIRawDelivery {
-            return String(localized: "\(dataDayCountDescription) sent to the CLI", comment: "Accessible CLI delivery data-day count")
+            return totalCount == 1
+                ? String(localized: "\(successCount) of 1 data day sent to the CLI", comment: "Accessible CLI delivery count when one data day was requested")
+                : String(localized: "\(successCount) of \(totalCount) data days sent to the CLI", comment: "Accessible CLI delivery count when multiple data days were requested")
         }
         if isAPIEndpointDelivery {
-            return String(localized: "\(dataDayCountDescription) uploaded", comment: "Accessible API delivery data-day count")
+            return totalCount == 1
+                ? String(localized: "\(successCount) of 1 data day uploaded", comment: "Accessible API delivery count when one data day was requested")
+                : String(localized: "\(successCount) of \(totalCount) data days uploaded", comment: "Accessible API delivery count when multiple data days were requested")
         }
-        return String(localized: "\(generatedFileCountDescription) exported from \(dataDayCountDescription)", comment: "Accessible generated-file total and data-day coverage")
+        switch (generatedFileCountForDisplay == 1, totalCount == 1) {
+        case (true, true):
+            return String(localized: "1 generated file exported from \(successCount) of 1 data day", comment: "Accessible export count with one file and one requested data day")
+        case (true, false):
+            return String(localized: "1 generated file exported from \(successCount) of \(totalCount) data days", comment: "Accessible export count with one file and multiple requested data days")
+        case (false, true):
+            return String(localized: "\(generatedFileCountForDisplay) generated files exported from \(successCount) of 1 data day", comment: "Accessible export count with multiple files and one requested data day")
+        case (false, false):
+            return String(localized: "\(generatedFileCountForDisplay) generated files exported from \(successCount) of \(totalCount) data days", comment: "Accessible export count with multiple files and requested data days")
+        }
     }
 
     var summaryAccessibilityDescription: String {
         guard let pendingRecoveryDescription else { return summaryDescription }
-        return String(localized: "\(summaryDescription). \(pendingRecoveryDescription)", comment: "Accessible export history summary with pending recovery context")
+        return summaryDescription + " " + pendingRecoveryDescription
     }
 
-    /// Summary description for display
+    /// Summary description for display.
     var summaryDescription: String {
         if isDailyNoteOnlyResult {
-            if dailyNoteSkipCount == 0 {
-                return dailyNoteUpdateCount == 1
-                    ? String(localized: "Updated 1 daily note", comment: "Daily-note-only export success summary when singular")
-                    : String(localized: "Updated \(dailyNoteUpdateCount) daily notes", comment: "Daily-note-only export success summary when plural or zero")
+            return dailyNoteSummaryDescription
+        }
+        if isCLIRawDelivery {
+            if isFullSuccess {
+                return successCount == 1
+                    ? String(localized: "Sent 1 data day to CLI", comment: "CLI raw export success summary when singular")
+                    : String(localized: "Sent \(successCount) data days to CLI", comment: "CLI raw export success summary when plural")
             }
-            if dailyNoteUpdateCount == 0 {
-                return dailyNoteSkipCount == 1
-                    ? String(localized: "Skipped 1 missing daily note", comment: "Daily-note-only skip summary when singular")
-                    : String(localized: "Skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only skip summary when plural")
+            if isPartialSuccess {
+                return totalCount == 1
+                    ? String(localized: "Partial: sent \(successCount) of 1 data day to CLI", comment: "Partial CLI raw export summary when one data day was requested")
+                    : String(localized: "Partial: sent \(successCount) of \(totalCount) data days to CLI", comment: "Partial CLI raw export summary when multiple data days were requested")
             }
-            switch (dailyNoteUpdateCount == 1, dailyNoteSkipCount == 1) {
-            case (true, true):
-                return String(localized: "Updated 1 daily note and skipped 1 missing daily note", comment: "Daily-note-only mixed summary with singular updated and skipped counts")
-            case (true, false):
-                return String(localized: "Updated 1 daily note and skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only mixed summary with one update and multiple skips")
-            case (false, true):
-                return String(localized: "Updated \(dailyNoteUpdateCount) daily notes and skipped 1 missing daily note", comment: "Daily-note-only mixed summary with multiple updates and one skip")
-            case (false, false):
-                return String(localized: "Updated \(dailyNoteUpdateCount) daily notes and skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only mixed summary with multiple updated and skipped counts")
+        }
+        if isAPIEndpointDelivery {
+            if isFullSuccess {
+                return successCount == 1
+                    ? String(localized: "Uploaded 1 data day to API", comment: "API export success summary when singular")
+                    : String(localized: "Uploaded \(successCount) data days to API", comment: "API export success summary when plural")
             }
-        } else if isCLIRawDelivery && isFullSuccess {
-            return successCount == 1
-                ? String(localized: "Sent 1 data day to CLI", comment: "CLI raw export success summary when singular")
-                : String(localized: "Sent \(successCount) data days to CLI", comment: "CLI raw export success summary when plural")
-        } else if isCLIRawDelivery && isPartialSuccess {
-            return String(localized: "Partial: sent \(dataDayCountDescription) to CLI", comment: "Partial CLI raw export summary")
-        } else if isAPIEndpointDelivery && isFullSuccess {
-            return successCount == 1
-                ? String(localized: "Uploaded 1 data day to API", comment: "API export success summary when singular")
-                : String(localized: "Uploaded \(successCount) data days to API", comment: "API export success summary when plural")
-        } else if isAPIEndpointDelivery && isPartialSuccess {
-            if partialFailures.count == 1 {
-                return String(localized: "Partial: uploaded \(dataDayCountDescription) with 1 metric warning", comment: "Partial API export summary with one metric warning")
+            if isPartialSuccess {
+                return partialAPISummaryDescription
             }
-            if partialFailures.count > 1 {
-                return String(localized: "Partial: uploaded \(dataDayCountDescription) with \(partialFailures.count) metric warnings", comment: "Partial API export summary with multiple metric warnings")
-            }
-            return String(localized: "Partial: uploaded \(dataDayCountDescription)", comment: "Partial API export summary without metric warnings")
-        } else if isFullSuccess {
-            return String(localized: "Exported \(plainFileCountDescription) from \(successfulDataDayDescription)", comment: "Export success summary distinguishing files from data days")
-        } else if isPartialSuccess {
-            if partialFailures.count == 1 {
-                return String(localized: "Partial: \(plainFileCountDescription) from \(dataDayCountDescription), 1 metric warning", comment: "Partial export summary with one metric warning")
-            }
-            if partialFailures.count > 1 {
-                return String(localized: "Partial: \(plainFileCountDescription) from \(dataDayCountDescription), \(partialFailures.count) metric warnings", comment: "Partial export summary with multiple metric warnings")
-            }
-            return String(localized: "Partial: \(plainFileCountDescription) from \(dataDayCountDescription)", comment: "Partial export summary without metric warnings")
-        } else {
-            let reason = failureReasonForDisplay ?? .unknown
-            return String(localized: "Export failed: \(reason.shortDescription)", comment: "Export failure summary with explicit reason")
+        }
+        if isFullSuccess {
+            return fullGeneratedFileSummaryDescription
+        }
+        if isPartialSuccess {
+            return partialGeneratedFileSummaryDescription
+        }
+        return failureSummaryDescription
+    }
+
+    private var dailyNoteSummaryDescription: String {
+        if dailyNoteSkipCount == 0 {
+            return dailyNoteUpdateCount == 1
+                ? String(localized: "Updated 1 daily note", comment: "Daily-note-only export success summary when singular")
+                : String(localized: "Updated \(dailyNoteUpdateCount) daily notes", comment: "Daily-note-only export success summary when plural or zero")
+        }
+        if dailyNoteUpdateCount == 0 {
+            return dailyNoteSkipCount == 1
+                ? String(localized: "Skipped 1 missing daily note", comment: "Daily-note-only skip summary when singular")
+                : String(localized: "Skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only skip summary when plural")
+        }
+        switch (dailyNoteUpdateCount == 1, dailyNoteSkipCount == 1) {
+        case (true, true):
+            return String(localized: "Updated 1 daily note and skipped 1 missing daily note", comment: "Daily-note-only mixed summary with singular updated and skipped counts")
+        case (true, false):
+            return String(localized: "Updated 1 daily note and skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only mixed summary with one update and multiple skips")
+        case (false, true):
+            return String(localized: "Updated \(dailyNoteUpdateCount) daily notes and skipped 1 missing daily note", comment: "Daily-note-only mixed summary with multiple updates and one skip")
+        case (false, false):
+            return String(localized: "Updated \(dailyNoteUpdateCount) daily notes and skipped \(dailyNoteSkipCount) missing daily notes", comment: "Daily-note-only mixed summary with multiple updated and skipped counts")
         }
     }
 
-    private var plainFileCountDescription: String {
-        generatedFileCountForDisplay == 1
-            ? String(localized: "1 file", comment: "Export history file count when singular")
-            : String(localized: "\(generatedFileCountForDisplay) files", comment: "Export history file count when plural or zero")
+    private var partialAPISummaryDescription: String {
+        if partialFailures.count == 1 {
+            return totalCount == 1
+                ? String(localized: "Partial: uploaded \(successCount) of 1 data day with 1 metric warning", comment: "Partial API export summary with one requested data day and one warning")
+                : String(localized: "Partial: uploaded \(successCount) of \(totalCount) data days with 1 metric warning", comment: "Partial API export summary with requested data days and one warning")
+        }
+        if partialFailures.count > 1 {
+            return totalCount == 1
+                ? String(localized: "Partial: uploaded \(successCount) of 1 data day with \(partialFailures.count) metric warnings", comment: "Partial API export summary with one requested data day and multiple warnings")
+                : String(localized: "Partial: uploaded \(successCount) of \(totalCount) data days with \(partialFailures.count) metric warnings", comment: "Partial API export summary with requested data days and multiple warnings")
+        }
+        return totalCount == 1
+            ? String(localized: "Partial: uploaded \(successCount) of 1 data day", comment: "Partial API export summary with one requested data day and no metric warnings")
+            : String(localized: "Partial: uploaded \(successCount) of \(totalCount) data days", comment: "Partial API export summary with requested data days and no metric warnings")
     }
 
-    private var successfulDataDayDescription: String {
-        successCount == 1
-            ? String(localized: "1 data day", comment: "Export history successful data-day count when singular")
-            : String(localized: "\(successCount) data days", comment: "Export history successful data-day count when plural or zero")
+    private var fullGeneratedFileSummaryDescription: String {
+        switch (generatedFileCountForDisplay == 1, successCount == 1) {
+        case (true, true):
+            return String(localized: "Exported 1 file from 1 data day", comment: "Export success summary with one file and one successful data day")
+        case (true, false):
+            return String(localized: "Exported 1 file from \(successCount) data days", comment: "Export success summary with one file and multiple successful data days")
+        case (false, true):
+            return String(localized: "Exported \(generatedFileCountForDisplay) files from 1 data day", comment: "Export success summary with multiple files and one successful data day")
+        case (false, false):
+            return String(localized: "Exported \(generatedFileCountForDisplay) files from \(successCount) data days", comment: "Export success summary with multiple files and successful data days")
+        }
     }
 
-    private static func boundedHistoryCount(_ value: Int) -> Int {
-        ExportHistoryOutputBreakdown.boundedCount(value)
+    private var partialGeneratedFileSummaryDescription: String {
+        if partialFailures.count == 1 {
+            switch (generatedFileCountForDisplay == 1, totalCount == 1) {
+            case (true, true):
+                return String(localized: "Partial: 1 file from \(successCount) of 1 data day, 1 metric warning", comment: "Partial export summary with one file, one requested data day, and one warning")
+            case (true, false):
+                return String(localized: "Partial: 1 file from \(successCount) of \(totalCount) data days, 1 metric warning", comment: "Partial export summary with one file, requested data days, and one warning")
+            case (false, true):
+                return String(localized: "Partial: \(generatedFileCountForDisplay) files from \(successCount) of 1 data day, 1 metric warning", comment: "Partial export summary with multiple files, one requested data day, and one warning")
+            case (false, false):
+                return String(localized: "Partial: \(generatedFileCountForDisplay) files from \(successCount) of \(totalCount) data days, 1 metric warning", comment: "Partial export summary with multiple files, requested data days, and one warning")
+            }
+        }
+        if partialFailures.count > 1 {
+            switch (generatedFileCountForDisplay == 1, totalCount == 1) {
+            case (true, true):
+                return String(localized: "Partial: 1 file from \(successCount) of 1 data day, \(partialFailures.count) metric warnings", comment: "Partial export summary with one file, one requested data day, and multiple warnings")
+            case (true, false):
+                return String(localized: "Partial: 1 file from \(successCount) of \(totalCount) data days, \(partialFailures.count) metric warnings", comment: "Partial export summary with one file, requested data days, and multiple warnings")
+            case (false, true):
+                return String(localized: "Partial: \(generatedFileCountForDisplay) files from \(successCount) of 1 data day, \(partialFailures.count) metric warnings", comment: "Partial export summary with multiple files, one requested data day, and multiple warnings")
+            case (false, false):
+                return String(localized: "Partial: \(generatedFileCountForDisplay) files from \(successCount) of \(totalCount) data days, \(partialFailures.count) metric warnings", comment: "Partial export summary with multiple files, requested data days, and multiple warnings")
+            }
+        }
+        switch (generatedFileCountForDisplay == 1, totalCount == 1) {
+        case (true, true):
+            return String(localized: "Partial: 1 file from \(successCount) of 1 data day", comment: "Partial export summary with one file and one requested data day")
+        case (true, false):
+            return String(localized: "Partial: 1 file from \(successCount) of \(totalCount) data days", comment: "Partial export summary with one file and requested data days")
+        case (false, true):
+            return String(localized: "Partial: \(generatedFileCountForDisplay) files from \(successCount) of 1 data day", comment: "Partial export summary with multiple files and one requested data day")
+        case (false, false):
+            return String(localized: "Partial: \(generatedFileCountForDisplay) files from \(successCount) of \(totalCount) data days", comment: "Partial export summary with multiple files and requested data days")
+        }
     }
+
+    private var failureSummaryDescription: String {
+        switch failureReasonForDisplay ?? .unknown {
+        case .noVaultSelected:
+            return String(localized: "Export failed: No vault selected", comment: "Export failure summary when no vault is selected")
+        case .accessDenied:
+            return String(localized: "Export failed: Vault access denied", comment: "Export failure summary when vault access is denied")
+        case .noHealthData:
+            return String(localized: "Export failed: No health data", comment: "Export failure summary when no health data is available")
+        case .healthKitError:
+            return String(localized: "Export failed: HealthKit error", comment: "Export failure summary for a HealthKit error")
+        case .deviceLocked:
+            return String(localized: "Export failed: Device locked", comment: "Export failure summary when the device is locked")
+        case .fileWriteError:
+            return String(localized: "Export failed: File write failed", comment: "Export failure summary for a file write error")
+        case .backgroundTaskExpired:
+            return String(localized: "Export failed: Task timed out", comment: "Export failure summary when a background task expires")
+        case .unknown:
+            return String(localized: "Export failed: Unknown error", comment: "Export failure summary for an unknown error")
+        }
+    }
+
 }
 
 /// The source of the export (manual, scheduled, Shortcut, or Mac-agent)

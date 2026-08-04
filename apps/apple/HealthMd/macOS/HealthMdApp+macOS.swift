@@ -1324,16 +1324,7 @@ struct HealthMdApp: App {
     }
 
     private func recordMacAgentHistory(for job: MacExportJob, result: MacExportResultPayload) {
-        let exportResult = ExportOrchestrator.ExportResult(
-            successCount: result.successCount,
-            totalCount: result.totalCount,
-            failedDateDetails: result.failedDateDetails,
-            formatsPerDate: result.formatsPerDate,
-            externalRecordFileCount: result.externalRecordFileCount,
-            dailyNoteUpdateCount: result.dailyNoteUpdateCount,
-            dailyNoteSkipCount: result.dailyNoteSkipCount,
-            wasCancelled: result.status == .cancelled
-        )
+        let exportResult = ExportOrchestrator.ExportResult(macExportPayload: result)
         ExportOrchestrator.recordResult(
             exportResult,
             source: .macAgent,

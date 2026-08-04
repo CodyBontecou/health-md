@@ -595,6 +595,10 @@ struct MacExportView: View {
             var failedDateDetails: [FailedDateDetail] = []
             var partialFailures: [ExportPartialFailure] = []
             var successfulHealthData: [HealthData] = []
+            var looseAggregateFileCount = 0
+            var individualEntryFileCount = 0
+            var dataDictionaryFileCount = 0
+            var isFileAccountingComplete = true
             var dailyNoteUpdateCount = 0
             var dailyNoteSkipCount = 0
             var completedDates: [Date] = []
@@ -607,6 +611,10 @@ struct MacExportView: View {
                         totalCount: totalCount,
                         failedDateDetails: failedDateDetails,
                         formatsPerDate: advancedSettings.looseFormatsPerDate,
+                        looseAggregateFileCount: looseAggregateFileCount,
+                        individualEntryFileCount: individualEntryFileCount,
+                        dataDictionaryFileCount: dataDictionaryFileCount,
+                        isFileCategoryBreakdownComplete: isFileAccountingComplete,
                         dailyNoteUpdateCount: dailyNoteUpdateCount,
                         dailyNoteSkipCount: dailyNoteSkipCount,
                         wasCancelled: true,
@@ -658,8 +666,12 @@ struct MacExportView: View {
                     let writeResult = try await vaultManager.exportHealthData(
                         healthData,
                         settings: advancedSettings,
+                        writeDataDictionary: dataDictionaryFileCount == 0,
                         operationSurface: .localVaultWithoutSideEffects
                     )
+                    looseAggregateFileCount += writeResult.aggregateFileCount
+                    individualEntryFileCount += writeResult.individualEntryFileCount
+                    dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                     dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     if advancedSettings.dailyNotesOnlyModeEnabled {
@@ -694,6 +706,7 @@ struct MacExportView: View {
                     successCount += 1
                     completedDates.append(date)
                 } catch {
+                    isFileAccountingComplete = false
                     failedDateDetails.append(FailedDateDetail(
                         date: date, reason: .unknown, errorDetails: error.localizedDescription
                     ))
@@ -704,8 +717,15 @@ struct MacExportView: View {
             let rollupHealthData = rollupHealthData(for: dates, seedData: successfulHealthData)
             if !rollupHealthData.isEmpty && HealthRollupExporter.isEnabled(settings: advancedSettings) {
                 do {
-                    rollupFileCount = try vaultManager.exportRollupSummaries(from: rollupHealthData, settings: advancedSettings).count
+                    let writeResult = try vaultManager.exportRollupSummaries(
+                        from: rollupHealthData,
+                        settings: advancedSettings,
+                        writeDataDictionary: dataDictionaryFileCount == 0
+                    )
+                    rollupFileCount = writeResult.count
+                    dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 } catch {
+                    isFileAccountingComplete = false
                     let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
                     partialFailures.append(ExportPartialFailure(
                         date: firstDate,
@@ -735,7 +755,11 @@ struct MacExportView: View {
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
                 formatsPerDate: advancedSettings.looseFormatsPerDate,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
                 rollupFileCount: rollupFileCount,
+                isFileCategoryBreakdownComplete: isFileAccountingComplete,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
                 completedDates: completedDates

@@ -156,19 +156,59 @@ struct ExportOrchestrator {
             }
             self.failedDateDetails = failedDateDetails
             self.partialFailures = partialFailures
-            self.formatsPerDate = max(formatsPerDate, 0)
-            self.looseAggregateFileCount = max(looseAggregateFileCount, 0)
-            self.individualEntryFileCount = max(individualEntryFileCount, 0)
-            self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
-            self.rollupFileCount = max(rollupFileCount, 0)
-            self.archiveCount = max(archiveCount, 0)
-            self.externalRecordFileCount = max(externalRecordFileCount, 0)
-            self.externalRecordPayloadCount = max(externalRecordPayloadCount, 0)
-            self.authoritativeFileCount = authoritativeFileCount.map { max($0, 0) }
-            self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
-            self.dailyNoteUpdateCount = dailyNoteUpdateCount
-            self.dailyNoteSkipCount = dailyNoteSkipCount
+            self.formatsPerDate = ExportHistoryOutputBreakdown.boundedCount(formatsPerDate)
+            let normalizedBreakdown = ExportHistoryOutputBreakdown(
+                requestedDataDayCount: totalCount,
+                successfulDataDayCount: successCount,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                zipArchiveFileCount: archiveCount,
+                rollupFileCount: rollupFileCount,
+                providerSidecarFileCount: externalRecordFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
+            )
+            self.looseAggregateFileCount = normalizedBreakdown.looseAggregateFileCount
+            self.individualEntryFileCount = normalizedBreakdown.individualEntryFileCount
+            self.dataDictionaryFileCount = normalizedBreakdown.dataDictionaryFileCount
+            self.rollupFileCount = normalizedBreakdown.rollupFileCount
+            self.archiveCount = normalizedBreakdown.zipArchiveFileCount
+            self.externalRecordFileCount = normalizedBreakdown.providerSidecarFileCount
+            self.externalRecordPayloadCount = ExportHistoryOutputBreakdown.boundedCount(
+                externalRecordPayloadCount
+            )
+            let normalizedAuthoritativeFileCount = authoritativeFileCount.map(
+                ExportHistoryOutputBreakdown.boundedCount
+            )
+            self.authoritativeFileCount = normalizedAuthoritativeFileCount
+            self.isFileCategoryBreakdownComplete = normalizedBreakdown.isFileCategoryBreakdownComplete
+                && (normalizedAuthoritativeFileCount.map {
+                    $0 == normalizedBreakdown.categorizedFileCount
+                } ?? true)
+            self.dailyNoteUpdateCount = normalizedBreakdown.dailyNoteUpdateCount
+            self.dailyNoteSkipCount = normalizedBreakdown.dailyNoteSkipCount
             self.wasCancelled = wasCancelled
+        }
+
+        /// Builds a conservative history result from the connected-Mac aggregate payload.
+        /// The payload has an authoritative total and an exact sidecar count, but does not carry
+        /// every writer category, so the remainder must stay unclassified.
+        init(macExportPayload payload: MacExportResultPayload) {
+            self.init(
+                successCount: payload.successCount,
+                totalCount: payload.totalCount,
+                failedDateDetails: payload.failedDateDetails,
+                formatsPerDate: payload.formatsPerDate,
+                externalRecordFileCount: payload.externalRecordFileCount,
+                authoritativeFileCount: payload.totalFilesWritten,
+                isFileCategoryBreakdownComplete: false,
+                dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
+                dailyNoteSkipCount: payload.dailyNoteSkipCount,
+                wasCancelled: payload.status == .cancelled,
+                completedDates: payload.completedDates
+            )
         }
 
         var hasPartialFailures: Bool { !partialFailures.isEmpty }
@@ -256,21 +296,28 @@ struct ExportOrchestrator {
         }
 
         var fileBreakdownDescription: String {
-            let looseDescription: String
+            let breakdown = outputBreakdown
+            let hasCompleteBreakdown = breakdown.isFileCategoryBreakdownComplete
+            var parts: [String] = []
             if looseAggregateFileCount == 0 {
-                looseDescription = String(localized: "No loose aggregate files", comment: "Export result breakdown with no loose aggregate output")
-            } else if isFileCategoryBreakdownComplete,
-                      formatsPerDate > 1,
-                      looseAggregateFileCount == successCount * formatsPerDate {
-                looseDescription = successCount == 1
-                    ? String(localized: "1 data day × \(formatsPerDate) loose formats", comment: "Exact loose export matrix for one data day")
-                    : String(localized: "\(successCount) data days × \(formatsPerDate) loose formats", comment: "Exact loose export matrix for multiple data days")
+                if hasCompleteBreakdown {
+                    parts.append(String(localized: "No loose aggregate files", comment: "Export result breakdown with no loose aggregate output"))
+                }
             } else {
-                looseDescription = looseAggregateFileCount == 1
-                    ? String(localized: "1 loose aggregate file", comment: "Loose aggregate file count when singular")
-                    : String(localized: "\(looseAggregateFileCount) loose aggregate files", comment: "Loose aggregate file count when plural or zero")
+                let expectedLooseCount = successCount.multipliedReportingOverflow(by: formatsPerDate)
+                if hasCompleteBreakdown,
+                   formatsPerDate > 1,
+                   !expectedLooseCount.overflow,
+                   looseAggregateFileCount == expectedLooseCount.partialValue {
+                    parts.append(successCount == 1
+                        ? String(localized: "1 data day × \(formatsPerDate) loose formats", comment: "Exact loose export matrix for one data day")
+                        : String(localized: "\(successCount) data days × \(formatsPerDate) loose formats", comment: "Exact loose export matrix for multiple data days"))
+                } else {
+                    parts.append(looseAggregateFileCount == 1
+                        ? String(localized: "1 loose aggregate file", comment: "Loose aggregate file count when singular")
+                        : String(localized: "\(looseAggregateFileCount) loose aggregate files", comment: "Loose aggregate file count when plural"))
+                }
             }
-            var parts = [looseDescription]
             if individualEntryFileCount == 1 {
                 parts.append(String(localized: "1 individual-entry file", comment: "Individual-entry file count when singular"))
             } else if individualEntryFileCount > 1 {
@@ -296,16 +343,20 @@ struct ExportOrchestrator {
             } else if externalRecordFileCount > 1 {
                 parts.append(String(localized: "\(externalRecordFileCount) provider sidecars", comment: "Provider sidecar file count when plural"))
             }
-            let unclassifiedFileCount = outputBreakdown.unclassifiedFileCount
-            if unclassifiedFileCount == 1 {
+            if breakdown.unclassifiedFileCount == 1 {
                 parts.append(String(localized: "1 unclassified file", comment: "Unclassified generated-file count when singular"))
-            } else if unclassifiedFileCount > 1 {
-                parts.append(String(localized: "\(unclassifiedFileCount) unclassified files", comment: "Unclassified generated-file count when plural"))
+            } else if breakdown.unclassifiedFileCount > 1 {
+                parts.append(String(localized: "\(breakdown.unclassifiedFileCount) unclassified files", comment: "Unclassified generated-file count when plural"))
             }
             if dailyNoteUpdateCount == 1 {
                 parts.append(String(localized: "1 daily note updated", comment: "Daily-note update count when singular"))
             } else if dailyNoteUpdateCount > 1 {
                 parts.append(String(localized: "\(dailyNoteUpdateCount) daily notes updated", comment: "Daily-note update count when plural"))
+            }
+            if parts.isEmpty {
+                parts.append(hasCompleteBreakdown
+                    ? String(localized: "No generated files", comment: "Export result with a complete zero-file breakdown")
+                    : String(localized: "File categories unavailable", comment: "Export result whose producer did not classify generated files"))
             }
             return parts.joined(separator: " + ")
         }
@@ -756,6 +807,7 @@ struct ExportOrchestrator {
         var failures: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         var selectedProgress = 0
+        var didStartWriting = false
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.timeZone = sourceTimeZone
@@ -770,6 +822,7 @@ struct ExportOrchestrator {
                     failedDateDetails: failures,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    isFileCategoryBreakdownComplete: !didStartWriting,
                     wasCancelled: true,
                     completedDates: completedDates
                 )
@@ -804,6 +857,7 @@ struct ExportOrchestrator {
                     failedDateDetails: failures,
                     partialFailures: partialFailures,
                     formatsPerDate: formatsPerDate,
+                    isFileCategoryBreakdownComplete: !didStartWriting,
                     wasCancelled: true,
                     completedDates: completedDates
                 )
@@ -861,6 +915,7 @@ struct ExportOrchestrator {
                 failedDateDetails: failures,
                 partialFailures: partialFailures,
                 formatsPerDate: formatsPerDate,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: completedDates
             )
         }
@@ -871,11 +926,13 @@ struct ExportOrchestrator {
                 failedDateDetails: failures,
                 partialFailures: partialFailures,
                 formatsPerDate: formatsPerDate,
+                isFileCategoryBreakdownComplete: true,
                 wasCancelled: true,
                 completedDates: completedDates
             )
         }
 
+        didStartWriting = true
         do {
             guard let writeResult = try await vaultManager.exportHealthDataRange(
                 records,
@@ -935,6 +992,7 @@ struct ExportOrchestrator {
                 failedDateDetails: failures,
                 partialFailures: partialFailures,
                 formatsPerDate: formatsPerDate,
+                isFileCategoryBreakdownComplete: !didStartWriting,
                 wasCancelled: true,
                 completedDates: completedDates
             )
@@ -1057,7 +1115,8 @@ struct ExportOrchestrator {
                             errorDetails: AppleLooseDailyExportPlannerError.rustPlanningFailed.rawValue
                         )
                     },
-                    formatsPerDate: formatsPerDate
+                    formatsPerDate: formatsPerDate,
+                    isFileCategoryBreakdownComplete: true
                 )
             }
             return await exportForegroundPinnedSimpleRange(

@@ -1061,9 +1061,7 @@ struct ScheduleSettingsView: View {
         retryStatusMessage = "Preparing…"
 
         Task {
-            await HealthKitQueryExecutionController.withController {
-                await performRetryExport(entry)
-            }
+            await performRetryExport(entry)
         }
     }
 
@@ -1131,109 +1129,53 @@ struct ScheduleSettingsView: View {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
-            await MainActor.run {
-                retryErrorMessage = ExportFailureReason.accessDenied.detailedDescription
-                showRetryError = true
+        let result = await ExportOrchestrator.exportDates(
+            datesToExport,
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: advancedSettings,
+            onProgress: { completed, total, dateDescription in
+                let boundedTotal = max(total, 1)
+                retryStatusMessage = String(
+                    localized: "Preparing \(dateDescription)… (\(completed) of \(boundedTotal) complete)",
+                    comment: "Retry-export progress with the current date and completed data-day count"
+                )
+                retryProgress = Double(completed) / Double(boundedTotal)
             }
-            return
+        )
+
+        retryProgress = 1.0
+        if result.successCount > 0 {
+            purchaseManager.recordExportUse()
         }
 
-        let totalDays = datesToExport.count
-        var successCount = 0
-        var failedDateDetails: [FailedDateDetail] = []
-        var partialFailures: [ExportPartialFailure] = []
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let startDate = datesToExport.min() ?? entry.dateRangeStart
+        let endDate = datesToExport.max() ?? entry.dateRangeEnd
+        ExportOrchestrator.recordResult(
+            result,
+            source: .manual,
+            dateRangeStart: startDate,
+            dateRangeEnd: endDate,
+            targetLabel: "iPhone: \(vaultManager.vaultName)",
+            exportTarget: .localIPhoneFolder
+        )
 
-        for (index, date) in datesToExport.enumerated() {
-            await MainActor.run {
-                retryStatusMessage = "Preparing \(dateFormatter.string(from: date))… (\(index)/\(totalDays) complete)"
-                retryProgress = Double(index) / Double(totalDays)
-            }
-
-            do {
-                let healthData = try await healthKitManager.fetchHealthData(
-                    for: date,
-                    includeGranularData: advancedSettings.effectiveGranularDataEnabled,
-                    metricSelection: advancedSettings.metricSelection
-                )
-
-                if !healthData.filtered(by: advancedSettings.metricSelection).hasAnyData {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
-                    continue
-                }
-
-                let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
-
-                if success {
-                    partialFailures.append(contentsOf: healthData.partialFailures)
-                    successCount += 1
-                } else {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
-                }
-            } catch {
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
-            }
-        }
-
-        vaultManager.stopVaultAccess()
-
-        await MainActor.run {
-            retryProgress = 1.0
-
-            if successCount > 0 {
-                purchaseManager.recordExportUse()
-            }
-
-            // Record the result
-            let startDate = datesToExport.min() ?? entry.dateRangeStart
-            let endDate = datesToExport.max() ?? entry.dateRangeEnd
-
-            if failedDateDetails.isEmpty && partialFailures.isEmpty && successCount > 0 {
-                retryStatusMessage = String(localized: "Successfully exported \(successCount) files", comment: "Export success message")
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
-                )
-            } else if successCount > 0 {
-                retryStatusMessage = partialFailures.isEmpty
-                    ? "Exported \(successCount)/\(totalDays) files"
-                    : "Exported \(successCount)/\(totalDays) files with \(partialFailures.count) warning(s)"
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    failedDateDetails: failedDateDetails,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1),
-                    partialFailures: partialFailures
-                )
+        if result.isFullSuccess {
+            if result.dailyNoteUpdateCount == 1 && result.totalFilesWritten == 0 {
+                retryStatusMessage = String(localized: "Successfully updated 1 daily note", comment: "Retry-export success with one daily-note update")
+            } else if result.dailyNoteUpdateCount > 1 && result.totalFilesWritten == 0 {
+                retryStatusMessage = String(localized: "Successfully updated \(result.dailyNoteUpdateCount) daily notes", comment: "Retry-export success with multiple daily-note updates")
+            } else if result.totalFilesWritten == 1 {
+                retryStatusMessage = String(localized: "Successfully exported 1 file", comment: "Retry-export success with one generated file")
             } else {
-                let primaryReason = failedDateDetails.first?.reason ?? .unknown
-                retryErrorMessage = primaryReason.detailedDescription
-                showRetryError = true
-
-                exportHistory.recordFailure(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    reason: primaryReason,
-                    successCount: 0,
-                    totalCount: totalDays,
-                    failedDateDetails: failedDateDetails,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: 0,
-                    partialFailures: partialFailures
-                )
+                retryStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files", comment: "Retry-export success with multiple generated files")
             }
+        } else if result.isPartialSuccess {
+            retryStatusMessage = String(localized: "Retry completed with warnings", comment: "Retry-export partial-success status")
+        } else {
+            let primaryReason = result.primaryFailureReason ?? .unknown
+            retryErrorMessage = primaryReason.detailedDescription
+            showRetryError = true
         }
     }
 }
@@ -1382,7 +1324,7 @@ struct ExportHistoryRow: View {
 
                 if entry.isPendingRecovery {
                     Label(
-                        "Pending recovery · \(entry.pendingRecoveryDayCount) data day\(entry.pendingRecoveryDayCount == 1 ? "" : "s")",
+                        entry.pendingRecoveryBadgeDescription,
                         systemImage: "clock.arrow.circlepath"
                     )
                     .font(Typography.caption())
@@ -1546,6 +1488,13 @@ struct ExportHistoryDetailView: View {
                             )
                         }
                         if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.dataDictionaryFileCount > 0 {
+                            historyValueRow(
+                                "Data dictionaries",
+                                value: "\(entry.outputBreakdown.dataDictionaryFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
                             || entry.outputBreakdown.zipArchiveFileCount > 0 {
                             historyValueRow(
                                 "ZIP archives",
@@ -1578,7 +1527,7 @@ struct ExportHistoryDetailView: View {
                             .foregroundStyle(Color.textSecondary)
                     } footer: {
                         if !entry.outputBreakdown.isFileCategoryBreakdownComplete {
-                            Text("This entry has a reliable file total, but its producer did not record every file category.")
+                            Text("This entry's producer did not record every generated-file category.")
                                 .font(Typography.caption())
                                 .foregroundStyle(Color.textMuted)
                         }

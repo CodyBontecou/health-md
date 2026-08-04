@@ -472,7 +472,7 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertTrue(result.didCompleteAllRequestedDates)
     }
 
-    func testExternalRecordCountOnlyIncludesSuccessfullyUploadedBatches() async {
+    func testExternalPayloadRecordCountOnlyIncludesSuccessfullyUploadedBatches() async {
         // Two single-day batches (batch span of 1) so each date is its own
         // batch: the first upload succeeds, the second is rejected. The
         // rejected batch's external/provider records must not be counted in
@@ -516,10 +516,13 @@ final class APIEndpointExportRunnerTests: XCTestCase {
 
         XCTAssertEqual(uploadCallCount, 2)
         XCTAssertEqual(result.successCount, 1)
-        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.externalRecordPayloadCount, 1)
+        XCTAssertEqual(result.externalRecordFileCount, 0)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
     }
 
-    func testCompatibilityUploaderAndCountsRetainCollectedEmptyExternalRecords() async {
+    func testCompatibilityUploaderAndPayloadCountsRetainCollectedEmptyExternalRecords() async {
         let exportDate = date(year: 2026, month: 6, day: 1)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
@@ -548,7 +551,10 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         )
 
         XCTAssertEqual(uploadedExternalRecords, [emptyRecord])
-        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.externalRecordPayloadCount, 1)
+        XCTAssertEqual(result.externalRecordFileCount, 0)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
     }
 
     func testCancellationDoesNotCountPreparedButUnuploadedRecords() async {

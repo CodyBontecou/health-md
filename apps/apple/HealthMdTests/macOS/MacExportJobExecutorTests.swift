@@ -378,7 +378,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.totalCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.totalFilesWritten, 5)
         XCTAssertEqual(payload.completedDates, [Calendar.current.startOfDay(for: date)])
         XCTAssertEqual(fileSystem.files.count, 5, "Export writes the requested file, three roll-up summaries, and the schema data dictionary")
         XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2026-05-12.md"])
@@ -688,7 +688,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.totalFilesWritten, 5)
         XCTAssertNil(executor.currentJobID)
     }
 
@@ -1156,7 +1156,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 2)
+        XCTAssertEqual(payload.totalFilesWritten, 3)
         XCTAssertEqual(payload.externalRecordFileCount, 1)
 
         let sidecarPath = "/tmp/MacVault/integrations/whoop/2026-05-12.json"
@@ -1198,7 +1198,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 2)
         XCTAssertEqual(payload.totalCount, 2)
-        XCTAssertEqual(payload.totalFilesWritten, 3)
+        XCTAssertEqual(payload.totalFilesWritten, 4)
         let weeklyRollup = try XCTUnwrap(
             fileSystem.files["/tmp/MacVault/Rollups/Weekly/2026-W20.md"]
         )
@@ -1236,7 +1236,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 0)
-        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 2)
         XCTAssertNil(
             fileSystem.files["/tmp/MacVault/2026-05-12.md"],
             "Summary-only mode must not write daily records on Mac"

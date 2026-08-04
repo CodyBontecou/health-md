@@ -1155,9 +1155,14 @@ struct ContentView: View {
                 )
             }
 
-            let providerRecordDescription = result.externalRecordFileCount == 0
-                ? ""
-                : " + \(result.externalRecordFileCount) provider record\(result.externalRecordFileCount == 1 ? "" : "s")"
+            let providerRecordSentence: String?
+            if result.externalRecordPayloadCount == 0 {
+                providerRecordSentence = nil
+            } else if result.externalRecordPayloadCount == 1 {
+                providerRecordSentence = String(localized: "Included 1 provider record.", comment: "API export status with one provider payload record")
+            } else {
+                providerRecordSentence = String(localized: "Included \(result.externalRecordPayloadCount) provider records.", comment: "API export status with multiple provider payload records")
+            }
 
             if result.wasCancelled {
                 exportStatusMessage = result.successCount == 0
@@ -1166,7 +1171,12 @@ struct ContentView: View {
                 vaultManager.lastExportStatus = exportStatusMessage
                 startStatusDismissTimer()
             } else if result.isFullSuccess {
-                exportStatusMessage = "Uploaded \(result.successCount) day\(result.successCount == 1 ? "" : "s")\(providerRecordDescription) to API"
+                let uploadedDaySentence = result.successCount == 1
+                    ? String(localized: "Uploaded 1 data day to API.", comment: "Successful API export status for one data day")
+                    : String(localized: "Uploaded \(result.successCount) data days to API.", comment: "Successful API export status for multiple data days")
+                exportStatusMessage = [uploadedDaySentence, providerRecordSentence]
+                    .compactMap { $0 }
+                    .joined(separator: " ")
                 vaultManager.lastExportStatus = "API export complete"
                 startStatusDismissTimer()
 
@@ -1179,7 +1189,12 @@ struct ContentView: View {
                 let warning = result.hasPartialFailures ? result.partialFailureSummary : nil
                 let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
                 let suffix = warning ?? "Failed: \(failedDatesStr)"
-                exportStatusMessage = "Uploaded \(result.successCount)/\(totalDays) days\(providerRecordDescription) to API. \(suffix)"
+                let uploadedDaySentence = totalDays == 1
+                    ? String(localized: "Uploaded \(result.successCount) of 1 data day to API.", comment: "Partial API export status when one data day was requested")
+                    : String(localized: "Uploaded \(result.successCount) of \(totalDays) data days to API.", comment: "Partial API export status when multiple data days were requested")
+                exportStatusMessage = [uploadedDaySentence, providerRecordSentence, suffix]
+                    .compactMap { $0 }
+                    .joined(separator: " ")
                 vaultManager.lastExportStatus = "API partial export: \(result.successCount)/\(totalDays) days uploaded"
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown
@@ -1866,24 +1881,7 @@ struct ContentView: View {
         let normalizedEndDate = activeMacExportEndDate
             ?? durableJournal?.exportManifest.dateRangeEnd
             ?? Calendar.current.startOfDay(for: endDate)
-        let externalRecordFileCount = result.externalRecordFileCount
-        let derivedFileCount = max(result.totalFilesWritten - (result.successCount * result.formatsPerDate) - externalRecordFileCount, 0)
-        let archiveCount = completionSettings.archiveModeEnabled && result.successCount > 0
-            ? min(derivedFileCount, 1)
-            : 0
-        let rollupFileCount = max(derivedFileCount - archiveCount, 0)
-        let exportResult = ExportOrchestrator.ExportResult(
-            successCount: result.successCount,
-            totalCount: result.totalCount,
-            failedDateDetails: result.failedDateDetails,
-            formatsPerDate: result.formatsPerDate,
-            rollupFileCount: rollupFileCount,
-            archiveCount: archiveCount,
-            externalRecordFileCount: externalRecordFileCount,
-            dailyNoteUpdateCount: result.dailyNoteUpdateCount,
-            dailyNoteSkipCount: result.dailyNoteSkipCount,
-            wasCancelled: result.status == .cancelled
-        )
+        let exportResult = ExportOrchestrator.ExportResult(macExportPayload: result)
         let destinationName = result.destinationDisplayName
             ?? syncService.macDestinationStatus?.destinationDisplayName
             ?? "Mac"
@@ -1925,7 +1923,7 @@ struct ContentView: View {
             if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)"
                 vaultManager.lastExportStatus = exportStatusMessage
-            } else if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
+            } else if result.formatsPerDate > 1 || result.totalFilesWritten > 0 {
                 exportStatusMessage = "Successfully exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription))"
                 vaultManager.lastExportStatus = "Exported \(result.totalFilesWritten) files to Mac"
             } else {
@@ -1953,7 +1951,7 @@ struct ContentView: View {
             } else if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
-            } else if result.formatsPerDate > 1 || derivedFileCount > 0 || externalRecordFileCount > 0 {
+            } else if result.formatsPerDate > 1 || result.totalFilesWritten > 0 {
                 exportStatusMessage = "Exported \(result.totalFilesWritten) files to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(result.totalFilesWritten) files)"
             } else {

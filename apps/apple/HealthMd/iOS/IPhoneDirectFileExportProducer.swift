@@ -237,7 +237,9 @@ final class IPhoneDirectFileExportProducer {
                 successCount: successCount,
                 totalCount: current.requestedDates.count,
                 failedDateDetails: failedDateDetails,
-                formatsPerDate: current.settingsSnapshot.exportFormats.count
+                formatsPerDate: current.settingsSnapshot.exportFormats.count,
+                authoritativeFileCount: current.generatedFiles.count,
+                isFileCategoryBreakdownComplete: false
             )
             ExportOrchestrator.recordResult(
                 result,

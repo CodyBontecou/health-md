@@ -174,33 +174,52 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.primaryFailureReason, .accessDenied)
     }
 
-    func testExportResultCountsEachGeneratedFileCategoryExactlyOnce() {
+    func testExportResultCountsEachMeasuredGeneratedFileCategoryExactlyOnce() {
         let result = ExportOrchestrator.ExportResult(
             successCount: 2,
             totalCount: 2,
             failedDateDetails: [],
             formatsPerDate: 3,
+            looseAggregateFileCount: 6,
             individualEntryFileCount: 7,
+            dataDictionaryFileCount: 1,
             rollupFileCount: 2,
             archiveCount: 1,
             externalRecordFileCount: 4,
+            isFileCategoryBreakdownComplete: true,
             dailyNoteUpdateCount: 2,
             dailyNoteSkipCount: 0
         )
 
-        XCTAssertEqual(result.looseAggregateFileCount, 6)
-        XCTAssertEqual(result.totalFilesWritten, 20)
-        XCTAssertEqual(result.outputBreakdown.generatedFileCount, 20)
+        XCTAssertEqual(result.totalFilesWritten, 21)
+        XCTAssertEqual(result.outputBreakdown.generatedFileCount, 21)
         XCTAssertEqual(result.outputBreakdown.looseAggregateFileCount, 6)
         XCTAssertEqual(result.outputBreakdown.individualEntryFileCount, 7)
+        XCTAssertEqual(result.outputBreakdown.dataDictionaryFileCount, 1)
         XCTAssertEqual(result.outputBreakdown.zipArchiveFileCount, 1)
         XCTAssertEqual(result.outputBreakdown.rollupFileCount, 2)
         XCTAssertEqual(result.outputBreakdown.providerSidecarFileCount, 4)
         XCTAssertEqual(result.outputBreakdown.dailyNoteUpdateCount, 2)
+        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
         XCTAssertEqual(
             result.fileBreakdownDescription.components(separatedBy: "7 individual-entry files").count - 1,
             1
         )
+    }
+
+    func testExportResultDoesNotInferFilesFromSuccessfulDaysAndFormats() {
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 2,
+            totalCount: 2,
+            failedDateDetails: [],
+            formatsPerDate: 3,
+            authoritativeFileCount: 5
+        )
+
+        XCTAssertEqual(result.looseAggregateFileCount, 0)
+        XCTAssertEqual(result.totalFilesWritten, 5)
+        XCTAssertEqual(result.outputBreakdown.unclassifiedFileCount, 5)
+        XCTAssertFalse(result.outputBreakdown.isFileCategoryBreakdownComplete)
     }
 
     @MainActor
@@ -478,11 +497,13 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.looseAggregateFileCount, 1)
         XCTAssertEqual(result.individualEntryFileCount, 1)
-        XCTAssertEqual(result.totalFilesWritten, 2)
+        XCTAssertEqual(result.dataDictionaryFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 3)
         XCTAssertEqual(result.outputBreakdown.requestedDataDayCount, 1)
         XCTAssertEqual(result.outputBreakdown.successfulDataDayCount, 1)
         XCTAssertEqual(result.outputBreakdown.looseAggregateFileCount, 1)
         XCTAssertEqual(result.outputBreakdown.individualEntryFileCount, 1)
+        XCTAssertEqual(result.outputBreakdown.dataDictionaryFileCount, 1)
         XCTAssertTrue(result.fileBreakdownDescription.contains("1 individual-entry file"))
     }
 
@@ -505,10 +526,36 @@ final class ExportOrchestratorTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 2)
+        XCTAssertEqual(result.dataDictionaryFileCount, 1)
+        XCTAssertEqual(result.outputBreakdown.dataDictionaryFileCount, 1)
         XCTAssertEqual(
             fileSystem.writeCounts["/tmp/DictionaryOnceVault/Health/_healthmd_data_dictionary.json"],
             1
         )
+    }
+
+    @MainActor
+    func testExportDatesDoesNotCountDataDictionaryWhenItsWriteFails() async {
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: HealthKitFixtures.referenceDate)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(vaultPath: "/tmp/DictionaryFailureVault")
+        let dictionaryPath = "/tmp/DictionaryFailureVault/Health/_healthmd_data_dictionary.json"
+        fileSystem.failBeforeWritingPathOnce = dictionaryPath
+        let settings = makeExportSettings(formats: [.markdown], rollupPeriods: [])
+        settings.includeGranularData = false
+
+        let result = await ExportOrchestrator.exportDates(
+            [HealthKitFixtures.referenceDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.dataDictionaryFileCount, 0)
+        XCTAssertEqual(result.outputBreakdown.dataDictionaryFileCount, 0)
+        XCTAssertNil(fileSystem.writeCounts[dictionaryPath])
+        XCTAssertFalse(result.outputBreakdown.isFileCategoryBreakdownComplete)
     }
 
     @MainActor
@@ -734,7 +781,8 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.formatsPerDate, 0)
         XCTAssertEqual(result.rollupFileCount, 1)
-        XCTAssertEqual(result.totalFilesWritten, 1)
+        XCTAssertEqual(result.dataDictionaryFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 2)
         XCTAssertTrue(result.isFullSuccess)
         XCTAssertNil(fileSystem.files.first { path, _ in
             path.hasSuffix("/Health/2026-03-15.md")
@@ -896,7 +944,8 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.successCount, 1)
         XCTAssertEqual(result.totalCount, 1)
         XCTAssertEqual(result.rollupFileCount, 1)
-        XCTAssertEqual(result.totalFilesWritten, 2)
+        XCTAssertEqual(result.dataDictionaryFileCount, 1)
+        XCTAssertEqual(result.totalFilesWritten, 3)
         XCTAssertTrue(result.failedDateDetails.isEmpty)
         XCTAssertTrue(result.isPartialSuccess)
         XCTAssertFalse(result.isFullSuccess)
