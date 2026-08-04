@@ -144,11 +144,13 @@ class CsvExporter {
                 s.inBedTime.takeIf { it > kotlin.time.Duration.ZERO }
                     ?.let { append(row(dateString, "Sleep", "In Bed Time", it.inWholeSeconds, "seconds")) }
 
-                // Bedtime / wake from sessionStart/End or stage boundaries
-                val bedtime = s.sessionStart ?: s.stages.minByOrNull { it.startTime }?.startTime
-                val wakeTime = s.sessionEnd ?: s.stages.maxByOrNull { it.endTime }?.endTime
-                bedtime?.let { append(row(dateString, "Sleep", "Bedtime", customization.timeFormat.format(it), "time")) }
-                wakeTime?.let { append(row(dateString, "Sleep", "Wake Time", customization.timeFormat.format(it), "time")) }
+                // Stage-only providers retain the historical fallback; rejected sessions do not.
+                s.headlineStart?.let {
+                    append(row(dateString, "Sleep", "Bedtime", customization.timeFormat.format(it), "time"))
+                }
+                s.headlineEnd?.let {
+                    append(row(dateString, "Sleep", "Wake Time", customization.timeFormat.format(it), "time"))
+                }
 
                 if (includeGranularData) {
                     for (stage in s.stages) {

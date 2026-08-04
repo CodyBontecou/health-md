@@ -217,17 +217,23 @@ class HealthConnectManager(
         val timeRange = TimeRangeFilter.between(startTime, endTime)
 
         return coroutineScope {
-            val sleepDeferred = async { fetchSleepData(timeRange, date) }
-            val activityDeferred = async { fetchActivityData(timeRange) }
-            val heartDeferred = async { fetchHeartData(timeRange) }
-            val vitalsDeferred = async { fetchVitalsData(timeRange) }
+            val sleepDeferred = async {
+                readSleepData(
+                    requestedDates = setOf(date),
+                    zone = zone,
+                    includeGranularData = true,
+                )[date] ?: SleepData()
+            }
+            val activityDeferred = async { fetchActivityData(timeRange, zone) }
+            val heartDeferred = async { fetchHeartData(timeRange, zone) }
+            val vitalsDeferred = async { fetchVitalsData(timeRange, zone) }
             val bodyDeferred = async { fetchBodyData(timeRange) }
-            val nutritionDeferred = async { fetchNutritionData(timeRange) }
+            val nutritionDeferred = async { fetchNutritionData(timeRange, zone) }
             val mobilityDeferred = async { fetchMobilityData(timeRange) }
-            val reproductiveDeferred = async { fetchReproductiveHealthData(timeRange) }
-            val mindfulnessDeferred = async { fetchMindfulnessData(timeRange) }
-            val workoutsDeferred = async { fetchWorkouts(timeRange) }
-            val plannedWorkoutsDeferred = async { fetchPlannedWorkouts(timeRange) }
+            val reproductiveDeferred = async { fetchReproductiveHealthData(timeRange, zone) }
+            val mindfulnessDeferred = async { fetchMindfulnessData(timeRange, zone) }
+            val workoutsDeferred = async { fetchWorkouts(timeRange, zone) }
+            val plannedWorkoutsDeferred = async { fetchPlannedWorkouts(timeRange, zone) }
             val medicalResourcesDeferred = async { fetchMedicalResources() }
 
             HealthData(
@@ -266,6 +272,7 @@ class HealthConnectManager(
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
         val sortedDates = requestedDates.sorted()
         val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+        val zone = ZoneId.systemDefault()
 
         for (chunk in sortedDates.chunked(chunkDays)) {
             val startDate = chunk.first()
@@ -275,8 +282,8 @@ class HealthConnectManager(
                 endExclusive.atStartOfDay(),
             )
             val instantRange = TimeRangeFilter.between(
-                startDate.atStartOfDay(ZoneId.systemDefault()).toInstant(),
-                endExclusive.atStartOfDay(ZoneId.systemDefault()).toInstant(),
+                startDate.atStartOfDay(zone).toInstant(),
+                endExclusive.atStartOfDay(zone).toInstant(),
             )
             val chunkDates = chunk.toSet()
 
@@ -288,35 +295,35 @@ class HealthConnectManager(
             applyMobilityAggregates(dataByDate, chunkDates, localRange, selection)
 
             if (selection.sleep) {
-                applySleepRange(dataByDate, chunkDates, instantRange, includeGranularData)
+                applySleepRange(dataByDate, chunkDates, zone, includeGranularData)
             }
             if (selection.activity || selection.workouts || selection.heart || selection.mobility) {
-                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData)
+                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zone)
             }
             if (selection.activity && includeGranularData) {
-                applyStepSamplesRange(dataByDate, chunkDates, instantRange)
-                applyActivityIntensityRange(dataByDate, chunkDates, instantRange)
+                applyStepSamplesRange(dataByDate, chunkDates, instantRange, zone)
+                applyActivityIntensityRange(dataByDate, chunkDates, instantRange, zone)
             }
             if (selection.heart) {
-                applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData)
+                applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zone)
             }
             if (selection.vitals) {
-                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, includeGranularData)
+                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zone)
             }
             if (selection.body) {
-                applyBodyRangeReads(dataByDate, chunkDates, instantRange)
+                applyBodyRangeReads(dataByDate, chunkDates, instantRange, zone)
             }
             if (selection.nutrition && includeGranularData) {
-                applyNutritionMealRange(dataByDate, chunkDates, instantRange)
+                applyNutritionMealRange(dataByDate, chunkDates, instantRange, zone)
             }
             if (selection.reproductiveHealth) {
-                applyReproductiveRangeReads(dataByDate, chunkDates, instantRange)
+                applyReproductiveRangeReads(dataByDate, chunkDates, instantRange, zone)
             }
             if (selection.mindfulness) {
-                applyMindfulnessRange(dataByDate, chunkDates, instantRange)
+                applyMindfulnessRange(dataByDate, chunkDates, instantRange, zone)
             }
             if (selection.plannedWorkouts) {
-                applyPlannedWorkoutRange(dataByDate, chunkDates, instantRange)
+                applyPlannedWorkoutRange(dataByDate, chunkDates, instantRange, zone)
             }
             if (selection.medicalResources) {
                 val medicalResources = fetchMedicalResources()
@@ -327,7 +334,7 @@ class HealthConnectManager(
                 }
             }
             if (selection.mobility) {
-                applyMobilityRangeReads(dataByDate, chunkDates, instantRange)
+                applyMobilityRangeReads(dataByDate, chunkDates, instantRange, zone)
             }
         }
 
@@ -350,6 +357,7 @@ class HealthConnectManager(
 
         val requestedDates = dates.toSet()
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
+        val zone = ZoneId.systemDefault()
         for (chunk in requestedDates.sorted().chunked(RANGE_READ_CHUNK_DAYS)) {
             val startDate = chunk.first()
             val endExclusive = chunk.last().plusDays(1)
@@ -359,21 +367,21 @@ class HealthConnectManager(
                 endExclusive.atStartOfDay(),
             )
             val instantRange = TimeRangeFilter.between(
-                startDate.atStartOfDay(ZoneId.systemDefault()).toInstant(),
-                endExclusive.atStartOfDay(ZoneId.systemDefault()).toInstant(),
+                startDate.atStartOfDay(zone).toInstant(),
+                endExclusive.atStartOfDay(zone).toInstant(),
             )
 
             if (selection.steps || selection.activeCalories) {
                 applyWidgetActivityAggregates(dataByDate, chunkDates, localRange, selection)
             }
             if (selection.exerciseSessions) {
-                applyWidgetExerciseMinutes(dataByDate, chunkDates, instantRange)
+                applyWidgetExerciseMinutes(dataByDate, chunkDates, instantRange, zone)
             }
             if (selection.sleepSessions) {
                 applySleepRange(
                     dataByDate,
                     chunkDates,
-                    instantRange,
+                    zone,
                     includeGranularData = false,
                     strictReads = true,
                 )
@@ -382,7 +390,7 @@ class HealthConnectManager(
                 applyWidgetHeartAggregates(dataByDate, chunkDates, localRange)
             }
             if (selection.restingHeartRate || selection.hrvRmssd) {
-                applyWidgetHeartRecords(dataByDate, chunkDates, instantRange, selection)
+                applyWidgetHeartRecords(dataByDate, chunkDates, instantRange, selection, zone)
             }
         }
         return dates.map { date -> dataByDate[date] ?: HealthData(date) }
@@ -433,8 +441,8 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
         val sessionsByDate = readRecordsPaged(ExerciseSessionRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
         for ((date, sessions) in sessionsByDate) {
@@ -476,8 +484,8 @@ class HealthConnectManager(
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
         selection: HealthConnectWidgetReadSelection,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
         if (selection.hrvRmssd) {
             val hrvByDate = readRecordsPaged(HeartRateVariabilityRmssdRecord::class, timeRange)
                 .groupBy { it.time.atZone(zone).toLocalDate() }
@@ -795,96 +803,87 @@ class HealthConnectManager(
     private suspend fun applySleepRange(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
-        timeRange: TimeRangeFilter,
+        zone: ZoneId,
         includeGranularData: Boolean,
         strictReads: Boolean = false,
     ) {
-        val zone = ZoneId.systemDefault()
+        for ((date, sleep) in readSleepData(
+            requestedDates = requestedDates,
+            zone = zone,
+            includeGranularData = includeGranularData,
+            strictReads = strictReads,
+        )) {
+            if (!sleep.hasData) continue
+            dataByDate.update(date) { current -> current.copy(sleep = sleep) }
+        }
+    }
+
+    private suspend fun readSleepData(
+        requestedDates: Set<LocalDate>,
+        zone: ZoneId,
+        includeGranularData: Boolean,
+        strictReads: Boolean = false,
+    ): Map<LocalDate, SleepData> {
+        val queryInterval = SleepJournalSummary.queryInterval(requestedDates, zone)
+        val timeRange = TimeRangeFilter.between(queryInterval.start, queryInterval.endExclusive)
         val records = if (strictReads) {
             readRecordsPaged(SleepSessionRecord::class, timeRange)
         } else {
             readRecordsOrEmpty(SleepSessionRecord::class, timeRange)
         }
-        val sleepByDate = mutableMapOf<LocalDate, SleepAccumulator>()
+        return SleepJournalSummary.summarize(
+            sourceSessions = records.map { it.toSleepJournalSource(zone) },
+            requestedDates = requestedDates,
+            zone = zone,
+            includeGranularData = includeGranularData,
+        )
+    }
 
-        for (session in records) {
-            val date = session.endTime.atZone(zone).toLocalDate()
-            if (date !in requestedDates) continue
-
-            val accumulator = sleepByDate.getOrPut(date) { SleepAccumulator() }
-            val sessionStart = LocalDateTime.ofInstant(session.startTime, zone)
-            val sessionEnd = LocalDateTime.ofInstant(session.endTime, zone)
-            accumulator.totalMs += java.time.Duration.between(session.startTime, session.endTime).toMillis()
-            accumulator.sessionStart = listOfNotNull(accumulator.sessionStart, sessionStart).minOrNull()
-            accumulator.sessionEnd = listOfNotNull(accumulator.sessionEnd, sessionEnd).maxOrNull()
-            accumulator.sessions += SleepSessionEntry(
-                startTime = sessionStart,
-                endTime = sessionEnd,
-                title = session.title?.takeIf { it.isNotBlank() },
-                notes = session.notes?.takeIf { it.isNotBlank() },
-                source = session.metadata.dataOrigin.packageName,
-                metadata = session.metadata.toExportMetadata(),
-                exactStartTime = session.startTime.toExactSourceTimestamp(session.startZoneOffset),
-                exactEndTime = session.endTime.toExactSourceTimestamp(session.endZoneOffset),
-                identity = session.metadata.toExactSourceIdentity("sleep_session", session.startTime, session.endTime),
-            )
-
-            for (stage in session.stages) {
-                val stageMs = java.time.Duration.between(stage.startTime, stage.endTime).toMillis()
+    private fun SleepSessionRecord.toSleepJournalSource(zone: ZoneId): SourceSession {
+        val sessionEntry = SleepSessionEntry(
+            startTime = LocalDateTime.ofInstant(startTime, zone),
+            endTime = LocalDateTime.ofInstant(endTime, zone),
+            title = title?.takeIf { it.isNotBlank() },
+            notes = notes?.takeIf { it.isNotBlank() },
+            source = metadata.dataOrigin.packageName,
+            metadata = metadata.toExportMetadata(),
+            exactStartTime = startTime.toExactSourceTimestamp(startZoneOffset),
+            exactEndTime = endTime.toExactSourceTimestamp(endZoneOffset),
+            identity = metadata.toExactSourceIdentity("sleep_session", startTime, endTime),
+        )
+        return SourceSession(
+            start = startTime,
+            end = endTime,
+            entry = sessionEntry,
+            stages = stages.map { stage ->
                 val stageName = when (stage.stage) {
-                    SleepSessionRecord.STAGE_TYPE_DEEP -> {
-                        accumulator.deepMs += stageMs
-                        "deep"
-                    }
-                    SleepSessionRecord.STAGE_TYPE_REM -> {
-                        accumulator.remMs += stageMs
-                        "rem"
-                    }
-                    SleepSessionRecord.STAGE_TYPE_LIGHT -> {
-                        accumulator.lightMs += stageMs
-                        "light"
-                    }
-                    SleepSessionRecord.STAGE_TYPE_AWAKE -> {
-                        accumulator.awakeMs += stageMs
-                        "awake"
-                    }
-                    SleepSessionRecord.STAGE_TYPE_SLEEPING -> {
-                        accumulator.lightMs += stageMs
-                        "sleeping"
-                    }
+                    SleepSessionRecord.STAGE_TYPE_DEEP -> "deep"
+                    SleepSessionRecord.STAGE_TYPE_REM -> "rem"
+                    SleepSessionRecord.STAGE_TYPE_LIGHT -> "light"
+                    SleepSessionRecord.STAGE_TYPE_AWAKE -> "awake"
+                    SleepSessionRecord.STAGE_TYPE_SLEEPING -> "sleeping"
                     else -> "unknown"
                 }
-                if (includeGranularData) {
-                    accumulator.stages += SleepStageEntry(
+                SourceStage(
+                    start = stage.startTime,
+                    end = stage.endTime,
+                    entry = SleepStageEntry(
                         startTime = LocalDateTime.ofInstant(stage.startTime, zone),
                         endTime = LocalDateTime.ofInstant(stage.endTime, zone),
                         stage = stageName,
                         exactStartTime = stage.startTime.toExactSourceTimestamp(),
                         exactEndTime = stage.endTime.toExactSourceTimestamp(),
-                        identity = session.metadata.toSyntheticChildIdentity("sleep_stage", session.metadata.id, stage.startTime, stage.endTime, stage.stage),
-                    )
-                }
-            }
-        }
-
-        for ((date, accumulator) in sleepByDate) {
-            dataByDate.update(date) { current ->
-                current.copy(
-                    sleep = SleepData(
-                        totalDuration = accumulator.totalMs.milliseconds,
-                        deepSleep = accumulator.deepMs.milliseconds,
-                        remSleep = accumulator.remMs.milliseconds,
-                        lightSleep = accumulator.lightMs.milliseconds,
-                        awakeTime = accumulator.awakeMs.milliseconds,
-                        inBedTime = accumulator.totalMs.milliseconds,
-                        stages = accumulator.stages.sortedBy { it.startTime },
-                        sessions = accumulator.sessions.sortedBy { it.startTime },
-                        sessionStart = accumulator.sessionStart,
-                        sessionEnd = accumulator.sessionEnd,
-                    )
+                        identity = metadata.toSyntheticChildIdentity(
+                            "sleep_stage",
+                            metadata.id,
+                            stage.startTime,
+                            stage.endTime,
+                            stage.stage,
+                        ),
+                    ),
                 )
-            }
-        }
+            },
+        )
     }
 
     private suspend fun applyExerciseRange(
@@ -893,8 +892,8 @@ class HealthConnectManager(
         timeRange: TimeRangeFilter,
         selection: DataTypeSelection,
         includeGranularData: Boolean,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
         val sessionsByDate = readRecordsOrEmpty(ExerciseSessionRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
         if (sessionsByDate.isEmpty()) return
@@ -964,8 +963,8 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
         val samplesByDate = readRecordsOrEmpty(StepsRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
             .mapValues { (_, records) ->
@@ -994,9 +993,9 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
         if (!isFeatureAvailable(HealthConnectFeatures.FEATURE_ACTIVITY_INTENSITY)) return
-        val zone = ZoneId.systemDefault()
         val entriesByDate = readRecordsOrEmpty(ActivityIntensityRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
             .mapValues { (_, records) ->
@@ -1027,8 +1026,8 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
         val mealsByDate = readRecordsOrEmpty(NutritionRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
             .mapValues { (_, records) ->
@@ -1065,8 +1064,8 @@ class HealthConnectManager(
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
         includeGranularData: Boolean,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
 
         val hrvByDate = readRecordsOrEmpty(HeartRateVariabilityRmssdRecord::class, timeRange)
             .groupBy { it.time.atZone(zone).toLocalDate() }
@@ -1149,8 +1148,8 @@ class HealthConnectManager(
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
         includeGranularData: Boolean,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
 
         val respiratoryByDate = readRecordsOrEmpty(RespiratoryRateRecord::class, timeRange)
             .groupBy { it.time.atZone(zone).toLocalDate() }
@@ -1382,8 +1381,8 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
 
         val weightsByDate = readRecordsOrEmpty(WeightRecord::class, timeRange)
             .groupBy { it.time.atZone(zone).toLocalDate() }
@@ -1449,8 +1448,8 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
 
         val periodByDate = readRecordsOrEmpty(MenstruationPeriodRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
@@ -1585,8 +1584,8 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
         val sessionsByDate = readRecordsOrEmpty(MindfulnessSessionRecord::class, timeRange)
             .groupBy { it.startTime.atZone(zone).toLocalDate() }
 
@@ -1625,8 +1624,8 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
         val vo2ByDate = readRecordsOrEmpty(Vo2MaxRecord::class, timeRange)
             .groupBy { it.time.atZone(zone).toLocalDate() }
 
@@ -1785,86 +1784,8 @@ class HealthConnectManager(
         this[date] = transform(this[date] ?: HealthData(date))
     }
 
-    private suspend fun fetchSleepData(timeRange: TimeRangeFilter, date: LocalDate): SleepData {
+    private suspend fun fetchActivityData(timeRange: TimeRangeFilter, zone: ZoneId): ActivityData {
         return try {
-            val zone = ZoneId.systemDefault()
-            val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(SleepSessionRecord::class, timeRange)
-            )
-
-            var totalMs = 0L
-            var deepMs = 0L
-            var remMs = 0L
-            var lightMs = 0L
-            var awakeMs = 0L
-            val stageEntries = mutableListOf<SleepStageEntry>()
-            val sessionEntries = mutableListOf<SleepSessionEntry>()
-            var sessionStart: LocalDateTime? = null
-            var sessionEnd: LocalDateTime? = null
-
-            for (session in response.records) {
-                val start = LocalDateTime.ofInstant(session.startTime, zone)
-                val end = LocalDateTime.ofInstant(session.endTime, zone)
-                val sessionDurationMs = java.time.Duration.between(session.startTime, session.endTime).toMillis()
-                totalMs += sessionDurationMs
-                sessionStart = listOfNotNull(sessionStart, start).minOrNull()
-                sessionEnd = listOfNotNull(sessionEnd, end).maxOrNull()
-                sessionEntries += SleepSessionEntry(
-                    startTime = start,
-                    endTime = end,
-                    title = session.title?.takeIf { it.isNotBlank() },
-                    notes = session.notes?.takeIf { it.isNotBlank() },
-                    source = session.metadata.dataOrigin.packageName,
-                    metadata = session.metadata.toExportMetadata(),
-                    exactStartTime = session.startTime.toExactSourceTimestamp(session.startZoneOffset),
-                    exactEndTime = session.endTime.toExactSourceTimestamp(session.endZoneOffset),
-                    identity = session.metadata.toExactSourceIdentity("sleep_session", session.startTime, session.endTime),
-                )
-
-                for (stage in session.stages) {
-                    val stageMs = java.time.Duration.between(stage.startTime, stage.endTime).toMillis()
-                    val stageName = when (stage.stage) {
-                        SleepSessionRecord.STAGE_TYPE_DEEP -> { deepMs += stageMs; "deep" }
-                        SleepSessionRecord.STAGE_TYPE_REM -> { remMs += stageMs; "rem" }
-                        SleepSessionRecord.STAGE_TYPE_LIGHT -> { lightMs += stageMs; "light" }
-                        SleepSessionRecord.STAGE_TYPE_AWAKE -> { awakeMs += stageMs; "awake" }
-                        SleepSessionRecord.STAGE_TYPE_SLEEPING -> { lightMs += stageMs; "sleeping" }
-                        else -> "unknown"
-                    }
-                    stageEntries.add(
-                        SleepStageEntry(
-                            startTime = LocalDateTime.ofInstant(stage.startTime, zone),
-                            endTime = LocalDateTime.ofInstant(stage.endTime, zone),
-                            stage = stageName,
-                            exactStartTime = stage.startTime.toExactSourceTimestamp(),
-                            exactEndTime = stage.endTime.toExactSourceTimestamp(),
-                            identity = session.metadata.toSyntheticChildIdentity("sleep_stage", session.metadata.id, stage.startTime, stage.endTime, stage.stage),
-                        )
-                    )
-                }
-            }
-
-            SleepData(
-                totalDuration = totalMs.milliseconds,
-                deepSleep = deepMs.milliseconds,
-                remSleep = remMs.milliseconds,
-                lightSleep = lightMs.milliseconds,
-                awakeTime = awakeMs.milliseconds,
-                inBedTime = totalMs.milliseconds, // approximate: total session time
-                stages = stageEntries,
-                sessions = sessionEntries.sortedBy { it.startTime },
-                sessionStart = sessionStart,
-                sessionEnd = sessionEnd,
-            )
-        } catch (e: Exception) {
-            e.rethrowIfActionableExportFailure()
-            SleepData()
-        }
-    }
-
-    private suspend fun fetchActivityData(timeRange: TimeRangeFilter): ActivityData {
-        return try {
-            val zone = ZoneId.systemDefault()
             val aggregateResponse = healthConnectClient.aggregate(
                 AggregateRequest(
                     metrics = buildSet<AggregateMetric<*>> {
@@ -1977,9 +1898,8 @@ class HealthConnectManager(
         }
     }
 
-    private suspend fun fetchHeartData(timeRange: TimeRangeFilter): HeartData {
+    private suspend fun fetchHeartData(timeRange: TimeRangeFilter, zone: ZoneId): HeartData {
         return try {
-            val zone = ZoneId.systemDefault()
 
             // Heart rate samples
             val hrRecords = healthConnectClient.readRecords(
@@ -2049,9 +1969,8 @@ class HealthConnectManager(
         }
     }
 
-    private suspend fun fetchVitalsData(timeRange: TimeRangeFilter): VitalsData {
+    private suspend fun fetchVitalsData(timeRange: TimeRangeFilter, zone: ZoneId): VitalsData {
         return try {
-            val zone = ZoneId.systemDefault()
 
             // Respiratory rate
             val rrRecords = healthConnectClient.readRecords(
@@ -2288,7 +2207,7 @@ class HealthConnectManager(
         }
     }
 
-    private suspend fun fetchNutritionData(timeRange: TimeRangeFilter): NutritionData {
+    private suspend fun fetchNutritionData(timeRange: TimeRangeFilter, zone: ZoneId): NutritionData {
         return try {
             val records = healthConnectClient.readRecords(
                 ReadRecordsRequest(NutritionRecord::class, timeRange)
@@ -2338,7 +2257,6 @@ class HealthConnectManager(
             var pantothenicAcid = 0.0
             var biotin = 0.0
             var hasAny = false
-            val zone = ZoneId.systemDefault()
             val meals = mutableListOf<NutritionMealEntry>()
 
             for (record in records.records) {
@@ -2535,9 +2453,11 @@ class HealthConnectManager(
         }
     }
 
-    private suspend fun fetchReproductiveHealthData(timeRange: TimeRangeFilter): ReproductiveHealthData {
+    private suspend fun fetchReproductiveHealthData(
+        timeRange: TimeRangeFilter,
+        zone: ZoneId,
+    ): ReproductiveHealthData {
         return try {
-            val zone = ZoneId.systemDefault()
             val periodRecords = healthConnectClient.readRecords(
                 ReadRecordsRequest(MenstruationPeriodRecord::class, timeRange)
             )
@@ -2638,12 +2558,11 @@ class HealthConnectManager(
         }
     }
 
-    private suspend fun fetchMindfulnessData(timeRange: TimeRangeFilter): MindfulnessData {
+    private suspend fun fetchMindfulnessData(timeRange: TimeRangeFilter, zone: ZoneId): MindfulnessData {
         return try {
             val records = healthConnectClient.readRecords(
                 ReadRecordsRequest(MindfulnessSessionRecord::class, timeRange)
             )
-            val zone = ZoneId.systemDefault()
             val totalMinutes = records.records.sumOf { session ->
                 java.time.Duration.between(session.startTime, session.endTime).toMinutes().toDouble()
             }
@@ -2675,9 +2594,9 @@ class HealthConnectManager(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
         timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
-        val zone = ZoneId.systemDefault()
-        val plansByDate = readPlannedWorkouts(timeRange)
+        val plansByDate = readPlannedWorkouts(timeRange, zone)
             .groupBy { it.startTime.toLocalDate() }
         for ((date, plans) in plansByDate) {
             if (date !in requestedDates) continue
@@ -2685,16 +2604,21 @@ class HealthConnectManager(
         }
     }
 
-    private suspend fun fetchPlannedWorkouts(timeRange: TimeRangeFilter): List<PlannedExerciseData> = try {
-        readPlannedWorkouts(timeRange)
+    private suspend fun fetchPlannedWorkouts(
+        timeRange: TimeRangeFilter,
+        zone: ZoneId,
+    ): List<PlannedExerciseData> = try {
+        readPlannedWorkouts(timeRange, zone)
     } catch (e: Exception) {
         e.rethrowIfActionableExportFailure()
         emptyList()
     }
 
-    private suspend fun readPlannedWorkouts(timeRange: TimeRangeFilter): List<PlannedExerciseData> {
+    private suspend fun readPlannedWorkouts(
+        timeRange: TimeRangeFilter,
+        zone: ZoneId,
+    ): List<PlannedExerciseData> {
         if (!isFeatureAvailable(HealthConnectFeatures.FEATURE_PLANNED_EXERCISE)) return emptyList()
-        val zone = ZoneId.systemDefault()
         return readRecordsOrEmpty(PlannedExerciseSessionRecord::class, timeRange).map { record ->
             val identity = record.metadata.toExactSourceIdentity(
                 "health_connect_planned_workout",
@@ -2764,7 +2688,7 @@ class HealthConnectManager(
         fhirResourceJson = fhirResource.data,
     )
 
-    private suspend fun fetchWorkouts(timeRange: TimeRangeFilter): List<WorkoutData> {
+    private suspend fun fetchWorkouts(timeRange: TimeRangeFilter, zone: ZoneId): List<WorkoutData> {
         return try {
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest(ExerciseSessionRecord::class, timeRange)
@@ -2782,7 +2706,7 @@ class HealthConnectManager(
             )
 
             response.records.map { session ->
-                buildWorkoutData(session, ZoneId.systemDefault(), sources, includeGranularData = true)
+                buildWorkoutData(session, zone, sources, includeGranularData = true)
             }
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
@@ -3351,18 +3275,6 @@ class HealthConnectManager(
         val stepsCadenceRecords: List<StepsCadenceRecord> = emptyList(),
         val powerRecords: List<PowerRecord> = emptyList(),
         val elevationRecords: List<ElevationGainedRecord> = emptyList(),
-    )
-
-    private data class SleepAccumulator(
-        var totalMs: Long = 0L,
-        var deepMs: Long = 0L,
-        var remMs: Long = 0L,
-        var lightMs: Long = 0L,
-        var awakeMs: Long = 0L,
-        val stages: MutableList<SleepStageEntry> = mutableListOf(),
-        val sessions: MutableList<SleepSessionEntry> = mutableListOf(),
-        var sessionStart: LocalDateTime? = null,
-        var sessionEnd: LocalDateTime? = null,
     )
 
     private companion object {

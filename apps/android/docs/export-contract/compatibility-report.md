@@ -18,6 +18,11 @@ Play Console release notes, and refreshed migration guidance.
 
 **No plugin changes are required** for the Android parity targets.
 
+Sleep summary ownership and principal-session selection are specified in
+[`android-sleep-journal-summary.md`](android-sleep-journal-summary.md). Android uses the established
+noon-to-noon journal day while retaining exact source sessions separately from the compatibility
+headline.
+
 ---
 
 ## 1) JSON format — Compatibility status: ✅ Fully compatible

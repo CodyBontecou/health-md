@@ -216,27 +216,15 @@ class JsonExporter {
                         put("totalDurationFormatted", ExportHelpers.formatDuration(it))
                     }
 
-                    // Bedtime / wake (T1-02): from sessionStart/End if provided by the reader
-                    s.sessionStart?.let { start ->
+                    // Bedtime/wake use the selected summary cluster. Stage-only providers retain
+                    // the historical fallback, but rejected detailed sessions cannot become a headline.
+                    s.headlineStart?.let { start ->
                         put("bedtime", customization.timeFormat.format(start))
                         put("bedtimeISO", start.toIso8601())
                     }
-                    s.sessionEnd?.let { end ->
+                    s.headlineEnd?.let { end ->
                         put("wakeTime", customization.timeFormat.format(end))
                         put("wakeTimeISO", end.toIso8601())
-                    }
-                    // If no explicit sessionStart/End but stages present, derive from stages
-                    if (s.sessionStart == null && s.stages.isNotEmpty()) {
-                        val earliest = s.stages.minByOrNull { it.startTime }?.startTime
-                        val latest = s.stages.maxByOrNull { it.endTime }?.endTime
-                        earliest?.let {
-                            put("bedtime", customization.timeFormat.format(it))
-                            put("bedtimeISO", it.toIso8601())
-                        }
-                        latest?.let {
-                            put("wakeTime", customization.timeFormat.format(it))
-                            put("wakeTimeISO", it.toIso8601())
-                        }
                     }
 
                     s.deepSleep.takeIf { it > kotlin.time.Duration.ZERO }?.let {

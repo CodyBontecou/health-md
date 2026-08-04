@@ -516,10 +516,8 @@ object HealthMdSemanticInputAdapter {
 
     private fun semanticValue(day: HealthData, key: String, value: Any, unit: String): JsonElement {
         val sourceTime = when (key) {
-            "sleep_bedtime" -> day.sleep.sessionStart
-                ?: day.sleep.stages.minByOrNull { it.startTime }?.startTime
-            "sleep_wake" -> day.sleep.sessionEnd
-                ?: day.sleep.stages.maxByOrNull { it.endTime }?.endTime
+            "sleep_bedtime" -> day.sleep.headlineStart
+            "sleep_wake" -> day.sleep.headlineEnd
             else -> null
         }
         if (sourceTime != null) {
