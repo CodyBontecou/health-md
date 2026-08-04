@@ -832,40 +832,11 @@ nonisolated enum ZipArchiveWriter {
     }
 
     private static func validatedEntryPath(_ path: String) throws -> String {
-        guard !path.isEmpty,
-              !path.contains("\0"),
-              !path.hasPrefix("/"),
-              !path.hasPrefix("\\") else {
+        do {
+            return try ExportPathPlanner.validatedPortableRelativePath(path)
+        } catch {
             throw ArchiveError.unsafePath(path)
         }
-
-        let slashPath = path.replacingOccurrences(of: "\\", with: "/")
-        let rawComponents = slashPath.split(separator: "/", omittingEmptySubsequences: false)
-        guard !rawComponents.contains(where: { $0 == ".." }) else {
-            throw ArchiveError.unsafePath(path)
-        }
-        if let first = rawComponents.first,
-           first.count >= 2,
-           first[first.index(after: first.startIndex)] == ":",
-           first.first?.isASCII == true,
-           first.first?.isLetter == true {
-            throw ArchiveError.unsafePath(path)
-        }
-
-        let normalized = normalizedEntryPath(path)
-        guard !normalized.isEmpty else {
-            throw ArchiveError.unsafePath(path)
-        }
-        return normalized
-    }
-
-    private static func normalizedEntryPath(_ path: String) -> String {
-        path
-            .replacingOccurrences(of: "\\", with: "/")
-            .split(separator: "/")
-            .map(String.init)
-            .filter { !$0.isEmpty && $0 != "." && $0 != ".." }
-            .joined(separator: "/")
     }
 
     private static func dosTimestampComponents(for date: Date) -> (date: UInt16, time: UInt16) {

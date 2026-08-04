@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 /// Shared path construction for aggregate exports and Daily Note Injection.
@@ -27,6 +28,22 @@ enum ExportPathPlanner {
     struct DataDictionaryCollision: Equatable {
         let dataDictionaryRelativePath: String
         let artifactRelativePath: String
+    }
+
+    enum PathValidationError: Error, Equatable {
+        case invalidRelativePath(String)
+        case destinationUnavailable(String)
+        case destinationOutsideVault(String)
+    }
+
+    private struct ResolvedDestinationTarget {
+        struct Identity: Equatable {
+            let device: UInt64
+            let inode: UInt64
+        }
+
+        let path: String
+        let identity: Identity?
     }
 
     static func normalizedRelativePath(_ rawPath: String) -> String {
@@ -201,45 +218,188 @@ enum ExportPathPlanner {
         relativePath([healthSubfolder, HealthMdExportSchema.dataDictionaryFilename])
     }
 
-    /// Detects aliases that resolve to the same destination on common case-insensitive,
-    /// Unicode-normalizing filesystems. Standardization also catches syntactically different
-    /// relative paths that resolve to the same file before a destination is opened.
+    /// Validates the one canonical relative-path spelling shared by direct files, ZIP entries,
+    /// artifact plans, and collision checks. Backslashes and non-normal components are rejected
+    /// instead of being reinterpreted differently by another destination.
+    static func validatedPortableRelativePath(_ relativePath: String) throws -> String {
+        let bytes = Array(relativePath.utf8)
+        let windowsAbsolute = bytes.count >= 2
+            && bytes[1] == 58
+            && ((65...90).contains(bytes[0]) || (97...122).contains(bytes[0]))
+        guard !relativePath.isEmpty,
+              bytes.count <= 4_096,
+              !relativePath.hasPrefix("/"),
+              !relativePath.hasSuffix("/"),
+              !windowsAbsolute,
+              !relativePath.contains("\\"),
+              !relativePath.contains("\0"),
+              !relativePath.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+        else {
+            throw PathValidationError.invalidRelativePath(relativePath)
+        }
+        let components = relativePath
+            .split(separator: "/", omittingEmptySubsequences: false)
+            .map(String.init)
+        guard !components.isEmpty,
+              components.allSatisfy({ !$0.isEmpty && $0 != "." && $0 != ".." }) else {
+            throw PathValidationError.invalidRelativePath(relativePath)
+        }
+        return components.joined(separator: "/")
+    }
+
+    /// Detects future/nonexistent aliases on case-insensitive, width-insensitive, or
+    /// Unicode-normalizing destinations. Invalid paths throw so callers cannot interpret an
+    /// unsafe path as "no collision."
     static func dataDictionaryArtifactCollision(
         healthSubfolder: String,
         artifactRelativePaths: [String]
-    ) -> DataDictionaryCollision? {
+    ) throws -> DataDictionaryCollision? {
         let dictionaryPath = dataDictionaryRelativePath(healthSubfolder: healthSubfolder)
-        guard let dictionaryKey = canonicalPortablePathKey(dictionaryPath) else { return nil }
+        let dictionaryKey = try canonicalPortablePathKey(dictionaryPath)
         for artifactPath in artifactRelativePaths {
-            guard let artifactKey = canonicalPortablePathKey(artifactPath),
-                  artifactKey == dictionaryKey else { continue }
-            return DataDictionaryCollision(
-                dataDictionaryRelativePath: dictionaryPath,
-                artifactRelativePath: artifactPath
-            )
+            let artifactKey = try canonicalPortablePathKey(artifactPath)
+            if artifactKey == dictionaryKey {
+                return DataDictionaryCollision(
+                    dataDictionaryRelativePath: dictionaryPath,
+                    artifactRelativePath: artifactPath
+                )
+            }
         }
         return nil
     }
 
-    static func canonicalPortablePathKey(_ relativePath: String) -> String? {
-        let root = URL(fileURLWithPath: "/__HealthMdCollisionRoot__", isDirectory: true)
-            .standardizedFileURL
-        let candidate = appendingRelativePath(
-            relativePath,
-            to: root,
-            isDirectory: false
-        ).standardizedFileURL
-        let rootPath = root.path.hasSuffix("/") ? root.path : root.path + "/"
-        guard candidate.path.hasPrefix(rootPath) else { return nil }
-        let standardizedRelativePath = String(candidate.path.dropFirst(rootPath.count))
-        guard !standardizedRelativePath.isEmpty else { return nil }
-        return standardizedRelativePath
+    /// Resolves every existing component under the standardized, resolved vault root. This
+    /// catches directory-symlink and hard-link aliases even when the final file does not yet
+    /// exist, while rejecting any target that leaves the selected vault.
+    static func destinationDataDictionaryArtifactCollision(
+        vaultURL: URL,
+        healthSubfolder: String,
+        artifactRelativePaths: [String]
+    ) throws -> DataDictionaryCollision? {
+        if let lexical = try dataDictionaryArtifactCollision(
+            healthSubfolder: healthSubfolder,
+            artifactRelativePaths: artifactRelativePaths
+        ) {
+            return lexical
+        }
+        let dictionaryPath = dataDictionaryRelativePath(healthSubfolder: healthSubfolder)
+        let dictionaryTarget = try resolvedDestinationTarget(
+            vaultURL: vaultURL,
+            relativePath: dictionaryPath
+        )
+        for artifactPath in artifactRelativePaths {
+            let artifactTarget = try resolvedDestinationTarget(
+                vaultURL: vaultURL,
+                relativePath: artifactPath
+            )
+            let sameResolvedPath = artifactTarget.path == dictionaryTarget.path
+            let sameExistingIdentity = artifactTarget.identity != nil
+                && artifactTarget.identity == dictionaryTarget.identity
+            if sameResolvedPath || sameExistingIdentity {
+                return DataDictionaryCollision(
+                    dataDictionaryRelativePath: dictionaryPath,
+                    artifactRelativePath: artifactPath
+                )
+            }
+        }
+        return nil
+    }
+
+    static func canonicalPortablePathKey(_ relativePath: String) throws -> String {
+        try validatedPortableRelativePath(relativePath)
             .precomposedStringWithCompatibilityMapping
             .folding(
                 options: [.caseInsensitive, .widthInsensitive],
                 locale: Locale(identifier: "en_US_POSIX")
             )
             .precomposedStringWithCompatibilityMapping
+    }
+
+    private static func resolvedDestinationTarget(
+        vaultURL: URL,
+        relativePath: String
+    ) throws -> ResolvedDestinationTarget {
+        let portablePath = try validatedPortableRelativePath(relativePath)
+        let standardizedRoot = vaultURL.standardizedFileURL
+        guard standardizedRoot.isFileURL,
+              let rootPointer = Darwin.realpath(standardizedRoot.path, nil) else {
+            throw PathValidationError.destinationUnavailable(relativePath)
+        }
+        defer { Darwin.free(rootPointer) }
+        let resolvedRootPath = String(cString: rootPointer)
+        var rootMetadata = stat()
+        guard Darwin.lstat(resolvedRootPath, &rootMetadata) == 0,
+              rootMetadata.st_mode & S_IFMT == S_IFDIR else {
+            throw PathValidationError.destinationUnavailable(relativePath)
+        }
+        let resolvedRoot = URL(
+            fileURLWithPath: resolvedRootPath,
+            isDirectory: true
+        ).standardizedFileURL
+        let components = portablePath.split(separator: "/").map(String.init)
+        var current = resolvedRoot
+
+        for index in components.indices {
+            let component = components[index]
+            let candidate = current.appendingPathComponent(
+                component,
+                isDirectory: index < components.index(before: components.endIndex)
+            )
+            var linkMetadata = stat()
+            if Darwin.lstat(candidate.path, &linkMetadata) != 0 {
+                guard errno == ENOENT else {
+                    throw PathValidationError.destinationUnavailable(relativePath)
+                }
+                for remaining in components[index...] {
+                    current.appendPathComponent(remaining)
+                }
+                current = current.standardizedFileURL
+                guard contains(current.path, inResolvedRoot: resolvedRoot.path) else {
+                    throw PathValidationError.destinationOutsideVault(relativePath)
+                }
+                return ResolvedDestinationTarget(path: current.path, identity: nil)
+            }
+
+            guard let resolvedPointer = Darwin.realpath(candidate.path, nil) else {
+                throw PathValidationError.destinationUnavailable(relativePath)
+            }
+            let resolvedPath = String(cString: resolvedPointer)
+            Darwin.free(resolvedPointer)
+            current = URL(
+                fileURLWithPath: resolvedPath,
+                isDirectory: index < components.index(before: components.endIndex)
+            ).standardizedFileURL
+            guard contains(current.path, inResolvedRoot: resolvedRoot.path) else {
+                throw PathValidationError.destinationOutsideVault(relativePath)
+            }
+
+            var resolvedMetadata = stat()
+            guard Darwin.lstat(current.path, &resolvedMetadata) == 0 else {
+                throw PathValidationError.destinationUnavailable(relativePath)
+            }
+            if index < components.index(before: components.endIndex) {
+                guard resolvedMetadata.st_mode & S_IFMT == S_IFDIR else {
+                    throw PathValidationError.destinationUnavailable(relativePath)
+                }
+            } else {
+                return ResolvedDestinationTarget(
+                    path: current.path,
+                    identity: ResolvedDestinationTarget.Identity(
+                        device: UInt64(bitPattern: Int64(resolvedMetadata.st_dev)),
+                        inode: UInt64(resolvedMetadata.st_ino)
+                    )
+                )
+            }
+        }
+        throw PathValidationError.invalidRelativePath(relativePath)
+    }
+
+    private static func contains(_ path: String, inResolvedRoot rootPath: String) -> Bool {
+        if path == rootPath { return true }
+        let prefix = rootPath == "/" || rootPath.hasSuffix("/")
+            ? rootPath
+            : rootPath + "/"
+        return path.hasPrefix(prefix)
     }
 
     static func fileURL(in folderURL: URL, filename: String) -> URL {

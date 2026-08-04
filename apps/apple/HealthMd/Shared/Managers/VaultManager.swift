@@ -3532,16 +3532,15 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Collision Safety
 
-    /// Validates every predictable destination artifact for one operation before callers begin
-    /// writing its first file. Explicit native plans are validated separately from their exact
-    /// materialized paths.
+    /// Validates every predictable artifact path before callers begin writing an operation's
+    /// first destination file. Loose output also resolves existing destination components so a
+    /// symlink or hard-link alias cannot bypass the portable lexical collision check.
     func preflightDataDictionaryArtifactCollisions(
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         dates: [Date],
         rollupDates: [Date]? = nil
     ) throws {
-        guard settings.writesDataDictionary else { return }
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
         var calendar = Calendar.current
         calendar.timeZone = settings.exportTimeZoneOverride ?? .current
@@ -3561,7 +3560,8 @@ final class VaultManager: ObservableObject {
             try ensureNoDataDictionaryExportCollision(
                 healthSubfolder: "",
                 settings: settings,
-                artifactRelativePaths: archivePaths
+                artifactRelativePaths: archivePaths,
+                destinationAware: false
             )
             return
         }
@@ -3600,16 +3600,66 @@ final class VaultManager: ObservableObject {
         )
     }
 
+    /// Destination-bound finalizers use their exact frozen artifact paths rather than regenerating
+    /// paths from settings that may no longer describe a persisted plan.
+    func preflightDataDictionaryArtifactCollisions(
+        settings: AdvancedExportSettings,
+        healthSubfolder: String,
+        artifactRelativePaths: [String]
+    ) throws {
+        try ensureNoDataDictionaryExportCollision(
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            artifactRelativePaths: artifactRelativePaths
+        )
+    }
+
     private func ensureNoDataDictionaryExportCollision(
         healthSubfolder: String,
         settings: AdvancedExportSettings,
-        artifactRelativePaths: [String]
+        artifactRelativePaths: [String],
+        destinationAware: Bool = true
     ) throws {
-        guard settings.writesDataDictionary,
-              let collision = ExportPathPlanner.dataDictionaryArtifactCollision(
-                  healthSubfolder: healthSubfolder,
-                  artifactRelativePaths: artifactRelativePaths
-              ) else { return }
+        let collision: ExportPathPlanner.DataDictionaryCollision?
+        do {
+            if !settings.writesDataDictionary {
+                for path in artifactRelativePaths {
+                    _ = try ExportPathPlanner.validatedPortableRelativePath(path)
+                }
+                return
+            }
+
+            if destinationAware,
+               fileSystem is SystemFileSystem,
+               destinationState == .available,
+               let vaultURL {
+                guard bookmarkResolver.startAccessing(vaultURL) else {
+                    throw ExportError.accessDenied
+                }
+                defer { bookmarkResolver.stopAccessing(vaultURL) }
+                collision = try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
+                    vaultURL: vaultURL,
+                    healthSubfolder: healthSubfolder,
+                    artifactRelativePaths: artifactRelativePaths
+                )
+            } else {
+                collision = try ExportPathPlanner.dataDictionaryArtifactCollision(
+                    healthSubfolder: healthSubfolder,
+                    artifactRelativePaths: artifactRelativePaths
+                )
+            }
+        } catch let error as ExportPathPlanner.PathValidationError {
+            let path: String
+            switch error {
+            case .invalidRelativePath(let value),
+                 .destinationUnavailable(let value),
+                 .destinationOutsideVault(let value):
+                path = value
+            }
+            throw ExportError.invalidExportPath(path: path)
+        }
+
+        guard let collision else { return }
         throw ExportError.dataDictionaryPathConflict(
             path: collision.dataDictionaryRelativePath
         )
@@ -3811,6 +3861,7 @@ enum ExportError: LocalizedError, Equatable {
     case noFormatsSelected
     case dailyNotePathConflict(path: String)
     case dataDictionaryPathConflict(path: String)
+    case invalidExportPath(path: String)
 
     var errorDescription: String? {
         switch self {
@@ -3828,6 +3879,8 @@ enum ExportError: LocalizedError, Equatable {
             return "Daily Note Injection target conflicts with export output: \(path). Change Output folder/filename or Daily Note Injection folder/filename."
         case .dataDictionaryPathConflict(let path):
             return "Data dictionary target conflicts with an export artifact: \(path). Change the output folder or filename before exporting."
+        case .invalidExportPath(let path):
+            return "Export path is unsafe or leaves the selected destination: \(path). Change the output folder or filename before exporting."
         }
     }
 }
