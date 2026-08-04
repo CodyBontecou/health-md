@@ -214,44 +214,49 @@ class ExportScheduler @Inject constructor(
                 !currentSettingsMatchOccurrence ||
                 (currentConfiguration.signature != occurrence.configuration.signature && !timezoneRebase)
             ) {
-                replaceGenerationLocked(
+                val dueOccurrenceToPreserve = occurrence.takeIf { delivered ->
+                    delivered.triggerAtMillis <= nowMillis &&
+                        delivered.configuration.zoneId == currentConfiguration.zoneId &&
+                        delivered.configuration.isSameScheduleExceptZone(currentConfiguration)
+                }
+                val replacement = replaceGenerationLocked(
                     configuration = currentConfiguration,
                     nowMillis = nowMillis,
                     reason = GenerationBoundaryReason.DELIVERY_CONFIGURATION_REPLACED,
                     currentFallback = currentFallback,
+                    dueOccurrenceToPreserve = dueOccurrenceToPreserve,
                 )
-                return@withLock false
+                if (dueOccurrenceToPreserve == null) return@withLock false
+
+                // The old frozen snapshot was never admitted. Preserve its due temporal anchor,
+                // but enqueue it only after the new snapshot/generation is durable and old work is
+                // cancelled. Target, endpoint, timing, window, and zone changes do not qualify.
+                return@withLock admitAndAdvanceOccurrenceLocked(
+                    occurrence = replacement,
+                    expedited = expedited,
+                    catchUpThroughMillis = nowMillis,
+                    nextConfiguration = { currentConfiguration },
+                    currentFallback = currentFallback,
+                )
             }
 
             // Admission boundary: generation, target plumbing, and frozen snapshot A are accepted.
             // A same-target preference write may race after this point, and the admitted worker may
             // finish A if it wins the run coordinator. Endpoint/target checks still fail closed in
             // ExportWorker; UI persistence is intentionally not coupled to scheduler reconciliation.
-            enqueueExport(
+            admitAndAdvanceOccurrenceLocked(
                 occurrence = occurrence,
                 expedited = expedited,
                 catchUpThroughMillis = nowMillis,
+                nextConfiguration = {
+                    if (timezoneRebase) {
+                        currentConfiguration
+                    } else {
+                        configurationForNewOccurrence(settings, currentZone)
+                    }
+                },
+                currentFallback = currentFallback,
             )
-
-            val nextConfiguration = if (timezoneRebase) {
-                currentConfiguration
-            } else {
-                configurationForNewOccurrence(settings, currentZone)
-            }
-            val next = if (nextConfiguration.zoneId == occurrence.configuration.zoneId) {
-                timeCalculator.nextFutureOccurrence(occurrence, nowMillis)
-                    .copy(configuration = nextConfiguration)
-            } else {
-                timeCalculator.rebaseOccurrence(occurrence, nextConfiguration, nowMillis)
-            }
-            armOccurrence(next)
-            stateStore.save(next)
-            if (!isFallbackDelivery && occurrence.id != next.id) {
-                workManager.cancelUniqueWork(
-                    "$FALLBACK_TRIGGER_WORK_PREFIX${occurrence.id}",
-                ).await()
-            }
-            true
         }
     }
 
@@ -283,15 +288,15 @@ class ExportScheduler @Inject constructor(
         nowMillis: Long,
         reason: GenerationBoundaryReason,
         currentFallback: ScheduledExportOccurrence? = null,
-    ) {
-        runCoordinator.mutex.withLock {
-            startGenerationTransitionLocked(
-                configuration = configuration,
-                nowMillis = nowMillis,
-                reason = reason,
-                currentFallback = currentFallback,
-            )
-        }
+        dueOccurrenceToPreserve: ScheduledExportOccurrence? = null,
+    ): ScheduledExportOccurrence = runCoordinator.mutex.withLock {
+        startGenerationTransitionLocked(
+            configuration = configuration,
+            nowMillis = nowMillis,
+            reason = reason,
+            currentFallback = currentFallback,
+            dueOccurrenceToPreserve = dueOccurrenceToPreserve,
+        )
     }
 
     private suspend fun resumePendingTransitionLocked(
@@ -312,14 +317,26 @@ class ExportScheduler @Inject constructor(
         reason: GenerationBoundaryReason,
         cleanupScope: ScheduledExportCleanupScope? = null,
         currentFallback: ScheduledExportOccurrence? = null,
-    ) {
+        dueOccurrenceToPreserve: ScheduledExportOccurrence? = null,
+    ): ScheduledExportOccurrence {
         val previous = stateStore.load()
         val generation = generationFactory.create().also { generated ->
             require(ScheduledExportGeneration.isValid(generated)) {
                 "Scheduled export generation factory returned an invalid value."
             }
         }
-        val replacement = timeCalculator.initialOccurrence(
+        val replacement = dueOccurrenceToPreserve?.let { due ->
+            require(due.triggerAtMillis <= nowMillis) {
+                "Only a due scheduled-export occurrence can cross a generation boundary."
+            }
+            require(
+                due.configuration.zoneId == configuration.zoneId &&
+                    due.configuration.isSameScheduleExceptZone(configuration)
+            ) {
+                "A due scheduled-export occurrence cannot cross a routing or schedule boundary."
+            }
+            due.copy(configuration = configuration, generation = generation)
+        } ?: timeCalculator.initialOccurrence(
             configuration = configuration,
             nowMillis = nowMillis,
             generation = generation,
@@ -345,6 +362,7 @@ class ExportScheduler @Inject constructor(
         stateStore.prepareTransition(transition)
         transitionObserver.onCheckpoint(ScheduledExportTransitionCheckpoint.DURABLE_TRANSITION)
         finishGenerationTransitionLocked(transition, currentFallback)
+        return replacement
     }
 
     /** Caller holds [ScheduledExportRunCoordinator.mutex]. Every step is safe to repeat. */
@@ -511,6 +529,41 @@ class ExportScheduler @Inject constructor(
             ExistingWorkPolicy.REPLACE,
             requestBuilder.build(),
         ).await()
+    }
+
+    private suspend fun admitAndAdvanceOccurrenceLocked(
+        occurrence: ScheduledExportOccurrence,
+        expedited: Boolean,
+        catchUpThroughMillis: Long,
+        nextConfiguration: suspend () -> ScheduledExportConfiguration,
+        currentFallback: ScheduledExportOccurrence?,
+    ): Boolean {
+        // Enqueue is the frozen-snapshot admission point. Resolve the following occurrence only
+        // afterward so a failure cannot prevent an otherwise valid due run from being admitted.
+        enqueueExport(
+            occurrence = occurrence,
+            expedited = expedited,
+            catchUpThroughMillis = catchUpThroughMillis,
+        )
+        val configuration = nextConfiguration()
+        val next = if (configuration.zoneId == occurrence.configuration.zoneId) {
+            timeCalculator.nextFutureOccurrence(occurrence, catchUpThroughMillis)
+                .copy(configuration = configuration)
+        } else {
+            timeCalculator.rebaseOccurrence(
+                occurrence,
+                configuration,
+                catchUpThroughMillis,
+            )
+        }
+        armOccurrence(next)
+        stateStore.save(next)
+        if (occurrence.id != next.id && occurrence.id != currentFallback?.id) {
+            workManager.cancelUniqueWork(
+                "$FALLBACK_TRIGGER_WORK_PREFIX${occurrence.id}",
+            ).await()
+        }
+        return true
     }
 
     private suspend fun enqueueExport(

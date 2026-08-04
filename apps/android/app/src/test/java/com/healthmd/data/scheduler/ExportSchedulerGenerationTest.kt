@@ -252,17 +252,103 @@ class ExportSchedulerGenerationTest {
         }
     }
 
+    @Test
+    fun dueOccurrenceUsesNewFrozenOutputSettingsBeforeContinuingReplacementGeneration() = runTest {
+        val oldSettings = settings(ExportTarget.DEVICE_FOLDER).copy(
+            filenameFormat = "frozen-a-{date}",
+        )
+        val currentSettings = oldSettings.copy(filenameFormat = "material-b-{date}")
+        val dueAtMillis = System.currentTimeMillis() - 60_000L
+        val dueOccurrence = occurrence(oldSettings, "generation-output-a").copy(
+            triggerAtMillis = dueAtMillis,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(dueOccurrence)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val workManager = workManager(requests)
+        val scheduler = scheduler(
+            workManager = workManager,
+            currentSettings = { currentSettings },
+            generations = listOf("generation-output-b"),
+        )
+
+        val accepted = scheduler.handleOccurrence(dueOccurrence, expedited = true)
+
+        assertThat(accepted).isTrue()
+        val exportRequests = requests.filter { request ->
+            ExportScheduler.EXPORT_OCCURRENCE_TAG in request.tags
+        }
+        assertThat(exportRequests).hasSize(1)
+        val admitted = requireNotNull(
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+        )
+        assertThat(admitted.generation).isEqualTo("generation-output-b")
+        assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
+        assertThat(admitted.intendedLocalDate).isEqualTo(dueOccurrence.intendedLocalDate)
+        assertThat(admitted.settingsSnapshot?.filenameFormat).isEqualTo("material-b-{date}")
+        assertThat(exportRequests.single().tags).contains(
+            ExportScheduler.EXPORT_GENERATION_TAG_PREFIX + "generation-output-b",
+        )
+
+        val next = requireNotNull(stateStore.load())
+        assertThat(next.generation).isEqualTo("generation-output-b")
+        assertThat(next.triggerAtMillis).isGreaterThan(dueAtMillis)
+        assertThat(next.settingsSnapshot?.filenameFormat).isEqualTo("material-b-{date}")
+        assertThat(stateStore.loadTransition()).isNull()
+        verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-output-a",
+            )
+        }
+    }
+
+    @Test
+    fun dueEndpointChangeFailsClosedAndOnlyArmsAFutureReplacement() = runTest {
+        val oldSettings = settings(ExportTarget.API_ENDPOINT)
+        val currentSettings = oldSettings.copy(apiEndpointUrl = "https://new.example.test/health")
+        val dueAtMillis = System.currentTimeMillis() - 60_000L
+        val dueOccurrence = occurrence(oldSettings, "generation-api-a").copy(
+            triggerAtMillis = dueAtMillis,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(dueOccurrence)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val scheduler = scheduler(
+            workManager = workManager(requests),
+            currentSettings = { currentSettings },
+            generations = listOf("generation-api-b"),
+            fingerprintForEndpoint = { endpoint ->
+                if (endpoint == oldSettings.apiEndpointUrl) API_FINGERPRINT else NEW_API_FINGERPRINT
+            },
+        )
+
+        val accepted = scheduler.handleOccurrence(dueOccurrence, expedited = true)
+
+        assertThat(accepted).isFalse()
+        assertThat(requests.none { ExportScheduler.EXPORT_OCCURRENCE_TAG in it.tags }).isTrue()
+        val replacement = requireNotNull(stateStore.load())
+        assertThat(replacement.generation).isEqualTo("generation-api-b")
+        assertThat(replacement.configuration.destinationFingerprint)
+            .isEqualTo(NEW_API_FINGERPRINT)
+        assertThat(replacement.triggerAtMillis).isGreaterThan(dueAtMillis)
+    }
+
     private fun scheduler(
         workManager: WorkManager,
         currentSettings: () -> ExportSettings,
         generations: List<String> = emptyList(),
         generationFactory: ScheduledExportGeneration = generationFactory(generations),
         stateStore: ScheduledExportStateStore = this.stateStore,
+        fingerprintForEndpoint: (String) -> String? = { API_FINGERPRINT },
     ): ExportScheduler {
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepository.getExportSettings() } answers { currentSettings() }
         val credentialStore = mockk<APIExportCredentialStore>(relaxed = true)
-        coEvery { credentialStore.destinationFingerprint(any()) } returns API_FINGERPRINT
+        coEvery { credentialStore.destinationFingerprint(any()) } answers {
+            fingerprintForEndpoint(firstArg())
+        }
         val enginePinPlanner = mockk<ExportEnginePinPlanner>()
         every { enginePinPlanner.forScheduledExport(any(), any(), any()) } returns null
         every {
@@ -353,5 +439,6 @@ class ExportSchedulerGenerationTest {
     private companion object {
         const val PREFERENCES_NAME = "health_md_scheduled_export_state"
         const val API_FINGERPRINT = "test-api-destination-fingerprint"
+        const val NEW_API_FINGERPRINT = "new-test-api-destination-fingerprint"
     }
 }
