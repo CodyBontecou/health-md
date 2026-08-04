@@ -620,6 +620,18 @@ main {
   width: 212px;
 }
 
+/*
+ * The English Play badge has transparent padding on all four sides. Google's
+ * localized artwork uses the full image width and only keeps vertical padding,
+ * so the English overscan would clip long translations and the badge edges.
+ */
+html:not(:lang(en)) .hero-store-badge-google img {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
 .hero-trust {
   margin-top: 47px;
   color: #66666c;

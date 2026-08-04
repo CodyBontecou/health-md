@@ -1,5 +1,6 @@
 ---
 import Default from '@astrojs/starlight/components/Footer.astro';
+import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
 import { defaultLocale, localeFor } from '../../../i18n/locales.mjs';
 import { localeFromPathname, routePath } from '../../../i18n/routes.mjs';
 
@@ -14,4 +15,7 @@ const legalLocale = locale.surfaces.legal ? localeCode : defaultLocale;
     · <a href={routePath('privacy', legalLocale)}>{locale.ui.privacy}</a>
     · <a href={routePath('terms', legalLocale)}>{locale.ui.terms}</a>
   </p>
+  <div class="healthmd-footer-language">
+    <LanguageSelect />
+  </div>
 </div>

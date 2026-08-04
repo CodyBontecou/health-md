@@ -56,7 +56,15 @@ function replaceLanguageSelector(html, routeId, locale) {
   );
   const marker = nav.test(html) ? nav : legacyLink;
   if (!marker.test(html)) throw new Error(`${locale}/${filename} is missing its language selector`);
-  return html.replace(marker, renderLanguageSelector(routeId, locale));
+  const withoutHeaderSelector = html.replace(marker, '');
+  const footerInner = /<div\b(?=[^>]*\bclass="footer-inner")[^>]*>/i;
+  if (!footerInner.test(withoutHeaderSelector)) {
+    throw new Error(`${locale}/${filename} is missing its footer`);
+  }
+  return withoutHeaderSelector.replace(
+    footerInner,
+    (tag) => `${tag}\n${renderLanguageSelector(routeId, locale)}`,
+  );
 }
 
 function replaceHeadMetadata(html, routeId, locale) {

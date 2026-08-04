@@ -23,6 +23,8 @@ const configurationGuide = await readFile(path.join(ROOT, "docs-src/src/content/
 const iphoneExportGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/iphone-first-export.md"), "utf8");
 const docsHead = await readFile(path.join(ROOT, "docs-src/src/components/Head.astro"), "utf8");
 const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/HeaderLinks.astro"), "utf8");
+const docsFooter = await readFile(path.join(ROOT, "docs-src/src/components/Footer.astro"), "utf8");
+const emptyLanguageSelect = await readFile(path.join(ROOT, "docs-src/src/components/EmptyLanguageSelect.astro"), "utf8");
 const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
@@ -197,7 +199,8 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 test("landing experience follows the reference's single-screen desktop composition", () => {
   assert.match(index, /<div class="header-nav">/);
   assert.match(index, /<nav aria-label="Documentation"><a class="header-docs-link" href="docs\/">Docs<\/a><\/nav>/);
-  assert.match(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
+  assert.doesNotMatch(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
+  assert.doesNotMatch(index.slice(index.indexOf('<header'), index.indexOf('</header>')), /language-menu|language-selector/);
   assert.doesNotMatch(index, /↗/);
   assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px 13\.7% 0/);
   assert.match(styles, /\.brand-name\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*19px;[\s\S]*?font-weight:\s*590/);
@@ -244,6 +247,10 @@ test("hero uses official store badges with direct marketplace links", () => {
   assert.match(actions, /assets\/store-badges\/get-it-on-google-play\.png/);
   assert.match(styles, /\.hero-store-badge-apple\s*{[\s\S]*?width:\s*166px;[\s\S]*?height:\s*55px/);
   assert.match(styles, /\.hero-store-badge-google\s*{[\s\S]*?width:\s*185px;[\s\S]*?height:\s*55px/);
+  assert.match(
+    styles,
+    /html:not\(:lang\(en\)\) \.hero-store-badge-google img\s*{[\s\S]*?left:\s*0;[\s\S]*?width:\s*100%;[\s\S]*?transform:\s*translateY\(-50%\)/,
+  );
 });
 
 test("hero visual routes health signals through Health.md to useful destinations", () => {
@@ -449,6 +456,16 @@ test("docs use the landing page's self-hosted light visual system", () => {
   assert.match(docsStyles, /html:lang\(zh-Hans\)[\s\S]*?line-break:\s*strict/);
   assert.match(docsStyles, /html:lang\(ko\)[\s\S]*?word-break:\s*keep-all/);
   assert.doesNotMatch(docsStyles, /cdn\.jsdelivr\.net/);
+});
+
+test("language selection lives in the landing and documentation footers", () => {
+  assert.match(index, /<div class="footer-language">[\s\S]*?<!-- HEALTHMD_FOOTER_LANGUAGE_SELECTOR -->/);
+  assert.doesNotMatch(index.slice(index.indexOf('<header'), index.indexOf('</header>')), /language-menu|language-selector/);
+  assert.match(docsConfig, /LanguageSelect: '\.\/src\/components\/EmptyLanguageSelect\.astro'/);
+  assert.match(emptyLanguageSelect, /Language selection is rendered in the documentation footer/);
+  assert.match(docsFooter, /import LanguageSelect from '@astrojs\/starlight\/components\/LanguageSelect\.astro'/);
+  assert.match(docsFooter, /class="healthmd-footer-language"[\s\S]*?<LanguageSelect \/>/);
+  assert.match(docsStyles, /\.healthmd-footer-language\s*\{[\s\S]*?margin-inline-start:\s*auto/);
 });
 
 test("docs navigation starts with user goals and labels preview surfaces", () => {

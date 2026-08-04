@@ -1334,12 +1334,26 @@ mobile-starlight-toc details#starlight__mobile-toc {
 }
 
 .healthmd-footer-note {
+  align-items: center;
   border-top: 1px solid var(--hmd-gray-alpha-200);
   color: var(--hmd-secondary);
+  display: flex;
+  flex-wrap: wrap;
   font-size: 0.875rem;
+  gap: 12px 20px;
   line-height: 20px;
   margin-top: 32px;
   padding-top: 16px;
+}
+
+.healthmd-footer-note p {
+  flex: 1 1 28rem;
+  margin: 0;
+}
+
+.healthmd-footer-language {
+  display: inline-flex;
+  margin-inline-start: auto;
 }
 
 .healthmd-footer-note a {
