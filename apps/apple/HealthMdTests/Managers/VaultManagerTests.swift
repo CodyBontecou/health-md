@@ -203,6 +203,22 @@ final class VaultManagerTests: XCTestCase {
         return manager
     }
 
+    private func externalRecord(
+        provider: ExternalIntegrationProvider = .whoop,
+        date: String = "2026-03-15"
+    ) -> ExternalDailyRecord {
+        ExternalDailyRecord(
+            provider: provider,
+            date: date,
+            payloads: [ExternalProviderPayload(
+                name: "fixture",
+                endpoint: "https://example.invalid/fixture",
+                statusCode: 200,
+                data: .object(["value": .number(1)])
+            )]
+        )
+    }
+
     // MARK: - Durable exact artifact I/O
 
     func testExactArtifactIOUsesRawBytesAndAtomicDescriptorRelativeWrite() async throws {
@@ -1139,6 +1155,356 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(healthPathFiles.isEmpty, "Should write file under vault/Health/")
     }
 
+    func testLegacySyncExportReportsFirstFormatWhenLaterFormatFails() throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SequentialSyncVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.csv, .json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let jsonPath = ExportPathPlanner.aggregateFileURL(
+            vaultURL: vaultURL,
+            healthSubfolder: "Health",
+            settings: settings,
+            date: ExportFixtures.fullDay.date,
+            format: .json
+        ).path
+        fileSystem.failBeforeWritingPathOnce = jsonPath
+
+        do {
+            _ = try manager.exportHealthDataResult(
+                ExportFixtures.fullDay,
+                for: ExportFixtures.fullDay.date,
+                settings: settings,
+                writeDataDictionary: false
+            )
+            XCTFail("Expected the later JSON write to fail")
+        } catch let error as ExportPartialWriteError {
+            XCTAssertEqual(error.looseAggregateFileCount, 1)
+            XCTAssertEqual(error.committedFileCount, 1)
+            XCTAssertFalse(error.wasCancelled)
+        }
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.hasSuffix(".csv") }.count, 1)
+        XCTAssertNil(fileSystem.files[jsonPath])
+    }
+
+    func testLegacyAsyncExportReportsFirstFormatWhenLaterFormatIsCancelled() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SequentialAsyncVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.csv, .json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let jsonPath = ExportPathPlanner.aggregateFileURL(
+            vaultURL: vaultURL,
+            healthSubfolder: "Health",
+            settings: settings,
+            date: ExportFixtures.fullDay.date,
+            format: .json
+        ).path
+        fileSystem.injectedErrorBeforeWritingPathOnce = (jsonPath, CancellationError())
+
+        do {
+            _ = try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false
+            )
+            XCTFail("Expected the later JSON write to be cancelled")
+        } catch let error as ExportPartialWriteError {
+            XCTAssertEqual(error.looseAggregateFileCount, 1)
+            XCTAssertEqual(error.committedFileCount, 1)
+            XCTAssertTrue(error.wasCancelled)
+        }
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.hasSuffix(".csv") }.count, 1)
+        XCTAssertNil(fileSystem.files[jsonPath])
+    }
+
+    func testExternalSidecarLoopReportsOnlyConfirmedPriorWrites() async throws {
+        let vaultURL = URL(fileURLWithPath: "/tmp/SequentialSidecarVault")
+        defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
+        bookmarkResolver.resolvedURL = vaultURL
+        let manager = makeManager()
+        manager.healthSubfolder = "Health"
+        var sidecarWrites = 0
+        let testFileSystem = fileSystem!
+        testFileSystem.writeStarted = { url in
+            guard url.path.contains("/integrations/") else { return }
+            sidecarWrites += 1
+            if sidecarWrites == 2 {
+                testFileSystem.failBeforeWritingPathOnce = url.path
+            }
+        }
+        let records = [ExternalIntegrationProvider.whoop, .strava].map { provider in
+            ExternalDailyRecord(
+                provider: provider,
+                date: "2026-03-15",
+                payloads: [ExternalProviderPayload(
+                    name: "fixture",
+                    endpoint: "https://example.invalid/fixture",
+                    statusCode: 500,
+                    error: "fixture"
+                )]
+            )
+        }
+
+        do {
+            _ = try await manager.exportExternalDailyRecords(records)
+            XCTFail("Expected the second sidecar write to fail")
+        } catch let error as ExportPartialWriteError {
+            XCTAssertEqual(error.kind, .providerSidecar)
+            XCTAssertEqual(error.providerSidecarFileCount, 1)
+            XCTAssertEqual(error.committedFileCount, 1)
+            XCTAssertFalse(error.wasCancelled)
+        }
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.contains("/integrations/") }.count, 1)
+    }
+
+    func testExternalSidecarPlanRejectsTraversalWithoutCommitting() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+
+        XCTAssertThrowsError(try manager.planExternalDailyRecordDestinations(
+            [externalRecord()],
+            healthSubfolder: "../outside"
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
+    func testExternalSidecarPlanRejectsBackslashWithoutCommitting() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+
+        XCTAssertThrowsError(try manager.planExternalDailyRecordDestinations(
+            [externalRecord()],
+            healthSubfolder: #"Health\Unsafe"#
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
+    func testExternalSidecarPlanRejectsOutboundSymlinkWithoutCommitting() throws {
+        let vaultURL = makeTempDir()
+        let outsideURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: outsideURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        try FileManager.default.createSymbolicLink(
+            at: vaultURL.appendingPathComponent("Health", isDirectory: true),
+            withDestinationURL: outsideURL
+        )
+
+        XCTAssertThrowsError(try manager.planExternalDailyRecordDestinations(
+            [externalRecord()],
+            healthSubfolder: "Health"
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), ["Health"])
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: outsideURL.path).isEmpty)
+    }
+
+    func testFrozenExternalSidecarPlanRevalidatesNamespaceBeforeFirstWrite() async throws {
+        let vaultURL = makeTempDir()
+        let outsideURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: outsideURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let plan = try XCTUnwrap(manager.planExternalDailyRecordDestinations(
+            [externalRecord()],
+            healthSubfolder: "Health"
+        ))
+        try FileManager.default.createSymbolicLink(
+            at: vaultURL.appendingPathComponent("Health", isDirectory: true),
+            withDestinationURL: outsideURL
+        )
+
+        do {
+            _ = try await manager.exportExternalDailyRecords(plan)
+            XCTFail("Expected invalidExportPath")
+        } catch {
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), ["Health"])
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: outsideURL.path).isEmpty)
+    }
+
+    func testExternalSidecarPlanRejectsPortableAliasWithoutCommitting() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let record = externalRecord()
+
+        XCTAssertThrowsError(try manager.planExternalDailyRecordDestinations(
+            [record, record],
+            healthSubfolder: "Health"
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
+    func testExternalSidecarPlanRejectsDataDictionaryAliasWithoutCommitting() throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        let providerURL = healthURL
+            .appendingPathComponent("integrations", isDirectory: true)
+            .appendingPathComponent("whoop", isDirectory: true)
+        try FileManager.default.createDirectory(at: providerURL, withIntermediateDirectories: true)
+        let dictionaryURL = healthURL.appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename)
+        try "existing dictionary".write(to: dictionaryURL, atomically: true, encoding: .utf8)
+        let sidecarURL = providerURL.appendingPathComponent("2026-03-15.json")
+        try FileManager.default.createSymbolicLink(at: sidecarURL, withDestinationURL: dictionaryURL)
+        let before = try Set(FileManager.default.subpathsOfDirectory(atPath: vaultURL.path))
+
+        XCTAssertThrowsError(try manager.planExternalDailyRecordDestinations(
+            [externalRecord()],
+            healthSubfolder: "Health"
+        )) { error in
+            guard case ExportError.dataDictionaryPathConflict = error else {
+                return XCTFail("Expected dataDictionaryPathConflict, got \(error)")
+            }
+        }
+        XCTAssertEqual(try String(contentsOf: dictionaryURL, encoding: .utf8), "existing dictionary")
+        XCTAssertEqual(try Set(FileManager.default.subpathsOfDirectory(atPath: vaultURL.path)), before)
+    }
+
+    func testInvalidIndividualEntryPlanRejectsBeforeAggregateCommit() async throws {
+        let parentURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: parentURL) }
+        let vaultURL = parentURL.appendingPathComponent("vault", isDirectory: true)
+        let outsideURL = parentURL.appendingPathComponent("outside", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: outsideURL, withIntermediateDirectories: true)
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.useCategoryFolders = false
+        settings.individualTracking.entriesFolder = "../outside"
+        settings.individualTracking.setTrackIndividually("weight", enabled: true)
+
+        do {
+            _ = try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false
+            )
+            XCTFail("Expected invalidExportPath")
+        } catch {
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: outsideURL.path).isEmpty)
+    }
+
+    func testIndividualEntryAliasOfAggregateRejectsBeforeAnyCommit() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.useCategoryFolders = false
+        settings.individualTracking.entriesFolder = ""
+        settings.individualTracking.setTrackIndividually("weight", enabled: true)
+        let aggregateFilename = settings.filename(
+            for: ExportFixtures.fullDay.date,
+            format: .markdown
+        )
+        settings.individualTracking.filenameTemplate = String(aggregateFilename.dropLast(3))
+
+        do {
+            _ = try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false
+            )
+            XCTFail("Expected cross-category aggregate alias rejection")
+        } catch {
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
+    func testProviderSidecarAliasOfAggregateRejectsBeforeAnyCommit() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = "integrations/whoop"
+        settings.filenameFormat = "2026-03-15"
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let sidecarPlan = try XCTUnwrap(manager.planExternalDailyRecordDestinations(
+            [externalRecord()],
+            healthSubfolder: "Health"
+        ))
+
+        do {
+            _ = try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false,
+                additionalArtifactRelativePaths: sidecarPlan.artifactRelativePaths
+            )
+            XCTFail("Expected cross-category provider alias rejection")
+        } catch {
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
     func testAsyncExportAppendRetryDoesNotDuplicateIdenticalAggregate() async throws {
         let vaultURL = URL(fileURLWithPath: "/tmp/AsyncAppendVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
@@ -1253,6 +1619,35 @@ final class VaultManagerTests: XCTestCase {
                 securityScopedRootURL: vaultURL
             )
         )
+    }
+
+    func testExportHealthData_dictionaryDisabledAllowsAggregateAtDictionaryFilename() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.filenameFormat = String(HealthMdExportSchema.dataDictionaryFilename.dropLast(5))
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+
+        let result = try await manager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: settings,
+            writeDataDictionary: false
+        )
+
+        XCTAssertEqual(result.aggregateFileCount, 1)
+        XCTAssertEqual(result.dataDictionaryFileCount, 0)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: vaultURL
+                .appendingPathComponent("Health")
+                .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename)
+                .path
+        ))
     }
 
     func testExportHealthData_dictionaryDisabledKeepsMarkdownWithoutJSONSidecar() {
@@ -1550,6 +1945,143 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(result)
         XCTAssertEqual(try String(contentsOf: dailyNoteURL, encoding: .utf8), originalContent)
         XCTAssertTrue(manager.lastExportStatus?.contains("Daily Note Injection target conflicts") == true)
+    }
+
+    func testManualExport_dataDictionaryCollisionFailsBeforeCreatingAnyArtifact() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = ""
+        settings.filenameFormat = "_healthmd_data_dictionary"
+        settings.includeDataDictionary = true
+
+        do {
+            _ = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+            XCTFail("Expected the dictionary/artifact collision to fail")
+        } catch let error as ExportError {
+            guard case .dataDictionaryPathConflict(let path) = error else {
+                XCTFail("Expected dataDictionaryPathConflict, got \(error)")
+                return
+            }
+            XCTAssertEqual(path, "Health/_healthmd_data_dictionary.json")
+            XCTAssertTrue(error.localizedDescription.contains("Data dictionary"))
+        }
+
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: vaultURL.path), [])
+    }
+
+    func testDataDictionaryCollisionUsesPortableCaseUnicodeWidthAndZIPAliasNormalization() throws {
+        let dictionary = "Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+        let fullWidth = dictionary.applyingTransform(.fullwidthToHalfwidth, reverse: true)
+            ?? dictionary.uppercased()
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: [dictionary.uppercased()]
+        ))
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: [fullWidth]
+        ))
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: ["Health/./\(HealthMdExportSchema.dataDictionaryFilename)"]
+        ))
+        XCTAssertNotNil(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: ["Health\\\(HealthMdExportSchema.dataDictionaryFilename)"]
+        ))
+
+        XCTAssertThrowsError(try ExportPathPlanner.validatedPortableRelativePath(
+            "Health/./\(HealthMdExportSchema.dataDictionaryFilename)"
+        ))
+        XCTAssertThrowsError(try ExportPathPlanner.validatedPortableRelativePath(
+            "Health\\\(HealthMdExportSchema.dataDictionaryFilename)"
+        ))
+        XCTAssertThrowsError(try ExportPathPlanner.dataDictionaryArtifactCollision(
+            healthSubfolder: "Health",
+            artifactRelativePaths: ["Health/../outside.json"]
+        ))
+    }
+
+    func testManualExportRejectsResolvedSymlinkAliasBeforeWritingDictionaryOrArtifact() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            at: healthURL.appendingPathComponent("Alias", isDirectory: true),
+            withDestinationURL: healthURL
+        )
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = "Alias"
+        settings.filenameFormat = "_healthmd_data_dictionary"
+        settings.includeDataDictionary = true
+
+        do {
+            _ = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+            XCTFail("Expected the resolved dictionary/artifact alias to fail")
+        } catch let error as ExportError {
+            guard case .dataDictionaryPathConflict(let path) = error else {
+                return XCTFail("Expected dataDictionaryPathConflict, got \(error)")
+            }
+            XCTAssertEqual(path, "Health/_healthmd_data_dictionary.json")
+        }
+
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: healthURL.appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
+        ))
+        let healthChildren = try FileManager.default.contentsOfDirectory(
+            at: healthURL,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(healthChildren.map(\.lastPathComponent), ["Alias"])
+    }
+
+    func testManualExportRejectsArtifactSymlinkOutsideVaultWithoutDictionary() async throws {
+        let vaultURL = makeTempDir()
+        let outsideURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: outsideURL)
+        }
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(
+            at: healthURL.appendingPathComponent("Alias", isDirectory: true),
+            withDestinationURL: outsideURL
+        )
+
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = "Alias"
+        settings.filenameFormat = "safe"
+        settings.includeDataDictionary = false
+
+        do {
+            _ = try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
+            XCTFail("Expected the out-of-root destination to fail")
+        } catch let error as ExportError {
+            guard case .invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: outsideURL.path).isEmpty)
+        let healthChildren = try FileManager.default.contentsOfDirectory(
+            at: healthURL,
+            includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(healthChildren.map(\.lastPathComponent), ["Alias"])
     }
 
     #if os(macOS)

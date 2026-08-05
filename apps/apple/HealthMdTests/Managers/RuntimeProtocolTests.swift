@@ -122,6 +122,7 @@ nonisolated final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable
     var directories: Set<String> = []
     var failBeforeWritingPathOnce: String?
     var failAfterWritingPathOnce: String?
+    var injectedErrorBeforeWritingPathOnce: (path: String, error: Error)?
     var writeStarted: ((URL) -> Void)?
     var writeBlocker: DispatchSemaphore?
     var readStarted: ((URL) -> Void)?
@@ -163,6 +164,11 @@ nonisolated final class FakeFileSystem: FileSystemAccessing, @unchecked Sendable
                 code: 2,
                 userInfo: [NSLocalizedDescriptionKey: "Injected failure before write"]
             )
+        }
+        if let injected = injectedErrorBeforeWritingPathOnce,
+           injected.path == url.path {
+            injectedErrorBeforeWritingPathOnce = nil
+            throw injected.error
         }
         files[url.path] = string
         writeCounts[url.path, default: 0] += 1

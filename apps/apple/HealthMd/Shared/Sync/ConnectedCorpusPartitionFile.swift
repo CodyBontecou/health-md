@@ -5,6 +5,17 @@ import Foundation
 struct MacCorpusDerivedOutputResult {
     let rollupFileCount: Int
     let archiveFileCount: Int
+    let dataDictionaryFileCount: Int
+
+    init(
+        rollupFileCount: Int,
+        archiveFileCount: Int,
+        dataDictionaryFileCount: Int = 0
+    ) {
+        self.rollupFileCount = rollupFileCount
+        self.archiveFileCount = archiveFileCount
+        self.dataDictionaryFileCount = dataDictionaryFileCount
+    }
 }
 
 /// Application items carried by corpus partitions. Each item is encoded and

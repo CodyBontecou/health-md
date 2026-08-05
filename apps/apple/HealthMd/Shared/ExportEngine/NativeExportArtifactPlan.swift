@@ -167,26 +167,9 @@ nonisolated struct NativeExportArtifact: Equatable, Sendable {
     }
 
     private static func isValidRelativePath(_ path: String) -> Bool {
-        let bytes = path.utf8
-        let windowsAbsolute = bytes.count >= 2
-            && bytes[bytes.index(after: bytes.startIndex)] == 58
-            && bytes.first.map { (65...90).contains($0) || (97...122).contains($0) } == true
-        guard !path.isEmpty,
-              bytes.count <= 4_096,
-              !path.hasPrefix("/"),
-              !path.hasSuffix("/"),
-              !windowsAbsolute,
-              !path.contains("\\"),
-              !path.contains("\0"),
-              !path.contains("{"),
-              !path.contains("}"),
-              !path.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
-        else {
-            return false
-        }
-        return !path.split(separator: "/", omittingEmptySubsequences: false).contains {
-            $0.isEmpty || $0 == "." || $0 == ".."
-        }
+        (try? ExportPathPlanner.validatedPortableRelativePath(path)) != nil
+            && !path.contains("{")
+            && !path.contains("}")
     }
 
     private static func isValidMediaType(_ value: String) -> Bool {

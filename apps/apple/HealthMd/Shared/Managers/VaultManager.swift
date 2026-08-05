@@ -475,8 +475,15 @@ struct ExportPresentationTarget: Equatable, Sendable {
 nonisolated struct AppleLooseDailyRangeWriteResult: Equatable, Sendable {
     let dailyFileCount: Int
     let rollupFileCount: Int
+    let dataDictionaryFileCount: Int
 
-    var totalFileCount: Int { dailyFileCount + rollupFileCount }
+    init(dailyFileCount: Int, rollupFileCount: Int, dataDictionaryFileCount: Int = 0) {
+        self.dailyFileCount = dailyFileCount
+        self.rollupFileCount = rollupFileCount
+        self.dataDictionaryFileCount = dataDictionaryFileCount
+    }
+
+    var totalFileCount: Int { dailyFileCount + rollupFileCount + dataDictionaryFileCount }
 }
 
 nonisolated struct AppleLooseDailyMaterializedFile: Equatable, Sendable {
@@ -941,14 +948,19 @@ nonisolated private enum SecureExactArtifactIO {
 struct DailyExportWriteResult {
     let aggregateFileCount: Int
     let individualEntryFileCount: Int
+    let dataDictionaryFileCount: Int
     let dailyNoteResult: DailyNoteInjector.InjectionResult?
 
-    var dailyNoteUpdatedCount: Int {
+    var totalGeneratedFileCount: Int {
+        aggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
+    }
+
+    nonisolated var dailyNoteUpdatedCount: Int {
         if case .updated = dailyNoteResult { return 1 }
         return 0
     }
 
-    var dailyNoteSkippedCount: Int {
+    nonisolated var dailyNoteSkippedCount: Int {
         if case .skipped = dailyNoteResult { return 1 }
         return 0
     }
@@ -961,8 +973,147 @@ struct DailyExportWriteResult {
     static let noOutput = DailyExportWriteResult(
         aggregateFileCount: 0,
         individualEntryFileCount: 0,
+        dataDictionaryFileCount: 0,
         dailyNoteResult: nil
     )
+}
+
+struct RollupExportWriteResult {
+    let files: [HealthRollupWriteResult]
+    let dataDictionaryFileCount: Int
+
+    nonisolated var count: Int { files.count }
+    var isEmpty: Bool { files.isEmpty }
+    var totalGeneratedFileCount: Int { files.count + dataDictionaryFileCount }
+}
+
+/// Health-free accounting attached only after a writer has confirmed earlier atomic commits.
+/// The write that threw is deliberately excluded because its outcome is not known.
+nonisolated struct ExportPartialWriteError: Error, LocalizedError, Equatable, Sendable {
+    enum Kind: String, Equatable, Sendable {
+        case daily
+        case range
+        case rollup
+        case providerSidecar
+        case archive
+    }
+
+    let kind: Kind
+    let diagnostic: String
+    let looseAggregateFileCount: Int
+    let individualEntryFileCount: Int
+    let dataDictionaryFileCount: Int
+    let rollupFileCount: Int
+    let zipArchiveFileCount: Int
+    let providerSidecarFileCount: Int
+    let dailyNoteUpdateCount: Int
+    let dailyNoteSkipCount: Int
+    /// A cancellation that occurs after a confirmed commit must keep both facts:
+    /// the exact committed lower bound and cancellation as the terminal outcome.
+    let wasCancelled: Bool
+
+    var committedFileCount: Int {
+        [
+            looseAggregateFileCount,
+            individualEntryFileCount,
+            dataDictionaryFileCount,
+            rollupFileCount,
+            zipArchiveFileCount,
+            providerSidecarFileCount
+        ].reduce(0, Self.saturatingAdd)
+    }
+
+    var hasCommittedOutput: Bool {
+        committedFileCount > 0 || dailyNoteUpdateCount > 0 || dailyNoteSkipCount > 0
+    }
+
+    var errorDescription: String? { diagnostic }
+
+    init(
+        underlyingError: Error,
+        kind: Kind,
+        looseAggregateFileCount: Int = 0,
+        individualEntryFileCount: Int = 0,
+        dataDictionaryFileCount: Int = 0,
+        rollupFileCount: Int = 0,
+        zipArchiveFileCount: Int = 0,
+        providerSidecarFileCount: Int = 0,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0
+    ) {
+        let nested = underlyingError as? ExportPartialWriteError
+        self.kind = kind
+        diagnostic = nested?.diagnostic ?? underlyingError.localizedDescription
+        self.looseAggregateFileCount = Self.saturatingAdd(
+            max(looseAggregateFileCount, 0),
+            nested?.looseAggregateFileCount ?? 0
+        )
+        self.individualEntryFileCount = Self.saturatingAdd(
+            max(individualEntryFileCount, 0),
+            nested?.individualEntryFileCount ?? 0
+        )
+        self.dataDictionaryFileCount = Self.saturatingAdd(
+            max(dataDictionaryFileCount, 0),
+            nested?.dataDictionaryFileCount ?? 0
+        )
+        self.rollupFileCount = Self.saturatingAdd(
+            max(rollupFileCount, 0),
+            nested?.rollupFileCount ?? 0
+        )
+        self.zipArchiveFileCount = Self.saturatingAdd(
+            max(zipArchiveFileCount, 0),
+            nested?.zipArchiveFileCount ?? 0
+        )
+        self.providerSidecarFileCount = Self.saturatingAdd(
+            max(providerSidecarFileCount, 0),
+            nested?.providerSidecarFileCount ?? 0
+        )
+        self.dailyNoteUpdateCount = Self.saturatingAdd(
+            max(dailyNoteUpdateCount, 0),
+            nested?.dailyNoteUpdateCount ?? 0
+        )
+        self.dailyNoteSkipCount = Self.saturatingAdd(
+            max(dailyNoteSkipCount, 0),
+            nested?.dailyNoteSkipCount ?? 0
+        )
+        wasCancelled = nested?.wasCancelled ?? (underlyingError is CancellationError)
+    }
+
+    init(underlyingError: Error, dailyResult: DailyExportWriteResult) {
+        self.init(
+            underlyingError: underlyingError,
+            kind: .daily,
+            looseAggregateFileCount: dailyResult.aggregateFileCount,
+            individualEntryFileCount: dailyResult.individualEntryFileCount,
+            dataDictionaryFileCount: dailyResult.dataDictionaryFileCount,
+            dailyNoteUpdateCount: dailyResult.dailyNoteUpdatedCount,
+            dailyNoteSkipCount: dailyResult.dailyNoteSkippedCount
+        )
+    }
+
+    init(underlyingError: Error, rangeResult: AppleLooseDailyRangeWriteResult) {
+        self.init(
+            underlyingError: underlyingError,
+            kind: .range,
+            looseAggregateFileCount: rangeResult.dailyFileCount,
+            dataDictionaryFileCount: rangeResult.dataDictionaryFileCount,
+            rollupFileCount: rangeResult.rollupFileCount
+        )
+    }
+
+    init(underlyingError: Error, rollupResult: RollupExportWriteResult) {
+        self.init(
+            underlyingError: underlyingError,
+            kind: .rollup,
+            dataDictionaryFileCount: rollupResult.dataDictionaryFileCount,
+            rollupFileCount: rollupResult.count
+        )
+    }
+
+    private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
+        let sum = lhs.addingReportingOverflow(rhs)
+        return sum.overflow ? Int.max : sum.partialValue
+    }
 }
 
 enum VaultDestinationState: Equatable {
@@ -1452,6 +1603,7 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true,
+        additionalArtifactRelativePaths: [String] = [],
         operationSurface: AppleExportOperationSurface = .legacyOnly,
         frozenSettingsSnapshot suppliedSettingsSnapshot: ExportSettingsSnapshot? = nil,
         preparedExport suppliedPreparedExport: PreparedHealthDataExport? = nil
@@ -1504,7 +1656,8 @@ final class VaultManager: ObservableObject {
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: frozenSettings,
                 shouldWriteDataDictionary: shouldWriteDataDictionary,
-                preparedExport: preparedExport
+                preparedExport: preparedExport,
+                additionalArtifactRelativePaths: additionalArtifactRelativePaths
             )
         case .planned(let operation):
             return try await writePlannedLooseDailyOutputsOffMain(
@@ -1514,7 +1667,8 @@ final class VaultManager: ObservableObject {
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: frozenSettings,
                 shouldWriteDataDictionary: shouldWriteDataDictionary,
-                operation: operation
+                operation: operation,
+                additionalArtifactRelativePaths: additionalArtifactRelativePaths
             )
         }
     }
@@ -1589,6 +1743,12 @@ final class VaultManager: ObservableObject {
         } else {
             dictionary = nil
         }
+        try ensureNoDataDictionaryExportCollision(
+            healthSubfolder: settingsSnapshot.healthSubfolder ?? self.healthSubfolder,
+            settings: frozenSettings,
+            artifactRelativePaths: operation.artifacts.map(\.artifact.relativePath),
+            destinationAware: false
+        )
         let rollupFileCount = operation.artifacts.count { $0.kind == .rollup }
         return AppleLooseDailyRangeMaterialization(
             operation: operation,
@@ -1624,6 +1784,12 @@ final class VaultManager: ObservableObject {
             operationIdentity: operationIdentity,
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
+
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settingsSnapshot.makeAdvancedExportSettings(),
+            healthSubfolder: settingsSnapshot.healthSubfolder ?? self.healthSubfolder,
+            artifactRelativePaths: materialized.operation.artifacts.map(\.artifact.relativePath)
+        )
 
         let dictionaryRequest = try materialized.dataDictionary.map { file in
             guard let content = String(data: file.data, encoding: .utf8) else {
@@ -1665,18 +1831,65 @@ final class VaultManager: ObservableObject {
         defer { bookmarkResolver.stopAccessing(vaultURL) }
         do {
             try await barrier.transition(to: .committing)
-            if let dictionaryRequest { _ = try await aggregateFileWriter.write(dictionaryRequest) }
             var writtenFiles: [WrittenAggregateFile] = []
+            var committedResult = AppleLooseDailyRangeWriteResult(
+                dailyFileCount: 0,
+                rollupFileCount: 0
+            )
             for (planned, request) in aggregateRequests {
-                let outcome = try await aggregateFileWriter.write(request)
+                let outcome: AggregateFileWriteOutcome
+                do {
+                    outcome = try await aggregateFileWriter.write(request)
+                } catch {
+                    try rethrowTrackedWriteFailure(error) {
+                        ExportPartialWriteError(
+                            underlyingError: $0,
+                            rangeResult: committedResult
+                        )
+                    }
+                }
                 writtenFiles.append(WrittenAggregateFile(
                     fileURL: outcome.fileURL,
                     filename: outcome.filename,
                     relativePath: planned.artifact.relativePath,
                     format: planned.format
                 ))
+                committedResult = AppleLooseDailyRangeWriteResult(
+                    dailyFileCount: committedResult.dailyFileCount
+                        + (planned.kind == .daily ? 1 : 0),
+                    rollupFileCount: committedResult.rollupFileCount
+                        + (planned.kind == .rollup ? 1 : 0)
+                )
             }
-            try await barrier.transition(to: .completed)
+            // Keep the shared dictionary as the final fallible artifact write. If it fails, every
+            // previously committed daily and roll-up artifact remains exactly accounted for.
+            if let dictionaryRequest {
+                do {
+                    _ = try await aggregateFileWriter.write(dictionaryRequest)
+                } catch {
+                    try rethrowTrackedWriteFailure(error) {
+                        ExportPartialWriteError(
+                            underlyingError: $0,
+                            rangeResult: committedResult
+                        )
+                    }
+                }
+                committedResult = AppleLooseDailyRangeWriteResult(
+                    dailyFileCount: committedResult.dailyFileCount,
+                    rollupFileCount: committedResult.rollupFileCount,
+                    dataDictionaryFileCount: 1
+                )
+            }
+            do {
+                try await barrier.transition(to: .completed)
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        rangeResult: committedResult
+                    )
+                }
+            }
             lastExportStatus = "Exported \(writtenFiles.count) files from one frozen range plan"
             if let previewFile = preferredPresentationFile(in: writtenFiles) {
                 recordExportPresentationTarget(
@@ -1684,7 +1897,7 @@ final class VaultManager: ObservableObject {
                     securityScopedRootURL: vaultURL
                 )
             }
-            return materialized.result
+            return committedResult
         } catch {
             try? await barrier.transition(to: .failed)
             throw error
@@ -1840,6 +2053,52 @@ final class VaultManager: ObservableObject {
         )
     }
 
+    /// Admits one cross-category namespace before a daily export commits anything. Dynamic
+    /// individual-entry/provider paths must be checked together with aggregates, Daily Notes and
+    /// derived roll-ups; validating each producer independently can miss an alias between them.
+    private func validateHealthDataOutputArtifactCollisions(
+        date: Date,
+        vaultURL: URL,
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        aggregateArtifactRelativePaths: [String]? = nil,
+        individualEntryPlan: IndividualEntryExporter.ExportPlan?,
+        additionalArtifactRelativePaths: [String]
+    ) throws {
+        var artifactRelativePaths = aggregateArtifactRelativePaths ?? looseExportFormats(in: settings).map {
+            ExportPathPlanner.aggregateRelativePath(
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: date,
+                format: $0
+            )
+        }
+        if settings.dailyNoteInjection.enabled {
+            artifactRelativePaths.append(ExportPathPlanner.dailyNoteRelativePath(
+                settings: settings.dailyNoteInjection,
+                date: date
+            ))
+        }
+        if !settings.archiveModeEnabled {
+            var calendar = Calendar.current
+            calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+            artifactRelativePaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+                for: [date],
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                calendar: calendar
+            ))
+        }
+        artifactRelativePaths.append(contentsOf: individualEntryPlan?.artifactRelativePaths ?? [])
+        artifactRelativePaths.append(contentsOf: additionalArtifactRelativePaths)
+        try validateDynamicDestinationPaths(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            artifactRelativePaths: artifactRelativePaths,
+            protectsDataDictionary: settings.writesDataDictionary
+        )
+    }
+
     private func prepareHealthDataOutputDestination(
         date: Date,
         vaultURL: URL,
@@ -1855,28 +2114,19 @@ final class VaultManager: ObservableObject {
         )
     }
 
-    private func completeHealthDataOutputWrite(
+    private func performHealthDataOutputSideEffects(
         _ healthData: HealthData,
         date: Date,
         vaultURL: URL,
-        healthSubfolder: String,
         settings: AdvancedExportSettings,
-        writtenFiles: [WrittenAggregateFile],
-        leadingAction: String
-    ) throws -> DailyExportWriteResult {
-        var individualEntriesCount = 0
-        if settings.writesIndividualEntryFiles {
-            individualEntriesCount = try exportIndividualEntries(
-                from: healthData,
-                to: individualEntriesBaseFolderURL(
-                    vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    date: date,
-                    settings: settings
-                ),
-                settings: settings
-            )
-        }
+        individualEntryPlan: IndividualEntryExporter.ExportPlan?
+    ) throws -> (
+        individualEntryFileCount: Int,
+        dailyNoteResult: DailyNoteInjector.InjectionResult?
+    ) {
+        let individualEntryFileCount = try individualEntryPlan.map {
+            try individualExporter.exportIndividualEntries($0)
+        } ?? 0
 
         let dailyNoteResult: DailyNoteInjector.InjectionResult? = settings.dailyNoteInjection.enabled
             ? DailyNoteInjector.inject(
@@ -1889,7 +2139,19 @@ final class VaultManager: ObservableObject {
                 fileCoordinator: fileCoordinator
             )
             : nil
+        return (individualEntryFileCount, dailyNoteResult)
+    }
 
+    private func completeHealthDataOutputWrite(
+        date: Date,
+        vaultURL: URL,
+        settings: AdvancedExportSettings,
+        writtenFiles: [WrittenAggregateFile],
+        individualEntryFileCount: Int,
+        dataDictionaryFileCount: Int,
+        dailyNoteResult: DailyNoteInjector.InjectionResult?,
+        leadingAction: String
+    ) -> DailyExportWriteResult {
         if settings.dailyNotesOnlyModeEnabled {
             switch dailyNoteResult {
             case .updated(let path):
@@ -1908,8 +2170,8 @@ final class VaultManager: ObservableObject {
             } else {
                 statusMessage = "\(leadingAction) \(statusPathSummary(for: writtenFiles))"
             }
-            if individualEntriesCount > 0 {
-                statusMessage += " + \(individualEntriesCount) individual entr\(individualEntriesCount == 1 ? "y" : "ies")"
+            if individualEntryFileCount > 0 {
+                statusMessage += " + \(individualEntryFileCount) individual entr\(individualEntryFileCount == 1 ? "y" : "ies")"
             }
             switch dailyNoteResult {
             case .updated(let path):
@@ -1944,7 +2206,8 @@ final class VaultManager: ObservableObject {
 
         return DailyExportWriteResult(
             aggregateFileCount: writtenFiles.count,
-            individualEntryFileCount: individualEntriesCount,
+            individualEntryFileCount: individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             dailyNoteResult: dailyNoteResult
         )
     }
@@ -1956,31 +2219,68 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings,
         shouldWriteDataDictionary: Bool,
-        preparedExport: PreparedHealthDataExport
+        preparedExport: PreparedHealthDataExport,
+        additionalArtifactRelativePaths: [String] = []
     ) throws -> DailyExportWriteResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         #endif
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: [date]
+        )
+        let individualEntryPlan = try planHealthDataDynamicDestinations(
+            healthData,
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        )
         try prepareHealthDataOutputDestination(
             date: date,
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
             settings: settings
         )
-        if !settings.dailyNotesOnlyModeEnabled,
-           !settings.archiveModeEnabled,
-           shouldWriteDataDictionary,
-           let dictionaryRequest = try makeDataDictionaryWriteRequest(
-               vaultURL: vaultURL,
-               healthSubfolder: healthSubfolder,
-               settings: settings
-           ) {
-            _ = try aggregateFileWriter.writeSynchronously(dictionaryRequest)
+        try validateHealthDataOutputArtifactCollisions(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            individualEntryPlan: individualEntryPlan,
+            additionalArtifactRelativePaths: additionalArtifactRelativePaths
+        )
+        let dictionaryRequest: AggregateFileWriteRequest? = if !settings.dailyNotesOnlyModeEnabled,
+                                                                !settings.archiveModeEnabled,
+                                                                shouldWriteDataDictionary {
+            try makeDataDictionaryWriteRequest(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings
+            )
+        } else {
+            nil
+        }
+        let looseFormats = looseExportFormats(in: settings)
+        if dictionaryRequest != nil {
+            try ensureNoDataDictionaryExportCollision(
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                artifactRelativePaths: looseFormats.map {
+                    ExportPathPlanner.aggregateRelativePath(
+                        healthSubfolder: healthSubfolder,
+                        settings: settings,
+                        date: date,
+                        format: $0
+                    )
+                }
+            )
         }
 
         var writtenFiles: [WrittenAggregateFile] = []
         var leadingAction = "Exported to"
-        for (index, format) in looseExportFormats(in: settings).enumerated() {
+        for (index, format) in looseFormats.enumerated() {
             let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: healthSubfolder,
@@ -1988,13 +2288,24 @@ final class VaultManager: ObservableObject {
                 date: date,
                 format: format
             )
-            let result = try writeOneFormat(
-                preparedExport: preparedExport,
-                date: date,
-                format: format,
-                targetFolderURL: targetFolderURL,
-                settings: settings
-            )
+            let result: AggregateFileWriteOutcome
+            do {
+                result = try writeOneFormat(
+                    preparedExport: preparedExport,
+                    date: date,
+                    format: format,
+                    targetFolderURL: targetFolderURL,
+                    settings: settings
+                )
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .daily,
+                        looseAggregateFileCount: writtenFiles.count
+                    )
+                }
+            }
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: result.fileURL,
                 filename: result.filename,
@@ -2009,13 +2320,54 @@ final class VaultManager: ObservableObject {
             if index == 0 { leadingAction = result.action }
         }
 
-        let result = try completeHealthDataOutputWrite(
-            healthData,
+        let sideEffects: (
+            individualEntryFileCount: Int,
+            dailyNoteResult: DailyNoteInjector.InjectionResult?
+        )
+        do {
+            sideEffects = try performHealthDataOutputSideEffects(
+                healthData,
+                date: date,
+                vaultURL: vaultURL,
+                settings: settings,
+                individualEntryPlan: individualEntryPlan
+            )
+        } catch {
+            try rethrowTrackedWriteFailure(error) {
+                ExportPartialWriteError(
+                    underlyingError: $0,
+                    kind: .daily,
+                    looseAggregateFileCount: writtenFiles.count
+                )
+            }
+        }
+        let dataDictionaryFileCount: Int
+        if let dictionaryRequest {
+            do {
+                _ = try aggregateFileWriter.writeSynchronously(dictionaryRequest)
+                dataDictionaryFileCount = 1
+            } catch {
+                let committed = DailyExportWriteResult(
+                    aggregateFileCount: writtenFiles.count,
+                    individualEntryFileCount: sideEffects.individualEntryFileCount,
+                    dataDictionaryFileCount: 0,
+                    dailyNoteResult: sideEffects.dailyNoteResult
+                )
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, dailyResult: committed)
+                }
+            }
+        } else {
+            dataDictionaryFileCount = 0
+        }
+        let result = completeHealthDataOutputWrite(
             date: date,
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
             settings: settings,
             writtenFiles: writtenFiles,
+            individualEntryFileCount: sideEffects.individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
+            dailyNoteResult: sideEffects.dailyNoteResult,
             leadingAction: leadingAction
         )
         #if DEBUG
@@ -2023,7 +2375,7 @@ final class VaultManager: ObservableObject {
             pipeline: "local-files",
             phase: "daily-write",
             timer: performanceTimer,
-            itemCount: result.aggregateFileCount + result.individualEntryFileCount
+            itemCount: result.totalGeneratedFileCount
         )
         #endif
         return result
@@ -2036,31 +2388,68 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings,
         shouldWriteDataDictionary: Bool,
-        preparedExport: PreparedHealthDataExport
+        preparedExport: PreparedHealthDataExport,
+        additionalArtifactRelativePaths: [String]
     ) async throws -> DailyExportWriteResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         #endif
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: [date]
+        )
+        let individualEntryPlan = try planHealthDataDynamicDestinations(
+            healthData,
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        )
         try prepareHealthDataOutputDestination(
             date: date,
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
             settings: settings
         )
-        if !settings.dailyNotesOnlyModeEnabled,
-           !settings.archiveModeEnabled,
-           shouldWriteDataDictionary,
-           let dictionaryRequest = try makeDataDictionaryWriteRequest(
-               vaultURL: vaultURL,
-               healthSubfolder: healthSubfolder,
-               settings: settings
-           ) {
-            _ = try await aggregateFileWriter.write(dictionaryRequest)
+        try validateHealthDataOutputArtifactCollisions(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            individualEntryPlan: individualEntryPlan,
+            additionalArtifactRelativePaths: additionalArtifactRelativePaths
+        )
+        let dictionaryRequest: AggregateFileWriteRequest? = if !settings.dailyNotesOnlyModeEnabled,
+                                                                !settings.archiveModeEnabled,
+                                                                shouldWriteDataDictionary {
+            try makeDataDictionaryWriteRequest(
+                vaultURL: vaultURL,
+                healthSubfolder: healthSubfolder,
+                settings: settings
+            )
+        } else {
+            nil
+        }
+        let looseFormats = looseExportFormats(in: settings)
+        if dictionaryRequest != nil {
+            try ensureNoDataDictionaryExportCollision(
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                artifactRelativePaths: looseFormats.map {
+                    ExportPathPlanner.aggregateRelativePath(
+                        healthSubfolder: healthSubfolder,
+                        settings: settings,
+                        date: date,
+                        format: $0
+                    )
+                }
+            )
         }
 
         var writtenFiles: [WrittenAggregateFile] = []
         var leadingAction = "Exported to"
-        for (index, format) in looseExportFormats(in: settings).enumerated() {
+        for (index, format) in looseFormats.enumerated() {
             let targetFolderURL = ExportPathPlanner.aggregateFolderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: healthSubfolder,
@@ -2068,13 +2457,24 @@ final class VaultManager: ObservableObject {
                 date: date,
                 format: format
             )
-            let result = try await writeOneFormatOffMain(
-                preparedExport: preparedExport,
-                date: date,
-                format: format,
-                targetFolderURL: targetFolderURL,
-                settings: settings
-            )
+            let result: AggregateFileWriteOutcome
+            do {
+                result = try await writeOneFormatOffMain(
+                    preparedExport: preparedExport,
+                    date: date,
+                    format: format,
+                    targetFolderURL: targetFolderURL,
+                    settings: settings
+                )
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .daily,
+                        looseAggregateFileCount: writtenFiles.count
+                    )
+                }
+            }
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: result.fileURL,
                 filename: result.filename,
@@ -2089,13 +2489,54 @@ final class VaultManager: ObservableObject {
             if index == 0 { leadingAction = result.action }
         }
 
-        let result = try completeHealthDataOutputWrite(
-            healthData,
+        let sideEffects: (
+            individualEntryFileCount: Int,
+            dailyNoteResult: DailyNoteInjector.InjectionResult?
+        )
+        do {
+            sideEffects = try performHealthDataOutputSideEffects(
+                healthData,
+                date: date,
+                vaultURL: vaultURL,
+                settings: settings,
+                individualEntryPlan: individualEntryPlan
+            )
+        } catch {
+            try rethrowTrackedWriteFailure(error) {
+                ExportPartialWriteError(
+                    underlyingError: $0,
+                    kind: .daily,
+                    looseAggregateFileCount: writtenFiles.count
+                )
+            }
+        }
+        let dataDictionaryFileCount: Int
+        if let dictionaryRequest {
+            do {
+                _ = try await aggregateFileWriter.write(dictionaryRequest)
+                dataDictionaryFileCount = 1
+            } catch {
+                let committed = DailyExportWriteResult(
+                    aggregateFileCount: writtenFiles.count,
+                    individualEntryFileCount: sideEffects.individualEntryFileCount,
+                    dataDictionaryFileCount: 0,
+                    dailyNoteResult: sideEffects.dailyNoteResult
+                )
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, dailyResult: committed)
+                }
+            }
+        } else {
+            dataDictionaryFileCount = 0
+        }
+        let result = completeHealthDataOutputWrite(
             date: date,
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
             settings: settings,
             writtenFiles: writtenFiles,
+            individualEntryFileCount: sideEffects.individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
+            dailyNoteResult: sideEffects.dailyNoteResult,
             leadingAction: leadingAction
         )
         #if DEBUG
@@ -2103,7 +2544,7 @@ final class VaultManager: ObservableObject {
             pipeline: "local-files",
             phase: "daily-write",
             timer: performanceTimer,
-            itemCount: result.aggregateFileCount + result.individualEntryFileCount
+            itemCount: result.totalGeneratedFileCount
         )
         #endif
         return result
@@ -2118,16 +2559,43 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings,
         shouldWriteDataDictionary: Bool,
-        operation: AppleLooseDailyPlannedOperation
+        operation: AppleLooseDailyPlannedOperation,
+        additionalArtifactRelativePaths: [String]
     ) async throws -> DailyExportWriteResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         #endif
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: [date]
+        )
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            artifactRelativePaths: operation.artifacts.map(\.artifact.relativePath)
+        )
+        let individualEntryPlan = try planHealthDataDynamicDestinations(
+            healthData,
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings
+        )
         try prepareHealthDataOutputDestination(
             date: date,
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
             settings: settings
+        )
+        try validateHealthDataOutputArtifactCollisions(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            aggregateArtifactRelativePaths: operation.artifacts.map(\.artifact.relativePath),
+            individualEntryPlan: individualEntryPlan,
+            additionalArtifactRelativePaths: additionalArtifactRelativePaths
         )
 
         let dictionaryRequest: AggregateFileWriteRequest? = if shouldWriteDataDictionary {
@@ -2162,14 +2630,21 @@ final class VaultManager: ObservableObject {
             // The authority and every output byte are locked before the first directory creation or
             // atomic write, including the native data dictionary sidecar.
             try await barrier.transition(to: .committing)
-            if let dictionaryRequest {
-                _ = try await aggregateFileWriter.write(dictionaryRequest)
-            }
-
             var writtenFiles: [WrittenAggregateFile] = []
             var leadingAction = "Exported to"
             for (index, pair) in aggregateRequests.enumerated() {
-                let outcome = try await aggregateFileWriter.write(pair.1)
+                let outcome: AggregateFileWriteOutcome
+                do {
+                    outcome = try await aggregateFileWriter.write(pair.1)
+                } catch {
+                    try rethrowTrackedWriteFailure(error) {
+                        ExportPartialWriteError(
+                            underlyingError: $0,
+                            kind: .daily,
+                            looseAggregateFileCount: writtenFiles.count
+                        )
+                    }
+                }
                 writtenFiles.append(WrittenAggregateFile(
                     fileURL: outcome.fileURL,
                     filename: outcome.filename,
@@ -2179,16 +2654,63 @@ final class VaultManager: ObservableObject {
                 if index == 0 { leadingAction = outcome.action }
             }
 
-            let result = try completeHealthDataOutputWrite(
-                healthData,
+            let sideEffects: (
+                individualEntryFileCount: Int,
+                dailyNoteResult: DailyNoteInjector.InjectionResult?
+            )
+            do {
+                sideEffects = try performHealthDataOutputSideEffects(
+                    healthData,
+                    date: date,
+                    vaultURL: vaultURL,
+                    settings: settings,
+                    individualEntryPlan: individualEntryPlan
+                )
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .daily,
+                        looseAggregateFileCount: writtenFiles.count
+                    )
+                }
+            }
+            let dataDictionaryFileCount: Int
+            if let dictionaryRequest {
+                do {
+                    _ = try await aggregateFileWriter.write(dictionaryRequest)
+                    dataDictionaryFileCount = 1
+                } catch {
+                    let committed = DailyExportWriteResult(
+                        aggregateFileCount: writtenFiles.count,
+                        individualEntryFileCount: sideEffects.individualEntryFileCount,
+                        dataDictionaryFileCount: 0,
+                        dailyNoteResult: sideEffects.dailyNoteResult
+                    )
+                    try rethrowTrackedWriteFailure(error) {
+                        ExportPartialWriteError(underlyingError: $0, dailyResult: committed)
+                    }
+                }
+            } else {
+                dataDictionaryFileCount = 0
+            }
+            let result = completeHealthDataOutputWrite(
                 date: date,
                 vaultURL: vaultURL,
-                healthSubfolder: healthSubfolder,
                 settings: settings,
                 writtenFiles: writtenFiles,
+                individualEntryFileCount: sideEffects.individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                dailyNoteResult: sideEffects.dailyNoteResult,
                 leadingAction: leadingAction
             )
-            try await barrier.transition(to: .completed)
+            do {
+                try await barrier.transition(to: .completed)
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, dailyResult: result)
+                }
+            }
             #if DEBUG
             ExportPerformanceInstrumentation.completed(
                 pipeline: "local-files",
@@ -2206,53 +2728,145 @@ final class VaultManager: ObservableObject {
 
     // MARK: - External Provider Sidecar Exports
 
-    @discardableResult
-    func exportExternalDailyRecords(
+    struct ExternalDailyRecordWritePlan {
+        fileprivate struct Entry {
+            let relativePath: String
+            let fileURL: URL
+            let json: String
+        }
+
+        fileprivate let vaultURL: URL
+        fileprivate let healthSubfolder: String
+        fileprivate let entries: [Entry]
+
+        var artifactRelativePaths: [String] {
+            entries.map(\.relativePath)
+        }
+    }
+
+    /// Freezes and validates the complete provider-sidecar loop without mutating the destination.
+    /// Nil means no record requested an export.
+    func planExternalDailyRecordDestinations(
         _ records: [ExternalDailyRecord],
         healthSubfolder: String? = nil
-    ) async throws -> Int {
-        guard !records.isEmpty else { return 0 }
+    ) throws -> ExternalDailyRecordWritePlan? {
+        guard !records.isEmpty else { return nil }
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
         }
-
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw ExportError.accessDenied
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-
-        let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder ?? self.healthSubfolder
-        )
-        let integrationsFolderURL = healthFolderURL.appendingPathComponent("integrations", isDirectory: true)
-
-        var writtenCount = 0
-        for record in records where record.shouldExport {
-            guard record.hasValidExportDate else {
-                throw ExternalProviderExportError.invalidDate(record.date)
-            }
-            let providerFolderURL = integrationsFolderURL.appendingPathComponent(
-                record.provider.exportFolderName,
-                isDirectory: true
-            )
+        let entries: [ExternalDailyRecordWritePlan.Entry] = try records.compactMap { record in
+            guard let relativePath = try externalRecordRelativePath(
+                for: record,
+                healthSubfolder: effectiveHealthSubfolder
+            ) else { return nil }
             let data = try encoder.encode(record)
-            guard let json = String(data: data, encoding: .utf8) else { continue }
-            let fileURL = providerFolderURL.appendingPathComponent("\(record.date).json")
-            _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: fileURL.lastPathComponent,
-                newContent: json,
-                behavior: .overwrite
-            ))
-            writtenCount += 1
+            guard let json = String(data: data, encoding: .utf8) else {
+                throw CocoaError(.fileWriteInapplicableStringEncoding)
+            }
+            return ExternalDailyRecordWritePlan.Entry(
+                relativePath: relativePath,
+                fileURL: ExportPathPlanner.appendingRelativePath(
+                    relativePath,
+                    to: vaultURL,
+                    isDirectory: false
+                ),
+                json: json
+            )
         }
+        guard !entries.isEmpty else { return nil }
+        try validateDynamicDestinationPaths(
+            vaultURL: vaultURL,
+            healthSubfolder: effectiveHealthSubfolder,
+            artifactRelativePaths: entries.map(\.relativePath)
+        )
+        return ExternalDailyRecordWritePlan(
+            vaultURL: vaultURL,
+            healthSubfolder: effectiveHealthSubfolder,
+            entries: entries
+        )
+    }
 
+    @discardableResult
+    func exportExternalDailyRecords(
+        _ records: [ExternalDailyRecord],
+        healthSubfolder: String? = nil
+    ) async throws -> Int {
+        guard let plan = try planExternalDailyRecordDestinations(
+            records,
+            healthSubfolder: healthSubfolder
+        ) else { return 0 }
+        return try await exportExternalDailyRecords(plan)
+    }
+
+    @discardableResult
+    func exportExternalDailyRecords(_ plan: ExternalDailyRecordWritePlan) async throws -> Int {
+        guard destinationState == .available,
+              vaultURL?.standardizedFileURL == plan.vaultURL.standardizedFileURL else {
+            throw ExportError.destinationChanged
+        }
+        guard bookmarkResolver.startAccessing(plan.vaultURL) else {
+            throw ExportError.accessDenied
+        }
+        defer { bookmarkResolver.stopAccessing(plan.vaultURL) }
+
+        // The compatibility writer remains FileCoordinator-backed. Revalidate the full frozen plan
+        // before its first commit and each path immediately before its atomic write.
+        try validateDynamicDestinationPaths(
+            vaultURL: plan.vaultURL,
+            healthSubfolder: plan.healthSubfolder,
+            artifactRelativePaths: plan.entries.map(\.relativePath)
+        )
+        var writtenCount = 0
+        for entry in plan.entries {
+            do {
+                try validateDynamicDestinationPaths(
+                    vaultURL: plan.vaultURL,
+                    healthSubfolder: plan.healthSubfolder,
+                    artifactRelativePaths: [entry.relativePath]
+                )
+                _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
+                    fileURL: entry.fileURL,
+                    filename: entry.fileURL.lastPathComponent,
+                    newContent: entry.json,
+                    behavior: .overwrite
+                ))
+                writtenCount += 1
+            } catch {
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(
+                        underlyingError: $0,
+                        kind: .providerSidecar,
+                        providerSidecarFileCount: writtenCount
+                    )
+                }
+            }
+        }
         return writtenCount
+    }
+
+    private func externalRecordRelativePath(
+        for record: ExternalDailyRecord,
+        healthSubfolder: String
+    ) throws -> String? {
+        guard record.shouldExport else { return nil }
+        guard record.hasValidExportDate else {
+            throw ExternalProviderExportError.invalidDate(record.date)
+        }
+        return [
+            healthSubfolder,
+            "integrations",
+            record.provider.exportFolderName,
+            "\(record.date).json"
+        ].filter { !$0.isEmpty }.joined(separator: "/")
     }
 
     // MARK: - ZIP Archives
@@ -2319,6 +2933,12 @@ final class VaultManager: ObservableObject {
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
         guard !sources.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return nil }
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: sources.map(\.date),
+            rollupDates: rollupHealthData.map(\.date)
+        )
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
         }
@@ -2503,12 +3123,14 @@ final class VaultManager: ObservableObject {
         generatedAt: Date = Date(),
         healthSubfolder: String? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true
-    ) throws -> [HealthRollupWriteResult] {
+    ) throws -> RollupExportWriteResult {
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
         }
 
-        guard HealthRollupExporter.isEnabled(settings: settings) else { return [] }
+        guard HealthRollupExporter.isEnabled(settings: settings) else {
+            return RollupExportWriteResult(files: [], dataDictionaryFileCount: 0)
+        }
 
         guard bookmarkResolver.startAccessing(vaultURL) else {
             throw ExportError.accessDenied
@@ -2520,24 +3142,34 @@ final class VaultManager: ObservableObject {
             settings: settings,
             generatedAt: generatedAt
         )
-        guard !summaries.isEmpty else { return [] }
+        guard !summaries.isEmpty else {
+            return RollupExportWriteResult(files: [], dataDictionaryFileCount: 0)
+        }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        if shouldWriteDataDictionary {
-            try writeDataDictionary(
+        let dictionaryRequest: AggregateFileWriteRequest? = if shouldWriteDataDictionary {
+            try makeDataDictionaryWriteRequest(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: settings
             )
+        } else {
+            nil
         }
-
-        var results: [HealthRollupWriteResult] = []
-        var writtenFiles: [WrittenAggregateFile] = []
-        for target in HealthRollupExporter.outputTargets(
+        let targets = HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
-        ) {
+        )
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: effectiveHealthSubfolder,
+            artifactRelativePaths: targets.map(\.relativePath)
+        )
+
+        var results: [HealthRollupWriteResult] = []
+        var writtenFiles: [WrittenAggregateFile] = []
+        for target in targets {
             let folderURL = HealthRollupExporter.folderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -2546,12 +3178,22 @@ final class VaultManager: ObservableObject {
                 settings: settings
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
-            _ = try aggregateFileWriter.writeSynchronously(AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: target.filename,
-                newContent: target.content,
-                behavior: .overwrite
-            ))
+            do {
+                _ = try aggregateFileWriter.writeSynchronously(AggregateFileWriteRequest(
+                    fileURL: fileURL,
+                    filename: target.filename,
+                    newContent: target.content,
+                    behavior: .overwrite
+                ))
+            } catch {
+                let committed = RollupExportWriteResult(
+                    files: results,
+                    dataDictionaryFileCount: 0
+                )
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, rollupResult: committed)
+                }
+            }
             results.append(target)
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: fileURL,
@@ -2561,6 +3203,24 @@ final class VaultManager: ObservableObject {
             ))
         }
 
+        let dataDictionaryFileCount: Int
+        if let dictionaryRequest {
+            do {
+                _ = try aggregateFileWriter.writeSynchronously(dictionaryRequest)
+                dataDictionaryFileCount = 1
+            } catch {
+                let committed = RollupExportWriteResult(
+                    files: results,
+                    dataDictionaryFileCount: 0
+                )
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, rollupResult: committed)
+                }
+            }
+        } else {
+            dataDictionaryFileCount = 0
+        }
+
         if lastExportPresentationTarget == nil,
            let previewFile = preferredPresentationFile(in: writtenFiles) {
             recordExportPresentationTarget(
@@ -2568,7 +3228,10 @@ final class VaultManager: ObservableObject {
                 securityScopedRootURL: vaultURL
             )
         }
-        return results
+        return RollupExportWriteResult(
+            files: results,
+            dataDictionaryFileCount: dataDictionaryFileCount
+        )
     }
 
     nonisolated private static func performArchiveIO<T: Sendable>(
@@ -2661,6 +3324,11 @@ final class VaultManager: ObservableObject {
         guard settings.archiveModeEnabled || HealthRollupExporter.isEnabled(settings: settings) else {
             return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
         }
+        try preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: requestedDates
+        )
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         defer {
@@ -2921,20 +3589,29 @@ final class VaultManager: ObservableObject {
         guard !summaries.isEmpty else {
             return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
         }
-        if shouldWriteDataDictionary {
-            try writeDataDictionary(
+        let dictionaryRequest: AggregateFileWriteRequest? = if shouldWriteDataDictionary {
+            try makeDataDictionaryWriteRequest(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: settings
             )
+        } else {
+            nil
         }
         let targets = HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         )
+        if settings.writesDataDictionary {
+            try ensureNoDataDictionaryExportCollision(
+                healthSubfolder: effectiveHealthSubfolder,
+                settings: settings,
+                artifactRelativePaths: targets.map(\.relativePath)
+            )
+        }
+        var writtenTargets: [HealthRollupWriteResult] = []
         for target in targets {
-            try checkCancellation()
             let folderURL = HealthRollupExporter.folderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -2943,17 +3620,50 @@ final class VaultManager: ObservableObject {
                 settings: settings
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
-            _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: target.filename,
-                newContent: target.content,
-                behavior: .overwrite
-            ))
+            do {
+                try checkCancellation()
+                _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
+                    fileURL: fileURL,
+                    filename: target.filename,
+                    newContent: target.content,
+                    behavior: .overwrite
+                ))
+            } catch {
+                let committed = RollupExportWriteResult(
+                    files: writtenTargets,
+                    dataDictionaryFileCount: 0
+                )
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, rollupResult: committed)
+                }
+            }
+            writtenTargets.append(target)
             progress?(finalizedUnits, estimatedUnits, target.summary.window.endDate)
             await Task.yield()
         }
-        try checkCancellation()
-        return MacCorpusDerivedOutputResult(rollupFileCount: targets.count, archiveFileCount: 0)
+        let dataDictionaryFileCount: Int
+        if let dictionaryRequest {
+            do {
+                try checkCancellation()
+                _ = try await aggregateFileWriter.write(dictionaryRequest)
+                dataDictionaryFileCount = 1
+            } catch {
+                let committed = RollupExportWriteResult(
+                    files: writtenTargets,
+                    dataDictionaryFileCount: 0
+                )
+                try rethrowTrackedWriteFailure(error) {
+                    ExportPartialWriteError(underlyingError: $0, rollupResult: committed)
+                }
+            }
+        } else {
+            dataDictionaryFileCount = 0
+        }
+        return MacCorpusDerivedOutputResult(
+            rollupFileCount: targets.count,
+            archiveFileCount: 0,
+            dataDictionaryFileCount: dataDictionaryFileCount
+        )
     }
 
     // MARK: - Format Routing
@@ -2989,20 +3699,196 @@ final class VaultManager: ObservableObject {
         )
     }
 
-    private func writeDataDictionary(
-        vaultURL: URL,
+    // MARK: - Collision Safety
+
+    /// Validates every predictable artifact path before callers begin writing an operation's
+    /// first destination file. Loose output also resolves existing destination components so a
+    /// symlink or hard-link alias cannot bypass the portable lexical collision check.
+    func preflightDataDictionaryArtifactCollisions(
+        settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
-        settings: AdvancedExportSettings
+        dates: [Date],
+        rollupDates: [Date]? = nil
     ) throws {
-        guard let request = try makeDataDictionaryWriteRequest(
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder,
-            settings: settings
-        ) else { return }
-        _ = try aggregateFileWriter.writeSynchronously(request)
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        var calendar = Calendar.current
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+
+        if settings.archiveModeEnabled {
+            var archivePaths: [String] = dates.flatMap { date in
+                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+                    archiveEntryPath(for: date, format: format, settings: settings)
+                }
+            }
+            archivePaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+                for: rollupDates ?? dates,
+                healthSubfolder: "",
+                settings: settings,
+                calendar: calendar
+            ))
+            try ensureNoDataDictionaryExportCollision(
+                healthSubfolder: "",
+                settings: settings,
+                artifactRelativePaths: archivePaths,
+                destinationAware: false
+            )
+            return
+        }
+
+        var artifactPaths: [String] = []
+        if settings.writesDailyAggregateFiles {
+            artifactPaths.append(contentsOf: dates.flatMap { date in
+                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+                    ExportPathPlanner.aggregateRelativePath(
+                        healthSubfolder: effectiveHealthSubfolder,
+                        settings: settings,
+                        date: date,
+                        format: format
+                    )
+                }
+            })
+        }
+        if settings.dailyNoteInjection.enabled {
+            artifactPaths.append(contentsOf: dates.map {
+                ExportPathPlanner.dailyNoteRelativePath(
+                    settings: settings.dailyNoteInjection,
+                    date: $0
+                )
+            })
+        }
+        artifactPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+            for: rollupDates ?? dates,
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings,
+            calendar: calendar
+        ))
+        try ensureNoDataDictionaryExportCollision(
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings,
+            artifactRelativePaths: artifactPaths
+        )
     }
 
-    // MARK: - Collision Safety
+    /// Destination-bound finalizers use their exact frozen artifact paths rather than regenerating
+    /// paths from settings that may no longer describe a persisted plan.
+    func preflightDataDictionaryArtifactCollisions(
+        settings: AdvancedExportSettings,
+        healthSubfolder: String,
+        artifactRelativePaths: [String]
+    ) throws {
+        try ensureNoDataDictionaryExportCollision(
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            artifactRelativePaths: artifactRelativePaths
+        )
+    }
+
+    private func validateDynamicDestinationPaths(
+        vaultURL: URL,
+        healthSubfolder: String,
+        artifactRelativePaths: [String],
+        protectsDataDictionary: Bool = true
+    ) throws {
+        guard !artifactRelativePaths.isEmpty else { return }
+        let collision: ExportPathPlanner.DataDictionaryCollision?
+        do {
+            try ExportPathPlanner.validatePortableArtifactPaths(artifactRelativePaths)
+            if fileSystem is SystemFileSystem {
+                try ExportPathPlanner.validateUniqueDestinationArtifactPaths(
+                    vaultURL: vaultURL,
+                    artifactRelativePaths: artifactRelativePaths
+                )
+            }
+            if protectsDataDictionary {
+                collision = fileSystem is SystemFileSystem
+                    ? try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
+                        vaultURL: vaultURL,
+                        healthSubfolder: healthSubfolder,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+                    : try ExportPathPlanner.dataDictionaryArtifactCollision(
+                        healthSubfolder: healthSubfolder,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+            } else {
+                collision = nil
+            }
+        } catch let error as ExportPathPlanner.PathValidationError {
+            let path: String
+            switch error {
+            case .invalidRelativePath(let value),
+                 .destinationUnavailable(let value),
+                 .destinationOutsideVault(let value):
+                path = value
+            }
+            throw ExportError.invalidExportPath(path: path)
+        }
+        if let collision {
+            throw ExportError.dataDictionaryPathConflict(
+                path: collision.dataDictionaryRelativePath
+            )
+        }
+    }
+
+    private func ensureNoDataDictionaryExportCollision(
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        artifactRelativePaths: [String],
+        destinationAware: Bool = true
+    ) throws {
+        let collision: ExportPathPlanner.DataDictionaryCollision?
+        do {
+            if destinationAware,
+               fileSystem is SystemFileSystem,
+               let vaultURL {
+                guard bookmarkResolver.startAccessing(vaultURL) else {
+                    throw ExportError.accessDenied
+                }
+                defer { bookmarkResolver.stopAccessing(vaultURL) }
+                if settings.writesDataDictionary {
+                    collision = try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
+                        vaultURL: vaultURL,
+                        healthSubfolder: healthSubfolder,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+                } else {
+                    try ExportPathPlanner.validateDestinationArtifactPaths(
+                        vaultURL: vaultURL,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+                    collision = nil
+                }
+            } else if settings.writesDataDictionary {
+                collision = try ExportPathPlanner.dataDictionaryArtifactCollision(
+                    healthSubfolder: healthSubfolder,
+                    artifactRelativePaths: artifactRelativePaths
+                )
+            } else {
+                for path in artifactRelativePaths {
+                    if destinationAware {
+                        _ = try ExportPathPlanner.validatedPortableRelativePath(path)
+                    } else {
+                        _ = try ExportPathPlanner.normalizedPortableRelativePath(path)
+                    }
+                }
+                collision = nil
+            }
+        } catch let error as ExportPathPlanner.PathValidationError {
+            let path: String
+            switch error {
+            case .invalidRelativePath(let value),
+                 .destinationUnavailable(let value),
+                 .destinationOutsideVault(let value):
+                path = value
+            }
+            throw ExportError.invalidExportPath(path: path)
+        }
+
+        guard let collision else { return }
+        throw ExportError.dataDictionaryPathConflict(
+            path: collision.dataDictionaryRelativePath
+        )
+    }
 
     private func ensureNoDailyNoteExportCollision(
         vaultURL: URL,
@@ -3018,6 +3904,17 @@ final class VaultManager: ObservableObject {
         ) {
             throw ExportError.dailyNotePathConflict(path: collision.dailyNoteRelativePath)
         }
+    }
+
+    private func rethrowTrackedWriteFailure(
+        _ error: Error,
+        accounting: (Error) -> ExportPartialWriteError
+    ) throws -> Never {
+        let tracked = accounting(error)
+        if tracked.hasCommittedOutput { throw tracked }
+        if tracked.wasCancelled { throw CancellationError() }
+        if let partial = error as? ExportPartialWriteError { throw partial }
+        throw error
     }
 
     // MARK: - Per-Format Writer
@@ -3099,15 +3996,13 @@ final class VaultManager: ObservableObject {
         return try await aggregateFileWriter.write(request)
     }
 
-    private func individualEntriesBaseFolderURL(
-        vaultURL: URL,
-        healthSubfolder: String? = nil,
+    private func individualEntriesBaseFolderRelativePath(
+        healthSubfolder: String,
         date: Date,
         settings: AdvancedExportSettings
-    ) -> URL {
-        ExportPathPlanner.aggregateFolderURL(
-            vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder ?? self.healthSubfolder,
+    ) -> String {
+        ExportPathPlanner.aggregateFolderRelativePath(
+            healthSubfolder: healthSubfolder,
             settings: settings,
             date: date,
             format: settings.organizeFormatsIntoFolders ? .markdown : nil
@@ -3153,28 +4048,32 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Individual Entry Export
 
-    /// Export individual timestamped entries for configured metrics
-    private func exportIndividualEntries(
-        from healthData: HealthData,
-        to baseURL: URL,
+    /// Freezes every individual-entry path and byte before aggregate output starts.
+    private func planHealthDataDynamicDestinations(
+        _ healthData: HealthData,
+        date: Date,
+        vaultURL: URL,
+        healthSubfolder: String,
         settings: AdvancedExportSettings
-    ) throws -> Int {
+    ) throws -> IndividualEntryExporter.ExportPlan? {
+        guard settings.writesIndividualEntryFiles else { return nil }
         let trackingSettings = settings.individualTracking
-
-        // Extract samples that should be tracked individually
         let samples = individualExporter.extractIndividualSamples(
             from: healthData,
             settings: trackingSettings
         )
-
-        guard !samples.isEmpty else { return 0 }
-
-        // Export the samples
-        return try individualExporter.exportIndividualEntries(
+        guard !samples.isEmpty else { return nil }
+        return try individualExporter.planIndividualEntries(
             samples: samples,
-            to: baseURL,
+            to: vaultURL,
             settings: trackingSettings,
-            formatSettings: settings.formatCustomization
+            formatSettings: settings.formatCustomization,
+            baseRelativePath: individualEntriesBaseFolderRelativePath(
+                healthSubfolder: healthSubfolder,
+                date: date,
+                settings: settings
+            ),
+            dataDictionaryHealthSubfolder: healthSubfolder
         )
     }
 }
@@ -3188,6 +4087,8 @@ enum ExportError: LocalizedError, Equatable {
     case destinationChanged
     case noFormatsSelected
     case dailyNotePathConflict(path: String)
+    case dataDictionaryPathConflict(path: String)
+    case invalidExportPath(path: String)
 
     var errorDescription: String? {
         switch self {
@@ -3203,6 +4104,10 @@ enum ExportError: LocalizedError, Equatable {
             return "At least one export format must be selected"
         case .dailyNotePathConflict(let path):
             return "Daily Note Injection target conflicts with export output: \(path). Change Output folder/filename or Daily Note Injection folder/filename."
+        case .dataDictionaryPathConflict(let path):
+            return "Data dictionary target conflicts with an export artifact: \(path). Change the output folder or filename before exporting."
+        case .invalidExportPath(let path):
+            return "Export path is unsafe or leaves the selected destination: \(path). Change the output folder or filename before exporting."
         }
     }
 }

@@ -237,7 +237,9 @@ final class IPhoneDirectFileExportProducer {
                 successCount: successCount,
                 totalCount: current.requestedDates.count,
                 failedDateDetails: failedDateDetails,
-                formatsPerDate: current.settingsSnapshot.exportFormats.count
+                formatsPerDate: current.settingsSnapshot.exportFormats.count,
+                authoritativeFileCount: current.generatedFiles.count,
+                isFileCategoryBreakdownComplete: false
             )
             ExportOrchestrator.recordResult(
                 result,
@@ -664,6 +666,11 @@ final class IPhoneDirectFileExportProducer {
         settings.exportTimeZoneOverride = TimeZone(
             identifier: journal.accepted.sourceTimeZoneIdentifier
         )
+        try vault.preflightDataDictionaryArtifactCollisions(
+            settings: settings,
+            healthSubfolder: journal.healthSubfolder,
+            dates: journal.requestedDates
+        )
         let payloadURLs = try journal.capturedDays.map {
             try jobDirectory(journal.request.jobID).appendingPathComponent($0.relativePath)
         }
@@ -738,12 +745,17 @@ final class IPhoneDirectFileExportProducer {
                 let preparedExport = record.preparedExportAssumingSelectionApplied(
                     settings: settings
                 )
+                let externalRecordPlan = try vault.planExternalDailyRecordDestinations(
+                    payload.externalDailyRecords,
+                    healthSubfolder: journal.healthSubfolder
+                )
                 do {
                     _ = try await vault.exportHealthData(
                         record,
                         settings: settings,
                         healthSubfolder: journal.healthSubfolder,
                         writeDataDictionary: !wroteDictionary,
+                        additionalArtifactRelativePaths: externalRecordPlan?.artifactRelativePaths ?? [],
                         operationSurface: operationSurface,
                         frozenSettingsSnapshot: journal.settingsSnapshot,
                         preparedExport: preparedExport
@@ -753,10 +765,9 @@ final class IPhoneDirectFileExportProducer {
                     // A successfully captured empty day is not a failed HealthKit day.
                 }
                 try checkCancellation(journal.request.jobID)
-                _ = try await vault.exportExternalDailyRecords(
-                    payload.externalDailyRecords,
-                    healthSubfolder: journal.healthSubfolder
-                )
+                if let externalRecordPlan {
+                    _ = try await vault.exportExternalDailyRecords(externalRecordPlan)
+                }
                 try checkCancellation(journal.request.jobID)
                 try await sendGeneratedProgress(
                     journal: journal,

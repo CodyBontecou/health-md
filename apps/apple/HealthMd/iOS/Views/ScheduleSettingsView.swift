@@ -588,9 +588,11 @@ struct ScheduleSettingsView: View {
 
     private var lookbackDescription: String {
         let days = schedulingManager.schedule.lookbackDays
-        return days == 1
-            ? String(localized: "Each run exports the past 1 day ending with yesterday.")
-            : String(localized: "Each run exports the past \(days) days ending with yesterday.")
+        let range = days == 1
+            ? String(localized: "Each occurrence uses yesterday only.")
+            : String(localized: "Each occurrence uses \(days) data days ending with yesterday.")
+        let outputNote = String(localized: "Formats, ZIP archives, roll-ups, individual entries, provider sidecars, and pending recovery can produce more files.")
+        return "\(range) \(outputNote)"
     }
 
     private var lookbackRow: some View {
@@ -603,7 +605,7 @@ struct ScheduleSettingsView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     HStack(spacing: Spacing.s2) {
-                        Text("Lookback Window")
+                        Text("Data days per scheduled occurrence")
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
 
@@ -623,9 +625,9 @@ struct ScheduleSettingsView: View {
         }
         .tint(Color.accent)
         .padding(.vertical, Spacing.s3)
-        .accessibilityLabel("Lookback window")
+        .accessibilityLabel("Data days per scheduled occurrence")
         .accessibilityValue(lookbackDayLabel)
-        .accessibilityHint("Adjusts how many past days each scheduled export includes")
+        .accessibilityHint("Uses completed data days ending with yesterday; output settings and pending recovery can produce more files")
     }
 
     private var todayRefreshRow: some View {
@@ -1059,9 +1061,7 @@ struct ScheduleSettingsView: View {
         retryStatusMessage = "Preparing…"
 
         Task {
-            await HealthKitQueryExecutionController.withController {
-                await performRetryExport(entry)
-            }
+            await performRetryExport(entry)
         }
     }
 
@@ -1129,109 +1129,53 @@ struct ScheduleSettingsView: View {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
-            await MainActor.run {
-                retryErrorMessage = ExportFailureReason.accessDenied.detailedDescription
-                showRetryError = true
+        let result = await ExportOrchestrator.exportDates(
+            datesToExport,
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: advancedSettings,
+            onProgress: { completed, total, dateDescription in
+                let boundedTotal = max(total, 1)
+                retryStatusMessage = String(
+                    localized: "Preparing \(dateDescription)… (\(completed) of \(boundedTotal) complete)",
+                    comment: "Retry-export progress with the current date and completed data-day count"
+                )
+                retryProgress = Double(completed) / Double(boundedTotal)
             }
-            return
+        )
+
+        retryProgress = 1.0
+        if result.successCount > 0 {
+            purchaseManager.recordExportUse()
         }
 
-        let totalDays = datesToExport.count
-        var successCount = 0
-        var failedDateDetails: [FailedDateDetail] = []
-        var partialFailures: [ExportPartialFailure] = []
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let startDate = datesToExport.min() ?? entry.dateRangeStart
+        let endDate = datesToExport.max() ?? entry.dateRangeEnd
+        ExportOrchestrator.recordResult(
+            result,
+            source: .manual,
+            dateRangeStart: startDate,
+            dateRangeEnd: endDate,
+            targetLabel: "iPhone: \(vaultManager.vaultName)",
+            exportTarget: .localIPhoneFolder
+        )
 
-        for (index, date) in datesToExport.enumerated() {
-            await MainActor.run {
-                retryStatusMessage = "Preparing \(dateFormatter.string(from: date))… (\(index)/\(totalDays) complete)"
-                retryProgress = Double(index) / Double(totalDays)
-            }
-
-            do {
-                let healthData = try await healthKitManager.fetchHealthData(
-                    for: date,
-                    includeGranularData: advancedSettings.effectiveGranularDataEnabled,
-                    metricSelection: advancedSettings.metricSelection
-                )
-
-                if !healthData.filtered(by: advancedSettings.metricSelection).hasAnyData {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
-                    continue
-                }
-
-                let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
-
-                if success {
-                    partialFailures.append(contentsOf: healthData.partialFailures)
-                    successCount += 1
-                } else {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
-                }
-            } catch {
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
-            }
-        }
-
-        vaultManager.stopVaultAccess()
-
-        await MainActor.run {
-            retryProgress = 1.0
-
-            if successCount > 0 {
-                purchaseManager.recordExportUse()
-            }
-
-            // Record the result
-            let startDate = datesToExport.min() ?? entry.dateRangeStart
-            let endDate = datesToExport.max() ?? entry.dateRangeEnd
-
-            if failedDateDetails.isEmpty && partialFailures.isEmpty && successCount > 0 {
-                retryStatusMessage = String(localized: "Successfully exported \(successCount) files", comment: "Export success message")
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
-                )
-            } else if successCount > 0 {
-                retryStatusMessage = partialFailures.isEmpty
-                    ? "Exported \(successCount)/\(totalDays) files"
-                    : "Exported \(successCount)/\(totalDays) files with \(partialFailures.count) warning(s)"
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    failedDateDetails: failedDateDetails,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1),
-                    partialFailures: partialFailures
-                )
+        if result.isFullSuccess {
+            if result.dailyNoteUpdateCount == 1 && result.totalFilesWritten == 0 {
+                retryStatusMessage = String(localized: "Successfully updated 1 daily note", comment: "Retry-export success with one daily-note update")
+            } else if result.dailyNoteUpdateCount > 1 && result.totalFilesWritten == 0 {
+                retryStatusMessage = String(localized: "Successfully updated \(result.dailyNoteUpdateCount) daily notes", comment: "Retry-export success with multiple daily-note updates")
+            } else if result.totalFilesWritten == 1 {
+                retryStatusMessage = String(localized: "Successfully exported 1 file", comment: "Retry-export success with one generated file")
             } else {
-                let primaryReason = failedDateDetails.first?.reason ?? .unknown
-                retryErrorMessage = primaryReason.detailedDescription
-                showRetryError = true
-
-                exportHistory.recordFailure(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    reason: primaryReason,
-                    successCount: 0,
-                    totalCount: totalDays,
-                    failedDateDetails: failedDateDetails,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: 0,
-                    partialFailures: partialFailures
-                )
+                retryStatusMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files", comment: "Retry-export success with multiple generated files")
             }
+        } else if result.isPartialSuccess {
+            retryStatusMessage = String(localized: "Retry completed with warnings", comment: "Retry-export partial-success status")
+        } else {
+            let primaryReason = result.primaryFailureReason ?? .unknown
+            retryErrorMessage = primaryReason.detailedDescription
+            showRetryError = true
         }
     }
 }
@@ -1378,6 +1322,15 @@ struct ExportHistoryRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                if entry.isPendingRecovery {
+                    Label(
+                        entry.pendingRecoveryBadgeDescription,
+                        systemImage: "clock.arrow.circlepath"
+                    )
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.warning)
+                }
+
                 HStack(spacing: Spacing.s2) {
                     Label(entry.sourceLabelForDisplay, systemImage: entry.sourceIconForDisplay)
                         .labelStyle(.titleAndIcon)
@@ -1409,8 +1362,8 @@ struct ExportHistoryRow: View {
         .accessibilityAddTraits(.isButton)
     }
 
-    private var accessibilityDescription: String {
-        let status = "\(statusDescription): \(entry.summaryDescription)"
+    var accessibilityDescription: String {
+        let status = "\(statusDescription): \(entry.summaryAccessibilityDescription)"
         guard let message = entry.failureListMessage else { return status }
         return "\(status). \(message)"
     }
@@ -1497,27 +1450,136 @@ struct ExportHistoryDetailView: View {
                         .foregroundStyle(Color.textSecondary)
                 }
 
-                // Export Details Section
                 Section {
-                    HStack {
-                        Text("Date Range")
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))
-                            .foregroundStyle(Color.textPrimary)
-                    }
-
-                    HStack {
-                        Text(entry.resultCountLabel)
-                            .foregroundStyle(Color.textSecondary)
-                        Spacer()
-                        Text(entry.resultCountDescription)
-                            .foregroundStyle(Color.textPrimary)
-                    }
+                    historyValueRow(
+                        "Date range",
+                        value: formatDateRange(entry.dateRangeStart, entry.dateRangeEnd)
+                    )
+                    historyValueRow(
+                        "Requested",
+                        value: Self.dataDayDescription(entry.outputBreakdown.requestedDataDayCount)
+                    )
+                    historyValueRow(
+                        "Successful",
+                        value: Self.dataDayDescription(entry.outputBreakdown.successfulDataDayCount)
+                    )
                 } header: {
-                    Text("Details")
+                    Text("Data days")
                         .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)
+                }
+
+                if entry.isGeneratedFileDelivery {
+                    Section {
+                        historyValueRow("Total", value: entry.generatedFileCountDescription)
+
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.looseAggregateFileCount > 0 {
+                            historyValueRow(
+                                "Loose aggregate files",
+                                value: "\(entry.outputBreakdown.looseAggregateFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.individualEntryFileCount > 0 {
+                            historyValueRow(
+                                "Individual-entry files",
+                                value: "\(entry.outputBreakdown.individualEntryFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.dataDictionaryFileCount > 0 {
+                            historyValueRow(
+                                "Data dictionaries",
+                                value: "\(entry.outputBreakdown.dataDictionaryFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.zipArchiveFileCount > 0 {
+                            historyValueRow(
+                                "ZIP archives",
+                                value: "\(entry.outputBreakdown.zipArchiveFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.rollupFileCount > 0 {
+                            historyValueRow(
+                                "Roll-up files",
+                                value: "\(entry.outputBreakdown.rollupFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.isFileCategoryBreakdownComplete
+                            || entry.outputBreakdown.providerSidecarFileCount > 0 {
+                            historyValueRow(
+                                "Provider sidecars",
+                                value: "\(entry.outputBreakdown.providerSidecarFileCount)"
+                            )
+                        }
+                        if entry.outputBreakdown.unclassifiedFileCount > 0 {
+                            historyValueRow(
+                                "Unclassified files",
+                                value: "\(entry.outputBreakdown.unclassifiedFileCount)"
+                            )
+                        }
+                    } header: {
+                        Text("Generated files")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    } footer: {
+                        if !entry.outputBreakdown.isFileCategoryBreakdownComplete {
+                            Text("This entry's producer did not record every generated-file category.")
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                } else if entry.isCLIRawDelivery {
+                    Section {
+                        historyValueRow("Days sent", value: "\(entry.successCount) of \(entry.totalCount)")
+                    } header: {
+                        Text("CLI delivery")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                } else if entry.isAPIEndpointDelivery {
+                    Section {
+                        historyValueRow("Days uploaded", value: "\(entry.successCount) of \(entry.totalCount)")
+                    } header: {
+                        Text("API delivery")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                if entry.dailyNoteUpdateCount > 0 || entry.dailyNoteSkipCount > 0 {
+                    Section {
+                        historyValueRow("Updated", value: "\(entry.dailyNoteUpdateCount)")
+                        historyValueRow("Skipped", value: "\(entry.dailyNoteSkipCount)")
+                    } header: {
+                        Text("Daily notes")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                if let recoveryDescription = entry.pendingRecoveryDescription {
+                    Section {
+                        Label {
+                            Text(recoveryDescription)
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } icon: {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .foregroundStyle(Color.warning)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("Pending recovery")
+                        .accessibilityValue(recoveryDescription)
+                    } header: {
+                        Text("Pending recovery")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
                 }
 
                 if let details = entry.operationDetails {
@@ -1772,6 +1834,12 @@ struct ExportHistoryDetailView: View {
                 }
             }
         }
+    }
+
+    static func dataDayDescription(_ count: Int) -> String {
+        count == 1
+            ? String(localized: "1 data day", comment: "Export history detail count for one data day")
+            : String(localized: "\(count) data days", comment: "Export history detail count for multiple or zero data days")
     }
 
     private func historyValueRow(

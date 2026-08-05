@@ -595,9 +595,87 @@ struct MacExportView: View {
             var failedDateDetails: [FailedDateDetail] = []
             var partialFailures: [ExportPartialFailure] = []
             var successfulHealthData: [HealthData] = []
+            var looseAggregateFileCount = 0
+            var individualEntryFileCount = 0
+            var dataDictionaryFileCount = 0
+            var rollupFileCount = 0
+            var isFileAccountingComplete = true
             var dailyNoteUpdateCount = 0
             var dailyNoteSkipCount = 0
             var completedDates: [Date] = []
+
+            @MainActor func finishCancelledExport() {
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: successCount,
+                    totalCount: totalCount,
+                    failedDateDetails: failedDateDetails,
+                    partialFailures: partialFailures,
+                    formatsPerDate: advancedSettings.looseFormatsPerDate,
+                    looseAggregateFileCount: looseAggregateFileCount,
+                    individualEntryFileCount: individualEntryFileCount,
+                    dataDictionaryFileCount: dataDictionaryFileCount,
+                    rollupFileCount: rollupFileCount,
+                    isFileCategoryBreakdownComplete: isFileAccountingComplete,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
+                    wasCancelled: true,
+                    completedDates: completedDates
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: dates.first ?? startDate,
+                    dateRangeEnd: dates.last ?? endDate
+                )
+                resultIsError = false
+                if advancedSettings.dailyNotesOnlyModeEnabled {
+                    resultMessage = "Daily note update cancelled."
+                } else if result.successCount > 0 {
+                    resultMessage = GeneratedFileCountText.localizedStoppedExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    )
+                } else {
+                    resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
+                }
+                showResult = true
+            }
+
+            do {
+                try vaultManager.preflightDataDictionaryArtifactCollisions(
+                    settings: advancedSettings,
+                    dates: dates
+                )
+            } catch {
+                let details = dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                }
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: 0,
+                    totalCount: totalCount,
+                    failedDateDetails: details,
+                    formatsPerDate: advancedSettings.looseFormatsPerDate,
+                    isFileCategoryBreakdownComplete: true,
+                    completedDates: []
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: dates.first ?? startDate,
+                    dateRangeEnd: dates.last ?? endDate
+                )
+                resultIsError = true
+                resultMessage = error.localizedDescription
+                showResult = true
+                return
+            }
 
             for (index, date) in dates.enumerated() {
                 // Check for cancellation before each date
@@ -607,6 +685,10 @@ struct MacExportView: View {
                         totalCount: totalCount,
                         failedDateDetails: failedDateDetails,
                         formatsPerDate: advancedSettings.looseFormatsPerDate,
+                        looseAggregateFileCount: looseAggregateFileCount,
+                        individualEntryFileCount: individualEntryFileCount,
+                        dataDictionaryFileCount: dataDictionaryFileCount,
+                        isFileCategoryBreakdownComplete: isFileAccountingComplete,
                         dailyNoteUpdateCount: dailyNoteUpdateCount,
                         dailyNoteSkipCount: dailyNoteSkipCount,
                         wasCancelled: true,
@@ -626,7 +708,13 @@ struct MacExportView: View {
                             ? "Daily note update stopped — \(dailyNoteUpdateCount) of \(totalCount) notes updated."
                             : "Daily note update cancelled."
                     } else if successCount > 0 {
-                        resultMessage = String(localized: "Export stopped — \(successCount) of \(totalCount) files exported.", comment: "Export cancelled with partial success")
+                        resultMessage = GeneratedFileCountText.localizedStoppedExport(
+                            count: result.totalFilesWritten,
+                            isAuthoritative: result.hasAuthoritativeFileCount
+                        ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                            successfulCount: result.successCount,
+                            totalCount: result.totalCount
+                        )
                     } else {
                         resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
                     }
@@ -658,8 +746,12 @@ struct MacExportView: View {
                     let writeResult = try await vaultManager.exportHealthData(
                         healthData,
                         settings: advancedSettings,
+                        writeDataDictionary: dataDictionaryFileCount == 0,
                         operationSurface: .localVaultWithoutSideEffects
                     )
+                    looseAggregateFileCount += writeResult.aggregateFileCount
+                    individualEntryFileCount += writeResult.individualEntryFileCount
+                    dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                     dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     if advancedSettings.dailyNotesOnlyModeEnabled {
@@ -693,19 +785,74 @@ struct MacExportView: View {
                     successfulHealthData.append(healthData)
                     successCount += 1
                     completedDates.append(date)
+                } catch is CancellationError {
+                    isFileAccountingComplete = false
+                    finishCancelledExport()
+                    return
+                } catch let error as ExportPartialWriteError {
+                    looseAggregateFileCount += error.looseAggregateFileCount
+                    individualEntryFileCount += error.individualEntryFileCount
+                    dataDictionaryFileCount += error.dataDictionaryFileCount
+                    dailyNoteUpdateCount += error.dailyNoteUpdateCount
+                    dailyNoteSkipCount += error.dailyNoteSkipCount
+                    isFileAccountingComplete = false
+                    if error.wasCancelled {
+                        finishCancelledExport()
+                        return
+                    }
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .fileWriteError,
+                        errorDetails: error.diagnostic
+                    ))
+                } catch let error as ExportError {
+                    if error == .destinationChanged {
+                        isFileAccountingComplete = false
+                    }
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    ))
                 } catch {
+                    isFileAccountingComplete = false
                     failedDateDetails.append(FailedDateDetail(
                         date: date, reason: .unknown, errorDetails: error.localizedDescription
                     ))
                 }
             }
 
-            var rollupFileCount = 0
             let rollupHealthData = rollupHealthData(for: dates, seedData: successfulHealthData)
             if !rollupHealthData.isEmpty && HealthRollupExporter.isEnabled(settings: advancedSettings) {
                 do {
-                    rollupFileCount = try vaultManager.exportRollupSummaries(from: rollupHealthData, settings: advancedSettings).count
+                    let writeResult = try vaultManager.exportRollupSummaries(
+                        from: rollupHealthData,
+                        settings: advancedSettings,
+                        writeDataDictionary: dataDictionaryFileCount == 0
+                    )
+                    rollupFileCount = writeResult.count
+                    dataDictionaryFileCount += writeResult.dataDictionaryFileCount
+                } catch is CancellationError {
+                    isFileAccountingComplete = false
+                    finishCancelledExport()
+                    return
+                } catch let error as ExportPartialWriteError {
+                    rollupFileCount += error.rollupFileCount
+                    dataDictionaryFileCount += error.dataDictionaryFileCount
+                    isFileAccountingComplete = false
+                    if error.wasCancelled {
+                        finishCancelledExport()
+                        return
+                    }
+                    let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
+                    partialFailures.append(ExportPartialFailure(
+                        date: firstDate,
+                        dataType: "Roll-up summaries",
+                        dateRangeDescription: "selected range",
+                        errorDescription: error.diagnostic
+                    ))
                 } catch {
+                    isFileAccountingComplete = false
                     let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
                     partialFailures.append(ExportPartialFailure(
                         date: firstDate,
@@ -735,9 +882,14 @@ struct MacExportView: View {
                 failedDateDetails: failedDateDetails,
                 partialFailures: partialFailures,
                 formatsPerDate: advancedSettings.looseFormatsPerDate,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
                 rollupFileCount: rollupFileCount,
+                isFileCategoryBreakdownComplete: isFileAccountingComplete,
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
+                hadTerminalFailure: !isFileAccountingComplete,
                 completedDates: completedDates
             )
 
@@ -751,25 +903,54 @@ struct MacExportView: View {
             if result.isFullSuccess {
                 resultIsError = false
                 if advancedSettings.dailyNotesOnlyModeEnabled {
-                    resultMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")."
+                    resultMessage = GeneratedFileCountText.localizedDailyNotesUpdated(
+                        count: result.dailyNoteUpdateCount
+                    )
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
+                    resultMessage = GeneratedFileCountText.localizedSuccessfulExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedBreakdown(
+                        result.fileBreakdownDescription
+                    )
                 } else {
-                    resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
+                    resultMessage = GeneratedFileCountText.localizedSuccessfulExport(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    )
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
-                let suffix = result.hasPartialFailures
-                    ? result.partialFailureSummary
-                    : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
+                let suffix: String
+                if result.hasPartialFailures {
+                    suffix = result.partialFailureSummary
+                } else if result.hadTerminalFailure {
+                    suffix = GeneratedFileCountText.localizedTerminalFailure
+                } else {
+                    suffix = GeneratedFileCountText.localizedIncompleteDataDays
+                }
                 if advancedSettings.dailyNotesOnlyModeEnabled && result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)"
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
+                    resultMessage = GeneratedFileCountText.localizedExported(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    ) + " " + GeneratedFileCountText.localizedBreakdown(
+                        result.fileBreakdownDescription
+                    ) + " " + suffix
                 } else {
-                    resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")
+                    resultMessage = GeneratedFileCountText.localizedExported(
+                        count: result.totalFilesWritten,
+                        isAuthoritative: result.hasAuthoritativeFileCount
+                    ) + " " + GeneratedFileCountText.localizedDataDayProgress(
+                        successfulCount: result.successCount,
+                        totalCount: result.totalCount
+                    ) + " " + suffix
                 }
             } else {
                 resultIsError = true

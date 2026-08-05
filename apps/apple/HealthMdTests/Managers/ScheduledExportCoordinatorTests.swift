@@ -156,6 +156,42 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(preparedAgain, retryRequest, "Same-occurrence preparation must not re-expand completed dates")
     }
 
+    func testCompletePendingScheduledExport_terminalDerivedOutputFailureKeepsFullRequestForRetry() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fireDate)
+        let schedule = ExportSchedule(
+            isEnabled: true,
+            frequency: .weekly,
+            preferredHour: 8,
+            lookbackDays: 2
+        )
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule,
+            fireDate: fireDate
+        )
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 2,
+            totalCount: 2,
+            failedDateDetails: [],
+            looseAggregateFileCount: 2,
+            isFileCategoryBreakdownComplete: false,
+            hadTerminalFailure: true,
+            completedDates: request.dates
+        )
+
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
+        XCTAssertNil(result.remainingDates(from: request.dates, calendar: Self.calendar))
+
+        let completion = try await coordinator.completePendingScheduledExport(request, result: result)
+
+        XCTAssertEqual(completion, .preservedPartialSuccess)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(scheduler.immediateRequests[request.id], request)
+        XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
+    }
+
     func testCompletePendingScheduledExport_reportedNoDataClearsCompletedRequest() async throws {
         let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
         let store = InMemoryPendingExportStore()

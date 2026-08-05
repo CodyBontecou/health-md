@@ -378,7 +378,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.totalCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.totalFilesWritten, 5)
         XCTAssertEqual(payload.completedDates, [Calendar.current.startOfDay(for: date)])
         XCTAssertEqual(fileSystem.files.count, 5, "Export writes the requested file, three roll-up summaries, and the schema data dictionary")
         XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2026-05-12.md"])
@@ -539,6 +539,74 @@ final class MacExportJobExecutorTests: XCTestCase {
         ])
     }
 
+    func testExecute_dictionaryArtifactCollisionFailsBeforeAnyMacWrite() async throws {
+        let manager = makeManagerWithVault()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.exportFormats = [.json]
+            settings.folderStructure = ""
+            settings.filenameFormat = "_healthmd_data_dictionary"
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings, healthSubfolder: "Health")
+        )
+
+        guard case .failure(let failure) = await MacExportJobExecutor().execute(
+            job,
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected path collision failure")
+        }
+
+        XCTAssertEqual(failure.reason, .exportWriteFailure)
+        XCTAssertEqual(failure.totalFilesWritten, 0)
+        XCTAssertEqual(failure.outputBreakdown?.generatedFileCount, 0)
+        XCTAssertTrue(failure.outputBreakdown?.isFileCategoryBreakdownComplete == true)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertTrue(fileSystem.writeCounts.isEmpty)
+    }
+
+    func testExecute_finalDictionaryFailureRetainsExactCommittedCategoriesAndFailureStatus() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.exportFormats = [.markdown]
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let dictionaryPath = "/tmp/MacVault/Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+        fileSystem.failBeforeWritingPathOnce = dictionaryPath
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: .from(settings, healthSubfolder: "Health")
+        )
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("A per-day writer failure must be represented by the result payload")
+        }
+
+        XCTAssertEqual(payload.status, .failure)
+        XCTAssertEqual(payload.successCount, 0)
+        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertFalse(payload.isTotalFilesWrittenAuthoritative)
+        let breakdown = try XCTUnwrap(payload.outputBreakdown)
+        XCTAssertEqual(breakdown.looseAggregateFileCount, 1)
+        XCTAssertEqual(breakdown.dataDictionaryFileCount, 0)
+        XCTAssertFalse(breakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(payload.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertEqual(payload.failedDateDetails.first?.errorDetails, "Injected failure before write")
+    }
+
     func testStream_usesIPhoneSubfolderInsteadOfMacLocalSubfolder() async throws {
         let manager = makeManagerWithVault()
         manager.healthSubfolder = "MacOnly"
@@ -688,7 +756,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.totalFilesWritten, 5)
         XCTAssertNil(executor.currentJobID)
     }
 
@@ -929,9 +997,27 @@ final class MacExportJobExecutorTests: XCTestCase {
         let start = makeStreamStart(jobID: jobID, start: date, end: date, totalTransferDays: 1)
         _ = executor.startStream(start, vaultManager: manager)
         XCTAssertEqual(executor.currentJobID, jobID)
+        _ = await executor.receiveChunk(
+            MacExportStreamChunk(
+                jobID: jobID,
+                sequence: 1,
+                records: [Self.healthData(on: date)],
+                externalDailyRecords: [],
+                processedTransferDays: 1,
+                totalTransferDays: 1
+            ),
+            vaultManager: manager
+        )
 
-        executor.abortStream(MacExportStreamAbort(jobID: jobID, reason: .cancelled, message: "test abort"))
+        let failure = executor.abortStream(
+            MacExportStreamAbort(jobID: jobID, reason: .cancelled, message: "test abort")
+        )
 
+        XCTAssertEqual(failure?.totalFilesWritten, 2)
+        XCTAssertEqual(failure?.outputBreakdown?.looseAggregateFileCount, 1)
+        XCTAssertEqual(failure?.outputBreakdown?.dataDictionaryFileCount, 1)
+        XCTAssertEqual(failure?.outputBreakdown?.generatedFileCount, 2)
+        XCTAssertTrue(failure?.outputBreakdown?.isFileCategoryBreakdownComplete == true)
         XCTAssertNil(executor.currentJobID)
         XCTAssertFalse(executor.isBusy)
     }
@@ -1122,6 +1208,62 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(fileSystem.files.count, 5, "Successful dates write the requested file, three roll-up summaries, and the schema data dictionary")
     }
 
+    func testExecute_partialSidecarLoopCountsCommittedSidecarExactlyOnce() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings { settings in
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        var sidecarWrites = 0
+        let testFileSystem = fileSystem!
+        testFileSystem.writeStarted = { url in
+            guard url.path.contains("/integrations/") else { return }
+            sidecarWrites += 1
+            if sidecarWrites == 2 {
+                testFileSystem.failBeforeWritingPathOnce = url.path
+            }
+        }
+        let externalRecords = [ExternalIntegrationProvider.whoop, .strava].map { provider in
+            ExternalDailyRecord(
+                provider: provider,
+                date: "2026-05-12",
+                payloads: [ExternalProviderPayload(
+                    name: "fixture",
+                    endpoint: "https://example.invalid/fixture",
+                    statusCode: 500,
+                    error: "fixture"
+                )]
+            )
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            externalDailyRecords: externalRecords,
+            start: date,
+            end: date,
+            snapshot: makeSnapshot(from: settings)
+        )
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("Expected a terminal payload")
+        }
+
+        XCTAssertEqual(payload.status, .partialSuccess)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.externalRecordFileCount, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 3)
+        XCTAssertFalse(payload.isTotalFilesWrittenAuthoritative)
+        let breakdown = try XCTUnwrap(payload.outputBreakdown)
+        XCTAssertEqual(breakdown.looseAggregateFileCount, 1)
+        XCTAssertEqual(breakdown.dataDictionaryFileCount, 1)
+        XCTAssertEqual(breakdown.providerSidecarFileCount, 1)
+        XCTAssertEqual(breakdown.generatedFileCount, 3)
+        XCTAssertFalse(breakdown.isFileCategoryBreakdownComplete)
+        XCTAssertEqual(fileSystem.files.keys.filter { $0.contains("/integrations/") }.count, 1)
+    }
+
     func testExecute_writesExternalProviderSidecarsFromJob() async throws {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()
@@ -1156,7 +1298,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 2)
+        XCTAssertEqual(payload.totalFilesWritten, 3)
         XCTAssertEqual(payload.externalRecordFileCount, 1)
 
         let sidecarPath = "/tmp/MacVault/integrations/whoop/2026-05-12.json"
@@ -1198,7 +1340,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 2)
         XCTAssertEqual(payload.totalCount, 2)
-        XCTAssertEqual(payload.totalFilesWritten, 3)
+        XCTAssertEqual(payload.totalFilesWritten, 4)
         let weeklyRollup = try XCTUnwrap(
             fileSystem.files["/tmp/MacVault/Rollups/Weekly/2026-W20.md"]
         )
@@ -1236,7 +1378,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 0)
-        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 2)
         XCTAssertNil(
             fileSystem.files["/tmp/MacVault/2026-05-12.md"],
             "Summary-only mode must not write daily records on Mac"
@@ -1303,6 +1445,59 @@ final class MacExportJobExecutorTests: XCTestCase {
         ))
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: vaultURL.appendingPathComponent("2026-05-12.md").path
+        ))
+    }
+
+    func testExecute_archiveCancellationAfterAllDaysKeepsSuccessfulDayButIsTerminalCancellation() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExportArchiveCancellation-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeManagerWithVault(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: vaultURL.path
+        )
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.archiveExportFiles = true
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: makeSnapshot(from: settings)
+        )
+        var exportTask: Task<Result<MacExportResultPayload, MacExportFailure>, Never>?
+        manager.archiveEntryWillAppendForTesting = {
+            exportTask?.cancel()
+        }
+        let task = Task { @MainActor in
+            await executor.execute(job, vaultManager: manager)
+        }
+        exportTask = task
+
+        guard case .success(let payload) = await task.value else {
+            return XCTFail("Expected a terminal cancellation payload")
+        }
+
+        XCTAssertEqual(payload.status, .cancelled)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.totalCount, 1)
+        XCTAssertEqual(payload.outputBreakdown?.successfulDataDayCount, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 0)
+        XCTAssertFalse(payload.isTotalFilesWrittenAuthoritative)
+        XCTAssertEqual(payload.completedDates, [])
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health.md Export 2026-05-12.zip").path
         ))
     }
 
@@ -1374,6 +1569,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             return XCTFail("Expected final result payload")
         }
         XCTAssertEqual(payload.status, .partialSuccess)
+        XCTAssertTrue(payload.hadTerminalFailure)
         XCTAssertEqual(payload.completedDates, [])
         XCTAssertTrue(payload.failedDateDetails.contains { $0.reason == .fileWriteError })
     }

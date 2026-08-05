@@ -308,6 +308,7 @@ struct APIEndpointExportRunner {
                 totalCount: 0,
                 failedDateDetails: [],
                 formatsPerDate: 0,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: []
             )
         }
@@ -501,6 +502,7 @@ struct APIEndpointExportRunner {
                 totalCount: 0,
                 failedDateDetails: [],
                 formatsPerDate: 0,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: []
             )
         }
@@ -581,6 +583,7 @@ struct APIEndpointExportRunner {
                 totalCount: normalizedDates.count,
                 failedDateDetails: [],
                 formatsPerDate: 0,
+                isFileCategoryBreakdownComplete: true,
                 wasCancelled: true,
                 completedDates: []
             )
@@ -1147,6 +1150,7 @@ struct APIEndpointExportRunner {
                 failedDateDetails: operation.failedDateDetails,
                 partialFailures: operation.partialFailures,
                 formatsPerDate: 0,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: []
             )
         }
@@ -1160,7 +1164,8 @@ struct APIEndpointExportRunner {
                     failedDateDetails: operation.failedDateDetails,
                     partialFailures: operation.partialFailures,
                     formatsPerDate: 0,
-                    externalRecordFileCount: totalExternalRecordCount,
+                    externalRecordPayloadCount: totalExternalRecordCount,
+                    isFileCategoryBreakdownComplete: true,
                     wasCancelled: true,
                     completedDates: Array(completedDates)
                 )
@@ -1215,7 +1220,8 @@ struct APIEndpointExportRunner {
             failedDateDetails: operation.failedDateDetails,
             partialFailures: operation.partialFailures,
             formatsPerDate: 0,
-            externalRecordFileCount: totalExternalRecordCount,
+            externalRecordPayloadCount: totalExternalRecordCount,
+            isFileCategoryBreakdownComplete: true,
             completedDates: Array(completedDates)
         )
     }
@@ -1282,7 +1288,8 @@ struct APIEndpointExportRunner {
                 successCount: 0,
                 totalCount: 0,
                 failedDateDetails: [],
-                formatsPerDate: 0
+                formatsPerDate: 0,
+                isFileCategoryBreakdownComplete: true
             )
         }
 
@@ -1321,7 +1328,8 @@ struct APIEndpointExportRunner {
                 failedDateDetails: allFailedDateDetails,
                 partialFailures: allPartialFailures,
                 formatsPerDate: 0,
-                externalRecordFileCount: totalExternalRecordCount,
+                externalRecordPayloadCount: totalExternalRecordCount,
+                isFileCategoryBreakdownComplete: true,
                 wasCancelled: true,
                 completedDates: Array(completedDates)
             )
@@ -1610,7 +1618,8 @@ struct APIEndpointExportRunner {
             failedDateDetails: allFailedDateDetails,
             partialFailures: allPartialFailures,
             formatsPerDate: 0,
-            externalRecordFileCount: totalExternalRecordCount,
+            externalRecordPayloadCount: totalExternalRecordCount,
+            isFileCategoryBreakdownComplete: true,
             completedDates: Array(completedDates)
         )
     }
@@ -1659,7 +1668,8 @@ struct APIEndpointExportRunner {
             failedDateDetails: orderedFailures,
             partialFailures: partialFailures,
             formatsPerDate: 0,
-            externalRecordFileCount: externalRecordCount,
+            externalRecordPayloadCount: externalRecordCount,
+            isFileCategoryBreakdownComplete: true,
             wasCancelled: Task.isCancelled || error is CancellationError,
             completedDates: Array(completedDates)
         )
@@ -1700,7 +1710,8 @@ struct APIEndpointExportRunner {
             failedDateDetails: failedDates.map {
                 FailedDateDetail(date: $0, reason: reason, errorDetails: message)
             },
-            formatsPerDate: 0
+            formatsPerDate: 0,
+            isFileCategoryBreakdownComplete: true
         )
     }
 

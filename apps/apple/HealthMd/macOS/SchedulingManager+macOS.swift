@@ -308,14 +308,37 @@ class SchedulingManager: ObservableObject {
         var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
         var successfulHealthData: [HealthData] = []
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
         var rollupFileCount = 0
         var archiveCount = 0
+        var isFileAccountingComplete = true
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
         let usesPinnedRange = frozenSettingsSnapshot?.appleExportEnginePin != nil
+        let preflightSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
+        var preflightFailed = false
+        do {
+            try vaultManager.preflightDataDictionaryArtifactCollisions(
+                settings: preflightSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            preflightFailed = true
+            failedDateDetails = dates.map {
+                FailedDateDetail(
+                    date: $0,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                )
+            }
+        }
 
-        if usesPinnedRange,
+        if !preflightFailed,
+           usesPinnedRange,
            let frozenSettingsSnapshot,
            let timeZoneIdentifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
            let timeZone = TimeZone(identifier: timeZoneIdentifier) {
@@ -338,6 +361,8 @@ class SchedulingManager: ObservableObject {
                     ) else {
                         throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                     }
+                    looseAggregateFileCount = writeResult.dailyFileCount
+                    dataDictionaryFileCount = writeResult.dataDictionaryFileCount
                     rollupFileCount = writeResult.rollupFileCount
                     if settings.summaryOnlyModeEnabled {
                         if rollupFileCount > 0 {
@@ -352,7 +377,27 @@ class SchedulingManager: ObservableObject {
                         successCount = captured.selectedRecordDates.count
                         completedDates = captured.selectedRecordDates
                     }
+                } catch is CancellationError {
+                    vaultManager.stopVaultAccess()
+                    return
+                } catch let error as ExportPartialWriteError {
+                    looseAggregateFileCount += error.looseAggregateFileCount
+                    dataDictionaryFileCount += error.dataDictionaryFileCount
+                    rollupFileCount += error.rollupFileCount
+                    isFileAccountingComplete = false
+                    if error.wasCancelled {
+                        vaultManager.stopVaultAccess()
+                        return
+                    }
+                    failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
+                        FailedDateDetail(
+                            date: $0,
+                            reason: .fileWriteError,
+                            errorDetails: error.diagnostic
+                        )
+                    })
                 } catch {
+                    isFileAccountingComplete = false
                     failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
                         FailedDateDetail(
                             date: $0,
@@ -362,7 +407,7 @@ class SchedulingManager: ObservableObject {
                     })
                 }
             }
-        } else if usesPinnedRange {
+        } else if !preflightFailed && usesPinnedRange {
             failedDateDetails = dates.map {
                 FailedDateDetail(
                     date: $0,
@@ -372,7 +417,7 @@ class SchedulingManager: ObservableObject {
             }
         }
 
-        if !usesPinnedRange {
+        if !preflightFailed && !usesPinnedRange {
         for date in dates {
             guard let healthData = healthDataStore.fetchHealthData(for: date) else {
                 // Mac cache absence is retryable: iPhone sync may populate it later.
@@ -390,11 +435,15 @@ class SchedulingManager: ObservableObject {
                     healthData,
                     settings: settings,
                     healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                    writeDataDictionary: dataDictionaryFileCount == 0,
                     operationSurface: frozenSettingsSnapshot == nil
                         ? .legacyOnly
                         : .localVaultWithoutSideEffects,
                     frozenSettingsSnapshot: frozenSettingsSnapshot
                 )
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                 if settings.dailyNotesOnlyModeEnabled {
@@ -430,7 +479,27 @@ class SchedulingManager: ObservableObject {
                 if !requiresDerivedOutput {
                     completedDates.append(date)
                 }
+            } catch is CancellationError {
+                vaultManager.stopVaultAccess()
+                return
+            } catch let error as ExportPartialWriteError {
+                looseAggregateFileCount += error.looseAggregateFileCount
+                individualEntryFileCount += error.individualEntryFileCount
+                dataDictionaryFileCount += error.dataDictionaryFileCount
+                dailyNoteUpdateCount += error.dailyNoteUpdateCount
+                dailyNoteSkipCount += error.dailyNoteSkipCount
+                isFileAccountingComplete = false
+                if error.wasCancelled {
+                    vaultManager.stopVaultAccess()
+                    return
+                }
+                failedDateDetails.append(FailedDateDetail(
+                    date: date,
+                    reason: .fileWriteError,
+                    errorDetails: error.diagnostic
+                ))
             } catch {
+                isFileAccountingComplete = false
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
                     reason: .fileWriteError,
@@ -462,7 +531,11 @@ class SchedulingManager: ObservableObject {
                 } else {
                     throw ExportError.noHealthData
                 }
+            } catch is CancellationError {
+                vaultManager.stopVaultAccess()
+                return
             } catch {
+                isFileAccountingComplete = false
                 failedDateDetails.append(contentsOf: successfulHealthData.map {
                     FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.localizedDescription)
                 })
@@ -472,8 +545,10 @@ class SchedulingManager: ObservableObject {
             do {
                 let results = try vaultManager.exportRollupSummaries(
                     from: rollupHealthData,
-                    settings: settings
+                    settings: settings,
+                    writeDataDictionary: dataDictionaryFileCount == 0
                 )
+                dataDictionaryFileCount += results.dataDictionaryFileCount
                 if results.isEmpty {
                     failedDateDetails.append(contentsOf: successfulHealthData.map {
                         FailedDateDetail(date: $0.date, reason: .noHealthData)
@@ -483,7 +558,23 @@ class SchedulingManager: ObservableObject {
                     rollupFileCount = results.count
                 }
                 completedDates.append(contentsOf: successfulHealthData.map(\.date))
+            } catch is CancellationError {
+                vaultManager.stopVaultAccess()
+                return
+            } catch let error as ExportPartialWriteError {
+                rollupFileCount += error.rollupFileCount
+                dataDictionaryFileCount += error.dataDictionaryFileCount
+                isFileAccountingComplete = false
+                if error.wasCancelled {
+                    vaultManager.stopVaultAccess()
+                    return
+                }
+                failedDateDetails.append(contentsOf: successfulHealthData.map {
+                    FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.diagnostic)
+                })
+                successCount = 0
             } catch {
+                isFileAccountingComplete = false
                 failedDateDetails.append(contentsOf: successfulHealthData.map {
                     FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.localizedDescription)
                 })
@@ -499,8 +590,12 @@ class SchedulingManager: ObservableObject {
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
             formatsPerDate: settings.looseFormatsPerDate,
+            looseAggregateFileCount: looseAggregateFileCount,
+            individualEntryFileCount: individualEntryFileCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
+            isFileCategoryBreakdownComplete: isFileAccountingComplete,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             completedDates: completedDates
@@ -575,6 +670,7 @@ class SchedulingManager: ObservableObject {
                 source: .scheduled,
                 dateRangeStart: dates.first!,
                 dateRangeEnd: dates.last!,
+                pendingRecoveryDayCount: existingPendingRequest?.dates.count ?? 0,
                 appleExportEnginePin: originalRequest.settingsSnapshot?.appleExportEnginePin
             )
 
@@ -603,6 +699,7 @@ class SchedulingManager: ObservableObject {
                 source: .scheduled,
                 dateRangeStart: dates.first!,
                 dateRangeEnd: dates.last!,
+                pendingRecoveryDayCount: existingPendingRequest?.dates.count ?? 0,
                 appleExportEnginePin: originalRequest.settingsSnapshot?.appleExportEnginePin
             )
             await sendNotification(

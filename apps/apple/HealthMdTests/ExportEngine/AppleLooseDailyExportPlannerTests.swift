@@ -526,6 +526,45 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         XCTAssertEqual(harness.fileSystem.fileCount, 16)
     }
 
+    func testVaultRejectsPlannedRangeDictionaryCollisionBeforeFirstDestinationWrite() async throws {
+        let planner = AppleLooseDailyExportPlanner(
+            policyResolver: AppleExportEnginePolicyResolver(
+                injectedOverride: "shadow",
+                userDefaults: nil,
+                environment: [:]
+            ),
+            identitySource: fixedIdentitySource
+        )
+        let settings = makeSimpleSettings(formats: [.json])
+        settings.folderStructure = ""
+        settings.filenameFormat = "_healthmd_data_dictionary"
+        settings.includeDataDictionary = true
+        let snapshot = ExportSettingsSnapshot.from(
+            settings,
+            healthSubfolder: "Health",
+            appleExportEngineAuthorityIsFrozen: false,
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        let harness = makeVaultHarness(planner: planner, label: "range-dictionary-collision")
+
+        do {
+            _ = try await harness.manager.exportHealthDataRange(
+                [ExportFixtures.partialDay],
+                settingsSnapshot: snapshot,
+                operationSurface: .localVaultRangeWithoutSideEffects
+            )
+            XCTFail("Expected the range plan collision to fail")
+        } catch let error as ExportError {
+            guard case .dataDictionaryPathConflict = error else {
+                XCTFail("Expected dataDictionaryPathConflict, got \(error)")
+                return
+            }
+        }
+
+        XCTAssertEqual(harness.fileSystem.writeAttempts, 0)
+        XCTAssertEqual(harness.fileSystem.fileCount, 0)
+    }
+
     func testRustPrecommitFailureThrowsWhileShadowReturnsNativeWithHealthFreeDiagnostic() async throws {
         let sensitive = "steps=987654;2026-03-15;private/path"
         let executor = M6SemanticFailingCoreExecutor(sensitiveValue: sensitive)

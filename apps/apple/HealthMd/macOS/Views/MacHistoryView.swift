@@ -115,9 +115,9 @@ struct MacHistoryView: View {
 
                 Spacer()
 
-                Text(entry.isAPIEndpointDelivery
+                Text(entry.isAPIEndpointDelivery || entry.isCLIRawDelivery
                     ? "\(entry.successCount)/\(entry.totalCount)"
-                    : entry.fileCount.map { "\($0)" } ?? "\(entry.successCount)/\(entry.totalCount)")
+                    : entry.generatedFileCountCompactDescription)
                     .font(BrandTypography.value())
                     .foregroundStyle(Color.textMuted)
             }

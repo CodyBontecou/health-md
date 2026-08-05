@@ -590,7 +590,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
-        guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
+        guard payload.hasConsistentFileAccounting,
+              let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
         streamAbortMessages.removeValue(forKey: payload.jobID)
         activeRequestID = nil
 
@@ -607,24 +608,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
             return true
         }
 
-        let result = ExportOrchestrator.ExportResult(
-            successCount: payload.successCount,
-            totalCount: payload.totalCount,
-            failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: payload.formatsPerDate,
-            externalRecordFileCount: payload.externalRecordFileCount,
-            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
-            dailyNoteSkipCount: payload.dailyNoteSkipCount,
-            wasCancelled: payload.status == .cancelled
-        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
 
         ExportOrchestrator.recordResult(
             result,
             source: .macAgent,
             dateRangeStart: pending.request.dateRangeStart,
             dateRangeEnd: pending.request.dateRangeEnd,
-            targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.totalFilesWritten
+            targetLabel: payload.destinationDisplayName ?? "Mac"
         )
 
         if payload.successCount > 0 {
@@ -659,19 +650,23 @@ final class IPhoneExportRequestHandler: ObservableObject {
             errorDetails: failure.underlyingError ?? failure.message
         )
         let result = ExportOrchestrator.ExportResult(
-            successCount: 0,
-            totalCount: max(ExportOrchestrator.dateRange(from: pending.request.dateRangeStart, to: pending.request.dateRangeEnd).count, 1),
-            failedDateDetails: [failedDetail],
+            macExportFailure: failure,
+            totalCount: max(
+                ExportOrchestrator.dateRange(
+                    from: pending.request.dateRangeStart,
+                    to: pending.request.dateRangeEnd
+                ).count,
+                1
+            ),
             formatsPerDate: pending.settings.looseFormatsPerDate,
-            wasCancelled: failure.reason == .cancelled
+            failedDateDetails: [failedDetail]
         )
         ExportOrchestrator.recordResult(
             result,
             source: .macAgent,
             dateRangeStart: pending.request.dateRangeStart,
             dateRangeEnd: pending.request.dateRangeEnd,
-            targetLabel: "Mac",
-            fileCount: 0
+            targetLabel: "Mac"
         )
         finishCLIActivity(
             for: pending.request,
@@ -1175,7 +1170,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             successCount: successCount,
             totalCount: totalCount,
             failedDateDetails: [],
-            formatsPerDate: 0
+            formatsPerDate: 0,
+            isFileCategoryBreakdownComplete: true
         )
         ExportOrchestrator.recordResult(
             result,
@@ -1702,7 +1698,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             totalCount: payload.totalDays,
             failedDateDetails: payload.failedDateDetails,
             formatsPerDate: 0,
-            externalRecordFileCount: payload.externalDailyRecords.filter(\.shouldExport).count
+            externalRecordPayloadCount: payload.externalDailyRecords.filter(\.shouldExport).count,
+            isFileCategoryBreakdownComplete: true
         )
         ExportOrchestrator.recordResult(
             result,

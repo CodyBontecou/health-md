@@ -60,6 +60,22 @@ final class IndividualEntryExporter {
     private let timeFormatter: DateFormatter
     private let filenameCollisionFormatter: DateFormatter
     private let datetimeFormatter: ISO8601DateFormatter
+    fileprivate struct PlannedEntry {
+        let relativePath: String
+        let fileURL: URL
+        let content: String
+    }
+
+    struct ExportPlan {
+        fileprivate let entries: [PlannedEntry]
+        fileprivate let destinationRootURL: URL
+        fileprivate let dataDictionaryHealthSubfolder: String?
+
+        var artifactRelativePaths: [String] {
+            entries.map(\.relativePath)
+        }
+    }
+
     private let fileSystem: FileSystemAccessing
     private let fileCoordinator: FileCoordinating
 
@@ -84,63 +100,76 @@ final class IndividualEntryExporter {
 
     // MARK: - Export Individual Entries
 
-    /// Export individual samples as separate files
-    /// Returns the number of files written
+    /// Freezes, materializes, and validates every dynamic individual-entry destination without
+    /// mutating the vault. VaultManager retains this exact plan across aggregate writes.
+    func planIndividualEntries(
+        samples: [IndividualHealthSample],
+        to destinationRootURL: URL,
+        settings: IndividualTrackingSettings,
+        formatSettings: FormatCustomization,
+        baseRelativePath: String = "",
+        dataDictionaryHealthSubfolder: String? = nil
+    ) throws -> ExportPlan {
+        let entries = makePlans(
+            samples: samples,
+            destinationRootURL: destinationRootURL,
+            baseRelativePath: baseRelativePath,
+            settings: settings,
+            formatSettings: formatSettings
+        )
+        try validateDestinationPlans(
+            entries,
+            destinationRootURL: destinationRootURL,
+            dataDictionaryHealthSubfolder: dataDictionaryHealthSubfolder
+        )
+        return ExportPlan(
+            entries: entries,
+            destinationRootURL: destinationRootURL,
+            dataDictionaryHealthSubfolder: dataDictionaryHealthSubfolder
+        )
+    }
+
+    /// Export individual samples as separate files. Every intended relative destination is frozen
+    /// and admitted before the first directory creation or write.
     func exportIndividualEntries(
         samples: [IndividualHealthSample],
-        to baseURL: URL,
+        to destinationRootURL: URL,
         settings: IndividualTrackingSettings,
-        formatSettings: FormatCustomization
+        formatSettings: FormatCustomization,
+        baseRelativePath: String = "",
+        dataDictionaryHealthSubfolder: String? = nil
     ) throws -> Int {
+        let plan = try planIndividualEntries(
+            samples: samples,
+            to: destinationRootURL,
+            settings: settings,
+            formatSettings: formatSettings,
+            baseRelativePath: baseRelativePath,
+            dataDictionaryHealthSubfolder: dataDictionaryHealthSubfolder
+        )
+        return try exportIndividualEntries(plan)
+    }
+
+    func exportIndividualEntries(_ plan: ExportPlan) throws -> Int {
+        try validateDestinationPlans(
+            plan.entries,
+            destinationRootURL: plan.destinationRootURL,
+            dataDictionaryHealthSubfolder: plan.dataDictionaryHealthSubfolder
+        )
+
         var filesWritten = 0
-        var reservedFilePaths = Set<String>()
-
-        for sample in samples {
-            // Skip if this metric isn't configured for individual tracking
-            guard settings.shouldTrackIndividually(sample.metricId) else {
-                continue
-            }
-
-            // Build the metric definition for folder/filename generation
-            let metricDef = HealthMetricDefinition(
-                id: sample.metricId,
-                name: sample.metricName,
-                category: sample.category,
-                unit: sample.unit,
-                healthKitIdentifier: nil,
-                metricType: .quantity,
-                aggregation: .mostRecent
+        for entry in plan.entries {
+            // SecureExactArtifactIO is intentionally bound to frozen exact range artifacts and
+            // cannot preserve this legacy FileCoordinator/custom-filesystem contract. Revalidate
+            // each deterministic path immediately before its coordinated atomic write.
+            try validateDestinationPlans(
+                [entry],
+                destinationRootURL: plan.destinationRootURL,
+                dataDictionaryHealthSubfolder: plan.dataDictionaryHealthSubfolder
             )
-
-            // Build folder path
-            let folderPath = settings.folderPath(for: metricDef)
-            let folderURL = baseURL.appendingPathComponent(folderPath, isDirectory: true)
-
-            // Canonical records always include their source UUID in the path. This
-            // makes same-minute collisions stable across partial reruns and exports
-            // where a single object is intentionally tracked under multiple metrics.
-            let filename = filename(for: sample, settings: settings)
-            let baseFileURL = folderURL.appendingPathComponent(filename)
-            let fileURL: URL
-            if sample.originalUUID != nil {
-                reservedFilePaths.insert(baseFileURL.path)
-                fileURL = baseFileURL
-            } else {
-                fileURL = collisionResolvedFileURL(
-                    baseFileURL,
-                    timestamp: sample.timestamp,
-                    reservedPaths: &reservedFilePaths
-                )
-            }
-
-            // Generate content
-            let content = generateEntryContent(for: sample, formatSettings: formatSettings)
-
-            // Coordinate directory creation and the final atomic replacement as
-            // one provider-visible mutation of the selected entry path.
             do {
                 try fileCoordinator.coordinateWriting(
-                    at: fileURL,
+                    at: entry.fileURL,
                     intent: .replace,
                     cancellationCheck: { try Task.checkCancellation() }
                 ) { coordinatedURL in
@@ -151,15 +180,125 @@ final class IndividualEntryExporter {
                             withIntermediateDirectories: true
                         )
                     }
-                    try fileSystem.writeString(content, to: coordinatedURL, atomically: true)
+                    try fileSystem.writeString(entry.content, to: coordinatedURL, atomically: true)
                 }
-            } catch FileCoordinationError.destinationChanged {
-                throw ExportError.destinationChanged
+            } catch {
+                let resolvedError: Error = error as? FileCoordinationError == .destinationChanged
+                    ? ExportError.destinationChanged
+                    : error
+                let tracked = ExportPartialWriteError(
+                    underlyingError: resolvedError,
+                    kind: .daily,
+                    individualEntryFileCount: filesWritten
+                )
+                if tracked.hasCommittedOutput { throw tracked }
+                if tracked.wasCancelled { throw CancellationError() }
+                throw resolvedError
             }
             filesWritten += 1
         }
 
         return filesWritten
+    }
+
+    private func makePlans(
+        samples: [IndividualHealthSample],
+        destinationRootURL: URL,
+        baseRelativePath: String,
+        settings: IndividualTrackingSettings,
+        formatSettings: FormatCustomization
+    ) -> [PlannedEntry] {
+        var plans: [PlannedEntry] = []
+        var reservedRelativePaths = Set<String>()
+
+        for sample in samples where settings.shouldTrackIndividually(sample.metricId) {
+            let metricDefinition = HealthMetricDefinition(
+                id: sample.metricId,
+                name: sample.metricName,
+                category: sample.category,
+                unit: sample.unit,
+                healthKitIdentifier: nil,
+                metricType: .quantity,
+                aggregation: .mostRecent
+            )
+            let baseRelativeFilePath = rawRelativePath([
+                baseRelativePath,
+                settings.folderPath(for: metricDefinition),
+                filename(for: sample, settings: settings)
+            ])
+            let relativePath: String
+            if sample.originalUUID != nil {
+                reservedRelativePaths.insert(baseRelativeFilePath)
+                relativePath = baseRelativeFilePath
+            } else {
+                relativePath = collisionResolvedRelativePath(
+                    baseRelativeFilePath,
+                    timestamp: sample.timestamp,
+                    reservedPaths: &reservedRelativePaths
+                )
+            }
+            plans.append(PlannedEntry(
+                relativePath: relativePath,
+                fileURL: ExportPathPlanner.appendingRelativePath(
+                    relativePath,
+                    to: destinationRootURL,
+                    isDirectory: false
+                ),
+                content: generateEntryContent(for: sample, formatSettings: formatSettings)
+            ))
+        }
+        return plans
+    }
+
+    private func validateDestinationPlans(
+        _ plans: [PlannedEntry],
+        destinationRootURL: URL,
+        dataDictionaryHealthSubfolder: String?
+    ) throws {
+        let relativePaths = plans.map(\.relativePath)
+        guard !relativePaths.isEmpty else { return }
+        do {
+            try ExportPathPlanner.validatePortableArtifactPaths(relativePaths)
+            if fileSystem is SystemFileSystem {
+                try ExportPathPlanner.validateUniqueDestinationArtifactPaths(
+                    vaultURL: destinationRootURL,
+                    artifactRelativePaths: relativePaths
+                )
+            }
+            let collision: ExportPathPlanner.DataDictionaryCollision?
+            if let dataDictionaryHealthSubfolder {
+                collision = fileSystem is SystemFileSystem
+                    ? try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
+                        vaultURL: destinationRootURL,
+                        healthSubfolder: dataDictionaryHealthSubfolder,
+                        artifactRelativePaths: relativePaths
+                    )
+                    : try ExportPathPlanner.dataDictionaryArtifactCollision(
+                        healthSubfolder: dataDictionaryHealthSubfolder,
+                        artifactRelativePaths: relativePaths
+                    )
+            } else {
+                collision = nil
+            }
+            if let collision {
+                throw ExportError.dataDictionaryPathConflict(
+                    path: collision.dataDictionaryRelativePath
+                )
+            }
+        } catch let error as ExportPathPlanner.PathValidationError {
+            let path: String
+            switch error {
+            case .invalidRelativePath(let value),
+                 .destinationUnavailable(let value),
+                 .destinationOutsideVault(let value):
+                path = value
+            }
+            throw ExportError.invalidExportPath(path: path)
+        }
+    }
+
+    private func rawRelativePath(_ components: [String]) -> String {
+        components.filter { !$0.isEmpty }.joined(separator: "/")
     }
 
     func filename(for sample: IndividualHealthSample, settings: IndividualTrackingSettings) -> String {
@@ -187,30 +326,32 @@ final class IndividualEntryExporter {
     /// occur within that minute (especially a blood-pressure triple measurement),
     /// so reserve a deterministic seconds/milliseconds suffix rather than letting
     /// a later sample overwrite an earlier one in the same export run.
-    private func collisionResolvedFileURL(
-        _ baseURL: URL,
+    private func collisionResolvedRelativePath(
+        _ baseRelativePath: String,
         timestamp: Date,
         reservedPaths: inout Set<String>
-    ) -> URL {
-        guard reservedPaths.contains(baseURL.path) else {
-            reservedPaths.insert(baseURL.path)
-            return baseURL
+    ) -> String {
+        guard reservedPaths.contains(baseRelativePath) else {
+            reservedPaths.insert(baseRelativePath)
+            return baseRelativePath
         }
 
-        let fileExtension = baseURL.pathExtension
-        let basename = baseURL.deletingPathExtension().lastPathComponent
-        let directory = baseURL.deletingLastPathComponent()
+        let path = baseRelativePath as NSString
+        let fileExtension = path.pathExtension
+        let pathWithoutExtension = path.deletingPathExtension as NSString
+        let basename = pathWithoutExtension.lastPathComponent
+        let directory = pathWithoutExtension.deletingLastPathComponent
         let timestampSuffix = filenameCollisionFormatter.string(from: timestamp)
         var collisionIndex = 1
 
         while true {
             let indexSuffix = collisionIndex == 1 ? "" : "_\(collisionIndex)"
-            let candidateName = "\(basename)_\(timestampSuffix)\(indexSuffix)"
-            let candidate = directory
-                .appendingPathComponent(candidateName)
-                .appendingPathExtension(fileExtension)
-            if !reservedPaths.contains(candidate.path) {
-                reservedPaths.insert(candidate.path)
+            let candidateFilename = "\(basename)_\(timestampSuffix)\(indexSuffix).\(fileExtension)"
+            let candidate = directory.isEmpty
+                ? candidateFilename
+                : directory + "/" + candidateFilename
+            if !reservedPaths.contains(candidate) {
+                reservedPaths.insert(candidate)
                 return candidate
             }
             collisionIndex += 1

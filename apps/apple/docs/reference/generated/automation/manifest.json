@@ -92,19 +92,19 @@
       "sha256" : "3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a"
     },
     {
-      "bytes" : 658,
+      "bytes" : 703,
       "path" : "mac-export-result-partial.json",
-      "sha256" : "a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49"
+      "sha256" : "55a26bbbfd04ef447bcb32e9f7fa1f2456bab9efe797cc83ecb113f3fa9febf0"
     },
     {
-      "bytes" : 502,
+      "bytes" : 547,
       "path" : "mac-export-result-success.json",
-      "sha256" : "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87"
+      "sha256" : "9e29de460ef2f379e0656536fc5dfd6cec59a5e1c37de6ad12f20cbdb23e0ad8"
     },
     {
-      "bytes" : 117653,
+      "bytes" : 117825,
       "path" : "message-fields.md",
-      "sha256" : "a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb"
+      "sha256" : "3e4a438eb2047eb4c85d4f9d3d2293deb20625eab29aac8b4b1db9d26ec2f79b"
     },
     {
       "bytes" : 1496,

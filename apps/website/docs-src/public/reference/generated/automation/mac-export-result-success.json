@@ -13,6 +13,7 @@
 
   ],
   "formatsPerDate" : 1,
+  "isTotalFilesWrittenAuthoritative" : true,
   "jobID" : "A1700000-0000-4000-8000-000000000001",
   "status" : "success",
   "successCount" : 2,
