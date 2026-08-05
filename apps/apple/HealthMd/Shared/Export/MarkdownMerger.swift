@@ -180,12 +180,13 @@ nonisolated struct MarkdownMerger {
         var incomingLinesByKey: [String: [PhysicalLine]] = [:]
 
         for block in incomingBlocks {
-            if incomingLinesByKey[block.key] == nil {
-                incomingOrder.append(block.key)
+            let lookupKey = propertyLookupKey(block.key)
+            if incomingLinesByKey[lookupKey] == nil {
+                incomingOrder.append(lookupKey)
             }
             // Generated frontmatter should not contain duplicate keys. If it does, retain its last value,
             // matching the previous merge policy while still emitting one authoritative block.
-            incomingLinesByKey[block.key] = newDocument.content[block.range].map {
+            incomingLinesByKey[lookupKey] = newDocument.content[block.range].map {
                 PhysicalLine(content: $0.content, ending: lineEnding)
             }
         }
@@ -199,6 +200,24 @@ nonisolated struct MarkdownMerger {
             ($0.range.lowerBound, $0)
         })
 
+        let incomingKeys = Set(incomingLinesByKey.keys)
+        var replacedAnchors: Set<String> = []
+        var preservedAliases: Set<String> = []
+        for block in existingBlocks {
+            guard let references = anchorReferences(in: Array(existingDocument.content[block.range])) else {
+                return existing
+            }
+            if incomingKeys.contains(propertyLookupKey(block.key)) {
+                replacedAnchors.formUnion(references.anchors)
+            } else {
+                preservedAliases.formUnion(references.aliases)
+            }
+        }
+        guard replacedAnchors.isDisjoint(with: preservedAliases) else {
+            // Replacing the defining block would leave a preserved alias with changed or missing meaning.
+            return existing
+        }
+
         var mergedContent: [PhysicalLine] = []
         var emittedIncomingKeys: Set<String> = []
         var index = 0
@@ -210,10 +229,11 @@ nonisolated struct MarkdownMerger {
                 continue
             }
 
-            if let replacement = incomingLinesByKey[block.key] {
-                if !emittedIncomingKeys.contains(block.key) {
+            let lookupKey = propertyLookupKey(block.key)
+            if let replacement = incomingLinesByKey[lookupKey] {
+                if !emittedIncomingKeys.contains(lookupKey) {
                     mergedContent.append(contentsOf: replacement)
-                    emittedIncomingKeys.insert(block.key)
+                    emittedIncomingKeys.insert(lookupKey)
                 }
                 // Skip every stale occurrence of an incoming key after replacing the first one.
             } else {
@@ -356,6 +376,165 @@ nonisolated struct MarkdownMerger {
         }
     }
 
+    private struct YAMLAnchorReferences {
+        var anchors: Set<String> = []
+        var aliases: Set<String> = []
+    }
+
+    /// Conservative YAML token scan for anchor dependencies. It tracks comments and quotes and is
+    /// applied to every nested/flow line, while block-scalar payload lines are skipped entirely.
+    private struct YAMLAnchorLexer {
+        private(set) var quote: Character?
+        private var escaped = false
+
+        mutating func scan(_ line: String, references: inout YAMLAnchorReferences) -> Bool {
+            var expectsNode = quote == nil
+            var previous: Character?
+            var index = line.startIndex
+
+            while index < line.endIndex {
+                let character = line[index]
+                let nextIndex = line.index(after: index)
+
+                if quote == "\"" {
+                    if escaped {
+                        escaped = false
+                    } else if character == "\\" {
+                        escaped = true
+                    } else if character == "\"" {
+                        quote = nil
+                    }
+                    previous = character
+                    index = nextIndex
+                    continue
+                }
+
+                if quote == "'" {
+                    if character == "'" {
+                        if nextIndex < line.endIndex, line[nextIndex] == "'" {
+                            previous = "'"
+                            index = line.index(after: nextIndex)
+                            continue
+                        }
+                        quote = nil
+                    }
+                    previous = character
+                    index = nextIndex
+                    continue
+                }
+
+                if character == "#",
+                   previous == nil || previous == " " || previous == "\t"
+                    || previous == "," || previous == "[" || previous == "{" {
+                    break
+                }
+
+                if character == " " || character == "\t" {
+                    previous = character
+                    index = nextIndex
+                    continue
+                }
+
+                if character == "\"" || character == "'" {
+                    quote = character
+                    expectsNode = false
+                    previous = character
+                    index = nextIndex
+                    continue
+                }
+
+                if expectsNode, character == "!" {
+                    let tokenEnd: String.Index
+                    if nextIndex < line.endIndex, line[nextIndex] == "<" {
+                        guard let closing = line[nextIndex...].firstIndex(of: ">") else { return false }
+                        tokenEnd = line.index(after: closing)
+                    } else {
+                        tokenEnd = line[nextIndex...].firstIndex(where: {
+                            $0 == " " || $0 == "\t" || "[]{},".contains($0)
+                        }) ?? line.endIndex
+                    }
+                    guard tokenEnd > nextIndex else { return false }
+                    expectsNode = true
+                    previous = "!"
+                    index = tokenEnd
+                    continue
+                }
+
+                if expectsNode, character == "&" || character == "*" {
+                    let tokenEnd = line[nextIndex...].firstIndex(where: {
+                        $0 == " " || $0 == "\t" || "[]{},#?:".contains($0)
+                    }) ?? line.endIndex
+                    guard tokenEnd > nextIndex else { return false }
+                    let name = String(line[nextIndex..<tokenEnd])
+                    if character == "&" {
+                        references.anchors.insert(name)
+                        expectsNode = true
+                    } else {
+                        references.aliases.insert(name)
+                        expectsNode = false
+                    }
+                    previous = character
+                    index = tokenEnd
+                    continue
+                }
+
+                if character == "[" || character == "{" || character == "," {
+                    expectsNode = true
+                } else if character == "]" || character == "}" {
+                    expectsNode = false
+                } else if character == ":" {
+                    let next = nextIndex < line.endIndex ? line[nextIndex] : nil
+                    expectsNode = next == nil || next == " " || next == "\t"
+                        || next == "[" || next == "{"
+                } else if expectsNode, character == "-" || character == "?" {
+                    let next = nextIndex < line.endIndex ? line[nextIndex] : nil
+                    expectsNode = next == " " || next == "\t"
+                } else {
+                    expectsNode = false
+                }
+
+                previous = character
+                index = nextIndex
+            }
+
+            // A trailing double-quote escape applies to the physical line break, not the next byte.
+            escaped = false
+            return true
+        }
+    }
+
+    private static func anchorReferences(in lines: [PhysicalLine]) -> YAMLAnchorReferences? {
+        var references = YAMLAnchorReferences()
+        var lexer = YAMLAnchorLexer()
+        var index = 0
+
+        while index < lines.count {
+            let quoteWasOpen = lexer.quote != nil
+            guard lexer.scan(lines[index].content, references: &references) else { return nil }
+
+            if !quoteWasOpen, lexer.quote == nil,
+               let scalar = blockScalarContinuationHeader(in: lines[index].content) {
+                guard let end = blockScalarEnd(
+                    in: lines,
+                    startingAt: index + 1,
+                    header: scalar.header,
+                    baseIndentation: scalar.baseIndentation
+                ) else {
+                    return nil
+                }
+                index = max(index + 1, end)
+            } else {
+                index += 1
+            }
+        }
+
+        return references
+    }
+
+    private static func propertyLookupKey(_ key: String) -> String {
+        key.precomposedStringWithCanonicalMapping
+    }
+
     /// Discover complete top-level property blocks. Returning nil means some non-trivia line could
     /// not be assigned safely, so callers must preserve the original frontmatter unchanged.
     private static func propertyBlocks(in lines: [PhysicalLine]) -> [FrontmatterPropertyBlock]? {
@@ -364,6 +543,7 @@ nonisolated struct MarkdownMerger {
 
         while index < lines.count {
             let line = lines[index].content
+            guard !hasTabInYAMLIndentation(line) else { return nil }
             if isYAMLTrivia(line) {
                 index += 1
                 continue
@@ -380,7 +560,8 @@ nonisolated struct MarkdownMerger {
                 guard let scalarEnd = blockScalarEnd(
                     in: lines,
                     startingAt: index + 1,
-                    header: scalarHeader
+                    header: scalarHeader,
+                    baseIndentation: 0
                 ) else {
                     return nil
                 }
@@ -392,17 +573,53 @@ nonisolated struct MarkdownMerger {
                     guard flowState.scan(initialNode) else { return nil }
                 }
 
+                let allowsIndentationlessSequence = initialNode.isEmpty || initialNode.first == "#"
                 var continuationEnd = index + 1
                 while continuationEnd < lines.count {
                     let continuation = lines[continuationEnd].content
+                    guard !hasTabInYAMLIndentation(continuation) else { return nil }
 
                     if flowState.isOpen {
                         guard flowState.scan(continuation[...]) else { return nil }
                         continuationEnd += 1
                         continue
                     }
+                    guard !hasTabAfterBlockSequenceDash(continuation) else { return nil }
+
+                    if allowsIndentationlessSequence,
+                       indentationlessSequenceNode(in: continuation) != nil {
+                        if let scalar = blockScalarContinuationHeader(in: continuation) {
+                            guard let scalarEnd = blockScalarEnd(
+                                in: lines,
+                                startingAt: continuationEnd + 1,
+                                header: scalar.header,
+                                baseIndentation: scalar.baseIndentation
+                            ) else {
+                                return nil
+                            }
+                            continuationEnd = scalarEnd
+                            continue
+                        }
+                        if let node = flowCollectionNode(inIndentedLine: continuation) {
+                            guard flowState.scan(node) else { return nil }
+                        }
+                        continuationEnd += 1
+                        continue
+                    }
 
                     if isIndented(continuation), !isYAMLTrivia(continuation) {
+                        if let scalar = blockScalarContinuationHeader(in: continuation) {
+                            guard let scalarEnd = blockScalarEnd(
+                                in: lines,
+                                startingAt: continuationEnd + 1,
+                                header: scalar.header,
+                                baseIndentation: scalar.baseIndentation
+                            ) else {
+                                return nil
+                            }
+                            continuationEnd = scalarEnd
+                            continue
+                        }
                         if let node = flowCollectionNode(inIndentedLine: continuation) {
                             guard flowState.scan(node) else { return nil }
                         }
@@ -411,15 +628,18 @@ nonisolated struct MarkdownMerger {
                     }
 
                     if isYAMLTrivia(continuation) {
-                        // Column-zero comments and blank lines can interrupt an indented mapping/list.
-                        // Attach them only when another indented, non-trivia continuation follows.
+                        // Comments and blank lines belong to this block only when owned content resumes.
                         var nextContent = continuationEnd + 1
                         while nextContent < lines.count,
                               isYAMLTrivia(lines[nextContent].content) {
+                            guard !hasTabInYAMLIndentation(lines[nextContent].content) else { return nil }
                             nextContent += 1
                         }
                         if nextContent < lines.count,
-                           isIndented(lines[nextContent].content) {
+                           isOwnedYAMLContinuation(
+                               lines[nextContent].content,
+                               allowsIndentationlessSequence: allowsIndentationlessSequence
+                           ) {
                             continuationEnd = nextContent
                             continue
                         }
@@ -430,8 +650,8 @@ nonisolated struct MarkdownMerger {
                         break
                     }
 
-                    // A column-zero closer, explicit complex key, directive, or other unsupported
-                    // construct has ambiguous ownership. Preserve instead of emitting partial YAML.
+                    // A column-zero closer, explicit complex key, directive, root sequence after a
+                    // nonempty value, or other unsupported construct has ambiguous ownership.
                     return nil
                 }
 
@@ -444,6 +664,21 @@ nonisolated struct MarkdownMerger {
         }
 
         return blocks
+    }
+
+    private static func indentationlessSequenceNode(in line: String) -> Substring? {
+        guard line.first == "-" else { return nil }
+        let afterDash = line.index(after: line.startIndex)
+        guard afterDash == line.endIndex || line[afterDash] == " " else { return nil }
+        return line[afterDash...].drop(while: { $0 == " " })
+    }
+
+    private static func isOwnedYAMLContinuation(
+        _ line: String,
+        allowsIndentationlessSequence: Bool
+    ) -> Bool {
+        if isIndented(line) { return true }
+        return allowsIndentationlessSequence && indentationlessSequenceNode(in: line) != nil
     }
 
     private static func propertyHeader(in line: String) -> FrontmatterPropertyHeader? {
@@ -627,9 +862,10 @@ nonisolated struct MarkdownMerger {
     private static func blockScalarEnd(
         in lines: [PhysicalLine],
         startingAt start: Int,
-        header: BlockScalarHeader
+        header: BlockScalarHeader,
+        baseIndentation: Int
     ) -> Int? {
-        var contentIndent = header.indentation
+        var contentIndent = header.indentation.map { baseIndentation + $0 }
         var consumedEnd = start
         var lastNonblankEnd: Int?
         var index = start
@@ -637,14 +873,25 @@ nonisolated struct MarkdownMerger {
         while index < lines.count {
             let line = lines[index].content
             if isBlankYAMLLine(line) {
+                if line.contains("\t") {
+                    let spacesBeforeTab = line.prefix(while: { $0 == " " }).count
+                    let minimum = contentIndent ?? (baseIndentation + 1)
+                    guard spacesBeforeTab >= minimum else { return nil }
+                }
                 consumedEnd = index + 1
                 index += 1
                 continue
             }
 
-            guard let indentation = leadingSpaceCount(in: line) else { return nil }
+            guard let indentation = blockScalarIndentation(
+                in: line,
+                required: contentIndent,
+                baseIndentation: baseIndentation
+            ) else {
+                return nil
+            }
             if contentIndent == nil {
-                guard indentation > 0 else { break }
+                guard indentation > baseIndentation else { break }
                 contentIndent = indentation
             }
             guard indentation >= contentIndent! else { break }
@@ -655,6 +902,54 @@ nonisolated struct MarkdownMerger {
         }
 
         return header.keepsTrailingBlankLines ? consumedEnd : (lastNonblankEnd ?? start)
+    }
+
+    /// Tabs are scalar payload only after the required space indentation has been satisfied.
+    private static func blockScalarIndentation(
+        in line: String,
+        required: Int?,
+        baseIndentation: Int
+    ) -> Int? {
+        var spaces = 0
+        for character in line {
+            if character == " " {
+                spaces += 1
+            } else if character == "\t" {
+                let minimum = required ?? (baseIndentation + 1)
+                return spaces >= minimum ? spaces : nil
+            } else {
+                break
+            }
+        }
+        return spaces
+    }
+
+    private static func blockScalarContinuationHeader(
+        in line: String
+    ) -> (header: BlockScalarHeader, baseIndentation: Int)? {
+        guard let indentation = leadingSpaceIndentation(in: line) else { return nil }
+        let unindented = String(line.dropFirst(indentation))
+        var candidate = unindented[...]
+        var nestedMappingIndentation = indentation
+        if let sequenceNode = indentationlessSequenceNode(in: unindented) {
+            nestedMappingIndentation += unindented.distance(
+                from: unindented.startIndex,
+                to: sequenceNode.startIndex
+            )
+            candidate = sequenceNode
+        }
+
+        let value: String
+        let baseIndentation: Int
+        if let nestedHeader = propertyHeader(in: String(candidate)) {
+            value = nestedHeader.value
+            baseIndentation = nestedMappingIndentation
+        } else {
+            value = String(candidate)
+            baseIndentation = indentation
+        }
+        guard case .header(let header) = blockScalarHeader(in: value) else { return nil }
+        return (header, baseIndentation)
     }
 
     private static func flowCollectionNode(inIndentedLine line: String) -> Substring? {
@@ -706,7 +1001,7 @@ nonisolated struct MarkdownMerger {
         line.allSatisfy { $0 == " " || $0 == "\t" }
     }
 
-    private static func leadingSpaceCount(in line: String) -> Int? {
+    private static func leadingSpaceIndentation(in line: String) -> Int? {
         var count = 0
         for character in line {
             if character == " " {
@@ -720,13 +1015,27 @@ nonisolated struct MarkdownMerger {
         return count
     }
 
+    private static func hasTabInYAMLIndentation(_ line: String) -> Bool {
+        for character in line {
+            if character == " " { continue }
+            return character == "\t"
+        }
+        return false
+    }
+
+    private static func hasTabAfterBlockSequenceDash(_ line: String) -> Bool {
+        var candidate = line.drop(while: { $0 == " " })
+        guard candidate.first == "-" else { return false }
+        candidate = candidate.dropFirst().drop(while: { $0 == " " })
+        return candidate.first == "\t"
+    }
+
     private static func isWhitespace(_ character: Character) -> Bool {
         character.unicodeScalars.allSatisfy { CharacterSet.whitespaces.contains($0) }
     }
 
     private static func isIndented(_ line: String) -> Bool {
-        guard let first = line.unicodeScalars.first else { return false }
-        return CharacterSet.whitespaces.contains(first)
+        line.first == " " || line.first == "\t"
     }
 
     private static func isFrontmatterDelimiter(_ line: String) -> Bool {

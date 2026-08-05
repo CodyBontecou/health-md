@@ -93,4 +93,107 @@ final class DirectMarkdownMergerTests: XCTestCase {
 
         XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
     }
+
+    func testMergeFrontmatterOwnsCompleteIndentationlessSequence() {
+        let existing = "---\nevents: # valid indentationless sequence\n- name: old\n  details:\n    status: stale\n# The sequence resumes after trivia.\n\n- name: second\n  values: [\n    one,\n    two\n  ]\nkeep: unchanged\n---\n"
+        let incoming = "---\nevents: refreshed\n---\n"
+        let expected = "---\nevents: refreshed\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterKeepsIncomingIndentationlessSequenceBoundaries() {
+        let existing = "---\nevents: stale\nkeep: unchanged\n---\n"
+        let incoming = "---\nevents:\n- name: fresh\n  details:\n    status: current\n- values: [\n    one,\n    two\n  ]\nsteps: 42\n---\n"
+        let expected = "---\nevents:\n- name: fresh\n  details:\n    status: current\n- values: [\n    one,\n    two\n  ]\nkeep: unchanged\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterSupportsNodePropertiesOnIndentationlessSequences() {
+        let existing = "---\nevents: &oldEvents !!seq\n- stale\nkeep: unchanged\n---\n"
+        let incoming = "---\nevents: !!seq &freshEvents\n- current\nsteps: 42\n---\n"
+        let expected = "---\nevents: !!seq &freshEvents\n- current\nkeep: unchanged\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterFindsAliasAfterNestedSequenceBlockScalar() {
+        let existing = "---\nmanaged: &defaults old\nkeep:\n- notes: |2\n    *defaults is scalar text\n  alias: *defaults\n---\n"
+        let incoming = "---\nmanaged: fresh\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
+
+    func testMergeFrontmatterFailsClosedForNonSpaceYAMLIndentation() {
+        let existing = "---\nsettings:\n\u{00A0}child: true\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
+
+    func testMergeFrontmatterDoesNotTreatPlainDashesOrRootSequenceAsOwnedSequence() {
+        let validExisting = "---\ndash: -foo\nnegative: -42\nkeep: unchanged\n---\n"
+        let validIncoming = "---\ndash: updated\n---\n"
+        let validExpected = "---\ndash: updated\nnegative: -42\nkeep: unchanged\n---\n"
+        XCTAssertEqual(
+            MarkdownMerger.mergeFrontmatter(existing: validExisting, new: validIncoming),
+            validExpected
+        )
+
+        let ambiguousRootSequence = "---\nowner: nonempty\n- root item\nkeep: unchanged\n---\n"
+        let incoming = "---\nowner: replacement\n---\n"
+        XCTAssertEqual(
+            MarkdownMerger.mergeFrontmatter(existing: ambiguousRootSequence, new: incoming),
+            ambiguousRootSequence
+        )
+    }
+
+    func testMergeFrontmatterFailsClosedWhenPreservedBlockAliasesReplacedAnchor() {
+        let existing = "---\nmanaged:\n  defaults: &defaults\n    unit: count\nkeep:\n  <<: *defaults\n  label: preserved\n---\n"
+        let incoming = "---\nmanaged:\n  unit: milliseconds\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
+
+    func testMergeFrontmatterAnchorScanIgnoresCommentsQuotesAndBlockScalarPayload() {
+        let existing = "---\nmanaged: &defaults old\nquoted: \"*defaults and &defaults\"\nsingle: '*defaults'\nliteral: |\n  *defaults\n  &defaults\nfolded: >\n  *defaults\n# *defaults is only a comment.\nkeep: unchanged\n---\n"
+        let incoming = "---\nmanaged: fresh\n---\n"
+        let expected = "---\nmanaged: fresh\nquoted: \"*defaults and &defaults\"\nsingle: '*defaults'\nliteral: |\n  *defaults\n  &defaults\nfolded: >\n  *defaults\n# *defaults is only a comment.\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterUsesNFCForKeyLookupWithoutRewritingPhysicalLines() {
+        let decomposedKey = "cafe\u{301}"
+        let existing = "---\n\(decomposedKey): old\ncafé: duplicate\nkeep: unchanged\n---\n"
+        let incoming = "---\ncafé: first\n\(decomposedKey): final\n---\n"
+        let expected = "---\n\(decomposedKey): final\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterAllowsTabsAfterBlockScalarSpaceIndentation() {
+        let existing = "---\nnotes: |2\n  \tpayload with *literal\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 42\n---\n"
+        let expected = "---\nnotes: |2\n  \tpayload with *literal\nkeep: unchanged\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterFailsClosedForTabsBeforeRequiredIndentation() {
+        let incoming = "---\nsteps: 42\n---\n"
+        let nestedTab = "---\nsettings:\n\tchild: true\nkeep: unchanged\n---\n"
+        let scalarTab = "---\nnotes: |2\n \tinvalid\nkeep: unchanged\n---\n"
+        let sequenceTab = "---\nitems:\n-\tinvalid\nkeep: unchanged\n---\n"
+        let spacedSequenceTab = "---\nitems:\n- \tinvalid\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: nestedTab, new: incoming), nestedTab)
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: scalarTab, new: incoming), scalarTab)
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: sequenceTab, new: incoming), sequenceTab)
+        XCTAssertEqual(
+            MarkdownMerger.mergeFrontmatter(existing: spacedSequenceTab, new: incoming),
+            spacedSequenceTab
+        )
+    }
 }

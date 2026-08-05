@@ -5,6 +5,8 @@ use std::{
     ops::Range,
 };
 
+use unicode_normalization::UnicodeNormalization;
+
 use super::RenderError;
 use crate::semantic::SemanticProfile;
 
@@ -263,8 +265,9 @@ fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
     let mut incoming_order = Vec::new();
     let mut incoming_by_key: HashMap<String, Vec<PhysicalLine>> = HashMap::new();
     for block in incoming_blocks {
-        if !incoming_by_key.contains_key(&block.key) {
-            incoming_order.push(block.key.clone());
+        let lookup_key = property_lookup_key(&block.key);
+        if !incoming_by_key.contains_key(&lookup_key) {
+            incoming_order.push(lookup_key.clone());
         }
         let lines = generated_document.content[block.range]
             .iter()
@@ -273,7 +276,7 @@ fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
                 ending: line_ending,
             })
             .collect();
-        incoming_by_key.insert(block.key, lines);
+        incoming_by_key.insert(lookup_key, lines);
     }
 
     let Some(existing_blocks) = property_blocks(&existing_document.content) else {
@@ -281,6 +284,13 @@ fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
         // partial replacement that leaves continuations attached to the wrong property.
         return existing.to_owned();
     };
+    if !anchor_replacements_are_safe(
+        &existing_document.content,
+        &existing_blocks,
+        &incoming_by_key,
+    ) {
+        return existing.to_owned();
+    }
     let existing_by_start = existing_blocks
         .into_iter()
         .map(|block| (block.range.start, block))
@@ -296,8 +306,9 @@ fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
             continue;
         };
 
-        if let Some(replacement) = incoming_by_key.get(&block.key) {
-            if emitted.insert(block.key.clone()) {
+        let lookup_key = property_lookup_key(&block.key);
+        if let Some(replacement) = incoming_by_key.get(&lookup_key) {
+            if emitted.insert(lookup_key) {
                 merged.extend(replacement.iter().cloned());
             }
         } else {
@@ -442,6 +453,9 @@ fn property_blocks(lines: &[PhysicalLine]) -> Option<Vec<FrontmatterPropertyBloc
 
     while index < lines.len() {
         let line = &lines[index].content;
+        if has_tab_in_yaml_indentation(line) {
+            return None;
+        }
         if is_yaml_trivia(line) {
             index += 1;
             continue;
@@ -454,68 +468,10 @@ fn property_blocks(lines: &[PhysicalLine]) -> Option<Vec<FrontmatterPropertyBloc
         let end = match block_scalar_header(&header.value) {
             BlockScalarHeaderParse::Invalid => return None,
             BlockScalarHeaderParse::Header(scalar_header) => {
-                block_scalar_end(lines, index + 1, &scalar_header)?
+                block_scalar_end(lines, index + 1, &scalar_header, 0)?
             }
             BlockScalarHeaderParse::NotBlockScalar => {
-                let mut flow_state = FlowCollectionState::default();
-                let initial_node = yaml_node(&header.value)?;
-                if matches!(initial_node.as_bytes().first(), Some(b'[' | b'{'))
-                    && !flow_state.scan(initial_node)
-                {
-                    return None;
-                }
-
-                let mut continuation_end = index + 1;
-                while continuation_end < lines.len() {
-                    let continuation = &lines[continuation_end].content;
-
-                    if flow_state.is_open() {
-                        if !flow_state.scan(continuation) {
-                            return None;
-                        }
-                        continuation_end += 1;
-                        continue;
-                    }
-
-                    if is_indented(continuation) && !is_yaml_trivia(continuation) {
-                        if let Some(node) = flow_collection_node(continuation) {
-                            if !flow_state.scan(&node) {
-                                return None;
-                            }
-                        }
-                        continuation_end += 1;
-                        continue;
-                    }
-
-                    if is_yaml_trivia(continuation) {
-                        // Column-zero comments and blank lines can interrupt an indented mapping/list.
-                        // Attach them only when another indented, non-trivia continuation follows.
-                        let mut next_content = continuation_end + 1;
-                        while next_content < lines.len()
-                            && is_yaml_trivia(&lines[next_content].content)
-                        {
-                            next_content += 1;
-                        }
-                        if next_content < lines.len() && is_indented(&lines[next_content].content) {
-                            continuation_end = next_content;
-                            continue;
-                        }
-                        break;
-                    }
-
-                    if property_header(continuation).is_some() {
-                        break;
-                    }
-
-                    // A column-zero closer, explicit complex key, directive, or other unsupported
-                    // construct has ambiguous ownership. Preserve instead of emitting partial YAML.
-                    return None;
-                }
-
-                if flow_state.is_open() {
-                    return None;
-                }
-                continuation_end
+                non_scalar_property_end(lines, index + 1, &header.value)?
             }
         };
 
@@ -526,6 +482,117 @@ fn property_blocks(lines: &[PhysicalLine]) -> Option<Vec<FrontmatterPropertyBloc
         index = end;
     }
     Some(blocks)
+}
+
+fn non_scalar_property_end(lines: &[PhysicalLine], start: usize, value: &str) -> Option<usize> {
+    let mut flow_state = FlowCollectionState::default();
+    let initial_node = yaml_node(value)?;
+    if matches!(initial_node.as_bytes().first(), Some(b'[' | b'{'))
+        && !flow_state.scan(initial_node)
+    {
+        return None;
+    }
+    let allows_indentationless_sequence = is_empty_or_comment_only_node(initial_node);
+    let mut end = start;
+
+    while end < lines.len() {
+        let continuation = &lines[end].content;
+        if has_tab_in_yaml_indentation(continuation) {
+            return None;
+        }
+
+        if flow_state.is_open() {
+            if !flow_state.scan(continuation) {
+                return None;
+            }
+            end += 1;
+            continue;
+        }
+        if has_tab_after_block_sequence_dash(continuation) {
+            return None;
+        }
+
+        let is_owned_content = (allows_indentationless_sequence
+            && indentationless_sequence_node(continuation).is_some())
+            || (is_indented(continuation) && !is_yaml_trivia(continuation));
+        if is_owned_content {
+            if let Some((scalar_header, base_indentation)) =
+                block_scalar_continuation_header(continuation)
+            {
+                end = block_scalar_end(lines, end + 1, &scalar_header, base_indentation)?;
+                continue;
+            }
+            if let Some(node) = flow_collection_node(continuation) {
+                if !flow_state.scan(&node) {
+                    return None;
+                }
+            }
+            end += 1;
+            continue;
+        }
+
+        if is_yaml_trivia(continuation) {
+            // Comments and blank lines belong only when owned content resumes.
+            let mut next_content = end + 1;
+            while next_content < lines.len() && is_yaml_trivia(&lines[next_content].content) {
+                if has_tab_in_yaml_indentation(&lines[next_content].content) {
+                    return None;
+                }
+                next_content += 1;
+            }
+            if next_content < lines.len()
+                && is_owned_yaml_continuation(
+                    &lines[next_content].content,
+                    allows_indentationless_sequence,
+                )
+            {
+                end = next_content;
+                continue;
+            }
+            break;
+        }
+
+        if property_header(continuation).is_some() {
+            break;
+        }
+
+        // A column-zero closer, explicit complex key, directive, root sequence after a nonempty
+        // value, or other unsupported construct has ambiguous ownership.
+        return None;
+    }
+
+    (!flow_state.is_open()).then_some(end)
+}
+
+fn property_lookup_key(key: &str) -> String {
+    key.nfc().collect()
+}
+
+fn is_empty_or_comment_only_node(node: &str) -> bool {
+    node.is_empty() || node.starts_with('#')
+}
+
+fn indentationless_sequence_node(line: &str) -> Option<&str> {
+    let remainder = line.strip_prefix('-')?;
+    if !remainder.is_empty() && remainder.as_bytes().first() != Some(&b' ') {
+        return None;
+    }
+    Some(remainder.trim_start_matches(' '))
+}
+
+fn has_tab_after_block_sequence_dash(line: &str) -> bool {
+    let Some(after_dash) = line.trim_start_matches(' ').strip_prefix('-') else {
+        return false;
+    };
+    after_dash
+        .bytes()
+        .find(|byte| *byte != b' ')
+        .is_some_and(|byte| byte == b'\t')
+}
+
+fn is_owned_yaml_continuation(line: &str, allows_indentationless_sequence: bool) -> bool {
+    is_indented(line)
+        || (allows_indentationless_sequence && indentationless_sequence_node(line).is_some())
 }
 
 fn property_header(line: &str) -> Option<FrontmatterPropertyHeader> {
@@ -725,8 +792,11 @@ fn block_scalar_end(
     lines: &[PhysicalLine],
     start: usize,
     header: &BlockScalarHeader,
+    base_indentation: usize,
 ) -> Option<usize> {
-    let mut content_indent = header.indentation;
+    let mut content_indent = header
+        .indentation
+        .map(|indentation| base_indentation + indentation);
     let mut consumed_end = start;
     let mut last_nonblank_end = None;
     let mut index = start;
@@ -734,14 +804,21 @@ fn block_scalar_end(
     while index < lines.len() {
         let line = &lines[index].content;
         if is_blank_yaml_line(line) {
+            if line.contains('\t') {
+                let spaces_before_tab = line.bytes().take_while(|byte| *byte == b' ').count();
+                let minimum = content_indent.unwrap_or(base_indentation + 1);
+                if spaces_before_tab < minimum {
+                    return None;
+                }
+            }
             consumed_end = index + 1;
             index += 1;
             continue;
         }
 
-        let indentation = leading_space_count(line)?;
+        let indentation = block_scalar_indentation(line, content_indent, base_indentation)?;
         if content_indent.is_none() {
-            if indentation == 0 {
+            if indentation <= base_indentation {
                 break;
             }
             content_indent = Some(indentation);
@@ -760,6 +837,44 @@ fn block_scalar_end(
     } else {
         last_nonblank_end.unwrap_or(start)
     })
+}
+
+/// Tabs are scalar payload only after the required space indentation has been satisfied.
+fn block_scalar_indentation(
+    line: &str,
+    required: Option<usize>,
+    base_indentation: usize,
+) -> Option<usize> {
+    let (spaces, encountered_tab) = leading_space_prefix(line);
+    if encountered_tab {
+        let minimum = required.unwrap_or(base_indentation + 1);
+        (spaces >= minimum).then_some(spaces)
+    } else {
+        Some(spaces)
+    }
+}
+
+fn block_scalar_continuation_header(line: &str) -> Option<(BlockScalarHeader, usize)> {
+    let indentation = leading_space_count(line)?;
+    let candidate = &line[indentation..];
+    let (value, base_indentation) =
+        if let Some(sequence_node) = indentationless_sequence_node(candidate) {
+            let sequence_node_offset = candidate.len() - sequence_node.len();
+            property_header(sequence_node).map_or_else(
+                || (sequence_node.to_owned(), indentation),
+                |header| (header.value, indentation + sequence_node_offset),
+            )
+        } else {
+            property_header(candidate).map_or_else(
+                || (candidate.to_owned(), indentation),
+                |header| (header.value, indentation),
+            )
+        };
+
+    match block_scalar_header(&value) {
+        BlockScalarHeaderParse::Header(header) => Some((header, base_indentation)),
+        BlockScalarHeaderParse::NotBlockScalar | BlockScalarHeaderParse::Invalid => None,
+    }
 }
 
 fn flow_collection_node(line: &str) -> Option<String> {
@@ -811,22 +926,238 @@ fn is_blank_yaml_line(line: &str) -> bool {
     line.bytes().all(|byte| matches!(byte, b' ' | b'\t'))
 }
 
-fn leading_space_count(line: &str) -> Option<usize> {
+fn leading_space_prefix(line: &str) -> (usize, bool) {
     let mut count = 0;
     for byte in line.bytes() {
         if byte == b' ' {
             count += 1;
-        } else if byte == b'\t' {
-            return None;
         } else {
-            break;
+            return (count, byte == b'\t');
         }
     }
-    Some(count)
+    (count, false)
+}
+
+fn leading_space_count(line: &str) -> Option<usize> {
+    let (count, encountered_tab) = leading_space_prefix(line);
+    (!encountered_tab).then_some(count)
+}
+
+fn has_tab_in_yaml_indentation(line: &str) -> bool {
+    for byte in line.bytes() {
+        if byte == b' ' {
+            continue;
+        }
+        return byte == b'\t';
+    }
+    false
+}
+
+#[derive(Default)]
+struct AnchorReferences {
+    definitions: HashSet<String>,
+    aliases: HashSet<String>,
+}
+
+#[derive(Default)]
+struct AnchorLexerState {
+    quote: Option<u8>,
+    escaped: bool,
+}
+
+fn anchor_replacements_are_safe(
+    lines: &[PhysicalLine],
+    blocks: &[FrontmatterPropertyBlock],
+    incoming_by_key: &HashMap<String, Vec<PhysicalLine>>,
+) -> bool {
+    let mut replaced_definitions = HashSet::new();
+    let mut preserved_aliases = HashSet::new();
+
+    for block in blocks {
+        let Some(references) = yaml_anchor_references(&lines[block.range.clone()]) else {
+            return false;
+        };
+        if incoming_by_key.contains_key(&property_lookup_key(&block.key)) {
+            replaced_definitions.extend(references.definitions);
+        } else {
+            preserved_aliases.extend(references.aliases);
+        }
+    }
+
+    replaced_definitions.is_disjoint(&preserved_aliases)
+}
+
+fn yaml_anchor_references(lines: &[PhysicalLine]) -> Option<AnchorReferences> {
+    let mut references = AnchorReferences::default();
+    let mut lexer = AnchorLexerState::default();
+    let mut index = 0;
+
+    while index < lines.len() {
+        let quote_was_open = lexer.quote.is_some();
+        if !scan_yaml_reference_tokens(&lines[index].content, &mut references, &mut lexer) {
+            return None;
+        }
+
+        if !quote_was_open && lexer.quote.is_none() {
+            if let Some((header, base_indentation)) =
+                block_scalar_continuation_header(&lines[index].content)
+            {
+                let end = block_scalar_end(lines, index + 1, &header, base_indentation)?;
+                index = std::cmp::max(index + 1, end);
+                continue;
+            }
+        }
+        index += 1;
+    }
+
+    Some(references)
+}
+
+fn consume_quoted_yaml_byte(
+    bytes: &[u8],
+    index: usize,
+    state: &mut AnchorLexerState,
+) -> Option<usize> {
+    let byte = bytes[index];
+    match state.quote {
+        Some(b'"') => {
+            if state.escaped {
+                state.escaped = false;
+            } else if byte == b'\\' {
+                state.escaped = true;
+            } else if byte == b'"' {
+                state.quote = None;
+            }
+            Some(index + 1)
+        }
+        Some(b'\'') => {
+            if byte == b'\'' {
+                if bytes.get(index + 1) == Some(&b'\'') {
+                    return Some(index + 2);
+                }
+                state.quote = None;
+            }
+            Some(index + 1)
+        }
+        _ => None,
+    }
+}
+
+fn scan_yaml_reference_tokens(
+    line: &str,
+    references: &mut AnchorReferences,
+    state: &mut AnchorLexerState,
+) -> bool {
+    let bytes = line.as_bytes();
+    let mut expects_node = state.quote.is_none();
+    let mut previous = None;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if let Some(next_index) = consume_quoted_yaml_byte(bytes, index, state) {
+            previous = Some(byte);
+            index = next_index;
+            continue;
+        }
+
+        if byte == b'#'
+            && (previous.is_none() || matches!(previous, Some(b' ' | b'\t' | b',' | b'[' | b'{')))
+        {
+            break;
+        }
+        if matches!(byte, b' ' | b'\t') {
+            previous = Some(byte);
+            index += 1;
+            continue;
+        }
+        if matches!(byte, b'"' | b'\'') {
+            state.quote = Some(byte);
+            expects_node = false;
+            previous = Some(byte);
+            index += 1;
+            continue;
+        }
+
+        if expects_node && byte == b'!' {
+            let token_end = if bytes.get(index + 1) == Some(&b'<') {
+                let Some(relative_end) = line[index + 1..].find('>') else {
+                    return false;
+                };
+                index + 1 + relative_end + 1
+            } else {
+                bytes[index + 1..]
+                    .iter()
+                    .position(|byte| {
+                        matches!(byte, b' ' | b'\t' | b'[' | b']' | b'{' | b'}' | b',')
+                    })
+                    .map_or(bytes.len(), |offset| index + 1 + offset)
+            };
+            if token_end <= index + 1 {
+                return false;
+            }
+            expects_node = true;
+            previous = Some(b'!');
+            index = token_end;
+            continue;
+        }
+
+        if expects_node && matches!(byte, b'&' | b'*') {
+            let name_start = index + 1;
+            let name_end = bytes[name_start..]
+                .iter()
+                .position(|byte| {
+                    matches!(
+                        byte,
+                        b' ' | b'\t' | b'[' | b']' | b'{' | b'}' | b',' | b'#' | b'?' | b':'
+                    )
+                })
+                .map_or(bytes.len(), |offset| name_start + offset);
+            if name_end <= name_start {
+                return false;
+            }
+            let name = line[name_start..name_end].to_owned();
+            if byte == b'&' {
+                references.definitions.insert(name);
+                expects_node = true;
+            } else {
+                references.aliases.insert(name);
+                expects_node = false;
+            }
+            previous = Some(byte);
+            index = name_end;
+            continue;
+        }
+
+        if matches!(byte, b'[' | b'{' | b',') {
+            expects_node = true;
+        } else if matches!(byte, b']' | b'}') {
+            expects_node = false;
+        } else if byte == b':' {
+            expects_node = bytes
+                .get(index + 1)
+                .is_none_or(|next| matches!(next, b' ' | b'\t' | b'[' | b'{'));
+        } else if expects_node && matches!(byte, b'-' | b'?') {
+            expects_node = bytes
+                .get(index + 1)
+                .is_some_and(|next| matches!(next, b' ' | b'\t'));
+        } else {
+            expects_node = false;
+        }
+
+        previous = Some(byte);
+        index += 1;
+    }
+
+    // A trailing double-quote escape applies to the physical line break, not the next byte.
+    state.escaped = false;
+    true
 }
 
 fn is_indented(line: &str) -> bool {
-    line.chars().next().is_some_and(char::is_whitespace)
+    line.as_bytes()
+        .first()
+        .is_some_and(|byte| matches!(byte, b' ' | b'\t'))
 }
 
 fn is_frontmatter_delimiter(line: &str) -> bool {
@@ -1312,5 +1643,170 @@ mod tests {
             .unwrap(),
             existing
         );
+    }
+
+    #[test]
+    fn apple_frontmatter_owns_indentationless_sequences_and_multiline_flow_items() {
+        let existing = "---\nitems: !healthmd &items # Node properties still own the sequence.\n# Before the first item.\n- name: first\n  nested:\n    enabled: true\n\n# Between items.\n- [\n  second,\n  {nested: value}\n]\nkeep: unchanged\n---\n";
+        let generated = "---\nitems: refreshed\n---\n";
+        let expected = "---\nitems: refreshed\nkeep: unchanged\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_keeps_incoming_indentationless_sequence_boundaries() {
+        let existing = "---\nitems:\n- stale\nnext: old\nkeep: unchanged\n---\n";
+        let generated = "---\nitems:\n- fresh\n- second\nnext: new\n---\n";
+        let expected = "---\nitems:\n- fresh\n- second\nnext: new\nkeep: unchanged\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_does_not_claim_root_or_dash_prefixed_syntax() {
+        let generated = "---\nvalue: replacement\n---\n";
+        for existing in [
+            "---\nvalue: present\n- root-item\n---\n",
+            "---\nvalue:\n-foo\n---\n",
+        ] {
+            assert_eq!(
+                merge_profile_markdown(
+                    SemanticProfile::AppleHealthDataV7,
+                    existing,
+                    generated,
+                    true,
+                )
+                .unwrap(),
+                existing
+            );
+        }
+
+        let negative = "---\nvalue: -1\nkeep: unchanged\n---\n";
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                negative,
+                generated,
+                true,
+            )
+            .unwrap(),
+            "---\nvalue: replacement\nkeep: unchanged\n---\n"
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_fails_closed_when_preserved_blocks_alias_replaced_anchors() {
+        let existing = "---\ndefaults:\n  nested: {palette: &defaults [blue, green]}\ntheme:\n  <<: *defaults\nkeep: unchanged\n---\n";
+        let generated = "---\ndefaults: refreshed\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            existing
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_anchor_scan_ignores_comments_quotes_and_scalar_payloads() {
+        let existing = "---\nreplace:\n  double: \"&quoted\"\n  single: '&single'\n  multiline: \"quoted across lines\n    &multiline\"\n  commented: value # &commented\n  literal: |\n    &payload\n    *payload\nkeep:\n  aliases: [*quoted, *single, *multiline, *commented, *payload]\n---\n";
+        let generated = "---\nreplace: refreshed\n---\n";
+        let expected = "---\nreplace: refreshed\nkeep:\n  aliases: [*quoted, *single, *multiline, *commented, *payload]\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_matches_property_keys_by_nfc_without_rewriting_lines() {
+        let existing = "---\ncafé: first\ncafe\u{301}: second\nkeep: cafe\u{301}\n---\n";
+        let generated = "---\ncafé: discarded\n\"cafe\u{301}\": refreshed\n---\n";
+        let expected = "---\n\"cafe\u{301}\": refreshed\nkeep: cafe\u{301}\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_allows_tabs_after_block_scalar_indentation() {
+        let existing = "---\nnotes: |2\n  \tfirst payload line\n   \tsecond payload line\nnested:\n  literal: |2\n    \tnested payload line\nevents:\n- notes: |2\n    \tinline mapping payload\n- |2\n  \tdirect sequence payload\nkeep: unchanged\n---\n";
+        let generated = "---\nsteps: 42\n---\n";
+        let expected = "---\nnotes: |2\n  \tfirst payload line\n   \tsecond payload line\nnested:\n  literal: |2\n    \tnested payload line\nevents:\n- notes: |2\n    \tinline mapping payload\n- |2\n  \tdirect sequence payload\nkeep: unchanged\nsteps: 42\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_rejects_tabs_before_required_yaml_indentation() {
+        let generated = "---\nsteps: 42\n---\n";
+        for existing in [
+            "---\nnotes: |2\n \tinvalid payload indentation\nkeep: unchanged\n---\n",
+            "---\nnotes: |2\n\t\nkeep: unchanged\n---\n",
+            "---\nnested:\n  literal: |2\n   \tinvalid nested payload indentation\nkeep: unchanged\n---\n",
+            "---\nevents:\n- notes: |2\n  \tinvalid inline mapping payload indentation\nkeep: unchanged\n---\n",
+            "---\nitems:\n\t- invalid sequence indentation\nkeep: unchanged\n---\n",
+            "---\nitems:\n-\tinvalid sequence separator\nkeep: unchanged\n---\n",
+            "---\nitems:\n- \tinvalid sequence separator\nkeep: unchanged\n---\n",
+            "---\nsettings:\n\u{00a0}child: true\nkeep: unchanged\n---\n",
+        ] {
+            assert_eq!(
+                merge_profile_markdown(
+                    SemanticProfile::AppleHealthDataV7,
+                    existing,
+                    generated,
+                    true,
+                )
+                .unwrap(),
+                existing
+            );
+        }
     }
 }
