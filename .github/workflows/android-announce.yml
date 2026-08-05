@@ -1,0 +1,426 @@
+# Announce a Google Play production release after it becomes available to users.
+#
+# Google Play does not provide the App Store Connect-style release webhook used by
+# apple-announce.yml. This workflow polls the read-only release-summary endpoint
+# hourly and also accepts a repository_dispatch from a future external hook.
+# Every candidate is revalidated against Google Play before Discord is touched.
+#
+# Effects:
+#   - Post the Android release announcement to #health-md-updates on Discord
+#   - Mark the android/v<version> commit with a durable success status so retries
+#     and later scheduled runs do not duplicate the message
+#
+# Required environment secret (google-play-announce, restricted to main):
+#   PLAY_CONSOLE_KEY_JSON (dedicated service account with app-level
+#                          CAN_VIEW_NON_FINANCIAL_DATA only)
+# Required repository secret:
+#   DISCORD_BOT_TOKEN
+
+name: Android Announce release
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  repository_dispatch:
+    types: [google-play-published]
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Optional production versionCode to verify (otherwise uses the newest published release)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Render the message without posting or recording the commit status'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: android-announce
+  cancel-in-progress: false
+
+env:
+  APP_NAME: Health.md
+  PACKAGE_NAME: com.healthmd.android
+  GOOGLE_PLAY_URL: https://play.google.com/store/apps/details?id=com.healthmd.android
+  DISCORD_CHANNEL_ID: '1498086736465760458'
+  DISCORD_GUILD_ID: '1443424100759634003'
+  STATUS_CONTEXT: discord/android-production
+  # v1.5.4 (25) was already live when this monitor was introduced. Do not
+  # backfill an old announcement on the monitor's first scheduled run.
+  BASELINE_VERSION_CODE: '25'
+
+jobs:
+  announce:
+    name: Announce published Android release
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: google-play-announce
+    steps:
+      - name: Checkout release ledger
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Google Play access token
+        id: play-auth
+        shell: bash
+        env:
+          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "${PLAY_CONSOLE_KEY_JSON:-}"
+
+          credentials="$RUNNER_TEMP/play-console-key.json"
+          private_key="$RUNNER_TEMP/play-console-private-key.pem"
+          printf '%s' "$PLAY_CONSOLE_KEY_JSON" > "$credentials"
+          jq -er '.private_key' "$credentials" > "$private_key"
+          chmod 600 "$credentials" "$private_key"
+
+          client_email=$(jq -er '.client_email' "$credentials")
+          token_uri=$(jq -er '.token_uri' "$credentials")
+          now=$(date +%s)
+
+          base64url() {
+            openssl base64 -A | tr '+/' '-_' | tr -d '='
+          }
+
+          header=$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | base64url)
+          claims=$(jq -nc \
+            --arg iss "$client_email" \
+            --arg scope 'https://www.googleapis.com/auth/androidpublisher' \
+            --arg aud "$token_uri" \
+            --argjson iat "$now" \
+            '{iss: $iss, scope: $scope, aud: $aud, iat: $iat, exp: ($iat + 3600)}' \
+            | base64url)
+          unsigned="$header.$claims"
+          signature=$(printf '%s' "$unsigned" \
+            | openssl dgst -sha256 -sign "$private_key" \
+            | base64url)
+
+          token_response=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X POST "$token_uri" \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer' \
+            --data-urlencode "assertion=$unsigned.$signature")
+          access_token=$(printf '%s' "$token_response" | jq -er '.access_token')
+          echo "::add-mask::$access_token"
+          echo "access_token=$access_token" >> "$GITHUB_OUTPUT"
+
+          rm -f "$credentials" "$private_key"
+
+      - name: Resolve published production release
+        id: release
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          INPUT_VERSION_CODE: ${{ inputs.version_code }}
+          DISPATCH_VERSION_CODE: ${{ github.event.client_payload.versionCode }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          releases_file="$RUNNER_TEMP/google-play-releases.json"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/production/releases" \
+            -o "$releases_file"
+
+          requested_code="${INPUT_VERSION_CODE:-${DISPATCH_VERSION_CODE:-}}"
+          if [[ -n "$requested_code" && (! "$requested_code" =~ ^[0-9]+$ || "$requested_code" == 0) ]]; then
+            echo "::error::versionCode must be a positive integer"
+            exit 1
+          fi
+          if [[ -n "$requested_code" \
+            && "$GITHUB_EVENT_NAME" != "workflow_dispatch" \
+            && "$requested_code" -le "$BASELINE_VERSION_CODE" ]]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Ignoring automated request for baseline versionCode $requested_code."
+            exit 0
+          fi
+
+          if [[ -n "$requested_code" ]]; then
+            candidate=$(jq -c --argjson requested "$requested_code" '
+              [
+                .releases[]?
+                | select(.releaseLifecycleState == "RELEASE_LIFECYCLE_STATE_PUBLISHED") as $release
+                | $release.activeArtifacts[]?
+                | select((.versionCode | tonumber) == $requested)
+                | {
+                    version_code: (.versionCode | tonumber),
+                    release_name: $release.releaseName,
+                    lifecycle_state: $release.releaseLifecycleState
+                  }
+              ]
+              | max_by(.version_code) // empty
+            ' "$releases_file")
+          else
+            candidate=$(jq -c --argjson baseline "$BASELINE_VERSION_CODE" '
+              [
+                .releases[]?
+                | select(.releaseLifecycleState == "RELEASE_LIFECYCLE_STATE_PUBLISHED") as $release
+                | $release.activeArtifacts[]?
+                | select((.versionCode | tonumber) > $baseline)
+                | {
+                    version_code: (.versionCode | tonumber),
+                    release_name: $release.releaseName,
+                    lifecycle_state: $release.releaseLifecycleState
+                  }
+              ]
+              | max_by(.version_code) // empty
+            ' "$releases_file")
+          fi
+
+          if [[ -z "$candidate" ]]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No matching published production release is available."
+            exit 0
+          fi
+
+          version_code=$(printf '%s' "$candidate" | jq -er '.version_code')
+
+          mapfile -t matching_tags < <(
+            while IFS= read -r tag; do
+              gradle=$(git show "$tag:apps/android/app/build.gradle.kts" 2>/dev/null || true)
+              tag_code=$(printf '%s\n' "$gradle" \
+                | sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' \
+                | head -1)
+              if [[ "$tag_code" == "$version_code" ]]; then
+                printf '%s\n' "$tag"
+              fi
+            done < <(git tag --list 'android/v*')
+          )
+
+          if [[ ${#matching_tags[@]} -ne 1 ]]; then
+            echo "::error::Expected exactly one android/v* tag for production versionCode $version_code; found ${#matching_tags[@]}"
+            exit 1
+          fi
+
+          tag=${matching_tags[0]}
+          if [[ "$(git cat-file -t "$tag")" != "tag" ]]; then
+            echo "::error::$tag must be an annotated release tag"
+            exit 1
+          fi
+
+          gradle=$(git show "$tag:apps/android/app/build.gradle.kts")
+          version=$(printf '%s\n' "$gradle" \
+            | sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' \
+            | head -1)
+          if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::Committed Android versionName is not a release semantic version"
+            exit 1
+          fi
+          if [[ "$tag" != "android/v$version" ]]; then
+            echo "::error::Tag $tag does not match its committed Android versionName ($version)"
+            exit 1
+          fi
+
+          sha=$(git rev-parse "$tag^{}")
+          git rev-parse --verify refs/remotes/origin/main >/dev/null
+          if ! git merge-base --is-ancestor "$sha" refs/remotes/origin/main; then
+            echo "::error::$tag does not point to a commit reachable from origin/main"
+            exit 1
+          fi
+
+          notes_file="$RUNNER_TEMP/android-release-notes.md"
+          git show "$tag:apps/android/play-console/listing/en-US/release-notes/en-US/default.txt" \
+            > "$notes_file"
+          test -s "$notes_file"
+
+          gh api --paginate --slurp \
+            "repos/$GITHUB_REPOSITORY/commits/$sha/statuses?per_page=100" \
+            > "$RUNNER_TEMP/commit-status-pages.json"
+          if jq -e --arg context "$STATUS_CONTEXT" '
+            any(.[][]; .context == $context and .state == "success")
+          ' "$RUNNER_TEMP/commit-status-pages.json" >/dev/null; then
+            already_announced=true
+          else
+            already_announced=false
+          fi
+
+          {
+            echo "found=true"
+            echo "already_announced=$already_announced"
+            echo "version=$version"
+            echo "version_code=$version_code"
+            echo "tag=$tag"
+            echo "sha=$sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Render Discord update
+        if: steps.release.outputs.found == 'true' && steps.release.outputs.already_announced != 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          notes=$(jq -Rrs '.[0:1500]' "$RUNNER_TEMP/android-release-notes.md")
+          cat > "$RUNNER_TEMP/discord.md" <<DISCORD_EOF
+          🟢 ${APP_NAME} v${VERSION} is live on Android.
+
+          ${notes}
+
+          Google Play: ${GOOGLE_PLAY_URL}
+          DISCORD_EOF
+
+      - name: Preview Discord update
+        if: >-
+          steps.release.outputs.found == 'true' &&
+          steps.release.outputs.already_announced != 'true' &&
+          github.event_name == 'workflow_dispatch' &&
+          inputs.dry_run
+        shell: bash
+        run: |
+          cat "$RUNNER_TEMP/discord.md"
+          echo "Dry run: Discord was not changed."
+
+      - name: Post Discord update
+        id: discord
+        if: >-
+          steps.release.outputs.found == 'true' &&
+          steps.release.outputs.already_announced != 'true' &&
+          (github.event_name != 'workflow_dispatch' || !inputs.dry_run)
+        shell: bash
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -n "${DISCORD_BOT_TOKEN:-}"
+
+          bot_response=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            "https://discord.com/api/v10/users/@me" \
+            -H "Authorization: Bot $DISCORD_BOT_TOKEN" \
+            -H "User-Agent: DiscordBot (https://github.com/${GITHUB_REPOSITORY}, 1.0)")
+          bot_id=$(printf '%s' "$bot_response" | jq -er '.id')
+
+          message_id=""
+          before=""
+          for _page in {1..10}; do
+            messages_url="https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages?limit=100"
+            if [[ -n "$before" ]]; then
+              messages_url="${messages_url}&before=${before}"
+            fi
+            messages=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              "$messages_url" \
+              -H "Authorization: Bot $DISCORD_BOT_TOKEN" \
+              -H "User-Agent: DiscordBot (https://github.com/${GITHUB_REPOSITORY}, 1.0)")
+            message_id=$(printf '%s' "$messages" | jq -r \
+              --arg bot_id "$bot_id" \
+              --rawfile expected "$RUNNER_TEMP/discord.md" '
+                [
+                  .[]
+                  | select(
+                      .author.id == $bot_id
+                      and .content == ($expected | rtrimstr("\n"))
+                    )
+                ][0].id // empty
+              ')
+            if [[ -n "$message_id" ]]; then
+              break
+            fi
+            message_count=$(printf '%s' "$messages" | jq 'length')
+            if [[ "$message_count" -lt 100 ]]; then
+              break
+            fi
+            before=$(printf '%s' "$messages" | jq -er '.[-1].id')
+          done
+
+          if [[ -n "$message_id" ]]; then
+            echo "Found the existing Discord announcement; no duplicate was posted."
+            posted=false
+          else
+            payload=$(jq -n \
+              --rawfile content "$RUNNER_TEMP/discord.md" \
+              '{content: ($content | rtrimstr("\n")), allowed_mentions: {parse: []}}')
+            # Do not retry this non-idempotent POST. If the response is lost after
+            # Discord accepts it, the next run reconciles against channel history.
+            response=$(curl --fail-with-body --max-time 30 -sS \
+              -X POST "https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages" \
+              -H "Authorization: Bot $DISCORD_BOT_TOKEN" \
+              -H 'Content-Type: application/json' \
+              -H "User-Agent: DiscordBot (https://github.com/${GITHUB_REPOSITORY}, 1.0)" \
+              --data-binary "$payload")
+            message_id=$(printf '%s' "$response" | jq -er '.id')
+            posted=true
+          fi
+
+          if [[ ! "$message_id" =~ ^[0-9]+$ ]]; then
+            echo "::error::Discord returned an invalid message id"
+            exit 1
+          fi
+          message_url="https://discord.com/channels/${DISCORD_GUILD_ID}/${DISCORD_CHANNEL_ID}/${message_id}"
+          {
+            echo "message_id=$message_id"
+            echo "message_url=$message_url"
+            echo "posted=$posted"
+          } >> "$GITHUB_OUTPUT"
+          echo "Discord update: $message_url"
+
+      - name: Record durable announcement marker
+        if: steps.discord.outputs.message_id != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          VERSION: ${{ steps.release.outputs.version }}
+          VERSION_CODE: ${{ steps.release.outputs.version_code }}
+          MESSAGE_URL: ${{ steps.discord.outputs.message_url }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if gh api \
+              --method POST \
+              "repos/$GITHUB_REPOSITORY/statuses/$RELEASE_SHA" \
+              -f state=success \
+              -f context="$STATUS_CONTEXT" \
+              -f description="Discord announced Android v$VERSION ($VERSION_CODE)" \
+              -f target_url="$MESSAGE_URL" \
+              >/dev/null; then
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "::error::Discord succeeded, but the durable commit status could not be recorded"
+          exit 1
+
+      - name: Summary
+        if: always()
+        shell: bash
+        env:
+          FOUND: ${{ steps.release.outputs.found }}
+          ALREADY_ANNOUNCED: ${{ steps.release.outputs.already_announced }}
+          VERSION: ${{ steps.release.outputs.version }}
+          VERSION_CODE: ${{ steps.release.outputs.version_code }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          DISCORD_POSTED: ${{ steps.discord.outputs.posted }}
+          MESSAGE_URL: ${{ steps.discord.outputs.message_url }}
+        run: |
+          {
+            echo "## Android production announcement"
+            echo
+            if [[ "$FOUND" != "true" ]]; then
+              echo "- Google Play: no matching published production release"
+            elif [[ "$ALREADY_ANNOUNCED" == "true" ]]; then
+              echo "- Version: $VERSION ($VERSION_CODE)"
+              echo "- Discord: already announced"
+            elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$DRY_RUN" == "true" ]]; then
+              echo "- Version: $VERSION ($VERSION_CODE)"
+              echo "- Discord: dry-run preview only"
+            else
+              echo "- Version: $VERSION ($VERSION_CODE)"
+              echo "- Google Play state: published"
+              if [[ "$DISCORD_POSTED" == "true" ]]; then
+                echo "- Discord: posted"
+              elif [[ -n "$MESSAGE_URL" ]]; then
+                echo "- Discord: existing bot message reused"
+              else
+                echo "- Discord: no message result"
+              fi
+              echo "- Message: $MESSAGE_URL"
+              echo "- Commit status: $STATUS_CONTEXT"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

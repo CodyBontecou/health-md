@@ -55,7 +55,6 @@ env:
   APP_STORE_URL: https://apps.apple.com/app/id6757763969
   BUNDLE_ID: com.codybontecou.obsidianhealth
   DISCORD_CHANNEL_ID: '1498086736465760458'
-  DISCORD_ROLE_ID: '1498086323251183809'
 
 jobs:
   announce:
@@ -305,8 +304,6 @@ jobs:
           BODY_FILE="$RUNNER_TEMP/discord.md"
           NOTES=$(head -c 1500 "$RUNNER_TEMP/notes.md")
           cat > "$BODY_FILE" <<DISCORD_EOF
-          <@&${DISCORD_ROLE_ID}>
-
           🟢 ${APP_NAME} v${{ steps.meta.outputs.version }} is live on ${{ steps.meta.outputs.platform_label }}.
 
           ${NOTES}
@@ -316,8 +313,7 @@ jobs:
 
           PAYLOAD=$(jq -n \
             --rawfile c "$BODY_FILE" \
-            --arg r "$DISCORD_ROLE_ID" \
-            '{ content: $c, allowed_mentions: { roles: [$r] } }')
+            '{ content: $c, allowed_mentions: { parse: [] } }')
 
           RESP=$(curl -fsS -X POST "https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages" \
             -H "Authorization: Bot $DISCORD_BOT_TOKEN" \
