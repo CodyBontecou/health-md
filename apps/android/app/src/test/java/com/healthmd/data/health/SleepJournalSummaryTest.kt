@@ -18,7 +18,7 @@ class SleepJournalSummaryTest {
     private val journalDay = LocalDate.of(2026, 1, 10)
 
     @Test
-    fun `issue 96 fragment cannot replace or inflate principal overnight session`() {
+    fun `issue 96 full overnight boundaries survive a nested fragment`() {
         val main = session(
             id = "main",
             start = local(journalDay, 22, 0),
@@ -40,59 +40,50 @@ class SleepJournalSummaryTest {
 
         assertThat(sleep.sessionStart).isEqualTo(local(journalDay, 22, 0))
         assertThat(sleep.sessionEnd).isEqualTo(local(journalDay.plusDays(1), 5, 30))
-        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(450)
-        assertThat(sleep.inBedTime.inWholeMinutes).isEqualTo(450)
-        assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(180)
-        assertThat(sleep.remSleep.inWholeMinutes).isEqualTo(120)
-        assertThat(sleep.lightSleep.inWholeMinutes).isEqualTo(150)
         assertThat(sleep.sessions.map { it.identity?.nativeId }).containsExactly("main", "fragment")
         assertThat(sleep.stages).hasSize(4)
     }
 
     @Test
-    fun `tiny midnight crossing cannot beat disconnected seven hour sleep`() {
-        val midnightFragment = session(
-            id = "midnight-fragment",
-            start = local(journalDay, 23, 50),
-            end = local(journalDay.plusDays(1), 0, 10),
+    fun `nested sessions retain frozen additive summary aggregation`() {
+        val parent = session(
+            id = "parent",
+            start = local(journalDay, 22, 0),
+            end = local(journalDay.plusDays(1), 5, 30),
+            stages = listOf(
+                stage(local(journalDay, 22, 0), local(journalDay.plusDays(1), 1, 0), "deep"),
+            ),
         )
-        val sevenHourSleep = session(
-            id = "seven-hour-sleep",
-            start = local(journalDay.plusDays(1), 2, 0),
-            end = local(journalDay.plusDays(1), 9, 0),
+        val fragment = session(
+            id = "fragment",
+            start = local(journalDay, 23, 8),
+            end = local(journalDay, 23, 48),
+            stages = listOf(stage(local(journalDay, 23, 8), local(journalDay, 23, 48), "deep")),
         )
 
-        val sleep = summarize(journalDay, listOf(midnightFragment, sevenHourSleep))
+        val sleep = summarize(journalDay, listOf(parent, fragment))
 
-        assertThat(sleep.sessionStart).isEqualTo(local(journalDay.plusDays(1), 2, 0))
-        assertThat(sleep.sessionEnd).isEqualTo(local(journalDay.plusDays(1), 9, 0))
-        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(420)
-        assertThat(sleep.sessions.map { it.identity?.nativeId })
-            .containsExactly("midnight-fragment", "seven-hour-sleep")
+        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(490)
+        assertThat(sleep.inBedTime.inWholeMinutes).isEqualTo(490)
+        assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(220)
     }
 
     @Test
     fun `sleep query looks back one journal day and reaches following noon`() {
         val interval = SleepJournalSummary.queryInterval(listOf(journalDay), utc)
 
+        assertThat(SleepJournalSummary.WINDOW_RULE_ID)
+            .isEqualTo("noon-to-noon-sleep-window-v1")
         assertThat(interval.start).isEqualTo(
             journalDay.minusDays(1).atTime(LocalTime.NOON).atZone(utc).toInstant(),
         )
         assertThat(interval.endExclusive).isEqualTo(
             journalDay.plusDays(1).atTime(LocalTime.NOON).atZone(utc).toInstant(),
         )
-
-        val overnight = session(
-            id = "first-day-overnight",
-            start = local(journalDay, 22, 0),
-            end = local(journalDay.plusDays(1), 5, 30),
-        )
-        val sleep = summarize(journalDay, listOf(overnight))
-        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(450)
     }
 
     @Test
-    fun `disconnected daytime nap does not pull headline bedtime earlier`() {
+    fun `disconnected sessions retain additive summary and full boundaries`() {
         val nap = session(
             id = "nap",
             start = local(journalDay, 14, 0),
@@ -110,17 +101,15 @@ class SleepJournalSummaryTest {
 
         val sleep = summarize(journalDay, listOf(nap, overnight))
 
-        assertThat(sleep.sessionStart).isEqualTo(local(journalDay, 22, 0))
+        assertThat(sleep.sessionStart).isEqualTo(local(journalDay, 14, 0))
         assertThat(sleep.sessionEnd).isEqualTo(local(journalDay.plusDays(1), 5, 30))
-        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(450)
-        assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(0)
+        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(540)
+        assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(90)
         assertThat(sleep.lightSleep.inWholeMinutes).isEqualTo(450)
-        assertThat(sleep.sessions).hasSize(2)
-        assertThat(sleep.stages).hasSize(2)
     }
 
     @Test
-    fun `named continuity rule joins split sleep without counting its gap`() {
+    fun `split sessions do not add the gap to total duration`() {
         val first = session(
             id = "split-1",
             start = local(journalDay, 22, 0),
@@ -134,14 +123,13 @@ class SleepJournalSummaryTest {
 
         val sleep = summarize(journalDay, listOf(second, first))
 
-        assertThat(SleepJournalSummary.PRODUCT_RULE_ID).isEqualTo("principal-overnight-sleep-v1")
         assertThat(sleep.sessionStart).isEqualTo(local(journalDay, 22, 0))
         assertThat(sleep.sessionEnd).isEqualTo(local(journalDay.plusDays(1), 5, 0))
         assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(375)
     }
 
     @Test
-    fun `overlapping and duplicate sessions use union coverage and deterministic stages`() {
+    fun `overlapping sessions remain additive and detail ordering is deterministic`() {
         val first = session(
             id = "source-a",
             start = local(journalDay, 22, 0),
@@ -165,10 +153,10 @@ class SleepJournalSummaryTest {
         val reversed = summarize(journalDay, listOf(duplicateFragment, second, first))
 
         assertThat(forward).isEqualTo(reversed)
-        assertThat(forward.totalDuration.inWholeHours).isEqualTo(7)
-        assertThat(
-            forward.deepSleep + forward.remSleep + forward.lightSleep + forward.awakeTime,
-        ).isAtMost(forward.totalDuration)
+        assertThat(forward.totalDuration.inWholeHours).isEqualTo(12)
+        assertThat(forward.deepSleep.inWholeHours).isEqualTo(4)
+        assertThat(forward.remSleep.inWholeHours).isEqualTo(4)
+        assertThat(forward.lightSleep.inWholeHours).isEqualTo(4)
         assertThat(forward.sessions).hasSize(3)
     }
 
@@ -196,8 +184,6 @@ class SleepJournalSummaryTest {
 
         assertThat(sleep.totalDuration.inWholeHours).isEqualTo(7)
         assertThat(sleep.deepSleep.inWholeMilliseconds).isEqualTo(0)
-        assertThat(sleep.remSleep.inWholeMilliseconds).isEqualTo(0)
-        assertThat(sleep.lightSleep.inWholeMilliseconds).isEqualTo(0)
         assertThat(sleep.stages).isEmpty()
     }
 
@@ -231,25 +217,27 @@ class SleepJournalSummaryTest {
     }
 
     @Test
-    fun `longer source remains authoritative when clipped at opening noon`() {
-        val longerAcrossNoon = session(
-            id = "longer-across-noon",
+    fun `summary intervals are clipped at opening noon without rewriting detail`() {
+        val acrossNoon = session(
+            id = "across-noon",
             start = local(journalDay, 10, 0),
             end = local(journalDay, 13, 0),
             stages = listOf(stage(local(journalDay, 10, 0), local(journalDay, 13, 0), "deep")),
         )
-        val shorterDuplicate = session(
-            id = "shorter-duplicate",
+        val afterNoon = session(
+            id = "after-noon",
             start = local(journalDay, 12, 0),
             end = local(journalDay, 13, 30),
             stages = listOf(stage(local(journalDay, 12, 0), local(journalDay, 13, 30), "rem")),
         )
 
-        val sleep = summarize(journalDay, listOf(shorterDuplicate, longerAcrossNoon))
+        val sleep = summarize(journalDay, listOf(afterNoon, acrossNoon))
 
-        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(90)
+        assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(150)
         assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(60)
-        assertThat(sleep.remSleep.inWholeMinutes).isEqualTo(30)
+        assertThat(sleep.remSleep.inWholeMinutes).isEqualTo(90)
+        assertThat(sleep.sessions.first { it.identity?.nativeId == "across-noon" }.startTime)
+            .isEqualTo(local(journalDay, 10, 0))
     }
 
     @Test
@@ -319,7 +307,7 @@ class SleepJournalSummaryTest {
     }
 
     @Test
-    fun `negative implausible and invalid stage intervals cannot corrupt summary`() {
+    fun `negative session and invalid stage remain detailed but cannot corrupt summary`() {
         val valid = session(
             id = "valid",
             start = local(journalDay, 22, 0),
@@ -334,28 +322,22 @@ class SleepJournalSummaryTest {
             start = local(journalDay.plusDays(1), 1, 0),
             end = local(journalDay, 23, 0),
         )
-        val implausible = session(
-            id = "implausible",
-            start = local(journalDay, 12, 0),
-            end = local(journalDay.plusDays(1), 13, 0),
-        )
 
-        val sleep = summarize(journalDay, listOf(negative, implausible, valid))
+        val sleep = summarize(journalDay, listOf(negative, valid))
 
         assertThat(sleep.totalDuration.inWholeHours).isEqualTo(7)
         assertThat(sleep.deepSleep.inWholeHours).isEqualTo(1)
         assertThat(sleep.remSleep.inWholeMilliseconds).isEqualTo(0)
-        assertThat(sleep.sessions.map { it.identity?.nativeId })
-            .containsExactly("implausible", "negative", "valid")
+        assertThat(sleep.sessions.map { it.identity?.nativeId }).containsExactly("negative", "valid")
         assertThat(sleep.stages).hasSize(2)
     }
 
     @Test
-    fun `rejected detailed session cannot regain a headline through stage fallback`() {
+    fun `rejected detailed session has no explicit session boundaries`() {
         val invalid = session(
-            id = "too-long",
-            start = local(journalDay, 12, 0),
-            end = local(journalDay.plusDays(1), 13, 0),
+            id = "negative",
+            start = local(journalDay.plusDays(1), 1, 0),
+            end = local(journalDay, 23, 0),
             stages = listOf(stage(local(journalDay, 22, 0), local(journalDay, 23, 0), "deep")),
         )
 
@@ -365,8 +347,6 @@ class SleepJournalSummaryTest {
         assertThat(sleep.stages).hasSize(1)
         assertThat(sleep.sessionStart).isNull()
         assertThat(sleep.sessionEnd).isNull()
-        assertThat(sleep.headlineStart).isNull()
-        assertThat(sleep.headlineEnd).isNull()
     }
 
     @Test

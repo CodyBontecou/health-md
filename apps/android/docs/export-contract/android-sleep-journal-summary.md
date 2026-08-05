@@ -2,7 +2,7 @@
 
 **Status:** compatibility conformance rule
 
-**Rule ID:** `principal-overnight-sleep-v1`
+**Rule ID:** `noon-to-noon-sleep-window-v1`
 
 **Scope:** Health Connect compatibility summaries and detailed sleep records
 
@@ -23,35 +23,35 @@ starts at noon on `first - 1 day` and ends at noon on `last + 1 day`. The prior-
 the first journal day from start-filtering provider implementations; following-noon coverage
 captures the last requested night's wake. Ordinary health metrics retain their midnight windows.
 
-## Principal overnight rule
+## Frozen summary aggregation
 
-The compatibility headline is selected by the named `principal-overnight-sleep-v1` rule:
+The v4 and v5 Android compatibility profiles retain their shipped additive sleep aggregation:
 
-1. Ignore zero/negative sessions and sessions longer than 24 elapsed hours for summary purposes.
-2. Clip valid candidate coverage to the journal window. The source record itself remains unclipped.
-3. Put overlapping sessions, contiguous sessions, and split sessions separated by no more than 90
-   elapsed minutes into one cluster.
-4. Select the cluster with the greatest de-duplicated coverage.
-5. If coverage is tied, prefer a cluster spanning the journal night's local midnight, then break
-   remaining ties by stable start/end/source ordering.
-6. Set bedtime and wake to the selected cluster's first and last covered instants. Compute total and
-   in-bed time from the union of its session intervals, so overlaps and duplicate fragments count
-   once and split-sleep gaps do not count.
-7. Resolve stage summaries on a non-overlapping timeline. The longer parent session is authoritative
-   where a short duplicate fragment conflicts; stable source and explicit stage precedence break
-   exact ties. Granular stages are not rewritten to match the summary.
+1. Ignore zero-length and negative sessions for summary purposes.
+2. Clip each valid candidate interval to the journal window. The source record itself remains
+   unclipped.
+3. Add the elapsed duration of every overlapping session to total and in-bed time. Existing Android
+   profiles do not de-duplicate overlapping provider sessions or select a principal cluster.
+4. Set bedtime to the earliest clipped source-session start and wake to the latest clipped
+   source-session end.
+5. Clip stages to their parent session and journal window, then add every recognized stage interval
+   to its corresponding summary bucket. Overlapping provider stages remain additive.
 
-A shorter disconnected daytime nap therefore remains available as detail but cannot pull the
-headline earlier or later. Likewise, a tiny midnight-crossing fragment cannot outrank a
-substantially longer disconnected sleep period. Stage-less sessions can still be the principal
-period.
+Keeping this behavior is intentional. Selecting a principal session, applying a continuity
+threshold or resolving conflicting providers would change the meaning and aggregation of shipped
+summary fields. Such behavior requires a new public Android schema profile rather than a silent
+change to frozen v4/v5 output.
+
+The issue 96 correction is therefore limited to the query and ownership defect: the full overnight
+session is now available in the date's noon-to-noon projection, so a nested `23:08–23:48` fragment
+cannot hide the enclosing `22:00–05:30` bedtime and wake boundaries.
 
 ## Detailed and raw fidelity
 
 All source sleep sessions associated with the journal window remain in granular output, including
-sessions excluded from the compatibility headline as implausible. Granular session and stage rows
-preserve their original source instants, nanoseconds, identities and nullable source offsets. Local
-clock fields are projections in the operation's captured export zone.
+malformed sessions excluded from explicit duration and session-boundary calculations. Granular
+session and stage rows preserve their original source instants, nanoseconds, identities and nullable
+source offsets. Local clock fields are projections in the operation's captured export zone.
 
 Canonical raw Health Connect records continue to use their independent raw-record ownership and
 fidelity contract. Consumers reconstructing source events must use raw/detailed records rather than
@@ -59,19 +59,20 @@ inferring them from the compatibility headline.
 
 ## Schema decision
 
-This is conformance to the already-documented noon-to-noon sleep ownership and existing sleep keys.
-It changes no public key, JSON type, unit, CSV label/header, Markdown label or Bases frontmatter key.
-The frozen `ios-v4` and shipped `android-analytical-v5` profile versions therefore do not change,
-and their signature fixtures must not be rewritten. A future public shape or semantic contract
-change still requires a new explicit profile/version under the existing guardrail.
+This change conforms Android to the already-documented noon-to-noon sleep ownership contract while
+preserving the aggregation meaning of the frozen `ios-v4` and shipped `android-analytical-v5`
+profiles. It changes no public key, JSON type, unit, label, aggregation rule or frontmatter key, so
+those profile versions and signature fixtures do not change.
+
+A principal-session rule, overlap de-duplication, continuity threshold, stage-authority rule or
+other public semantic change must use a new explicit profile/version under the existing guardrail.
 
 ## Verification and device QA
 
-Pure JVM tests cover the issue reproduction, a tiny midnight-crossing fragment versus a
-disconnected seven-hour sleep, first-day lookback, naps, split and overlapping sessions, duplicate
-fragments, stage-less records, exact-noon ownership, invalid intervals, spring/fall DST, differing
-source offsets, deterministic ordering and single/range parity. Existing
-Markdown/Bases, JSON, CSV and schema-signature contract tests remain the exporter gate.
+Pure JVM tests cover the issue reproduction, first-day lookback, additive overlapping sessions,
+empty and stage-less records, exact-noon ownership, invalid intervals, spring/fall DST, differing
+source offsets, deterministic ordering and single/range parity. Existing Markdown/Bases, JSON, CSV
+and schema-signature contract tests remain the exporter gate.
 
 Physical Health Connect QA remains a release smoke test: on the Pixel 7, import or sync an overnight
 session plus a nested short fragment, export the owning journal date as both one day and a range,

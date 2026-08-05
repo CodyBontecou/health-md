@@ -2,8 +2,11 @@ package com.healthmd.data.health
 
 import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.response.ReadRecordsResponse
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -11,6 +14,8 @@ import io.mockk.mockk
 import io.mockk.slot
 import java.io.IOException
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -35,6 +40,31 @@ class HealthConnectWidgetReadTest {
         val metrics = metricsField.get(request.captured) as Set<Any>
         assertThat(metrics).containsExactly(StepsRecord.COUNT_TOTAL)
         coVerify(exactly = 1) { client.aggregateGroupByPeriod(any()) }
+    }
+
+    @Test
+    fun `sleep widget read sends the noon journal lookback interval to Health Connect`() = runTest {
+        val client = mockk<HealthConnectClient>()
+        val request = slot<ReadRecordsRequest<SleepSessionRecord>>()
+        coEvery { client.readRecords(capture(request)) } returns ReadRecordsResponse(emptyList(), null)
+        val manager = HealthConnectManager(mockk<Context>(relaxed = true), client)
+        val date = LocalDate.parse("2026-08-02")
+
+        val result = manager.fetchWidgetHealthDataRange(
+            dates = listOf(date),
+            selection = HealthConnectWidgetReadSelection(sleepSessions = true),
+        )
+
+        val zone = ZoneId.systemDefault()
+        assertThat(result).hasSize(1)
+        assertThat(request.captured.recordType).isEqualTo(SleepSessionRecord::class)
+        assertThat(request.captured.timeRangeFilter.startTime).isEqualTo(
+            date.minusDays(1).atTime(LocalTime.NOON).atZone(zone).toInstant(),
+        )
+        assertThat(request.captured.timeRangeFilter.endTime).isEqualTo(
+            date.plusDays(1).atTime(LocalTime.NOON).atZone(zone).toInstant(),
+        )
+        coVerify(exactly = 1) { client.readRecords(any<ReadRecordsRequest<SleepSessionRecord>>()) }
     }
 
     @Test

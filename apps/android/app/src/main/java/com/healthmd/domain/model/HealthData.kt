@@ -178,15 +178,6 @@ data class SleepData(
                 remSleep > Duration.ZERO || lightSleep > Duration.ZERO ||
                 awakeTime > Duration.ZERO || inBedTime > Duration.ZERO ||
                 stages.isNotEmpty() || sessions.isNotEmpty() || sessionStart != null || sessionEnd != null
-
-    /** Stage-only providers may derive a headline; rejected source sessions must never do so. */
-    val headlineStart: LocalDateTime?
-        get() = sessionStart ?: stages.takeIf { sessions.isEmpty() }
-            ?.minByOrNull { it.startTime }?.startTime
-
-    val headlineEnd: LocalDateTime?
-        get() = sessionEnd ?: stages.takeIf { sessions.isEmpty() }
-            ?.maxByOrNull { it.endTime }?.endTime
 }
 
 // MARK: - Activity Data

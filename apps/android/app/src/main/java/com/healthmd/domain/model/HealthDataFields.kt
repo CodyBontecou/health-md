@@ -262,9 +262,13 @@ object HealthDataFields {
         val s = data.sleep
         add(HealthField("sleep_total_hours", s.totalDuration.toHoursRounded(), "hours"))
 
-        // T1-02: selected session headline, with the historical stage-only fallback.
-        add(HealthField("sleep_bedtime", s.headlineStart?.let { timeFormat.format(it) }, "time"))
-        add(HealthField("sleep_wake", s.headlineEnd?.let { timeFormat.format(it) }, "time"))
+        // T1-02: bedtime/wake from sessionStart/End or derived from stage boundaries
+        val derivedStart = s.sessionStart
+            ?: s.stages.minByOrNull { it.startTime }?.startTime
+        val derivedEnd = s.sessionEnd
+            ?: s.stages.maxByOrNull { it.endTime }?.endTime
+        add(HealthField("sleep_bedtime", derivedStart?.let { timeFormat.format(it) }, "time"))
+        add(HealthField("sleep_wake", derivedEnd?.let { timeFormat.format(it) }, "time"))
 
         add(HealthField("sleep_deep_hours", s.deepSleep.toHoursRounded(), "hours"))
         add(HealthField("sleep_rem_hours", s.remSleep.toHoursRounded(), "hours"))

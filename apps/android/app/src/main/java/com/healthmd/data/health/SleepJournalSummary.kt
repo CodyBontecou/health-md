@@ -14,22 +14,17 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Pure compatibility projection for Health Connect sleep sessions.
  *
- * Product rule `principal-overnight-sleep-v1`:
- * - a journal day is the half-open local interval [noon, following noon);
- * - valid sessions separated by at most [SPLIT_SLEEP_CONTINUITY_GAP] form one cluster;
- * - the greatest de-duplicated session coverage wins; spanning local midnight is a tie-breaker,
- *   followed by stable timestamp/source ordering;
- * - overlapping session and stage time is counted once. A longer source session supplies the
- *   stage label when a shorter duplicate fragment disagrees.
+ * The exported journal date owns the half-open local interval from noon on that date to noon on
+ * the following date. Summary intervals are clipped to that window, while detailed source entries
+ * retain their original timestamps and offsets.
  *
- * Source entries are never clipped or rewritten. Clipping and validity limits apply only to the
- * compatibility headline so detailed exports retain exact source timestamps and offsets.
+ * Frozen Android v4/v5 aggregation remains additive: every valid source session and stage that
+ * overlaps the journal window contributes independently. This object deliberately does not choose
+ * a principal cluster or de-duplicate provider records because doing so would change the meaning
+ * of shipped summary fields and require a new public schema profile.
  */
 internal object SleepJournalSummary {
-    const val PRODUCT_RULE_ID = "principal-overnight-sleep-v1"
-
-    val SPLIT_SLEEP_CONTINUITY_GAP: Duration = Duration.ofMinutes(90)
-    val MAX_SUMMARY_SESSION_DURATION: Duration = Duration.ofHours(24)
+    const val WINDOW_RULE_ID = "noon-to-noon-sleep-window-v1"
 
     data class QueryInterval(
         val start: Instant,
@@ -84,20 +79,15 @@ internal object SleepJournalSummary {
             emptyList()
         }
         val detailedSessions = rawSessions.map { it.entry }
-
-        val slices = rawSessions.mapNotNull { source ->
-            if (!source.isSummaryEligible()) return@mapNotNull null
-            val start = maxOf(source.start, window.start)
-            val end = minOf(source.end, window.end)
-            if (!start.isBefore(end)) return@mapNotNull null
-            SessionSlice(source, start, end)
+        val slices = rawSessions.mapNotNull { source -> source.clippedTo(window) }
+        if (slices.isEmpty()) {
+            return SleepData(stages = rawStages, sessions = detailedSessions)
         }
-        val principal = principalCluster(slices, date, zone)
-            ?: return SleepData(stages = rawStages, sessions = detailedSessions)
 
-        val coverage = mergeIntervals(principal.slices.map { InstantInterval(it.start, it.end) })
-        val stageDurations = resolveStageDurations(principal.slices, window)
-        val totalMilliseconds = coverage.totalMilliseconds()
+        val totalMilliseconds = slices.sumOf { slice ->
+            Duration.between(slice.start, slice.end).toMillis()
+        }
+        val stageDurations = additiveStageDurations(slices, window)
 
         return SleepData(
             totalDuration = totalMilliseconds.milliseconds,
@@ -108,94 +98,27 @@ internal object SleepJournalSummary {
             inBedTime = totalMilliseconds.milliseconds,
             stages = rawStages,
             sessions = detailedSessions,
-            sessionStart = LocalDateTime.ofInstant(coverage.first().start, zone),
-            sessionEnd = LocalDateTime.ofInstant(coverage.last().end, zone),
+            sessionStart = LocalDateTime.ofInstant(slices.minOf { it.start }, zone),
+            sessionEnd = LocalDateTime.ofInstant(slices.maxOf { it.end }, zone),
         )
     }
 
-    private fun principalCluster(
-        slices: List<SessionSlice>,
-        date: LocalDate,
-        zone: ZoneId,
-    ): SessionCluster? {
-        if (slices.isEmpty()) return null
-        val sorted = slices.sortedWith(SESSION_SLICE_ORDER)
-        val clusters = mutableListOf<MutableList<SessionSlice>>()
-        var current = mutableListOf(sorted.first())
-        var currentEnd = sorted.first().end
-
-        for (slice in sorted.drop(1)) {
-            val gap = Duration.between(currentEnd, slice.start)
-            if (gap.isNegative || gap.isZero || gap <= SPLIT_SLEEP_CONTINUITY_GAP) {
-                current += slice
-                if (slice.end > currentEnd) currentEnd = slice.end
-            } else {
-                clusters += current
-                current = mutableListOf(slice)
-                currentEnd = slice.end
-            }
-        }
-        clusters += current
-
-        val midnight = date.plusDays(1).atStartOfDay(zone).toInstant()
-        return clusters
-            .map { SessionCluster(it) }
-            .sortedWith(
-                compareByDescending<SessionCluster> { cluster -> cluster.coverageMilliseconds }
-                    .thenByDescending { cluster -> cluster.spans(midnight) }
-                    .thenBy { cluster -> cluster.start }
-                    .thenByDescending { cluster -> cluster.end }
-                    .thenBy { cluster -> cluster.stableKey },
-            )
-            .first()
-    }
-
-    /**
-     * Resolves an atomic timeline so duplicate or conflicting stage fragments cannot add time.
-     * The longest parent session is authoritative; exact ties use stable source identity and then
-     * an explicit stage order that prefers awake/specific stages over generic sleeping.
-     */
-    private fun resolveStageDurations(
+    /** Preserves the shipped Android behavior: overlapping stage sources remain additive. */
+    private fun additiveStageDurations(
         slices: List<SessionSlice>,
         window: InstantInterval,
     ): Map<StageBucket, Long> {
-        val candidates = slices.flatMap { slice ->
-            slice.source.stages.mapNotNull { stage ->
-                if (!stage.start.isBefore(stage.end)) return@mapNotNull null
+        val totals = mutableMapOf<StageBucket, Long>()
+        for (slice in slices) {
+            for (stage in slice.source.stages) {
+                if (!stage.start.isBefore(stage.end)) continue
                 val start = maxOf(stage.start, slice.start, window.start)
                 val end = minOf(stage.end, slice.end, window.end)
-                if (!start.isBefore(end)) return@mapNotNull null
-                val bucket = stageBucket(stage.entry.stage) ?: return@mapNotNull null
-                StageCandidate(
-                    start = start,
-                    end = end,
-                    bucket = bucket,
-                    parentDurationMilliseconds = Duration.between(
-                        slice.source.start,
-                        slice.source.end,
-                    ).toMillis(),
-                    parentStart = slice.start,
-                    parentEnd = slice.end,
-                    sourceKey = slice.source.stableKey(),
-                    stageName = stage.entry.stage.lowercase(),
-                )
+                if (!start.isBefore(end)) continue
+                val bucket = stageBucket(stage.entry.stage) ?: continue
+                totals[bucket] = totals.getOrDefault(bucket, 0L) +
+                    Duration.between(start, end).toMillis()
             }
-        }
-        if (candidates.isEmpty()) return emptyMap()
-
-        val boundaries = candidates.flatMap { listOf(it.start, it.end) }.distinct().sorted()
-        val totals = mutableMapOf<StageBucket, Long>()
-        for (index in 0 until boundaries.lastIndex) {
-            val start = boundaries[index]
-            val end = boundaries[index + 1]
-            if (!start.isBefore(end)) continue
-            val winner = candidates
-                .asSequence()
-                .filter { it.start < end && it.end > start }
-                .minWithOrNull(STAGE_CANDIDATE_ORDER)
-                ?: continue
-            totals[winner.bucket] = totals.getOrDefault(winner.bucket, 0L) +
-                Duration.between(start, end).toMillis()
         }
         return totals
     }
@@ -222,30 +145,12 @@ internal object SleepJournalSummary {
         return ownerDate == date
     }
 
-    private fun SourceSession.isSummaryEligible(): Boolean {
-        if (!start.isBefore(end)) return false
-        return Duration.between(start, end) <= MAX_SUMMARY_SESSION_DURATION
-    }
-
-    private fun mergeIntervals(intervals: List<InstantInterval>): List<InstantInterval> {
-        if (intervals.isEmpty()) return emptyList()
-        val sorted = intervals.sortedWith(compareBy<InstantInterval>({ it.start }, { it.end }))
-        val merged = mutableListOf<InstantInterval>()
-        var current = sorted.first()
-        for (next in sorted.drop(1)) {
-            if (next.start <= current.end) {
-                if (next.end > current.end) current = current.copy(end = next.end)
-            } else {
-                merged += current
-                current = next
-            }
-        }
-        merged += current
-        return merged
-    }
-
-    private fun List<InstantInterval>.totalMilliseconds(): Long = sumOf { interval ->
-        Duration.between(interval.start, interval.end).toMillis()
+    private fun SourceSession.clippedTo(window: InstantInterval): SessionSlice? {
+        if (!start.isBefore(end)) return null
+        val clippedStart = maxOf(start, window.start)
+        val clippedEnd = minOf(end, window.end)
+        if (!clippedStart.isBefore(clippedEnd)) return null
+        return SessionSlice(this, clippedStart, clippedEnd)
     }
 
     private fun stageBucket(stageName: String): StageBucket? = when (stageName.lowercase()) {
@@ -256,38 +161,6 @@ internal object SleepJournalSummary {
         else -> null
     }
 
-    private fun stagePriority(stageName: String): Int = when (stageName) {
-        "awake", "wake" -> 0
-        "deep" -> 1
-        "rem" -> 2
-        "light", "core" -> 3
-        "sleeping" -> 4
-        else -> 5
-    }
-
-    private fun SourceSession.stableKey(): String = listOf(
-        entry.identity?.nativeId.orEmpty(),
-        entry.identity?.clientRecordId.orEmpty(),
-        entry.identity?.clientRecordVersion?.toString().orEmpty(),
-        entry.identity?.origin.orEmpty(),
-        entry.identity?.syntheticId.orEmpty(),
-        entry.identity?.lastModified?.let {
-            "${it.epochSecond}:${it.nano}:${it.offset.orEmpty()}"
-        }.orEmpty(),
-        entry.exactStartTime?.let {
-            "${it.epochSecond}:${it.nano}:${it.offset.orEmpty()}"
-        }.orEmpty(),
-        entry.exactEndTime?.let {
-            "${it.epochSecond}:${it.nano}:${it.offset.orEmpty()}"
-        }.orEmpty(),
-        entry.source.orEmpty(),
-        entry.title.orEmpty(),
-        entry.notes.orEmpty(),
-        entry.metadata.toSortedMap().entries.joinToString("\u001d") { (key, value) ->
-            "${key.length}:$key=${value.length}:$value"
-        },
-    ).joinToString("\u001f")
-
     private fun Long?.orZero(): Long = this ?: 0L
 
     private val JOURNAL_BOUNDARY: LocalTime = LocalTime.NOON
@@ -295,7 +168,7 @@ internal object SleepJournalSummary {
     private val SOURCE_SESSION_ORDER = compareBy<SourceSession>(
         { it.start },
         { it.end },
-        { it.stableKey() },
+        { it.stableSortKey },
     )
     private val SOURCE_STAGE_ORDER = compareBy<SourceStage>(
         { it.start },
@@ -304,18 +177,6 @@ internal object SleepJournalSummary {
         { it.entry.identity?.nativeId.orEmpty() },
         { it.entry.identity?.syntheticId.orEmpty() },
     )
-    private val SESSION_SLICE_ORDER = compareBy<SessionSlice>(
-        { it.start },
-        { it.end },
-        { it.source.stableKey() },
-    )
-    private val STAGE_CANDIDATE_ORDER =
-        compareByDescending<StageCandidate> { it.parentDurationMilliseconds }
-            .thenBy { it.parentStart }
-            .thenByDescending { it.parentEnd }
-            .thenBy { it.sourceKey }
-            .thenBy { stagePriority(it.stageName) }
-            .thenBy { it.stageName }
 
     private enum class StageBucket { DEEP, REM, LIGHT, AWAKE }
 
@@ -329,29 +190,6 @@ internal object SleepJournalSummary {
         val start: Instant,
         val end: Instant,
     )
-
-    private data class SessionCluster(
-        val slices: List<SessionSlice>,
-    ) {
-        val coverage: List<InstantInterval> = mergeIntervals(slices.map { InstantInterval(it.start, it.end) })
-        val coverageMilliseconds: Long = coverage.totalMilliseconds()
-        val start: Instant = coverage.first().start
-        val end: Instant = coverage.last().end
-        val stableKey: String = slices.map { it.source.stableKey() }.sorted().joinToString("\u001e")
-
-        fun spans(instant: Instant): Boolean = start < instant && end > instant
-    }
-
-    private data class StageCandidate(
-        val start: Instant,
-        val end: Instant,
-        val bucket: StageBucket,
-        val parentDurationMilliseconds: Long,
-        val parentStart: Instant,
-        val parentEnd: Instant,
-        val sourceKey: String,
-        val stageName: String,
-    )
 }
 
 internal data class SourceSession(
@@ -359,7 +197,32 @@ internal data class SourceSession(
     val end: Instant,
     val entry: SleepSessionEntry,
     val stages: List<SourceStage> = emptyList(),
-)
+) {
+    val stableSortKey: String by lazy(LazyThreadSafetyMode.NONE) {
+        listOf(
+            entry.identity?.nativeId.orEmpty(),
+            entry.identity?.clientRecordId.orEmpty(),
+            entry.identity?.clientRecordVersion?.toString().orEmpty(),
+            entry.identity?.origin.orEmpty(),
+            entry.identity?.syntheticId.orEmpty(),
+            entry.identity?.lastModified?.let {
+                "${it.epochSecond}:${it.nano}:${it.offset.orEmpty()}"
+            }.orEmpty(),
+            entry.exactStartTime?.let {
+                "${it.epochSecond}:${it.nano}:${it.offset.orEmpty()}"
+            }.orEmpty(),
+            entry.exactEndTime?.let {
+                "${it.epochSecond}:${it.nano}:${it.offset.orEmpty()}"
+            }.orEmpty(),
+            entry.source.orEmpty(),
+            entry.title.orEmpty(),
+            entry.notes.orEmpty(),
+            entry.metadata.toSortedMap().entries.joinToString("\u001d") { (key, value) ->
+                "${key.length}:$key=${value.length}:$value"
+            },
+        ).joinToString("\u001f")
+    }
+}
 
 internal data class SourceStage(
     val start: Instant,
