@@ -40,7 +40,7 @@ Use `build/play-metadata/reviewed/` as the reviewed Console input. Do not valida
 
 ### Store assets
 
-- Phone screenshots: `play-console/screenshots/en-US/phone/`. The user owns the pending phone-creative refresh; do not replace or upload these without approval.
+- Phone screenshots: `play-console/screenshots/en-US/phone/` — eight reviewed 1080×1920 English images in filename order. Do not upload them without approval.
 - Seven-inch tablet screenshots: `play-console/screenshots/en-US/sevenInch/` — four genuine 1200×1920 API 35 captures.
 - Ten-inch tablet screenshots: `play-console/screenshots/en-US/tenInch/` — four genuine 2560×1600 API 35 captures.
 - Icon: `play-console/graphics/en-US/icon.png`.

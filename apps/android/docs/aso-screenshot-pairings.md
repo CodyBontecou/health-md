@@ -3,7 +3,7 @@
 The current audit and copy template replace the old `200027.png`–`200059.png` pairing notes:
 
 - Audit: [`aso-audit-2026-08-04.md`](aso-audit-2026-08-04.md)
-- Localized overlay copy: [`../play-store-screenshots/locales/`](../play-store-screenshots/locales/)
+- Localized campaign copy: [`../play-store-screenshots/locales/`](../play-store-screenshots/locales/)
 - Store assets: [`../play-console/screenshots/`](../play-console/screenshots/)
 
 ## Canonical sequence
@@ -25,7 +25,9 @@ Use `100+`, not an exact metric total. Keep one headline and one supporting line
 
 ### Phone
 
-The user owns the next phone creative and store graphics. Existing files under `play-console/screenshots/en-US/phone/` remain validation inputs until that replacement is ready; do not describe them as the final 2026 campaign.
+`play-console/screenshots/en-US/phone/` contains the reviewed eight-image English campaign at 1080×1920. It follows the canonical sequence above and replaces the older five-image, 941×1672 set. Store graphics remain user-owned work.
+
+Draft locale phone campaigns are generated through the repository's `appstore-ai-images` reference-swap workflow. Each edit supplies `gpt-image-2` with the English master, the matching genuine localized API 35 app capture and the exact localized marketing copy. Completed paid outputs are imported only after manifest and dimension validation by `scripts/finalize-ai-localized-play-screenshots.py`. This workflow does not upload or publish Play assets.
 
 ### Seven-inch tablet
 

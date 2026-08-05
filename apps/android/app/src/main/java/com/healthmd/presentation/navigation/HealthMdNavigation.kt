@@ -112,7 +112,21 @@ fun HealthMdNavigation(
         }
     }
 
-    val knownStartRoutes = NavDestination.entries.map { it.route } + listOf(SubRoutes.PAYWALL)
+    val debugStartRoutes = if (BuildConfig.DEBUG) {
+        listOf(
+            SubRoutes.ONBOARDING,
+            SubRoutes.METRIC_SELECTION,
+            SubRoutes.FORMAT_CUSTOMIZATION,
+            SubRoutes.FRONTMATTER_CUSTOMIZATION,
+            SubRoutes.DAILY_NOTE_INJECTION,
+            SubRoutes.INDIVIDUAL_TRACKING,
+            SubRoutes.ADVANCED_SETTINGS,
+            SubRoutes.DIRECT_CLI,
+        )
+    } else {
+        emptyList()
+    }
+    val knownStartRoutes = NavDestination.entries.map { it.route } + SubRoutes.PAYWALL + debugStartRoutes
     val startDestination = if (shouldSkipOnboarding) {
         initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
     } else {
@@ -151,12 +165,15 @@ fun HealthMdNavigation(
         ) {
             // Onboarding
             composable(SubRoutes.ONBOARDING) {
+                val isDebugMarketingCapture = BuildConfig.DEBUG && initialRoute == SubRoutes.ONBOARDING
                 OnboardingScreen(
                     onComplete = {
                         navController.navigate(NavDestination.EXPORT.route) {
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
                         }
                     },
+                    initialPage = if (isDebugMarketingCapture) 1 else 0,
+                    allowAutomaticAdvance = !isDebugMarketingCapture,
                 )
             }
 

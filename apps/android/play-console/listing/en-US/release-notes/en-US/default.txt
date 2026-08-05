@@ -1,8 +1,5 @@
-v1.6.0 — Widgets, previews, and reliable upgrades
+v1.6.1 — Better sleep summaries and localized guidance
 
-• Adds four configurable home-screen health widgets with light/dark and accessibility support.
-• Lets you export directly from mobile previews.
-• Improves onboarding and guidance across all supported languages.
-• Keeps Google Play Billing available after onboarding and navigation.
-• Adds 16 KB page-size compatibility for newer Android devices.
-• Strengthens Direct CLI, scheduling, and export reliability.
+• Improves sleep summaries across overnight and noon-to-noon windows.
+• Adds localized Play Store guidance and screenshots across supported languages.
+• Includes reliability and compatibility improvements for exports, widgets, and Direct CLI.
