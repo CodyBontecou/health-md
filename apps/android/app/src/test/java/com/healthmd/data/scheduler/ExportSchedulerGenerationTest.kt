@@ -146,6 +146,102 @@ class ExportSchedulerGenerationTest {
     }
 
     @Test
+    fun dueLegacyOccurrenceUsesCurrentFrozenSettingsDuringMigration() = runTest {
+        val legacySettings = settings(ExportTarget.DEVICE_FOLDER).copy(
+            filenameFormat = "legacy-{date}",
+        )
+        val currentSettings = legacySettings.copy(filenameFormat = "current-{date}")
+        val dueAtMillis = System.currentTimeMillis() - 60_000L
+        val legacyOccurrence = occurrence(legacySettings, generation = null).copy(
+            triggerAtMillis = dueAtMillis,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.save(legacyOccurrence)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val workManager = workManager(requests)
+        val generationFactory = generationFactory(listOf("generation-migrated"))
+        val scheduler = scheduler(
+            workManager = workManager,
+            currentSettings = { currentSettings },
+            generationFactory = generationFactory,
+        )
+
+        scheduler.reconcile()
+
+        val exportRequests = requests.filter { request ->
+            ExportScheduler.EXPORT_OCCURRENCE_TAG in request.tags
+        }
+        assertThat(exportRequests).hasSize(1)
+        val admitted = requireNotNull(
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+        )
+        assertThat(admitted.generation).isEqualTo("generation-migrated")
+        assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
+        assertThat(admitted.intendedLocalDate).isEqualTo(legacyOccurrence.intendedLocalDate)
+        assertThat(admitted.settingsSnapshot?.filenameFormat).isEqualTo("current-{date}")
+
+        val next = requireNotNull(stateStore.load())
+        assertThat(stateStore.isGenerationMigrationComplete()).isTrue()
+        assertThat(next.generation).isEqualTo("generation-migrated")
+        assertThat(next.triggerAtMillis).isGreaterThan(dueAtMillis)
+        assertThat(next.settingsSnapshot?.filenameFormat).isEqualTo("current-{date}")
+        assertThat(stateStore.loadTransition()).isNull()
+        verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG)
+        }
+        verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(ExportScheduler.FALLBACK_TRIGGER_TAG)
+        }
+        verify(exactly = 1) { generationFactory.create() }
+    }
+
+    @Test
+    fun dueLegacyFallbackMigratesAndAdmitsWithoutCancellingItself() = runTest {
+        val legacySettings = settings(ExportTarget.DEVICE_FOLDER).copy(
+            filenameFormat = "legacy-{date}",
+        )
+        val currentSettings = legacySettings.copy(filenameFormat = "current-{date}")
+        val dueAtMillis = System.currentTimeMillis() - 60_000L
+        val legacyOccurrence = occurrence(legacySettings, generation = null).copy(
+            triggerAtMillis = dueAtMillis,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.save(legacyOccurrence)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val workManager = workManager(requests)
+        val scheduler = scheduler(
+            workManager = workManager,
+            currentSettings = { currentSettings },
+            generations = listOf("generation-migrated"),
+        )
+
+        val accepted = scheduler.handleOccurrence(
+            occurrence = legacyOccurrence,
+            expedited = true,
+            isFallbackDelivery = true,
+        )
+
+        assertThat(accepted).isTrue()
+        val exportRequests = requests.filter { request ->
+            ExportScheduler.EXPORT_OCCURRENCE_TAG in request.tags
+        }
+        assertThat(exportRequests).hasSize(1)
+        val admitted = requireNotNull(
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+        )
+        assertThat(admitted.generation).isEqualTo("generation-migrated")
+        assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
+        assertThat(admitted.settingsSnapshot?.filenameFormat).isEqualTo("current-{date}")
+        assertThat(stateStore.load()?.triggerAtMillis).isGreaterThan(dueAtMillis)
+        verify(exactly = 0) {
+            workManager.cancelAllWorkByTag(ExportScheduler.FALLBACK_TRIGGER_TAG)
+        }
+        verify(exactly = 0) {
+            workManager.cancelUniqueWork("scheduled_export_trigger_${legacyOccurrence.id}")
+        }
+    }
+
+    @Test
     fun rebootReconciliationKeepsThePersistedGeneration() = runTest {
         val settings = settings(ExportTarget.DEVICE_FOLDER)
         val persisted = occurrence(settings, "generation-before-reboot")
@@ -245,6 +341,53 @@ class ExportSchedulerGenerationTest {
         verify(exactly = 0) {
             workManager.cancelAllWorkByTag(ExportScheduler.EXPORT_OCCURRENCE_TAG)
         }
+        verify(exactly = 1) {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-output-a",
+            )
+        }
+    }
+
+    @Test
+    fun dueOccurrenceUsesNewFrozenOutputSettingsDuringReconcile() = runTest {
+        val oldSettings = settings(ExportTarget.DEVICE_FOLDER).copy(
+            filenameFormat = "frozen-a-{date}",
+        )
+        val currentSettings = oldSettings.copy(filenameFormat = "material-b-{date}")
+        val dueAtMillis = System.currentTimeMillis() - 60_000L
+        val dueOccurrence = occurrence(oldSettings, "generation-output-a").copy(
+            triggerAtMillis = dueAtMillis,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(dueOccurrence)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val workManager = workManager(requests)
+        val scheduler = scheduler(
+            workManager = workManager,
+            currentSettings = { currentSettings },
+            generations = listOf("generation-output-b"),
+        )
+
+        scheduler.reconcile()
+
+        val exportRequests = requests.filter { request ->
+            ExportScheduler.EXPORT_OCCURRENCE_TAG in request.tags
+        }
+        assertThat(exportRequests).hasSize(1)
+        val admitted = requireNotNull(
+            ScheduledExportOccurrence.fromWorkData(exportRequests.single().workSpec.input),
+        )
+        assertThat(admitted.generation).isEqualTo("generation-output-b")
+        assertThat(admitted.triggerAtMillis).isEqualTo(dueAtMillis)
+        assertThat(admitted.intendedLocalDate).isEqualTo(dueOccurrence.intendedLocalDate)
+        assertThat(admitted.settingsSnapshot?.filenameFormat).isEqualTo("material-b-{date}")
+
+        val next = requireNotNull(stateStore.load())
+        assertThat(next.generation).isEqualTo("generation-output-b")
+        assertThat(next.triggerAtMillis).isGreaterThan(dueAtMillis)
+        assertThat(next.settingsSnapshot?.filenameFormat).isEqualTo("material-b-{date}")
+        assertThat(stateStore.loadTransition()).isNull()
         verify(exactly = 1) {
             workManager.cancelAllWorkByTag(
                 ExportScheduler.GENERATION_TAG_PREFIX + "generation-output-a",

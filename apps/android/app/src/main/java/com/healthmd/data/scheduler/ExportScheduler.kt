@@ -93,7 +93,26 @@ class ExportScheduler @Inject constructor(
                     !hasActiveGeneration -> GenerationBoundaryReason.INVALID_ACTIVE_GENERATION
                     else -> GenerationBoundaryReason.CONFIGURATION_REPLACED
                 }
-                replaceGenerationLocked(configuration, nowMillis, reason)
+                val dueOccurrenceToPreserve = dueOccurrenceEligibleForReplacement(
+                    occurrence = existing,
+                    replacementConfiguration = configuration,
+                    nowMillis = nowMillis,
+                )
+                val replacement = replaceGenerationLocked(
+                    configuration = configuration,
+                    nowMillis = nowMillis,
+                    reason = reason,
+                    dueOccurrenceToPreserve = dueOccurrenceToPreserve,
+                )
+                if (dueOccurrenceToPreserve != null) {
+                    admitAndAdvanceOccurrenceLocked(
+                        occurrence = replacement,
+                        expedited = true,
+                        catchUpThroughMillis = nowMillis,
+                        nextConfiguration = { configuration },
+                        currentFallback = null,
+                    )
+                }
                 return@withLock
             }
 
@@ -164,13 +183,12 @@ class ExportScheduler @Inject constructor(
             resumePendingTransitionLocked(currentFallback)
 
             if (!stateStore.isGenerationMigrationComplete()) {
-                migrateLegacyScheduleLocked(
+                return@withLock migrateLegacyScheduleLocked(
                     settings = settings,
                     currentZone = currentZone,
                     nowMillis = nowMillis,
                     currentFallback = currentFallback,
                 )
-                return@withLock false
             }
 
             val persisted = stateStore.load()
@@ -214,11 +232,11 @@ class ExportScheduler @Inject constructor(
                 !currentSettingsMatchOccurrence ||
                 (currentConfiguration.signature != occurrence.configuration.signature && !timezoneRebase)
             ) {
-                val dueOccurrenceToPreserve = occurrence.takeIf { delivered ->
-                    delivered.triggerAtMillis <= nowMillis &&
-                        delivered.configuration.zoneId == currentConfiguration.zoneId &&
-                        delivered.configuration.isSameScheduleExceptZone(currentConfiguration)
-                }
+                val dueOccurrenceToPreserve = dueOccurrenceEligibleForReplacement(
+                    occurrence = occurrence,
+                    replacementConfiguration = currentConfiguration,
+                    nowMillis = nowMillis,
+                )
                 val replacement = replaceGenerationLocked(
                     configuration = currentConfiguration,
                     nowMillis = nowMillis,
@@ -270,17 +288,30 @@ class ExportScheduler @Inject constructor(
         currentZone: ZoneId,
         nowMillis: Long,
         currentFallback: ScheduledExportOccurrence? = null,
-    ) {
-        runCoordinator.mutex.withLock {
-            startGenerationTransitionLocked(
-                configuration = configurationForNewOccurrence(settings, currentZone),
-                nowMillis = nowMillis,
-                reason = GenerationBoundaryReason.LEGACY_MIGRATION,
-                cleanupScope = ScheduledExportCleanupScope.LEGACY,
-                currentFallback = currentFallback,
-            )
-            Timber.i("Scheduled export generation migration completed")
-        }
+    ): Boolean = runCoordinator.mutex.withLock {
+        val configuration = configurationForNewOccurrence(settings, currentZone)
+        val dueOccurrenceToPreserve = dueOccurrenceEligibleForReplacement(
+            occurrence = stateStore.load()?.takeIf { it.generation == null },
+            replacementConfiguration = configuration,
+            nowMillis = nowMillis,
+        )
+        val replacement = startGenerationTransitionLocked(
+            configuration = configuration,
+            nowMillis = nowMillis,
+            reason = GenerationBoundaryReason.LEGACY_MIGRATION,
+            cleanupScope = ScheduledExportCleanupScope.LEGACY,
+            currentFallback = currentFallback,
+            dueOccurrenceToPreserve = dueOccurrenceToPreserve,
+        )
+        val admitted = dueOccurrenceToPreserve != null && admitAndAdvanceOccurrenceLocked(
+            occurrence = replacement,
+            expedited = true,
+            catchUpThroughMillis = nowMillis,
+            nextConfiguration = { configuration },
+            currentFallback = currentFallback,
+        )
+        Timber.i("Scheduled export generation migration completed")
+        admitted
     }
 
     private suspend fun replaceGenerationLocked(
@@ -308,6 +339,20 @@ class ExportScheduler @Inject constructor(
                 finishGenerationTransitionLocked(transition, currentFallback)
             }
         }
+    }
+
+    /**
+     * Returns a due temporal anchor only when routing, cadence, window, and timezone are unchanged.
+     * The transition replaces all frozen settings and engine authority with [replacementConfiguration].
+     */
+    private fun dueOccurrenceEligibleForReplacement(
+        occurrence: ScheduledExportOccurrence?,
+        replacementConfiguration: ScheduledExportConfiguration,
+        nowMillis: Long,
+    ): ScheduledExportOccurrence? = occurrence?.takeIf { candidate ->
+        candidate.triggerAtMillis <= nowMillis &&
+            candidate.configuration.zoneId == replacementConfiguration.zoneId &&
+            candidate.configuration.isSameScheduleExceptZone(replacementConfiguration)
     }
 
     /** Caller holds [ScheduledExportRunCoordinator.mutex]. */
