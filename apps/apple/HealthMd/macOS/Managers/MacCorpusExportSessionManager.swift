@@ -1860,6 +1860,12 @@ final class MacCorpusExportSessionManager {
                     session.journal.successfulRequestedDates.append(payload.sourceDate)
                 } else {
                     do {
+                        let externalRecordPlan = settings.writesExternalProviderSidecars
+                            ? try vaultManager.planExternalDailyRecordDestinations(
+                                payload.externalDailyRecords,
+                                healthSubfolder: session.journal.exportManifest.settingsSnapshot.healthSubfolder
+                            )
+                            : nil
                         // Archive mode intentionally writes no loose daily aggregate, but this
                         // call still performs configured standard-mode side effects.
                         let writeResult = try await vaultManager.exportHealthData(
@@ -1867,6 +1873,7 @@ final class MacCorpusExportSessionManager {
                             settings: settings,
                             healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
                             writeDataDictionary: session.journal.dataDictionaryWritten != true,
+                            additionalArtifactRelativePaths: externalRecordPlan?.artifactRelativePaths ?? [],
                             operationSurface: dailyExportOperation.surface,
                             frozenSettingsSnapshot: dailyExportOperation.settingsSnapshot
                         )
@@ -1915,11 +1922,10 @@ final class MacCorpusExportSessionManager {
                             session.journal.completedDates.append(payload.sourceDate)
                         }
                         session.journal.successfulRequestedDates.append(payload.sourceDate)
-                        if settings.writesExternalProviderSidecars && !payload.externalDailyRecords.isEmpty {
+                        if let externalRecordPlan {
                             do {
                                 let count = try await vaultManager.exportExternalDailyRecords(
-                                    payload.externalDailyRecords,
-                                    healthSubfolder: session.journal.exportManifest.settingsSnapshot.healthSubfolder
+                                    externalRecordPlan
                                 )
                                 recordProviderSidecarWrites(count, session: session)
                             } catch let error as ExportPartialWriteError {

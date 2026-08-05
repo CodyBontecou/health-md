@@ -817,6 +817,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult._0.failedDateDetails[].errorDetails` | string |
 | `$.macExportResult._0.failedDateDetails[].reason` | string |
 | `$.macExportResult._0.formatsPerDate` | integer |
+| `$.macExportResult._0.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.macExportResult._0.jobID` | string |
 | `$.macExportResult._0.status` | string |
 | `$.macExportResult._0.successCount` | integer |
@@ -1885,6 +1886,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.failedDateDetails[].errorDetails` | string |
 | `$.failedDateDetails[].reason` | string |
 | `$.formatsPerDate` | integer |
+| `$.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.jobID` | string |
 | `$.status` | string |
 | `$.successCount` | integer |
@@ -1906,6 +1908,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.externalRecordFileCount` | integer |
 | `$.failedDateDetails` | array |
 | `$.formatsPerDate` | integer |
+| `$.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.jobID` | string |
 | `$.status` | string |
 | `$.successCount` | integer |

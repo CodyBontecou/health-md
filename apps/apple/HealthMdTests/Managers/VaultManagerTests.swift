@@ -1433,6 +1433,78 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: outsideURL.path).isEmpty)
     }
 
+    func testIndividualEntryAliasOfAggregateRejectsBeforeAnyCommit() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.individualTracking.globalEnabled = true
+        settings.individualTracking.useCategoryFolders = false
+        settings.individualTracking.entriesFolder = ""
+        settings.individualTracking.setTrackIndividually("weight", enabled: true)
+        let aggregateFilename = settings.filename(
+            for: ExportFixtures.fullDay.date,
+            format: .markdown
+        )
+        settings.individualTracking.filenameTemplate = String(aggregateFilename.dropLast(3))
+
+        do {
+            _ = try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false
+            )
+            XCTFail("Expected cross-category aggregate alias rejection")
+        } catch {
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
+    func testProviderSidecarAliasOfAggregateRejectsBeforeAnyCommit() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.folderStructure = "integrations/whoop"
+        settings.filenameFormat = "2026-03-15"
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let sidecarPlan = try XCTUnwrap(manager.planExternalDailyRecordDestinations(
+            [externalRecord()],
+            healthSubfolder: "Health"
+        ))
+
+        do {
+            _ = try await manager.exportHealthData(
+                ExportFixtures.fullDay,
+                settings: settings,
+                writeDataDictionary: false,
+                additionalArtifactRelativePaths: sidecarPlan.artifactRelativePaths
+            )
+            XCTFail("Expected cross-category provider alias rejection")
+        } catch {
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+    }
+
     func testAsyncExportAppendRetryDoesNotDuplicateIdenticalAggregate() async throws {
         let vaultURL = URL(fileURLWithPath: "/tmp/AsyncAppendVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
@@ -1547,6 +1619,35 @@ final class VaultManagerTests: XCTestCase {
                 securityScopedRootURL: vaultURL
             )
         )
+    }
+
+    func testExportHealthData_dictionaryDisabledAllowsAggregateAtDictionaryFilename() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.filenameFormat = String(HealthMdExportSchema.dataDictionaryFilename.dropLast(5))
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+
+        let result = try await manager.exportHealthData(
+            ExportFixtures.fullDay,
+            settings: settings,
+            writeDataDictionary: false
+        )
+
+        XCTAssertEqual(result.aggregateFileCount, 1)
+        XCTAssertEqual(result.dataDictionaryFileCount, 0)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: vaultURL
+                .appendingPathComponent("Health")
+                .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename)
+                .path
+        ))
     }
 
     func testExportHealthData_dictionaryDisabledKeepsMarkdownWithoutJSONSidecar() {

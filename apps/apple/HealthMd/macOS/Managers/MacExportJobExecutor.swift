@@ -496,6 +496,7 @@ final class MacExportJobExecutor {
                     settings: settings,
                     healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
                     writeDataDictionary: !dataDictionaryWritten,
+                    additionalArtifactRelativePaths: externalRecordPlan?.artifactRelativePaths ?? [],
                     operationSurface: dailyExportOperation.surface,
                     frozenSettingsSnapshot: dailyExportOperation.settingsSnapshot
                 )
@@ -1043,6 +1044,7 @@ final class MacExportJobExecutor {
                         settings: settings,
                         healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
                         writeDataDictionary: !session.dataDictionaryWritten,
+                        additionalArtifactRelativePaths: externalRecordPlan?.artifactRelativePaths ?? [],
                         operationSurface: session.dailyExportOperation.surface,
                         frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )
@@ -1314,6 +1316,7 @@ final class MacExportJobExecutor {
                         settings: settings,
                         healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
                         writeDataDictionary: !session.dataDictionaryWritten,
+                        additionalArtifactRelativePaths: externalRecordPlan?.artifactRelativePaths ?? [],
                         operationSurface: session.dailyExportOperation.surface,
                         frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )

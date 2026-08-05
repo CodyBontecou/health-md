@@ -222,7 +222,8 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertFalse(result.wasCancelled)
         XCTAssertFalse(result.isFullSuccess)
         XCTAssertTrue(result.isPartialSuccess)
-        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        XCTAssertFalse(result.didCompleteAllRequestedDates)
+        XCTAssertNil(result.remainingDates(from: [date]))
 
         ExportOrchestrator.recordResult(
             result,
@@ -425,6 +426,40 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertFalse(decoded.isFullSuccess)
         XCTAssertTrue(decoded.isPartialSuccess)
         XCTAssertEqual(decoded.successCount, decoded.totalCount)
+    }
+
+    func testRecordResultShowsCancellationAfterCommittedFileBeforeFirstCompletedDay() throws {
+        let date = Date()
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: 1,
+            failedDateDetails: [],
+            looseAggregateFileCount: 1,
+            isFileCategoryBreakdownComplete: false,
+            wasCancelled: true,
+            completedDates: []
+        )
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+
+        ExportOrchestrator.recordResult(
+            result,
+            source: .manual,
+            dateRangeStart: date,
+            dateRangeEnd: date
+        )
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertFalse(entry.success)
+        XCTAssertEqual(entry.successCount, 0)
+        XCTAssertEqual(entry.outputBreakdown.generatedFileCount, 1)
+        XCTAssertNil(entry.fileCount)
+        XCTAssertTrue(entry.wasCancelled)
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertNil(entry.failureReasonForDisplay)
+        XCTAssertEqual(entry.summaryDescription, "Cancelled after generating at least 1 file")
+        XCTAssertFalse(entry.summaryDescription.contains("Unknown"))
     }
 
     func testFailedDateDetailPreventsOtherwiseCompleteHistoryFromFullSuccess() {

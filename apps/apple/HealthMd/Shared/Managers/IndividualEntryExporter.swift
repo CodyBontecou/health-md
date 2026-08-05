@@ -70,6 +70,10 @@ final class IndividualEntryExporter {
         fileprivate let entries: [PlannedEntry]
         fileprivate let destinationRootURL: URL
         fileprivate let dataDictionaryHealthSubfolder: String?
+
+        var artifactRelativePaths: [String] {
+            entries.map(\.relativePath)
+        }
     }
 
     private let fileSystem: FileSystemAccessing

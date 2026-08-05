@@ -793,6 +793,9 @@ public actor DirectFileReceiver {
             throw DirectFileReceiverError.invalidDestination
         }
         let url = URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
+        guard url.path == path else {
+            throw DirectFileReceiverError.invalidDestination
+        }
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory),
               isDirectory.boolValue,

@@ -1603,6 +1603,7 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true,
+        additionalArtifactRelativePaths: [String] = [],
         operationSurface: AppleExportOperationSurface = .legacyOnly,
         frozenSettingsSnapshot suppliedSettingsSnapshot: ExportSettingsSnapshot? = nil,
         preparedExport suppliedPreparedExport: PreparedHealthDataExport? = nil
@@ -1655,7 +1656,8 @@ final class VaultManager: ObservableObject {
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: frozenSettings,
                 shouldWriteDataDictionary: shouldWriteDataDictionary,
-                preparedExport: preparedExport
+                preparedExport: preparedExport,
+                additionalArtifactRelativePaths: additionalArtifactRelativePaths
             )
         case .planned(let operation):
             return try await writePlannedLooseDailyOutputsOffMain(
@@ -1665,7 +1667,8 @@ final class VaultManager: ObservableObject {
                 healthSubfolder: effectiveHealthSubfolder,
                 settings: frozenSettings,
                 shouldWriteDataDictionary: shouldWriteDataDictionary,
-                operation: operation
+                operation: operation,
+                additionalArtifactRelativePaths: additionalArtifactRelativePaths
             )
         }
     }
@@ -2050,6 +2053,52 @@ final class VaultManager: ObservableObject {
         )
     }
 
+    /// Admits one cross-category namespace before a daily export commits anything. Dynamic
+    /// individual-entry/provider paths must be checked together with aggregates, Daily Notes and
+    /// derived roll-ups; validating each producer independently can miss an alias between them.
+    private func validateHealthDataOutputArtifactCollisions(
+        date: Date,
+        vaultURL: URL,
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        aggregateArtifactRelativePaths: [String]? = nil,
+        individualEntryPlan: IndividualEntryExporter.ExportPlan?,
+        additionalArtifactRelativePaths: [String]
+    ) throws {
+        var artifactRelativePaths = aggregateArtifactRelativePaths ?? looseExportFormats(in: settings).map {
+            ExportPathPlanner.aggregateRelativePath(
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: date,
+                format: $0
+            )
+        }
+        if settings.dailyNoteInjection.enabled {
+            artifactRelativePaths.append(ExportPathPlanner.dailyNoteRelativePath(
+                settings: settings.dailyNoteInjection,
+                date: date
+            ))
+        }
+        if !settings.archiveModeEnabled {
+            var calendar = Calendar.current
+            calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+            artifactRelativePaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+                for: [date],
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                calendar: calendar
+            ))
+        }
+        artifactRelativePaths.append(contentsOf: individualEntryPlan?.artifactRelativePaths ?? [])
+        artifactRelativePaths.append(contentsOf: additionalArtifactRelativePaths)
+        try validateDynamicDestinationPaths(
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            artifactRelativePaths: artifactRelativePaths,
+            protectsDataDictionary: settings.writesDataDictionary
+        )
+    }
+
     private func prepareHealthDataOutputDestination(
         date: Date,
         vaultURL: URL,
@@ -2170,7 +2219,8 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings,
         shouldWriteDataDictionary: Bool,
-        preparedExport: PreparedHealthDataExport
+        preparedExport: PreparedHealthDataExport,
+        additionalArtifactRelativePaths: [String] = []
     ) throws -> DailyExportWriteResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
@@ -2192,6 +2242,14 @@ final class VaultManager: ObservableObject {
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
             settings: settings
+        )
+        try validateHealthDataOutputArtifactCollisions(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            individualEntryPlan: individualEntryPlan,
+            additionalArtifactRelativePaths: additionalArtifactRelativePaths
         )
         let dictionaryRequest: AggregateFileWriteRequest? = if !settings.dailyNotesOnlyModeEnabled,
                                                                 !settings.archiveModeEnabled,
@@ -2330,7 +2388,8 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings,
         shouldWriteDataDictionary: Bool,
-        preparedExport: PreparedHealthDataExport
+        preparedExport: PreparedHealthDataExport,
+        additionalArtifactRelativePaths: [String]
     ) async throws -> DailyExportWriteResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
@@ -2352,6 +2411,14 @@ final class VaultManager: ObservableObject {
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
             settings: settings
+        )
+        try validateHealthDataOutputArtifactCollisions(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            individualEntryPlan: individualEntryPlan,
+            additionalArtifactRelativePaths: additionalArtifactRelativePaths
         )
         let dictionaryRequest: AggregateFileWriteRequest? = if !settings.dailyNotesOnlyModeEnabled,
                                                                 !settings.archiveModeEnabled,
@@ -2492,7 +2559,8 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings,
         shouldWriteDataDictionary: Bool,
-        operation: AppleLooseDailyPlannedOperation
+        operation: AppleLooseDailyPlannedOperation,
+        additionalArtifactRelativePaths: [String]
     ) async throws -> DailyExportWriteResult {
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
@@ -2519,6 +2587,15 @@ final class VaultManager: ObservableObject {
             vaultURL: vaultURL,
             healthSubfolder: healthSubfolder,
             settings: settings
+        )
+        try validateHealthDataOutputArtifactCollisions(
+            date: date,
+            vaultURL: vaultURL,
+            healthSubfolder: healthSubfolder,
+            settings: settings,
+            aggregateArtifactRelativePaths: operation.artifacts.map(\.artifact.relativePath),
+            individualEntryPlan: individualEntryPlan,
+            additionalArtifactRelativePaths: additionalArtifactRelativePaths
         )
 
         let dictionaryRequest: AggregateFileWriteRequest? = if shouldWriteDataDictionary {
@@ -2661,6 +2738,10 @@ final class VaultManager: ObservableObject {
         fileprivate let vaultURL: URL
         fileprivate let healthSubfolder: String
         fileprivate let entries: [Entry]
+
+        var artifactRelativePaths: [String] {
+            entries.map(\.relativePath)
+        }
     }
 
     /// Freezes and validates the complete provider-sidecar loop without mutating the destination.
@@ -3705,7 +3786,8 @@ final class VaultManager: ObservableObject {
     private func validateDynamicDestinationPaths(
         vaultURL: URL,
         healthSubfolder: String,
-        artifactRelativePaths: [String]
+        artifactRelativePaths: [String],
+        protectsDataDictionary: Bool = true
     ) throws {
         guard !artifactRelativePaths.isEmpty else { return }
         let collision: ExportPathPlanner.DataDictionaryCollision?
@@ -3717,16 +3799,20 @@ final class VaultManager: ObservableObject {
                     artifactRelativePaths: artifactRelativePaths
                 )
             }
-            collision = fileSystem is SystemFileSystem
-                ? try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
-                    vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    artifactRelativePaths: artifactRelativePaths
-                )
-                : try ExportPathPlanner.dataDictionaryArtifactCollision(
-                    healthSubfolder: healthSubfolder,
-                    artifactRelativePaths: artifactRelativePaths
-                )
+            if protectsDataDictionary {
+                collision = fileSystem is SystemFileSystem
+                    ? try ExportPathPlanner.destinationDataDictionaryArtifactCollision(
+                        vaultURL: vaultURL,
+                        healthSubfolder: healthSubfolder,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+                    : try ExportPathPlanner.dataDictionaryArtifactCollision(
+                        healthSubfolder: healthSubfolder,
+                        artifactRelativePaths: artifactRelativePaths
+                    )
+            } else {
+                collision = nil
+            }
         } catch let error as ExportPathPlanner.PathValidationError {
             let path: String
             switch error {

@@ -541,17 +541,21 @@ struct ExportOrchestrator {
         /// Whether every requested date completed, even if retained records include
         /// non-fatal partial-capture warnings.
         var didCompleteAllRequestedDates: Bool {
-            completedDateCount == totalCount && totalCount > 0 && !wasCancelled
+            completedDateCount == totalCount
+                && totalCount > 0
+                && !wasCancelled
+                && !hadTerminalFailure
         }
 
         /// Returns the exact unresolved subset when the producer supplied
-        /// per-date completion. Legacy aggregate-only partial results return nil
-        /// so callers can conservatively preserve the original request.
+        /// per-date completion. Legacy aggregate-only or terminal derived-output failures return
+        /// nil so callers conservatively preserve the original request. A derived output belongs
+        /// to the range, not one date, so successful daily commits cannot prove it is resolved.
         func remainingDates(
             from requestedDates: [Date],
             calendar: Calendar = .current
         ) -> [Date]? {
-            guard let completedDates else { return nil }
+            guard !hadTerminalFailure, let completedDates else { return nil }
             let completedDays = Set(completedDates.map { calendar.startOfDay(for: $0) })
             return requestedDates
                 .map { calendar.startOfDay(for: $0) }
@@ -968,6 +972,7 @@ struct ExportOrchestrator {
                     healthData,
                     settings: settings,
                     writeDataDictionary: shouldWriteDataDictionary,
+                    additionalArtifactRelativePaths: externalRecordPlan?.artifactRelativePaths ?? [],
                     operationSurface: operationSurface,
                     frozenSettingsSnapshot: operationSettingsSnapshot,
                     preparedExport: preparedExport

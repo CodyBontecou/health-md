@@ -89,9 +89,9 @@ final class ScheduledExportCoordinator {
         }
 
         if result.completedDateCount > 0 || result.successCount > 0 {
-            // The stable-ID notification carries the reduced request so a tap
-            // retries only unresolved dates instead of duplicating completed
-            // local/Connected Mac files.
+            // The stable-ID notification carries the reduced unresolved dates when possible.
+            // A terminal range-output failure conservatively retains the full request because a
+            // roll-up or archive cannot be assigned to just one completed date.
             try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: retryRequest)
             return .preservedPartialSuccess
         }

@@ -477,10 +477,21 @@ struct ExportHistoryEntry: Codable, Identifiable {
             && operationDetails?.hasWarnings != true
     }
 
+    private var hasConfirmedOutput: Bool {
+        successCount > 0
+            || dailyNoteUpdateCount > 0
+            || dailyNoteSkipCount > 0
+            || outputBreakdown.generatedFileCount > 0
+    }
+
     /// Returns true when confirmed output exists but the terminal result was not full success.
+    /// This includes a cancellation or write failure after an atomic file commit but before the
+    /// first complete data day, even though the legacy `success` flag is false for that entry.
     var isPartialSuccess: Bool {
-        success && (successCount > 0 || dailyNoteSkipCount > 0)
-            && (successCount < totalCount
+        hasConfirmedOutput
+            && !isFullSuccess
+            && (success
+                || successCount < totalCount
                 || wasCancelled
                 || hadTerminalFailure
                 || !failedDateDetails.isEmpty
@@ -499,7 +510,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
     /// Resolves the most useful reason available, including older history entries
     /// that only persisted a reason on their per-date failure details.
     var failureReasonForDisplay: ExportFailureReason? {
-        guard !isFullSuccess else { return nil }
+        guard !isFullSuccess, !wasCancelled else { return nil }
         if let failureReason { return failureReason }
         if let failedDateReason = failedDateDetails.first?.reason { return failedDateReason }
         return success ? nil : .unknown
@@ -747,6 +758,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     /// Summary description for display.
     var summaryDescription: String {
+        if wasCancelled {
+            return cancellationSummaryDescription
+        }
         if isDailyNoteOnlyResult {
             return dailyNoteSummaryDescription
         }
@@ -779,6 +793,37 @@ struct ExportHistoryEntry: Codable, Identifiable {
             return partialGeneratedFileSummaryDescription
         }
         return failureSummaryDescription
+    }
+
+    private var cancellationSummaryDescription: String {
+        if isCLIRawDelivery, successCount > 0 {
+            return successCount == 1
+                ? String(localized: "Cancelled after sending 1 data day to CLI", comment: "Cancelled CLI export after one confirmed data day")
+                : String(localized: "Cancelled after sending \(successCount) data days to CLI", comment: "Cancelled CLI export after confirmed data days")
+        }
+        if isAPIEndpointDelivery, successCount > 0 {
+            return successCount == 1
+                ? String(localized: "Cancelled after uploading 1 data day to API", comment: "Cancelled API export after one confirmed data day")
+                : String(localized: "Cancelled after uploading \(successCount) data days to API", comment: "Cancelled API export after confirmed data days")
+        }
+        if isDailyNoteOnlyResult, dailyNoteUpdateCount > 0 {
+            return dailyNoteUpdateCount == 1
+                ? String(localized: "Cancelled after updating 1 daily note", comment: "Cancelled daily-note export after one confirmed update")
+                : String(localized: "Cancelled after updating \(dailyNoteUpdateCount) daily notes", comment: "Cancelled daily-note export after confirmed updates")
+        }
+
+        let count = generatedFileCountForDisplay
+        guard count > 0 else {
+            return String(localized: "Export cancelled", comment: "Export cancelled without confirmed output")
+        }
+        if fileCount != nil {
+            return count == 1
+                ? String(localized: "Cancelled after generating 1 file", comment: "Cancelled export with one authoritative generated file")
+                : String(localized: "Cancelled after generating \(count) files", comment: "Cancelled export with authoritative generated files")
+        }
+        return count == 1
+            ? String(localized: "Cancelled after generating at least 1 file", comment: "Cancelled export with one confirmed generated file and an incomplete total")
+            : String(localized: "Cancelled after generating at least \(count) files", comment: "Cancelled export with confirmed generated files and an incomplete total")
     }
 
     private var dailyNoteSummaryDescription: String {

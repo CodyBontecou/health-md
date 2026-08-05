@@ -2,11 +2,11 @@
   "format": "healthmd.reference-source",
   "format_version": 1,
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
-  "source_app_commit": "9f89f8845f153116106bbc0ac0eaf653fbf34505",
-  "docs_reference_git_tree": "4ba54e22a7e1499e8669ad164a5be2cd3442cc10",
+  "source_app_commit": "b80e2e9ef4fa762b8a2f4d8444091e876d9c056a",
+  "docs_reference_git_tree": "08addc0313cf4259020cfe77c15e5c43859b10e4",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "5069950f624fe968fe5f9a1172743f2ee4b61777d75d9091ed0f7c3369f6d9a4",
+    "digest": "9f3f5f9aeb2478032022886410b8fdcf8b59da61582eb4d8769a07388039eabf",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -82,7 +82,7 @@
     {
       "path": "api-and-cli.md",
       "bytes": 28624,
-      "sha256": "59b8f4d7637a07968a8a0bfeaa0a747d0358e6fc461c082afb28003254b48302",
+      "sha256": "8c6a00e71ca3ebe4ec691fcba9e0aca13bcedba036a4d39a7afb4459f9c903f7",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/api-and-cli/",
@@ -341,8 +341,8 @@
     },
     {
       "path": "generated/automation/mac-export-result-partial.json",
-      "bytes": 658,
-      "sha256": "a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49",
+      "bytes": 703,
+      "sha256": "55a26bbbfd04ef447bcb32e9f7fa1f2456bab9efe797cc83ecb113f3fa9febf0",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -351,8 +351,8 @@
     },
     {
       "path": "generated/automation/mac-export-result-success.json",
-      "bytes": 502,
-      "sha256": "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87",
+      "bytes": 547,
+      "sha256": "9e29de460ef2f379e0656536fc5dfd6cec59a5e1c37de6ad12f20cbdb23e0ad8",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -362,7 +362,7 @@
     {
       "path": "generated/automation/manifest.json",
       "bytes": 5419,
-      "sha256": "408f1315562ee6c05ec4b6a6ef1caf45733fa95fdbecfbc0a58644ca5c05c3fb",
+      "sha256": "45169cd6010b97501c95d1b1c00fbcfaa8c83c2046b9aa380d089d0b1254d96e",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -371,8 +371,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 117653,
-      "sha256": "a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb",
+      "bytes": 117825,
+      "sha256": "3e4a438eb2047eb4c85d4f9d3d2293deb20625eab29aac8b4b1db9d26ec2f79b",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -1206,29 +1206,29 @@
     },
     {
       "path": "public/reference/generated/automation/mac-export-result-partial.json",
-      "bytes": 658,
-      "sha256": "a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49",
+      "bytes": 703,
+      "sha256": "55a26bbbfd04ef447bcb32e9f7fa1f2456bab9efe797cc83ecb113f3fa9febf0",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-result-partial.json"
     },
     {
       "path": "public/reference/generated/automation/mac-export-result-success.json",
-      "bytes": 502,
-      "sha256": "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87",
+      "bytes": 547,
+      "sha256": "9e29de460ef2f379e0656536fc5dfd6cec59a5e1c37de6ad12f20cbdb23e0ad8",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-result-success.json"
     },
     {
       "path": "public/reference/generated/automation/manifest.json",
       "bytes": 5419,
-      "sha256": "408f1315562ee6c05ec4b6a6ef1caf45733fa95fdbecfbc0a58644ca5c05c3fb",
+      "sha256": "45169cd6010b97501c95d1b1c00fbcfaa8c83c2046b9aa380d089d0b1254d96e",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 117653,
-      "sha256": "a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb",
+      "bytes": 117825,
+      "sha256": "3e4a438eb2047eb4c85d4f9d3d2293deb20625eab29aac8b4b1db9d26ec2f79b",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
@@ -1676,7 +1676,7 @@
     {
       "path": "src/content/docs/reference/api-and-cli.md",
       "bytes": 28975,
-      "sha256": "4af3cee3d75e693d6d6b59ef7b288cb44dcc636dc8fd155721aa4a46c8d6e2e7",
+      "sha256": "f609b14af328f3bd32bd7a84841d86f538261868e985806101db04ced8b676dd",
       "classification": "rendered-page",
       "route": "/docs/reference/api-and-cli/"
     },
@@ -1725,14 +1725,14 @@
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
       "bytes": 6360,
-      "sha256": "415a4971142bb2553740464d82bfe15f8d434a06096e20766c8a1b77a87df359",
+      "sha256": "63ac25de50dc12db0ca76df6ebad6ca499f5352178a710e4ec3b758f3dcb72f5",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 117856,
-      "sha256": "252f4ccfa5c07daeca8f6259d4a7977a4a41c8c7a24f971615e92dd0a7d01b93",
+      "bytes": 118028,
+      "sha256": "1a2924949ad9c2a1c43c4609d24ef5aca912c15891b53997776172c30af84344",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1802,7 +1802,7 @@
     {
       "path": "src/content/docs/reference/generated/index.md",
       "bytes": 19216,
-      "sha256": "b3b5aa88e7587a267d463880a5fbc528e5134d4de7b5512d2cf52b1eed975fdc",
+      "sha256": "b8692259c8225141eace7d4c67e43c507bfe1d77c1c5a6e08b96ae844bac5a4f",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },

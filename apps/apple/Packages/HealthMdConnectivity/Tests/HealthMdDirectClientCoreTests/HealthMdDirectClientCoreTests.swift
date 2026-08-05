@@ -687,6 +687,74 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         )
     }
 
+    func testDirectFileReceiverRejectsNoncanonicalDestinationBeforeJournalCreation() async throws {
+        let root = temporaryRoot()
+        let destination = temporaryRoot()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+
+        let layout = try DirectClientStorageLayout(rootURL: root)
+        let store = try DirectJobStore(layout: layout)
+        let binding = DirectPeerBinding(
+            sourceInstallationID: UUID(),
+            destinationInstallationID: UUID()
+        )
+        let parent = destination.deletingLastPathComponent().path
+        let name = destination.lastPathComponent
+        let unsafeRoots = [
+            destination.path + "/",
+            parent + "//" + name,
+            destination.path + "/.",
+            destination.path + "/missing/..",
+        ]
+
+        for unsafeRoot in unsafeRoots {
+            let request = DirectExportRequest(
+                jobID: UUID(),
+                createdAt: Date(),
+                dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"),
+                responseMode: .writeFiles,
+                destination: DirectExportDestination(rootPath: unsafeRoot)
+            )
+            try await store.save(try DirectJobRecord(
+                request: request,
+                createdAt: request.createdAt
+            ))
+            let accepted = DirectExportAccepted(
+                jobID: request.jobID,
+                acceptedAt: Date(),
+                peerBinding: binding,
+                resolvedDateIdentifiers: ["2026-07-01"]
+            )
+            let session = try DirectTransferSession(
+                sessionID: UUID(),
+                jobID: request.jobID,
+                requestFingerprint: try DirectRequestFingerprint.make(for: request),
+                peerBinding: binding,
+                partitionTargetBytes: DirectTransferLimits.minimumPartitionBytes,
+                createdAt: Date()
+            )
+            let receiver = DirectFileReceiver(layout: layout, jobStore: store)
+
+            do {
+                try await receiver.prepare(request: request, accepted: accepted, session: session)
+                XCTFail("Expected noncanonical destination rejection for \(unsafeRoot)")
+            } catch DirectFileReceiverError.invalidDestination {
+                // Expected before file-journal creation.
+            }
+        }
+
+        let storedPaths = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: nil
+        )?.compactMap { ($0 as? URL)?.lastPathComponent } ?? []
+        XCTAssertFalse(storedPaths.contains("file-journal.json"))
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: destination.path).isEmpty)
+    }
+
     func testDirectFileReceiverAppliesAppendExactlyOnceAndRejectsTraversal() async throws {
         let root = temporaryRoot()
         let destination = temporaryRoot()
