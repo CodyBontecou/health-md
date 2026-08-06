@@ -81,23 +81,48 @@ test('unpublished legal translations remain noindex review drafts', async () => 
 });
 
 test('published legal pages derive reciprocal metadata and language navigation from the manifest', async () => {
-  for (const locale of publishedLocales('legal')) {
-    const sourcePath = locale.code === defaultLocale
-      ? path.join(ROOT, 'privacy-policy.html')
-      : path.join(ROOT, locale.path, 'privacy-policy.html');
-    const html = renderLegalPage(await readFile(sourcePath, 'utf8'), 'privacy', locale.code);
-    assert.match(html, new RegExp(`<html lang="${locale.lang}" dir="${locale.dir}">`));
-    assert.ok(html.includes('<meta name="robots" content="index,follow">'));
-    assert.ok(html.includes(`aria-label="${locale.ui.languageSelector}"`));
-    assert.ok(html.includes(`aria-current="page" lang="${locale.lang}">${locale.label}</span>`));
-    const renderedHeader = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
-    const renderedFooter = html.slice(html.indexOf('<footer'), html.indexOf('</footer>'));
-    assert.doesNotMatch(renderedHeader, /class="language-selector"/);
-    assert.match(renderedFooter, /class="language-selector"/);
-    for (const alternate of publishedLocales('legal')) {
-      assert.ok(html.includes(`hreflang="${alternate.lang}" href="https://healthmd.app${alternate.code === defaultLocale ? '/privacy-policy.html' : `/${alternate.path}/privacy-policy.html`}"`));
+  for (const route of [
+    { id: 'privacy', filename: 'privacy-policy.html' },
+    { id: 'terms', filename: 'terms-of-service.html' },
+  ]) {
+    for (const locale of publishedLocales('legal')) {
+      const sourcePath = locale.code === defaultLocale
+        ? path.join(ROOT, route.filename)
+        : path.join(ROOT, locale.path, route.filename);
+      const html = renderLegalPage(await readFile(sourcePath, 'utf8'), route.id, locale.code);
+      assert.match(html, new RegExp(`<html lang="${locale.lang}" dir="${locale.dir}">`));
+      assert.ok(html.includes('<meta name="robots" content="index,follow">'));
+      assert.ok(html.includes(`aria-label="${locale.ui.languageSelector}"`));
+      assert.ok(html.includes(`aria-current="page" lang="${locale.lang}">${locale.label}</span>`));
+      const renderedHeader = html.slice(html.indexOf('<header'), html.indexOf('</header>'));
+      const renderedFooter = html.slice(html.indexOf('<footer'), html.indexOf('</footer>'));
+      assert.doesNotMatch(renderedHeader, /class="language-selector"/);
+      assert.match(renderedFooter, /class="language-selector"/);
+      for (const alternate of publishedLocales('legal')) {
+        const pathname = alternate.code === defaultLocale
+          ? `/${route.filename}`
+          : `/${alternate.path}/${route.filename}`;
+        assert.ok(html.includes(`hreflang="${alternate.lang}" href="https://healthmd.app${pathname}"`));
+      }
     }
   }
+});
+
+test('published Spanish legal pages preserve controlling notices and current product clauses', async () => {
+  const [privacy, terms] = await Promise.all([
+    readFile(path.join(ROOT, 'es/privacy-policy.html'), 'utf8'),
+    readFile(path.join(ROOT, 'es/terms-of-service.html'), 'utf8'),
+  ]);
+
+  assert.match(privacy, /Aviso sobre la traducción/);
+  assert.match(privacy, /href="\.\.\/privacy-policy\.html" hreflang="en"/);
+  assert.match(privacy, /ayudantes CLI y MCP incluidos con Mac y las herramientas portátiles cuando estén disponibles/);
+  assert.match(privacy, /<a class="brand" href="\.\.\/es\/"/);
+  assert.match(terms, /Aviso sobre la traducción/);
+  assert.match(terms, /AGPL-3\.0-only/);
+  assert.match(terms, /código fuente del sitio web se distribuye bajo la Licencia MIT/);
+  assert.match(terms, /10 exportaciones gratuitas/);
+  assert.match(terms, /No es una suscripción y no se renueva/);
 });
 
 test('docs IDs place every configured locale before the docs segment', () => {

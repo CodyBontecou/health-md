@@ -57,7 +57,7 @@ function replaceLanguageSelector(html, routeId, locale) {
   const marker = nav.test(html) ? nav : legacyLink;
   if (!marker.test(html)) throw new Error(`${locale}/${filename} is missing its language selector`);
   const withoutHeaderSelector = html.replace(marker, '');
-  const footerInner = /<div\b(?=[^>]*\bclass="footer-inner")[^>]*>/i;
+  const footerInner = /<div\b(?=[^>]*\bclass="[^"]*\bfooter-inner\b[^"]*")[^>]*>/i;
   if (!footerInner.test(withoutHeaderSelector)) {
     throw new Error(`${locale}/${filename} is missing its footer`);
   }
