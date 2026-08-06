@@ -1,6 +1,6 @@
 # Health.md Practice pilot discovery and approval guide
 
-- **Template version:** `1.0-draft.4`
+- **Template version:** `1.0-draft.5`
 - **Related protocol:** [`v1-pilot-protocol.md`](v1-pilot-protocol.md)
 - **Purpose:** Collect Practice A and Practice B workflow decisions without collecting real patient data
 
@@ -21,6 +21,25 @@ do not paste answers into general analytics, issue trackers, or public chat.
 If PHI is disclosed accidentally, stop note-taking, follow the incident/escalation process, and do not
 copy the disclosure into this template.
 
+Complete this governance preflight before scheduling or starting the interview. Use governed
+references and roles, never credentials, personal contact details, or a production URL containing an
+identifier or token.
+
+```text
+Approved artifact-location reference:
+Artifact access-owner role:
+Interview recording status: prohibited | separately approved
+Recording approval/process reference: not applicable—prohibited | governed reference
+Discovery-record and recording retention rule/reference:
+Accidental-disclosure incident process/reference:
+Incident contact role:
+Preflight completed by role:
+Preflight completion date:
+```
+
+Every field is required. Postpone the interview if the approved location, access owner, retention
+rule, recording decision, or incident process/contact is not established.
+
 ## Interview metadata
 
 Record roles and organizational context, not unnecessary personal identifiers.
@@ -33,7 +52,7 @@ Clinical approval role present: yes | no
 Operations approval role present: yes | no
 Privacy/security approval role present: yes | no
 EHR/integration role present: yes | no
-Protocol draft reviewed: 1.0-draft.3
+Protocol draft reviewed: 1.0-draft.4
 Interviewer:
 ```
 
@@ -103,32 +122,64 @@ Integration owner role:
 Deviation from protocol:
 ```
 
+Map every context selected in section 1 to at least one proposed Path ID. A context may have multiple
+paths, but it is not pilot-ready unless at least one mapped path has final disposition `selected` and
+meets the complete pass rule below. Do not count an out-of-scope context as covered.
+
+| Context | In pilot scope? | Proposed Path IDs | Selected passing Path ID | Excluded/blocking scope and evidence reference |
+| --- | --- | --- | --- | --- |
+| Pre-visit document exchange | yes / no | | | |
+| Medication follow-up | yes / no | | | |
+| Bounded recurring collection | yes / no | | | |
+
 Complete one verification block for **each** selected path, such as patient portal upload, Health.md
-portal download, staff EHR attachment, Direct message, or structured import. Do not combine results
-from different paths or environments.
+portal download, staff EHR attachment, Direct message, or structured import. Define the required
+actions for that path before testing; do not combine results from different paths or environments.
 
 ```text
 Path ID:
 Exact workflow and environment:
 Expected authorized role:
 Expected unauthorized role:
+Required transfer actions: upload | import | download | send | attach | structured write | other
+Required authorized retrieval/use actions:
+Required system acceptance evidence:
+Path-specific required steps approved by roles:
 Fixture ID: practice-ingest-test-v1
 Fixture SHA-256: 53b5033914f2a451e094bc6432f5bebbfeb75aca51d914f2a6e2afb87ff5aebc
 Verification status: passed | failed | not supported | not run
 Verification date:
-Authorized upload/import result:
-Authorized locate/open/read/download-or-attach result:
+Required transfer actions result:
+Required authorized retrieval/use actions result:
 Unauthorized-role retrieval result: denied | unexpectedly allowed | not run
-System acceptance/rejection receipt, without production object ID:
+Required system acceptance evidence result/reference, without production object ID:
 Synthetic-test evidence reference:
 Practice attestation reference, supplemental only:
-Test-document deletion result:
+Test-document cleanup result: completed | failed | not run
+Cleanup method/evidence reference:
 Structured-import result: passed | failed | not required | not run
 If structured import is not required, rationale:
 Final disposition: selected | rejected | blocking
 Unknown or non-passing verification blocks this path: yes (required)
 Deviation ID if a required confirmation is not yes:
 ```
+
+`Verification status: passed` is valid only when all of the following are true for the exact path and
+environment:
+
+- every predefined required transfer action succeeded;
+- the expected authorized role completed every predefined required retrieval/use action;
+- the expected unauthorized role was denied retrieval;
+- the predefined system acceptance receipt or equivalent acceptance evidence was recorded;
+- structured import passed when required, or is `not required` with a recorded rationale; and
+- test-document cleanup completed under the approved test-data procedure.
+
+An attempted required step that fails uses `Verification status: failed`. Preserve `not supported` or
+`not run` when that is the accurate diagnostic result, but all three statuses are non-passing. Any
+required step not run, an unexpectedly allowed retrieval, missing acceptance evidence, failed
+cleanup, or unresolved unknown requires `Final disposition: blocking` or `rejected`. Every context
+kept in pilot scope requires at least one mapped path that meets the complete pass rule; selecting
+zero paths is not passing evidence.
 
 ## 3. Request templates and windows
 
@@ -449,8 +500,23 @@ The interviewer then updates the protocol approval table and deviation register 
 An `unknown` document-path capability blocks that workflow until a fictional document test verifies
 it. A governed practice attestation may supplement the test but cannot replace it.
 
-After discovery changes are incorporated, the owners prepare the final-version approval candidate
-and commit it. The founder and both pilot practices must approve the same candidate commit SHA and
-name the exact protocol, common instruction, and applicable practice-variant versions. Acceptance may
-change only status and approval evidence; any normative change requires a new candidate and new
-approvals.
+## Final candidate approval collection worksheet
+
+After discovery changes are incorporated, create and freeze the final-version approval-candidate
+commit. Do not amend, rebase, or otherwise replace that commit while collecting approvals. Record its
+SHA in governed approval evidence outside the immutable candidate. This table is a collection
+worksheet; the canonical final record is the approval-status table in
+[`v1-pilot-protocol.md`](v1-pilot-protocol.md), populated by the later acceptance-only commit.
+
+| Owner | Candidate commit SHA | Protocol ID/version | Common instruction ID/version | Applicable practice variant ID/version | Approval date | Approver role | Governed evidence reference | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Health.md founder | | | | | | | | Pending |
+| Pilot Practice A | | | | | | | | Pending |
+| Pilot Practice B | | | | | | | | Pending |
+
+All three rows must name the identical full candidate commit SHA, protocol `1.0`, and common
+instructions `practice-bp-common/1.0`. Each practice row must name its applicable final variant or
+explicitly state `none`. An approval with a different SHA or identifier does not count. Copy the
+three matching rows into the canonical protocol table and resolve any discrepancy against the
+governed evidence before acceptance. The acceptance-only commit may change status and approval
+evidence, but any normative content or identifier change requires a new candidate and new approvals.

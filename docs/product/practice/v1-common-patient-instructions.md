@@ -79,6 +79,8 @@ Practice alias: Practice A | Practice B
 Variant ID:
 Variant version:
 Common template ID/version: practice-bp-common/1.0-draft.1
+Candidate protocol ID/version:
+Candidate commit SHA (final approval only):
 Exact practice_collection_instructions:
 Exact practice_contact_text:
 Clinical approver role:

@@ -33,15 +33,26 @@ For each document path selected for the pilot:
 1. Verify the fixture with `--check` and record the exact document ID and SHA-256.
 2. Use a fictional/non-production patient or test chart approved by the practice. Do not attach the
    fixture to a real patient's record.
-3. Upload or import the unchanged PDF through the exact proposed path.
-4. Confirm that an authorized staff member can locate, open, read, and download or attach it as the
-   workflow requires.
-5. Confirm that an unauthorized role cannot retrieve it.
-6. If an EHR transfer is involved, record the actual acceptance/rejection receipt without including a
-   patient or production object identifier.
-7. Remove the test document according to the practice's test-data procedure.
+3. Before testing, define the path-specific required transfer actions and acceptance evidence. Then
+   perform each applicable action—such as upload, import, download, send, attach, or structured
+   write—with the unchanged fixture through the exact proposed path.
+4. Confirm that the expected authorized role completes every required locate, open, read, download,
+   attach, import, or other use action defined for that path.
+5. Confirm that the expected unauthorized role cannot retrieve it.
+6. Record the predefined system acceptance receipt or equivalent acceptance evidence without
+   including a patient or production object identifier.
+7. Complete test-document cleanup according to the practice's approved test-data procedure and
+   record the cleanup evidence. If the system retains an immutable test record, use its approved
+   archival/test-data disposition rather than falsely claiming deletion.
 8. Record the result in
    [`../pilot-practice-discovery-and-approval.md`](../pilot-practice-discovery-and-approval.md).
+
+A path passes only when every predefined required transfer and retrieval/use action succeeded,
+unauthorized retrieval was denied, predefined acceptance evidence was recorded, any required
+structured import passed, and approved test-document cleanup completed. Any required step not run,
+unexpected access, missing acceptance evidence, failed cleanup, or unresolved unknown makes the path
+non-passing and blocks or rejects it. Every care context retained in pilot scope needs at least one
+mapped, selected path that meets this complete rule; zero selected paths cannot pass.
 
 A practice attestation may supplement this test but cannot replace it. A successful test verifies
 only the document path; it does not validate Health.md authentication, tenant authorization, packet

@@ -1,6 +1,6 @@
 # Health.md Practice v1 pilot protocol
 
-- **Protocol version:** `1.0-draft.3`
+- **Protocol version:** `1.0-draft.4`
 - **Status:** Draft — founder input recorded; founder and pilot-practice approval pending
 - **Draft input date:** 2026-08-06
 - **Decision owners:** Health.md founder, Pilot Practice A, Pilot Practice B
@@ -23,14 +23,15 @@ The protocol becomes accepted only after the approval gate at the end of this do
 
 ## Approval status
 
-| Owner | Protocol revision reviewed | Input status | Approval status | Approval date | Evidence reference |
-| --- | --- | --- | --- | --- | --- |
-| Health.md founder | — | Input received 2026-08-06 | Pending | — | Founder answers informed this draft, but no protocol revision review or final approval is yet evidenced. |
-| Pilot Practice A | — | Pending interview | Pending | — | Use [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md). |
-| Pilot Practice B | — | Pending interview | Pending | — | Use [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md). |
+| Owner | Candidate commit SHA | Protocol ID/version | Common instruction ID/version | Applicable practice variant ID/version | Input status | Approval status | Approval date | Approver role | Evidence reference |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Health.md founder | — | `1.0-draft.4` | `practice-bp-common/1.0-draft.1` | not applicable | Input received 2026-08-06 | Pending | — | — | Founder answers informed this draft, but no protocol revision review or final approval is yet evidenced. |
+| Pilot Practice A | — | `1.0-draft.4` | `practice-bp-common/1.0-draft.1` | Pending discovery | Pending interview | Pending | — | — | Use [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md). |
+| Pilot Practice B | — | `1.0-draft.4` | `practice-bp-common/1.0-draft.1` | Pending discovery | Pending interview | Pending | — | — | Use [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md). |
 
-No real-patient pilot may begin while any required approval is pending. An approval applies only to
-the exact protocol revision recorded in this table.
+No real-patient pilot may begin while any required approval is pending. Final approval applies only
+when all three rows name the identical immutable candidate commit SHA, final protocol and common
+instruction identifiers, and the applicable final practice variant or `none`.
 
 ## Recorded founder input — pending protocol approval
 
@@ -411,13 +412,18 @@ market norms.
 A deviation is resolved only through this resolution ledger. Keep the row in the open register until
 its status is incorporated or accepted as a scoped practice variant.
 
-| ID | Practice | Approved value | Disposition | Protocol revision reviewed | Approver role | Approval date | Evidence reference | Incorporated revision |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| — | — | — | Pending interviews | — | — | — | — | — |
+| ID | Practice | Affected contexts / Path IDs | Approved value | Disposition | Blocks pilot or scoped workflow | Excluded scope | Scope-exclusion evidence | Protocol revision reviewed | Approver role | Approval date | Evidence reference | Incorporated revision |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| — | — | — | — | Pending interviews | — | — | — | — | — | — | — | — |
 
 Allowed dispositions are `baseline accepted`, `incorporated`, `scoped variant accepted`, and
 `blocking`. `Incorporated revision` is required only when approved input changed the protocol;
 `Protocol revision reviewed` always records the exact text the approver evaluated.
+
+A `blocking` row must state whether it blocks the complete pilot or named scoped workflows, identify
+the exact excluded contexts and Path IDs, and reference evidence that those scopes were excluded.
+Exclusion cannot leave any in-scope context without at least one selected document path that passed
+every required fictional ingest-test step.
 
 A disagreement may remain an explicit per-practice variant when it does not change packet meaning or
 safety. A disagreement that changes semantics must produce a versioned contract decision rather than
@@ -431,9 +437,12 @@ Before real-patient enrollment, the owners must provide evidence that:
   report;
 - both practices approved their template windows, cadence, exact versioned instruction text, identity fields, roles,
   document path, acknowledgment meaning, and retention policy;
+- every in-scope care context is mapped to at least one selected portal/EHR Path ID, and at least one
+  mapped path per context passed the complete authorization, retrieval, acceptance-evidence,
+  structured-import-if-required, and test-document-cleanup rule in the discovery guide;
 - every selected portal/EHR ingest path was verified with the pinned
   [`practice-ingest-test-v1`](fixtures/README.md) fictional PDF, with a dated evidence reference and
-  exact fixture SHA-256; an `unknown` result blocks that path;
+  exact fixture SHA-256; an `unknown`, omitted, partially run, or non-passing result blocks that path;
 - Apple and Android produce equivalent Practice meaning from synthetic source records while retaining
   platform provenance;
 - the portal flow works with fictional identities and no PHI in email, URLs, analytics, or logs;
@@ -454,12 +463,16 @@ Before requesting final approval, the owners must:
    `practice-bp-common/1.0`;
 3. assign final versioned IDs to each practice instruction variant;
 4. set status to **Approval candidate** without changing the intended normative text afterward; and
-5. commit that complete candidate and record its Git commit SHA.
+5. commit that complete candidate, do not amend or replace it, and record its full Git commit SHA in
+   governed approval evidence outside the candidate commit.
 
-The founder and both practices approve the same candidate commit and explicitly name the protocol,
-common instruction, and applicable practice-variant versions. Final acceptance changes only status
-and approval evidence; it must not change normative content or identifiers. Any normative change
-after candidate approval invalidates those approvals and requires a new candidate commit.
+The founder and both practices approve the same immutable candidate commit and explicitly name the
+full SHA, protocol `1.0`, common instructions `practice-bp-common/1.0`, and each applicable final
+practice-variant ID/version or `none`. After all approvals exist, a later acceptance-only commit
+copies the SHA, identifiers, approval status, dates, roles, and governed evidence references into the
+approval table. That acceptance commit must not change normative content or identifiers. Any
+normative change after candidate approval invalidates those approvals and requires a new candidate
+commit.
 
 After acceptance:
 
