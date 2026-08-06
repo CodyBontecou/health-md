@@ -11,10 +11,12 @@ Practice handles real patient information.
   operational/no-monitoring text for practice review and constrained variants.
 - [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md) — structured,
   PHI-prohibiting interview and approval guide for Pilot Practice A and Pilot Practice B.
+- [`fixtures/`](fixtures/README.md) — deterministic PHI-free PDF and generator for verifying the actual
+  portal/EHR document path selected by each practice.
 
 ## Current status
 
-`v1-pilot-protocol.md` is `1.0-draft.2`.
+`v1-pilot-protocol.md` is `1.0-draft.3`.
 
 Founder decision input has been incorporated, but final founder approval and both practice approvals
 are pending. The protocol must not be relabeled accepted and the pilot must not use real PHI until the
@@ -29,7 +31,8 @@ approval table and deviation register are complete for the same reviewed revisio
    recurring-renewal choices.
 4. Copy every deviation into the protocol's open deviation register.
 5. Incorporate approved decisions in a new `1.0-draft.N` revision and verify each selected document
-   path with a fictional file; `unknown` blocks that path.
+   path with the pinned [`practice-ingest-test-v1`](fixtures/README.md) fictional PDF; `unknown` blocks
+   that path.
 6. Resolve or explicitly block deviations, then assign final protocol `1.0`, common instruction
    `practice-bp-common/1.0`, and practice-variant versions.
 7. Commit the complete **Approval candidate** and record its Git commit SHA.

@@ -1,6 +1,6 @@
 # Health.md Practice pilot discovery and approval guide
 
-- **Template version:** `1.0-draft.2`
+- **Template version:** `1.0-draft.3`
 - **Related protocol:** [`v1-pilot-protocol.md`](v1-pilot-protocol.md)
 - **Purpose:** Collect Practice A and Practice B workflow decisions without collecting real patient data
 
@@ -33,7 +33,7 @@ Clinical approval role present: yes | no
 Operations approval role present: yes | no
 Privacy/security approval role present: yes | no
 EHR/integration role present: yes | no
-Protocol draft reviewed: 1.0-draft.2
+Protocol draft reviewed: 1.0-draft.3
 Interviewer:
 ```
 
@@ -69,7 +69,9 @@ Deviation from protocol:
 
 ## 2. Existing systems and document path
 
-Do not demonstrate a real patient chart or message.
+Do not demonstrate a real patient chart or message. Verify each selected path with the unchanged
+[`practice-ingest-test-v1`](fixtures/README.md) fictional PDF in an approved non-production/test
+chart. Record its pinned SHA-256 with the result.
 
 1. EHR product, edition/version, and deployment model, if known.
 2. Patient-portal product, if separate.
@@ -81,7 +83,7 @@ Do not demonstrate a real patient chart or message.
    VPN, Direct Secure Messaging, or another process?
 8. What evidence tells the practice that a document was accepted by its system?
 
-Structured decision:
+System inventory:
 
 ```text
 EHR product/version:
@@ -92,16 +94,35 @@ Required pilot formats: PDF | JSON | CSV | structured FHIR | other
 Enabled integration capabilities:
 Vendor onboarding prerequisites:
 Pilot fallback document path:
-Capability verification: synthetic test | unknown
+Integration owner role:
+Deviation from protocol:
+```
+
+Complete one verification block for **each** selected path, such as patient portal upload, Health.md
+portal download, staff EHR attachment, Direct message, or structured import. Do not combine results
+from different paths or environments.
+
+```text
+Path ID:
+Exact workflow and environment:
+Expected authorized role:
+Expected unauthorized role:
+Fixture ID: practice-ingest-test-v1
+Fixture SHA-256: 53b5033914f2a451e094bc6432f5bebbfeb75aca51d914f2a6e2afb87ff5aebc
+Verification status: passed | failed | not supported | not run
 Verification date:
+Authorized upload/import result:
+Authorized locate/open/read/download-or-attach result:
+Unauthorized-role retrieval result: denied | unexpectedly allowed | not run
+System acceptance/rejection receipt, without production object ID:
 Synthetic-test evidence reference:
 Practice attestation reference, supplemental only:
-Synthetic PDF upload/attachment result: passed | failed | not supported | not run
+Test-document deletion result:
 Structured-import result: passed | failed | not required | not run
 If structured import is not required, rationale:
-Integration owner role:
-Does an unknown verification result block this path: yes | no
-Deviation from protocol:
+Final disposition: selected | rejected | blocking
+Unknown or non-passing verification blocks this path: yes (required)
+Deviation ID if a required confirmation is not yes:
 ```
 
 ## 3. Request templates and windows

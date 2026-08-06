@@ -1,6 +1,6 @@
 # Health.md Practice v1 pilot protocol
 
-- **Protocol version:** `1.0-draft.2`
+- **Protocol version:** `1.0-draft.3`
 - **Status:** Draft — founder input recorded; founder and pilot-practice approval pending
 - **Draft input date:** 2026-08-06
 - **Decision owners:** Health.md founder, Pilot Practice A, Pilot Practice B
@@ -25,7 +25,7 @@ The protocol becomes accepted only after the approval gate at the end of this do
 
 | Owner | Protocol revision reviewed | Input status | Approval status | Approval date | Evidence reference |
 | --- | --- | --- | --- | --- | --- |
-| Health.md founder | `1.0-draft.2` | Input received 2026-08-06 | Pending | — | Founder answers are reflected in this draft; final protocol approval is still required. |
+| Health.md founder | — | Input received 2026-08-06 | Pending | — | Founder answers informed this draft, but no protocol revision review or final approval is yet evidenced. |
 | Pilot Practice A | — | Pending interview | Pending | — | Use [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md). |
 | Pilot Practice B | — | Pending interview | Pending | — | Use [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md). |
 
@@ -431,8 +431,9 @@ Before real-patient enrollment, the owners must provide evidence that:
   report;
 - both practices approved their template windows, cadence, exact versioned instruction text, identity fields, roles,
   document path, acknowledgment meaning, and retention policy;
-- every selected portal/EHR ingest path was verified with a fictional document, with a dated evidence
-  reference; an `unknown` result blocks that path;
+- every selected portal/EHR ingest path was verified with the pinned
+  [`practice-ingest-test-v1`](fixtures/README.md) fictional PDF, with a dated evidence reference and
+  exact fixture SHA-256; an `unknown` result blocks that path;
 - Apple and Android produce equivalent Practice meaning from synthetic source records while retaining
   platform provenance;
 - the portal flow works with fictional identities and no PHI in email, URLs, analytics, or logs;
