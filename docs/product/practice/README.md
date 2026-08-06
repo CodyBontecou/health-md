@@ -11,6 +11,8 @@ Practice handles real patient information.
   operational/no-monitoring text for practice review and constrained variants.
 - [`pilot-practice-discovery-and-approval.md`](pilot-practice-discovery-and-approval.md) — structured,
   PHI-prohibiting interview and approval guide for Pilot Practice A and Pilot Practice B.
+- [`pilot-ehr-vendor-discovery-aid.md`](pilot-ehr-vendor-discovery-aid.md) — dated, non-normative
+  official-source aid for disambiguating candidate EHRs without assuming tenant capability.
 - [`fixtures/`](fixtures/README.md) — deterministic PHI-free PDF and generator for verifying the actual
   portal/EHR document path selected by each practice.
 

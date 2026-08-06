@@ -1,6 +1,6 @@
 # Health.md Practice pilot discovery and approval guide
 
-- **Template version:** `1.0-draft.3`
+- **Template version:** `1.0-draft.4`
 - **Related protocol:** [`v1-pilot-protocol.md`](v1-pilot-protocol.md)
 - **Purpose:** Collect Practice A and Practice B workflow decisions without collecting real patient data
 
@@ -68,6 +68,11 @@ Deviation from protocol:
 ```
 
 ## 2. Existing systems and document path
+
+If the vendor is initially unknown, use the non-normative
+[`pilot-ehr-vendor-discovery-aid.md`](pilot-ehr-vendor-discovery-aid.md) to disambiguate candidates and
+locate official documentation. The aid is not tenant evidence and cannot replace this interview or
+the fictional path test.
 
 Do not demonstrate a real patient chart or message. Verify each selected path with the unchanged
 [`practice-ingest-test-v1`](fixtures/README.md) fictional PDF in an approved non-production/test
