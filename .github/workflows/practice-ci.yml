@@ -19,6 +19,7 @@ on:
       - 'Makefile'
       - '.github/workflows/practice-ci.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
