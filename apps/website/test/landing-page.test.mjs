@@ -9,6 +9,7 @@ const index = await readFile(path.join(ROOT, "index.html"), "utf8");
 const privacyPolicy = await readFile(path.join(ROOT, "privacy-policy.html"), "utf8");
 const terms = await readFile(path.join(ROOT, "terms-of-service.html"), "utf8");
 const styles = await readFile(path.join(ROOT, "assets/landing.css"), "utf8");
+const legalStyles = await readFile(path.join(ROOT, "assets/legal.css"), "utf8");
 const script = await readFile(path.join(ROOT, "assets/landing.js"), "utf8");
 const threeSource = await readFile(path.join(ROOT, "scripts/landing-three.source.js"), "utf8");
 const threeBuildScript = await readFile(path.join(ROOT, "scripts/build-three-hero.mjs"), "utf8");
@@ -180,6 +181,51 @@ test("product and legal copy reject Health.md server storage without hiding user
   assert.match(privacyPolicy, /file provider/i);
   assert.match(terms, /We do not collect or store your health data on Health\.md servers/);
   assert.doesNotMatch(publicCopy, /Hosted Account|hosted-data|serve-hosted|\/data\/v1\//i);
+});
+
+test("privacy policy uses the landing design and describes the current app surfaces", () => {
+  assert.match(privacyPolicy, /<body class="legal-page">/);
+  assert.match(privacyPolicy, /<link rel="stylesheet" href="assets\/landing\.css">/);
+  assert.match(privacyPolicy, /<link rel="stylesheet" href="assets\/legal\.css">/);
+  assert.match(privacyPolicy, /<header class="site-header">/);
+  assert.match(privacyPolicy, /<footer class="site-footer">/);
+  assert.match(privacyPolicy, /Privacy,<br>in plain language\./);
+  assert.match(privacyPolicy, /Last updated: August 6, 2026/);
+  assert.match(privacyPolicy, /Scheduled Apple exports:[\s\S]*?APNs token/);
+  assert.match(privacyPolicy, /Lossless files and direct results may preserve exact timestamps/);
+  assert.match(privacyPolicy, /Android medical records \(FHIR\)/);
+  assert.doesNotMatch(privacyPolicy, /<style\b|theme\.js|fonts\.googleapis\.com|theme-toggle|grid-bg/);
+  assert.match(legalStyles, /\.legal-hero h1\s*{[\s\S]*?font-size:\s*clamp\(64px, 7\.2vw, 108px\)/);
+  assert.match(legalStyles, /\.legal-promise\s*{[\s\S]*?grid-template-columns:\s*repeat\(3,/);
+  assert.match(legalStyles, /\.legal-eyebrow\s*{[\s\S]*?color:\s*#7240e8/);
+  assert.match(legalStyles, /@media \(max-width: 720px\)[\s\S]*?\.legal-promise\s*{[\s\S]*?grid-template-columns:\s*1fr/);
+});
+
+test("terms of service uses the legal design and covers the current product model", () => {
+  assert.match(terms, /<body class="legal-page">/);
+  assert.match(terms, /<link rel="stylesheet" href="assets\/landing\.css">/);
+  assert.match(terms, /<link rel="stylesheet" href="assets\/legal\.css">/);
+  assert.match(terms, /<header class="site-header">/);
+  assert.match(terms, /<footer class="site-footer">/);
+  assert.match(terms, /Terms,<br>made readable\./);
+  assert.match(terms, /Last updated: August 6, 2026/);
+  assert.match(terms, /consumer apps for iPhone, iPad, Mac, and Android/);
+  assert.match(terms, /command-line and MCP tools where made available/);
+  assert.match(terms, /preview, source-build, beta, or compatibility path/);
+  assert.match(terms, /current consumer offer is 10 free exports/);
+  assert.match(terms, /It is not a subscription and does not renew/);
+  assert.match(terms, /never exposing a local loopback API or its port to another machine/);
+  assert.match(terms, /not a medical device, healthcare provider, diagnostic service, treatment, or emergency service/);
+  assert.match(terms, /Cody Bontecou, who operates Health\.md under the isolated\.tech name/);
+  assert.match(terms, /GNU Affero General Public License version 3\.0 only \(AGPL-3\.0-only\)/);
+  assert.match(terms, /website source is distributed under the MIT License/);
+  assert.match(terms, /Nothing in these Terms restricts rights granted by the AGPL/);
+  assert.doesNotMatch(terms, /<style\b|theme\.js|fonts\.googleapis\.com|theme-toggle|grid-bg/);
+
+  const sectionIds = [...terms.matchAll(/<section id="([^"]+)"/g)].map((match) => match[1]);
+  const toc = terms.slice(terms.indexOf('<aside class="legal-toc">'), terms.indexOf('</aside>'));
+  assert.equal(sectionIds.length, 21);
+  for (const id of sectionIds) assert.ok(toc.includes(`href="#${id}"`), id);
 });
 
 test("privacy policy discloses automatic pseudonymous analytics and strict health-data exclusions", () => {
