@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.wrangler/
+coverage/
+playwright-report/
+test-results/
+qualification/generated/
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
