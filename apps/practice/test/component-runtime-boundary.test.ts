@@ -39,7 +39,7 @@ describe("practice component and production-disabled runtime boundary", () => {
     expect(workflow).toContain('plutil -convert json -o "$project_json" apps/apple/HealthMd.xcodeproj/project.pbxproj');
     expect(workflow).toContain('value.get("isa") == "PBXNativeTarget" and value.get("name") == "HealthMd"');
     expect(workflow).toContain('checked_configuration_names = {"Release", "Release-iOS"}');
-    expect(workflow).toContain("if set(releases) != checked_configuration_names:");
+    expect(workflow).toContain("if len(releases) != 2 or {name for name, _ in releases} != checked_configuration_names:");
     expect(workflow).toContain("baseConfigurationReference");
     expect(workflow).toContain("if marker in json.dumps(project, sort_keys=True):");
     expect(workflow).toContain('os.environ.get("XCODE_XCCONFIG_FILE")');

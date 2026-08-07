@@ -1512,7 +1512,7 @@
       },
       "evidenceLayer": "static-policy",
       "declaration": {
-        "normalizedAstSha256": "b17990426a9d5e7a555d5b8df52eb5581f1bfcef4169cc8df71d3de45cea8eb0",
+        "normalizedAstSha256": "c0bc7039fb73ed432423d30980cb2d73c06cbacd7179eb707ec3ec21a4ff8b1d",
         "line": 25
       },
       "assertions": [
@@ -1624,8 +1624,8 @@
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-015",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "e286663e3ac7d4dcfe92dcef8d938d86171dfba1d4bcb563ecddb437c3c5e1fe",
-          "excerpt": "expect(workflow).toContain(\"if set(releases) != checked_configuration_names:\")",
+          "normalizedAstSha256": "1d1cb15bd486836f2b321d4472b0d3ff9ea05461b17830f1afd1c0cf3cb82d76",
+          "excerpt": "expect(workflow).toContain(\"if len(releases) != 2 or {name for name, _ in releases} != checked_configuration_names:\")",
           "line": 42
         },
         {

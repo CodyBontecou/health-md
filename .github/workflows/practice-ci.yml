@@ -149,20 +149,20 @@ jobs:
 
           def release_settings(owner, label):
               configuration_list = objects[owner["buildConfigurationList"]]
-              releases = {
-                  objects[identifier].get("name"): objects[identifier]
+              releases = [
+                  (objects[identifier].get("name"), objects[identifier])
                   for identifier in configuration_list["buildConfigurations"]
                   if objects[identifier].get("name") in checked_configuration_names
-              }
-              if set(releases) != checked_configuration_names:
-                  raise SystemExit(f"Expected exactly Release and Release-iOS for {label}")
-              for name, release in releases.items():
+              ]
+              if len(releases) != 2 or {name for name, _ in releases} != checked_configuration_names:
+                  raise SystemExit(f"Expected exactly one Release and one Release-iOS for {label}")
+              for name, release in releases:
                   if release.get("baseConfigurationReference"):
                       raise SystemExit(f"{label} {name} uses an unchecked base configuration")
               return releases
 
           for label, owner in (("project", root), ("HealthMd target", targets[0])):
-              for name, release in release_settings(owner, label).items():
+              for name, release in release_settings(owner, label):
                   serialized = json.dumps(release.get("buildSettings", {}), sort_keys=True)
                   if marker in serialized:
                       raise SystemExit(f"{label} {name} must fail closed without {marker}")
