@@ -120,19 +120,58 @@ jobs:
               ).isEnabled == false)
           }
           SWIFT
-          settings="$(xcodebuild \
-            -project apps/apple/HealthMd.xcodeproj \
-            -scheme HealthMd \
-            -configuration Release \
-            -sdk iphoneos \
-            -showBuildSettings \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO)"
-          default_swift_flags="$(printf '%s\n' "$settings" | sed -n -e 's/^[[:space:]]*SWIFT_ACTIVE_COMPILATION_CONDITIONS = //p' -e 's/^[[:space:]]*OTHER_SWIFT_FLAGS = //p' | sort -u)"
-          if grep -Eq '(^|[[:space:]])(-D[[:space:]]*)?HEALTHMD_PRACTICE_COMPILED_IN($|[[:space:]])' <<<"$default_swift_flags"; then
-            echo "HealthMd iOS Release project default must fail closed without HEALTHMD_PRACTICE_COMPILED_IN" >&2
-            exit 1
-          fi
+          # Parse the checked-in Release configurations directly so this focused
+          # policy gate does not resolve the app's unrelated Swift packages. The
+          # full Apple workflow owns package/build qualification on its Swift 6.3
+          # self-hosted toolchain.
+          project_json="$RUNNER_TEMP/HealthMd-project.json"
+          plutil -convert json -o "$project_json" apps/apple/HealthMd.xcodeproj/project.pbxproj
+          python3 - "$project_json" <<'PY'
+          import json
+          import os
+          import sys
+
+          marker = "HEALTHMD_PRACTICE_COMPILED_IN"
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              project = json.load(handle)
+          objects = project["objects"]
+          root = objects[project["rootObject"]]
+          targets = [
+              value for value in objects.values()
+              if value.get("isa") == "PBXNativeTarget" and value.get("name") == "HealthMd"
+          ]
+          if len(targets) != 1:
+              raise SystemExit("Expected exactly one HealthMd native target")
+          if marker in json.dumps(project, sort_keys=True):
+              raise SystemExit(f"Checked-in Xcode project must not define {marker}")
+
+          checked_configuration_names = {"Release", "Release-iOS"}
+
+          def release_settings(owner, label):
+              configuration_list = objects[owner["buildConfigurationList"]]
+              releases = {
+                  objects[identifier].get("name"): objects[identifier]
+                  for identifier in configuration_list["buildConfigurations"]
+                  if objects[identifier].get("name") in checked_configuration_names
+              }
+              if set(releases) != checked_configuration_names:
+                  raise SystemExit(f"Expected exactly Release and Release-iOS for {label}")
+              for name, release in releases.items():
+                  if release.get("baseConfigurationReference"):
+                      raise SystemExit(f"{label} {name} uses an unchecked base configuration")
+              return releases
+
+          for label, owner in (("project", root), ("HealthMd target", targets[0])):
+              for name, release in release_settings(owner, label).items():
+                  serialized = json.dumps(release.get("buildSettings", {}), sort_keys=True)
+                  if marker in serialized:
+                      raise SystemExit(f"{label} {name} must fail closed without {marker}")
+          if os.environ.get("XCODE_XCCONFIG_FILE"):
+              raise SystemExit("Hosted environment must not inject XCODE_XCCONFIG_FILE")
+          for variable, value in os.environ.items():
+              if marker in value:
+                  raise SystemExit(f"Hosted environment variable {variable} unexpectedly defines {marker}")
+          PY
 
           policy="apps/apple/HealthMd/Shared/Practice/PracticeFeaturePolicy.swift"
           swiftc "$policy" "$harness" -o "$RUNNER_TEMP/practice-policy-default"

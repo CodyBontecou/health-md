@@ -1512,7 +1512,7 @@
       },
       "evidenceLayer": "static-policy",
       "declaration": {
-        "normalizedAstSha256": "9aabb29f8c32cada835fdf20843c0ae5b2c25bb5ee5a8be450fa88aa60d6b4ae",
+        "normalizedAstSha256": "b17990426a9d5e7a555d5b8df52eb5581f1bfcef4169cc8df71d3de45cea8eb0",
         "line": 25
       },
       "assertions": [
@@ -1573,87 +1573,87 @@
           "line": 34
         },
         {
+          "id": "test-observable-39fca66c5f1593c0-assertion-009",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "19d07be230c0b3a2485115c9cf290ec45e28fab1143fcb99a886f4da108cb225",
+          "excerpt": "expect(workflow).toContain(\"workflow_call:\")",
+          "line": 35
+        },
+        {
           "id": "test-observable-39fca66c5f1593c0-assertion-007",
           "kind": "expect-matcher",
           "normalizedAstSha256": "15c33a7305eb8f261470dba85ed2b375edc9109cd1000fef8a1ddbd624f1e0b2",
           "excerpt": "expect(workflow).not.toContain(\"uses: ./.github/workflows/apple-ci.yml\")",
-          "line": 35
+          "line": 36
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-008",
           "kind": "expect-matcher",
           "normalizedAstSha256": "92d4712ffeed80c967fcb92d9fd30322ceb84d17e0096ef4930942ff499013d3",
           "excerpt": "expect(workflow).not.toContain(\"uses: ./.github/workflows/android-ci.yml\")",
-          "line": 36
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-009",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "624ac4e2f96ee84f543ab88d92a8a89e4c4bd5e71d89cc809b3ef85a7f84211d",
-          "excerpt": "expect(workflow).toContain(\"xcodebuild \\\\\")",
           "line": 37
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-010",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "025b036e7c958c63085953996852260d4173c40155a78156ffc2274b636da0d5",
-          "excerpt": "expect(workflow).toContain(\"-project apps/apple/HealthMd.xcodeproj\")",
+          "normalizedAstSha256": "edce0f87558f6bb79b0b63eb8ec2a520aeee8e15c2060629d0d51cc63b96bb85",
+          "excerpt": "expect(workflow).not.toContain(\"xcodebuild\")",
           "line": 38
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-011",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "26e5306d1e8a80c0aaa03cfc899e7db0ed7aeeca334cfeb29e5afd90c244e89c",
-          "excerpt": "expect(workflow).toContain(\"-scheme HealthMd\")",
+          "normalizedAstSha256": "45328823fa3b79a3375295fd4bf467fe7e739c27aa345b296f5bbd328e29c87c",
+          "excerpt": "expect(workflow).toContain('plutil -convert json -o \"$project_json\" apps/apple/HealthMd.xcodeproj/project.pbxproj')",
           "line": 39
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-012",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "79c354fbc44b5f9e626d825d42edfd24a9ea17e60943127d8b52d3a6c6f9b80a",
-          "excerpt": "expect(workflow).toContain(\"-configuration Release\")",
+          "normalizedAstSha256": "78c32676626aad037ce8bc1fd6edfc8dc8e0bd579936e1ae39cd923e316cf53c",
+          "excerpt": "expect(workflow).toContain('value.get(\"isa\") == \"PBXNativeTarget\" and value.get(\"name\") == \"HealthMd\"')",
           "line": 40
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-013",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "f42b616819624aa020966217653b425b9fcbfbf1a11d97d7b23bc2532fcecb93",
-          "excerpt": "expect(workflow).toContain(\"-sdk iphoneos\")",
+          "normalizedAstSha256": "59a38e3f927a576c8e295021b3d19f2c3be9a20d1a5e288b4b12741f7bd9c576",
+          "excerpt": "expect(workflow).toContain('checked_configuration_names = {\"Release\", \"Release-iOS\"}')",
           "line": 41
-        },
-        {
-          "id": "test-observable-39fca66c5f1593c0-assertion-014",
-          "kind": "expect-matcher",
-          "normalizedAstSha256": "51335752c517d9fb376463c64825274232012dbb128da5dacc8db2b852053124",
-          "excerpt": "expect(workflow).toContain(\"-showBuildSettings\")",
-          "line": 42
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-015",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "32624781f8b5b1db1eca938ceac5343ec5c950e175ec9c4538f65932cde81995",
-          "excerpt": "expect(workflow).toContain(\"SWIFT_ACTIVE_COMPILATION_CONDITIONS\")",
+          "normalizedAstSha256": "e286663e3ac7d4dcfe92dcef8d938d86171dfba1d4bcb563ecddb437c3c5e1fe",
+          "excerpt": "expect(workflow).toContain(\"if set(releases) != checked_configuration_names:\")",
+          "line": 42
+        },
+        {
+          "id": "test-observable-39fca66c5f1593c0-assertion-014",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "eec90d1c29e3a8b8bac3cbf0d5a9f2aed434cc3629b181eb84403ecccbc029c4",
+          "excerpt": "expect(workflow).toContain(\"baseConfigurationReference\")",
           "line": 43
         },
         {
           "id": "test-observable-39fca66c5f1593c0-assertion-016",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "bae9eadec1dcd6dddb77eae2d6eb710c86a8c4907feb836cf9ef895a9b6b1ff1",
-          "excerpt": "expect(workflow).toContain(\"OTHER_SWIFT_FLAGS\")",
+          "normalizedAstSha256": "67d33f7e90041d2fb1cdcb876f697353b7afdfb681f6cf8b6753b2a22e902600",
+          "excerpt": "expect(workflow).toContain(\"if marker in json.dumps(project, sort_keys=True):\")",
           "line": 44
         },
         {
-          "id": "test-observable-39fca66c5f1593c0-assertion-017",
+          "id": "test-observable-39fca66c5f1593c0-assertion-029",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "b511461be315fa6c707b9123ca252493ae5e60090e3ae384f95f9a996049e7c3",
-          "excerpt": "expect(workflow).toContain(\"CODE_SIGNING_ALLOWED=NO\")",
+          "normalizedAstSha256": "6e79093d75dbf9704956fcf8e9ff9190c42013bc4465069313959a5a1bd50325",
+          "excerpt": "expect(workflow).toContain('os.environ.get(\"XCODE_XCCONFIG_FILE\")')",
           "line": 45
         },
         {
-          "id": "test-observable-39fca66c5f1593c0-assertion-018",
+          "id": "test-observable-39fca66c5f1593c0-assertion-030",
           "kind": "expect-matcher",
-          "normalizedAstSha256": "0eacaa3ace9c8df9731e5c7a4fde960d024b883cd6413fe4f2e900c7b189002c",
-          "excerpt": "expect(workflow).not.toMatch(/\\bxcodebuild\\b[^\\n]*\\b(?:build|archive)\\b/)",
+          "normalizedAstSha256": "ccad57bf819ed89cd88dbfc3eb578b936ce9fab307176d5fe52205b4f9558cdc",
+          "excerpt": "expect(workflow).toContain(\"for variable, value in os.environ.items():\")",
           "line": 46
         },
         {
