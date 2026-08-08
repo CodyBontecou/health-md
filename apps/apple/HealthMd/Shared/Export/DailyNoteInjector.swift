@@ -250,22 +250,7 @@ struct DailyNoteInjector {
     }
 
     private static func mergeIntoContent(existing: String, injectionFrontmatter: String) -> String {
-        let lines = existing.components(separatedBy: "\n")
-        var existingFrontmatter = ""
-        var bodyStartIndex = 0
-
-        if let first = lines.first,
-           first.trimmingCharacters(in: .whitespaces) == "---" {
-            for i in 1..<lines.count {
-                if lines[i].trimmingCharacters(in: .whitespaces) == "---" {
-                    existingFrontmatter = lines[0...i].joined(separator: "\n") + "\n"
-                    bodyStartIndex = i + 1
-                    break
-                }
-            }
-        }
-
-        if existingFrontmatter.isEmpty {
+        guard let parts = MarkdownMerger.splitFrontmatter(from: existing) else {
             if existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return injectionFrontmatter
             }
@@ -273,14 +258,9 @@ struct DailyNoteInjector {
         }
 
         let mergedFrontmatter = MarkdownMerger.mergeFrontmatter(
-            existing: existingFrontmatter,
+            existing: parts.frontmatter,
             new: injectionFrontmatter
         )
-
-        let body = lines[bodyStartIndex...].joined(separator: "\n")
-        if body.hasPrefix("\n") || body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return mergedFrontmatter + body
-        }
-        return mergedFrontmatter + "\n" + body
+        return mergedFrontmatter + parts.body
     }
 }

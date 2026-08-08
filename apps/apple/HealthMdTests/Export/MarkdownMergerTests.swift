@@ -445,6 +445,52 @@ final class MarkdownMergerTests: XCTestCase {
         XCTAssertFalse(result.contains("name: \"Old\""), result)
     }
 
+    func testMergeFrontmatter_preservesOneItemListAndUnrelatedPhysicalBlocksExactly() {
+        let existing = "---\ndate: 2026-08-03\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\n---\n"
+        let incoming = "---\ndate: 2026-07-30\nsteps: 2119\n---\n"
+        let expected = "---\ndate: 2026-07-30\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\nsteps: 2119\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatter_replacesCompleteNestedBlockAtItsFirstPosition() {
+        let existing = "---\nmetadata:\n  source: old\n  labels:\n    - stale\nkeep: unchanged\n---\n"
+        let incoming = "---\nmetadata:\n  source: healthmd\n  labels:\n    - first\n    - second\n---\n"
+        let expected = "---\nmetadata:\n  source: healthmd\n  labels:\n    - first\n    - second\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatter_removesCollidingDuplicatesButPreservesUnrelatedDuplicates() {
+        let existing = "---\nsteps: 100\ncustom: first\n# Keep this comment.\nsteps: 200\ncustom: second\n---\n"
+        let incoming = "---\nsteps: 300\n---\n"
+        let expected = "---\nsteps: 300\ncustom: first\n# Keep this comment.\ncustom: second\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatter_preservesCRLFAndUsesItForIncomingBlocks() {
+        let existing = "---\r\ntags:\r\n  - daily-notes\r\ncustom: keep\r\n---\r\n"
+        let incoming = "---\ntags:\n  - healthmd\n  - synced\nsteps: 42\n---\n"
+        let expected = "---\r\ntags:\r\n  - healthmd\r\n  - synced\r\ncustom: keep\r\nsteps: 42\r\n---\r\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergePreservingPreamble_keepsBlockScalarsIndentedDelimiterAndBodyExact() {
+        let frontmatter = "---\nsummary: |-\n  first line\n  ---\n  last line\n\nfolded: >+\n  one folded\n  paragraph\n---\n"
+        let body = "# My Daily Note\n\nUser prose with no final newline"
+        let incoming = "---\nsteps: 42\n---\n"
+        let expectedFrontmatter = "---\nsummary: |-\n  first line\n  ---\n  last line\n\nfolded: >+\n  one folded\n  paragraph\nsteps: 42\n---\n"
+
+        let result = MarkdownMerger.mergePreservingPreamble(
+            existing: frontmatter + body,
+            new: incoming
+        )
+
+        XCTAssertEqual(result, expectedFrontmatter + body)
+    }
+
     func testMerge_preservesUserFrontmatterProperties() {
         let existing = """
         ---
@@ -681,5 +727,162 @@ final class MarkdownMergerTests: XCTestCase {
         
         let result = MarkdownMerger.merge(existing: existing, new: new)
         XCTAssertTrue(result.contains("## Sleep"))
+    }
+
+    func testMergeAddsOnlyRequiredLineBoundaries() {
+        let frontmatterOnly = "---\r\nuser: keep\r\n---"
+        let userProse = "## Notes\nUser prose with no final newline"
+        let appendedSection = "## Sleep\nfresh"
+
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: frontmatterOnly, new: appendedSection),
+            frontmatterOnly + "\r\n" + appendedSection
+        )
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: userProse, new: appendedSection),
+            userProse + "\n" + appendedSection
+        )
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: frontmatterOnly, new: ""),
+            frontmatterOnly
+        )
+        XCTAssertEqual(
+            MarkdownMerger.mergePreservingPreamble(existing: userProse, new: ""),
+            userProse
+        )
+    }
+
+    func testMergeFrontmatterOwnsCommentsAndMultilineFlowContinuations() {
+        let existing = "---\nmetadata:\n  source: old\n# This comment interrupts the nested mapping.\n  labels:\n    - stale\nsteps: [\n  100,\n  200\n]\nkeep: unchanged\n---\n"
+        let incoming = "---\nmetadata: refreshed\nsteps: 300\n---\n"
+        let expected = "---\nmetadata: refreshed\nsteps: 300\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterCanonicalizesQuotedScalarKeys() {
+        let existing = "---\n\"steps\": 100\n'steps': 200\n\"st\\u0065ps\": 250\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 300\n---\n"
+        let expected = "---\nsteps: 300\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterReplacesKeepChompedScalarBlankLines() {
+        let existing = "---\nnotes: |2+\n  old\n\n\nkeep: unchanged\n---\n"
+        let incoming = "---\nnotes: >+2\n  fresh\n\n---\n"
+        let expected = "---\nnotes: >+2\n  fresh\n\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterFailsClosedForUnsupportedComplexKeys() {
+        let existing = "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 300\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
+
+    func testMergeFrontmatterOwnsCompleteIndentationlessSequence() {
+        let existing = "---\nevents: # valid indentationless sequence\n- name: old\n  details:\n    status: stale\n# The sequence resumes after trivia.\n\n- name: second\n  values: [\n    one,\n    two\n  ]\nkeep: unchanged\n---\n"
+        let incoming = "---\nevents: refreshed\n---\n"
+        let expected = "---\nevents: refreshed\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterKeepsIncomingIndentationlessSequenceBoundaries() {
+        let existing = "---\nevents: stale\nkeep: unchanged\n---\n"
+        let incoming = "---\nevents:\n- name: fresh\n  details:\n    status: current\n- values: [\n    one,\n    two\n  ]\nsteps: 42\n---\n"
+        let expected = "---\nevents:\n- name: fresh\n  details:\n    status: current\n- values: [\n    one,\n    two\n  ]\nkeep: unchanged\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterSupportsNodePropertiesOnIndentationlessSequences() {
+        let existing = "---\nevents: &oldEvents !!seq\n- stale\nkeep: unchanged\n---\n"
+        let incoming = "---\nevents: !!seq &freshEvents\n- current\nsteps: 42\n---\n"
+        let expected = "---\nevents: !!seq &freshEvents\n- current\nkeep: unchanged\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterFindsAliasAfterNestedSequenceBlockScalar() {
+        let existing = "---\nmanaged: &defaults old\nkeep:\n- notes: |2\n    *defaults is scalar text\n  alias: *defaults\n---\n"
+        let incoming = "---\nmanaged: fresh\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
+
+    func testMergeFrontmatterFailsClosedForNonSpaceYAMLIndentation() {
+        let existing = "---\nsettings:\n\u{00A0}child: true\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
+
+    func testMergeFrontmatterDoesNotTreatPlainDashesOrRootSequenceAsOwnedSequence() {
+        let validExisting = "---\ndash: -foo\nnegative: -42\nkeep: unchanged\n---\n"
+        let validIncoming = "---\ndash: updated\n---\n"
+        let validExpected = "---\ndash: updated\nnegative: -42\nkeep: unchanged\n---\n"
+        XCTAssertEqual(
+            MarkdownMerger.mergeFrontmatter(existing: validExisting, new: validIncoming),
+            validExpected
+        )
+
+        let ambiguousRootSequence = "---\nowner: nonempty\n- root item\nkeep: unchanged\n---\n"
+        let incoming = "---\nowner: replacement\n---\n"
+        XCTAssertEqual(
+            MarkdownMerger.mergeFrontmatter(existing: ambiguousRootSequence, new: incoming),
+            ambiguousRootSequence
+        )
+    }
+
+    func testMergeFrontmatterFailsClosedWhenPreservedBlockAliasesReplacedAnchor() {
+        let existing = "---\nmanaged:\n  defaults: &defaults\n    unit: count\nkeep:\n  <<: *defaults\n  label: preserved\n---\n"
+        let incoming = "---\nmanaged:\n  unit: milliseconds\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), existing)
+    }
+
+    func testMergeFrontmatterAnchorScanIgnoresCommentsQuotesAndBlockScalarPayload() {
+        let existing = "---\nmanaged: &defaults old\nquoted: \"*defaults and &defaults\"\nsingle: '*defaults'\nliteral: |\n  *defaults\n  &defaults\nfolded: >\n  *defaults\n# *defaults is only a comment.\nkeep: unchanged\n---\n"
+        let incoming = "---\nmanaged: fresh\n---\n"
+        let expected = "---\nmanaged: fresh\nquoted: \"*defaults and &defaults\"\nsingle: '*defaults'\nliteral: |\n  *defaults\n  &defaults\nfolded: >\n  *defaults\n# *defaults is only a comment.\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterUsesNFCForKeyLookupWithoutRewritingPhysicalLines() {
+        let decomposedKey = "cafe\u{301}"
+        let existing = "---\n\(decomposedKey): old\ncafé: duplicate\nkeep: unchanged\n---\n"
+        let incoming = "---\ncafé: first\n\(decomposedKey): final\n---\n"
+        let expected = "---\n\(decomposedKey): final\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterAllowsTabsAfterBlockScalarSpaceIndentation() {
+        let existing = "---\nnotes: |2\n  \tpayload with *literal\nkeep: unchanged\n---\n"
+        let incoming = "---\nsteps: 42\n---\n"
+        let expected = "---\nnotes: |2\n  \tpayload with *literal\nkeep: unchanged\nsteps: 42\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: existing, new: incoming), expected)
+    }
+
+    func testMergeFrontmatterFailsClosedForTabsBeforeRequiredIndentation() {
+        let incoming = "---\nsteps: 42\n---\n"
+        let nestedTab = "---\nsettings:\n\tchild: true\nkeep: unchanged\n---\n"
+        let scalarTab = "---\nnotes: |2\n \tinvalid\nkeep: unchanged\n---\n"
+        let sequenceTab = "---\nitems:\n-\tinvalid\nkeep: unchanged\n---\n"
+        let spacedSequenceTab = "---\nitems:\n- \tinvalid\nkeep: unchanged\n---\n"
+
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: nestedTab, new: incoming), nestedTab)
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: scalarTab, new: incoming), scalarTab)
+        XCTAssertEqual(MarkdownMerger.mergeFrontmatter(existing: sequenceTab, new: incoming), sequenceTab)
+        XCTAssertEqual(
+            MarkdownMerger.mergeFrontmatter(existing: spacedSequenceTab, new: incoming),
+            spacedSequenceTab
+        )
     }
 }
