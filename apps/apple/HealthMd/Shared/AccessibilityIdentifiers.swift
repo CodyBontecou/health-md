@@ -34,6 +34,27 @@ enum AccessibilityID {
         static let statusMessage = "export.statusMessage"
     }
 
+    // MARK: - Clinician Report
+    enum ClinicianReport {
+        static let entry = "clinicianReport.entry"
+        static let displayName = "clinicianReport.displayName"
+        static let customStartDate = "clinicianReport.dateRange.custom.start"
+        static let customEndDate = "clinicianReport.dateRange.custom.end"
+        static let detail = "clinicianReport.detail"
+        static let preview = "clinicianReport.preview"
+        static let previewContent = "clinicianReport.preview.content"
+        static let generate = "clinicianReport.generate"
+        static let share = "clinicianReport.share"
+
+        static func preset(_ preset: ReportDateRangePreset) -> String {
+            "clinicianReport.dateRange.preset.\(preset.rawValue)"
+        }
+
+        static func metric(_ metric: ReportMetric) -> String {
+            "clinicianReport.metric.\(metric.rawValue)"
+        }
+    }
+
     // MARK: - CLI Export Activity
     enum CLI {
         static let exportActivity = "cli.exportActivity"

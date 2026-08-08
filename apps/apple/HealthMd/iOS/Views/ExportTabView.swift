@@ -54,10 +54,12 @@ struct ExportTabView: View {
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
     @State private var showAPIEndpointSettings = false
+    @State private var showClinicianReport = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.locale) private var locale
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
@@ -85,6 +87,7 @@ struct ExportTabView: View {
                     dateRangeSection
                     healthDataSection
                         .id("marketing-export-health-data")
+                    clinicianReportSection
                     formatsSection
                     automationSection
                     formatOptionsSection
@@ -178,6 +181,12 @@ struct ExportTabView: View {
             APIExportSettingsSheet(settings: apiExportSettings)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showClinicianReport) {
+            ClinicianReportView(
+                healthKitManager: healthKitManager,
+                unitPreference: advancedSettings.formatCustomization.unitPreference
+            )
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
@@ -544,6 +553,42 @@ struct ExportTabView: View {
 
                 losslessHealthRecordsInlineRow
             }
+        }
+    }
+
+    private var clinicianReportSection: some View {
+        let copy = ClinicianReportCopy(locale: locale)
+        return sectionCard(title: copy.string(.title)) {
+            Button {
+                showClinicianReport = true
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.accent)
+                        .frame(width: 34, height: 34)
+                        .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        Text(copy.string(.document_title))
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.textPrimary)
+                        Text(copy.string(.entry_subtitle))
+                            .font(.footnote)
+                            .foregroundStyle(Color.textSecondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                    Spacer(minLength: Spacing.xs)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.textMuted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(AccessibilityID.ClinicianReport.entry)
+            .accessibilityLabel(copy.string(.title))
+            .accessibilityHint(copy.string(.accessibility_hint))
         }
     }
 

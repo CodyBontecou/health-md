@@ -258,13 +258,20 @@ class HealthConnectManager(
      * Fetches a multi-day export window with Health Connect range APIs.
      *
      * The goal is to keep 30/90/all-time exports away from the old N days x N categories
-     * call pattern. Aggregatable metrics are read as daily period groups; high-cardinality
-     * records are read once per chunk with pagination and then grouped into [HealthData].
+     * call pattern. Aggregatable metrics are normally read as daily period groups;
+     * high-cardinality records are read once per chunk with pagination and then grouped into
+     * [HealthData]. Health Connect period aggregation accepts local date-times but no [ZoneId].
+     * When [pinnedCalendarDays] is true, report metrics instead come from instant-filtered granular
+     * reads, except steps, which use one deduplicating aggregate over each exact zoned local day.
+     * [zoneId] is captured by the caller so every instant boundary and day grouping in one operation
+     * uses the same timezone even if the device timezone changes mid-read.
      */
     suspend fun fetchHealthDataRange(
         dates: List<LocalDate>,
         selection: DataTypeSelection,
         includeGranularData: Boolean,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        pinnedCalendarDays: Boolean = false,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
 
@@ -272,7 +279,6 @@ class HealthConnectManager(
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
         val sortedDates = requestedDates.sorted()
         val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
-        val zone = ZoneId.systemDefault()
 
         for (chunk in sortedDates.chunked(chunkDays)) {
             val startDate = chunk.first()
@@ -282,48 +288,52 @@ class HealthConnectManager(
                 endExclusive.atStartOfDay(),
             )
             val instantRange = TimeRangeFilter.between(
-                startDate.atStartOfDay(zone).toInstant(),
-                endExclusive.atStartOfDay(zone).toInstant(),
+                startDate.atStartOfDay(zoneId).toInstant(),
+                endExclusive.atStartOfDay(zoneId).toInstant(),
             )
             val chunkDates = chunk.toSet()
 
-            applyActivityAggregates(dataByDate, chunkDates, localRange, selection)
-            applyHeartAggregates(dataByDate, chunkDates, localRange, selection)
-            applyVitalsAggregates(dataByDate, chunkDates, localRange, selection)
-            applyBodyAggregates(dataByDate, chunkDates, localRange, selection)
+            if (pinnedCalendarDays) {
+                applyPinnedStepAggregates(dataByDate, chunkDates, selection, zoneId)
+            } else {
+                applyActivityAggregates(dataByDate, chunkDates, localRange, selection)
+                applyHeartAggregates(dataByDate, chunkDates, localRange, selection)
+                applyVitalsAggregates(dataByDate, chunkDates, localRange, selection)
+                applyBodyAggregates(dataByDate, chunkDates, localRange, selection)
+            }
             applyNutritionAggregates(dataByDate, chunkDates, localRange, selection)
             applyMobilityAggregates(dataByDate, chunkDates, localRange, selection)
 
             if (selection.sleep) {
-                applySleepRange(dataByDate, chunkDates, zone, includeGranularData)
+                applySleepRange(dataByDate, chunkDates, zoneId, includeGranularData)
             }
             if (selection.activity || selection.workouts || selection.heart || selection.mobility) {
-                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zone)
+                applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zoneId)
             }
             if (selection.activity && includeGranularData) {
-                applyStepSamplesRange(dataByDate, chunkDates, instantRange, zone)
-                applyActivityIntensityRange(dataByDate, chunkDates, instantRange, zone)
+                applyStepSamplesRange(dataByDate, chunkDates, instantRange, zoneId)
+                applyActivityIntensityRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.heart) {
-                applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zone)
+                applyHeartRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zoneId)
             }
             if (selection.vitals) {
-                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zone)
+                applyVitalsRangeReads(dataByDate, chunkDates, instantRange, includeGranularData, zoneId)
             }
             if (selection.body) {
-                applyBodyRangeReads(dataByDate, chunkDates, instantRange, zone)
+                applyBodyRangeReads(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.nutrition && includeGranularData) {
-                applyNutritionMealRange(dataByDate, chunkDates, instantRange, zone)
+                applyNutritionMealRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.reproductiveHealth) {
-                applyReproductiveRangeReads(dataByDate, chunkDates, instantRange, zone)
+                applyReproductiveRangeReads(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.mindfulness) {
-                applyMindfulnessRange(dataByDate, chunkDates, instantRange, zone)
+                applyMindfulnessRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.plannedWorkouts) {
-                applyPlannedWorkoutRange(dataByDate, chunkDates, instantRange, zone)
+                applyPlannedWorkoutRange(dataByDate, chunkDates, instantRange, zoneId)
             }
             if (selection.medicalResources) {
                 val medicalResources = fetchMedicalResources()
@@ -334,7 +344,7 @@ class HealthConnectManager(
                 }
             }
             if (selection.mobility) {
-                applyMobilityRangeReads(dataByDate, chunkDates, instantRange, zone)
+                applyMobilityRangeReads(dataByDate, chunkDates, instantRange, zoneId)
             }
         }
 
@@ -513,6 +523,31 @@ class HealthConnectManager(
                         )
                     )
                 }
+            }
+        }
+    }
+
+    private suspend fun applyPinnedStepAggregates(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        selection: DataTypeSelection,
+        zone: ZoneId,
+    ) {
+        if (!selection.activity) return
+
+        for (date in requestedDates.sorted()) {
+            val result = healthConnectClient.aggregate(
+                AggregateRequest(
+                    metrics = setOf(StepsRecord.COUNT_TOTAL),
+                    timeRangeFilter = TimeRangeFilter.between(
+                        date.atStartOfDay(zone).toInstant(),
+                        date.plusDays(1).atStartOfDay(zone).toInstant(),
+                    ),
+                )
+            )
+            val steps = result[StepsRecord.COUNT_TOTAL]?.toInt() ?: continue
+            dataByDate.update(date) { current ->
+                current.copy(activity = current.activity.copy(steps = steps))
             }
         }
     }

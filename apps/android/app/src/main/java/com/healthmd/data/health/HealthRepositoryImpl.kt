@@ -7,6 +7,7 @@ import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.util.runCatchingCancellable
 import java.time.LocalDate
+import java.time.ZoneId
 
 class HealthRepositoryImpl(
     private val providerRegistry: HealthProviderRegistry,
@@ -93,9 +94,17 @@ class HealthRepositoryImpl(
         dates: List<LocalDate>,
         dataTypes: DataTypeSelection,
         includeGranularData: Boolean,
+        zoneId: ZoneId,
+        pinnedCalendarDays: Boolean,
     ): List<HealthData> {
         if (!shouldUseAllConnected()) {
-            return activeProvider().fetchHealthDataRange(dates, dataTypes, includeGranularData)
+            return activeProvider().fetchHealthDataRange(
+                dates,
+                dataTypes,
+                includeGranularData,
+                zoneId,
+                pinnedCalendarDays,
+            )
         }
         if (dates.isEmpty()) return emptyList()
         val attemptedIds = configuredProviderIds()
@@ -105,7 +114,13 @@ class HealthRepositoryImpl(
 
         providers.forEach { provider ->
             runCatchingCancellable {
-                provider.fetchHealthDataRange(dates, dataTypes, includeGranularData)
+                provider.fetchHealthDataRange(
+                    dates,
+                    dataTypes,
+                    includeGranularData,
+                    zoneId,
+                    pinnedCalendarDays,
+                )
             }
                 .onSuccess { records ->
                     records.forEach { record ->

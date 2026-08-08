@@ -245,6 +245,17 @@
                 tools:node="remove" />
         </provider>
 
+        <!-- Narrow read-only URI grant for explicitly shared clinician report PDFs. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.clinician-reports"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/clinician_report_file_paths" />
+        </provider>
+
         <!-- Health Connect declaration -->
         <meta-data
             android:name="health_connect_opt_in"

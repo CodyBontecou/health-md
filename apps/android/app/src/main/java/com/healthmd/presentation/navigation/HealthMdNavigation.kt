@@ -34,6 +34,7 @@ import com.healthmd.data.scheduler.ScheduledExportRecoveryRunStatus
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.paywall.PaywallViewModel
 import com.healthmd.presentation.directcli.DirectCliScreen
+import com.healthmd.presentation.clinicianreport.ClinicianReportScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
@@ -121,6 +122,7 @@ fun HealthMdNavigation(
             SubRoutes.DAILY_NOTE_INJECTION,
             SubRoutes.INDIVIDUAL_TRACKING,
             SubRoutes.ADVANCED_SETTINGS,
+            SubRoutes.CLINICIAN_REPORT,
             SubRoutes.DIRECT_CLI,
         )
     } else {
@@ -181,6 +183,7 @@ fun HealthMdNavigation(
                 ExportScreen(
                     onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
+                    onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
@@ -198,6 +201,9 @@ fun HealthMdNavigation(
             // Sub-screens
             composable(SubRoutes.DIRECT_CLI) {
                 DirectCliScreen(onBack = { navController.popBackStack() })
+            }
+            composable(SubRoutes.CLINICIAN_REPORT) {
+                ClinicianReportScreen(onBack = { navController.popBackStack() })
             }
             composable(SubRoutes.ADVANCED_SETTINGS) {
                 AdvancedSettingsScreen(
