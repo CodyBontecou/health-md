@@ -39,7 +39,9 @@ final class ClinicianReportGeneratorTests: XCTestCase {
         XCTAssertEqual(section.facts.first { $0.label == "Readings" }?.value, "3")
         XCTAssertEqual(section.facts.first { $0.label == "Median" }?.value, "64.0 bpm")
         XCTAssertEqual(section.table?.rows.count, 3)
-        XCTAssertTrue(section.coverageDisclosure?.contains("2 of 30 days") == true)
+        XCTAssertEqual(section.table?.columns, ["Date", "Time", "Value"])
+        XCTAssertEqual(section.availabilitySummary, "Days with data: 2/30")
+        XCTAssertFalse(section.facts.contains { $0.label == "Days with data" })
     }
 
     func testBloodPressureMeansAndPulseIsAbsent() {
@@ -56,6 +58,7 @@ final class ClinicianReportGeneratorTests: XCTestCase {
         let section = ClinicianReportGenerator(locale: Locale(identifier: "en_US")).generate(input).sections[0]
         XCTAssertEqual(section.facts.first { $0.label == "Average" }?.value, "130/85 mmHg")
         XCTAssertFalse(section.table?.columns.contains("Pulse") ?? true)
+        XCTAssertFalse(section.table?.columns.contains("Source") ?? true)
     }
 
     func testUnitConversionsAndLargeReadingTable() {
@@ -88,11 +91,63 @@ final class ClinicianReportGeneratorTests: XCTestCase {
         let range = ReportDateRange(startDate: date(2026, 3, 1), endDate: date(2026, 3, 1))
         let input = ClinicianReportInput(configuration: ReportConfiguration(dateRange: range, selectedMetrics: [.bloodGlucose]), calendar: calendar, generatedAt: date(2026, 3, 2))
         let copy = ClinicianReportCopy(locale: Locale(identifier: "en_US"))
-        XCTAssertEqual(ClinicianReportGenerator(locale: Locale(identifier: "en_US")).generate(input).sections[0].noDataMessage, copy.string(.no_data))
+        let report = ClinicianReportGenerator(locale: Locale(identifier: "en_US")).generate(input)
+        XCTAssertEqual(report.sections[0].noDataMessage, copy.string(.no_data))
+        XCTAssertFalse(report.hasReportableData)
+        XCTAssertEqual(report.noReportableDataMessage, copy.string(.no_reportable_data))
+    }
+
+    func testRecommendedDefaultsAndAvailabilityOverviewStayFocused() {
+        XCTAssertEqual(ReportConfiguration().selectedMetrics, ReportMetric.recommended)
+        XCTAssertFalse(ReportMetric.recommended.contains(.heartRate))
+        XCTAssertFalse(ReportMetric.recommended.contains(.steps))
+        XCTAssertFalse(ReportMetric.recommended.contains(.workouts))
+
+        let range = ReportDateRange(startDate: date(2026, 3, 1), endDate: date(2026, 3, 3))
+        let input = ClinicianReportInput(
+            configuration: ReportConfiguration(dateRange: range, selectedMetrics: [.steps, .weight]),
+            calendar: calendar,
+            generatedAt: date(2026, 3, 4),
+            dailyValues: [.init(metric: .steps, date: range.startDate, value: 1_234)],
+            warnings: ["Some data could not be read.", "Some data could not be read."]
+        )
+        let report = ClinicianReportGenerator(locale: Locale(identifier: "en_US")).generate(input)
+        XCTAssertEqual(report.availableSections.map(\.metric), [.steps])
+        XCTAssertEqual(report.unavailableSections.map(\.metric), [.weight])
+        XCTAssertEqual(report.availabilityOverview, "1 of 2 measurements include data.")
+        XCTAssertEqual(report.unavailableMeasurementsSummary, "No data: Weight")
+        XCTAssertEqual(report.warnings, ["Some data could not be read."])
+        XCTAssertEqual(report.completeness, .partial)
+        XCTAssertFalse(report.timeZoneLabel.contains("_"))
+        XCTAssertEqual(
+            report.practiceLine,
+            ClinicianReportCopy(locale: Locale(identifier: "en_US")).practiceLine
+        )
+    }
+
+    func testRepeatedDailyWarningsCollapseIntoOneAvailabilitySummary() {
+        let copy = ClinicianReportCopy(locale: Locale(identifier: "en_US"))
+        let range = ReportDateRange(startDate: date(2026, 3, 1), endDate: date(2026, 3, 7))
+        let input = ClinicianReportInput(
+            configuration: ReportConfiguration(dateRange: range, selectedMetrics: [.weight]),
+            calendar: calendar,
+            generatedAt: date(2026, 3, 8),
+            warnings: (1...7).map { "Read warning for day \($0)" } + [
+                copy.string(.warning_apple_summary_fallback)
+            ]
+        )
+
+        let report = ClinicianReportGenerator(locale: Locale(identifier: "en_US")).generate(input)
+
+        XCTAssertEqual(report.warnings, [
+            copy.string(.warning_read_failure),
+            copy.string(.warning_apple_summary_fallback)
+        ])
+        XCTAssertEqual(report.completeness, .partial)
     }
 
     func testLocaleIsPinnedAcrossModelVocabularyAndPlaceholderFormatting() {
-        XCTAssertEqual(ClinicianReportCopy.Key.allCases.count, 194)
+        XCTAssertEqual(ClinicianReportCopy.Key.allCases.count, 205)
         let range = ReportDateRange(startDate: date(2026, 3, 1), endDate: date(2026, 3, 3))
         let input = ClinicianReportInput(
             configuration: ReportConfiguration(dateRange: range, selectedMetrics: [.steps]),
@@ -103,14 +158,14 @@ final class ClinicianReportGeneratorTests: XCTestCase {
         let germanCopy = ClinicianReportCopy(locale: Locale(identifier: "de_DE"))
         XCTAssertEqual(germanCopy.format(.coverage, "1", "3", "2"), "Daten für 1 von 3 Tagen verfügbar. Für die verbleibenden 2 Tage waren in Health.md keine Daten verfügbar.")
         let german = ClinicianReportGenerator(locale: Locale(identifier: "de_DE")).generate(input)
-        XCTAssertEqual(german.title, "Gesundheitsübersicht")
+        XCTAssertEqual(german.title, "Bericht für medizinisches Fachpersonal")
         XCTAssertEqual(german.languageTag, "de")
         XCTAssertEqual(german.sections[0].localizedTitle, "Schritte")
-        XCTAssertEqual(german.sections[0].facts.first?.label, "Tage mit Daten")
-        XCTAssertFalse(german.sections[0].coverageDisclosure?.contains("Data available") ?? true)
+        XCTAssertEqual(german.sections[0].availabilitySummary, "Tage mit Daten: 1/3")
+        XCTAssertFalse(german.sections[0].facts.contains { $0.label == "Tage mit Daten" })
 
         let japanese = ClinicianReportGenerator(locale: Locale(identifier: "ja_JP")).generate(input)
-        XCTAssertEqual(japanese.title, "健康サマリー")
+        XCTAssertEqual(japanese.title, "医療従事者向けレポート")
         XCTAssertEqual(japanese.sections[0].localizedTitle, "歩数")
         XCTAssertFalse(japanese.disclaimer.contains("This report summarizes"))
     }
@@ -130,7 +185,7 @@ final class ClinicianReportGeneratorTests: XCTestCase {
         let fallbackReport = ClinicianReportGenerator(locale: Locale(identifier: "ar_SA")).generate(fallbackInput)
         XCTAssertEqual(fallbackReport.languageTag, "en")
         XCTAssertEqual(fallbackReport.paperRegionCode, "SA")
-        XCTAssertEqual(fallbackReport.title, "Health Summary")
+        XCTAssertEqual(fallbackReport.title, "Clinician Report")
 
         let german = ClinicianReportCopy(locale: Locale(identifier: "de_DE"))
         XCTAssertEqual(german.localeIdentifier, "de")

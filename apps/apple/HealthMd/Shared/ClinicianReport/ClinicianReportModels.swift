@@ -1,6 +1,7 @@
 import Foundation
 
-/// Ephemeral report configuration. This is intentionally not Codable or persisted.
+/// Ephemeral report configuration. The view model persists only the selected metric
+/// identifiers independently; dates, detail level, units, and display name remain transient.
 nonisolated struct ReportConfiguration: Equatable {
     var dateRange: ReportDateRange
     var selectedMetrics: Set<ReportMetric>
@@ -10,7 +11,7 @@ nonisolated struct ReportConfiguration: Equatable {
 
     init(
         dateRange: ReportDateRange = .preset(.days30),
-        selectedMetrics: Set<ReportMetric> = Set(ReportMetric.allCases),
+        selectedMetrics: Set<ReportMetric> = ReportMetric.recommended,
         detailLevel: ReportDetailLevel = .summary,
         unitPreference: UnitPreference = .metric,
         displayName: String = ""
@@ -106,7 +107,7 @@ nonisolated struct ReportDateRange: Equatable {
     }
 }
 
-nonisolated enum ReportDetailLevel: String, CaseIterable, Identifiable {
+nonisolated enum ReportDetailLevel: String, CaseIterable, Identifiable, Sendable {
     case summary
     case summaryAndReadings
     var id: String { rawValue }
@@ -126,6 +127,18 @@ nonisolated enum ReportMetric: String, CaseIterable, Identifiable, Hashable, Sen
     case workouts
 
     var id: String { rawValue }
+
+    /// A focused starting point for a clinician-facing summary. Activity and high-volume
+    /// readings remain available, but are opt-in so the default report stays concise.
+    static let recommended: Set<ReportMetric> = [
+        .bloodPressure,
+        .restingHeartRate,
+        .weight,
+        .bloodGlucose,
+        .oxygenSaturation,
+        .respiratoryRate,
+        .bodyTemperature
+    ]
 
     func displayName(using copy: ClinicianReportCopy) -> String {
         switch self {
@@ -248,12 +261,10 @@ nonisolated struct ReportTable: Equatable, Sendable {
 nonisolated struct MetricReportSummary: Equatable, Identifiable, Sendable {
     let metric: ReportMetric
     let facts: [ReportFact]
-    let sources: [String]
-    let coverageDisclosure: String?
+    let availabilitySummary: String
     let noDataMessage: String?
     let table: ReportTable?
     var localizedTitle: String = ""
-    var sourcesDisclosure: String? = nil
     var detailReadingsDescription: String? = nil
     var id: ReportMetric { metric }
 }
@@ -270,7 +281,6 @@ nonisolated struct ClinicianReportData: Equatable, Sendable {
     let generatedLabel: String
     let timeZoneLabel: String
     let sections: [MetricReportSummary]
-    let warnings: [String]
     let completeness: ReportCompleteness
     let disclaimer: String
     let attribution: String
@@ -284,7 +294,25 @@ nonisolated struct ClinicianReportData: Equatable, Sendable {
     var metadataGeneratedLabel: String = ""
     var metadataTimeZoneLabel: String = ""
     var metadataPatientLabel: String = ""
-    var availabilityNoteTitle: String = ""
     var aboutTitle: String = ""
     var pageFooterTemplate: String = ""
+    var warnings: [String] = []
+    var detailLevel: ReportDetailLevel = .summary
+    var availabilityNoteTitle: String = ""
+    var availabilityColumnLabel: String = ""
+    var summaryTableTitle: String = ""
+    var summaryColumnLabel: String = ""
+    var availabilityOverview: String = ""
+    var noReportableDataMessage: String = ""
+    var unavailableMeasurementsSummary: String? = nil
+
+    var availableSections: [MetricReportSummary] {
+        sections.filter { $0.noDataMessage == nil }
+    }
+
+    var unavailableSections: [MetricReportSummary] {
+        sections.filter { $0.noDataMessage != nil }
+    }
+
+    var hasReportableData: Bool { !availableSections.isEmpty }
 }

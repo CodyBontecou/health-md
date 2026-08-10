@@ -23,10 +23,14 @@ nonisolated enum ClinicianReportPageSize: CaseIterable, Equatable, Sendable {
 }
 
 nonisolated struct ClinicianReportPDFRenderer: Sendable {
+    typealias ProgressHandler = @Sendable (_ progress: Double) -> Void
+
     func pdfData(
         report: ClinicianReportData,
-        pageSize: ClinicianReportPageSize = .forLocale()
+        pageSize: ClinicianReportPageSize = .forLocale(),
+        progress: ProgressHandler = { _ in }
     ) -> Data {
+        progress(0)
         let bounds = CGRect(origin: .zero, size: pageSize.size)
         let format = UIGraphicsPDFRendererFormat()
         format.documentInfo = [
@@ -39,51 +43,125 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
         let renderer = UIGraphicsPDFRenderer(bounds: bounds, format: format)
         return renderer.pdfData { context in
             if let metadata = xmpMetadata(for: report) {
-                CGPDFContextAddDocumentMetadata(context.cgContext, metadata as CFData)
+                context.cgContext.addDocumentMetadata(metadata as CFData)
             }
-            let layout = Layout(context: context, bounds: bounds, pageFooterTemplate: report.pageFooterTemplate)
+            let continuationSubtitle = [
+                report.displayName,
+                "\(report.metadataPeriodLabel): \(report.dateRangeLabel)"
+            ]
+            .compactMap { $0 }
+            .joined(separator: " • ")
+            let layout = Layout(
+                context: context,
+                bounds: bounds,
+                pageFooterTemplate: report.pageFooterTemplate,
+                continuationTitle: report.title,
+                continuationSubtitle: continuationSubtitle
+            )
             layout.startPage()
-            let documentProperties = [
-                kCGPDFTagPropertyLanguageText: report.languageTag,
-                kCGPDFTagPropertyTitleText: report.title
-            ] as CFDictionary
-            context.cgContext.beginTag(.document, properties: documentProperties)
-            defer { context.cgContext.endTag() }
+            layout.document(language: report.languageTag, title: report.title) {
+            progress(0.05)
 
-            layout.title(report.title)
-            layout.group {
-                layout.metadata(label: report.metadataPeriodLabel, value: report.dateRangeLabel)
-                layout.metadata(label: report.metadataGeneratedLabel, value: report.generatedLabel)
-                layout.metadata(label: report.metadataTimeZoneLabel, value: report.timeZoneLabel)
-                if let displayName = report.displayName {
-                    layout.metadata(label: report.metadataPatientLabel, value: displayName)
-                }
+        layout.title(report.title)
+        layout.group {
+            layout.metadata(label: report.metadataPeriodLabel, value: report.dateRangeLabel)
+            layout.metadata(label: report.metadataGeneratedLabel, value: report.generatedLabel)
+            layout.metadata(label: report.metadataTimeZoneLabel, value: report.timeZoneLabel)
+            if let displayName = report.displayName {
+                layout.metadata(label: report.metadataPatientLabel, value: displayName)
             }
-            if !report.warnings.isEmpty {
-                layout.group {
-                    layout.section(report.availabilityNoteTitle)
-                    report.warnings.forEach(layout.paragraph)
-                }
-            }
-            for section in report.sections {
-                if Task.isCancelled { break }
-                layout.group {
-                    layout.section(section.localizedTitle)
-                    if let noData = section.noDataMessage { layout.paragraph(noData) }
-                    for fact in section.facts { layout.fact(label: fact.label, value: fact.value) }
-                    if let coverage = section.coverageDisclosure { layout.paragraph(coverage) }
-                    if let sources = section.sourcesDisclosure { layout.paragraph(sources) }
-                    if let table = section.table { layout.table(table) }
-                }
-            }
-            layout.group {
-                layout.section(report.aboutTitle)
-                layout.paragraph(report.disclaimer)
-                layout.paragraph(report.attribution)
-                if let practiceLine = report.practiceLine { layout.smallParagraph(practiceLine) }
-            }
-            layout.finish()
         }
+        progress(0.10)
+        let availableSections = report.availableSections
+        let availabilityMessages = report.warnings + [report.unavailableMeasurementsSummary].compactMap { $0 }
+        if !availabilityMessages.isEmpty {
+            layout.group {
+                layout.section(report.availabilityNoteTitle)
+                availabilityMessages.forEach(layout.paragraph)
+            }
+        }
+
+        if availableSections.isEmpty {
+            layout.group {
+                layout.section(report.summaryTableTitle)
+                layout.paragraph(report.noReportableDataMessage)
+            }
+        } else {
+            let summaryRows = availableSections.map { section in
+                [
+                    section.localizedTitle,
+                    coverageValue(section.availabilitySummary),
+                    conciseSummary(section)
+                ]
+            }
+            layout.group {
+                layout.table(ReportTable(
+                    title: report.summaryTableTitle,
+                    columns: [
+                        report.summaryTableTitle,
+                        report.availabilityColumnLabel,
+                        report.summaryColumnLabel
+                    ],
+                    rows: summaryRows
+                ))
+            }
+        }
+        progress(0.25)
+
+        let detailedSections = availableSections.filter { $0.table != nil }
+        let sectionWorkUnits = detailedSections.map { max($0.table?.rows.count ?? 0, 1) }
+        let totalSectionWorkUnits = max(sectionWorkUnits.reduce(0, +), 1)
+        var completedSectionWorkUnits = 0
+        for (index, section) in detailedSections.enumerated() {
+            if Task.isCancelled { break }
+            let currentSectionWorkUnits = sectionWorkUnits[index]
+            layout.group {
+                layout.section(
+                    section.localizedTitle,
+                    detail: section.availabilitySummary,
+                    keepWith: section.facts,
+                    or: nil
+                )
+                if let table = section.table {
+                    layout.table(table) { completedRows, totalRows in
+                        let rowFraction = totalRows > 0
+                            ? Double(completedRows) / Double(totalRows)
+                            : 1
+                        let completedWork = Double(completedSectionWorkUnits)
+                            + (Double(currentSectionWorkUnits) * rowFraction)
+                        progress(0.25 + (0.65 * completedWork / Double(totalSectionWorkUnits)))
+                    }
+                }
+            }
+            completedSectionWorkUnits += currentSectionWorkUnits
+            progress(0.25 + (0.65 * Double(completedSectionWorkUnits) / Double(totalSectionWorkUnits)))
+        }
+        if detailedSections.isEmpty { progress(0.90) }
+        layout.aboutSection(
+            title: report.aboutTitle,
+            disclaimer: report.disclaimer,
+            attribution: report.attribution,
+            practiceLine: report.practiceLine
+        )
+        progress(0.95)
+        layout.finish()
+            }
+        progress(1)
+        }
+    }
+
+    private func coverageValue(_ availabilitySummary: String) -> String {
+        availabilitySummary
+            .split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
+            .last
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            ?? availabilitySummary
+    }
+
+    private func conciseSummary(_ section: MetricReportSummary) -> String {
+        let facts = section.facts.suffix(2)
+        guard !facts.isEmpty else { return section.availabilitySummary }
+        return facts.map { "\($0.label): \($0.value)" }.joined(separator: "; ")
     }
 
     func renderArtifact(
@@ -92,8 +170,10 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
         endDate: Date,
         calendar: Calendar,
         pageSize: ClinicianReportPageSize = .forLocale(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        progress: ProgressHandler = { _ in }
     ) throws -> ExportArtifactFile {
+        progress(0)
         try Task.checkCancellation()
         let root = fileManager.temporaryDirectory.appendingPathComponent("clinician-reports", isDirectory: true)
         let ownerDirectory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -102,15 +182,19 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
         try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: ownerDirectory.path)
         let filename = "\(filenameComponent(report.title))_\(isoDate(startDate, calendar: calendar))_\(isoDate(endDate, calendar: calendar)).pdf"
         let url = ownerDirectory.appendingPathComponent(filename, isDirectory: false)
-        let data = pdfData(report: report, pageSize: pageSize)
+        let data = pdfData(report: report, pageSize: pageSize) { pdfProgress in
+            progress(pdfProgress * 0.90)
+        }
         do {
             try Task.checkCancellation()
             guard fileManager.createFile(atPath: url.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
                 throw CocoaError(.fileWriteUnknown)
             }
             try fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+            progress(0.95)
             try Task.checkCancellation()
             let sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            progress(1)
             return ExportArtifactFile(
                 descriptor: ExportArtifactDescriptor(byteCount: UInt64(data.count), sha256: sha256, mediaType: "application/pdf"),
                 lease: RestrictedArtifactFileLease(url: url, removesParentDirectoryIfEmpty: true)
@@ -176,6 +260,8 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
         private let context: UIGraphicsPDFRendererContext
         private let bounds: CGRect
         private let pageFooterTemplate: String
+        private let continuationTitle: String
+        private let continuationSubtitle: String
         private let margin: CGFloat = 44
         private let footerHeight: CGFloat = 42
         private let titleFont = UIFont.systemFont(ofSize: 22, weight: .semibold)
@@ -192,6 +278,8 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
         private struct SemanticTag {
             let type: CGPDFTagType
             let actualText: String?
+            let languageText: String?
+            let titleText: String?
         }
 
         private var y: CGFloat = 44
@@ -202,10 +290,18 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
         /// the new page, so no marked-content sequence crosses a page boundary.
         private var activeSemanticTags: [SemanticTag] = []
 
-        init(context: UIGraphicsPDFRendererContext, bounds: CGRect, pageFooterTemplate: String) {
+        init(
+            context: UIGraphicsPDFRendererContext,
+            bounds: CGRect,
+            pageFooterTemplate: String,
+            continuationTitle: String,
+            continuationSubtitle: String
+        ) {
             self.context = context
             self.bounds = bounds
             self.pageFooterTemplate = pageFooterTemplate
+            self.continuationTitle = continuationTitle
+            self.continuationSubtitle = continuationSubtitle
         }
 
         private var contentWidth: CGFloat { bounds.width - margin * 2 }
@@ -215,21 +311,61 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
             tagged(.section, body: body)
         }
 
+        func document(language: String, title: String, body: () -> Void) {
+            tagged(.document, languageText: language, titleText: title, body: body)
+        }
+
+        func aboutSection(
+            title: String,
+            disclaimer: String,
+            attribution: String,
+            practiceLine: String?
+        ) {
+            let sectionHeight: CGFloat = 42
+            let requiredHeight = sectionHeight
+                + paragraphHeight(disclaimer, font: bodyFont)
+                + paragraphHeight(attribution, font: bodyFont)
+                + (practiceLine.map { paragraphHeight($0, font: bodyFont) } ?? 0)
+            let pageContentHeight = contentBottom - margin
+            ensure(min(requiredHeight, pageContentHeight))
+            if requiredHeight <= pageContentHeight {
+                y = contentBottom - requiredHeight
+            }
+
+            group {
+                section(title)
+                paragraph(disclaimer)
+                paragraph(attribution)
+                if let practiceLine { paragraph(practiceLine) }
+            }
+        }
+
         func startPage() {
             let isContinuation = hasPage
+            let hasDocumentRoot = activeSemanticTags.first?.type == .document
             if isContinuation {
-                suspendSemanticTags()
+                suspendSemanticTags(excludingDocumentRoot: hasDocumentRoot)
                 footer()
+                if hasDocumentRoot { CGPDFContextEndTag(context.cgContext) }
             }
             context.beginPage()
             page += 1
             hasPage = true
             y = margin
-            if isContinuation { resumeSemanticTags() }
+            if isContinuation {
+                if hasDocumentRoot, let documentRoot = activeSemanticTags.first {
+                    beginTag(documentRoot)
+                }
+                continuationHeader()
+                resumeSemanticTags(excludingDocumentRoot: hasDocumentRoot)
+            }
         }
 
         func finish() {
-            precondition(activeSemanticTags.isEmpty, "PDF layout finished with unbalanced semantic tags")
+            precondition(
+                activeSemanticTags.count == 1 && activeSemanticTags.first?.type == .document,
+                "PDF layout finished outside its document tag"
+            )
             if hasPage { footer() }
         }
 
@@ -257,19 +393,41 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
             y += max(14, valueHeight)
         }
 
-        func section(_ text: String) {
-            ensure(42)
-            y += 14
-            tagged(.header2, actualText: text) {
-                draw(text, rect: CGRect(x: margin, y: y, width: contentWidth, height: 18), font: headingFont, color: accent)
-                line(at: y + 21)
+        func section(
+            _ text: String,
+            detail: String? = nil,
+            keepWith facts: [ReportFact] = [],
+            or paragraph: String? = nil
+        ) {
+            let sectionHeight: CGFloat = detail == nil ? 42 : 54
+            let firstFactsHeight = facts.prefix(2).reduce(CGFloat.zero) { partial, fact in
+                partial + factRowHeight(label: fact.label, value: fact.value) + 2
             }
-            y += 28
+            let allFactsHeight = facts.reduce(CGFloat.zero) { partial, fact in
+                partial + factRowHeight(label: fact.label, value: fact.value) + 2
+            }
+            let paragraphHeight = paragraph.map {
+                min(height($0, width: contentWidth, font: bodyFont) + 4, bodyFont.lineHeight * 3 + 4)
+            } ?? 0
+            let pageContentHeight = contentBottom - margin
+            let factsToKeep = sectionHeight + allFactsHeight <= pageContentHeight
+                ? allFactsHeight
+                : firstFactsHeight
+            ensure(sectionHeight + max(factsToKeep, paragraphHeight))
+            y += 14
+            tagged(.header2, actualText: [text, detail].compactMap { $0 }.joined(separator: ", ")) {
+                draw(text, rect: CGRect(x: margin, y: y, width: contentWidth, height: 18), font: headingFont, color: accent)
+                if let detail {
+                    draw(detail, rect: CGRect(x: margin, y: y + 17, width: contentWidth, height: 13), font: mutedFont, color: muted)
+                }
+                line(at: y + sectionHeight - 21)
+            }
+            y += sectionHeight - 14
         }
 
         func fact(label: String, value: String) {
             let labelWidth: CGFloat = 120
-            let rowHeight = max(14, height(value, width: contentWidth - labelWidth, font: bodyFont))
+            let rowHeight = factRowHeight(label: label, value: value)
             guard rowHeight <= contentBottom - margin else {
                 paragraph("\(label): \(value)", font: bodyFont, color: ink)
                 return
@@ -280,6 +438,17 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
                 draw(value, rect: CGRect(x: margin + labelWidth, y: y, width: contentWidth - labelWidth, height: rowHeight), font: bodyFont, color: ink)
             }
             y += rowHeight + 2
+        }
+
+        private func factRowHeight(label: String, value: String) -> CGFloat {
+            let labelWidth: CGFloat = 120
+            let labelHeight = height(label, width: labelWidth - 6, font: bodyMediumFont)
+            let valueHeight = height(value, width: contentWidth - labelWidth, font: bodyFont)
+            return max(14, max(labelHeight, valueHeight))
+        }
+
+        private func paragraphHeight(_ text: String, font: UIFont) -> CGFloat {
+            text.isEmpty ? 4 : height(text, width: contentWidth, font: font) + 4
         }
 
         func paragraph(_ text: String) { paragraph(text, font: bodyFont, color: ink) }
@@ -333,8 +502,14 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
             y += 4
         }
 
-        func table(_ table: ReportTable) {
+        func table(
+            _ table: ReportTable,
+            progress: (_ completedRows: Int, _ totalRows: Int) -> Void = { _, _ in }
+        ) {
             let count = max(1, table.columns.count)
+            let totalRows = table.rows.count
+            let progressInterval = max(totalRows / 100, 1)
+            progress(0, totalRows)
             let columnWidth = contentWidth / CGFloat(count)
             let maximumRowHeight = contentBottom - margin - 19
             func naturalRowHeight(_ row: [String]) -> CGFloat {
@@ -353,8 +528,14 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
             y += 21
             tagged(.table) {
                 tableHeader(table.columns)
-                for row in table.rows {
+                for (index, row) in table.rows.enumerated() {
                     if Task.isCancelled { return }
+                    defer {
+                        let completedRows = index + 1
+                        if completedRows == totalRows || completedRows.isMultiple(of: progressInterval) {
+                            progress(completedRows, totalRows)
+                        }
+                    }
                     let naturalHeight = naturalRowHeight(row)
                     if naturalHeight > maximumRowHeight {
                         tagged(.tableRow) {
@@ -414,7 +595,7 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
             // startPage() has suspended every child semantic tag, so this running content is
             // always a direct child of Document rather than a child of a section or table.
             // Core Graphics exposes NonStruct rather than a public Artifact authoring API.
-            beginTag(SemanticTag(type: .nonStructure, actualText: ""))
+            beginTag(SemanticTag(type: .nonStructure, actualText: "", languageText: nil, titleText: nil))
             divider.setStroke()
             let path = UIBezierPath()
             path.move(to: CGPoint(x: margin, y: bounds.height - 38))
@@ -423,7 +604,28 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
             path.stroke()
             let text = pageFooterTemplate.replacingOccurrences(of: "%1$d", with: "\(page)")
             draw(text, rect: CGRect(x: margin, y: bounds.height - 32, width: contentWidth, height: 14), font: mutedFont, color: muted)
-            context.cgContext.endTag()
+            CGPDFContextEndTag(context.cgContext)
+        }
+
+        private func continuationHeader() {
+            beginTag(SemanticTag(type: .nonStructure, actualText: "", languageText: nil, titleText: nil))
+            draw(
+                continuationTitle,
+                rect: CGRect(x: margin, y: y, width: contentWidth, height: 14),
+                font: bodyMediumFont,
+                color: ink,
+                lineBreak: .byTruncatingTail
+            )
+            draw(
+                continuationSubtitle,
+                rect: CGRect(x: margin, y: y + 14, width: contentWidth, height: 13),
+                font: mutedFont,
+                color: muted,
+                lineBreak: .byTruncatingTail
+            )
+            line(at: y + 31)
+            CGPDFContextEndTag(context.cgContext)
+            y += 39
         }
 
         private func line(at lineY: CGFloat? = nil) {
@@ -441,32 +643,45 @@ nonisolated struct ClinicianReportPDFRenderer: Sendable {
         private func tagged(
             _ tag: CGPDFTagType,
             actualText: String? = nil,
+            languageText: String? = nil,
+            titleText: String? = nil,
             body: () -> Void
         ) {
-            let descriptor = SemanticTag(type: tag, actualText: actualText)
+            let descriptor = SemanticTag(
+                type: tag,
+                actualText: actualText,
+                languageText: languageText,
+                titleText: titleText
+            )
             activeSemanticTags.append(descriptor)
             beginTag(descriptor)
             body()
-            context.cgContext.endTag()
+            CGPDFContextEndTag(context.cgContext)
             activeSemanticTags.removeLast()
         }
 
         private func beginTag(_ descriptor: SemanticTag) {
-            let properties: CFDictionary?
+            var properties: [CGPDFTagProperty: String] = [:]
             if let actualText = descriptor.actualText {
-                properties = [kCGPDFTagPropertyActualText: actualText] as CFDictionary
-            } else {
-                properties = nil
+                properties[.actualText] = actualText
             }
-            context.cgContext.beginTag(descriptor.type, properties: properties)
+            if let languageText = descriptor.languageText {
+                properties[.languageText] = languageText
+            }
+            if let titleText = descriptor.titleText {
+                properties[.titleText] = titleText
+            }
+            CGPDFContextBeginTag(context.cgContext, descriptor.type, properties as CFDictionary)
         }
 
-        private func suspendSemanticTags() {
-            for _ in activeSemanticTags.reversed() { context.cgContext.endTag() }
+        private func suspendSemanticTags(excludingDocumentRoot: Bool) {
+            let tags = excludingDocumentRoot ? activeSemanticTags.dropFirst() : activeSemanticTags[...]
+            for _ in tags.reversed() { CGPDFContextEndTag(context.cgContext) }
         }
 
-        private func resumeSemanticTags() {
-            for descriptor in activeSemanticTags { beginTag(descriptor) }
+        private func resumeSemanticTags(excludingDocumentRoot: Bool) {
+            let tags = excludingDocumentRoot ? activeSemanticTags.dropFirst() : activeSemanticTags[...]
+            for descriptor in tags { beginTag(descriptor) }
         }
 
         private func height(_ text: String, width: CGFloat, font: UIFont) -> CGFloat {

@@ -52,7 +52,9 @@ nonisolated struct AppleClinicianReportSourceAdapter {
             values.warnings.append(copy.format(.warning_apple_read_failure_date, isoDate(day, calendar: calendar)))
         }
 
-        addCompatibilitySamples(healthData, configuration: configuration, copy: copy, canonicalMetrics: &values.canonicalMetrics, into: &values)
+        var canonicalMetrics = values.canonicalMetrics
+        addCompatibilitySamples(healthData, configuration: configuration, copy: copy, canonicalMetrics: &canonicalMetrics, into: &values)
+        values.canonicalMetrics = canonicalMetrics
         addFallbacks(healthData, day: day, configuration: configuration, canonicalMetrics: values.canonicalMetrics, into: &values)
 
         if configuration.selectedMetrics.contains(.sleepDuration), healthData.sleep.totalDuration > 0 {
@@ -104,9 +106,7 @@ nonisolated struct AppleClinicianReportSourceAdapter {
                   selected.contains(metric) else { continue }
             values.canonicalMetrics.insert(metric)
             let provenance = source(record, copy: copy)
-            let normalizedValue = metric == .oxygenSaturation && payload.unit == "%"
-                ? payload.value / 100
-                : payload.value
+            let normalizedValue = normalizedValue(payload.value, for: metric)
             if metric == .weight || metric == .restingHeartRate {
                 let candidate = DailyReportValue(
                     metric: metric,
@@ -156,6 +156,14 @@ nonisolated struct AppleClinicianReportSourceAdapter {
                 source: source(correlation, copy: copy)
             ))
         }
+    }
+
+    /// HealthKit's percent unit stores oxygen saturation as a fraction (`0.96` = 96%).
+    /// Older compatibility fixtures may contain whole-percent values, so normalize only
+    /// values above 1 instead of dividing every canonical `%` payload a second time.
+    private func normalizedValue(_ value: Double, for metric: ReportMetric) -> Double {
+        guard metric == .oxygenSaturation, value > 1 else { return value }
+        return value / 100
     }
 
     private func addCompatibilitySamples(

@@ -21,7 +21,7 @@ APPLE_LOCALES = {
     "zh-Hans",
 }
 PLACEHOLDER = re.compile(r"%\d+\$[sd]")
-EXPECTED_KEY_COUNT = 194
+EXPECTED_KEY_COUNT = 205
 LEGACY_UNREVIEWED_KEYS = {
     "%lld individual readings will be included in the PDF.",
     "Blood Glucose",

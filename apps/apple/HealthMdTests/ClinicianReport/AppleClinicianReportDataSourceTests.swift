@@ -79,7 +79,7 @@ final class AppleClinicianReportDataSourceTests: XCTestCase {
             startDate: day,
             endDate: day,
             sourceRevision: revision,
-            payload: .quantity(.init(value: 96, unit: "%"))
+            payload: .quantity(.init(value: 0.96, unit: "%"))
         )
         let firstWeight = HealthKitRecord(
             originalUUID: UUID(),
@@ -124,7 +124,7 @@ final class AppleClinicianReportDataSourceTests: XCTestCase {
         XCTAssertEqual(weights[0].value, 79)
         let report = ClinicianReportGenerator(locale: Locale(identifier: "en_US")).generate(input)
         XCTAssertEqual(report.sections.first { $0.metric == .oxygenSaturation }?.facts.first { $0.label == "Median" }?.value, "96.0 %")
-        XCTAssertEqual(report.sections.first { $0.metric == .weight }?.facts.first { $0.label == "Days with data" }?.value, "1")
+        XCTAssertEqual(report.sections.first { $0.metric == .weight }?.availabilitySummary, "Days with data: 1/1")
     }
 
     func testWorkoutAdapterPreservesNormalizedTypeForPinnedLocalization() async throws {
@@ -176,6 +176,31 @@ final class AppleClinicianReportDataSourceTests: XCTestCase {
         let input = try await source.load(configuration: ReportConfiguration(dateRange: .init(startDate: first, endDate: second), selectedMetrics: [.steps]), timeZone: calendar.timeZone)
         XCTAssertEqual(input.dailyValues.map(\.value), [1234])
         XCTAssertEqual(input.warnings.count, 1)
+    }
+
+    func testLoadReportsProgressForEveryRequestedDayIncludingFailures() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let first = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
+        let last = calendar.date(byAdding: .day, value: 2, to: first)!
+        var fetchedDay = 0
+        let source = AppleClinicianReportDataSource(fetch: { date, _, _ in
+            fetchedDay += 1
+            if fetchedDay == 2 { throw CocoaError(.fileReadNoPermission) }
+            return HealthData(date: date, healthKitRecordCaptureStatus: .complete)
+        }, now: { last })
+        var updates: [String] = []
+
+        _ = try await source.load(
+            configuration: ReportConfiguration(
+                dateRange: .init(startDate: first, endDate: last),
+                selectedMetrics: [.steps]
+            ),
+            timeZone: calendar.timeZone,
+            progress: { completed, total in updates.append("\(completed)/\(total)") }
+        )
+
+        XCTAssertEqual(updates, ["0/3", "1/3", "2/3", "3/3"])
     }
 
     private var revision: HealthKitSourceRevision {

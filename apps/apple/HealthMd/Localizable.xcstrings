@@ -49352,61 +49352,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Berichtsvorschau"
+            "value": "Bericht erstellen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Preview Report"
+            "value": "Generate Report"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Previsualizar informe"
+            "value": "Generar informe"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Prévisualiser le rapport"
+            "value": "Générer le rapport"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anteprima report"
+            "value": "Genera report"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "レポートをプレビュー"
+            "value": "レポートを作成"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "보고서 미리 보기"
+            "value": "보고서 생성"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rapport bekijken"
+            "value": "Rapport genereren"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Visualizar relatório"
+            "value": "Gerar relatório"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "预览报告"
+            "value": "生成报告"
           }
         }
       }
@@ -51134,61 +51134,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Für Gesundheitseinrichtungen, die vor Terminen von Patientinnen und Patienten erstellte Berichte erhalten möchten: %1$s"
+            "value": "Mehr erfahren unter %1$s"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "For healthcare practices interested in receiving patient-generated reports before visits: %1$s"
+            "value": "Learn more at %1$s"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Para centros sanitarios interesados en recibir informes generados por pacientes antes de las consultas: %1$s"
+            "value": "Más información en %1$s"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pour les établissements de santé souhaitant recevoir des rapports générés par les patients avant les consultations : %1$s"
+            "value": "En savoir plus sur %1$s"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Per le strutture sanitarie interessate a ricevere report generati dai pazienti prima delle visite: %1$s"
+            "value": "Scopri di più su %1$s"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "受診前に患者が作成したレポートの受領を希望する医療機関：%1$s"
+            "value": "詳しくは %1$s をご覧ください"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "진료 전에 환자가 생성한 보고서를 받는 데 관심이 있는 의료 기관: %1$s"
+            "value": "자세한 내용은 %1$s에서 확인하세요"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Voor zorgpraktijken die vóór afspraken door patiënten gegenereerde rapporten willen ontvangen: %1$s"
+            "value": "Meer informatie op %1$s"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Para instituições de saúde interessadas em receber relatórios gerados por pacientes antes das consultas: %1$s"
+            "value": "Saiba mais em %1$s"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "有意在就诊前接收患者生成报告的医疗机构：%1$s"
+            "value": "了解更多：%1$s"
           }
         }
       }
@@ -55160,61 +55160,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gesundheitsübersicht gespeichert"
+            "value": "Klinikerbericht exportiert"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Health Summary saved"
+            "value": "Clinician Report exported"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resumen de salud guardado"
+            "value": "Informe clínico exportado"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Résumé de santé enregistré"
+            "value": "Rapport clinique exporté"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riepilogo sanitario salvato"
+            "value": "Report clinico esportato"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "健康サマリーを保存しました"
+            "value": "臨床医向けレポートを書き出しました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "건강 요약이 저장됨"
+            "value": "의료진용 보고서를 내보냄"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gezondheidsoverzicht opgeslagen"
+            "value": "Artsenrapport geëxporteerd"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resumo de saúde salvo"
+            "value": "Relatório clínico exportado"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "健康摘要已保存"
+            "value": "临床医生报告已导出"
           }
         }
       }
@@ -55415,6 +55415,182 @@
             "value": "在此设备上创建私密的健康摘要 PDF"
           }
         }
+      }
+    },
+    "clinician_report_recommended": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Empfohlen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Recommended" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Recomendado" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Recommandé" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Consigliato" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "推奨" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "권장" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Aanbevolen" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Recomendado" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "推荐" } }
+      }
+    },
+    "clinician_report_select_all": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Alle auswählen" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Select All" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Seleccionar todo" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Tout sélectionner" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Seleziona tutto" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "すべて選択" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "모두 선택" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Alles selecteren" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Selecionar tudo" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全选" } }
+      }
+    },
+    "clinician_report_clear": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Auswahl aufheben" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Clear Selection" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Borrar selección" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Effacer la sélection" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Cancella selezione" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "選択を解除" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "선택 해제" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Selectie wissen" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Limpar seleção" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "清除选择" } }
+      }
+    },
+    "clinician_report_selected_count": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "%1$d von %2$d ausgewählt" } },
+        "en": { "stringUnit": { "state": "translated", "value": "%1$d of %2$d selected" } },
+        "es": { "stringUnit": { "state": "translated", "value": "%1$d de %2$d seleccionadas" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "%1$d sur %2$d sélectionnées" } },
+        "it": { "stringUnit": { "state": "translated", "value": "%1$d di %2$d selezionate" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "%1$d/%2$d件を選択" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%1$d/%2$d개 선택됨" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "%1$d van %2$d geselecteerd" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "%1$d de %2$d selecionadas" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已选择 %1$d/%2$d" } }
+      }
+    },
+    "clinician_report_summary_description": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Kernwerte und Datenabdeckung." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Key facts and data coverage." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Datos clave y cobertura de datos." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Données clés et couverture des données." } },
+        "it": { "stringUnit": { "state": "translated", "value": "Dati principali e copertura dei dati." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "主な数値とデータの取得状況。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "주요 정보 및 데이터 제공 범위." } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Kerngegevens en gegevensdekking." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Dados principais e cobertura dos dados." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "关键数据和数据覆盖情况。" } }
+      }
+    },
+    "clinician_report_readings_description": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Kernwerte, Datenabdeckung und einzelne Messwerte." } },
+        "en": { "stringUnit": { "state": "translated", "value": "Key facts, data coverage, and individual readings." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Datos clave, cobertura de datos y lecturas individuales." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Données clés, couverture des données et mesures individuelles." } },
+        "it": { "stringUnit": { "state": "translated", "value": "Dati principali, copertura dei dati e singole letture." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "主な数値、データの取得状況、個別の測定値。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "주요 정보, 데이터 제공 범위 및 개별 측정값." } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Kerngegevens, gegevensdekking en afzonderlijke metingen." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Dados principais, cobertura dos dados e leituras individuais." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "关键数据、数据覆盖情况和单次读数。" } }
+      }
+    },
+    "clinician_report_edit": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Bericht bearbeiten" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Edit Report" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Editar informe" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Modifier le rapport" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Modifica report" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "レポートを編集" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "보고서 편집" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Rapport bewerken" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Editar relatório" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "编辑报告" } }
+      }
+    },
+    "clinician_report_data_available_count": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "%1$d von %2$d Messungen enthalten Daten." } },
+        "en": { "stringUnit": { "state": "translated", "value": "%1$d of %2$d measurements include data." } },
+        "es": { "stringUnit": { "state": "translated", "value": "%1$d de %2$d mediciones incluyen datos." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "%1$d mesures sur %2$d contiennent des données." } },
+        "it": { "stringUnit": { "state": "translated", "value": "%1$d misurazioni su %2$d includono dati." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "%1$d/%2$d項目にデータがあります。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "%1$d/%2$d개 측정 항목에 데이터가 있습니다." } },
+        "nl": { "stringUnit": { "state": "translated", "value": "%1$d van %2$d metingen bevatten gegevens." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "%1$d de %2$d medições incluem dados." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%1$d/%2$d 项测量包含数据。" } }
+      }
+    },
+    "clinician_report_no_reportable_data": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Für den ausgewählten Zeitraum wurden keine berichtsfähigen Daten gefunden. Wählen Sie einen anderen Zeitraum oder andere Messungen." } },
+        "en": { "stringUnit": { "state": "translated", "value": "No reportable data was found for the selected period. Choose a different period or measurements." } },
+        "es": { "stringUnit": { "state": "translated", "value": "No se encontraron datos que se puedan incluir en el informe durante el periodo seleccionado. Elija otro periodo u otras mediciones." } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Aucune donnée à inclure dans le rapport n’a été trouvée pour la période sélectionnée. Choisissez une autre période ou d’autres mesures." } },
+        "it": { "stringUnit": { "state": "translated", "value": "Non sono stati trovati dati da includere nel report per il periodo selezionato. Scegli un altro periodo o altre misurazioni." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "選択した期間にはレポートに含められるデータがありません。別の期間または測定項目を選択してください。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "선택한 기간에 보고서에 포함할 수 있는 데이터가 없습니다. 다른 기간 또는 측정 항목을 선택하십시오." } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Er zijn geen gegevens voor het rapport gevonden in de geselecteerde periode. Kies een andere periode of andere metingen." } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Nenhum dado para incluir no relatório foi encontrado no período selecionado. Escolha outro período ou outras medições." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "在所选期间内未找到可用于报告的数据。请选择其他期间或测量项目。" } }
+      }
+    },
+    "clinician_report_unavailable_measurements": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Keine Daten: %1$s" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No data: %1$s" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sin datos: %1$s" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Aucune donnée : %1$s" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Nessun dato: %1$s" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "データなし：%1$s" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "데이터 없음: %1$s" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Geen gegevens: %1$s" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem dados: %1$s" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无数据：%1$s" } }
+      }
+    },
+    "clinician_report_summary": {
+      "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": { "stringUnit": { "state": "translated", "value": "Zusammenfassung" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Summary" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Resumen" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Résumé" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Riepilogo" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "サマリー" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "요약" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Samenvatting" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Resumo" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "摘要" } }
       }
     },
     "clinician_report_workout_type_americanFootball": {

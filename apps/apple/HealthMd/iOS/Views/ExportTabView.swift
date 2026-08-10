@@ -83,11 +83,11 @@ struct ExportTabView: View {
                 VStack(spacing: Spacing.md) {
                     heroHeader
                     statusBadges
+                    clinicianReportSection
                     exportTargetSection
                     dateRangeSection
                     healthDataSection
                         .id("marketing-export-health-data")
-                    clinicianReportSection
                     formatsSection
                     automationSection
                     formatOptionsSection
@@ -564,12 +564,11 @@ struct ExportTabView: View {
             } label: {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "doc.text.fill")
-                        .font(.title3.weight(.semibold))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.accent)
-                        .frame(width: 34, height: 34)
-                        .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                        .frame(width: 28, height: 44)
                     VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(copy.string(.document_title))
+                        Text(copy.string(.title))
                             .font(.body.weight(.semibold))
                             .foregroundStyle(Color.textPrimary)
                         Text(copy.string(.entry_subtitle))
@@ -582,7 +581,7 @@ struct ExportTabView: View {
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(Color.textMuted)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 final class AppleClinicianReportDataSource {
     typealias Fetch = (_ date: Date, _ selection: MetricSelectionState, _ timeZone: TimeZone) async throws -> HealthData
+    typealias ProgressHandler = (_ completedDays: Int, _ totalDays: Int) -> Void
 
     private let fetch: Fetch
     private let now: () -> Date
@@ -20,7 +21,16 @@ final class AppleClinicianReportDataSource {
 
     convenience init(healthKitManager: HealthKitManager, now: @escaping () -> Date = Date.init) {
         self.init(fetch: { date, selection, timeZone in
-            try await healthKitManager.fetchHealthData(
+            #if DEBUG
+            if TestMode.useHealthKitExportPreviewFixtures {
+                return UITestHealthKitFixtures.exportPreviewHealthData(
+                    for: date,
+                    includeGranularData: true
+                )
+            }
+            #endif
+
+            return try await healthKitManager.fetchHealthData(
                 for: date,
                 includeGranularData: true,
                 metricSelection: selection,
@@ -32,7 +42,8 @@ final class AppleClinicianReportDataSource {
     func load(
         configuration: ReportConfiguration,
         timeZone: TimeZone = .current,
-        locale: Locale = .current
+        locale: Locale = .current,
+        progress: ProgressHandler = { _, _ in }
     ) async throws -> ClinicianReportInput {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
@@ -53,7 +64,9 @@ final class AppleClinicianReportDataSource {
             generatedAt: generationDate
         )
 
-        for date in normalizedRange.dates(calendar: calendar) {
+        let dates = normalizedRange.dates(calendar: calendar)
+        progress(0, dates.count)
+        for (index, date) in dates.enumerated() {
             try Task.checkCancellation()
             do {
                 let healthData = try await fetch(date, selection, timeZone)
@@ -79,6 +92,7 @@ final class AppleClinicianReportDataSource {
                     Self.isoDate(date, calendar: calendar)
                 ))
             }
+            progress(index + 1, dates.count)
         }
         input.warnings = input.warnings.uniqued()
         return input
