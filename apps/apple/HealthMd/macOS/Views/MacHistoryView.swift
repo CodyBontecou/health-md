@@ -130,7 +130,9 @@ struct MacHistoryView: View {
     }
 
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
-        let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
+        let status = entry.isFullSuccess
+            ? String(localized: "Success")
+            : entry.success ? String(localized: "Partial success") : String(localized: "Failed")
         let date = Self.dateFormatter.string(from: entry.timestamp)
         let base = "\(status): \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(date)"
         guard let message = entry.failureListMessage else { return base }
@@ -147,7 +149,11 @@ struct MacHistoryView: View {
                     // Status header
                     HStack(spacing: 8) {
                         statusIcon(for: entry)
-                        Text(entry.isFullSuccess ? "Success" : entry.success ? "Partial" : "Failed")
+                        Text(
+                            entry.isFullSuccess
+                                ? String(localized: "Success")
+                                : entry.success ? String(localized: "Partial") : String(localized: "Failed")
+                        )
                             .font(BrandTypography.heading())
                             .foregroundStyle(Color.textPrimary)
                     }
@@ -159,12 +165,21 @@ struct MacHistoryView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         BrandLabel("Details")
 
-                        detailDataRow(label: "Timestamp", value: Self.dateFormatter.string(from: entry.timestamp))
-                        detailDataRow(label: "Source", value: entry.source.rawValue)
+                        detailDataRow(
+                            label: String(localized: "Timestamp"),
+                            value: Self.dateFormatter.string(from: entry.timestamp)
+                        )
+                        detailDataRow(
+                            label: String(localized: "Source"),
+                            value: entry.source.localizedDisplayName
+                        )
                         if let targetLabel = entry.targetLabel {
-                            detailDataRow(label: "Target", value: targetLabel)
+                            detailDataRow(label: String(localized: "Target"), value: targetLabel)
                         }
-                        detailDataRow(label: "Date Range", value: dateRangeString(entry))
+                        detailDataRow(
+                            label: String(localized: "Date Range"),
+                            value: dateRangeString(entry)
+                        )
                         detailDataRow(
                             label: entry.resultCountLabel,
                             value: entry.resultCountDescription
@@ -176,7 +191,11 @@ struct MacHistoryView: View {
 
                     if let reason = entry.failureReasonForDisplay {
                         VStack(alignment: .leading, spacing: 12) {
-                            BrandLabel(entry.isPartialSuccess ? "Why some dates did not export" : "Why it failed")
+                            if entry.isPartialSuccess {
+                                BrandLabel("Why some dates did not export")
+                            } else {
+                                BrandLabel("Why it failed")
+                            }
 
                             Label(reason.shortDescription, systemImage: "exclamationmark.octagon.fill")
                                 .font(BrandTypography.bodyMedium())
@@ -231,7 +250,7 @@ struct MacHistoryView: View {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .foregroundStyle(Color.warning)
                                         .font(.caption)
-                                    Text(failure.summary)
+                                    Text(failure.localizedSummary)
                                         .font(BrandTypography.caption())
                                         .foregroundStyle(Color.textMuted)
                                 }
@@ -289,12 +308,16 @@ struct MacHistoryView: View {
               ? "checkmark.circle.fill"
               : entry.success ? "exclamationmark.circle.fill" : "xmark.circle.fill")
             .foregroundStyle(entry.isFullSuccess ? Color.success : entry.success ? Color.warning : Color.error)
-            .accessibilityLabel(entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed")
+            .accessibilityLabel(
+                entry.isFullSuccess
+                    ? String(localized: "Success")
+                    : entry.success ? String(localized: "Partial success") : String(localized: "Failed")
+            )
     }
 
     @ViewBuilder
     private func sourceBadge(for entry: ExportHistoryEntry) -> some View {
-        Text(entry.source.rawValue)
+        Text(entry.source.localizedDisplayName)
             .font(BrandTypography.caption())
             .foregroundStyle(Color.textMuted)
             .padding(.horizontal, 8)

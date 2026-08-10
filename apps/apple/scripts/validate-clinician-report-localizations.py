@@ -58,7 +58,9 @@ def main() -> None:
     catalog_path = apple / "HealthMd/Localizable.xcstrings"
     copy_path = apple / "HealthMd/Shared/ClinicianReport/ClinicianReportCopy.swift"
     health_data_path = apple / "HealthMd/Shared/Models/HealthData.swift"
+    mac_manifest_path = apple / "scripts/fixtures/macos-localization-keys.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    mac_reviewed_keys = set(json.loads(mac_manifest_path.read_text(encoding="utf-8"))["keys"])
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
 
     if len(manifest) != EXPECTED_KEY_COUNT:
@@ -71,9 +73,9 @@ def main() -> None:
             f"missing={sorted(expected_keys - provider_keys)}, extra={sorted(provider_keys - expected_keys)}"
         )
     catalog_keys = {key for key in catalog["strings"] if key.startswith("clinician_report_")}
-    legacy_keys = LEGACY_UNREVIEWED_KEYS.intersection(catalog["strings"])
+    legacy_keys = LEGACY_UNREVIEWED_KEYS.intersection(catalog["strings"]) - mac_reviewed_keys
     if legacy_keys:
-        fail(f"legacy unreviewed report keys remain in catalog: {sorted(legacy_keys)}")
+        fail(f"legacy keys without an explicit reviewed owner remain in catalog: {sorted(legacy_keys)}")
     if catalog_keys != expected_keys:
         fail(
             "stable catalog keys differ from the manifest; "

@@ -134,7 +134,11 @@ struct MacOnboardingView: View {
 
             Button(action: advance) {
                 HStack(spacing: 8) {
-                    Text(currentStep == totalSteps - 1 ? "Get Started" : "Continue")
+                    Text(
+                        currentStep == totalSteps - 1
+                            ? String(localized: "Get Started")
+                            : String(localized: "Continue")
+                    )
                     Image(systemName: currentStep == totalSteps - 1 ? "arrow.right" : "chevron.right")
                 }
                 .font(BrandTypography.bodyMedium())
@@ -263,11 +267,20 @@ private struct WelcomeStep: View {
             .staggerIn(animateIn, index: 1)
 
             VStack(spacing: 10) {
-                MacFeatureRow(icon: "iphone.gen3", text: "Configure and start exports on iPhone")
+                MacFeatureRow(
+                    icon: "iphone.gen3",
+                    text: String(localized: "Configure and start exports on iPhone")
+                )
                     .staggerIn(animateIn, index: 2)
-                MacFeatureRow(icon: "folder.fill", text: "Choose only the destination folder on Mac")
+                MacFeatureRow(
+                    icon: "folder.fill",
+                    text: String(localized: "Choose only the destination folder on Mac")
+                )
                     .staggerIn(animateIn, index: 3)
-                MacFeatureRow(icon: "arrow.down.doc.fill", text: "Receive local export jobs over Wi-Fi/Bluetooth")
+                MacFeatureRow(
+                    icon: "arrow.down.doc.fill",
+                    text: String(localized: "Receive local export jobs over Wi-Fi/Bluetooth")
+                )
                     .staggerIn(animateIn, index: 4)
             }
             .padding(20)
@@ -285,7 +298,7 @@ private struct HowItWorksStep: View {
     var body: some View {
         VStack(spacing: 28) {
             HStack(spacing: 18) {
-                deviceIcon("iphone.gen3", label: "iPhone")
+                deviceIcon("iphone.gen3", label: String(localized: "iPhone"))
                     .scaleEffect(animateIn ? 1 : 0.7)
                     .opacity(animateIn ? 1 : 0)
                     .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.05), value: animateIn)
@@ -297,7 +310,7 @@ private struct HowItWorksStep: View {
                     .offset(x: animateIn ? 0 : -8)
                     .animation(.easeOut(duration: 0.4).delay(0.2), value: animateIn)
 
-                deviceIcon("desktopcomputer", label: "Mac")
+                deviceIcon("desktopcomputer", label: String(localized: "Mac"))
                     .scaleEffect(animateIn ? 1 : 0.7)
                     .opacity(animateIn ? 1 : 0)
                     .animation(.spring(response: 0.6, dampingFraction: 0.7).delay(0.3), value: animateIn)
@@ -319,8 +332,8 @@ private struct HowItWorksStep: View {
             VStack(spacing: 0) {
                 MacStepRow(
                     number: "1",
-                    title: "iPhone owns setup",
-                    detail: "Choose dates, metrics, formats, filenames, and write mode on iPhone"
+                    title: String(localized: "iPhone owns setup"),
+                    detail: String(localized: "Choose dates, metrics, formats, filenames, and write mode on iPhone")
                 )
                 .staggerIn(animateIn, index: 2)
 
@@ -330,8 +343,8 @@ private struct HowItWorksStep: View {
 
                 MacStepRow(
                     number: "2",
-                    title: "Select this Mac as target",
-                    detail: "The iPhone sends one configured export job over Wi-Fi"
+                    title: String(localized: "Select this Mac as target"),
+                    detail: String(localized: "The iPhone sends one configured export job over Wi-Fi")
                 )
                 .staggerIn(animateIn, index: 3)
 
@@ -341,8 +354,8 @@ private struct HowItWorksStep: View {
 
                 MacStepRow(
                     number: "3",
-                    title: "Mac writes files",
-                    detail: "This Mac saves the received Markdown, Bases, JSON, or CSV files"
+                    title: String(localized: "Mac writes files"),
+                    detail: String(localized: "This Mac saves the received Markdown, Bases, JSON, or CSV files")
                 )
                 .staggerIn(animateIn, index: 4)
             }
@@ -444,7 +457,7 @@ private struct GetIPhoneAppStep: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            Text(copied ? "Copied!" : "Copy Link")
+                            Text(copied ? String(localized: "Copied!") : String(localized: "Copy Link"))
                         }
                         .font(BrandTypography.detail())
                         .padding(.horizontal, 14)
@@ -453,7 +466,9 @@ private struct GetIPhoneAppStep: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(Color.textPrimary)
                     .brandGlassButton()
-                    .accessibilityLabel(copied ? "Link copied" : "Copy App Store link")
+                    .accessibilityLabel(
+                        copied ? String(localized: "Link copied") : String(localized: "Copy App Store link")
+                    )
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -602,24 +617,27 @@ private struct ConnectStep: View {
     private var statusTitle: String {
         switch syncService.connectionState {
         case .connected:
-            return "Connected to \(syncService.connectedPeerName ?? "iPhone")"
+            let peerName = syncService.connectedPeerName ?? String(localized: "iPhone")
+            return String(localized: "Connected to \(peerName)")
         case .connecting:
-            return "Connecting…"
+            return String(localized: "Connecting…")
         case .disconnected:
             return syncService.discoveredPeers.isEmpty
-                ? "Searching for nearby iPhones…"
-                : "iPhone found nearby"
+                ? String(localized: "Searching for nearby iPhones…")
+                : String(localized: "iPhone found nearby")
         }
     }
 
     private var statusSubtitle: String {
         switch syncService.connectionState {
-        case .connected: return "Ready once a destination folder is selected"
-        case .connecting: return "Establishing secure connection"
+        case .connected:
+            return String(localized: "Ready once a destination folder is selected")
+        case .connecting:
+            return String(localized: "Establishing secure connection")
         case .disconnected:
             return syncService.discoveredPeers.isEmpty
-                ? "Make sure Health.md is open on your iPhone with Mac Destination enabled"
-                : "Click Connect to pair this Mac"
+                ? String(localized: "Make sure Health.md is open on your iPhone with Mac Destination enabled")
+                : String(localized: "Click Connect to pair this Mac")
         }
     }
 }

@@ -37,7 +37,11 @@ struct MacVaultFolderSection: View {
                         .foregroundStyle(Color.textMuted)
                 }
                 Spacer()
-                Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
+                Button(
+                    vaultManager.vaultURL != nil
+                        ? String(localized: "Change…")
+                        : String(localized: "Choose…")
+                ) {
                     MacFolderPicker.show { url in
                         vaultManager.setVaultFolder(url)
                     }

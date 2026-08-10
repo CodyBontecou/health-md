@@ -551,8 +551,8 @@ extension View {
 #if os(macOS)
 
 struct BrandLabel: View {
-    let text: String
-    init(_ text: String) { self.text = text }
+    let text: LocalizedStringKey
+    init(_ text: LocalizedStringKey) { self.text = text }
 
     var body: some View {
         Text(text)

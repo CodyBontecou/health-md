@@ -241,6 +241,9 @@ jobs:
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
+      - name: Validate macOS localizations
+        run: make check-macos-localizations
+
       - name: Run macOS unit tests
         run: |
           set -euo pipefail

@@ -21,15 +21,15 @@ nonisolated enum HealthContextEncryptionKeyProviderError: LocalizedError, Equata
     var errorDescription: String? {
         switch self {
         case .invalidKeyLength:
-            return "The Health.md query-context encryption key is invalid."
+            return String(localized: "The Health.md query-context encryption key is invalid.")
         case .randomGenerationFailed:
-            return "Health.md could not generate a query-context encryption key."
+            return String(localized: "Health.md could not generate a query-context encryption key.")
         case .keychainReadFailed:
-            return "Health.md could not read the query-context encryption key from Keychain."
+            return String(localized: "Health.md could not read the query-context encryption key from Keychain.")
         case .keychainWriteFailed:
-            return "Health.md could not save the query-context encryption key in Keychain."
+            return String(localized: "Health.md could not save the query-context encryption key in Keychain.")
         case .keychainDeleteFailed:
-            return "Health.md could not remove the query-context encryption key from Keychain."
+            return String(localized: "Health.md could not remove the query-context encryption key from Keychain.")
         }
     }
 }

@@ -111,7 +111,11 @@ struct MacExportView: View {
                                 .foregroundStyle(Color.textMuted)
                         }
                         Spacer()
-                        Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
+                        Button(
+                            vaultManager.vaultURL != nil
+                                ? String(localized: "Change…")
+                                : String(localized: "Choose…")
+                        ) {
                             MacFolderPicker.show { url in
                                 vaultManager.setVaultFolder(url)
                             }
@@ -119,7 +123,11 @@ struct MacExportView: View {
                         .buttonStyle(.bordered)
                         .tint(Color.accent)
                         .controlSize(.small)
-                        .accessibilityLabel(vaultManager.vaultURL != nil ? "Change export folder" : "Choose export folder")
+                        .accessibilityLabel(
+                            vaultManager.vaultURL != nil
+                                ? String(localized: "Change export folder")
+                                : String(localized: "Choose export folder")
+                        )
                         .accessibilityHint("Opens folder picker to select export destination")
                     }
 
@@ -137,7 +145,11 @@ struct MacExportView: View {
                                     vaultManager.saveSubfolderSetting()
                                 }
                                 .accessibilityLabel("Subfolder name")
-                                .accessibilityValue(vaultManager.healthSubfolder.isEmpty ? "Selected folder" : vaultManager.healthSubfolder)
+                                .accessibilityValue(
+                                    vaultManager.healthSubfolder.isEmpty
+                                        ? String(localized: "Selected folder")
+                                        : vaultManager.healthSubfolder
+                                )
                         }
                     }
                 }
@@ -207,7 +219,7 @@ struct MacExportView: View {
                             .accessibilityLabel("How export formats work")
                         }
                         ForEach(ExportFormat.allCases, id: \.self) { format in
-                            Toggle(format.rawValue, isOn: Binding(
+                            Toggle(format.localizedDisplayName, isOn: Binding(
                                 get: { advancedSettings.exportFormats.contains(format) },
                                 set: { isOn in
                                     if isOn { advancedSettings.exportFormats.insert(format) }
@@ -215,8 +227,12 @@ struct MacExportView: View {
                                 }
                             ))
                             .tint(Color.accent)
-                            .accessibilityLabel(format.rawValue)
-                            .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
+                            .accessibilityLabel(format.localizedDisplayName)
+                            .accessibilityValue(
+                                advancedSettings.exportFormats.contains(format)
+                                    ? String(localized: "Enabled")
+                                    : String(localized: "Disabled")
+                            )
                         }
                         if advancedSettings.dailyNotesOnlyModeEnabled {
                             Text("Daily Notes Only is active. Format choices are saved but aggregate files are skipped.")
@@ -261,9 +277,11 @@ struct MacExportView: View {
                         Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                             .tint(Color.accent)
                             .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
-                        Text(advancedSettings.summaryOnlyModeEnabled
-                             ? "Only summary files will be written for the full touched week/month/year windows."
-                             : "Generated for every selected format using the full touched week/month/year windows.")
+                        Text(
+                            advancedSettings.summaryOnlyModeEnabled
+                                ? String(localized: "Only summary files will be written for the full touched week/month/year windows.")
+                                : String(localized: "Generated for every selected format using the full touched week/month/year windows.")
+                        )
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
                     }
@@ -275,14 +293,14 @@ struct MacExportView: View {
                         Spacer()
                         Picker("Write mode", selection: $advancedSettings.writeMode) {
                             ForEach(WriteMode.allCases, id: \.self) { mode in
-                                Text(mode.rawValue).tag(mode)
+                                Text(mode.localizedDisplayName).tag(mode)
                             }
                         }
                         .pickerStyle(.menu)
                         .tint(Color.accent)
                         .frame(width: 180)
                         .accessibilityLabel("File write mode")
-                        .accessibilityValue(advancedSettings.writeMode.rawValue)
+                        .accessibilityValue(advancedSettings.writeMode.localizedDisplayName)
                     }
 
                     HStack {
@@ -412,9 +430,13 @@ struct MacExportView: View {
                 .disabled(!canExport || isExporting)
                 .keyboardShortcut("e", modifiers: .command)
                 .tint(Color.accent)
-                .accessibilityLabel(isExporting ? "Exporting" : "Export now")
+                .accessibilityLabel(
+                    isExporting ? String(localized: "Exporting") : String(localized: "Export now")
+                )
                 .accessibilityHint("Exports health data to the selected folder")
-                .accessibilityValue(isExporting ? "\(Int(exportProgress * 100)) percent complete" : "")
+                .accessibilityValue(
+                    isExporting ? String(localized: "\(Int(exportProgress * 100)) percent complete") : ""
+                )
             }
         }
         .sheet(isPresented: $showMetricSelection) {
@@ -431,7 +453,9 @@ struct MacExportView: View {
                 endDate: endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
-                destinationLabel: vaultManager.vaultURL == nil ? "Mac folder" : "Mac: \(vaultManager.vaultName)",
+                destinationLabel: vaultManager.vaultURL == nil
+                    ? String(localized: "Mac folder")
+                    : String(localized: "Mac: \(vaultManager.vaultName)"),
                 destinationRootName: nil,
                 dateRangePreset: dateRangePreset,
                 targetType: .localFile,
@@ -441,7 +465,10 @@ struct MacExportView: View {
             )
             .frame(minWidth: 600, minHeight: 600)
         }
-        .alert(resultIsError ? "Export Failed" : "Export Complete", isPresented: $showResult) {
+        .alert(
+            resultIsError ? String(localized: "Export Failed") : String(localized: "Export Complete"),
+            isPresented: $showResult
+        ) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(resultMessage)
@@ -462,11 +489,11 @@ struct MacExportView: View {
 
     private var readinessMessage: String {
         if healthDataStore.recordCount == 0 && vaultManager.vaultURL == nil {
-            return "Sync health data from your iPhone and choose an export folder to get started."
+            return String(localized: "Sync health data from your iPhone and choose an export folder to get started.")
         } else if healthDataStore.recordCount == 0 {
-            return "Sync health data from your iPhone to export."
+            return String(localized: "Sync health data from your iPhone to export.")
         } else {
-            return "Choose an export folder to get started."
+            return String(localized: "Choose an export folder to get started.")
         }
     }
 
@@ -492,7 +519,9 @@ struct MacExportView: View {
         .brandGlassPill(tint: isSelected ? Color.accent : Color.borderSubtle)
         .accessibilityIdentifier(accessibilityIdentifier(for: preset))
         .accessibilityLabel(preset.title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityValue(
+            isSelected ? String(localized: "Selected") : String(localized: "Not selected")
+        )
         .accessibilityHint(preset.accessibilityHint)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
@@ -751,7 +780,7 @@ struct MacExportView: View {
             if result.isFullSuccess {
                 resultIsError = false
                 if advancedSettings.dailyNotesOnlyModeEnabled {
-                    resultMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")."
+                    resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) daily notes.")
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
                 } else {
@@ -760,12 +789,12 @@ struct MacExportView: View {
             } else if result.isPartialSuccess {
                 resultIsError = false
                 let suffix = result.hasPartialFailures
-                    ? result.partialFailureSummary
+                    ? result.localizedPartialFailureSummary
                     : String(localized: "Some dates had no synced data.", comment: "Partial export no synced data suffix")
                 if advancedSettings.dailyNotesOnlyModeEnabled && result.dailyNoteSkipCount > 0 && result.didCompleteAllRequestedDates {
-                    resultMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created."
+                    resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes. No export files were created.")
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
-                    resultMessage = "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)"
+                    resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)")
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
                 } else {
@@ -774,7 +803,7 @@ struct MacExportView: View {
             } else {
                 resultIsError = true
                 resultMessage = advancedSettings.dailyNotesOnlyModeEnabled
-                    ? "No daily notes were updated."
+                    ? String(localized: "No daily notes were updated.")
                     : (result.primaryFailureReason?.detailedDescription ?? String(localized: "No synced data found for the selected date range.", comment: "Export failure reason"))
             }
             showResult = true
