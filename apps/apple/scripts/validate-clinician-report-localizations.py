@@ -20,7 +20,7 @@ APPLE_LOCALES = {
     "pt-BR",
     "zh-Hans",
 }
-PLACEHOLDER = re.compile(r"%\d+\$[sd]")
+PLACEHOLDER = re.compile(r"%\d+\$[@d]")
 EXPECTED_KEY_COUNT = 205
 LEGACY_UNREVIEWED_KEYS = {
     "%lld individual readings will be included in the PDF.",
@@ -45,6 +45,11 @@ LEGACY_UNREVIEWED_KEYS = {
 def fail(message: str) -> None:
     print(f"error: {message}", file=sys.stderr)
     raise SystemExit(1)
+
+
+def apple_catalog_value(value: str) -> str:
+    """Translate platform-neutral string placeholders into Apple catalog syntax."""
+    return re.sub(r"%(\d+)\$s", r"%\1$@", value)
 
 
 def main() -> None:
@@ -114,7 +119,8 @@ def main() -> None:
                 f"missing={sorted(APPLE_LOCALES - set(localizations))}, "
                 f"extra={sorted(set(localizations) - APPLE_LOCALES)}"
             )
-        expected_placeholders = PLACEHOLDER.findall(english)
+        expected_apple_value = apple_catalog_value(english)
+        expected_placeholders = PLACEHOLDER.findall(expected_apple_value)
         for locale, localization in localizations.items():
             unit = localization.get("stringUnit", {})
             value = unit.get("value", "")
@@ -125,7 +131,7 @@ def main() -> None:
                     f"{key}/{locale}: placeholder mismatch; "
                     f"expected={expected_placeholders}, actual={PLACEHOLDER.findall(value)}"
                 )
-        if localizations["en"]["stringUnit"]["value"] != english:
+        if localizations["en"]["stringUnit"]["value"] != expected_apple_value:
             fail(f"{key}/en: differs from the reviewed English manifest")
 
     print(

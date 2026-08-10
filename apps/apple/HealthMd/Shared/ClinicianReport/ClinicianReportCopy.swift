@@ -260,12 +260,14 @@ nonisolated struct ClinicianReportCopy: Equatable, Sendable {
         return bundle.localizedString(forKey: key.rawValue, value: nil, table: "Localizable")
     }
 
-    /// Substitutes the reviewed, cross-platform positional tokens without passing
-    /// localized text through a printf parser. Values are already locale-formatted.
+    /// Substitutes the reviewed positional tokens without passing localized text
+    /// through a printf parser. Apple string catalogs require `%n$@` for string
+    /// arguments, while the cross-platform manifest uses `%n$s`.
     func format(_ key: Key, _ values: [String]) -> String {
         var result = string(key)
         for (offset, value) in values.enumerated().reversed() {
             let position = offset + 1
+            result = result.replacingOccurrences(of: "%\(position)$@", with: value)
             result = result.replacingOccurrences(of: "%\(position)$s", with: value)
             result = result.replacingOccurrences(of: "%\(position)$d", with: value)
         }

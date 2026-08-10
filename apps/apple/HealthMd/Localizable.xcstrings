@@ -51134,61 +51134,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mehr erfahren unter %1$s"
+            "value": "Mehr erfahren unter %1$@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Learn more at %1$s"
+            "value": "Learn more at %1$@"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Más información en %1$s"
+            "value": "Más información en %1$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "En savoir plus sur %1$s"
+            "value": "En savoir plus sur %1$@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scopri di più su %1$s"
+            "value": "Scopri di più su %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "詳しくは %1$s をご覧ください"
+            "value": "詳しくは %1$@ をご覧ください"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자세한 내용은 %1$s에서 확인하세요"
+            "value": "자세한 내용은 %1$@에서 확인하세요"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Meer informatie op %1$s"
+            "value": "Meer informatie op %1$@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Saiba mais em %1$s"
+            "value": "Saiba mais em %1$@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "了解更多：%1$s"
+            "value": "了解更多：%1$@"
           }
         }
       }
@@ -51266,61 +51266,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s (manuelle Eingabe)"
+            "value": "%1$@ (manuelle Eingabe)"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s (manual entry)"
+            "value": "%1$@ (manual entry)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s (entrada manual)"
+            "value": "%1$@ (entrada manual)"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s (saisie manuelle)"
+            "value": "%1$@ (saisie manuelle)"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s (inserimento manuale)"
+            "value": "%1$@ (inserimento manuale)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s（手動入力）"
+            "value": "%1$@（手動入力）"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s(수동 입력)"
+            "value": "%1$@(수동 입력)"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s (handmatige invoer)"
+            "value": "%1$@ (handmatige invoer)"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s (entrada manual)"
+            "value": "%1$@ (entrada manual)"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s（手动输入）"
+            "value": "%1$@（手动输入）"
           }
         }
       }
@@ -52520,61 +52520,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s – Messwerte"
+            "value": "%1$@ – Messwerte"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s Readings"
+            "value": "%1$@ Readings"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lecturas de %1$s"
+            "value": "Lecturas de %1$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mesures de %1$s"
+            "value": "Mesures de %1$@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rilevazioni di %1$s"
+            "value": "Rilevazioni di %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$sの測定値"
+            "value": "%1$@の測定値"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s 측정값"
+            "value": "%1$@ 측정값"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s-metingen"
+            "value": "%1$@-metingen"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Medições de %1$s"
+            "value": "Medições de %1$@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s读数"
+            "value": "%1$@读数"
           }
         }
       }
@@ -53444,61 +53444,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s am %2$s"
+            "value": "%1$@ am %2$@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s on %2$s"
+            "value": "%1$@ on %2$@"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s el %2$s"
+            "value": "%1$@ el %2$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s le %2$s"
+            "value": "%1$@ le %2$@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s il %2$s"
+            "value": "%1$@ il %2$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s（%2$s）"
+            "value": "%1$@（%2$@）"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s(%2$s)"
+            "value": "%1$@(%2$@)"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s op %2$s"
+            "value": "%1$@ op %2$@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s em %2$s"
+            "value": "%1$@ em %2$@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s（%2$s）"
+            "value": "%1$@（%2$@）"
           }
         }
       }
@@ -53576,61 +53576,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quellen: %1$s"
+            "value": "Quellen: %1$@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sources: %1$s"
+            "value": "Sources: %1$@"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fuentes: %1$s"
+            "value": "Fuentes: %1$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sources : %1$s"
+            "value": "Sources : %1$@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fonti: %1$s"
+            "value": "Fonti: %1$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ソース：%1$s"
+            "value": "ソース：%1$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "출처: %1$s"
+            "value": "출처: %1$@"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bronnen: %1$s"
+            "value": "Bronnen: %1$@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fontes: %1$s"
+            "value": "Fontes: %1$@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "来源：%1$s"
+            "value": "来源：%1$@"
           }
         }
       }
@@ -53642,61 +53642,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s Schritte"
+            "value": "%1$@ Schritte"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s steps"
+            "value": "%1$@ steps"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s pasos"
+            "value": "%1$@ pasos"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s pas"
+            "value": "%1$@ pas"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s passi"
+            "value": "%1$@ passi"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s歩"
+            "value": "%1$@歩"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s걸음"
+            "value": "%1$@걸음"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s stappen"
+            "value": "%1$@ stappen"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s passos"
+            "value": "%1$@ passos"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s 步"
+            "value": "%1$@ 步"
           }
         }
       }
@@ -53708,61 +53708,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s Schritte/Tag"
+            "value": "%1$@ Schritte/Tag"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s steps/day"
+            "value": "%1$@ steps/day"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s pasos/día"
+            "value": "%1$@ pasos/día"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s pas/jour"
+            "value": "%1$@ pas/jour"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s passi/giorno"
+            "value": "%1$@ passi/giorno"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s歩/日"
+            "value": "%1$@歩/日"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s걸음/일"
+            "value": "%1$@걸음/일"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s stappen/dag"
+            "value": "%1$@ stappen/dag"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s passos/dia"
+            "value": "%1$@ passos/dia"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s 步/天"
+            "value": "%1$@ 步/天"
           }
         }
       }
@@ -53906,61 +53906,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s %2$s"
+            "value": "%1$@ %2$@"
           }
         }
       }
@@ -53972,61 +53972,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s: %2$d"
+            "value": "%1$@: %2$d"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s: %2$d"
+            "value": "%1$@: %2$d"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s: %2$d"
+            "value": "%1$@: %2$d"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s : %2$d"
+            "value": "%1$@ : %2$d"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s: %2$d"
+            "value": "%1$@: %2$d"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s：%2$d"
+            "value": "%1$@：%2$d"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s: %2$d"
+            "value": "%1$@: %2$d"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s: %2$d"
+            "value": "%1$@: %2$d"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s: %2$d"
+            "value": "%1$@: %2$d"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s：%2$d"
+            "value": "%1$@：%2$d"
           }
         }
       }
@@ -54632,61 +54632,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einige verbundene Gesundheitsdatenquellen konnten für %1$s nicht gelesen werden."
+            "value": "Einige verbundene Gesundheitsdatenquellen konnten für %1$@ nicht gelesen werden."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Some connected health sources could not be read for %1$s."
+            "value": "Some connected health sources could not be read for %1$@."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudieron leer algunas fuentes de salud conectadas para %1$s."
+            "value": "No se pudieron leer algunas fuentes de salud conectadas para %1$@."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Certaines sources de données de santé connectées n’ont pas pu être lues pour le %1$s."
+            "value": "Certaines sources de données de santé connectées n’ont pas pu être lues pour le %1$@."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non è stato possibile leggere alcune fonti di dati sanitari connesse per il giorno %1$s."
+            "value": "Non è stato possibile leggere alcune fonti di dati sanitari connesse per il giorno %1$@."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$sについて、接続された健康データソースの一部を読み取れませんでした。"
+            "value": "%1$@について、接続された健康データソースの一部を読み取れませんでした。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s의 연결된 건강 데이터 출처 중 일부를 읽을 수 없습니다."
+            "value": "%1$@의 연결된 건강 데이터 출처 중 일부를 읽을 수 없습니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sommige gekoppelde gezondheidsbronnen konden voor %1$s niet worden gelezen."
+            "value": "Sommige gekoppelde gezondheidsbronnen konden voor %1$@ niet worden gelezen."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível ler algumas fontes de dados de saúde conectadas em %1$s."
+            "value": "Não foi possível ler algumas fontes de dados de saúde conectadas em %1$@."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法读取 %1$s 的部分已连接健康数据来源。"
+            "value": "无法读取 %1$@ 的部分已连接健康数据来源。"
           }
         }
       }
@@ -54698,61 +54698,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einige ausgewählte Daten aus Apple Health konnten für %1$s nicht gelesen werden. Leere Abschnitte können auf fehlenden Zugriff oder darauf zurückzuführen sein, dass keine Datensätze zurückgegeben wurden."
+            "value": "Einige ausgewählte Daten aus Apple Health konnten für %1$@ nicht gelesen werden. Leere Abschnitte können auf fehlenden Zugriff oder darauf zurückzuführen sein, dass keine Datensätze zurückgegeben wurden."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Some selected Apple Health data could not be read for %1$s. Empty sections may reflect unavailable access or no records returned."
+            "value": "Some selected Apple Health data could not be read for %1$@. Empty sections may reflect unavailable access or no records returned."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudieron leer algunos datos de Apple Health seleccionados para %1$s. Las secciones vacías pueden deberse a que el acceso no está disponible o a que no se devolvieron registros."
+            "value": "No se pudieron leer algunos datos de Apple Health seleccionados para %1$@. Las secciones vacías pueden deberse a que el acceso no está disponible o a que no se devolvieron registros."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Certaines données Apple Health sélectionnées n’ont pas pu être lues pour le %1$s. Les sections vides peuvent indiquer un accès indisponible ou l’absence d’enregistrements renvoyés."
+            "value": "Certaines données Apple Health sélectionnées n’ont pas pu être lues pour le %1$@. Les sections vides peuvent indiquer un accès indisponible ou l’absence d’enregistrements renvoyés."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non è stato possibile leggere alcuni dati Apple Health selezionati per il giorno %1$s. Le sezioni vuote possono indicare un accesso non disponibile o l’assenza di record restituiti."
+            "value": "Non è stato possibile leggere alcuni dati Apple Health selezionati per il giorno %1$@. Le sezioni vuote possono indicare un accesso non disponibile o l’assenza di record restituiti."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$sについて、選択した Apple Health データの一部を読み取れませんでした。空欄のセクションは、アクセスできないか、記録が返されなかったことを示す場合があります。"
+            "value": "%1$@について、選択した Apple Health データの一部を読み取れませんでした。空欄のセクションは、アクセスできないか、記録が返されなかったことを示す場合があります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s의 선택한 Apple Health 데이터 중 일부를 읽을 수 없습니다. 빈 섹션은 접근할 수 없거나 반환된 기록이 없음을 나타낼 수 있습니다."
+            "value": "%1$@의 선택한 Apple Health 데이터 중 일부를 읽을 수 없습니다. 빈 섹션은 접근할 수 없거나 반환된 기록이 없음을 나타낼 수 있습니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sommige geselecteerde gegevens uit Apple Health konden voor %1$s niet worden gelezen. Lege secties kunnen het gevolg zijn van ontbrekende toegang of het ontbreken van geretourneerde records."
+            "value": "Sommige geselecteerde gegevens uit Apple Health konden voor %1$@ niet worden gelezen. Lege secties kunnen het gevolg zijn van ontbrekende toegang of het ontbreken van geretourneerde records."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível ler alguns dados selecionados do Apple Health em %1$s. Seções vazias podem indicar acesso indisponível ou nenhum registro retornado."
+            "value": "Não foi possível ler alguns dados selecionados do Apple Health em %1$@. Seções vazias podem indicar acesso indisponível ou nenhum registro retornado."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法读取 %1$s 的部分所选 Apple Health 数据。空白部分可能表示无法访问或未返回任何记录。"
+            "value": "无法读取 %1$@ 的部分所选 Apple Health 数据。空白部分可能表示无法访问或未返回任何记录。"
           }
         }
       }
@@ -54764,61 +54764,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Einige ausgewählte Quelldatensätze aus Apple Health konnten für %1$s nicht gelesen werden."
+            "value": "Einige ausgewählte Quelldatensätze aus Apple Health konnten für %1$@ nicht gelesen werden."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Some selected Apple Health source records could not be read for %1$s."
+            "value": "Some selected Apple Health source records could not be read for %1$@."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudieron leer algunos registros de fuentes de Apple Health seleccionados para %1$s."
+            "value": "No se pudieron leer algunos registros de fuentes de Apple Health seleccionados para %1$@."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Certains enregistrements de sources Apple Health sélectionnés n’ont pas pu être lus pour le %1$s."
+            "value": "Certains enregistrements de sources Apple Health sélectionnés n’ont pas pu être lus pour le %1$@."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Non è stato possibile leggere alcuni record di origine Apple Health selezionati per il giorno %1$s."
+            "value": "Non è stato possibile leggere alcuni record di origine Apple Health selezionati per il giorno %1$@."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$sについて、選択した Apple Health のソース記録の一部を読み取れませんでした。"
+            "value": "%1$@について、選択した Apple Health のソース記録の一部を読み取れませんでした。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$s의 선택한 Apple Health 출처 기록 중 일부를 읽을 수 없습니다."
+            "value": "%1$@의 선택한 Apple Health 출처 기록 중 일부를 읽을 수 없습니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sommige geselecteerde bronrecords uit Apple Health konden voor %1$s niet worden gelezen."
+            "value": "Sommige geselecteerde bronrecords uit Apple Health konden voor %1$@ niet worden gelezen."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível ler alguns registros de fontes selecionados do Apple Health em %1$s."
+            "value": "Não foi possível ler alguns registros de fontes selecionados do Apple Health em %1$@."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法读取 %1$s 的部分所选 Apple Health 来源记录。"
+            "value": "无法读取 %1$@ 的部分所选 Apple Health 来源记录。"
           }
         }
       }
@@ -54830,61 +54830,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health hat für %1$s eine Warnung zur Integrität eines Quelldatensatzes gemeldet."
+            "value": "Apple Health hat für %1$@ eine Warnung zur Integrität eines Quelldatensatzes gemeldet."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health reported a source-record integrity warning for %1$s."
+            "value": "Apple Health reported a source-record integrity warning for %1$@."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health notificó una advertencia de integridad de los registros de origen para %1$s."
+            "value": "Apple Health notificó una advertencia de integridad de los registros de origen para %1$@."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health a signalé un avertissement relatif à l’intégrité des enregistrements sources pour le %1$s."
+            "value": "Apple Health a signalé un avertissement relatif à l’intégrité des enregistrements sources pour le %1$@."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health ha segnalato un avviso sull’integrità dei record di origine per il giorno %1$s."
+            "value": "Apple Health ha segnalato un avviso sull’integrità dei record di origine per il giorno %1$@."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$sについて、Apple Health からソース記録の整合性に関する警告が報告されました。"
+            "value": "%1$@について、Apple Health からソース記録の整合性に関する警告が報告されました。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health에서 %1$s의 출처 기록 무결성 경고를 보고했습니다."
+            "value": "Apple Health에서 %1$@의 출처 기록 무결성 경고를 보고했습니다."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health heeft voor %1$s een integriteitswaarschuwing voor een bronrecord gemeld."
+            "value": "Apple Health heeft voor %1$@ een integriteitswaarschuwing voor een bronrecord gemeld."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Apple Health informou um aviso de integridade dos registros de origem em %1$s."
+            "value": "O Apple Health informou um aviso de integridade dos registros de origem em %1$@."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Health 报告了 %1$s 的来源记录完整性警告。"
+            "value": "Apple Health 报告了 %1$@ 的来源记录完整性警告。"
           }
         }
       }
@@ -55565,16 +55565,16 @@
       "comment": "Clinician Report V1 localized vocabulary. Managed by scripts/validate-clinician-report-localizations.py.",
       "extractionState": "manual",
       "localizations": {
-        "de": { "stringUnit": { "state": "translated", "value": "Keine Daten: %1$s" } },
-        "en": { "stringUnit": { "state": "translated", "value": "No data: %1$s" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Sin datos: %1$s" } },
-        "fr": { "stringUnit": { "state": "translated", "value": "Aucune donnée : %1$s" } },
-        "it": { "stringUnit": { "state": "translated", "value": "Nessun dato: %1$s" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "データなし：%1$s" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "데이터 없음: %1$s" } },
-        "nl": { "stringUnit": { "state": "translated", "value": "Geen gegevens: %1$s" } },
-        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem dados: %1$s" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无数据：%1$s" } }
+        "de": { "stringUnit": { "state": "translated", "value": "Keine Daten: %1$@" } },
+        "en": { "stringUnit": { "state": "translated", "value": "No data: %1$@" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Sin datos: %1$@" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Aucune donnée : %1$@" } },
+        "it": { "stringUnit": { "state": "translated", "value": "Nessun dato: %1$@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "データなし：%1$@" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "데이터 없음: %1$@" } },
+        "nl": { "stringUnit": { "state": "translated", "value": "Geen gegevens: %1$@" } },
+        "pt-BR": { "stringUnit": { "state": "translated", "value": "Sem dados: %1$@" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无数据：%1$@" } }
       }
     },
     "clinician_report_summary": {
