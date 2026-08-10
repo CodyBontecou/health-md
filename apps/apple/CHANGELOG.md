@@ -12,6 +12,7 @@ All notable changes to Health.md will be documented in this file.
 
 ### Changed
 - Scanning a Direct CLI or MCP pairing QR from **Sync → Direct CLI Access → Scan Pairing QR** now starts the authenticated connection immediately, with no second **Pair** tap. External custom-URL opens no longer authorize pairing.
+- The Mac app is now fully localized in every supported language, with a clearer dashboard and layouts that preserve longer localized labels and status details.
 
 ### Fixed
 - New Direct CLI trust remains provisional until a valid peer hello; incomplete, cancelled, duplicated, expired, or interrupted QR handoffs restore previous trust and endpoint settings.

@@ -26,41 +26,55 @@ struct MacSyncView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.s8) {
-                    heroSection
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.s8) {
+                        heroSection
+                            .id("marketing-sync")
 
-                    if !syncService.discoveredPeers.isEmpty && syncService.connectionState != .connected {
-                        nearbyDevicesCard
+                        if !syncService.discoveredPeers.isEmpty && displayConnectionState != .connected {
+                            nearbyDevicesCard
+                        }
+
+                        dashboardGrid(width: proxy.size.width)
+
+                        if let error = displayLastError {
+                            errorBanner(error)
+                        }
                     }
-
-                    dashboardGrid(width: proxy.size.width)
-
-                    if let error = syncService.lastError {
-                        errorBanner(error)
-                    }
+                    .padding(.horizontal, horizontalPadding(for: proxy.size.width))
+                    .padding(.vertical, Spacing.s8)
+                    .frame(maxWidth: 1_200, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
-                .padding(.horizontal, horizontalPadding(for: proxy.size.width))
-                .padding(.vertical, Spacing.s8)
-                .frame(maxWidth: 1_200, alignment: .topLeading)
-                .frame(maxWidth: .infinity, alignment: .top)
+                .background(GeistMacBackdrop())
+                #if DEBUG
+                .task {
+                    guard MacMarketingCapture.isActive,
+                          let target = MacMarketingCapture.scrollTarget else { return }
+                    try? await Task.sleep(for: .milliseconds(650))
+                    scrollProxy.scrollTo(target, anchor: .top)
+                }
+                #endif
             }
-            .background(GeistMacBackdrop())
         }
         .foregroundStyle(Color.textPrimary)
         .tint(Color.accent)
         .onAppear {
             receivingPaused = false
+            #if DEBUG
+            if MacMarketingCapture.isActive { return }
+            #endif
             syncService.startBrowsing()
             trackMacSetupMilestones()
         }
         .onChange(of: vaultManager.vaultURL) { _, _ in
             trackMacSetupMilestones()
         }
-        .onChange(of: syncService.connectionState) { _, _ in
+        .onChange(of: displayConnectionState) { _, _ in
             trackMacSetupMilestones()
         }
-        .onChange(of: syncService.remoteCapabilities) { _, _ in
+        .onChange(of: displayRemoteCapabilities) { _, _ in
             trackMacSetupMilestones()
         }
         .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
@@ -209,13 +223,13 @@ struct MacSyncView: View {
                     GeistMetricTile(
                         icon: "iphone",
                         title: String(localized: "iPhone"),
-                        value: syncService.connectionState == .connected
-                            ? (syncService.connectedPeerName ?? String(localized: "Connected"))
+                        value: displayConnectionState == .connected
+                            ? (displayConnectedPeerName ?? String(localized: "Connected"))
                             : String(localized: "Listening"),
-                        detail: syncService.connectionState == .connected
+                        detail: displayConnectionState == .connected
                             ? String(localized: "Local network")
                             : String(localized: "Open Health.md on iPhone"),
-                        color: syncService.connectionState == .connected ? Color.success : Color.textMuted
+                        color: displayConnectionState == .connected ? Color.success : Color.textMuted
                     )
 
                     GeistMetricTile(
@@ -254,7 +268,7 @@ struct MacSyncView: View {
             )
         }
         .buttonStyle(GeistMacButtonStyle(kind: .primary))
-        .disabled(syncService.connectionState == .connecting)
+        .disabled(displayConnectionState == .connecting)
     }
 
     // MARK: - Cards
@@ -375,6 +389,7 @@ struct MacSyncView: View {
                 StorageUsageBar(summary: storageSummary)
             }
         }
+        .id("marketing-destination")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Destination folder")
         .accessibilityValue(folderAccessibilityValue)
@@ -446,6 +461,7 @@ struct MacSyncView: View {
                 }
             }
         }
+        .id("marketing-system-status")
     }
 
     private var manualIPConnectionCard: some View {
@@ -621,6 +637,7 @@ struct MacSyncView: View {
                 )
             }
         }
+        .id("marketing-activity")
     }
 
     private var legacyCacheCard: some View {
@@ -665,12 +682,42 @@ struct MacSyncView: View {
 
     // MARK: - State
 
+    private var displayConnectionState: SyncConnectionState {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return .connected }
+        #endif
+        return syncService.connectionState
+    }
+
+    private var displayConnectedPeerName: String? {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return String(localized: "iPhone") }
+        #endif
+        return syncService.connectedPeerName
+    }
+
+    private var displayRemoteCapabilities: SyncPeerCapabilities? {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            return SyncPeerCapabilities.current(platform: .iOS)
+        }
+        #endif
+        return syncService.remoteCapabilities
+    }
+
+    private var displayLastError: String? {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return nil }
+        #endif
+        return syncService.lastError
+    }
+
     private var manualIPServerStatusText: String {
         if !syncService.manualIPServerEnabled {
             return String(localized: "Disabled. Nearby discovery still works over local Wi‑Fi/Bluetooth.")
         }
-        if syncService.activeTransport == .manualIP && syncService.connectionState == .connected {
-            let peerName = syncService.connectedPeerName ?? String(localized: "iPhone")
+        if syncService.activeTransport == .manualIP && displayConnectionState == .connected {
+            let peerName = displayConnectedPeerName ?? String(localized: "iPhone")
             return String(localized: "Connected to \(peerName) by manual IP / Tailscale.")
         }
         if syncService.manualIPServerListening {
@@ -681,7 +728,7 @@ struct MacSyncView: View {
 
     private var connectionDotColor: Color {
         if receivingPaused { return Color.warning }
-        switch syncService.connectionState {
+        switch displayConnectionState {
         case .connected: return Color.success
         case .connecting: return Color.warning
         case .disconnected: return Color.textMuted
@@ -690,7 +737,7 @@ struct MacSyncView: View {
 
     private var connectionStatusIcon: String {
         if receivingPaused { return "pause.fill" }
-        switch syncService.connectionState {
+        switch displayConnectionState {
         case .connected: return "checkmark.circle.fill"
         case .connecting: return "arrow.triangle.2.circlepath"
         case .disconnected: return "dot.radiowaves.left.and.right"
@@ -714,10 +761,10 @@ struct MacSyncView: View {
         if readinessState == .paused { return String(localized: "Receiving Paused") }
         if readinessState == .active { return String(localized: "Receiving Export") }
         if readinessState == .ready { return String(localized: "Ready to Receive") }
-        if syncService.connectionState == .connected && !folderAccessHealthy {
+        if displayConnectionState == .connected && !folderAccessHealthy {
             return String(localized: "Choose Destination")
         }
-        if syncService.connectionState == .connecting {
+        if displayConnectionState == .connecting {
             return String(localized: "Connecting to iPhone")
         }
         return String(localized: "Listening for iPhone")
@@ -726,7 +773,7 @@ struct MacSyncView: View {
     private var readinessText: String {
         if readinessState == .paused { return String(localized: "Paused") }
         if readinessState == .active { return String(localized: "Receiving Export") }
-        if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
+        if displayConnectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone App") }
         if vaultManager.vaultURL == nil { return String(localized: "Choose Folder") }
         if !folderAccessHealthy { return String(localized: "Re-select Folder") }
@@ -751,9 +798,9 @@ struct MacSyncView: View {
     }
 
     private var statusPrimaryLine: String {
-        switch syncService.connectionState {
+        switch displayConnectionState {
         case .connected:
-            let peerName = syncService.connectedPeerName ?? String(localized: "iPhone")
+            let peerName = displayConnectedPeerName ?? String(localized: "iPhone")
             return String(localized: "Connected to \(peerName)")
         case .connecting:
             return String(localized: "Establishing local connection")
@@ -765,18 +812,28 @@ struct MacSyncView: View {
     }
 
     private var statusSecondaryLine: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            let device = displayConnectedPeerName ?? String(localized: "iPhone")
+            let localizedStatus = String(localized: "\(device) · local network · encrypted handoff")
+            let devicePrefix = "\(device) · "
+            return localizedStatus.hasPrefix(devicePrefix)
+                ? String(localizedStatus.dropFirst(devicePrefix.count))
+                : localizedStatus
+        }
+        #endif
         if let progress = syncService.activeMacExportProgress,
            ![MacExportPhase.completed, .failed, .cancelled].contains(progress.phase) {
             return localizedProgressMessage(progress)
         }
-        if let error = syncService.lastError {
+        if let error = displayLastError {
             return localizedStatusSummary(
                 String(localized: "Receiver needs attention"),
                 technicalDetail: error
             )
         }
-        if syncService.connectionState == .connected {
-            let device = syncService.connectedPeerName ?? String(localized: "iPhone")
+        if displayConnectionState == .connected {
+            let device = displayConnectedPeerName ?? String(localized: "iPhone")
             return String(localized: "\(device) · local network · encrypted handoff")
         }
         return folderAccessHealthy
@@ -805,7 +862,7 @@ struct MacSyncView: View {
             return String(localized: "Choose where this Mac should save exports.")
         }
         if folderAccessHealthy {
-            return url.path(percentEncoded: false)
+            return vaultManager.pathForDisplay ?? url.path(percentEncoded: false)
         }
         return String(localized: "Re-select \(url.lastPathComponent) so Health.md can write exports.")
     }
@@ -826,14 +883,14 @@ struct MacSyncView: View {
     private var isReadyForExports: Bool {
         !receivingPaused
             && !hasActiveExport
-            && syncService.connectionState == .connected
+            && displayConnectionState == .connected
             && iPhoneSupportsMacExports
             && folderAccessHealthy
     }
 
     private var iPhoneSupportsMacExports: Bool {
-        guard syncService.connectionState == .connected else { return false }
-        guard let capabilities = syncService.remoteCapabilities else { return false }
+        guard displayConnectionState == .connected else { return false }
+        guard let capabilities = displayRemoteCapabilities else { return false }
         return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
     }
 
@@ -849,7 +906,7 @@ struct MacSyncView: View {
 
     private var lastCheckText: String {
         if hasActiveExport { return String(localized: "In Progress") }
-        if syncService.connectionState == .connected { return String(localized: "Just Now") }
+        if displayConnectionState == .connected { return String(localized: "Just Now") }
         return receivingPaused ? String(localized: "Paused") : String(localized: "Scanning")
     }
 
@@ -861,6 +918,9 @@ struct MacSyncView: View {
     }
 
     private var volumeKind: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return "APFS" }
+        #endif
         guard let url = vaultManager.vaultURL,
               let values = try? url.resourceValues(forKeys: [.volumeLocalizedFormatDescriptionKey]),
               let description = values.volumeLocalizedFormatDescription,
@@ -871,6 +931,14 @@ struct MacSyncView: View {
     }
 
     private var storageSummary: StorageSummary {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            return StorageSummary(
+                freeBytes: 750_000_000_000,
+                totalBytes: 1_000_000_000_000
+            )
+        }
+        #endif
         let targetURL = vaultManager.vaultURL ?? FileManager.default.homeDirectoryForCurrentUser
         guard let attributes = try? FileManager.default.attributesOfFileSystem(forPath: targetURL.path),
               let total = attributes[.systemSize] as? NSNumber,
@@ -903,12 +971,12 @@ struct MacSyncView: View {
         items.append(contentsOf: historyManager.history.prefix(6).map(activityItem(for:)))
 
         if items.isEmpty {
-            if syncService.connectionState == .connected {
+            if displayConnectionState == .connected {
                 items.append(ActivityFeedItem(
                     timestamp: Date().addingTimeInterval(-60),
                     icon: "link",
                     title: String(localized: "Connection Established"),
-                    headline: syncService.connectedPeerName ?? String(localized: "iPhone"),
+                    headline: displayConnectedPeerName ?? String(localized: "iPhone"),
                     detail: String(localized: "Wi‑Fi / local network"),
                     trailing: nil,
                     color: Color.success
@@ -1287,12 +1355,13 @@ private struct GeistMetricTile: View {
                 Text(value)
                     .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Spacing.s4)
@@ -1324,11 +1393,13 @@ private struct GeistInfoChip: View {
                 Text(title)
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(value)
                     .font(Typography.label())
                     .foregroundStyle(color)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Spacing.s3)

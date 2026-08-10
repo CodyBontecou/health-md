@@ -67,6 +67,10 @@ screenshots/*
 screenshots/app-store/*
 !screenshots/app-store/ios-iphone-67/
 !screenshots/app-store/ios-iphone-67/*.png
+!screenshots/macos/
+screenshots/macos/*
+!screenshots/macos/README.md
+!screenshots/macos/copy.json
 
 # asc release run checkpoints (per-release artifacts)
 .asc/

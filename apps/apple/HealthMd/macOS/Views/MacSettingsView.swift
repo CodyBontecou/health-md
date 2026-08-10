@@ -368,6 +368,12 @@ struct MacGeneralSettingsView: View {
     }
 
     private var connectionStatusText: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            let peerName = String(localized: "iPhone")
+            return String(localized: "Connected to \(peerName)")
+        }
+        #endif
         guard syncService.connectionState == .connected else {
             return String(localized: "Not connected")
         }
@@ -376,6 +382,9 @@ struct MacGeneralSettingsView: View {
     }
 
     private var readinessText: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return String(localized: "Ready") }
+        #endif
         if syncService.isSyncing { return String(localized: "Receiving export") }
         if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
@@ -391,6 +400,9 @@ struct MacGeneralSettingsView: View {
     }
 
     private var iPhoneSupportsMacExports: Bool {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return true }
+        #endif
         guard syncService.connectionState == .connected else { return false }
         guard let capabilities = syncService.remoteCapabilities else { return false }
         return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs

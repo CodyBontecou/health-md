@@ -8,7 +8,18 @@ import SwiftUI
 /// readiness, job status, and recent activity.
 struct MacContentView: View {
     @AppStorage("hasCompletedMacOnboarding") private var hasCompletedOnboarding = false
-    @State private var selection: MacSidebarDestination? = .home
+    @State private var selection: MacSidebarDestination?
+
+    init() {
+        #if DEBUG
+        let initialSelection = MacSidebarDestination(
+            rawValue: MacMarketingCapture.initialSidebarDestination
+        ) ?? .home
+        _selection = State(initialValue: initialSelection)
+        #else
+        _selection = State(initialValue: .home)
+        #endif
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -26,6 +37,9 @@ struct MacContentView: View {
                 .navigationTitle((selection ?? .home).title)
         }
         .onAppear {
+            #if DEBUG
+            if MacMarketingCapture.isActive { return }
+            #endif
             // Retire the legacy Mac onboarding flow so new users land on the
             // destination-agent screen instead of the old cache-sync flow.
             hasCompletedOnboarding = true

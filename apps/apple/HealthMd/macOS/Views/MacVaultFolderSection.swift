@@ -23,7 +23,7 @@ struct MacVaultFolderSection: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(vaultManager.vaultName)
                             .font(BrandTypography.bodyMedium())
-                        Text(url.path(percentEncoded: false))
+                        Text(vaultManager.pathForDisplay ?? url.path(percentEncoded: false))
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
                             .lineLimit(1)

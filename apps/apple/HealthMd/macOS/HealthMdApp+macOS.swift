@@ -319,8 +319,24 @@ struct HealthMdApp: App {
                 .environmentObject(healthDataStore)
                 .environmentObject(encryptedHealthContextManager)
                 .frame(minWidth: 1_100, minHeight: 680)
-                        .tint(Color.accent)
+                .tint(Color.accent)
+                #if DEBUG
+                .preferredColorScheme(MacMarketingCapture.isActive ? .light : nil)
+                #endif
                 .task {
+                    #if DEBUG
+                    if MacMarketingCapture.isActive {
+                        MacMarketingCapture.configure(
+                            syncService: syncService,
+                            vaultManager: vaultManager
+                        )
+                        await MacMarketingCapture.captureWindowAndTerminate(
+                            syncService: syncService,
+                            vaultManager: vaultManager
+                        )
+                        return
+                    }
+                    #endif
                     setupSyncMessageHandler()
                     setupControlServer()
                     syncService.startBrowsing()
@@ -346,7 +362,14 @@ struct HealthMdApp: App {
                 .withWindowManagerBridge()
                 .gradientMatchedTitleBar()
         }
+        #if DEBUG
+        .defaultSize(
+            width: MacMarketingCapture.isActive ? 1_100 : 1_360,
+            height: MacMarketingCapture.isActive ? 700 : 900
+        )
+        #else
         .defaultSize(width: 1_360, height: 900)
+        #endif
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }

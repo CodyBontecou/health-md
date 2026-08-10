@@ -71196,7 +71196,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportar escrito"
+            "value": "Exportación guardada"
           }
         },
         "fr": {
@@ -72496,7 +72496,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La carpeta existe"
+            "value": "Carpeta disponible"
           }
         },
         "fr": {
@@ -72626,7 +72626,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "generales"
+            "value": "General"
           }
         },
         "fr": {
@@ -76916,7 +76916,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "último cheque"
+            "value": "Última comprobación"
           }
         },
         "fr": {
@@ -78021,7 +78021,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lossless Health Records conserva todos los registros fuente HealthKit seleccionados junto con resúmenes diarios, incluida la fuente UUIDs, marcas de tiempo exactas, procedencia, metadatos y series detalladas. Los archivos pueden ser mucho más grandes. Desactívelo en iPhone para exportaciones de solo resumen."
+            "value": "Los registros de salud sin pérdida conservan cada registro de origen de HealthKit seleccionado junto con los resúmenes diarios, incluidos los UUID de origen, las marcas de tiempo exactas, la procedencia, los metadatos y las series detalladas. Los archivos pueden ser mucho más grandes. Desactívelos en el iPhone para exportar solo resúmenes."
           }
         },
         "fr": {
@@ -91411,7 +91411,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "grabable"
+            "value": "Escritura permitida"
           }
         },
         "fr": {
@@ -92386,7 +92386,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "iPhone-Exportaciones controladas"
+            "value": "Exportaciones controladas desde el iPhone"
           }
         },
         "fr": {
@@ -98431,7 +98431,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exportación Mac escribió archivo(s) %1$lld"
+            "value": "Archivos guardados por el Mac: %1$lld"
           }
         },
         "fr": {

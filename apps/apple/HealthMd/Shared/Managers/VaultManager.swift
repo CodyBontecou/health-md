@@ -988,6 +988,17 @@ final class VaultManager: ObservableObject {
     @Published private(set) var destinationState: VaultDestinationState = .notSelected
     @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
     @Published var lastExportStatus: String?
+    #if DEBUG && os(macOS)
+    @Published private var marketingCaptureDisplayPath: String?
+    private var marketingCaptureAccessOverride = false
+    #endif
+
+    var pathForDisplay: String? {
+        #if DEBUG && os(macOS)
+        if let marketingCaptureDisplayPath { return marketingCaptureDisplayPath }
+        #endif
+        return vaultURL?.path(percentEncoded: false)
+    }
 
     /// Localized semantic presentation for `lastExportStatus`. The stored value remains
     /// unchanged because it can contain paths or technical error detail.
@@ -1339,6 +1350,26 @@ final class VaultManager: ObservableObject {
         destinationState = .available
     }
 
+    #if DEBUG && os(macOS)
+    /// Uses an isolated writable folder while displaying a stable anonymized path.
+    func setMarketingCaptureVault() {
+        guard MacMarketingCapture.isActive else { return }
+        let captureRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Health.md Demo", isDirectory: true)
+            .appendingPathComponent("Exports", isDirectory: true)
+        try? FileManager.default.createDirectory(
+            at: captureRoot,
+            withIntermediateDirectories: true
+        )
+        vaultURL = captureRoot
+        vaultName = "Exports"
+        destinationState = .available
+        lastExportStatus = nil
+        marketingCaptureDisplayPath = "~/Health.md Demo/Exports"
+        marketingCaptureAccessOverride = true
+    }
+    #endif
+
     // MARK: - Background Access
 
     /// Check if we have a currently resolved vault URL (for background tasks).
@@ -1361,6 +1392,9 @@ final class VaultManager: ObservableObject {
     /// its security-scoped bookmark. Used by the Mac export-agent readiness
     /// status before iOS sends an export job.
     func canAccessSelectedVaultFolder() -> Bool {
+        #if DEBUG && os(macOS)
+        if marketingCaptureAccessOverride { return true }
+        #endif
         guard destinationState == .available, let vaultURL else { return false }
         guard bookmarkResolver.startAccessing(vaultURL) else { return false }
         bookmarkResolver.stopAccessing(vaultURL)
