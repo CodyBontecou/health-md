@@ -1,852 +1,317 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Termos de Serviço — Health.md</title>
-  <meta name="description" content="Termos do Health.md para exportações do Apple Health e do Health Connect no Android, Full Access, destinos de arquivos que priorizam o armazenamento local, aviso médico e processamento de reembolsos pelas lojas de apps.">
+  <meta name="description" content="Termos para usar os aplicativos, exportações, ferramentas diretas CLI e MCP, Full Access, destinos escolhidos pelo usuário e serviços de suporte do Health.md.">
   <link rel="canonical" href="https://healthmd.app/pt-br/terms-of-service.html">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html">
   <link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html">
   <link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html">
-  <meta name="robots" content="noindex,follow">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="Termos de Serviço — Health.md">
-  <meta property="og:description" content="Termos do Health.md para exportações do Apple Health e do Health Connect no Android, Full Access, destinos de arquivos locais, aviso médico e reembolsos pelas lojas de apps.">
+  <meta property="og:description" content="Termos claros para os aplicativos do Health.md, exportações de dados de saúde, ferramentas diretas, compras e destinos escolhidos pelo usuário.">
   <meta property="og:url" content="https://healthmd.app/pt-br/terms-of-service.html">
   <meta property="og:locale" content="pt_BR">
   <meta property="og:locale:alternate" content="en_US">
-  <meta name="theme-color" content="#6d4aff">
   <link rel="icon" href="../favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="16x16" href="../assets/app-icon/icon_16x16.png">
-  <link rel="icon" type="image/png" sizes="20x20" href="../assets/app-icon/icon_20x20.png">
-  <link rel="icon" type="image/png" sizes="29x29" href="../assets/app-icon/icon_29x29.png">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/app-icon/icon_32x32.png">
-  <link rel="icon" type="image/png" sizes="40x40" href="../assets/app-icon/icon_40x40.png">
-  <link rel="icon" type="image/png" sizes="60x60" href="../assets/app-icon/icon_60x60.png">
   <link rel="icon" type="image/png" sizes="192x192" href="../assets/app-icon/icon_192x192.png">
-  <link rel="icon" type="image/png" sizes="1024x1024" href="../assets/app-icon/icon_1024x1024.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="../assets/app-icon/icon_76x76.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="../assets/app-icon/icon_120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="../assets/app-icon/icon_152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="../assets/app-icon/icon_167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script src="../assets/theme.js"></script>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg-primary: #f4f2f8;
-      --bg-secondary: #fbfaff;
-      --bg-tertiary: #e9e5f1;
-      --text-primary: #202024;
-      --text-secondary: #42404a;
-      --text-muted: #6f6a7c;
-      --accent: #6d4aff;
-      --accent-dim: #4f2bbd;
-      --accent-glow: rgba(109, 74, 255, 0.14);
-      --border: #d4cde0;
-      --success: #9b5cf6;
-      --on-accent: #ffffff;
-      --mono: 'JetBrains Mono', 'Space Mono', monospace;
-    }
-
-    :root[data-theme="dark"] {
-      color-scheme: dark;
-      --bg-primary: #18181d;
-      --bg-secondary: #24222c;
-      --bg-tertiary: #211f28;
-      --text-primary: #f0eef7;
-      --text-secondary: #d3cedf;
-      --text-muted: #aaa3b8;
-      --accent: #a78bfa;
-      --accent-dim: #6d4aff;
-      --accent-glow: rgba(167, 139, 250, 0.18);
-      --border: #3b3549;
-      --success: #c4b5fd;
-      --on-accent: #ffffff;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        color-scheme: dark;
-        --bg-primary: #18181d;
-        --bg-secondary: #24222c;
-        --bg-tertiary: #211f28;
-        --text-primary: #f0eef7;
-        --text-secondary: #d3cedf;
-        --text-muted: #aaa3b8;
-        --accent: #a78bfa;
-        --accent-dim: #6d4aff;
-        --accent-glow: rgba(167, 139, 250, 0.18);
-        --border: #3b3549;
-        --success: #c4b5fd;
-        --on-accent: #ffffff;
-      }
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: var(--mono);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 17px;
-      line-height: 1.75;
-      -webkit-text-size-adjust: 100%;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-      opacity: 0.03;
-      pointer-events: none;
-      z-index: 1000;
-    }
-
-    .grid-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px;
-      opacity: 0.15;
-      pointer-events: none;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-      position: relative;
-      z-index: 1;
-    }
-
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 20px 0;
-      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
-    }
-
-    .header-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .logo-content {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo-mark {
-      width: 36px;
-      height: 36px;
-      border: 2px solid var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .logo-mark::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-
-    .logo-text {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-primary);
-    }
-
-    .logo-subtext {
-      font-size: 12px;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-      margin-top: 4px;
-    }
-
-    .logo-subtext a {
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .logo-subtext a:hover {
-      color: var(--accent);
-    }
-
-    .back-link {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 13px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .back-link:hover {
-      color: var(--accent);
-    }
-
-    .header-actions {
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .language-selector {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-secondary);
-      font-size: 12px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .language-selector a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .language-selector a:hover {
-      color: var(--accent);
-    }
-
-    .language-selector [aria-current="page"] {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .theme-toggle {
-      flex: 0 0 auto;
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 2px;
-      background: var(--bg-secondary);
-    }
-
-    .theme-toggle button {
-      min-width: 44px;
-      border: 0;
-      border-radius: 6px;
-      padding: 6px 8px;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      font: 700 10px/1 var(--mono);
-      text-transform: uppercase;
-    }
-
-    .theme-toggle button[aria-pressed="true"] {
-      background: var(--accent);
-      color: var(--on-accent);
-    }
-
-    main {
-      padding-top: 140px;
-      padding-bottom: 80px;
-      min-height: 100vh;
-    }
-
-    .page-header {
-      margin-bottom: 60px;
-    }
-
-    .page-label {
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .page-title {
-      font-size: clamp(40px, 7vw, 56px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-      line-height: 1.05;
-    }
-
-    .page-meta {
-      font-size: 15px;
-      color: var(--text-muted);
-    }
-
-    .content-box {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 52px;
-      margin-bottom: 32px;
-    }
-
-    .content-box h2 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      margin-top: 40px;
-      color: var(--text-primary);
-      line-height: 1.2;
-    }
-
-    .content-box h2:first-child {
-      margin-top: 0;
-    }
-
-    .content-box h3 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      margin-top: 32px;
-      color: var(--text-primary);
-      line-height: 1.3;
-    }
-
-    .content-box p {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 18px;
-      line-height: 1.9;
-    }
-
-    .content-box ul {
-      margin: 20px 0;
-      padding-left: 0;
-      list-style: none;
-    }
-
-    .content-box ul li {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 14px;
-      padding-left: 28px;
-      position: relative;
-      line-height: 1.9;
-    }
-
-    .content-box ul li::before {
-      content: '→';
-      position: absolute;
-      left: 0;
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .content-box strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .highlight-box {
-      background: var(--accent-glow);
-      border: 1px solid var(--accent-dim);
-      border-radius: 4px;
-      padding: 24px;
-      margin: 32px 0;
-    }
-
-    .highlight-box p {
-      margin-bottom: 0;
-      color: var(--text-primary);
-    }
-
-    footer {
-      padding: 40px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .footer-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-text {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      font-size: 14px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover {
-      color: var(--accent);
-    }
-
-    @media (max-width: 768px) {
-      header {
-        padding: 16px 0;
-      }
-
-      .header-inner {
-        align-items: flex-start;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-
-      .header-actions {
-        margin-left: auto;
-      }
-
-      .content-box {
-        padding: 30px 22px;
-      }
-
-      .page-title {
-        font-size: 38px;
-      }
-
-      .content-box p,
-      .content-box ul li {
-        font-size: 16px;
-      }
-
-      .footer-inner {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-
-      .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 560px) {
-      main {
-        padding-top: 152px;
-      }
-
-      .container,
-      .header-inner {
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .logo-subtext {
-        display: none;
-      }
-
-      .page-label,
-      .back-link {
-        font-size: 12px;
-      }
-
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-      }
-
-      .theme-toggle button {
-        min-width: 38px;
-        padding: 6px;
-        font-size: 9px;
-      }
-
-      .content-box {
-        padding: 24px 18px;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .back-link,
-      .theme-toggle {
-        width: 100%;
-      }
-
-      .back-link {
-        justify-content: center;
-      }
-
-      .theme-toggle button {
-        min-width: 0;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="../assets/theme-icons.css">
+  <link rel="stylesheet" href="../assets/landing.css">
+  <link rel="stylesheet" href="../assets/legal.css">
 </head>
-<body>
-  <div class="grid-bg"></div>
+<body class="legal-page">
+  <a class="skip-link" href="#terms-of-service">Ir para os termos</a>
 
-  <header>
-    <div class="header-inner">
-      <a href="../index.html" class="logo" aria-label="Health.md — página inicial">
-        <div class="logo-mark"></div>
-        <div class="logo-content">
-          <span class="logo-text">health.md</span>
-          <span class="logo-subtext">criado por <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span>
-        </div>
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="../pt-br/" aria-label="Página inicial do Health.md">
+        <span class="brand-name">health.md</span>
       </a>
-      <div class="header-actions">
-        <nav class="language-selector" aria-label="Seletor de idioma">
-          <span aria-current="page">Português</span>
-          <span aria-hidden="true">/</span>
-          <a href="../terms-of-service.html" hreflang="en" lang="en">English</a>
+      <div class="header-nav">
+        <nav aria-label="Navegação principal">
+          <a class="header-docs-link" href="../pt-br/docs/">Documentação</a>
+          <a class="header-docs-link" href="../pt-br/">Início</a>
         </nav>
-        <a href="../index.html" class="back-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          Voltar
-        </a>
-        <div class="theme-toggle" role="group" aria-label="Tema de cores">
-          <button type="button" data-theme-option="system" aria-pressed="true">Sistema</button>
-          <button type="button" data-theme-option="light" aria-pressed="false">Claro</button>
-          <button type="button" data-theme-option="dark" aria-pressed="false">Escuro</button>
-        </div>
       </div>
     </div>
   </header>
 
-  <main>
-    <div class="container">
-      <div class="page-header">
-        <p class="page-label">Informações legais</p>
-        <h1 class="page-title">Termos de Serviço</h1>
-        <p class="page-meta">Última atualização: 2 de agosto de 2026</p>
-      </div>
+  <main class="legal-main" id="terms-of-service">
+    <section class="legal-hero" aria-labelledby="terms-title">
+      <div class="legal-hero-inner">
+        <p class="legal-eyebrow">Legal · Termos</p>
+        <h1 id="terms-title">Termos,<br>de um jeito fácil de ler.</h1>
+        <p class="legal-updated">Última atualização: 6 de agosto de 2026</p>
+        <p class="legal-lede">O Health.md ajuda você a movimentar e trabalhar com dados de saúde. Estes termos explicam a licença, os limites do produto e as responsabilidades envolvidas ao direcionar dados sensíveis aos seus arquivos, computadores, serviços e agentes.</p>
 
-      <div class="content-box">
-        <div class="highlight-box">
-          <p><strong>Aviso sobre a tradução:</strong> Esta versão em português do Brasil é fornecida apenas para sua conveniência. Em caso de divergência ou conflito, prevalece a <a href="../terms-of-service.html" hreflang="en" style="color: var(--accent); text-decoration: underline;">versão em inglês dos Termos de Serviço</a>.</p>
+        <div class="legal-promise" role="list" aria-label="Termos principais">
+          <div role="listitem">
+            <span>01</span>
+            <strong>Use de forma lícita</strong>
+            <p>Use o Health.md somente com dados, dispositivos, contas e destinos que você está autorizado a acessar.</p>
+          </div>
+          <div role="listitem">
+            <span>02</span>
+            <strong>Você controla o resultado</strong>
+            <p>Você escolhe para onde vão as exportações e os resultados diretos sensíveis e como eles são protegidos.</p>
+          </div>
+          <div role="listitem">
+            <span>03</span>
+            <strong>Não é orientação médica</strong>
+            <p>O Health.md informa e movimenta dados. Ele não diagnostica, trata nem substitui o atendimento profissional.</p>
+          </div>
         </div>
-
-        <div class="highlight-box">
-          <p><strong>Versão resumida:</strong> O download do Health.md é gratuito, com uma compra única e opcional no app chamada Full Access. Use-o para exportações pessoais, mantenha o controle dos seus arquivos e lembre-se de que ele não oferece orientação médica. Os reembolsos são processados pela loja de apps onde você comprou Full Access.</p>
-        </div>
-
-        <h2>1. Aceitação dos Termos</h2>
-        <p>
-          Ao baixar, instalar ou usar o health.md (o “App”), você concorda em se vincular a estes Termos de Serviço (“Termos”). Se não concordar com estes Termos, não use o App.
-        </p>
-        <p>
-          Estes Termos constituem um acordo juridicamente vinculante entre você e o operador do health.md (“nós”, “nos” ou “nosso”). Seu uso do App também é regido pelos termos da loja de apps onde você o baixou, incluindo os Termos de Serviço da App Store da Apple ou os termos do Google Play.
-        </p>
-
-        <h2>2. Concessão de licença</h2>
-        <p>
-          Desde que você cumpra estes Termos, concedemos uma licença limitada, não exclusiva, intransferível e revogável para:
-        </p>
-        <ul>
-          <li>Instalar e usar o App em dispositivos Apple ou Android que você possua ou controle</li>
-          <li>Acessar e usar os recursos de exportação, agendamento, Apple Shortcuts, automação do Android e destino Mac do App para fins pessoais e não comerciais</li>
-        </ul>
-        <p>
-          O download do App é gratuito. Full Access é uma compra única e opcional no app, processada pelo StoreKit nas plataformas Apple ou pelo Google Play Billing no Android; não é uma assinatura e não se renova. Você tem o direito de usar os recursos desbloqueados pela compra conforme estes Termos, mas não temos a obrigação de oferecer novos recursos nem manter o App indefinidamente.
-        </p>
-
-        <h2>3. Uso aceitável</h2>
-        <p>
-          Você concorda em usar o App apenas para fins legais e de acordo com estes Termos. Você concorda em NÃO:
-        </p>
-        <ul>
-          <li>Fazer engenharia reversa, descompilar, desmontar ou tentar obter o código-fonte do App, exceto quando essa restrição for proibida por lei</li>
-          <li>Modificar, adaptar ou criar obras derivadas com base no App</li>
-          <li>Alugar, arrendar, emprestar, vender, redistribuir ou sublicenciar o App</li>
-          <li>Remover, alterar ou ocultar avisos de propriedade no App</li>
-          <li>Usar o App de qualquer maneira que viole leis ou regulamentos aplicáveis</li>
-          <li>Usar o App de uma maneira que possa danificar, desativar ou prejudicar nossos serviços</li>
-        </ul>
-
-        <h2>4. Funcionalidade do App</h2>
-        <p>
-          O health.md foi criado para:
-        </p>
-        <ul>
-          <li>Ler seus dados do Apple Health usando as APIs do HealthKit ou os dados de saúde do Android usando as APIs do Health Connect</li>
-          <li>Exportar esses dados para arquivos Markdown, Obsidian, CSV e JSON nos destinos que você escolher</li>
-          <li>Automatizar esse processo de exportação de acordo com um agendamento definido por você, sujeito aos limites de execução em segundo plano da Apple ou ao comportamento do WorkManager no Android</li>
-          <li>Enviar tarefas de exportação diretamente para um Mac ou uma CLI opcionais e emparelhados nos fluxos compatíveis</li>
-          <li>Enviar exportações selecionadas diretamente para um endpoint de API configurado pelo usuário</li>
-        </ul>
-        <p>
-          O processamento principal dos dados de saúde ocorre localmente nos seus dispositivos. O Health.md não coleta nem armazena dados de saúde em servidores do Health.md. Alguns fluxos usam a rede sob seu comando ou serviços das plataformas, incluindo compra ou restauração na App Store ou no Google Play, atualizações do app, iCloud, sincronização por provedores de documentos do Android ou provedores de arquivos de terceiros, transferência para dispositivos emparelhados e um endpoint de API configurado pelo usuário.
-        </p>
-
-        <h2>5. Aviso sobre dados de saúde</h2>
-        <p>
-          <strong>IMPORTANTE: o health.md é uma ferramenta de exportação de dados, não um dispositivo médico nem um serviço de saúde.</strong>
-        </p>
-        <ul>
-          <li>O App não oferece orientação, diagnóstico ou tratamento médico</li>
-          <li>O App não substitui a consulta a profissionais de saúde qualificados</li>
-          <li>Os dados exportados destinam-se apenas a fins informativos pessoais</li>
-          <li>Não verificamos a exatidão dos dados do Apple Health, Health Connect, dispositivos vestíveis ou apps de saúde conectados</li>
-          <li>Não use os dados de saúde exportados para tomar decisões médicas sem consultar um profissional de saúde</li>
-        </ul>
-        <p>
-          Em caso de emergência médica, entre em contato imediatamente com os serviços de emergência. Não dependa de dados deste App para decisões médicas urgentes.
-        </p>
-
-        <h2>6. Dados e privacidade</h2>
-        <p>
-          Seu uso do App é regido pela nossa <a href="privacy-policy.html" style="color: var(--accent); text-decoration: underline;">Política de Privacidade</a>, incorporada a estes Termos por referência. Pontos principais:
-        </p>
-        <ul>
-          <li>Não coletamos nem armazenamos seus dados de saúde em servidores do Health.md</li>
-          <li>Os dados de origem permanecem no Apple Health ou no Health Connect, a menos que você os exporte explicitamente</li>
-          <li>Os arquivos exportados são gravados nos dispositivos, pastas, provedores de arquivos, provedores de documentos do Android ou destinos Mac que você escolher</li>
-          <li>Você é o único responsável por gerenciar seus dados exportados e os provedores de sincronização utilizados</li>
-          <li>Você controla quais dados são exportados e onde são armazenados</li>
-        </ul>
-
-        <h2>7. Suas responsabilidades</h2>
-        <p>
-          Você é responsável por:
-        </p>
-        <ul>
-          <li><strong>Segurança dos dispositivos:</strong> manter seus dispositivos seguros, inclusive usando códigos de acesso e mantendo iOS, iPadOS, macOS e Android atualizados</li>
-          <li><strong>Backups dos dados:</strong> fazer backup dos seus dispositivos e dos arquivos Markdown, Obsidian, CSV e JSON exportados. Não nos responsabilizamos pela perda de dados.</li>
-          <li><strong>Controle de acesso:</strong> gerenciar quem tem acesso aos seus dispositivos, pastas, cofres, provedores de sincronização e arquivos exportados</li>
-          <li><strong>Conformidade:</strong> garantir que seu uso do App esteja de acordo com todas as leis e todos os regulamentos aplicáveis</li>
-          <li><strong>Armazenamento de arquivos:</strong> gerenciar seus arquivos exportados, incluindo qualquer iCloud Drive, provedor de documentos do Android, provedor de arquivos de terceiros, cofre do Obsidian ou pasta do Mac que você use</li>
-          <li><strong>Destinos de API:</strong> verificar a segurança, autorização, registro, retenção e exclusão de qualquer endpoint de API configurado por você</li>
-        </ul>
-
-        <h2>8. Serviços de terceiros</h2>
-        <p>
-          O App integra-se a:
-        </p>
-        <ul>
-          <li><strong>Apple HealthKit:</strong> sujeito aos termos da Apple e aos seus ajustes de privacidade do iOS.</li>
-          <li><strong>Android Health Connect:</strong> sujeito aos termos do Google/Android e aos seus ajustes de privacidade do Health Connect.</li>
-          <li><strong>APIs opcionais de provedores de saúde:</strong> as importações diretas de provedores, quando disponíveis e explicitamente ativadas, estão sujeitas aos termos de OAuth, API, privacidade e conta do respectivo provedor.</li>
-          <li><strong>Arquivos da Apple, Storage Access Framework do Android e provedores de arquivos:</strong> o App grava os arquivos exportados na pasta que você selecionar usando o seletor da plataforma e a infraestrutura do provedor de arquivos.</li>
-          <li><strong>StoreKit, App Store e Google Play Billing:</strong> compras, restaurações, atualizações e reembolsos de Full Access são processados pela loja correspondente.</li>
-          <li><strong>Rede local / conectividade próxima:</strong> fluxos opcionais com destino Mac exigem descoberta local e conectividade entre seus dispositivos.</li>
-        </ul>
-        <p>
-          Não nos responsabilizamos por serviços de terceiros, sua disponibilidade ou seus termos.
-        </p>
-
-        <h2>9. Isenção de garantias</h2>
-        <p>
-          O APP É FORNECIDO “NO ESTADO EM QUE SE ENCONTRA” E “CONFORME DISPONÍVEL”, SEM GARANTIAS DE QUALQUER TIPO, EXPRESSAS OU IMPLÍCITAS, INCLUINDO, ENTRE OUTRAS:
-        </p>
-        <ul>
-          <li>Garantias de comerciabilidade, adequação a uma finalidade específica ou não violação</li>
-          <li>Garantias de que o App funcionará sem erros, interrupções ou riscos de segurança</li>
-          <li>Garantias referentes à exatidão, confiabilidade ou integridade dos dados exportados</li>
-        </ul>
-        <p>
-          Algumas jurisdições não permitem a exclusão de garantias implícitas, portanto algumas das exclusões acima podem não se aplicar a você.
-        </p>
-
-        <h2>10. Limitação de responsabilidade</h2>
-        <p>
-          NA EXTENSÃO MÁXIMA PERMITIDA POR LEI, NÃO SEREMOS RESPONSÁVEIS POR DANOS INDIRETOS, INCIDENTAIS, ESPECIAIS, CONSEQUENCIAIS OU PUNITIVOS NEM POR PERDA DE LUCROS, RECEITA, DADOS OU USO, DECORRENTES DE OU RELACIONADOS A:
-        </p>
-        <ul>
-          <li>Seu uso do App ou sua impossibilidade de usá-lo</li>
-          <li>Erros, falhas ou inexatidões no App ou nos dados exportados</li>
-          <li>Perda ou corrupção de dados</li>
-          <li>Decisões tomadas com base nos dados exportados</li>
-          <li>Danos a dispositivos ou problemas de desempenho</li>
-        </ul>
-        <p>
-          EM NENHUMA HIPÓTESE NOSSA RESPONSABILIDADE TOTAL EXCEDERÁ O VALOR QUE VOCÊ PAGOU PELO APP.
-        </p>
-        <p>
-          Algumas jurisdições não permitem a limitação ou exclusão de responsabilidade por danos incidentais ou consequenciais, portanto as limitações acima podem não se aplicar a você.
-        </p>
-
-        <h2>11. Indenização</h2>
-        <p>
-          Você concorda em indenizar, defender e isentar os operadores do health.md de reivindicações, responsabilidades, danos, perdas, custos ou despesas, incluindo honorários advocatícios razoáveis, decorrentes de ou relacionados a:
-        </p>
-        <ul>
-          <li>Seu uso ou uso indevido do App</li>
-          <li>Sua violação destes Termos</li>
-          <li>Sua violação de direitos de outra pessoa ou entidade</li>
-          <li>Sua violação de leis ou regulamentos aplicáveis</li>
-        </ul>
-
-        <h2>12. Atualizações e alterações</h2>
-        <p>
-          Podemos atualizar o App periodicamente para:
-        </p>
-        <ul>
-          <li>Corrigir falhas ou melhorar o desempenho</li>
-          <li>Adicionar novos recursos ou funcionalidades</li>
-          <li>Cumprir novos requisitos do iOS, iPadOS, macOS, Android, App Store ou Google Play</li>
-          <li>Resolver problemas de segurança</li>
-        </ul>
-        <p>
-          As atualizações são fornecidas pela App Store ou pelo Google Play. Não temos a obrigação de fornecer atualizações indefinidamente. Algumas atualizações podem exigir que você aceite novos termos.
-        </p>
-
-        <h2>13. Rescisão</h2>
-        <p>
-          Estes Termos permanecem em vigor até sua rescisão:
-        </p>
-        <ul>
-          <li><strong>Por você:</strong> você pode rescindi-los a qualquer momento excluindo o App de todos os seus dispositivos</li>
-          <li><strong>Por nós:</strong> podemos rescindir sua licença se você violar estes Termos</li>
-          <li><strong>Por um provedor da loja:</strong> sua licença poderá ser rescindida se você violar os termos da Apple App Store ou do Google Play</li>
-        </ul>
-        <p>
-          Após a rescisão, você deverá parar de usar o App e excluir todas as cópias. As seções que, por sua natureza, devam sobreviver à rescisão, incluindo isenções de garantias, limitações de responsabilidade e indenização, permanecerão em vigor.
-        </p>
-
-        <h2>14. Propriedade intelectual</h2>
-        <p>
-          O App e seu conteúdo, seus recursos e suas funcionalidades originais pertencem aos operadores do health.md e são protegidos por leis internacionais de direitos autorais, marcas registradas e outros direitos de propriedade intelectual.
-        </p>
-        <p>
-          Embora partes do App possam ser de código aberto, conforme indicado na nossa documentação, o App como um todo, incluindo seu design e sua implementação, continua sendo nossa propriedade.
-        </p>
-
-        <h2>15. Código aberto</h2>
-        <p>
-          Partes da lógica principal do App são de código aberto e licenciadas sob licenças de código aberto separadas. Esses componentes são identificados na documentação ou no repositório do App. Seu uso de componentes de código aberto é regido pelas respectivas licenças.
-        </p>
-
-        <h2>16. Reembolsos</h2>
-        <p>
-          As solicitações de reembolso são processadas pela loja onde você comprou Full Access. Não processamos reembolsos diretamente. Para compras da Apple, acesse a <a href="https://support.apple.com/pt-br/118223" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">página de suporte da Apple</a>. Para compras no Android, use o processo de reembolso do Google Play.
-        </p>
-
-        <h2>17. Conformidade com controles de exportação</h2>
-        <p>
-          Você concorda em cumprir todas as leis e todos os regulamentos aplicáveis de controle de exportação e reexportação, incluindo os Regulamentos de Administração de Exportações dos Estados Unidos. Você declara que não está em um país sujeito a embargo nem consta como parte proibida.
-        </p>
-
-        <h2>18. Lei aplicável e resolução de disputas</h2>
-        <p>
-          Estes Termos serão regidos e interpretados conforme as leis da jurisdição onde operamos, independentemente dos princípios de conflito de leis.
-        </p>
-        <p>
-          Qualquer disputa decorrente destes Termos ou do seu uso do App será resolvida por arbitragem vinculante de acordo com as regras da associação de arbitragem pertinente, exceto quando proibido por lei.
-        </p>
-
-        <h2>19. Independência das disposições</h2>
-        <p>
-          Se alguma disposição destes Termos for considerada inexequível ou inválida, ela será limitada ou eliminada na menor extensão necessária, e as disposições restantes permanecerão em pleno vigor e efeito.
-        </p>
-
-        <h2>20. Acordo integral</h2>
-        <p>
-          Estes Termos, juntamente com nossa Política de Privacidade e quaisquer outros avisos legais publicados por nós no App, constituem o acordo integral entre você e nós sobre seu uso do App e substituem acordos anteriores.
-        </p>
-
-        <h2>21. Alterações dos Termos</h2>
-        <p>
-          Reservamo-nos o direito de modificar estes Termos a qualquer momento. Se fizermos alterações relevantes, avisaremos você por uma atualização do app ou por outros meios razoáveis. Seu uso contínuo do App após a entrada em vigor das alterações constitui aceitação dos Termos atualizados.
-        </p>
-
-        <h2>22. Informações de contato</h2>
-        <p>
-          Se tiver dúvidas sobre estes Termos, entre em contato conosco:
-        </p>
-        <p>
-          <strong>E-mail:</strong> legal@isolated.tech<br>
-          <strong>Site:</strong> https://isolated.tech
-        </p>
-
-        <h2>23. Termos específicos das lojas</h2>
-        <p>
-          Quando este App for distribuído pela Apple App Store ou pelo Google Play, os seguintes termos adicionais se aplicarão:
-        </p>
-        <ul>
-          <li>Apple e Google não são partes destes Termos e não têm nenhuma obrigação referente ao App</li>
-          <li>A licença concedida limita-se ao uso em dispositivos que você possua ou controle, conforme permitido pelos termos da loja pertinente</li>
-          <li>Apple e Google não têm nenhuma obrigação de garantia referente ao App</li>
-          <li>Apple e Google não são responsáveis por tratar reivindicações relacionadas ao App ou ao seu uso</li>
-          <li>Se terceiros alegarem que o App viola direitos de propriedade intelectual, nós, e não o provedor da loja, seremos responsáveis pela investigação e defesa</li>
-          <li>A Apple e suas subsidiárias são terceiras beneficiárias destes Termos para cópias distribuídas pela Apple e podem exigir que você cumpra estes Termos</li>
-        </ul>
-
-        <h2>Reconhecimento</h2>
-        <p>
-          AO USAR O HEALTH.MD, VOCÊ RECONHECE QUE LEU E COMPREENDEU ESTES TERMOS DE SERVIÇO E CONCORDA EM SE VINCULAR A ELES.
-        </p>
       </div>
+    </section>
+
+    <div class="legal-shell">
+      <aside class="legal-toc">
+        <p class="legal-toc-title">Nestes termos</p>
+        <nav aria-label="Seções dos termos de serviço">
+          <ol>
+            <li><a href="#agreement">Acordo e escopo</a></li>
+            <li><a href="#eligibility">Elegibilidade</a></li>
+            <li><a href="#license">Licença</a></li>
+            <li><a href="#acceptable-use">Uso aceitável</a></li>
+            <li><a href="#functionality">O que o Health.md faz</a></li>
+            <li><a href="#availability">Disponibilidade e recursos de prévia</a></li>
+            <li><a href="#health-disclaimer">Aviso sobre saúde</a></li>
+            <li><a href="#data">Dados e privacidade</a></li>
+            <li><a href="#responsibilities">Suas responsabilidades</a></li>
+            <li><a href="#purchases">Compras e reembolsos</a></li>
+            <li><a href="#third-parties">Terceiros</a></li>
+            <li><a href="#intellectual-property">Propriedade intelectual</a></li>
+            <li><a href="#updates">Atualizações e rescisão</a></li>
+            <li><a href="#warranties">Garantias</a></li>
+            <li><a href="#liability">Responsabilidade</a></li>
+            <li><a href="#indemnity">Indenização e controles de exportação</a></li>
+            <li><a href="#disputes">Disputas</a></li>
+            <li><a href="#general">Termos gerais</a></li>
+            <li><a href="#stores">Lojas de aplicativos</a></li>
+            <li><a href="#changes">Alterações</a></li>
+            <li><a href="#contact">Contato</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <article class="policy-content">
+        <section id="agreement">
+          <h2>1. Acordo e escopo</h2>
+          <p>Estes Termos de Serviço (“Termos”) constituem um acordo vinculante entre você e Cody Bontecou, que opera o Health.md sob o nome isolated.tech (“Health.md”, “nós” ou “nosso”). Ao baixar, instalar, acessar ou usar um Produto abrangido, você concorda com estes Termos. Se não concordar, não use os Produtos.</p>
+          <p>“Produtos” significa os aplicativos do Health.md para consumidores no iPhone, iPad, Mac e Android; os auxiliares incluídos; as ferramentas de linha de comando e MCP, quando disponibilizadas; o healthmd.app e sua documentação; os protocolos diretos; e os serviços próprios que dão suporte a essas interfaces. Um recurso pode estar disponível somente em determinadas plataformas, versões, regiões, dispositivos ou canais de lançamento.</p>
+          <p>Os termos das lojas de aplicativos também se aplicam às cópias distribuídas pela Apple ou pelo Google. Se você usar um Produto em nome de uma organização, declara que tem autoridade para vincular essa organização, e “você” também a inclui.</p>
+          <div class="policy-note">
+            <p><strong>Em resumo:</strong> o Health.md oferece ferramentas para exportar e consultar dados de saúde, mas você continua responsável por suas permissões, destinos, segurança e pelo uso dos resultados.</p>
+            <p>Os Produtos não são dispositivos médicos, serviços de emergência nem uma promessa de que todo registro de origem, tarefa em segundo plano, provedor, sistema operacional ou destino de terceiros estará sempre disponível.</p>
+          </div>
+          <div class="policy-note">
+            <p><strong>Aviso sobre a tradução:</strong> esta versão em português do Brasil é fornecida para sua conveniência. Em caso de divergência, a <a href="../terms-of-service.html" hreflang="en">versão em inglês</a> prevalece somente na medida permitida pela legislação aplicável, sem limitar direitos obrigatórios do consumidor.</p>
+          </div>
+        </section>
+
+        <section id="eligibility">
+          <h2>2. Elegibilidade e autoridade</h2>
+          <p>Você deve ter capacidade jurídica para concordar com estes Termos. Se a legislação do local onde você mora exigir que seu pai, sua mãe ou seu responsável aprove o uso, essa pessoa deverá analisar e aceitar estes Termos em seu nome.</p>
+          <p>Você só pode usar o Health.md com dados de saúde, dispositivos, contas, computadores, conexões de provedores, endpoints de API e outros destinos que sejam seus, estejam sob seu controle ou que você esteja autorizado a usar. Não acesse nem processe dados de saúde de outra pessoa sem autoridade válida e qualquer consentimento exigido por lei.</p>
+        </section>
+
+        <section id="license">
+          <h2>3. Licença</h2>
+          <p>O software Health.md é licenciado, não vendido. O aplicativo Apple, o aplicativo Android, a CLI e o núcleo compartilhado são distribuídos exclusivamente sob a GNU Affero General Public License versão 3.0 (AGPL-3.0-only). O código-fonte do site é distribuído sob a MIT License. Códigos e recursos de terceiros mantêm suas próprias licenças.</p>
+          <p>Essas licenças de software — e não esta seção — regem a cópia, modificação, redistribuição e hospedagem do código-fonte e dos binários licenciados. Sujeito a estes Termos, concedemos a você um direito limitado, não exclusivo, intransferível e revogável de acessar serviços operados pelo Health.md e usar direitos adquiridos por meio das lojas, marcas, ilustrações e outros materiais não abrangidos por uma licença separada, somente para fins pessoais ou internos lícitos.</p>
+          <p>Você pode usar suas exportações e seus resultados diretos nos seus próprios arquivos, scripts, automações, fluxos de trabalho de agentes e comunicações com pessoas ou serviços escolhidos por você, inclusive um profissional de saúde. Nada nestes Termos restringe direitos concedidos pela AGPL, MIT License, outra licença aplicável ou direitos que não possam ser legalmente restringidos.</p>
+        </section>
+
+        <section id="acceptable-use">
+          <h2>4. Uso aceitável</h2>
+          <p>Você concorda em não:</p>
+          <ul>
+            <li>usar um Produto ou seu resultado de forma ilegal ou enganosa ou para violar a privacidade, confidencialidade, propriedade intelectual ou outros direitos de outra pessoa;</li>
+            <li>acessar dados de saúde, contas de provedores, dispositivos emparelhados, arquivos ou endpoints sem autorização;</li>
+            <li>burlar controles de compra, permissões, emparelhamento, autenticação, limites de taxa, limites de segurança ou outras proteções técnicas;</li>
+            <li>atacar, sobrecarregar, interromper, sondar ou introduzir código malicioso em um Produto ou serviço de suporte;</li>
+            <li>extrair ou usar indevidamente credenciais não públicas, materiais de assinatura, segredos de serviços ou recursos protegidos; isso não restringe direitos concedidos por uma licença de software aplicável ou por lei;</li>
+            <li>remover avisos obrigatórios de direitos autorais, marcas, atribuição ou licença nem sugerir falsamente que o Health.md endossa seu produto, análise, conclusão médica ou serviço;</li>
+            <li>usar os Produtos como único sistema de resposta a emergências, manutenção regulamentada de registros clínicos ou qualquer uso para o qual não foram projetados.</li>
+          </ul>
+          <p>Você é responsável pela conduta de qualquer pessoa que use os Produtos por meio dos seus dispositivos, credenciais de emparelhamento, processos locais ou sistemas organizacionais.</p>
+        </section>
+
+        <section id="functionality">
+          <h2>5. O que o Health.md faz</h2>
+          <p>Dependendo da plataforma e da disponibilidade, o Health.md pode:</p>
+          <ul>
+            <li>ler dados autorizados do Apple HealthKit, WorkoutKit, Android Health Connect e registros médicos do Health Connect;</li>
+            <li>exportar dados selecionados como Markdown, Obsidian, CSV, JSON, FHIR/formato nativo do provedor e outros formatos documentados;</li>
+            <li>gravar em uma pasta local ou sincronizada com a nuvem, cofre, provedor de documentos, Mac ou CLI emparelhado ou endpoint de API configurado pelo usuário;</li>
+            <li>executar fluxos de exportação manuais, agendados, via Shortcut, automação do Android, diretos e retomáveis, sujeitos aos limites da plataforma;</li>
+            <li>responder a consultas tipadas com escopo definido e retornar valores factuais, proveniência, cobertura, dados ausentes, evidências ou gráficos por meio de clientes CLI e MCP compatíveis;</li>
+            <li>conectar-se a provedores de saúde compatíveis após a autorização e enviar os registros do provedor ao dispositivo;</li>
+            <li>usar infraestrutura limitada e sem dados de saúde para agendamento, compras, análises do produto, atribuição de campanhas, autorização de provedores, entrega do site e suporte, conforme descrito na Política de Privacidade.</li>
+          </ul>
+          <p>Não coletamos nem armazenamos seus dados de saúde em servidores do Health.md. Os dados de saúde ainda podem sair do seu dispositivo quando você escolhe uma pasta sincronizada, cliente emparelhado, provedor, agente ou serviço de modelos, endpoint de API ou outro destino. Esse destino controla sua cópia.</p>
+        </section>
+
+        <section id="availability">
+          <h2>6. Disponibilidade, limites e recursos de prévia</h2>
+          <p>Os recursos variam conforme o sistema operacional, dispositivo, versão da loja, API de origem, permissão, região, provedor conectado e canal de lançamento. A documentação pode descrever uma prévia, compilação a partir do código-fonte, versão beta ou alternativa de compatibilidade que não esteja incluída nem seja compatível com todas as plataformas. “Quando disponível” não promete lançamento, disponibilidade contínua nem paridade de recursos.</p>
+          <p>As permissões do HealthKit e do Health Connect podem fazer com que dados negados ou indisponíveis pareçam vazios. O bloqueio do dispositivo, as regras de execução em segundo plano, as condições da rede, os limites de API, o comportamento dos provedores de arquivos, o estado do emparelhamento, o armazenamento disponível e as interrupções de terceiros podem atrasar, limitar ou impedir o trabalho.</p>
+          <p>Solicitações diretas ao iPhone exigem uma fonte acessível, compatível e emparelhada explicitamente e podem exigir que o Health.md esteja aberto, em primeiro plano ou desbloqueado. Tarefas duráveis podem permanecer nos seus dispositivos após um tempo limite ou uma desconexão até serem concluídas, retomadas, canceladas, removidas ou expirarem. Você deve examinar o estado, a cobertura, os intervalos ausentes, os avisos e os diagnósticos de resultados parciais antes de considerar o resultado completo.</p>
+          <p>Podemos alterar, suspender, descontinuar ou impor limites razoáveis a qualquer Produto ou recurso. Não prometemos compatibilidade retroativa, manutenção indefinida nem que uma prévia se tornará disponível ao público em geral.</p>
+        </section>
+
+        <section id="health-disclaimer">
+          <h2>7. Aviso sobre saúde e medicina</h2>
+          <p><strong>O Health.md é uma ferramenta de portabilidade de dados e consultas factuais. Não é um dispositivo médico, prestador de serviços de saúde, serviço de diagnóstico, tratamento nem serviço de emergência.</strong></p>
+          <ul>
+            <li>O Health.md não diagnostica, recomenda tratamentos, infere causalidade nem determina se um resultado é saudável, prejudicial, melhor ou pior.</li>
+            <li>Valores e registros podem estar incompletos, atrasados, duplicados, alterados, identificados incorretamente, indisponíveis ou inexatos na origem ou no destino.</li>
+            <li>Gráficos, resumos, evidências e arquivos exportados não substituem o registro original nem a orientação de um profissional de saúde qualificado.</li>
+            <li>Você pode compartilhar dados com um profissional de saúde, mas esse profissional — e não o Health.md — é responsável por qualquer interpretação ou decisão médica.</li>
+            <li>Os resultados produzidos por uma ferramenta de IA ou provedor de modelos são fornecidos por esse terceiro e não constituem orientação médica do Health.md.</li>
+          </ul>
+          <p>Não dependa de um Produto em uma emergência nem para uma decisão médica urgente. Entre em contato com os serviços locais de emergência ou um profissional qualificado. A menos que concordemos separadamente por escrito, os Produtos para consumidores não são oferecidos sob um contrato de associado comercial da HIPAA e não substituem um sistema de prontuário eletrônico.</p>
+        </section>
+
+        <section id="data">
+          <h2>8. Dados, privacidade e propriedade</h2>
+          <p>Nossa <a href="privacy-policy.html">Política de Privacidade</a> explica como o Health.md trata dados de saúde, análises próprias do produto, atribuição de campanhas, metadados de agendamento, autorização de provedores, informações de compras, solicitações do site e dados de suporte. Ela é incorporada a estes Termos por referência.</p>
+          <p>Na relação entre você e o Health.md, você mantém seus direitos sobre os dados de saúde e outros conteúdos que instrui os Produtos a processar. Você instrui o Health.md a acessar, transformar, transmitir e gravar esses dados somente conforme necessário para executar o recurso solicitado. Isso não transfere para nós a propriedade dos seus dados de saúde.</p>
+          <p>O Health.md mantém seus direitos sobre o nome e as marcas Health.md, serviços operados, listagens e direitos adquiridos nas lojas e conteúdos ou recursos não disponibilizados sob uma licença separada. Os direitos sobre o software e o código-fonte do Health.md são regidos pela AGPL-3.0-only, MIT, licença de terceiros ou outra licença aplicável ao componente pertinente. A propriedade dos seus dados não lhe confere a propriedade da marca nem dos serviços do Health.md.</p>
+        </section>
+
+        <section id="responsibilities">
+          <h2>9. Suas responsabilidades</h2>
+          <p>Você é responsável por:</p>
+          <ul>
+            <li><strong>Permissões e autoridade:</strong> selecionar somente dados e contas que você possa acessar, processar e divulgar legalmente;</li>
+            <li><strong>Segurança do dispositivo:</strong> usar códigos de acesso, atualizações, criptografia de disco, armazenamentos protegidos de credenciais e redes confiáveis, conforme adequado;</li>
+            <li><strong>Destinos:</strong> avaliar a segurança, autorização, registro, retenção, exclusão, backup e controles de acesso de pastas, provedores, endpoints, serviços de IA/modelos e computadores emparelhados;</li>
+            <li><strong>Resultados sensíveis:</strong> proteger arquivos e resultados que possam conter carimbos de data e hora exatos, rotas e localizações, medicamentos, registros de bem-estar mental, valores de ECG, conteúdo clínico/FHIR, proveniência, documentos ou anexos;</li>
+            <li><strong>Acesso direto:</strong> aprovar somente pares confiáveis, proteger credenciais de emparelhamento e nunca expor uma API local de loopback nem sua porta a outra máquina;</li>
+            <li><strong>Integridade:</strong> analisar recibos, manifestos, cobertura, limitações da fonte, avisos e resultados parciais em vez de considerar que dados ausentes são iguais a zero;</li>
+            <li><strong>Backups e exclusão:</strong> manter os backups necessários e excluir cópias de cada destino por meio dos controles dele;</li>
+            <li><strong>Conformidade:</strong> cumprir as leis e os requisitos profissionais, trabalhistas, de pesquisa, clínicos ou organizacionais aplicáveis ao seu fluxo de trabalho.</li>
+          </ul>
+          <p>Não coloque registros de saúde, exportações, credenciais nem resultados diretos sensíveis em e-mails comuns de suporte, relatos públicos, transcrições de chats, logs de CI, rastreamentos de shell nem outros locais inadequados para dados de saúde.</p>
+        </section>
+
+        <section id="purchases">
+          <h2>10. Uso gratuito, Full Access e reembolsos</h2>
+          <p>Os Produtos podem permitir um número limitado de ações de exportação bem-sucedidas sem cobrança. A oferta atual para consumidores inclui 10 exportações gratuitas. Uma ação manual, agendada, via Shortcut ou direta bem-sucedida pode consumir a mesma franquia, conforme mostrado no Produto, independentemente de quantas datas ou arquivos ela inclua. Trabalhos com falha e novas tentativas podem ser tratados de forma diferente conforme as regras documentadas da cota.</p>
+          <p>Quando oferecido, o Full Access é uma compra única no aplicativo que remove o limite de exportações para recursos compatíveis. Ele não é uma assinatura e não se renova. As plataformas Apple podem oferecer Individual Lifetime, Family Lifetime ou uma atualização entre eles; outras lojas podem oferecer seu próprio produto único compatível. A tela de compra da loja controla o produto, preço, moeda, tributos, conta e elegibilidade para Compartilhamento Familiar exibidos.</p>
+          <p>Um direito “vitalício” ou permanente significa que a licença adquirida não expira em um ciclo de cobrança recorrente. Isso não garante que todos os recursos, sistemas operacionais, dispositivos, provedores ou Produtos continuarão disponíveis ou compatíveis para sempre. Podemos alterar preços ou ofertas futuras sem modificar uma compra concluída, exceto conforme permitido pelos termos da loja e pela legislação.</p>
+          <p>Compras, restaurações, cobranças e reembolsos são tratados pela loja em que você comprou o Full Access. Não recebemos os dados completos do cartão e, normalmente, não podemos emitir diretamente um reembolso da loja. Para compras da Apple, use <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">Relatar um Problema</a>; para compras no Google Play, use o processo de reembolso aplicável do Google. A elegibilidade ao reembolso é determinada pela loja e pela legislação aplicável.</p>
+        </section>
+
+        <section id="third-parties">
+          <h2>11. Serviços e destinos de terceiros</h2>
+          <p>Os Produtos dependem ou podem se conectar a serviços operados por terceiros, inclusive Apple, Google, HealthKit, Health Connect, lojas de aplicativos, APNs, provedores de arquivos e sincronização, Obsidian, provedores de saúde, serviços OAuth, endpoints de API, redes locais, Cloudflare, hosts de sites, provedores de IA/modelos, hosts de agentes e ferramentas configuradas por você.</p>
+          <p>Os termos, as licenças, as práticas de privacidade, as regras de contas, os limites de uso, as tarifas, a disponibilidade e os controles de segurança de terceiros se aplicam aos serviços deles. Não os controlamos e não somos responsáveis por seus atos, omissões, resultados, interrupções, alterações de políticas nem pelo tratamento dos dados depois que você os direciona a esses serviços.</p>
+          <p>Nomes de marcas e logotipos pertencem aos respectivos proprietários. A menção a um terceiro não implica patrocínio, endosso, compatibilidade nem suporte contínuo.</p>
+        </section>
+
+        <section id="intellectual-property">
+          <h2>12. Propriedade intelectual, código aberto e feedback</h2>
+          <p>O nome, os logotipos e as marcas Health.md, os serviços operados, os materiais das lojas e o conteúdo ou os recursos originais não disponibilizados sob outra licença pertencem ao Health.md ou a seus licenciadores e são protegidos pela legislação aplicável de propriedade intelectual.</p>
+          <p>O aplicativo Apple, o aplicativo Android, a CLI e o núcleo compartilhado do Health.md são AGPL-3.0-only, e o código-fonte do site é licenciado sob a MIT. Dependências e recursos incluídos de terceiros mantêm seus próprios termos. A licença aplicável rege seu uso, cópia, modificação, distribuição e — quando abordada pela licença — hospedagem em rede. Nada nestes Termos restringe esses direitos de licença.</p>
+          <p>Se você enviar voluntariamente feedback ou sugestões, concede a nós um direito mundial, perpétuo, irrevogável e livre de royalties de usá-los para melhorar ou desenvolver produtos sem obrigação de remunerar você nem lhe dar crédito. Não inclua dados de saúde, credenciais, informações confidenciais nem conteúdo que você não esteja autorizado a compartilhar.</p>
+        </section>
+
+        <section id="updates">
+          <h2>13. Atualizações, suspensão e rescisão</h2>
+          <p>Podemos fornecer atualizações para corrigir falhas, melhorar o desempenho, alterar recursos, cumprir requisitos da plataforma ou legais ou resolver problemas de segurança. As atualizações podem alterar os requisitos do sistema e exigir a aceitação de termos revisados. Não temos a obrigação de fornecer atualizações indefinidamente.</p>
+          <p>Você pode parar de usar um Produto a qualquer momento e desinstalar ou excluir suas cópias locais. A desinstalação não exclui exportações, estados de computadores emparelhados, cópias de provedores, entregas de API, mensagens de suporte nem outros dados já colocados em outro local.</p>
+          <p>Podemos suspender o acesso a um serviço de suporte operado pelo Health.md ou revogar um direito da loja, na medida permitida pela loja e pela legislação, se você violar estes Termos de forma relevante, criar risco jurídico ou de segurança ou usar indevidamente os Produtos. A rescisão de direitos sob uma licença de código aberto é regida somente por essa licença. Quando for razoável, limitaremos a medida ao Produto ou serviço afetado.</p>
+          <p>As disposições que, por sua natureza, devam sobreviver à rescisão — inclusive propriedade, pagamentos, isenções de responsabilidade, limites de responsabilidade, indenização, disputas e termos gerais — continuarão em vigor.</p>
+        </section>
+
+        <section id="warranties">
+          <h2>14. Isenção de garantias</h2>
+          <p>NA EXTENSÃO MÁXIMA PERMITIDA POR LEI, OS PRODUTOS SÃO FORNECIDOS “NO ESTADO EM QUE SE ENCONTRAM” E “CONFORME DISPONÍVEIS”. O HEALTH.MD E SEUS LICENCIADORES SE ISENTAM DE GARANTIAS EXPRESSAS, IMPLÍCITAS E LEGAIS, INCLUSIVE COMERCIABILIDADE, ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA, TITULARIDADE, NÃO VIOLAÇÃO E QUALQUER GARANTIA DECORRENTE DO CURSO DAS NEGOCIAÇÕES OU DOS USOS COMERCIAIS.</p>
+          <p>Não garantimos que um Produto será ininterrupto, seguro, livre de erros, compatível, completo ou exato; que os dados estarão disponíveis, serão preservados ou exportados com sucesso; nem que uma fonte, destino, provedor, modelo, loja ou plataforma de terceiros funcionará conforme esperado.</p>
+          <p>Algumas jurisdições não permitem determinadas exclusões de garantia. Nesse caso, as exclusões se aplicam somente na medida permitida, e qualquer garantia obrigatória fica limitada ao menor período e ao escopo mínimo permitidos por lei.</p>
+        </section>
+
+        <section id="liability">
+          <h2>15. Limitação de responsabilidade</h2>
+          <p>NA EXTENSÃO MÁXIMA PERMITIDA POR LEI, O HEALTH.MD, SEU OPERADOR, SUAS AFILIADAS E SEUS LICENCIADORES NÃO SERÃO RESPONSÁVEIS POR DANOS INDIRETOS, INCIDENTAIS, ESPECIAIS, EXEMPLARES, CONSEQUENCIAIS OU PUNITIVOS NEM POR LUCROS CESSANTES, PERDA DE RECEITA, REPUTAÇÃO, DADOS OU USO OU INTERRUPÇÃO DOS NEGÓCIOS DECORRENTES DOS PRODUTOS OU RELACIONADOS A ELES.</p>
+          <p>Isso inclui perda, corrupção, divulgação ou direcionamento indevido de dados; registros de saúde indisponíveis ou incompletos; erros em exportações ou consultas; decisões baseadas nos resultados; serviços de terceiros; falhas em agendamentos, tarefas em segundo plano, transferências, emparelhamento, compras ou integrações; e acesso não autorizado causado pelo seu dispositivo, suas credenciais, seu destino ou sua configuração.</p>
+          <p>NA EXTENSÃO MÁXIMA PERMITIDA POR LEI, NOSSA RESPONSABILIDADE TOTAL DECORRENTE DE UM PRODUTO OU RELACIONADA A ELE NÃO EXCEDERÁ O VALOR PAGO POR VOCÊ POR ESSE PRODUTO.</p>
+          <p>Esses limites não excluem responsabilidades que não possam ser legalmente excluídas, como responsabilidade por fraude ou dolo ou por morte ou lesão corporal quando a legislação aplicável proibir a exclusão. Algumas jurisdições concedem direitos adicionais, portanto alguns limites podem não se aplicar a você.</p>
+        </section>
+
+        <section id="indemnity">
+          <h2>16. Indenização e controles de exportação</h2>
+          <p>Na medida permitida por lei, se você usar os Produtos em nome de uma organização, defenderá e indenizará o Health.md e seu operador contra reivindicações de terceiros, danos e custos razoáveis decorrentes do uso ilegal pela organização, do processamento ou divulgação não autorizados de dados de outra pessoa, da violação destes Termos ou da violação de direitos de terceiros. Essa obrigação não se aplica na medida em que uma reivindicação tenha sido causada por violação ou conduta indevida do próprio Health.md.</p>
+          <p>Você deve cumprir as leis aplicáveis de controle de exportação, sanções e reexportação. Você não pode usar, exportar nem fornecer um Produto onde isso for proibido por lei. Você declara que não está proibido de receber os Produtos pelas sanções ou restrições de exportação aplicáveis.</p>
+        </section>
+
+        <section id="disputes">
+          <h2>17. Legislação aplicável e disputas</h2>
+          <p>Estes Termos são regidos pela legislação aplicável, sem aplicar regras de conflito de leis que eliminem proteções obrigatórias. Nada nestes Termos retira direitos ou medidas de proteção do consumidor que não possam ser renunciados conforme a legislação do local onde você mora.</p>
+          <p>Antes de iniciar um processo formal, pedimos que você entre em contato pelo e-mail <a href="mailto:legal@isolated.tech">legal@isolated.tech</a> e nos dê uma oportunidade razoável de resolver a questão informalmente. Qualquer uma das partes pode apresentar uma reivindicação a um tribunal ou foro com jurisdição legal. Estes Termos não exigem arbitragem, a menos que você e o Health.md concordem separadamente com ela quando for lícito.</p>
+        </section>
+
+        <section id="general">
+          <h2>18. Termos jurídicos gerais</h2>
+          <p>Estes Termos, a Política de Privacidade, as licenças de software e os termos das lojas aplicáveis e quaisquer termos adicionais apresentados para um Produto específico constituem o acordo integral sobre o uso dos Produtos por você e substituem conversas anteriores sobre o assunto.</p>
+          <p>Se uma disposição for inválida ou inexequível, ela será limitada ao mínimo necessário, e as demais disposições continuarão em vigor. Nossa omissão em exigir o cumprimento de uma disposição não constitui renúncia. Você não pode ceder estes Termos sem nosso consentimento; nós podemos cedê-los como parte de uma reorganização, fusão, aquisição ou transferência dos Produtos, sujeito à legislação aplicável.</p>
+          <p>Os títulos das seções servem apenas para facilitar a consulta. “Inclusive” significa “inclusive, sem limitação”. Avisos e aceitações eletrônicos têm o mesmo efeito que comunicações em papel, quando permitido.</p>
+        </section>
+
+        <section id="stores">
+          <h2>19. Termos específicos das lojas de aplicativos</h2>
+          <h3>Cópias distribuídas pela Apple</h3>
+          <ul>
+            <li>Estes Termos são celebrados entre você e o Health.md, não com a Apple. O Health.md, não a Apple, é responsável pelo Aplicativo e seu conteúdo.</li>
+            <li>Para a cópia distribuída pela loja, seu uso está sujeito às Regras de Uso da Apple, inclusive o uso elegível por Compartilhamento Familiar ou compra por volume. Direitos separados sobre software licenciado sob a AGPL continuam regidos pela AGPL.</li>
+            <li>A Apple não tem obrigação de fornecer manutenção ou suporte. Se uma garantia aplicável não for cumprida, você poderá notificar a Apple para receber qualquer reembolso do preço de compra disponível conforme as regras dela; na extensão máxima permitida, a Apple não tem nenhuma outra obrigação de garantia.</li>
+            <li>O Health.md, não a Apple, é responsável por tratar reivindicações de responsabilidade pelo produto, conformidade legal, proteção do consumidor e propriedade intelectual relacionadas ao Aplicativo, sujeito a estes Termos.</li>
+            <li>Você deve cumprir os termos aplicáveis de terceiros ao usar o Aplicativo.</li>
+            <li>A Apple e suas subsidiárias são terceiras beneficiárias destes Termos e podem exigir seu cumprimento para cópias distribuídas pela Apple.</li>
+          </ul>
+          <h3>Cópias distribuídas pelo Google Play</h3>
+          <p>Estes Termos são celebrados entre você e o Health.md, não com o Google. O Google não é responsável pelo Aplicativo nem pelo suporte conforme estes Termos. Seu uso também está sujeito aos termos, às políticas e às regras de contas aplicáveis do Google Play; se um termo obrigatório do Google Play entrar em conflito com estes Termos, esse termo obrigatório prevalecerá para a cópia distribuída pelo Google.</p>
+        </section>
+
+        <section id="changes">
+          <h2>20. Alterações destes Termos</h2>
+          <p>Podemos atualizar estes Termos quando os Produtos, a legislação ou nossas práticas mudarem. Publicaremos os Termos revisados e atualizaremos a data acima. Se uma alteração afetar de forma relevante seus direitos ou seu uso, também poderemos fornecer um aviso em um Produto, nas notas da versão ou em outro canal razoável. As alterações se aplicam prospectivamente a partir da data de vigência; o uso contínuo após essa data significa que você aceita os Termos revisados, quando permitido por lei.</p>
+        </section>
+
+        <section id="contact">
+          <h2>21. Contato</h2>
+          <p>Dúvidas sobre estes Termos podem ser enviadas para <a href="mailto:legal@isolated.tech">legal@isolated.tech</a>. O Health.md é operado por Cody Bontecou sob o nome <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>.</p>
+          <p>Para suporte ao produto, envie um e-mail para <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>. Não inclua registros de saúde, exportações, credenciais nem outros dados sensíveis em mensagens comuns de suporte ou relatos públicos.</p>
+        </section>
+      </article>
     </div>
   </main>
 
-  <footer>
-    <div class="container">
-      <div class="footer-inner">
-        <p class="footer-text">© 2026 health.md. Criado com cuidado.</p>
-        <div class="footer-links" aria-label="Links jurídicos e de suporte">
-          <a href="privacy-policy.html">Política de Privacidade</a>
-          <a href="terms-of-service.html" aria-current="page">Termos</a>
-          <a href="mailto:cody@isolated.tech">Suporte</a>
-        </div>
-      </div>
+  <footer class="site-footer">
+    <div class="footer-shell footer-inner">
+      <nav class="language-selector" aria-label="Seletor de idioma">
+        <a href="../terms-of-service.html" hreflang="en" lang="en">English</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page" lang="pt-BR">Português (Brasil)</span>
+      </nav>
+      <a class="footer-brand" href="../pt-br/" aria-label="Página inicial do Health.md">health.md</a>
+      <nav class="footer-links" aria-label="Navegação do rodapé">
+        <a href="../pt-br/docs/">Documentação</a>
+        <a href="privacy-policy.html">Privacidade</a>
+        <a href="terms-of-service.html">Termos</a>
+        <a href="mailto:cody@isolated.tech">Suporte</a>
+      </nav>
     </div>
   </footer>
+
   <script src="../assets/analytics.js" defer></script>
 </body>
 </html>

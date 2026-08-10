@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "products": [
+    {
+      "id": "6780235271",
+      "productId": "com.codybontecou.obsidianhealth.unlock.family",
+      "referenceName": "Family Full Access",
+      "localizations": {
+        "en-US": {
+          "name": "Family Full Access",
+          "description": "Share unlimited Health.md exports with your family."
+        },
+        "de-DE": {
+          "name": "Vollzugriff für Familien",
+          "description": "Teile unbegrenzte Exporte mit deiner Familie."
+        },
+        "es-ES": {
+          "name": "Acceso total familiar",
+          "description": "Comparte exportaciones ilimitadas en familia."
+        },
+        "fr-FR": {
+          "name": "Accès complet en famille",
+          "description": "Partagez des exports illimités en famille."
+        },
+        "it": {
+          "name": "Accesso completo in famiglia",
+          "description": "Condividi esportazioni illimitate in famiglia"
+        },
+        "ja": {
+          "name": "ファミリー向けフルアクセス",
+          "description": "Appleのファミリー共有で、家族もHealth.mdから無制限にエクスポートできます。"
+        },
+        "ko": {
+          "name": "가족 공유 전체 이용권",
+          "description": "가족과 Health.md 내보내기를 무제한으로 공유하세요."
+        },
+        "nl-NL": {
+          "name": "Volledige gezinstoegang",
+          "description": "Deel onbeperkte toegang via Delen met gezin."
+        },
+        "pt-BR": {
+          "name": "Acesso total familiar",
+          "description": "Compartilhe exportações ilimitadas em família"
+        },
+        "zh-Hans": {
+          "name": "家人共享完整访问权限",
+          "description": "通过“家人共享”，全家可享无限次导出。"
+        }
+      }
+    },
+    {
+      "id": "6781658621",
+      "productId": "com.codybontecou.obsidianhealth.unlock.family.upgrade",
+      "referenceName": "Family Upgrade",
+      "localizations": {
+        "en-US": {
+          "name": "Family Upgrade",
+          "description": "Upgrade Lifetime to Family Sharing."
+        },
+        "de-DE": {
+          "name": "Familien-Upgrade",
+          "description": "Füge Familienfreigabe zum Dauerzugriff hinzu."
+        },
+        "es-ES": {
+          "name": "Mejora para la familia",
+          "description": "Amplía tu acceso de por vida con En familia."
+        },
+        "fr-FR": {
+          "name": "Passage au partage familial",
+          "description": "Ajoutez le partage familial à l’accès à vie."
+        },
+        "it": {
+          "name": "Upgrade per la famiglia",
+          "description": "Aggiungi “In famiglia” all’accesso a vita."
+        },
+        "ja": {
+          "name": "ファミリー共有アップグレード",
+          "description": "買い切りの永久アクセスを、ファミリー共有対応にアップグレードします。"
+        },
+        "ko": {
+          "name": "가족 공유 업그레이드",
+          "description": "평생 이용권을 가족 공유가 가능한 이용권으로 업그레이드합니다."
+        },
+        "nl-NL": {
+          "name": "Gezinsupgrade",
+          "description": "Voeg ‘Delen met gezin’ toe aan je aankoop."
+        },
+        "pt-BR": {
+          "name": "Upgrade para família",
+          "description": "Vitalício com Compartilhamento Familiar."
+        },
+        "zh-Hans": {
+          "name": "家人共享升级",
+          "description": "将一次性购买的永久访问权限升级为支持“家人共享”的版本。"
+        }
+      }
+    },
+    {
+      "id": "6761057963",
+      "productId": "com.codybontecou.obsidianhealth.unlock",
+      "referenceName": "Unlock Full Access",
+      "localizations": {
+        "en-US": {
+          "name": "Unlock Full Access",
+          "description": "Unlimited exports forever. One-time purchase."
+        },
+        "de-DE": {
+          "name": "Vollzugriff freischalten",
+          "description": "Unbegrenzte Exporte. Einmaliger Kauf."
+        },
+        "es-ES": {
+          "name": "Desbloquear acceso total",
+          "description": "Exportaciones ilimitadas. Pago único."
+        },
+        "fr-FR": {
+          "name": "Débloquer l’accès complet",
+          "description": "Exports illimités à vie. Un seul achat."
+        },
+        "it": {
+          "name": "Sblocca l’accesso completo",
+          "description": "Esportazioni illimitate. Acquisto unico."
+        },
+        "ja": {
+          "name": "フルアクセスをアンロック",
+          "description": "一度の購入で、永久に無制限にエクスポートできます。"
+        },
+        "ko": {
+          "name": "전체 이용권 잠금 해제",
+          "description": "한 번만 구매하면 평생 횟수 제한 없이 내보낼 수 있습니다."
+        },
+        "nl-NL": {
+          "name": "Volledige toegang ontgrendelen",
+          "description": "Onbeperkt exporteren. Eenmalige aankoop."
+        },
+        "pt-BR": {
+          "name": "Desbloquear acesso total",
+          "description": "Exportações ilimitadas. Pagamento único."
+        },
+        "zh-Hans": {
+          "name": "解锁完整访问权限",
+          "description": "一次购买，永久无限次导出。"
+        }
+      }
+    }
+  ]
+}

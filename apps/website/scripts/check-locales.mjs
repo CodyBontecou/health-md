@@ -50,7 +50,7 @@ assert.equal(defaultLocale, 'en');
 assert.deepEqual(enabledLocales, expectedLocales);
 assert.deepEqual(publishedLocales('landing').map(({ code }) => code), expectedLocales);
 assert.deepEqual(publishedLocales('docs').map(({ code }) => code), expectedLocales);
-assert.deepEqual(publishedLocales('legal').map(({ code }) => code), ['en', 'es']);
+assert.deepEqual(publishedLocales('legal').map(({ code }) => code), expectedLocales);
 assert.deepEqual(
   publishedLocales('redirect').map(({ code }) => code),
   expectedLocales.filter((code) => code !== defaultLocale),

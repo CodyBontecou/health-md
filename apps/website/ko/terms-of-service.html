@@ -1,620 +1,317 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>서비스 약관 — Health.md</title>
-  <meta name="description" content="Apple Health 및 Android Health Connect 내보내기, Full Access, 로컬 우선 파일 대상, 의료 면책 및 앱 스토어 환불 처리에 관한 Health.md 약관입니다.">
+  <meta name="description" content="Health.md 앱, 내보내기, 직접 CLI 및 MCP 도구, Full Access, 사용자가 선택한 대상과 지원 서비스 이용에 관한 약관입니다.">
   <link rel="canonical" href="https://healthmd.app/ko/terms-of-service.html">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html">
   <link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html">
   <link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html">
-  <meta name="robots" content="noindex,follow">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="서비스 약관 — Health.md">
-  <meta property="og:description" content="Apple Health 및 Android Health Connect 내보내기, Full Access, 로컬 우선 파일 대상, 의료 면책 및 앱 스토어 환불 처리에 관한 Health.md 약관입니다.">
+  <meta property="og:description" content="Health.md 앱, 건강 데이터 내보내기, 직접 도구, 구매 및 사용자가 선택한 대상에 관한 읽기 쉬운 약관입니다.">
   <meta property="og:url" content="https://healthmd.app/ko/terms-of-service.html">
   <meta property="og:locale" content="ko_KR">
   <meta property="og:locale:alternate" content="en_US">
-  <meta name="theme-color" content="#6d4aff">
   <link rel="icon" href="../favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="16x16" href="../assets/app-icon/icon_16x16.png">
-  <link rel="icon" type="image/png" sizes="20x20" href="../assets/app-icon/icon_20x20.png">
-  <link rel="icon" type="image/png" sizes="29x29" href="../assets/app-icon/icon_29x29.png">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/app-icon/icon_32x32.png">
-  <link rel="icon" type="image/png" sizes="40x40" href="../assets/app-icon/icon_40x40.png">
-  <link rel="icon" type="image/png" sizes="60x60" href="../assets/app-icon/icon_60x60.png">
   <link rel="icon" type="image/png" sizes="192x192" href="../assets/app-icon/icon_192x192.png">
-  <link rel="icon" type="image/png" sizes="1024x1024" href="../assets/app-icon/icon_1024x1024.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="../assets/app-icon/icon_76x76.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="../assets/app-icon/icon_120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="../assets/app-icon/icon_152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="../assets/app-icon/icon_167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script src="../assets/theme.js"></script>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg-primary: #f4f2f8;
-      --bg-secondary: #fbfaff;
-      --bg-tertiary: #e9e5f1;
-      --text-primary: #202024;
-      --text-secondary: #42404a;
-      --text-muted: #6f6a7c;
-      --accent: #6d4aff;
-      --accent-dim: #4f2bbd;
-      --accent-glow: rgba(109, 74, 255, 0.14);
-      --border: #d4cde0;
-      --success: #9b5cf6;
-      --on-accent: #ffffff;
-      --mono: 'JetBrains Mono', 'Space Mono', monospace;
-    }
-
-    :root[data-theme="dark"] {
-      color-scheme: dark;
-      --bg-primary: #18181d;
-      --bg-secondary: #24222c;
-      --bg-tertiary: #211f28;
-      --text-primary: #f0eef7;
-      --text-secondary: #d3cedf;
-      --text-muted: #aaa3b8;
-      --accent: #a78bfa;
-      --accent-dim: #6d4aff;
-      --accent-glow: rgba(167, 139, 250, 0.18);
-      --border: #3b3549;
-      --success: #c4b5fd;
-      --on-accent: #ffffff;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        color-scheme: dark;
-        --bg-primary: #18181d;
-        --bg-secondary: #24222c;
-        --bg-tertiary: #211f28;
-        --text-primary: #f0eef7;
-        --text-secondary: #d3cedf;
-        --text-muted: #aaa3b8;
-        --accent: #a78bfa;
-        --accent-dim: #6d4aff;
-        --accent-glow: rgba(167, 139, 250, 0.18);
-        --border: #3b3549;
-        --success: #c4b5fd;
-        --on-accent: #ffffff;
-      }
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: var(--mono);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 17px;
-      line-height: 1.75;
-      -webkit-text-size-adjust: 100%;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-      opacity: 0.03;
-      pointer-events: none;
-      z-index: 1000;
-    }
-
-    .grid-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px;
-      opacity: 0.15;
-      pointer-events: none;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-      position: relative;
-      z-index: 1;
-    }
-
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 20px 0;
-      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
-    }
-
-    .header-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .logo-content {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo-mark {
-      width: 36px;
-      height: 36px;
-      border: 2px solid var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .logo-mark::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-
-    .logo-text {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-primary);
-    }
-
-    .logo-subtext {
-      font-size: 12px;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-      margin-top: 4px;
-    }
-
-    .logo-subtext a {
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .logo-subtext a:hover {
-      color: var(--accent);
-    }
-
-    .back-link {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 13px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .back-link:hover {
-      color: var(--accent);
-    }
-
-    .header-actions {
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .language-selector {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-secondary);
-      font-size: 12px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .language-selector a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .language-selector a:hover {
-      color: var(--accent);
-    }
-
-    .language-selector [aria-current="page"] {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .theme-toggle {
-      flex: 0 0 auto;
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 2px;
-      background: var(--bg-secondary);
-    }
-
-    .theme-toggle button {
-      min-width: 44px;
-      border: 0;
-      border-radius: 6px;
-      padding: 6px 8px;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      font: 700 10px/1 var(--mono);
-      text-transform: uppercase;
-    }
-
-    .theme-toggle button[aria-pressed="true"] {
-      background: var(--accent);
-      color: var(--on-accent);
-    }
-
-    main {
-      padding-top: 140px;
-      padding-bottom: 80px;
-      min-height: 100vh;
-    }
-
-    .page-header {
-      margin-bottom: 60px;
-    }
-
-    .page-label {
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .page-title {
-      font-size: clamp(40px, 7vw, 56px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-      line-height: 1.05;
-    }
-
-    .page-meta {
-      font-size: 15px;
-      color: var(--text-muted);
-    }
-
-    .content-box {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 52px;
-      margin-bottom: 32px;
-    }
-
-    .content-box h2 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      margin-top: 40px;
-      color: var(--text-primary);
-      line-height: 1.2;
-    }
-
-    .content-box h2:first-child {
-      margin-top: 0;
-    }
-
-    .content-box h3 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      margin-top: 32px;
-      color: var(--text-primary);
-      line-height: 1.3;
-    }
-
-    .content-box p {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 18px;
-      line-height: 1.9;
-    }
-
-    .content-box ul {
-      margin: 20px 0;
-      padding-left: 0;
-      list-style: none;
-    }
-
-    .content-box ul li {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 14px;
-      padding-left: 28px;
-      position: relative;
-      line-height: 1.9;
-    }
-
-    .content-box ul li::before {
-      content: '→';
-      position: absolute;
-      left: 0;
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .content-box strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .highlight-box {
-      background: var(--accent-glow);
-      border: 1px solid var(--accent-dim);
-      border-radius: 4px;
-      padding: 24px;
-      margin: 32px 0;
-    }
-
-    .highlight-box p {
-      margin-bottom: 0;
-      color: var(--text-primary);
-    }
-
-    footer {
-      padding: 40px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .footer-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-text {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      font-size: 14px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover {
-      color: var(--accent);
-    }
-
-    @media (max-width: 768px) {
-      header {
-        padding: 16px 0;
-      }
-
-      .header-inner {
-        align-items: flex-start;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-
-      .header-actions {
-        margin-left: auto;
-      }
-
-      .content-box {
-        padding: 30px 22px;
-      }
-
-      .page-title {
-        font-size: 38px;
-      }
-
-      .content-box p,
-      .content-box ul li {
-        font-size: 16px;
-      }
-
-      .footer-inner {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-
-      .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 560px) {
-      main {
-        padding-top: 152px;
-      }
-
-      .container,
-      .header-inner {
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .logo-subtext {
-        display: none;
-      }
-
-      .page-label,
-      .back-link {
-        font-size: 12px;
-      }
-
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-      }
-
-      .theme-toggle button {
-        min-width: 38px;
-        padding: 6px;
-        font-size: 9px;
-      }
-
-      .content-box {
-        padding: 24px 18px;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .back-link,
-      .theme-toggle {
-        width: 100%;
-      }
-
-      .back-link {
-        justify-content: center;
-      }
-
-      .theme-toggle button {
-        min-width: 0;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="../assets/theme-icons.css">
+  <link rel="stylesheet" href="../assets/landing.css">
+  <link rel="stylesheet" href="../assets/legal.css">
 </head>
-<body>
-  <div class="grid-bg"></div>
+<body class="legal-page">
+  <a class="skip-link" href="#terms-of-service">서비스 약관으로 건너뛰기</a>
 
-  <header>
-    <div class="header-inner">
-      <a href="../index.html" class="logo">
-        <div class="logo-mark"></div>
-        <div class="logo-content">
-          <span class="logo-text">health.md</span>
-          <span class="logo-subtext">제작: <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span>
-        </div>
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="../ko/" aria-label="Health.md 홈">
+        <span class="brand-name">health.md</span>
       </a>
-      <div class="header-actions">
-        <a href="../index.html" class="back-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          뒤로
-        </a>
-        <nav class="language-selector" aria-label="언어 선택"><span aria-current="page" lang="ko">한국어</span><span aria-hidden="true">/</span><a href="../terms-of-service.html" hreflang="en" lang="en">English</a></nav>
-        <div class="theme-toggle" role="group" aria-label="색상 테마">
-          <button type="button" data-theme-option="system" aria-pressed="true">자동</button>
-          <button type="button" data-theme-option="light" aria-pressed="false">밝게</button>
-          <button type="button" data-theme-option="dark" aria-pressed="false">어둡게</button>
-        </div>
+      <div class="header-nav">
+        <nav aria-label="기본 탐색">
+          <a class="header-docs-link" href="../ko/docs/">문서</a>
+          <a class="header-docs-link" href="../ko/">홈</a>
+        </nav>
       </div>
     </div>
   </header>
 
-  <main>
-    <div class="container">
-      <div class="page-header">
-        <p class="page-label">법률 문서 · 미게시 번역 초안</p>
-        <h1 class="page-title">서비스 약관</h1>
-        <p class="page-meta">최종 업데이트: 2026년 8월 2일</p><p class="page-meta"><strong>번역 안내:</strong> 이 한국어 번역은 편의를 위한 미게시 초안입니다. 상충하거나 해석상 차이가 있는 경우 <a href="../terms-of-service.html" hreflang="en" lang="en">영문 원본</a>이 우선하며 법적 효력을 가집니다.</p>
-      </div>
+  <main class="legal-main" id="terms-of-service">
+    <section class="legal-hero" aria-labelledby="terms-title">
+      <div class="legal-hero-inner">
+        <p class="legal-eyebrow">법률 · 약관</p>
+        <h1 id="terms-title">서비스 약관을<br>읽기 쉽게 설명합니다.</h1>
+        <p class="legal-updated">최종 업데이트: 2026년 8월 6일</p>
+        <p class="legal-lede">Health.md는 건강 데이터를 이동하고 활용할 수 있게 도와줍니다. 이 약관은 라이선스, 제품의 한계, 그리고 민감한 데이터를 사용자의 파일, 컴퓨터, 서비스 및 에이전트로 보낼 때 따르는 책임을 설명합니다.</p>
 
-      <div class="content-box">
-<div class="highlight-box"><p><strong>요약:</strong> Health.md는 무료로 다운로드할 수 있으며 선택 사항인 일회성 Full Access 앱 내 구매를 제공합니다. 개인적인 내보내기에 사용하고 파일을 직접 관리하십시오. 이 앱은 의학적 조언을 제공하지 않습니다. 환불은 Full Access를 구매한 앱 스토어에서 처리합니다.</p></div>
-<h2>1. 약관 동의</h2><p>health.md(이하 “앱”)를 다운로드, 설치 또는 사용하면 본 서비스 약관(이하 “약관”)에 동의하는 것입니다. 동의하지 않으면 앱을 사용하지 마십시오.</p><p>본 약관은 사용자와 health.md 운영자(“당사”) 사이의 법적 계약입니다. 앱 사용에는 Apple App Store 서비스 약관 또는 Google Play 약관을 포함해 앱을 다운로드한 스토어 약관도 적용됩니다.</p>
-<h2>2. 라이선스 부여</h2><p>본 약관을 준수하는 조건으로 당사는 다음을 위한 제한적이고 비독점적이며 양도 불가능하고 철회 가능한 라이선스를 부여합니다:</p><ul><li>소유하거나 관리하는 Apple 또는 Android 기기에 앱을 설치하고 사용</li><li>개인적·비상업적 목적으로 앱의 내보내기, 예약, Apple 단축어, Android 자동화 및 Mac 대상 기능 이용</li></ul><p>앱은 무료입니다. Full Access는 Apple 플랫폼의 StoreKit 또는 Android의 Google Play Billing이 처리하는 선택적 일회성 앱 내 구매이며 구독이 아니고 갱신되지 않습니다. 구매로 잠금 해제된 기능을 본 약관에 따라 사용할 수 있지만 당사는 새 기능을 제공하거나 앱을 무기한 유지할 의무가 없습니다.</p>
-<h2>3. 허용되는 사용</h2><p>합법적인 목적과 본 약관에 따라서만 앱을 사용해야 합니다. 다음 행위를 해서는 안 됩니다:</p><ul><li>법률이 금지하지 않는 범위에서 앱을 리버스 엔지니어링, 디컴파일, 디스어셈블하거나 소스 코드를 추출하려는 행위</li><li>앱을 수정·각색하거나 파생 저작물을 만드는 행위</li><li>앱을 임대, 대여, 판매, 재배포 또는 재라이선스하는 행위</li><li>앱의 소유권 고지를 제거·변경·가리는 행위</li><li>관련 법률이나 규정을 위반하는 방식으로 사용하는 행위</li><li>당사 서비스를 손상·비활성화·저해할 수 있는 방식으로 사용하는 행위</li></ul>
-<h2>4. 앱 기능</h2><p>health.md의 용도:</p><ul><li>HealthKit API로 Apple Health 데이터 또는 Health Connect API로 Android 건강 데이터 읽기</li><li>선택한 대상으로 Markdown, Obsidian, CSV 및 JSON 파일 내보내기</li><li>Apple 백그라운드 실행 제한 또는 Android WorkManager 동작에 따라 지정한 일정으로 자동화</li><li>지원되는 워크플로에서 선택적 페어링 Mac 또는 CLI로 작업 직접 전송</li><li>선택한 내보내기를 사용자가 구성한 API 엔드포인트로 직접 전송</li></ul><p>핵심 처리는 기기에서 이루어지며 Health.md 서버는 건강 데이터를 수집·저장하지 않습니다. 일부 흐름은 스토어 구매·복원·업데이트, iCloud, 문서·파일 제공자 동기화, 페어링 전송 및 사용자가 구성한 API 등 사용자가 지시하거나 플랫폼이 제공하는 네트워크를 사용합니다.</p>
-<h2>5. 건강 데이터 면책</h2><p><strong>중요: health.md는 데이터 내보내기 도구이며 의료 기기나 의료 서비스가 아닙니다.</strong></p><ul><li>앱은 의학적 조언, 진단 또는 치료를 제공하지 않습니다</li><li>자격을 갖춘 의료 전문가와의 상담을 대체하지 않습니다</li><li>내보낸 데이터는 개인 참고용입니다</li><li>Apple Health, Health Connect, 웨어러블 또는 연결된 건강 앱 데이터의 정확성을 검증하지 않습니다</li><li>의료 제공자와 상담하지 않고 의료 결정에 사용하지 마십시오</li></ul><p>응급 상황에는 즉시 응급 서비스에 연락하십시오. 시간에 민감한 의료 결정에 앱 데이터를 의존하지 마십시오.</p>
-<h2>6. 데이터 및 개인정보</h2><p>앱 사용에는 본 약관에 포함되는 <a href="privacy-policy.html" style="color: var(--accent); text-decoration: underline;">개인정보 처리방침</a>이 적용됩니다. 핵심 사항:</p><ul><li>Health.md 서버에 건강 데이터를 수집·저장하지 않습니다</li><li>명시적으로 내보내기 전에는 원본이 Apple Health 또는 Health Connect에 남습니다</li><li>파일은 사용자가 선택한 기기, 폴더, 파일·문서 제공자 또는 Mac 대상에 기록됩니다</li><li>내보낸 데이터와 동기화 제공자 관리는 전적으로 사용자의 책임입니다</li><li>무엇을 어디로 내보낼지 사용자가 제어합니다</li></ul>
-<h2>7. 사용자의 책임</h2><p>사용자는 다음에 책임이 있습니다:</p><ul><li><strong>기기 보안:</strong> 암호 사용과 iOS, iPadOS, macOS 및 Android 업데이트 유지</li><li><strong>데이터 백업:</strong> 기기와 내보낸 파일 백업. 당사는 데이터 손실에 책임지지 않습니다.</li><li><strong>접근 제어:</strong> 기기, 폴더, 보관함, 동기화 제공자 및 파일 접근 관리</li><li><strong>법규 준수:</strong> 앱 사용에 적용되는 모든 법률·규정 준수</li><li><strong>파일 저장:</strong> 모든 클라우드, 문서 제공자, 보관함 및 Mac 폴더의 내보낸 파일 관리</li><li><strong>API 대상:</strong> 구성한 API의 보안, 권한, 로깅, 보관 및 삭제 방식 검증</li></ul>
-<h2>8. 타사 서비스</h2><p>앱은 다음과 통합됩니다:</p><ul><li><strong>Apple HealthKit:</strong> Apple 약관과 iOS 개인정보 설정이 적용됩니다.</li><li><strong>Android Health Connect:</strong> Google/Android 약관과 Health Connect 개인정보 설정이 적용됩니다.</li><li><strong>선택적 건강 제공자 API:</strong> 명시적으로 활성화한 직접 가져오기는 해당 제공자의 OAuth, API, 개인정보 및 계정 약관을 따릅니다.</li><li><strong>Apple 파일, Android Storage Access Framework 및 파일 제공자:</strong> 플랫폼 선택기를 통해 선택한 폴더에 파일을 씁니다.</li><li><strong>StoreKit, App Store 및 Google Play Billing:</strong> Full Access 구매, 복원, 업데이트 및 환불을 관련 스토어가 처리합니다.</li><li><strong>로컬 네트워크/근거리 연결:</strong> 선택적 Mac 대상에는 기기 간 로컬 탐색과 연결이 필요합니다.</li></ul><p>당사는 타사 서비스, 가용성 또는 약관에 책임지지 않습니다.</p>
-<h2>9. 보증 부인</h2><p>앱은 명시적이든 묵시적이든 어떠한 보증도 없이 “있는 그대로”, “이용 가능한 상태로” 제공됩니다. 여기에는 다음이 포함됩니다:</p><ul><li>상품성, 특정 목적 적합성 또는 비침해 보증</li><li>앱이 오류 없이 중단되지 않고 안전하다는 보증</li><li>내보낸 데이터의 정확성, 신뢰성 또는 완전성 보증</li></ul><p>일부 관할권은 묵시적 보증 배제를 허용하지 않으므로 일부 배제가 적용되지 않을 수 있습니다.</p>
-<h2>10. 책임 제한</h2><p>법이 허용하는 최대 범위에서 당사는 다음으로 인해 발생하는 간접, 부수적, 특별, 결과적 또는 징벌적 손해나 이익·수익·데이터·사용의 손실에 책임지지 않습니다:</p><ul><li>앱의 사용 또는 사용 불능</li><li>앱이나 내보낸 데이터의 오류, 버그 또는 부정확성</li><li>데이터 손실 또는 손상</li><li>내보낸 데이터를 근거로 한 결정</li><li>기기 손상 또는 성능 문제</li></ul><p>어떠한 경우에도 당사의 총책임은 사용자가 앱에 지불한 금액을 초과하지 않습니다.</p><p>일부 관할권은 부수적·결과적 손해의 책임 제한을 허용하지 않으므로 위 제한이 적용되지 않을 수 있습니다.</p>
-<h2>11. 면책 및 배상</h2><p>사용자는 다음과 관련해 발생하는 청구, 책임, 손해, 손실, 비용 또는 경비(합리적인 변호사 비용 포함)로부터 health.md 운영자를 방어하고 면책하며 손해를 입지 않도록 하는 데 동의합니다:</p><ul><li>앱의 사용 또는 오용</li><li>본 약관 위반</li><li>다른 개인이나 단체의 권리 침해</li><li>관련 법률이나 규정 위반</li></ul>
-<h2>12. 업데이트 및 변경</h2><p>당사는 다음 목적으로 앱을 업데이트할 수 있습니다:</p><ul><li>버그 수정 또는 성능 개선</li><li>새 기능 추가</li><li>새로운 iOS, iPadOS, macOS, Android, App Store 또는 Google Play 요구사항 준수</li><li>보안 문제 해결</li></ul><p>업데이트는 App Store 또는 Google Play를 통해 제공됩니다. 무기한 제공 의무는 없으며 일부 업데이트에는 새 약관 동의가 필요할 수 있습니다.</p>
-<h2>13. 종료</h2><p>본 약관은 종료될 때까지 유효합니다:</p><ul><li><strong>사용자에 의한 종료:</strong> 모든 기기에서 앱을 삭제하여 언제든 종료</li><li><strong>당사에 의한 종료:</strong> 약관 위반 시 라이선스 종료</li><li><strong>스토어 제공자에 의한 종료:</strong> 스토어 약관 위반 시 라이선스 종료 가능</li></ul><p>종료 시 앱 사용을 중단하고 모든 사본을 삭제해야 합니다. 성격상 존속해야 하는 면책, 책임 제한 및 배상 조항은 계속 유효합니다.</p>
-<h2>14. 지식재산권</h2><p>앱과 원본 콘텐츠, 기능은 health.md 운영자의 소유이며 국제 저작권, 상표권 및 기타 지식재산권법의 보호를 받습니다.</p><p>일부가 오픈 소스일 수 있지만 문서에 명시된 경우를 제외하고 디자인과 구현을 포함한 앱 전체는 당사 재산입니다.</p>
-<h2>15. 오픈 소스</h2><p>핵심 로직 일부는 별도 오픈 소스 라이선스로 제공되며 문서나 저장소에 표시됩니다. 해당 구성 요소 사용에는 각 라이선스가 적용됩니다.</p>
-<h2>16. 환불</h2><p>환불 요청은 Full Access를 구매한 스토어에서 처리하며 당사는 직접 처리하지 않습니다. Apple 구매 환불은 <a href="https://support.apple.com/en-us/HT204084" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">Apple 지원 페이지</a>에서 요청하고, Android 구매 환불은 Google Play 환불 절차를 이용하십시오.</p>
-<h2>17. 수출 규정 준수</h2><p>미국 수출관리규정을 포함한 모든 수출·재수출 통제 법률과 규정을 준수하는 데 동의합니다. 금수 조치 대상 국가에 있거나 금지 당사자로 등재되지 않았음을 진술합니다.</p>
-<h2>18. 준거법 및 분쟁 해결</h2><p>본 약관은 법률 충돌 원칙과 관계없이 당사가 운영되는 관할권의 법률에 따라 규율·해석됩니다.</p><p>법률이 금지하지 않는 한 본 약관 또는 앱 사용에서 발생하는 분쟁은 관련 중재 기관 규칙에 따른 구속력 있는 중재로 해결합니다.</p>
-<h2>19. 분리 가능성</h2><p>조항이 집행 불가능하거나 무효라면 필요한 최소 범위로 제한·제거되며 나머지 조항은 완전한 효력을 유지합니다.</p>
-<h2>20. 완전 합의</h2><p>본 약관, 개인정보 처리방침 및 앱에 게시한 기타 법적 고지는 앱 사용에 관한 사용자와 당사 간 완전한 합의를 구성하며 이전 합의를 대체합니다.</p>
-<h2>21. 약관 변경</h2><p>당사는 언제든 약관을 변경할 수 있습니다. 중대한 변경은 앱 업데이트 등 합리적 방법으로 알립니다. 효력 발생 뒤 앱을 계속 사용하면 변경 약관에 동의한 것입니다.</p>
-<h2>22. 연락처</h2><p>본 약관 문의:</p><p><strong>이메일:</strong> legal@isolated.tech<br><strong>웹사이트:</strong> https://isolated.tech</p>
-<h2>23. 스토어별 약관</h2><p>Apple App Store 또는 Google Play로 배포될 때 다음 추가 약관이 적용됩니다:</p><ul><li>Apple과 Google은 본 약관 당사자가 아니며 앱에 관한 의무가 없습니다</li><li>라이선스는 관련 스토어 약관이 허용하는 사용자가 소유·관리하는 기기에서의 사용으로 제한됩니다</li><li>Apple과 Google은 앱에 대한 보증 의무가 없습니다</li><li>Apple과 Google은 앱 또는 사용과 관련된 청구를 처리할 책임이 없습니다</li><li>앱이 타사 지식재산권을 침해한다는 청구가 있으면 스토어가 아닌 당사가 조사·방어합니다</li><li>Apple 및 그 자회사는 Apple 배포 사본에 관한 본 약관의 제3자 수익자이며 사용자에게 약관을 집행할 수 있습니다</li></ul>
-<h2>확인</h2><p>HEALTH.MD를 사용함으로써 사용자는 본 서비스 약관을 읽고 이해했으며 이에 동의함을 확인합니다.</p>
+        <div class="legal-promise" role="list" aria-label="주요 약관">
+          <div role="listitem">
+            <span>01</span>
+            <strong>합법적으로 사용</strong>
+            <p>Health.md는 접근 권한이 있는 데이터, 기기, 계정 및 대상에만 사용하십시오.</p>
+          </div>
+          <div role="listitem">
+            <span>02</span>
+            <strong>출력은 사용자가 관리</strong>
+            <p>민감한 내보내기 데이터와 직접 결과를 어디로 보낼지, 어떻게 보호할지는 사용자가 선택합니다.</p>
+          </div>
+          <div role="listitem">
+            <span>03</span>
+            <strong>의학적 조언이 아님</strong>
+            <p>Health.md는 데이터를 보고하고 이동합니다. 진단이나 치료를 하지 않으며 전문적인 진료를 대체하지 않습니다.</p>
+          </div>
+        </div>
       </div>
+    </section>
+
+    <div class="legal-shell">
+      <aside class="legal-toc">
+        <p class="legal-toc-title">이 약관의 내용</p>
+        <nav aria-label="서비스 약관 섹션">
+          <ol>
+            <li><a href="#agreement">동의 및 범위</a></li>
+            <li><a href="#eligibility">이용 자격</a></li>
+            <li><a href="#license">라이선스</a></li>
+            <li><a href="#acceptable-use">허용되는 사용</a></li>
+            <li><a href="#functionality">Health.md의 기능</a></li>
+            <li><a href="#availability">가용성 및 미리보기</a></li>
+            <li><a href="#health-disclaimer">건강 관련 면책</a></li>
+            <li><a href="#data">데이터 및 개인정보 보호</a></li>
+            <li><a href="#responsibilities">사용자의 책임</a></li>
+            <li><a href="#purchases">구매 및 환불</a></li>
+            <li><a href="#third-parties">제3자</a></li>
+            <li><a href="#intellectual-property">지식재산권</a></li>
+            <li><a href="#updates">업데이트 및 종료</a></li>
+            <li><a href="#warranties">보증</a></li>
+            <li><a href="#liability">책임</a></li>
+            <li><a href="#indemnity">배상 및 수출 통제</a></li>
+            <li><a href="#disputes">분쟁</a></li>
+            <li><a href="#general">일반 약관</a></li>
+            <li><a href="#stores">앱 스토어</a></li>
+            <li><a href="#changes">변경</a></li>
+            <li><a href="#contact">문의</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <article class="policy-content">
+        <section id="agreement">
+          <h2>1. 동의 및 범위</h2>
+          <p>본 서비스 약관(“약관”)은 사용자와 isolated.tech라는 이름으로 Health.md를 운영하는 Cody Bontecou(“Health.md”, “당사”, “저희” 또는 “당사의”) 간의 구속력 있는 계약입니다. 적용 대상 제품을 다운로드, 설치, 접근 또는 사용함으로써 사용자는 본 약관에 동의합니다. 동의하지 않는 경우 제품을 사용하지 마십시오.</p>
+          <p>“제품”은 iPhone, iPad, Mac 및 Android용 Health.md 소비자 앱, 함께 제공되는 도우미, 제공되는 경우의 명령줄 및 MCP 도구, healthmd.app과 그 문서, 직접 프로토콜, 그리고 이러한 서비스를 지원하는 자사 서비스를 의미합니다. 기능은 특정 플랫폼, 버전, 지역, 기기 또는 릴리스 채널에서만 제공될 수 있습니다.</p>
+          <p>Apple 또는 Google을 통해 배포된 사본에는 앱 스토어 약관도 적용됩니다. 조직을 위해 제품을 사용하는 경우 사용자는 해당 조직을 구속할 권한이 있음을 진술하며, “사용자”에는 해당 조직도 포함됩니다.</p>
+          <div class="policy-note">
+            <p><strong>간단히 말하면:</strong> Health.md는 건강 데이터를 내보내고 쿼리하는 도구를 제공하지만, 권한, 전송 대상, 보안 및 결과의 이용에 대한 책임은 사용자에게 있습니다.</p>
+            <p>제품은 의료 기기나 응급 서비스가 아니며, 모든 원본 기록, 백그라운드 작업, 제공자, 운영체제 또는 제3자 대상이 항상 이용 가능하다는 약속도 아닙니다.</p>
+          </div>
+          <div class="policy-note">
+            <p><strong>번역 안내:</strong> 이 한국어 번역은 편의를 위해 제공됩니다. 내용이 상충하는 경우 <a href="../terms-of-service.html" hreflang="en">영문본</a>은 관련 법률이 허용하는 범위에서만 우선하며, 강행적인 소비자 권리를 제한하지 않습니다.</p>
+          </div>
+        </section>
+
+        <section id="eligibility">
+          <h2>2. 이용 자격 및 권한</h2>
+          <p>사용자는 본 약관에 동의할 법적 능력이 있어야 합니다. 거주 지역의 법률에 따라 부모 또는 보호자가 사용을 승인해야 하는 경우, 해당 부모 또는 보호자가 사용자를 대신하여 본 약관을 검토하고 동의해야 합니다.</p>
+          <p>Health.md는 사용자가 소유하거나 관리하거나 이용 권한을 가진 건강 데이터, 기기, 계정, 컴퓨터, 제공자 연결, API 엔드포인트 및 기타 대상에만 사용할 수 있습니다. 유효한 권한과 법적으로 요구되는 동의 없이 다른 사람의 건강 데이터에 접근하거나 이를 처리하지 마십시오.</p>
+        </section>
+
+        <section id="license">
+          <h2>3. 라이선스</h2>
+          <p>Health.md 소프트웨어는 판매되는 것이 아니라 라이선스가 부여됩니다. Apple 앱, Android 앱, CLI 및 공유 코어는 GNU Affero General Public License 버전 3.0 전용(AGPL-3.0-only)으로 배포됩니다. 웹사이트 소스는 MIT License로 배포됩니다. 제3자 코드 및 자산에는 각각의 라이선스가 유지됩니다.</p>
+          <p>라이선스가 적용된 소스와 바이너리의 복제, 수정, 재배포 및 호스팅에는 본 조항이 아니라 해당 소프트웨어 라이선스가 적용됩니다. 본 약관을 준수하는 조건으로 당사는 별도 라이선스가 적용되지 않는 Health.md 운영 서비스, 스토어 권리, 상표, 삽화 및 기타 자료에 접근하여 합법적인 개인 용도 또는 내부 용도로만 사용할 수 있는 제한적이고 비독점적이며 양도 불가능하고 철회 가능한 권리를 사용자에게 부여합니다.</p>
+          <p>사용자는 의료 전문가를 포함하여 자신이 선택한 사람 또는 서비스와의 자체 파일, 스크립트, 자동화, 에이전트 워크플로 및 통신에서 내보내기 데이터와 직접 결과를 사용할 수 있습니다. 본 약관의 어떠한 내용도 AGPL, MIT License, 기타 관련 라이선스가 부여한 권리 또는 법적으로 제한할 수 없는 권리를 제한하지 않습니다.</p>
+        </section>
+
+        <section id="acceptable-use">
+          <h2>4. 허용되는 사용</h2>
+          <p>사용자는 다음 행위를 하지 않는 데 동의합니다.</p>
+          <ul>
+            <li>제품 또는 그 출력을 불법적이거나 기만적인 방식으로 사용하거나 다른 사람의 개인정보 보호권, 비밀유지권, 지식재산권 또는 기타 권리를 침해하는 행위</li>
+            <li>권한 없이 건강 데이터, 제공자 계정, 페어링된 기기, 파일 또는 엔드포인트에 접근하는 행위</li>
+            <li>구매 통제, 권한, 페어링, 인증, 속도 제한, 안전 제한 또는 기타 기술적 보호 조치를 우회하는 행위</li>
+            <li>제품 또는 지원 서비스를 공격하거나 과부하를 일으키거나 방해하거나 탐색하거나 악성 코드를 삽입하는 행위</li>
+            <li>비공개 자격 증명, 서명 자료, 서비스 비밀 정보 또는 보호되는 자산을 추출하거나 오용하는 행위. 단, 관련 소프트웨어 라이선스 또는 법률이 부여한 권리는 제한되지 않습니다.</li>
+            <li>필수 저작권, 상표, 출처 표시 또는 라이선스 고지를 제거하거나 Health.md가 사용자의 제품, 분석, 의학적 결론 또는 서비스를 보증한다고 허위로 암시하는 행위</li>
+            <li>제품을 응급 대응, 규제 대상 임상 기록 관리 또는 제품이 설계되지 않은 용도의 유일한 시스템으로 사용하는 행위</li>
+          </ul>
+          <p>사용자는 자신의 기기, 페어링 자격 증명, 로컬 프로세스 또는 조직 시스템을 통해 제품을 사용하는 모든 사람의 행위에 책임이 있습니다.</p>
+        </section>
+
+        <section id="functionality">
+          <h2>5. Health.md가 제공하는 기능</h2>
+          <p>플랫폼과 가용성에 따라 Health.md는 다음 기능을 제공할 수 있습니다.</p>
+          <ul>
+            <li>승인된 Apple HealthKit, WorkoutKit, Android Health Connect 및 Health Connect 의료 기록 데이터 읽기</li>
+            <li>선택한 데이터를 Markdown, Obsidian, CSV, JSON, FHIR/제공자 기본 형식 및 기타 문서화된 형식으로 내보내기</li>
+            <li>선택한 로컬 또는 클라우드 연동 폴더, 보관함, 문서 제공자, 페어링된 Mac 또는 CLI, 사용자 구성 API 엔드포인트에 쓰기</li>
+            <li>플랫폼 제한에 따라 수동, 예약, Shortcut, Android 자동화, 직접 및 재개 가능한 내보내기 워크플로 실행</li>
+            <li>범위가 한정된 형식화 쿼리에 응답하고 지원되는 CLI 및 MCP 클라이언트를 통해 사실 값, 출처, 범위, 누락 정보, 증거 또는 차트 반환</li>
+            <li>승인 후 지원되는 건강 정보 제공자에 연결하고 제공자 기록을 기기로 전달</li>
+            <li>개인정보 처리방침에 설명된 예약, 구매, 제품 분석, 캠페인 기여도 측정, 제공자 승인, 웹사이트 제공 및 지원을 위해 제한적인 비건강 정보 인프라 이용</li>
+          </ul>
+          <p>당사는 사용자의 건강 데이터를 Health.md 서버에서 수집하거나 저장하지 않습니다. 사용자가 동기화 폴더, 페어링된 클라이언트, 제공자, 에이전트 또는 모델 서비스, API 엔드포인트나 다른 대상을 선택하면 건강 데이터가 여전히 기기에서 벗어날 수 있습니다. 해당 대상이 그 사본을 관리합니다.</p>
+        </section>
+
+        <section id="availability">
+          <h2>6. 가용성, 제한 및 미리보기 기능</h2>
+          <p>기능은 운영체제, 기기, 스토어 버전, 원본 API, 권한, 지역, 연결된 제공자 및 릴리스 채널에 따라 다릅니다. 문서에는 모든 플랫폼에서 패키지로 제공되거나 지원되지 않는 미리보기, 소스 빌드, 베타 또는 호환성 경로가 설명될 수 있습니다. “제공되는 경우”라는 표현은 출시, 지속적인 제공 또는 기능 동등성을 보장하지 않습니다.</p>
+          <p>HealthKit 및 Health Connect 권한으로 인해 거부되었거나 이용할 수 없는 데이터가 비어 있는 것으로 표시될 수 있습니다. 기기 잠금, 백그라운드 실행 규칙, 네트워크 상태, API 제한, 파일 제공자 동작, 페어링 상태, 사용 가능한 저장 공간 및 제3자 장애로 작업이 지연, 제한 또는 방해될 수 있습니다.</p>
+          <p>직접 iPhone 요청에는 도달 가능하고 호환되며 명시적으로 페어링된 원본이 필요하고, Health.md가 열려 있거나 포그라운드 상태이거나 잠금 해제되어 있어야 할 수 있습니다. 지속적인 작업은 시간 초과나 연결 해제 후에도 완료, 재개, 취소, 정리 또는 만료될 때까지 사용자의 기기에 남을 수 있습니다. 출력을 완전한 것으로 취급하기 전에 상태, 범위, 누락 구간, 경고 및 부분 결과 진단을 확인해야 합니다.</p>
+          <p>당사는 제품 또는 기능을 변경, 일시 중지, 중단하거나 합리적인 제한을 둘 수 있습니다. 이전 버전과의 호환성, 무기한 유지 관리 또는 미리보기 기능이 일반에 제공될 것을 보장하지 않습니다.</p>
+        </section>
+
+        <section id="health-disclaimer">
+          <h2>7. 건강 및 의료 관련 면책</h2>
+          <p><strong>Health.md는 데이터 이동성 및 사실 쿼리 도구입니다. 의료 기기, 의료 서비스 제공자, 진단 서비스, 치료 또는 응급 서비스가 아닙니다.</strong></p>
+          <ul>
+            <li>Health.md는 진단하거나 치료를 권고하거나 인과관계를 추론하거나 결과가 건강한지, 유해한지, 더 나은지 또는 더 나쁜지 판단하지 않습니다.</li>
+            <li>값과 기록은 원본 또는 대상에서 불완전하거나 지연되거나 중복되거나 변경되거나 잘못 표시되거나 이용할 수 없거나 부정확할 수 있습니다.</li>
+            <li>차트, 요약, 증거 및 내보낸 파일은 원본 기록이나 자격을 갖춘 의료 전문가의 조언을 대체하지 않습니다.</li>
+            <li>사용자는 임상의와 데이터를 공유할 수 있지만 의학적 해석 또는 결정에는 Health.md가 아니라 해당 임상의가 책임을 집니다.</li>
+            <li>AI 도구 또는 모델 제공자가 생성한 결과는 해당 제3자가 제공하며 Health.md의 의학적 조언이 아닙니다.</li>
+          </ul>
+          <p>응급 상황이나 시간에 민감한 의료 결정을 위해 제품에 의존하지 마십시오. 지역 응급 서비스 또는 자격을 갖춘 전문가에게 문의하십시오. 별도의 서면 합의가 없는 한 소비자 제품은 HIPAA Business Associate Agreement(BAA)에 따라 제공되지 않으며 전자 건강 기록 시스템을 대체하지 않습니다.</p>
+        </section>
+
+        <section id="data">
+          <h2>8. 데이터, 개인정보 보호 및 소유권</h2>
+          <p>당사의 <a href="privacy-policy.html">개인정보 처리방침</a>은 Health.md가 건강 데이터, 자사 제품 분석, 캠페인 기여도 측정, 예약 메타데이터, 제공자 승인, 구매 정보, 웹사이트 요청 및 지원 데이터를 처리하는 방식을 설명합니다. 해당 방침은 본 약관에 참조로 포함됩니다.</p>
+          <p>사용자와 Health.md 간의 관계에서, 사용자는 제품이 처리하도록 지시한 건강 데이터 및 기타 콘텐츠에 대한 권리를 보유합니다. 사용자는 요청한 기능을 수행하는 데 필요한 범위에서만 해당 데이터에 접근하고 변환하고 전송하고 기록하도록 Health.md에 지시합니다. 이로 인해 사용자의 건강 데이터 소유권이 당사로 이전되지 않습니다.</p>
+          <p>Health.md는 Health.md 명칭과 상표, 운영 서비스, 스토어 목록과 권리, 별도 라이선스로 배포되지 않은 콘텐츠 또는 자산에 대한 권리를 보유합니다. Health.md 소프트웨어 및 소스 코드에 대한 권리에는 관련 구성 요소에 적용되는 AGPL-3.0-only, MIT, 제3자 또는 기타 라이선스가 적용됩니다. 사용자의 데이터 소유권은 Health.md 브랜드 또는 서비스의 소유권을 부여하지 않습니다.</p>
+        </section>
+
+        <section id="responsibilities">
+          <h2>9. 사용자의 책임</h2>
+          <p>사용자는 다음 사항에 책임이 있습니다.</p>
+          <ul>
+            <li><strong>권한 및 권원:</strong> 합법적으로 접근, 처리 및 공개할 수 있는 데이터와 계정만 선택합니다.</li>
+            <li><strong>기기 보안:</strong> 적절한 경우 암호, 업데이트, 디스크 암호화, 보호되는 자격 증명 저장소 및 신뢰할 수 있는 네트워크를 사용합니다.</li>
+            <li><strong>대상:</strong> 폴더, 제공자, 엔드포인트, AI/모델 서비스 및 페어링된 컴퓨터의 보안, 승인, 로깅, 보관, 삭제, 백업 및 접근 통제를 평가합니다.</li>
+            <li><strong>민감한 출력:</strong> 정확한 타임스탬프, 이동 경로와 위치, 약물, 정신적 웰빙 항목, ECG 값, 임상/FHIR 내용, 출처, 문서 또는 첨부 파일이 포함될 수 있는 파일과 결과를 보호합니다.</li>
+            <li><strong>직접 접근:</strong> 신뢰할 수 있는 피어만 승인하고 페어링 자격 증명을 보호하며 로컬 루프백 API 또는 그 포트를 다른 컴퓨터에 절대 노출하지 않습니다.</li>
+            <li><strong>완전성:</strong> 누락된 데이터를 0으로 취급하지 말고 영수증, 매니페스트, 범위, 원본 제한, 경고 및 부분 결과를 검토합니다.</li>
+            <li><strong>백업 및 삭제:</strong> 필요한 백업을 유지하고 각 대상의 통제 기능을 사용하여 사본을 삭제합니다.</li>
+            <li><strong>규정 준수:</strong> 사용자의 워크플로에 적용되는 법률 및 전문직, 고용, 연구, 임상 또는 조직 요건을 준수합니다.</li>
+          </ul>
+          <p>일반 지원 이메일, 공개 이슈, 채팅 대화 기록, CI 로그, 셸 추적 또는 건강 데이터에 적합하지 않은 기타 위치에 건강 기록, 내보내기 데이터, 자격 증명 또는 민감한 직접 결과를 넣지 마십시오.</p>
+        </section>
+
+        <section id="purchases">
+          <h2>10. 무료 이용, Full Access 및 환불</h2>
+          <p>제품은 성공한 내보내기 작업을 제한된 횟수만큼 무료로 허용할 수 있습니다. 현재 소비자용 제공 조건은 무료 내보내기 10회입니다. 성공한 수동, 예약, Shortcut 또는 직접 작업은 포함된 날짜 또는 파일 수와 관계없이 제품에 표시된 대로 같은 허용량에서 차감될 수 있습니다. 실패한 작업과 재시도는 문서화된 할당량 규칙에 따라 다르게 처리될 수 있습니다.</p>
+          <p>제공되는 경우 Full Access는 지원되는 기능의 내보내기 제한을 해제하는 일회성 앱 내 구매입니다. 구독이 아니며 갱신되지 않습니다. Apple 플랫폼은 Individual Lifetime, Family Lifetime 또는 이들 간의 업그레이드를 제공할 수 있고, 다른 스토어는 자체적으로 지원되는 일회성 제품을 제공할 수 있습니다. 스토어 구매 화면에 표시된 제품, 가격, 통화, 세금, 계정 및 Family Sharing 이용 자격이 우선합니다.</p>
+          <p>“평생” 또는 영구적인 권리는 구매한 라이선스가 정기 결제 일정에 따라 만료되지 않는다는 뜻입니다. 모든 기능, 운영체제, 기기, 제공자 또는 제품이 영구히 제공되거나 지원된다는 보장은 아닙니다. 스토어 약관 및 법률이 허용하는 경우를 제외하고 완료된 구매를 변경하지 않으면서 향후 가격이나 제공 조건을 변경할 수 있습니다.</p>
+          <p>구매, 복원, 청구 및 환불은 Full Access를 구매한 스토어에서 처리합니다. 당사는 카드 전체 정보를 수신하지 않으며 일반적으로 스토어 환불을 직접 처리할 수 없습니다. Apple 구매는 <a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">문제 신고</a>를 이용하고, Google Play 구매는 Google의 해당 환불 절차를 이용하십시오. 환불 자격은 스토어와 관련 법률에 따라 결정됩니다.</p>
+        </section>
+
+        <section id="third-parties">
+          <h2>11. 제3자 서비스 및 대상</h2>
+          <p>제품은 Apple, Google, HealthKit, Health Connect, 앱 스토어, APNs, 파일 및 동기화 제공자, Obsidian, 건강 정보 제공자, OAuth 서비스, API 엔드포인트, 로컬 네트워크, Cloudflare, 웹사이트 호스트, AI/모델 제공자, 에이전트 호스트 및 사용자가 구성하는 도구를 포함하여 다른 주체가 운영하는 서비스에 의존하거나 연결될 수 있습니다.</p>
+          <p>제3자의 서비스에는 해당 제3자의 약관, 라이선스, 개인정보 보호 관행, 계정 규칙, 사용 제한, 요금, 가용성 및 보안 통제가 적용됩니다. 당사는 이를 통제하지 않으며, 사용자가 데이터를 보낸 후 제3자의 작위, 부작위, 출력, 장애, 정책 변경 또는 데이터 처리에 책임을 지지 않습니다.</p>
+          <p>브랜드명과 로고는 각 소유자에게 귀속됩니다. 제3자를 언급한다고 해서 후원, 보증, 호환성 또는 지속적인 지원을 의미하지 않습니다.</p>
+        </section>
+
+        <section id="intellectual-property">
+          <h2>12. 지식재산권, 오픈 소스 및 피드백</h2>
+          <p>Health.md 명칭, 로고, 상표, 운영 서비스, 스토어 자료 및 다른 라이선스로 배포되지 않은 독창적인 콘텐츠 또는 자산은 Health.md 또는 그 라이선스 제공자의 소유이며 관련 지식재산권법의 보호를 받습니다.</p>
+          <p>Health.md Apple 앱, Android 앱, CLI 및 공유 코어는 AGPL-3.0-only이고 웹사이트 소스에는 MIT License가 적용됩니다. 제3자 종속 항목과 함께 제공되는 자산에는 각각의 약관이 유지됩니다. 사용, 복제, 수정, 배포 및 해당 라이선스에서 다루는 경우 네트워크 호스팅에는 관련 라이선스가 적용됩니다. 본 약관의 어떠한 내용도 해당 라이선스 권리를 축소하지 않습니다.</p>
+          <p>사용자가 자발적으로 피드백이나 제안을 보내면 보상 또는 사용자 표시 의무 없이 제품을 개선하거나 개발하기 위해 이를 사용할 수 있는 전 세계적이고 영구적이며 취소 불가능하고 로열티 없는 권리를 당사에 부여합니다. 건강 데이터, 자격 증명, 기밀 정보 또는 공유할 권한이 없는 콘텐츠를 포함하지 마십시오.</p>
+        </section>
+
+        <section id="updates">
+          <h2>13. 업데이트, 이용 정지 및 종료</h2>
+          <p>당사는 버그 수정, 성능 개선, 기능 변경, 플랫폼 또는 법적 요건 충족, 보안 문제 해결을 위해 업데이트를 제공할 수 있습니다. 업데이트로 시스템 요구 사항이 변경될 수 있으며 개정된 약관에 동의해야 할 수 있습니다. 당사는 업데이트를 무기한 제공할 의무가 없습니다.</p>
+          <p>사용자는 언제든지 제품 이용을 중지하고 로컬 사본을 제거하거나 삭제할 수 있습니다. 제품을 제거해도 내보내기 데이터, 페어링된 컴퓨터의 상태, 제공자의 사본, API 전송 데이터, 지원 메시지 또는 이미 다른 위치에 둔 기타 데이터는 삭제되지 않습니다.</p>
+          <p>사용자가 본 약관을 중대하게 위반하거나 보안 또는 법적 위험을 초래하거나 제품을 오용하는 경우, 당사는 스토어와 법률이 허용하는 범위에서 Health.md가 운영하는 지원 서비스 접근을 정지하거나 스토어 권리를 철회할 수 있습니다. 오픈 소스 라이선스에 따른 권리의 종료에는 해당 라이선스만 적용됩니다. 합리적인 경우 당사는 조치를 영향받는 제품 또는 서비스로 제한합니다.</p>
+          <p>소유권, 결제, 면책, 책임 제한, 배상, 분쟁 및 일반 약관을 포함하여 성격상 종료 후에도 존속해야 하는 조항은 계속 유효합니다.</p>
+        </section>
+
+        <section id="warranties">
+          <h2>14. 보증의 부인</h2>
+          <p>법률이 허용하는 최대 범위에서 제품은 “있는 그대로” 및 “이용 가능한 상태로” 제공됩니다. HEALTH.MD와 그 라이선스 제공자는 상품성, 특정 목적 적합성, 권원, 비침해 및 거래 과정이나 거래 관행에서 발생하는 보증을 포함하여 명시적, 묵시적 및 법정 보증을 부인합니다.</p>
+          <p>당사는 제품이 중단되지 않고 안전하며 오류가 없고 호환 가능하며 완전하거나 정확하다는 점, 데이터가 이용 가능하거나 보존되거나 성공적으로 내보내진다는 점, 또는 제3자 원본, 대상, 제공자, 모델, 스토어 또는 플랫폼이 예상대로 작동한다는 점을 보증하지 않습니다.</p>
+          <p>일부 관할권에서는 특정 보증의 배제를 허용하지 않습니다. 이 경우 배제는 허용되는 범위에서만 적용되며, 필수 보증은 법률이 허용하는 최단 기간과 최소 범위로 제한됩니다.</p>
+        </section>
+
+        <section id="liability">
+          <h2>15. 책임의 제한</h2>
+          <p>법률이 허용하는 최대 범위에서 HEALTH.MD, 그 운영자, 계열사 및 라이선스 제공자는 제품으로부터 발생하거나 제품과 관련된 간접적, 부수적, 특별, 징벌적, 결과적 또는 처벌적 손해나 이익, 수익, 영업권, 데이터, 사용 또는 사업 중단의 손실에 대해 책임을 지지 않습니다.</p>
+          <p>여기에는 데이터의 손실, 손상, 공개 또는 오전송, 이용할 수 없거나 불완전한 건강 기록, 내보내기 또는 쿼리 오류, 출력에 근거한 결정, 제3자 서비스, 실패한 예약·백그라운드 작업·전송·페어링·구매·통합, 그리고 사용자의 기기·자격 증명·대상·구성으로 인한 무단 접근이 포함됩니다.</p>
+          <p>법률이 허용하는 최대 범위에서 제품으로부터 발생하거나 제품과 관련된 당사의 총책임은 사용자가 해당 제품에 지불한 금액을 초과하지 않습니다.</p>
+          <p>이러한 제한은 사기나 고의적인 위법행위에 대한 책임 또는 관련 법률상 배제가 금지되는 사망이나 신체 상해에 대한 책임 등 법적으로 배제할 수 없는 책임을 배제하지 않습니다. 일부 관할권은 추가 권리를 제공하므로 일부 제한이 사용자에게 적용되지 않을 수 있습니다.</p>
+        </section>
+
+        <section id="indemnity">
+          <h2>16. 배상 및 수출 통제</h2>
+          <p>법률이 허용하는 범위에서 사용자가 조직을 대신하여 제품을 사용하는 경우, 해당 조직의 불법적 사용, 다른 사람의 데이터에 대한 무단 처리 또는 공개, 본 약관 위반이나 제3자의 권리 침해로 인해 발생하는 제3자 청구, 손해 및 합리적인 비용에 대하여 Health.md와 그 운영자를 방어하고 배상합니다. 청구가 Health.md 자체의 위반 또는 위법행위로 인해 발생한 범위에는 이 의무가 적용되지 않습니다.</p>
+          <p>사용자는 관련 수출 통제, 제재 및 재수출 법률을 준수해야 합니다. 법률로 금지된 곳에서 제품을 사용, 수출 또는 제공해서는 안 됩니다. 사용자는 관련 제재 또는 수출 제한에 따라 제품 수령이 금지된 자가 아님을 진술합니다.</p>
+        </section>
+
+        <section id="disputes">
+          <h2>17. 준거법 및 분쟁</h2>
+          <p>본 약관에는 강행적 보호를 무효화하는 법률 충돌 규칙을 적용하지 않고 관련 법률이 적용됩니다. 본 약관의 어떠한 내용도 사용자의 거주지 법률에 따라 포기할 수 없는 소비자 권리 또는 구제 수단을 배제하지 않습니다.</p>
+          <p>정식 절차를 시작하기 전에 <a href="mailto:legal@isolated.tech">legal@isolated.tech</a>으로 연락하여 문제를 비공식적으로 해결할 합리적인 기회를 주시기 바랍니다. 어느 당사자든 적법한 관할권을 가진 법원 또는 재판 기관에 청구할 수 있습니다. 본 약관은 합법적인 경우 사용자와 Health.md가 별도로 합의하지 않는 한 중재를 요구하지 않습니다.</p>
+        </section>
+
+        <section id="general">
+          <h2>18. 일반 법률 조항</h2>
+          <p>본 약관, 개인정보 처리방침, 관련 소프트웨어 라이선스와 스토어 약관, 특정 제품에 대해 제시된 추가 약관은 제품 이용에 관한 완전한 합의를 구성하며 그 주제에 관한 이전 협의를 대체합니다.</p>
+          <p>조항이 무효이거나 집행할 수 없는 경우 필요한 최소 범위로 제한되며 나머지 조항은 계속 유효합니다. 당사가 조항을 집행하지 않았다고 해서 권리를 포기한 것은 아닙니다. 사용자는 당사의 동의 없이 본 약관을 양도할 수 없으며, 당사는 관련 법률에 따라 조직 개편, 합병, 인수 또는 제품 양도의 일부로 이를 양도할 수 있습니다.</p>
+          <p>섹션 제목은 편의를 위한 것입니다. “포함”은 “이에 국한되지 않고 포함”을 의미합니다. 허용되는 경우 전자 고지 및 전자적 동의는 서면 통지와 동일한 효력을 갖습니다.</p>
+        </section>
+
+        <section id="stores">
+          <h2>19. 앱 스토어별 약관</h2>
+          <h3>Apple 배포 사본</h3>
+          <ul>
+            <li>본 약관은 사용자와 Health.md 간에 체결되며 Apple과 체결되는 것이 아닙니다. 앱과 그 콘텐츠에는 Apple이 아니라 Health.md가 책임을 집니다.</li>
+            <li>스토어 배포 사본의 사용에는 이용 가능한 Family Sharing 또는 대량 구매 사용을 포함하여 Apple의 이용 규칙이 적용됩니다. AGPL 라이선스 소프트웨어의 별도 권리에는 계속 AGPL이 적용됩니다.</li>
+            <li>Apple은 유지 관리 또는 지원을 제공할 의무가 없습니다. 관련 보증이 충족되지 않은 경우 Apple의 규칙에 따라 가능한 구매 가격 환불을 위해 Apple에 알릴 수 있으며, 법률이 허용하는 최대 범위에서 Apple에는 그 밖의 보증 의무가 없습니다.</li>
+            <li>본 약관에 따라 앱과 관련된 제조물 책임, 법규 준수, 소비자 보호 및 지식재산권 청구에는 Apple이 아니라 Health.md가 책임을 집니다.</li>
+            <li>앱을 사용할 때 관련 제3자 약관을 준수해야 합니다.</li>
+            <li>Apple과 그 자회사는 본 약관의 제3자 수익자이며 Apple 배포 사본에 관해 본 약관을 집행할 수 있습니다.</li>
+          </ul>
+          <h3>Google Play 배포 사본</h3>
+          <p>본 약관은 사용자와 Health.md 간에 체결되며 Google과 체결되는 것이 아닙니다. Google은 본 약관에 따른 앱 또는 지원에 책임이 없습니다. 사용에는 Google Play의 관련 약관, 정책 및 계정 규칙도 적용됩니다. 강행적인 Google Play 약관이 본 약관과 상충하는 경우 Google 배포 사본에는 해당 강행 약관이 우선합니다.</p>
+        </section>
+
+        <section id="changes">
+          <h2>20. 본 약관의 변경</h2>
+          <p>제품, 법률 또는 당사의 관행이 변경됨에 따라 본 약관을 갱신할 수 있습니다. 당사는 개정된 약관을 게시하고 위 날짜를 갱신합니다. 변경으로 사용자의 권리 또는 이용이 중대하게 달라지는 경우 제품, 릴리스 노트 또는 다른 합리적인 채널을 통해 알릴 수도 있습니다. 변경은 효력 발생일부터 장래에 적용되며, 법률이 허용하는 경우 그 날짜 이후에 계속 이용하면 개정된 약관에 동의한 것으로 봅니다.</p>
+        </section>
+
+        <section id="contact">
+          <h2>21. 문의</h2>
+          <p>본 약관에 관한 질문은 <a href="mailto:legal@isolated.tech">legal@isolated.tech</a>으로 보내십시오. Health.md는 Cody Bontecou가 <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>라는 이름으로 운영합니다.</p>
+          <p>제품 지원은 <a href="mailto:cody@isolated.tech">cody@isolated.tech</a>으로 이메일을 보내십시오. 일반 지원 메시지 또는 공개 이슈에 건강 기록, 내보내기 데이터, 자격 증명 또는 기타 민감한 데이터를 포함하지 마십시오.</p>
+        </section>
+      </article>
     </div>
   </main>
 
-  <footer>
-    <div class="container">
-      <div class="footer-inner">
-        <p class="footer-text">© 2026 health.md. 정성을 담아 만들었습니다.</p>
-        <div class="footer-links">
-          <a href="privacy-policy.html">개인정보 처리방침</a>
-          <a href="terms-of-service.html">약관</a>
-          <a href="mailto:cody@isolated.tech">지원</a>
-        </div>
-      </div>
+  <footer class="site-footer">
+    <div class="footer-shell footer-inner">
+      <nav class="language-selector" aria-label="언어 선택">
+        <a href="../terms-of-service.html" hreflang="en" lang="en">English</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page" lang="ko">한국어</span>
+      </nav>
+      <a class="footer-brand" href="../ko/" aria-label="Health.md 홈">health.md</a>
+      <nav class="footer-links" aria-label="바닥글 탐색">
+        <a href="../ko/docs/">문서</a>
+        <a href="privacy-policy.html">개인정보 보호</a>
+        <a href="terms-of-service.html">서비스 약관</a>
+        <a href="mailto:cody@isolated.tech">지원</a>
+      </nav>
     </div>
   </footer>
+
   <script src="../assets/analytics.js" defer></script>
 </body>
 </html>

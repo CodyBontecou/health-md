@@ -78,8 +78,14 @@ screenshots/app-store/*
 # Sales/analytics reports
 *.gz
 
-# App Store metadata pulled locally
+# App Store metadata pulled locally. Keep canonical app-info and IAP localization
+# sources in Git; version files are force-tracked per release.
 metadata/
+!metadata/
+metadata/*
+!metadata/app-info/
+!metadata/app-info/*.json
+!metadata/in-app-purchases.json
 
 # Local capture script
 scripts/capture-docs.sh
