@@ -3,6 +3,7 @@ package com.healthmd.data.health
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Normalized read contract for every health data source Health.md can export.
@@ -20,6 +21,8 @@ interface HealthDataProvider {
         dates: List<LocalDate>,
         dataTypes: DataTypeSelection = DataTypeSelection(),
         includeGranularData: Boolean = false,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        pinnedCalendarDays: Boolean = false,
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }

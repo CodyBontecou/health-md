@@ -32,7 +32,7 @@
 SHELL       := /bin/bash
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
-IOS_SIM     ?= platform=iOS Simulator,name=iPhone 16 Pro,arch=$(HOST_ARCH)
+IOS_SIM     ?=
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
@@ -51,10 +51,15 @@ test: test-ios test-macos
 test-ios: prepare-healthmd-core-rust
 	@echo "\n━━━  iOS Tests  ━━━"
 	@set -o pipefail; \
-	xcodebuild test \
+	  ios_sim='$(IOS_SIM)'; \
+	  if [[ -z "$$ios_sim" ]]; then \
+	    ios_sim="$$(scripts/select-ios-simulator.sh)"; \
+	  fi; \
+	  echo "Using iOS Simulator destination: $$ios_sim"; \
+	  xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-iOS \
-	  -destination '$(IOS_SIM)' \
+	  -destination "$$ios_sim" \
 	  -configuration Debug-iOS \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | \

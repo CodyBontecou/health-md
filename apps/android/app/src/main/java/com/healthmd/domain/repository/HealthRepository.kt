@@ -3,6 +3,7 @@ package com.healthmd.domain.repository
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import java.time.LocalDate
+import java.time.ZoneId
 
 interface HealthRepository {
     suspend fun fetchHealthData(date: LocalDate): HealthData
@@ -10,6 +11,8 @@ interface HealthRepository {
         dates: List<LocalDate>,
         dataTypes: DataTypeSelection = DataTypeSelection(),
         includeGranularData: Boolean = false,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        pinnedCalendarDays: Boolean = false,
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }

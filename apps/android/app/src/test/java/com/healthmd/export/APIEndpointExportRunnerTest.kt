@@ -24,6 +24,7 @@ import kotlinx.serialization.json.jsonObject
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 class APIEndpointExportRunnerTest {
     @Test
@@ -213,6 +214,8 @@ class APIEndpointExportRunnerTest {
                 dates: List<LocalDate>,
                 dataTypes: DataTypeSelection,
                 includeGranularData: Boolean,
+                zoneId: ZoneId,
+                pinnedCalendarDays: Boolean,
             ): List<HealthData> {
                 rangeFlags?.add(includeGranularData)
                 return dates.map { rangeDataByDate.getValue(it).filtered(dataTypes) }

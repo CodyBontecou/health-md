@@ -32,6 +32,7 @@ installReferrer = "2.2"
 securityCrypto = "1.1.0-alpha06"
 timber = "4.7.1"
 okhttp = "4.12.0"
+pdfboxAndroid = "2.0.27.0"
 bouncyCastle = "1.80"
 jna = "5.17.0"
 
@@ -93,6 +94,7 @@ security-crypto = { group = "androidx.security", name = "security-crypto", versi
 
 # Logging
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 
 # Kotlinx
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
