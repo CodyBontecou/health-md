@@ -40,6 +40,7 @@ import com.healthmd.presentation.MainActivity
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.presentation.navigation.NavDestination
 import com.healthmd.util.runCatchingCancellable
+import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -65,12 +66,68 @@ class ExportWorker @AssistedInject constructor(
     private val runCoordinator: ScheduledExportRunCoordinator,
     private val timeCalculator: ScheduledExportTimeCalculator,
     private val stateStore: ScheduledExportStateStore,
+    private val exportScheduler: Lazy<ExportScheduler>,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result = runCoordinator.mutex.withLock {
-        ExportAwakeCoordinator.shared.whileExporting {
-            doWorkExclusive()
+    override suspend fun doWork(): Result {
+        var admissionCompleted = false
+        var admissionCompletionFailed = false
+        val occurrence = ScheduledExportOccurrence.fromWorkData(inputData)
+        val operationId = ScheduledExportAdmission.operationIdFrom(inputData)
+        val result = runCoordinator.mutex.withLock {
+            if (
+                occurrence != null &&
+                operationId != null &&
+                stateStore.isAdmissionExecutionCompleted(occurrence, operationId, id)
+            ) {
+                // A prior attempt finished every side effect but could not durably remove admission.
+                // Retry only that finalization; never execute providers or destinations again.
+                admissionCompleted = stateStore.completeAdmission(occurrence, operationId, id)
+                admissionCompletionFailed = !admissionCompleted
+                Result.success()
+            } else {
+                val workerResult = try {
+                    ExportAwakeCoordinator.shared.whileExporting {
+                        doWorkExclusive()
+                    }
+                } catch (error: kotlinx.coroutines.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    Timber.e(error, "Scheduled export worker failed outside export execution")
+                    if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
+                }
+                if (
+                    workerResult != Result.retry() &&
+                    occurrence != null &&
+                    operationId != null &&
+                    stateStore.matchesAdmission(occurrence, operationId, id)
+                ) {
+                    val executionMarked = stateStore.markAdmissionExecutionCompleted(
+                        occurrence,
+                        operationId,
+                        id,
+                    )
+                    admissionCompleted = executionMarked && stateStore.completeAdmission(
+                        occurrence = occurrence,
+                        operationId = operationId,
+                        workRequestId = id,
+                    )
+                    admissionCompletionFailed = !admissionCompleted
+                }
+                workerResult
+            }
         }
+
+        if (admissionCompletionFailed) return Result.retry()
+
+        // Reconciliation occurs outside the shared coordinator. If process death happens after the
+        // admission commit but before this call, WorkManager retries this same request; the durable
+        // pending-arm marker makes that retry reconcile without repeating export side effects.
+        if (admissionCompleted || stateStore.pendingArmOccurrence() != null) {
+            val reconciled = runCatchingCancellable { exportScheduler.get().reconcile() }
+            if (reconciled.isFailure) return Result.retry()
+        }
+        return result
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
@@ -141,8 +198,21 @@ class ExportWorker @AssistedInject constructor(
             return Result.success()
         }
 
-        // handleOccurrence admitted this frozen snapshot before enqueue. This generation check,
-        // while holding runCoordinator, decides whether it won the race with a later replacement.
+        val admissionOperationId = ScheduledExportAdmission.operationIdFrom(inputData)
+        if (
+            admissionOperationId == null ||
+            !stateStore.matchesAdmission(capturedOccurrence, admissionOperationId, id)
+        ) {
+            Timber.w(
+                "Skipped stale scheduled export generation=%s active=%s reason=admission_mismatch",
+                ScheduledExportGeneration.diagnosticId(capturedGeneration),
+                ScheduledExportGeneration.diagnosticId(activeGeneration),
+            )
+            return Result.success()
+        }
+
+        // handleOccurrence durably admitted this exact occurrence and WorkRequest identity. This
+        // check, while holding runCoordinator, decides whether it won a later replacement race.
         // Once it passes, a same-target run may finish despite mutable output preference writes.
         // Target and endpoint identity remain fail-closed below.
         val persistedSettings = settingsRepository.getExportSettings()
@@ -208,7 +278,7 @@ class ExportWorker @AssistedInject constructor(
                 .firstOrNull()
         } else null
         val durableApiOperationId = if (capturedTarget == ExportTarget.API_ENDPOINT) {
-            pendingApiOperationId ?: id.toString()
+            pendingApiOperationId ?: admissionOperationId
         } else null
         val matchingFolderRequests = if (capturedTarget == ExportTarget.DEVICE_FOLDER) {
             ScheduledExportPendingRequests.pendingRequests(settings)
@@ -233,11 +303,9 @@ class ExportWorker @AssistedInject constructor(
                 settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER),
             )
         ) {
-            pendingFolderOperationId ?: buildString {
-                append("folder-").append(capturedOccurrence.id)
-                if (hasFreshFolderRetry) append("-retry-").append(runAttemptCount)
-            }
+            pendingFolderOperationId ?: "folder-$admissionOperationId"
         } else null
+        val historyOperationId = durableFolderOperationId ?: durableApiOperationId ?: admissionOperationId
         val isPurchased = settingsRepository.isPurchased.first()
         val dates = scheduledDates(
             settings,
@@ -263,6 +331,11 @@ class ExportWorker @AssistedInject constructor(
                     result = ExportResult(0, dates.size, failureDetails),
                     failureReason = ExportFailureReason.PAYWALL_REQUIRED,
                     warning = PROTOCOL_SCHEDULE_UNLOCK_REQUIRED,
+                    reconciliationKey = scheduledReconciliationKey(
+                        target = settings.scheduledExportTarget,
+                        operationId = historyOperationId,
+                        dates = dates,
+                    ),
                 )
             )
             persistPendingRetryDates(
@@ -302,6 +375,11 @@ class ExportWorker @AssistedInject constructor(
                     result = result,
                     failureReason = ExportFailureReason.UNKNOWN,
                     warning = null,
+                    reconciliationKey = scheduledReconciliationKey(
+                        target = settings.scheduledExportTarget,
+                        operationId = historyOperationId,
+                        dates = dates,
+                    ),
                 ),
             )
             persistPendingRetryDates(
@@ -352,6 +430,11 @@ class ExportWorker @AssistedInject constructor(
                     fileCount = 0,
                     warningSummary = PROTOCOL_BACKGROUND_PERMISSION_REQUIRED,
                     exportMode = settings.exportMode,
+                    reconciliationKey = scheduledReconciliationKey(
+                        target = settings.scheduledExportTarget,
+                        operationId = historyOperationId,
+                        dates = dates,
+                    ),
                 )
             )
             persistPendingRetryDates(
@@ -414,7 +497,7 @@ class ExportWorker @AssistedInject constructor(
                     warning = result.warningSummary(),
                     reconciliationKey = scheduledReconciliationKey(
                         target = settings.scheduledExportTarget,
-                        operationId = durableFolderOperationId ?: durableApiOperationId,
+                        operationId = historyOperationId,
                         dates = dates,
                     ),
                 )
@@ -494,7 +577,7 @@ class ExportWorker @AssistedInject constructor(
                 Result.retry()
             } else if (result.primaryFailureReason == ExportFailureReason.BACKGROUND_PERMISSION_DENIED) {
                 Result.failure()
-            } else if (shouldRetry(result) && runAttemptCount < 3) {
+            } else if (shouldRetry(result) && runAttemptCount < MAX_WORKER_ATTEMPTS) {
                 Result.retry()
             } else {
                 Result.failure()
@@ -518,7 +601,7 @@ class ExportWorker @AssistedInject constructor(
                 NavDestination.SCHEDULE.route,
                 promptRecovery = true,
             )
-            if (runAttemptCount < 3) Result.retry() else Result.failure()
+            if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
         }
     }
 
@@ -737,6 +820,7 @@ class ExportWorker @AssistedInject constructor(
         private const val FOREGROUND_NOTIFICATION_ID = 6_042
         private const val EXPORT_RESULT_NOTIFICATION_ID = 6_043
         private const val SCHEDULE_RESULT_NOTIFICATION_ID = 6_044
+        private const val MAX_WORKER_ATTEMPTS = 3
 
         // Stable protocol/history values. They are localized only when rendered in the app UI.
         private const val PROTOCOL_SCHEDULE_UNLOCK_REQUIRED =

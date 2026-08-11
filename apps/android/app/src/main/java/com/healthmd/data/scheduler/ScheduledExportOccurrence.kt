@@ -16,6 +16,13 @@ import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.ZoneId
 
+internal class ScheduledExportWorkDataTooLargeException(
+    cause: IllegalStateException,
+) : IllegalArgumentException(
+    "Scheduled export configuration exceeds background-work limits.",
+    cause,
+)
+
 /** Immutable schedule configuration captured for one intended export occurrence. */
 data class ScheduledExportConfiguration(
     val cadenceValue: Int,
@@ -152,7 +159,10 @@ data class ScheduledExportOccurrence(
     val settingsSnapshot: AndroidExportSettingsSnapshot?
         get() = configuration.settingsSnapshot
 
-    fun toWorkData(catchUpThroughMillis: Long = triggerAtMillis): Data {
+    fun toWorkData(
+        catchUpThroughMillis: Long = triggerAtMillis,
+        admissionOperationId: String? = null,
+    ): Data {
         val builder = Data.Builder()
             .putString(KEY_SIGNATURE, configuration.signature)
             .putLong(KEY_TRIGGER_AT_MILLIS, triggerAtMillis)
@@ -168,11 +178,18 @@ data class ScheduledExportOccurrence(
             .putString(KEY_DESTINATION_FINGERPRINT, configuration.destinationFingerprint.orEmpty())
             .putString(KEY_ZONE_ID, configuration.zoneId)
         generation?.let { builder.putString(KEY_GENERATION, it) }
+        admissionOperationId?.let {
+            builder.putString(ScheduledExportAdmission.KEY_OPERATION_ID, it)
+        }
         configuration.canonicalEnginePinJson?.let { builder.putString(KEY_ENGINE_PIN_JSON, it) }
         configuration.canonicalSettingsSnapshotJson?.let {
             builder.putString(KEY_SETTINGS_SNAPSHOT_JSON, it)
         }
-        return builder.build()
+        return try {
+            builder.build()
+        } catch (error: IllegalStateException) {
+            throw ScheduledExportWorkDataTooLargeException(error)
+        }
     }
 
     fun putInto(intent: Intent): Intent = intent.apply {

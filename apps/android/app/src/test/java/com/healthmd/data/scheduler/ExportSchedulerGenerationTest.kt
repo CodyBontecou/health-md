@@ -14,6 +14,7 @@ import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.model.MarkdownTemplateConfig
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
@@ -478,6 +479,174 @@ class ExportSchedulerGenerationTest {
         assertThat(replacement.triggerAtMillis).isGreaterThan(dueAtMillis)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun settingsAreCapturedAfterWaitingForRunningWorkerCoordinator() = runTest {
+        val oldSettings = settings(ExportTarget.DEVICE_FOLDER).copy(
+            filenameFormat = "frozen-a-{date}",
+        )
+        var currentSettings = oldSettings.copy(filenameFormat = "material-b-{date}")
+        val due = occurrence(oldSettings, "generation-output-a").copy(
+            triggerAtMillis = System.currentTimeMillis() - 60_000L,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(due)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val coordinator = ScheduledExportRunCoordinator()
+        val scheduler = scheduler(
+            workManager = workManager(requests),
+            currentSettings = { currentSettings },
+            generations = listOf("generation-output-c"),
+            runCoordinator = coordinator,
+        )
+        coordinator.mutex.lock()
+
+        val handling = async { scheduler.handleOccurrence(due, expedited = true) }
+        runCurrent()
+        currentSettings = oldSettings.copy(filenameFormat = "material-c-{date}")
+        coordinator.mutex.unlock()
+
+        assertThat(handling.await()).isTrue()
+        val export = requests.single { ExportScheduler.EXPORT_OCCURRENCE_TAG in it.tags }
+        val admitted = requireNotNull(ScheduledExportOccurrence.fromWorkData(export.workSpec.input))
+        assertThat(admitted.settingsSnapshot?.filenameFormat).isEqualTo("material-c-{date}")
+        assertThat(admitted.generation).isEqualTo("generation-output-c")
+    }
+
+    @Test
+    fun oversizedWorkDataIsRejectedBeforeReplacingTheActiveGeneration() = runTest {
+        val oldSettings = settings(ExportTarget.DEVICE_FOLDER)
+        val oversizedSettings = oldSettings.copy(
+            formatCustomization = oldSettings.formatCustomization.copy(
+                markdownTemplate = MarkdownTemplateConfig(customTemplate = "x".repeat(12_000)),
+            ),
+        )
+        val active = occurrence(oldSettings, "generation-small")
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(active)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val workManager = workManager(requests)
+        val scheduler = scheduler(
+            workManager = workManager,
+            currentSettings = { oversizedSettings },
+            generations = listOf("generation-oversized"),
+        )
+
+        val error = runCatching { scheduler.reconcile() }.exceptionOrNull()
+
+        assertThat(error).isInstanceOf(ScheduledExportWorkDataTooLargeException::class.java)
+        assertThat(stateStore.load()).isEqualTo(active)
+        assertThat(stateStore.loadTransition()).isNull()
+        assertThat(stateStore.loadAdmission()).isNull()
+        assertThat(requests).isEmpty()
+        verify(exactly = 0) {
+            workManager.cancelAllWorkByTag(
+                ExportScheduler.GENERATION_TAG_PREFIX + "generation-small",
+            )
+        }
+    }
+
+    @Test
+    fun interruptedArmRecoversTheSameAdmissionWithoutReadmittingCompletedOccurrence() = runTest {
+        val currentSettings = settings(ExportTarget.DEVICE_FOLDER)
+        val due = occurrence(currentSettings, "generation-active").copy(
+            triggerAtMillis = System.currentTimeMillis() - 60_000L,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(due)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        var failFallbackArm = true
+        val workManager = workManager()
+        every {
+            workManager.enqueueUniqueWork(
+                any<String>(),
+                any<ExistingWorkPolicy>(),
+                any<OneTimeWorkRequest>(),
+            )
+        } answers {
+            val request = thirdArg<OneTimeWorkRequest>()
+            requests += request
+            if (failFallbackArm && ExportScheduler.FALLBACK_TRIGGER_TAG in request.tags) {
+                failedOperation(IllegalStateException("simulated arm failure"))
+            } else {
+                successfulOperation()
+            }
+        }
+        val scheduler = scheduler(
+            workManager = workManager,
+            currentSettings = { currentSettings },
+        )
+
+        assertThat(runCatching { scheduler.handleOccurrence(due, expedited = true) }.isFailure)
+            .isTrue()
+        val admission = requireNotNull(stateStore.loadAdmission())
+        val next = requireNotNull(stateStore.load())
+        assertThat(admission.occurrence).isEqualTo(due)
+        assertThat(next.triggerAtMillis).isGreaterThan(due.triggerAtMillis)
+        assertThat(stateStore.pendingArmOccurrence()).isEqualTo(next)
+
+        failFallbackArm = false
+        assertThat(
+            scheduler.handleOccurrence(
+                occurrence = due,
+                expedited = true,
+                isFallbackDelivery = true,
+            ),
+        ).isFalse()
+
+        val exportRequests = requests.filter { ExportScheduler.EXPORT_OCCURRENCE_TAG in it.tags }
+        assertThat(exportRequests).hasSize(2)
+        assertThat(exportRequests.map { it.id }.distinct()).containsExactly(admission.workRequestId)
+        assertThat(stateStore.pendingArmOccurrence()).isNull()
+        assertThat(
+            stateStore.completeAdmission(
+                due,
+                admission.operationId,
+                admission.workRequestId,
+            ),
+        ).isTrue()
+
+        assertThat(scheduler.handleOccurrence(due, expedited = true)).isFalse()
+        assertThat(requests.count { ExportScheduler.EXPORT_OCCURRENCE_TAG in it.tags }).isEqualTo(2)
+    }
+
+    @Test
+    fun busyExactDeliveryDoesNotRearmThePastOccurrence() = runTest {
+        val currentSettings = settings(ExportTarget.DEVICE_FOLDER)
+        val admittedOccurrence = occurrence(currentSettings, "generation-active").copy(
+            triggerAtMillis = System.currentTimeMillis() - 120_000L,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        val nextDue = admittedOccurrence.copy(
+            triggerAtMillis = System.currentTimeMillis() - 60_000L,
+        )
+        val admission = ScheduledExportAdmission.create(
+            occurrence = admittedOccurrence,
+            catchUpThroughMillis = admittedOccurrence.triggerAtMillis,
+            expedited = true,
+        )
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(admittedOccurrence)
+        assertThat(stateStore.prepareAdmission(admission, nextDue)).isTrue()
+        assertThat(stateStore.completePendingArm(nextDue.id)).isTrue()
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val scheduler = scheduler(
+            workManager = workManager(requests),
+            currentSettings = { currentSettings },
+        )
+
+        val result = scheduler.handleOccurrenceDelivery(nextDue, expedited = true)
+
+        assertThat(result).isEqualTo(ScheduledExportDeliveryResult.BUSY)
+        assertThat(requests.count { ExportScheduler.EXPORT_OCCURRENCE_TAG in it.tags })
+            .isEqualTo(1)
+        assertThat(requests.none { ExportScheduler.FALLBACK_TRIGGER_TAG in it.tags }).isTrue()
+        assertThat(stateStore.load()).isEqualTo(nextDue)
+        assertThat(stateStore.loadAdmission()).isEqualTo(admission)
+    }
+
     private fun scheduler(
         workManager: WorkManager,
         currentSettings: () -> ExportSettings,
@@ -485,6 +654,7 @@ class ExportSchedulerGenerationTest {
         generationFactory: ScheduledExportGeneration = generationFactory(generations),
         stateStore: ScheduledExportStateStore = this.stateStore,
         fingerprintForEndpoint: (String) -> String? = { API_FINGERPRINT },
+        runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
     ): ExportScheduler {
         val settingsRepository = mockk<SettingsRepository>(relaxed = true)
         coEvery { settingsRepository.getExportSettings() } answers { currentSettings() }
@@ -506,7 +676,7 @@ class ExportSchedulerGenerationTest {
             timeCalculator = ScheduledExportTimeCalculator(),
             enginePinPlanner = enginePinPlanner,
             generationFactory = generationFactory,
-            runCoordinator = ScheduledExportRunCoordinator(),
+            runCoordinator = runCoordinator,
             transitionObserver = ScheduledExportTransitionObserver(),
         )
     }
@@ -577,6 +747,10 @@ class ExportSchedulerGenerationTest {
         resultFuture: SettableFuture<Operation.State.SUCCESS>,
     ): Operation = mockk(relaxed = true) {
         every { result } returns resultFuture
+    }
+
+    private fun failedOperation(error: Throwable): Operation = mockk(relaxed = true) {
+        every { result } returns Futures.immediateFailedFuture(error)
     }
 
     private companion object {

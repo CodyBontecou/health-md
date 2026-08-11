@@ -7,6 +7,7 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import java.time.LocalDate
+import java.util.UUID
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,6 +58,131 @@ class ScheduledExportStateStoreTest {
         reloadedProcessStore.clear()
         assertThat(ScheduledExportStateStore(context).load()).isNull()
         assertThat(ScheduledExportStateStore(context).isGenerationMigrationComplete()).isTrue()
+    }
+
+    @Test
+    fun admissionAtomicallyAdvancesAndRequiresExactWorkIdentity() {
+        val admitted = occurrence("generation-one", 1_800_000_000_000L)
+        val next = occurrence("generation-one", 1_800_000_900_000L)
+        val admission = ScheduledExportAdmission.create(
+            occurrence = admitted,
+            catchUpThroughMillis = admitted.triggerAtMillis + 60_000L,
+            expedited = true,
+        )
+        val store = ScheduledExportStateStore(context)
+        store.markGenerationMigrationComplete()
+        store.save(admitted)
+
+        assertThat(store.prepareAdmission(admission, next)).isTrue()
+
+        val reloaded = ScheduledExportStateStore(context)
+        assertThat(reloaded.load()).isEqualTo(next)
+        assertThat(reloaded.loadAdmission()).isEqualTo(admission)
+        assertThat(reloaded.pendingArmOccurrence()).isEqualTo(next)
+        assertThat(
+            reloaded.matchesAdmission(admitted, admission.operationId, admission.workRequestId),
+        ).isTrue()
+        assertThat(
+            reloaded.completeAdmission(admitted, admission.operationId, UUID.randomUUID()),
+        ).isFalse()
+        assertThat(
+            reloaded.markAdmissionExecutionCompleted(
+                admitted,
+                admission.operationId,
+                admission.workRequestId,
+            ),
+        ).isTrue()
+        assertThat(
+            reloaded.matchesAdmission(admitted, admission.operationId, admission.workRequestId),
+        ).isFalse()
+        assertThat(
+            reloaded.isAdmissionExecutionCompleted(
+                admitted,
+                admission.operationId,
+                admission.workRequestId,
+            ),
+        ).isTrue()
+        assertThat(
+            reloaded.completeAdmission(admitted, admission.operationId, admission.workRequestId),
+        ).isTrue()
+        assertThat(reloaded.loadAdmission()).isNull()
+        assertThat(reloaded.pendingArmOccurrence()).isEqualTo(next)
+        assertThat(reloaded.completePendingArm(next.id)).isTrue()
+        assertThat(reloaded.pendingArmOccurrence()).isNull()
+    }
+
+    @Test
+    fun malformedPreferenceTypesFailClosedInsteadOfThrowing() {
+        val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        preferences.edit()
+            .putString("trigger_at_millis", "not-a-long")
+            .putInt("generation_transition_phase_v1", 7)
+            .putString("generation_migration_complete_v1", "not-a-boolean")
+            .commit()
+
+        val store = ScheduledExportStateStore(context)
+
+        assertThat(store.load()).isNull()
+        assertThat(store.loadTransition()).isNull()
+        assertThat(store.isGenerationMigrationComplete()).isFalse()
+    }
+
+    @Test
+    fun malformedRequiredAdmissionFieldIsDetectedAndClearedFailClosed() {
+        val admitted = occurrence("generation-one", 1_800_000_000_000L)
+        val next = occurrence("generation-one", 1_800_000_900_000L)
+        val admission = ScheduledExportAdmission.create(
+            occurrence = admitted,
+            catchUpThroughMillis = admitted.triggerAtMillis,
+            expedited = true,
+        )
+        val store = ScheduledExportStateStore(context)
+        store.save(admitted)
+        assertThat(store.prepareAdmission(admission, next)).isTrue()
+        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString("admission_v2_expedited", "not-a-boolean")
+            .commit()
+
+        val corrupted = ScheduledExportStateStore(context)
+        assertThat(corrupted.loadAdmission()).isNull()
+        assertThat(corrupted.hasCorruptAdmissionState()).isTrue()
+        assertThat(corrupted.clearAdmissionState()).isTrue()
+        assertThat(corrupted.hasCorruptAdmissionState()).isFalse()
+        assertThat(corrupted.load()).isEqualTo(next)
+    }
+
+    @Test
+    fun generationTransitionAtomicallyInvalidatesAnExistingAdmission() {
+        val admitted = occurrence("generation-old", 1_800_000_000_000L)
+        val oldNext = occurrence("generation-old", 1_800_000_450_000L)
+        val replacement = occurrence("generation-new", 1_800_000_900_000L)
+        val admission = ScheduledExportAdmission.create(
+            occurrence = admitted,
+            catchUpThroughMillis = admitted.triggerAtMillis,
+            expedited = false,
+        )
+        val store = ScheduledExportStateStore(context)
+        store.save(admitted)
+        assertThat(store.prepareAdmission(admission, oldNext)).isTrue()
+
+        assertThat(
+            store.prepareTransition(
+                ScheduledExportTransition(
+                    replacement = replacement,
+                    previousGeneration = oldNext.generation,
+                    previousOccurrenceId = oldNext.id,
+                    cleanupScope = ScheduledExportCleanupScope.GENERATION,
+                    phase = ScheduledExportTransitionPhase.PREPARED,
+                    reason = "TEST_REPLACEMENT",
+                ),
+            ),
+        ).isTrue()
+
+        val reloaded = ScheduledExportStateStore(context)
+        assertThat(reloaded.load()).isEqualTo(replacement)
+        assertThat(reloaded.loadAdmission()).isNull()
+        assertThat(reloaded.pendingArmOccurrence()).isNull()
     }
 
     @Test
