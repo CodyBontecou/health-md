@@ -32,6 +32,12 @@ enum AccessibilityID {
         static let pathPreview = "export.pathPreview"
         static let exportProgress = "export.progressView"
         static let statusMessage = "export.statusMessage"
+        static let activityBanner = "export.activityBanner"
+    }
+
+    // MARK: - Mac Destination
+    enum Mac {
+        static let exportActivity = "mac.exportActivity"
     }
 
     // MARK: - Clinician Report

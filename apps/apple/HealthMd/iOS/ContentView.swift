@@ -243,6 +243,20 @@ struct ContentView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if isExporting {
+                ManualExportActivityBanner(
+                    target: exportTargetSelection,
+                    progress: exportProgress,
+                    message: exportStatusMessage
+                )
+                .padding(.horizontal, Spacing.md)
+                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s1)
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
                 vaultManager.setVaultFolder(url)

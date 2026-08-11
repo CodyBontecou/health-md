@@ -165,81 +165,32 @@ struct NotificationExportActivityBanner: View {
     let snapshot: NotificationExportActivityTracker.Snapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: phaseIcon)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(phaseColor)
-                    .frame(width: 18, height: 18)
-                    .accessibilityHidden(true)
-
-                Text(title)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-
-                Spacer(minLength: Spacing.s2)
-
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(snapshot.source.label)
-                        .font(.caption2.weight(.semibold))
-                    Text(snapshot.targetLabel)
-                        .font(.caption2)
-                        .lineLimit(1)
-                }
-                .foregroundStyle(Color.textSecondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(Color.bgSecondary))
-                .privacySensitive()
-            }
-
-            Text(snapshot.message)
-                .font(.caption)
-                .foregroundStyle(Color.textSecondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let progress = snapshot.fractionComplete {
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .tint(phaseColor)
-                    .accessibilityLabel("Notification export progress")
-                    .accessibilityValue("\(Int((progress * 100).rounded())) percent")
-            } else if !snapshot.phase.isTerminal {
-                ProgressView()
-                    .progressViewStyle(.linear)
-                    .tint(phaseColor)
-                    .accessibilityLabel("Notification export in progress")
-            }
-
-            HStack(spacing: Spacing.s3) {
-                if snapshot.totalDays > 0 {
-                    Label(
-                        "\(min(snapshot.processedDays, snapshot.totalDays)) of \(snapshot.totalDays) days",
-                        systemImage: "calendar"
-                    )
-                }
-                Spacer(minLength: 0)
-                if snapshot.phase.keepsScreenAwake {
-                    Text("Keep Health.md open")
-                }
-            }
-            .font(.caption2)
-            .foregroundStyle(Color.textMuted)
-        }
-        .padding(.horizontal, Spacing.s3)
-        .padding(.vertical, Spacing.s2)
-        .background(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .fill(Color.bgPrimary)
+        ExportActivityBanner(
+            title: title,
+            systemImage: phaseIcon,
+            tint: phaseColor,
+            sourceLabel: snapshot.source.label,
+            targetLabel: snapshot.targetLabel,
+            message: snapshot.message,
+            progress: snapshot.fractionComplete,
+            showsIndeterminateProgress: !snapshot.phase.isTerminal,
+            progressAccessibilityLabel: snapshot.fractionComplete == nil
+                ? String(localized: "Notification export in progress")
+                : String(localized: "Notification export progress"),
+            details: details,
+            trailingText: snapshot.phase.keepsScreenAwake
+                ? String(localized: "Keep Health.md open")
+                : nil,
+            accessibilityIdentifier: AccessibilityID.Notification.exportActivity
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(phaseColor.opacity(0.35), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(AccessibilityID.Notification.exportActivity)
+    }
+
+    private var details: [ExportActivityBannerDetail] {
+        guard snapshot.totalDays > 0 else { return [] }
+        return [ExportActivityBannerDetail(
+            text: "\(min(snapshot.processedDays, snapshot.totalDays)) of \(snapshot.totalDays) days",
+            systemImage: "calendar"
+        )]
     }
 
     private var title: String {

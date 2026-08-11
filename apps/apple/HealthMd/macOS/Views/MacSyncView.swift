@@ -10,6 +10,7 @@ import SwiftUI
 /// listens, validates the local destination, writes received jobs, and exposes
 /// recent activity.
 struct MacSyncView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var healthDataStore: HealthDataStore
@@ -31,6 +32,15 @@ struct MacSyncView: View {
                     VStack(alignment: .leading, spacing: Spacing.s8) {
                         heroSection
                             .id("marketing-sync")
+
+                        if let progress = activeExportProgress {
+                            activeExportCard(progress)
+                                .transition(
+                                    reduceMotion
+                                        ? .opacity
+                                        : .move(edge: .top).combined(with: .opacity)
+                                )
+                        }
 
                         if !syncService.discoveredPeers.isEmpty && displayConnectionState != .connected {
                             nearbyDevicesCard
@@ -60,6 +70,10 @@ struct MacSyncView: View {
         }
         .foregroundStyle(Color.textPrimary)
         .tint(Color.accent)
+        .animation(
+            reduceMotion ? nil : AnimationTimings.standard,
+            value: activeExportProgress
+        )
         .onAppear {
             receivingPaused = false
             #if DEBUG
@@ -269,6 +283,226 @@ struct MacSyncView: View {
         }
         .buttonStyle(GeistMacButtonStyle(kind: .primary))
         .disabled(displayConnectionState == .connecting)
+    }
+
+    // MARK: - Active Export
+
+    private var activeExportProgress: MacExportProgress? {
+        guard let progress = syncService.activeMacExportProgress,
+              ![MacExportPhase.completed, .failed, .cancelled].contains(progress.phase) else {
+            return nil
+        }
+        return progress
+    }
+
+    private func activeExportCard(_ progress: MacExportProgress) -> some View {
+        let clampedProgress = min(max(progress.fractionComplete, 0), 0.99)
+        let percentage = Int((clampedProgress * 100).rounded())
+
+        return GeistMacCard(padding: Spacing.s6) {
+            VStack(alignment: .leading, spacing: Spacing.s6) {
+                HStack(alignment: .center, spacing: Spacing.s4) {
+                    Image(systemName: exportPhaseIcon(progress.phase))
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.accent)
+                        .frame(width: 48, height: 48)
+                        .background(
+                            Color.accentSubtle,
+                            in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                                .strokeBorder(Color.accent.opacity(0.25), lineWidth: 1)
+                        )
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        HStack(spacing: Spacing.s2) {
+                            Text(exportPhaseTitle(progress.phase))
+                                .font(Typography.heading20())
+                                .foregroundStyle(Color.textPrimary)
+                                .accessibilityAddTraits(.isHeader)
+
+                            Text(String(localized: "In Progress"))
+                                .font(Typography.label())
+                                .foregroundStyle(Color.accent)
+                                .padding(.horizontal, Spacing.s2)
+                                .padding(.vertical, 3)
+                                .background(Color.accentSubtle, in: Capsule())
+                                .overlay(Capsule().strokeBorder(Color.accent.opacity(0.25), lineWidth: 1))
+                        }
+
+                        Text(localizedProgressMessage(progress))
+                            .font(Typography.body())
+                            .foregroundStyle(Color.textSecondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: Spacing.s4)
+
+                    if progress.totalDays > 0 {
+                        Text(String(localized: "\(percentage) percent complete"))
+                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.textPrimary)
+                            .monospacedDigit()
+                    } else {
+                        VStack(alignment: .trailing, spacing: Spacing.s1) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(String(localized: "In Progress"))
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(String(localized: "Export in Progress"))
+                    }
+                }
+
+                exportPhaseRail(progress)
+
+                if progress.totalDays > 0 {
+                    ProgressView(value: clampedProgress)
+                        .progressViewStyle(.linear)
+                        .tint(Color.accent)
+                        .accessibilityLabel(String(localized: "Export progress"))
+                        .accessibilityValue(String(localized: "\(percentage) percent complete"))
+                } else {
+                    ProgressView()
+                        .progressViewStyle(.linear)
+                        .tint(Color.accent)
+                        .accessibilityLabel(String(localized: "Export in Progress"))
+                }
+
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.s3)],
+                    alignment: .leading,
+                    spacing: Spacing.s3
+                ) {
+                    if progress.totalDays > 0 {
+                        GeistInfoChip(
+                            icon: "calendar",
+                            title: String(localized: "Source days processed"),
+                            value: "\(min(max(progress.processedDays, 0), progress.totalDays)) / \(progress.totalDays)",
+                            color: Color.textSecondary
+                        )
+                    }
+
+                    GeistInfoChip(
+                        icon: "doc.on.doc",
+                        title: String(localized: "Files Exported"),
+                        value: "\(max(progress.filesWritten, 0))",
+                        color: progress.filesWritten > 0 ? Color.success : Color.textSecondary
+                    )
+
+                    GeistInfoChip(
+                        icon: "folder",
+                        title: String(localized: "Destination"),
+                        value: vaultManager.vaultURL == nil
+                            ? String(localized: "Mac folder")
+                            : vaultManager.vaultName,
+                        color: Color.textSecondary
+                    )
+                }
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(Color.accent.opacity(0.28), lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.Mac.exportActivity)
+    }
+
+    private func exportPhaseRail(_ progress: MacExportProgress) -> some View {
+        let currentIndex = exportPhaseIndex(progress.phase)
+        let steps: [(title: String, icon: String)] = [
+            (String(localized: "Receiving export"), "arrow.down.doc"),
+            (String(localized: "Validating export"), "checkmark.shield"),
+            (String(localized: "Preparing export"), "gearshape.2"),
+            (String(localized: "Writing export files"), "externaldrive")
+        ]
+
+        return HStack(alignment: .top, spacing: 0) {
+            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                let isComplete = index < currentIndex
+                let isCurrent = index == currentIndex
+                let stepColor = isComplete ? Color.success : (isCurrent ? Color.accent : Color.textMuted)
+
+                VStack(spacing: Spacing.s2) {
+                    HStack(spacing: 0) {
+                        Rectangle()
+                            .fill(index == 0
+                                  ? Color.clear
+                                  : (index <= currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                            .frame(height: 2)
+
+                        ZStack {
+                            Circle()
+                                .fill(isComplete || isCurrent ? stepColor.opacity(0.14) : Color.bgSecondary)
+                            Circle()
+                                .strokeBorder(stepColor.opacity(isComplete || isCurrent ? 0.75 : 0.35), lineWidth: 1)
+                            Image(systemName: isComplete ? "checkmark" : step.icon)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(stepColor)
+                        }
+                        .frame(width: 28, height: 28)
+
+                        Rectangle()
+                            .fill(index == steps.count - 1
+                                  ? Color.clear
+                                  : (index < currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                            .frame(height: 2)
+                    }
+
+                    Text(step.title)
+                        .font(Typography.label())
+                        .foregroundStyle(stepColor)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(step.title)
+                .accessibilityValue(
+                    isComplete
+                        ? String(localized: "Done")
+                        : (isCurrent ? String(localized: "In Progress") : String(localized: "Pending"))
+                )
+            }
+        }
+    }
+
+    private func exportPhaseIndex(_ phase: MacExportPhase) -> Int {
+        switch phase {
+        case .receiving: return 0
+        case .validating: return 1
+        case .exporting: return 2
+        case .writing: return 3
+        case .completed, .failed, .cancelled: return 3
+        }
+    }
+
+    private func exportPhaseTitle(_ phase: MacExportPhase) -> String {
+        switch phase {
+        case .receiving: return String(localized: "Receiving export")
+        case .validating: return String(localized: "Validating export")
+        case .exporting: return String(localized: "Preparing export")
+        case .writing: return String(localized: "Writing export files")
+        case .completed: return String(localized: "Export complete")
+        case .failed: return String(localized: "Export failed")
+        case .cancelled: return String(localized: "Export cancelled")
+        }
+    }
+
+    private func exportPhaseIcon(_ phase: MacExportPhase) -> String {
+        switch phase {
+        case .receiving: return "arrow.down.doc.fill"
+        case .validating: return "checkmark.shield.fill"
+        case .exporting: return "gearshape.2.fill"
+        case .writing: return "externaldrive.fill.badge.checkmark"
+        case .completed: return "checkmark.circle.fill"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .cancelled: return "xmark.circle.fill"
+        }
     }
 
     // MARK: - Cards
