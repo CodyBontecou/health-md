@@ -1,0 +1,27 @@
+{
+  "schema": "healthmd.agent_skill_manifest",
+  "schema_version": 1,
+  "name": "healthmd-cli",
+  "availability": "preview_until_public_healthmd_cli_release",
+  "install_as": "healthmd-cli/SKILL.md",
+  "latest": {
+    "version": 1,
+    "path": "/agents/skills/healthmd-cli/v1/SKILL.md",
+    "media_type": "text/markdown",
+    "bytes": 14969,
+    "sha256": "e919190e350abd67f689ad67dd9f42d788ded72a27eabdec97f701167ac28b0a"
+  },
+  "versions": [
+    {
+      "version": 1,
+      "path": "/agents/skills/healthmd-cli/v1/SKILL.md",
+      "media_type": "text/markdown",
+      "bytes": 14969,
+      "sha256": "e919190e350abd67f689ad67dd9f42d788ded72a27eabdec97f701167ac28b0a"
+    }
+  ],
+  "source": {
+    "repository": "https://github.com/CodyBontecou/health-md",
+    "path": ".agents/skills/healthmd-cli/SKILL.md"
+  }
+}

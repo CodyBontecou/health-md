@@ -20,7 +20,7 @@ description: Export Apple Health or Health Connect data, connect the signed Mac 
 
 <div class="agent-path" aria-label="Choose a Health.md goal">
   <a href="/docs/iphone-first-export/"><span>01 · Export</span><strong>Start on iPhone</strong>Authorize Apple Health, choose a folder, preview the output, and run a first export.</a>
-  <a href="/docs/configuration/"><span>02 · Ask</span><strong>Connect a local agent</strong>Use the signed Mac MCP helper with Codex, Claude, or another stdio client.</a>
+  <a href="/docs/configuration/"><span>02 · Ask</span><strong>Connect a local agent</strong>Use the signed Mac MCP helper with Codex or Claude, refresh an explicit scope, and verify a bounded result.</a>
   <a href="/docs/reference/"><span>03 · Build</span><strong>Use stable contracts</strong>Integrate schemas, records, evidence, generated fixtures, and exact envelopes.</a>
 </div>
 
@@ -33,9 +33,9 @@ description: Export Apple Health or Health Connect data, connect the signed Mac 
 
 <p class="docs-section-kicker">Available now · macOS</p>
 
-## Five-minute local agent quickstart
+## Ten-minute local agent quickstart
 
-Open Health.md on Mac, then open Health.md on the paired iPhone and wait for connectivity. The bundled helper checks readiness without returning health values, lists Sleep metrics, and runs a one-day query:
+Use the released signed Mac helper with a connected iPhone. The complete path includes installation, Mac–iPhone connectivity, Codex and Claude configuration, the expected health-free doctor result, an explicit one-day refresh, a bounded typed query, completeness checks, and safe timeout recovery.
 
 ```bash
 HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
@@ -44,7 +44,9 @@ HMD="/Applications/Health.md.app/Contents/Helpers/healthmd"
 "$HMD" query --category Sleep --yesterday
 ```
 
-A ready `doctor` result uses the `healthmd.cli_doctor` schema and includes next actions when setup is incomplete. For Codex or Claude, continue to [Configure your agent](/docs/configuration/) and point the client at the separate signed `healthmd-mcp` helper.
+A ready `doctor` result uses the `healthmd.cli_doctor` schema and includes next actions when setup is incomplete. For Codex or Claude, the complete walkthrough configures the separate signed `healthmd-mcp` helper.
+
+[Agent configuration reference →](/docs/configuration/)
 
 <p class="docs-section-kicker">Choose by goal</p>
 

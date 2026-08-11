@@ -223,7 +223,7 @@ Do not include raw records, routes, clinical text, medication details, mood entr
 
 <div class="related">
   <a href="/docs/agent-queries/"><span>CLI cookbook</span>Typed agent queries: metrics, sleep sessions, training alignment, workouts, coverage, comparison, and evidence.</a>
-  <a href="/docs/mcp/"><span>Tool protocol</span>Codex and Claude setup, 17 portable tools, MCP App charts, exports, paging, and sandbox boundaries.</a>
+  <a href="/docs/mcp/"><span>Tool protocol</span>Codex and Claude setup, 21 released Mac tools, 19 portable preview tools, MCP App charts, exports, paging, and sandbox boundaries.</a>
   <a href="/docs/agent-api/"><span>Low level</span>Loopback query API: routes, direct request JSON, cursors, and durable acquisition jobs.</a>
   <a href="/docs/cli-extract/"><span>Source objects</span>Canonical extraction: selected schema-v7 documents, records, projections, and receipts.</a>
   <a href="/docs/reference/evidence-packets/"><span>Contracts</span>Compact queries and evidence packets: typed values, coverage, operations, and deterministic IDs.</a>

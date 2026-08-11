@@ -4,6 +4,7 @@ import {
   defaultLocale,
   localeFor,
 } from '../../../i18n/locales.mjs';
+import { markdownPathForDocsPath } from '../../lib/docs-metadata.mjs';
 import {
   docsPathForSlug,
   englishDocsPath,
@@ -12,7 +13,7 @@ import {
 } from '../../../i18n/routes.mjs';
 
 const route = Astro.locals.starlightRoute;
-const { entry, head, lang, siteTitle, isFallback } = route;
+const { entry, head, lang, siteTitle, isFallback, lastUpdated } = route;
 const routeLocaleCode = localeFromPathname(Astro.url.pathname);
 const routeLocale = localeFor(routeLocaleCode);
 const contentLocale = isFallback ? localeFor(defaultLocale) : routeLocale;
@@ -21,6 +22,11 @@ const site = Astro.site ?? new URL('https://healthmd.app');
 const englishPath = englishDocsPath(Astro.url.pathname);
 const englishCanonical = new URL(englishPath, site).href;
 const pageCanonical = isFallback ? englishCanonical : new URL(Astro.url.pathname, site).href;
+const markdownPath = englishPath.startsWith('/docs/')
+  ? markdownPathForDocsPath(isFallback ? englishPath : Astro.url.pathname)
+  : undefined;
+const markdownURL = markdownPath ? new URL(markdownPath, site).href : undefined;
+const dateModified = lastUpdated?.toISOString();
 
 const canonicalEntry = head.find(
   ({ tag, attrs }) => tag === 'link' && attrs?.rel === 'canonical',
@@ -114,6 +120,7 @@ const jsonLD = JSON.stringify({
       url: pageCanonical,
       image,
       inLanguage: contentLocale.lang,
+      ...(dateModified ? { dateModified } : {}),
       publisher: {
         '@type': 'Organization',
         name: 'Health.md',
@@ -129,6 +136,10 @@ const jsonLD = JSON.stringify({
 ---
 
 <DefaultHead />
+{markdownURL && (
+  <link rel="alternate" type="text/markdown" href={markdownURL} title={`${entry.data.title} — Markdown`} />
+)}
+{dateModified && <meta property="article:modified_time" content={dateModified} />}
 {!meta('name', 'twitter:title') && <meta name="twitter:title" content={entry.data.title} />}
 {description && !meta('name', 'twitter:description') && (
   <meta name="twitter:description" content={description} />

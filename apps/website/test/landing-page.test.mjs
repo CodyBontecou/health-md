@@ -146,7 +146,7 @@ test("agent showcase connects scoped questions to contextual answers", async () 
   assert.match(index, /<section class="agent-showcase" id="agents"/);
   assert.match(index, /Your health data,<br>ready for questions\./);
   assert.match(index, /without routing data through a Health\.md cloud/);
-  assert.match(index, /href="docs\/configuration\/"[\s\S]*?Connect an agent/);
+  assert.match(index, /href="docs\/guides\/connect-agent\/"[\s\S]*?Connect an agent/);
   assert.match(index, /href="docs\/cli\/"[\s\S]*?Explore CLI &amp; MCP/);
   assert.ok(index.indexOf("Connect an agent") < index.indexOf("Explore CLI &amp; MCP"));
   assert.match(styles, /\.agent-copy\s*{[\s\S]*?height:\s*694px;/);
@@ -527,7 +527,7 @@ test("docs navigation starts with user goals and labels preview surfaces", () =>
   assert.match(docsConfig, /sidebar: starlightSidebar\(\)/);
   assert.match(docsIndex, /Start with Health\.md/);
   assert.match(docsIndex, /Contents\/Helpers\/healthmd" doctor/);
-  assert.match(docsIndex, /Five-minute local agent quickstart/);
+  assert.match(docsIndex, /Ten-minute local agent quickstart/);
   assert.doesNotMatch(docsIndex, /healthmd setup codex/);
   assert.match(configurationGuide, /Available now · signed Mac helper/);
   assert.match(configurationGuide, /Preview · not yet publicly packaged/);
