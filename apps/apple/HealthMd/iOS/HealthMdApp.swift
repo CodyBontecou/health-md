@@ -122,6 +122,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 struct HealthMdApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
@@ -300,10 +301,16 @@ struct HealthMdApp: App {
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.s2)
                 .padding(.bottom, Spacing.s1)
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
-            .animation(AnimationTimings.standard, value: notificationExportActivity.snapshot?.operationID)
-            .animation(AnimationTimings.standard, value: cliExportActivity.snapshot?.jobID)
+            .animation(
+                reduceMotion ? nil : AnimationTimings.standard,
+                value: notificationExportActivity.snapshot?.operationID
+            )
+            .animation(
+                reduceMotion ? nil : AnimationTimings.standard,
+                value: cliExportActivity.snapshot?.jobID
+            )
             #if DEBUG
             .sheet(isPresented: $exportPerformanceLab.isConfirmationPresented) {
                 IPhoneExportPerformanceLabConfirmationView(

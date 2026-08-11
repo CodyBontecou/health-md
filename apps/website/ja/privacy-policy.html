@@ -1,812 +1,295 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>プライバシーポリシー — Health.md</title>
-  <meta name="description" content="Health.mdプライバシーポリシー：ヘルスデータはユーザーが管理するデバイスおよび送信先に保持されます。限定的な仮名化製品分析に、ヘルスレコードやエクスポート内容が含まれることはありません。">
+  <meta name="description" content="Health.mdが、限定的でヘルスデータを含まないファーストパーティ分析のみを利用し、ヘルスデータをユーザーが管理するデバイスと送信先に保持する仕組みについて説明します。">
   <link rel="canonical" href="https://healthmd.app/ja/privacy-policy.html">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
-  <link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html">
   <link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html">
   <link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html">
-  <meta name="robots" content="noindex,follow">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="プライバシーポリシー — Health.md">
-  <meta property="og:description" content="Health.mdプライバシーポリシー：ヘルスデータはユーザーが管理するデバイスおよび送信先に保持されます。限定的な仮名化製品分析に、ヘルスレコードやエクスポート内容が含まれることはありません。">
+  <meta property="og:description" content="ヘルスデータはユーザーが管理するデバイスと送信先に保持されます。限定的なファーストパーティ分析にヘルスレコードやエクスポート内容が含まれることはありません。">
   <meta property="og:url" content="https://healthmd.app/ja/privacy-policy.html">
   <meta property="og:locale" content="ja_JP">
   <meta property="og:locale:alternate" content="en_US">
-  <meta property="og:locale:alternate" content="es_ES">
-  <meta name="theme-color" content="#6d4aff">
-  <link rel="icon" href="../assets/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="16x16" href="../assets/app-icon/icon_16x16.png">
-  <link rel="icon" type="image/png" sizes="20x20" href="../assets/app-icon/icon_20x20.png">
-  <link rel="icon" type="image/png" sizes="29x29" href="../assets/app-icon/icon_29x29.png">
+  <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/app-icon/icon_32x32.png">
-  <link rel="icon" type="image/png" sizes="40x40" href="../assets/app-icon/icon_40x40.png">
-  <link rel="icon" type="image/png" sizes="60x60" href="../assets/app-icon/icon_60x60.png">
   <link rel="icon" type="image/png" sizes="192x192" href="../assets/app-icon/icon_192x192.png">
-  <link rel="icon" type="image/png" sizes="1024x1024" href="../assets/app-icon/icon_1024x1024.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="../assets/app-icon/icon_76x76.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="../assets/app-icon/icon_120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="../assets/app-icon/icon_152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="../assets/app-icon/icon_167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script src="../assets/theme.js"></script>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg-primary: #f4f2f8;
-      --bg-secondary: #fbfaff;
-      --bg-tertiary: #e9e5f1;
-      --text-primary: #202024;
-      --text-secondary: #42404a;
-      --text-muted: #6f6a7c;
-      --accent: #6d4aff;
-      --accent-dim: #4f2bbd;
-      --accent-glow: rgba(109, 74, 255, 0.14);
-      --border: #d4cde0;
-      --success: #9b5cf6;
-      --on-accent: #ffffff;
-      --mono: 'JetBrains Mono', 'Space Mono', monospace;
-    }
-
-    :root[data-theme="dark"] {
-      color-scheme: dark;
-      --bg-primary: #18181d;
-      --bg-secondary: #24222c;
-      --bg-tertiary: #211f28;
-      --text-primary: #f0eef7;
-      --text-secondary: #d3cedf;
-      --text-muted: #aaa3b8;
-      --accent: #a78bfa;
-      --accent-dim: #6d4aff;
-      --accent-glow: rgba(167, 139, 250, 0.18);
-      --border: #3b3549;
-      --success: #c4b5fd;
-      --on-accent: #ffffff;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        color-scheme: dark;
-        --bg-primary: #18181d;
-        --bg-secondary: #24222c;
-        --bg-tertiary: #211f28;
-        --text-primary: #f0eef7;
-        --text-secondary: #d3cedf;
-        --text-muted: #aaa3b8;
-        --accent: #a78bfa;
-        --accent-dim: #6d4aff;
-        --accent-glow: rgba(167, 139, 250, 0.18);
-        --border: #3b3549;
-        --success: #c4b5fd;
-        --on-accent: #ffffff;
-      }
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: var(--mono);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 17px;
-      line-height: 1.75;
-      -webkit-text-size-adjust: 100%;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-      opacity: 0.03;
-      pointer-events: none;
-      z-index: 1000;
-    }
-
-    .grid-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px;
-      opacity: 0.15;
-      pointer-events: none;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-      position: relative;
-      z-index: 1;
-    }
-
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 20px 0;
-      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
-    }
-
-    .header-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .logo-content {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo-mark {
-      width: 36px;
-      height: 36px;
-      border: 2px solid var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .logo-mark::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-
-    .logo-text {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-primary);
-    }
-
-    .logo-subtext {
-      font-size: 12px;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-      margin-top: 4px;
-    }
-
-    .logo-subtext a {
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .logo-subtext a:hover {
-      color: var(--accent);
-    }
-
-    .back-link {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 13px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .back-link:hover {
-      color: var(--accent);
-    }
-
-    .header-actions {
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .language-selector {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-secondary);
-      font-size: 12px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .language-selector a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .language-selector a:hover {
-      color: var(--accent);
-    }
-
-    .language-selector [aria-current="page"] {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .theme-toggle {
-      flex: 0 0 auto;
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 2px;
-      background: var(--bg-secondary);
-    }
-
-    .theme-toggle button {
-      min-width: 44px;
-      border: 0;
-      border-radius: 6px;
-      padding: 6px 8px;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      font: 700 10px/1 var(--mono);
-      text-transform: uppercase;
-    }
-
-    .theme-toggle button[aria-pressed="true"] {
-      background: var(--accent);
-      color: var(--on-accent);
-    }
-
-    main {
-      padding-top: 140px;
-      padding-bottom: 80px;
-      min-height: 100vh;
-    }
-
-    .page-header {
-      margin-bottom: 60px;
-    }
-
-    .page-label {
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .page-title {
-      font-size: clamp(40px, 7vw, 56px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-      line-height: 1.05;
-    }
-
-    .page-meta {
-      font-size: 15px;
-      color: var(--text-muted);
-    }
-
-    .content-box {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 52px;
-      margin-bottom: 32px;
-    }
-
-    .content-box h2 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      margin-top: 40px;
-      color: var(--text-primary);
-      line-height: 1.2;
-    }
-
-    .content-box h2:first-child {
-      margin-top: 0;
-    }
-
-    .content-box h3 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      margin-top: 32px;
-      color: var(--text-primary);
-      line-height: 1.3;
-    }
-
-    .content-box p {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 18px;
-      line-height: 1.9;
-    }
-
-    .content-box ul {
-      margin: 20px 0;
-      padding-left: 0;
-      list-style: none;
-    }
-
-    .content-box ul li {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 14px;
-      padding-left: 28px;
-      position: relative;
-      line-height: 1.9;
-    }
-
-    .content-box ul li::before {
-      content: '→';
-      position: absolute;
-      left: 0;
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .content-box strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .highlight-box {
-      background: var(--accent-glow);
-      border: 1px solid var(--accent-dim);
-      border-radius: 4px;
-      padding: 24px;
-      margin: 32px 0;
-    }
-
-    .highlight-box p {
-      margin-bottom: 0;
-      color: var(--text-primary);
-    }
-
-    footer {
-      padding: 40px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .footer-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-text {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      font-size: 14px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover {
-      color: var(--accent);
-    }
-
-    @media (max-width: 768px) {
-      header {
-        padding: 16px 0;
-      }
-
-      .header-inner {
-        align-items: flex-start;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-
-      .header-actions {
-        margin-left: auto;
-      }
-
-      .content-box {
-        padding: 30px 22px;
-      }
-
-      .page-title {
-        font-size: 38px;
-      }
-
-      .content-box p,
-      .content-box ul li {
-        font-size: 16px;
-      }
-
-      .footer-inner {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-
-      .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 560px) {
-      main {
-        padding-top: 152px;
-      }
-
-      .container,
-      .header-inner {
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .logo-subtext {
-        display: none;
-      }
-
-      .page-label,
-      .back-link {
-        font-size: 12px;
-      }
-
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-      }
-
-      .theme-toggle button {
-        min-width: 38px;
-        padding: 6px;
-        font-size: 9px;
-      }
-
-      .content-box {
-        padding: 24px 18px;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .back-link,
-      .theme-toggle {
-        width: 100%;
-      }
-
-      .back-link {
-        justify-content: center;
-      }
-
-      .theme-toggle button {
-        min-width: 0;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="../assets/theme-icons.css">
+  <link rel="stylesheet" href="../assets/landing.css">
+  <link rel="stylesheet" href="../assets/legal.css">
 </head>
-<body>
-  <div class="grid-bg"></div>
+<body class="legal-page">
+  <a class="skip-link" href="#privacy-policy">ポリシー本文へ移動</a>
 
-  <header>
-    <div class="header-inner">
-      <a href="../index.html" class="logo">
-        <div class="logo-mark"></div>
-        <div class="logo-content">
-          <span class="logo-text">health.md</span>
-          <span class="logo-subtext"><a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>制作</span>
-        </div>
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="../ja/" aria-label="Health.md ホーム">
+        <span class="brand-name">health.md</span>
       </a>
-      <div class="header-actions">
-        <nav class="language-selector" aria-label="言語選択">
-          <span aria-current="page">日本語</span>
-          <span aria-hidden="true">/</span>
-          <a href="../privacy-policy.html" hreflang="en" lang="en">English</a>
+      <div class="header-nav">
+        <nav aria-label="メインナビゲーション">
+          <a class="header-docs-link" href="../ja/docs/">ドキュメント</a>
+          <a class="header-docs-link" href="../ja/">ホーム</a>
         </nav>
-        <a href="../index.html" class="back-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          戻る
-        </a>
-        <div class="theme-toggle" role="group" aria-label="カラーテーマ">
-          <button type="button" data-theme-option="system" aria-pressed="true">自動</button>
-          <button type="button" data-theme-option="light" aria-pressed="false">明</button>
-          <button type="button" data-theme-option="dark" aria-pressed="false">暗</button>
-        </div>
       </div>
     </div>
   </header>
 
-  <main>
-    <div class="container">
-      <div class="page-header">
-        <p class="page-label">法的事項</p>
-        <h1 class="page-title">プライバシーポリシー</h1>
-        <p class="page-meta">最終更新日：2026年8月2日</p>
-      </div>
+  <main class="legal-main" id="privacy-policy">
+    <section class="legal-hero" aria-labelledby="privacy-title">
+      <div class="legal-hero-inner">
+        <p class="legal-eyebrow">法的事項 · プライバシー</p>
+        <h1 id="privacy-title">プライバシーを、<br>わかりやすく。</h1>
+        <p class="legal-updated">最終更新日：2026年8月6日</p>
+        <p class="legal-lede">Health.mdは、Health.md独自のヘルスデータクラウドを構築することなく、機密性の高いヘルスデータを移動します。デバイスがユーザーの許可した記録を読み取り、各エクスポートまたは直接応答の送信先はユーザーが選択します。</p>
 
-      <div class="translation-notice">
-        この日本語訳は確認用の参考訳です。英語版が正文であり、英語版と本訳に相違がある場合は英語版が優先されます。
-      </div>
-
-      <div class="content-box">
-        <div class="highlight-box">
-          <p><strong>概要：</strong>Health.mdは、Health.mdのサーバー上でヘルスデータを収集または保存しません。HealthKitおよびHealth Connectのデータはユーザーのデバイス上で処理され、フォルダ、ファイルプロバイダ、ペアリング済みデバイス、ユーザーが設定したAPIエンドポイントなど、ユーザーが選んだ送信先にだけ送られます。Health.mdは、第三者の分析、広告、アトリビューションSDKをアプリに組み込まず、限定的なファーストパーティ製品分析を自動的に収集します。これらのイベントに、ヘルスデータの値、指標名、ヘルス関連の日付、エクスポート内容、パス、ピア名、認証情報、ユーザーが入力したテキストが含まれることはなく、広告やアプリ横断トラッキングに使用されることもありません。</p>
+        <div class="legal-promise" role="list" aria-label="プライバシー原則">
+          <div role="listitem">
+            <span>01</span>
+            <strong>Health.mdのヘルスデータクラウドはありません</strong>
+            <p>ヘルスレコード、エクスポート、直接クエリの結果をサーバー上に保存しません。</p>
+          </div>
+          <div role="listitem">
+            <span>02</span>
+            <strong>送信先はユーザーが選びます</strong>
+            <p>ファイル、ペアリング済みコンピューター、接続したプロバイダ、APIエンドポイントは、ユーザーの指示のもとで利用されます。</p>
+          </div>
+          <div role="listitem">
+            <span>03</span>
+            <strong>分析にヘルスデータは含まれません</strong>
+            <p>限定的なファーストパーティイベントでは、ヘルスレコードやエクスポート内容を表現できない大まかな項目のみを使用します。</p>
+          </div>
         </div>
-
-        <h2>当社のプライバシーに関する約束</h2>
-        <p>
-          ユーザーのヘルスデータはユーザー自身のものです。Health.mdは、プラットフォーム上で権限が付与された後にだけデータを読み取り、サーバー上にコピーを保持しません。本ポリシーでは、ユーザーが指示するエクスポートと転送、限定的なファーストパーティ製品分析とウェブサイト分析、必要最小限のファーストパーティキャンペーンアトリビューションについて説明します。
-        </p>
-
-        <h2>データ収集</h2>
-        <p>
-          <strong>エクスポートにはHealth.mdアカウントは不要であり、ヘルスデータがHealth.mdのサーバーに送信されることもありません。</strong>具体的には、次のとおりです。
-        </p>
-        <ul>
-          <li>ヘルスデータのエクスポートに、アカウント作成または登録は不要です</li>
-          <li>HealthKitサンプル、Health Connectレコード、エクスポートドキュメント、型付きクエリ結果、ヘルス関連の添付ファイルが、Health.mdのサービスによって収集または保持されることはありません</li>
-          <li>第三者のアプリ内分析、アトリビューション、クラッシュレポート、広告、またはトラッキングSDKはありません</li>
-          <li>製品分析やキャンペーンアトリビューションに、広告ID、Android ID、ハードウェアID、トラッキングピクセル、ヘルスサンプル、エクスポート内容、ファイル／フォルダパスは含まれません</li>
-          <li>限定的なファーストパーティ製品データおよびキャンペーンデータは、以下に記載する場合にのみ収集されます</li>
-        </ul>
-
-        <h2>ファーストパーティキャンペーンアトリビューション</h2>
-        <p>
-          Health.mdは、第三者アトリビューションSDKを使用せずに集計されたキャンペーン成果を測定するため、<code>healthmd.app/v/yt-csv-001</code>などのファーストパーティキャンペーンリンクを使用します。Cloudflareのリダイレクトサービスは、キャンペーントークン、リンクスラッグ、キャンペーンのプラットフォームとコンテンツの切り口、送信先／クライアントの大まかなカテゴリ、提供された場合の参照元ホスト名、大まかな国コード、タイムスタンプを記録します。保存されるクリック行に、IPアドレスまたは完全なUser-Agentは含まれません。
-        </p>
-        <p>
-          Androidでは、Google Play Install Referrerにより、発生したインストールをキャンペーンと関連付けられる場合があります。有効なキャンペーンインストールについて、Androidアプリは、アプリがランダムに生成したインストールUUIDおよびイベントUUID、アプリのバージョンおよびビルド番号、検証済みのキャンペーントークン／ソース／メディアム／コンテンツメタデータ、イベント時刻、ならびに任意のPlay参照元クリック時刻およびインストール開始時刻を含む1件のイベントを送信します。ランダムなインストールUUIDは、そのインストールで継続して使用される仮名IDであり、デバイスIDや広告IDから派生したものではありません。完全な未加工のInstall ReferrerがHealth.mdによって永続化または送信されることはありません。
-        </p>
-        <p>
-          キャンペーンクリックとアトリビューションされたインストールは、集計レポートのために、検証済みキャンペーントークンによってのみ結合されます。キャンペーンアトリビューション記録は、最長でも13か月間のみ保持されます。集計取り込みレートカウンターには、1分間の時間枠と件数だけが含まれ、24時間後に削除されます。Cloudflareは通常のネットワーク接続情報を自社の条件に基づいて処理しますが、Health.mdは、IPアドレス、完全なUser-Agent、CloudflareリクエストID、Cookie、またはフィンガープリンティングデータをインストールアトリビューション記録に追加しません。
-        </p>
-
-        <h2>ファーストパーティ製品分析</h2>
-        <p>
-          Health.mdは、第三者分析SDKを使用せずに、オンボーディング、アクティベーション、エクスポート、ペイウォール、購入フローの大まかな結果を把握するため、ファーストパーティのCloudflare WorkerおよびD1データベースを使用します。アプリは、ランダムなインストールUUIDおよびランダムなイベントUUID、イベント名、アプリのバージョン／ビルド／プラットフォーム、ならびに関連する許可リスト済みの大まかなフィールドだけを送信します。これには、オンボーディング手順または明示的な設定スキップ、無料エクスポート数、エクスポート先カテゴリ、形式数、指標数と日付範囲のバケット、ペイウォールコンテキスト、StoreKitまたはGoogle Playの商品ID、購入／復元の結果、大まかな権限付与またはエラーカテゴリが含まれます。
-        </p>
-        <p>
-          製品分析に、HealthKitまたはHealth Connectの値や識別子、指標名、ヘルス関連の日付、服薬、ワークアウト、エクスポート内容、型付きクエリ結果、フォルダ／Vault／ファイルの名前やパス、ピア名やデバイス名、アカウントデータ、認証情報やトークン、ユーザーが入力したテキスト、広告ID、Android ID、ハードウェアID、未加工の参照元、完全なUser-Agent、保存されたIPアドレスが含まれることはありません。取り込みサービスは、未知のエンベロープ、イベント、プロパティ、プロパティ値のフィールドを拒否します。ランダムなインストールUUIDはアプリのインストール期間中存続するため、匿名ではなく仮名です。デバイス、アカウント、広告、ヘルス関連の識別子から派生したものではありません。
-        </p>
-        <p>
-          Health.mdは、これらの限定的な製品イベントを自動的に収集します。製品分析は広告主と共有されず、広告、フィンガープリンティング、またはアプリ横断トラッキングに使用されることもありません。Health.mdの公開クライアントおよびWorkerの許可リストは、ヘルスレコードやエクスポート内容を分析ペイロード内で表現できないように設計されています。
-        </p>
-        <p>
-          検証済みの製品分析行は、最長でも13か月間保持された後、自動の日次クリーンアップによって削除されます。Health.mdは、検証済みイベントフィールド以外の未加工IPアドレス、完全なUser-Agent、リクエストURL、リクエストヘッダー、認証情報、またはリクエスト本文を分析行に追加しません。Cloudflareは通常のネットワーク接続情報を自社の条件に基づいて処理します。
-        </p>
-
-        <h2>アプリの仕組み</h2>
-        <p>
-          Health.mdは、Appleが提供するHealthKit APIを使ってApple Healthデータをローカルで読み取り、Health Connectを通じてAndroidのヘルスデータをローカルで読み取ります。HealthKitエクスポートではiPhoneがソースのままです。Health ConnectエクスポートではAndroidがソースのままです。Mac同期を有効にした場合、Macアプリはローカルの送信先として機能できます。このデータは次のとおりです。
-        </p>
-        <ul>
-          <li>ユーザーが明示的にエクスポートしない限り、AppleのHealthKitデータベースまたはAndroid Health Connectに保持されます</li>
-          <li>ユーザーが要求したエクスポートのために、ユーザーのデバイス上で処理されます</li>
-          <li>ファイルApp、iCloud Drive、Androidドキュメントプロバイダ、第三者ファイルプロバイダ、Obsidian Vault、ペアリング済みのMacまたはCLI、ユーザーが設定したAPIエンドポイントなど、ユーザーが選択した送信先にだけエクスポートされます</li>
-          <li>Health.mdのヘルスデータ用データベースへアップロードされることも、後日のクエリのためにHealth.mdが保持することもありません</li>
-        </ul>
-
-        <h2>Android Health Connectの医療記録</h2>
-        <p>
-          Health.mdは、読み取り専用のヘルスデータポータビリティおよび個人記録管理アプリです。対応するAndroidデバイスでは、ユーザー向けの<strong>医療記録（FHIR）</strong>エクスポート機能により、ユーザーがHealth Connectで明示的に許可した医療リソースを読み取ることができます。Health Connectはポータブルな個人医療記録を以下のカテゴリに分けているため、Health.mdは各カテゴリについて個別の読み取りアクセスを要求します。
-        </p>
-        <ul>
-          <li><strong>ワクチン：</strong>予防接種履歴</li>
-          <li><strong>アレルギーおよび不耐症：</strong> AllergyIntolerance記録</li>
-          <li><strong>疾患：</strong>診断および問題リスト履歴</li>
-          <li><strong>検査結果：</strong>検査結果のObservationレコード</li>
-          <li><strong>医薬品：</strong> Medication、MedicationRequest、およびMedicationStatement記録</li>
-          <li><strong>個人詳細：</strong>ユーザーの記録を識別し、人口統計上の文脈を提供するPatient記録</li>
-          <li><strong>医療従事者詳細：</strong>ケア記録から参照されるPractitionerおよびPractitionerRole記録</li>
-          <li><strong>妊娠：</strong>妊娠関連の医療記録</li>
-          <li><strong>処置：</strong>処置履歴</li>
-          <li><strong>社会歴：</strong>ソースシステムに記録された生活習慣と臨床的背景の観測レコード</li>
-          <li><strong>受診：</strong> Encounterおよびケア受診履歴</li>
-          <li><strong>バイタルサイン：</strong>医療記録に保存された臨床バイタルサインの観測レコード</li>
-        </ul>
-        <p>
-          これらの権限は、ユーザーが開始またはスケジュールするエクスポートに、権限を付与したカテゴリを含めるためだけに使用されます。JSONおよびプロバイダ固有形式のエクスポートでは、Health Connectから提供されたFHIRリソースデータおよびソースメタデータが保持されます。MarkdownおよびCSVの要約では、カテゴリ別の医療リソース数が報告されます。Health.mdは、疾患の診断、治療の推奨、Health Connectへの書き込み、または広告、プロファイリング、信用、保険、雇用に関する判断のためのヘルスデータ使用を行いません。
-        </p>
-        <p>
-          すべてのHealth Connectカテゴリは任意です。ユーザーはいつでもカテゴリを拒否または取り消すことができます。権限が付与されたほかのエクスポートは引き続き機能します。Health.mdは、Android Health Connectデータのサーバーコピーを保持しません。エクスポートされた記録は、ユーザーがその送信先の管理機能に従って削除するまで、フォルダ、ドキュメントプロバイダ、Vault、ペアリング済みデバイス、またはユーザー設定のHTTPSエンドポイントに残ります。
-        </p>
-
-        <h2>データ保存</h2>
-        <p>
-          Health.mdは、Apple Health、Health Connect、またはその他のヘルスデータをHealth.mdのサーバーに保存しません。
-        </p>
-        <ul>
-          <li><strong>ソースデータ：</strong> Apple HealthデータはHealthKitに保持され、AndroidのヘルスデータはHealth Connectに保持されます</li>
-          <li><strong>エクスポート済みデータ：</strong> Markdown、Obsidian、CSV、およびJSONファイルは、ユーザーが選択した送信先に書き込まれます</li>
-          <li><strong>直接転送：</strong>ペアリング済みのMacおよびCLIワークフローは、モバイルソースから直接データを受信し、それぞれ独自のローカルジョブ状態を保持します</li>
-          <li><strong>ファイルプロバイダ同期：</strong>ユーザーが選択したフォルダがiCloud Drive、Dropbox、Google Drive、Working Copy、Syncthing、OneDrive、またはその他のプロバイダによってバックアップされている場合、そのプロバイダが自社の条件に基づいて保存および同期を処理します</li>
-          <li><strong>APIエンドポイント：</strong>設定されている場合、選択されたエクスポートはそのエンドポイントに直接送信され、そのエンドポイントのセキュリティ、ログ記録、保持、および削除の管理に従います</li>
-          <li><strong>アプリ設定：</strong>スケジュール、フォルダ、テンプレート、接続、およびロック解除設定は、プラットフォームストレージ、StoreKit、またはGoogle Play Billingを使用して保存されます</li>
-        </ul>
-        <p>
-          当社は、ソースのヘルスデータベース、ローカルのエクスポートファイル、またはユーザーが管理する送信先にアクセスできません。上記の個別の製品分析記録およびキャンペーンアトリビューション記録には、ヘルスデータまたはエクスポート内容は含まれません。
-        </p>
-
-        <h2>第三者サービス</h2>
-        <p>
-          Health.mdは、アプリ内に広告SDK、第三者分析／アトリビューションSDK、または第三者トラッキングを含みません。アプリは、プラットフォームサービス、ファーストパーティの製品／キャンペーンインフラ、およびユーザーが選択した送信先と連携します。
-        </p>
-        <ul>
-          <li><strong>Apple HealthKit：</strong>ユーザーのApple Healthデータをユーザーのデバイス上でローカルに読み取るため（ユーザーの明示的な権限付与に基づく）</li>
-          <li><strong>Android Health Connect：</strong>Androidのヘルスレコードをユーザーのデバイス上でローカルに読み取るため（ユーザーの明示的な権限付与に基づく）</li>
-          <li><strong>任意のヘルスプロバイダAPI：</strong>ユーザーが直接プロバイダインポートを明示的に有効にした場合、アプリはプロバイダのOAuthフローを使用し、そのプロバイダから直接データを要求するためにプロバイダトークンをデバイス上に保存することがあります。Health.mdは、ユーザーが接続しない限り、これらのプロバイダを使用しません。</li>
-          <li><strong>AppleのファイルApp、Android Storage Access Framework、ファイルプロバイダ：</strong>エクスポートされたファイルをユーザーが選択したフォルダ場所に書き込むため</li>
-          <li><strong>StoreKit、App Store、およびGoogle Play Billing：</strong> 1回限りのFull Accessロック解除を購入または復元するため</li>
-          <li><strong>Google Play Install Referrer：</strong> Androidにおいて、有効なHealth.mdキャンペーンリンクに由来するインストールを、サニタイズ済みのファーストパーティキャンペーンメタデータと関連付けるため</li>
-          <li><strong>Cloudflare：</strong>許可リスト済みのファーストパーティ製品分析を受信し、キャンペーンリダイレクトを運用し、最小化された製品／クリック／インストール記録をD1に保存し、保持期間後のクリーンアップを実行し、集計ベースの不正利用抑制を実施し、ウェブサイト配信および分析を提供するため</li>
-          <li><strong>ローカルネットワーク／近接接続：</strong> Mac同期を有効にした場合に、任意のMac送信先を検出し書き込むため</li>
-        </ul>
-
-        <h2>ウェブサイト分析</h2>
-        <p>
-          healthmd.appウェブサイトは、簡易的な分析利用可否の判定を経てCloudflare Web Analyticsを使用します。Cloudflare Web Analyticsは、集計されたウェブサイトトラフィック、パフォーマンス、および人気ページを把握するために使用されます。このサイトではクライアント側Cookieを使用せず、ユーザーのApple Healthデータ、Health Connectデータ、エクスポート済みファイル、StoreKitまたはGoogle Playの購入状態、またはアプリ内設定とは接続されません。
-        </p>
-        <p>
-          ウェブサイトページは、Google FontsやjsDelivrなどの第三者CDNからフォントまたはアセットを要求する場合もあります。これらのプロバイダは、自社のポリシーに基づき、ユーザーのIPアドレス、ブラウザ、参照元ページ、要求されたURLなどの標準的なウェブリクエスト情報を受信することがあります。
-        </p>
-
-        <h2>ネットワーク活動</h2>
-        <p>
-          <strong>ローカルエクスポートワークフローは、ヘルスデータをHealth.mdに送信しません。</strong>ネットワーク活動は、ユーザーが開始する機能またはプラットフォームサービスに限定されます。例として、次のものがあります。
-        </p>
-        <ul>
-          <li>Full AccessのためのStoreKit、App Store、およびGoogle Playの購入または復元フロー</li>
-          <li>Mac送信先を有効にした場合のローカルネットワーク検出および転送</li>
-          <li>エクスポート済みファイル用にそれらのフォルダを選択した場合の、iCloud Drive、Androidドキュメントプロバイダ、または第三者ファイルプロバイダ同期</li>
-          <li>対応する直接接続ヘルスソースをユーザーが明示的に接続した場合の、任意のプロバイダOAuthまたはAPIリクエスト</li>
-          <li>モバイルソースが利用可能な間に、明示的にペアリングされたCLIまたはMCPクライアントから行われるライブ直接クエリ。Health.mdはその結果をサーバー上に保持しません</li>
-          <li>ユーザーがその送信先を明示的に設定および選択した場合の、ユーザーが要求したエクスポートのHTTPS APIエンドポイントへの配信</li>
-          <li>App StoreまたはGoogle Playによって配信されるアプリ更新</li>
-          <li>上記のとおり、許可リスト済みのファーストパーティのオンボーディング、アクティベーション、エクスポート、ペイウォール、および購入フロー分析</li>
-          <li>上記のとおり、ファーストパーティキャンペーンリダイレクトおよびAndroidキャンペーンインストールアトリビューション</li>
-          <li>ブラウザでhealthmd.appにアクセスした場合のウェブサイト分析およびCDNリクエスト</li>
-        </ul>
-
-        <h2>権限</h2>
-        <p>
-          Health.mdは、以下のプラットフォーム権限を要求する場合があります。
-        </p>
-        <ul>
-          <li><strong>ヘルスデータ（HealthKit）：</strong>ユーザーが指示するエクスポートおよび直接クエリのため、ユーザーが選択したApple Healthカテゴリを読み取るため。ユーザーは、iOS設定 → ヘルスケア → データアクセスとデバイス → Health.mdでカテゴリを許可または取り消すことができます。</li>
-          <li><strong>Health Connectのフィットネスおよびウェルネスデータ：</strong>ユーザーが管理するエクスポートのために許可した、特定のAndroidフィットネス、ウェルネス、活動、身体、栄養、生殖健康、およびバイタルデータカテゴリを読み取るため。</li>
-          <li><strong>Health Connectの医療記録：</strong>上記の医療記録（FHIR）エクスポート機能のため、個別に許可されたワクチン、アレルギー／不耐症、疾患、検査結果、医薬品、個人詳細、医療従事者詳細、妊娠、処置、社会歴、受診、および医療バイタルサインの各カテゴリを読み取るため。</li>
-          <li><strong>ファイルシステムアクセス：</strong>エクスポートされたファイルをユーザーが選択したファイルシステム場所に書き込むため。ユーザーは、AppleのファイルピッカーまたはAndroidのStorage Access Frameworkピッカーを使用してこの場所を選択します。</li>
-          <li><strong>ローカルネットワーク：</strong> Mac同期を有効にした場合に、Macコンパニオンを検出し、エクスポートジョブを送信するため。</li>
-          <li><strong>通知：</strong>スケジュール済みエクスポートに手動操作が必要な場合、または完了した場合にユーザーへ通知するため。</li>
-        </ul>
-        <p>
-          これらの権限は、記載された目的にのみ使用され、iOS、iPadOS、macOS、またはAndroidの設定でいつでも取り消すことができます。
-        </p>
-
-        <h2>児童のプライバシー</h2>
-        <p>
-          Health.mdは、広告または児童向けプロファイリングのために、氏名、連絡先情報、ヘルスデータ、またはアカウントプロフィールを求めません。上記のウェブサイトおよびキャンペーン測定は、集計された成果測定を目的とするものであり、児童向けプロファイリングまたは広告を目的とするものではありません。
-        </p>
-
-        <h2>データセキュリティ</h2>
-        <p>
-          Health.mdは、各保存経路に適した技術的および組織的保護措置を使用します。
-        </p>
-        <ul>
-          <li>Apple HealthKitデータはAppleのデバイスセキュリティとHealthKit権限によって保護され、AndroidのヘルスデータはAndroidのデバイスセキュリティとHealth Connect権限によって保護されます</li>
-          <li>エクスポートされたファイルは、ユーザーが保存するファイルシステム、Vault、クラウドドライブ、Androidドキュメントプロバイダ、またはMacフォルダによって保護されます</li>
-          <li>Health.mdは、保護されたAPIエンドポイントエクスポートモードにHTTPSを要求します。送信先サービスは、独自の保存と保持を管理します</li>
-          <li>MacおよびCLIへの直接転送では、認証済みの暗号化チャネル、上限付きフレーム、整合性チェック、明示的なペアリングを使用します</li>
-          <li>当社は、デバイスパスコードの使用、iOS／iPadOS／macOS／Androidを最新に保つこと、およびユーザーが使用する同期プロバイダの権限を確認することを推奨します</li>
-        </ul>
-
-        <h2>ユーザーの権利と管理</h2>
-        <p>
-          製品分析記録およびキャンペーン記録は仮名化され、13か月以内に自動的に失効します。ユーザーは、ソース権限、ローカルのアトリビューション状態、直接ペアリング、およびエクスポート済みファイルを管理できます。
-        </p>
-        <ul>
-          <li><strong>アクセス：</strong> Apple HealthデータはApple Healthで、AndroidデータはHealth Connectで、エクスポート済みファイルはユーザーが選択した送信先で管理できます</li>
-          <li><strong>権限の変更：</strong>関連するアプリまたはプラットフォームの管理機能を通じて、HealthKit、Health Connect、プロバイダ、ファイル、ローカルネットワーク、通知のアクセス権限、またはペアリングを取り消せます</li>
-          <li><strong>製品分析：</strong>限定的な製品イベントは、上記の厳格なフィールド除外に従って自動的に収集され、13か月以内に失効します</li>
-          <li><strong>削除：</strong>送信先ファイルは、その送信先を通じて削除してください。Health.mdをアンインストールするとローカルのアプリ状態は削除されますが、ファイルプロバイダ、ペアリング済みコンピューター、Vault、またはAPIエンドポイントに既に書き込まれたファイルは削除されません。配信済みの分析行は、保持ポリシーに基づいて自動的に失効します。</li>
-          <li><strong>ポータビリティ：</strong>エクスポートされたMarkdown、Obsidian、CSV、およびJSONファイルはHealth.mdの外部で使用できます</li>
-          <li><strong>キャンペーンに関する質問：</strong>ファーストパーティキャンペーン記録は上記の期間に従って失効します。プライバシーに関する質問またはリクエストがある場合はお問い合わせください</li>
-        </ul>
-
-        <h2>本ポリシーの変更</h2>
-        <p>
-          当社がプライバシー慣行を重要な形で変更する場合、本ポリシーを更新し、アプリ更新またはウェブサイト更新を通じてユーザーに通知します。本ポリシー上部の「最終更新日」は、変更が行われた時点を示します。
-        </p>
-
-        <h2>オープンソース</h2>
-        <p>
-          Health.mdのデータ処理ロジックの一部は、オープンソースまたはドキュメントとして確認可能になる場合があり、ユーザーはエクスポートがどのように構成されるかを監査できます。現在のソース公開状況については、ドキュメントまたはプロジェクトリポジトリをご確認ください。
-        </p>
-
-        <h2>連絡先</h2>
-        <p>
-          本プライバシーポリシーまたはhealth.mdの仕組みに関する質問がある場合は、以下までお問い合わせください。
-        </p>
-        <p>
-          <strong>メール：</strong> privacy@isolated.tech<br>
-          <strong>ウェブサイト：</strong> https://isolated.tech
-        </p>
-
-        <h2>管轄</h2>
-        <p>
-          本プライバシーポリシーは、health.mdが運営される管轄区域の法律に準拠します。上記の仮名化された製品分析、キャンペーンアトリビューション、ウェブサイト分析、プロバイダOAuth／CDNリクエスト、およびその他のヘルスデータではない処理は、ユーザーの所在地に応じて適用されるプライバシー法の対象となる場合があります。
-        </p>
       </div>
+    </section>
+
+    <div class="legal-shell">
+      <aside class="legal-toc">
+        <p class="legal-toc-title">本ポリシーの内容</p>
+        <nav aria-label="プライバシーポリシーの各セクション">
+          <ol>
+            <li><a href="#scope">適用範囲</a></li>
+            <li><a href="#health-data">ヘルスデータ</a></li>
+            <li><a href="#destinations">送信先</a></li>
+            <li><a href="#medical-records">Androidの医療記録</a></li>
+            <li><a href="#product-analytics">製品分析</a></li>
+            <li><a href="#campaigns">キャンペーンアトリビューション</a></li>
+            <li><a href="#operations">スケジュールとサポート</a></li>
+            <li><a href="#website">ウェブサイトデータ</a></li>
+            <li><a href="#retention">保存と保持</a></li>
+            <li><a href="#services">利用するサービス</a></li>
+            <li><a href="#security">セキュリティ</a></li>
+            <li><a href="#choices">選択肢と権利</a></li>
+            <li><a href="#children">児童</a></li>
+            <li><a href="#changes">変更</a></li>
+            <li><a href="#contact">お問い合わせ</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <article class="policy-content">
+        <section id="scope">
+          <h2>本ポリシーの適用範囲</h2>
+          <p>本ポリシーは、iPhone、iPad、Mac、Android向けのHealth.mdコンシューマーアプリ、同梱のMac用CLIおよびMCPヘルパー、提供される場合のポータブルツール、healthmd.appとそのドキュメント、ならびにこれらの製品を支えるファーストパーティサービスについて説明します。Health.mdはCody Bontecouがisolated.techの名称で運営しており、本ポリシーでは「Health.md」「当社」または「当社ら」といいます。</p>
+          <p>本ポリシーは、Apple、Google、医療プロバイダ、ファイルまたは同期プロバイダ、API運営者、AIツール、その他ユーザーが選択する送信先のプライバシー条件に代わるものではありません。ユーザーがこれらのサービスのいずれかにデータを送るよう指示した後は、そのサービスが保有するコピーには、当該サービスの規約およびユーザーの設定が適用されます。</p>
+          <div class="policy-note">
+            <p><strong>翻訳に関するお知らせ：</strong>本ページは<a href="../privacy-policy.html" hreflang="en">英語版プライバシーポリシー</a>の日本語訳です。適用法令で認められる範囲に限り英語版が優先しますが、この定めは、放棄または制限することのできない消費者の権利を制限するものではありません。</p>
+          </div>
+          <div class="policy-note">
+            <p><strong>簡単に言うと：</strong>Health.mdは、Health.mdのサーバー上でヘルスデータを収集または保存しません。ヘルスデータはユーザーのデバイス上で処理され、ユーザーが選択した送信先またはクライアントにのみ送られます。</p>
+            <p>当社は、限定的なファーストパーティ製品分析およびキャンペーンデータを自動的に収集します。これらのシステムは仮名化されており、ヘルスレコードやエクスポートを含まず、広告には使用されません。</p>
+          </div>
+        </section>
+
+        <section id="health-data">
+          <h2>ユーザーの指示に基づき処理するヘルスデータ</h2>
+          <p>Health.mdは、プラットフォームの権限とユーザーの操作に基づいてヘルスデータを読み取り、または受信します。デバイスおよび有効にした機能に応じて、次のデータが含まれる場合があります。</p>
+          <ul>
+            <li><strong>Apple Health：</strong>iPhoneまたはiPadでユーザーが許可したHealthKitおよびWorkoutKitのカテゴリ。</li>
+            <li><strong>Androidのヘルスデータ：</strong>Health Connectを通じてユーザーが許可したフィットネス、ウェルネス、アクティビティ、身体、栄養、生殖に関する健康、バイタル、医療記録。</li>
+            <li><strong>接続したプロバイダ：</strong>ユーザーがプロバイダを接続し、そのアクセスを承認した後に限り、対応するプロバイダから取得される記録。</li>
+            <li><strong>直接リクエスト：</strong>モバイルのデータソースが利用可能な間に、明示的にペアリングされたMac、CLI、またはMCPクライアントが要求する、範囲を限定したクエリまたはエクスポート。</li>
+          </ul>
+          <p>Health.mdによるヘルスデータへのアクセスは読み取り専用です。診断や治療内容をHealthKitまたはHealth Connectに書き込むことはなく、広告、プロファイリング、信用、保険、雇用に関する判断にヘルスデータを使用することもありません。</p>
+          <p>エクスポートには極めて機密性の高い情報が含まれる場合があります。ロスレス形式のファイルおよび直接取得した結果には、正確なタイムスタンプ、ソースUUID、来歴、経路と位置情報、服薬情報、心の健康に関する項目、ECG値、臨床情報、文書、バイナリ添付ファイルが保持されることがあります。元のヘルスデータベースと同様に保護してください。現在のApple App Store版は過去の臨床記録へのアクセスを要求しません。Androidの医療記録へのアクセスについては、以下で別途説明します。</p>
+        </section>
+
+        <section id="destinations">
+          <h2>ヘルスデータの送信先</h2>
+          <p>ヘルスデータは、ユーザーが選択した機能で必要な場合にのみ、データソースから移動します。Health.mdは、選択されたデータを次の場所に送信または書き込むことができます。</p>
+          <ul>
+            <li><strong>ファイルとVault：</strong>デバイス上のフォルダ、Apple Files、AndroidのStorage Access Framework、Obsidian Vault、その他のファイルプロバイダ。</li>
+            <li><strong>クラウド同期フォルダ：</strong>ユーザーが選択したフォルダが同期される場合のiCloud Drive、Dropbox、Google Drive、OneDrive、Syncthing、Working Copy、その他のプロバイダ。</li>
+            <li><strong>ペアリング済みコンピューター：</strong>認証済みの暗号化された直接接続を介した、承認済みのMacまたはスタンドアロンCLI。</li>
+            <li><strong>ローカルツールとエージェント：</strong>ユーザーが設定するCLIまたはMCPクライアント。その後の結果には、当該ツールの保存、トランスクリプト、モデルプロバイダの設定が適用されます。</li>
+            <li><strong>ユーザーのAPIエンドポイント：</strong>ユーザーが選択したエクスポートを受信する、ユーザー設定のAPIエンドポイント。保護されたエンドポイントモードではHTTPSが必要です。</li>
+            <li><strong>接続したヘルスプロバイダ：</strong>ユーザーが接続を許可した後に開始される、読み取り専用のプロバイダリクエスト。</li>
+          </ul>
+          <p>Health.mdは、後日のクエリに備えてヘルスデータのサーバーコピーを保持しません。Apple Healthへの直接クエリでは、iPhoneが引き続きデータソースとなります。直接転送により、ペアリングされたコンピューター上に永続的なジョブ状態や出力が残ることはありますが、それらはHealth.mdがホストするヘルスデータ集積ではありません。</p>
+        </section>
+
+        <section id="medical-records">
+          <h2>Androidの医療記録（FHIR）</h2>
+          <p>対応するAndroidデバイスでは、<strong>医療記録（FHIR）</strong>機能により、ユーザーが個別に許可したHealth Connectカテゴリだけを読み取ることができます。Health Connectは、ポータブルな医療記録を次のカテゴリに区分しています。</p>
+          <details class="policy-detail">
+            <summary>Health.mdが要求する医療記録カテゴリ</summary>
+            <ul>
+              <li>ワクチン</li>
+              <li>アレルギーおよび不耐症</li>
+              <li>疾患および診断</li>
+              <li>検査結果</li>
+              <li>医薬品</li>
+              <li>個人情報</li>
+              <li>医療従事者情報</li>
+              <li>妊娠記録</li>
+              <li>処置</li>
+              <li>社会歴</li>
+              <li>受診および診療記録</li>
+              <li>医療上のバイタルサイン</li>
+            </ul>
+          </details>
+          <p>各カテゴリは任意であり、読み取り専用です。直接リクエストに応答するため、またはユーザーが開始もしくはスケジュールしたエクスポートに許可済みの記録を含めるためにのみ使用されます。JSONおよびプロバイダ固有形式のエクスポートではFHIRリソースデータとソースメタデータを保持でき、MarkdownおよびCSVの要約ではカテゴリ別の件数を示す場合があります。Health.mdはサーバーコピーを保持しません。他の許可済みエクスポートを無効にすることなく、個別のカテゴリを拒否または取り消すことができます。</p>
+        </section>
+
+        <section id="product-analytics">
+          <h2>ファーストパーティ製品分析</h2>
+          <p>Health.mdは、オンボーディング、アクティベーション、エクスポート、スケジュール、ペイウォール、購入の各フローが機能しているかを把握するため、ファーストパーティのCloudflare WorkerおよびD1データベースを使用します。Health.mdは、Firebase Analytics、Google Analytics、AppsFlyer、第三者のクラッシュレポートSDK、広告SDKをアプリ内で使用せず、これらの限定的な製品イベントを自動的に収集します。</p>
+          <p>プラットフォームとイベントに応じて、受け付けるペイロードには、ランダムなアプリインストールUUID、ランダムなイベントUUID、イベント名、アプリのバージョン、ビルド番号、プラットフォーム、実験またはバリアント、オンボーディング手順または明示的なスキップ、上限付きの無料エクスポート回数、エクスポート先カテゴリ、形式数、指標数と期間の大まかな区分、ペイウォールのコンテキスト、製品識別子、購入または復元の結果、権限またはエラーの大まかなカテゴリが含まれる場合があります。</p>
+          <p>インストールUUIDはそのアプリのインストール期間中保持されるため、データは<strong>匿名ではなく仮名化されたもの</strong>です。このUUIDはランダムに生成され、氏名、アカウント、ヘルス関連の識別子、デバイスのハードウェア識別子、Android ID、Advertising IDから派生したものではありません。</p>
+          <p>製品分析には、<strong>HealthKitまたはHealth Connectの値もしくは識別子、指標名、ヘルス関連の日付が含まれることは決してなく</strong>、服薬、ワークアウト、エクスポート内容、入力されたクエリの結果、フォルダまたはVaultの名称、ファイルパス、ピアまたはデバイス名、アカウントデータ、価格、<strong>認証情報またはトークン</strong>、ユーザーが入力したテキスト、未加工の参照元、完全なUser-Agent文字列、保存されたIPアドレスも含まれません。未知のイベント、プロパティ、プロパティ値は拒否されます。公開クライアントとWorkerの許可リストは、<strong>ヘルスレコードとエクスポート内容を分析ペイロード内で表現できない</strong>よう設計されています。</p>
+          <p>これらのイベントは、広告、フィンガープリンティング、アプリ横断トラッキングには使用されず、広告主に販売または共有されることもありません。検証済みの行は最長13か月間保持され、自動の日次クリーンアップで削除されます。Cloudflareは引き続き、同社の規約に基づいて通常の接続情報を処理します。</p>
+        </section>
+
+        <section id="campaigns">
+          <h2>ファーストパーティのキャンペーンアトリビューション</h2>
+          <p>Health.mdは、第三者のアトリビューションSDKを使わずにキャンペーンの集計成果を測定するため、<code>healthmd.app/v/yt-csv-001</code>などのファーストパーティ短縮リンクを使用します。</p>
+          <ul>
+            <li>リダイレクトサービスは、キャンペーントークンとスラッグ、プラットフォームとコンテンツの切り口、送信先またはクライアントの大まかなカテゴリ、提供された場合の参照元ホスト名、大まかな国コード、時刻を記録することがあります。</li>
+            <li>保存されるクリック行には、IPアドレス、完全なUser-Agent、Cookie、CloudflareリクエストID、フィンガープリントは含まれません。</li>
+            <li>Androidでは、Google Play Install Referrerにより、ランダムなインストールUUIDとイベントUUID、アプリのバージョン／ビルド、検証済みキャンペーン項目、イベント時刻、任意のPlayクリック／インストール時刻を含む、サニタイズ済みのアトリビューション対象インストールイベントが1件生成される場合があります。</li>
+            <li>未加工のInstall Referrerは破棄され、Health.mdが永続化または送信することはありません。クリックとインストールは、集計レポートのために、検証済みキャンペーントークンのみを用いて関連付けられます。</li>
+          </ul>
+          <p>キャンペーンのクリック行およびインストール行は最長13か月間保持されます。集計取り込みレートの時間枠には分と件数のみが含まれ、24時間後に削除されます。Cloudflareはこれらのリクエストを配信する際に通常のネットワーク情報を処理しますが、Health.mdがそれをキャンペーン記録に追加することはありません。</p>
+        </section>
+
+        <section id="operations">
+          <h2>スケジュール、購入、プロバイダ、サポート</h2>
+          <p>一部のアプリ機能では、ヘルスデータではない運用上のデータを使用します。</p>
+          <ul>
+            <li><strong>Appleのスケジュール済みエクスポート：</strong>スケジュールサービスは、APNsトークン、ランダムなインストールIDまたはユーザーID、プラットフォーム、バンドルID、スケジュールの頻度、時刻、曜日、タイムゾーンを受信する場合があります。サイレントプッシュにはトリガーとスケジュールバージョンの情報が含まれます。Workerは、HealthKitサンプル、エクスポートファイル、送信先パス、API URL、APIシークレットを受信しません。</li>
+            <li><strong>購入：</strong>Apple StoreKit、App Store、Google Play Billing、限定的なファーストパーティ検証経路では、Full Accessの購入または復元に必要な製品、取引、権利、レシートの情報を処理します。Health.mdが支払カードの完全な情報を受け取ることはありません。</li>
+            <li><strong>プロバイダ認証：</strong>プロバイダのOAuthブローカーは、プロバイダ／クライアントID、リダイレクトURI、認可コード交換、トークン更新を転送中に処理する場合があります。対応している場合、プロバイダのアクセストークンはiOS Keychainに保存され、プロバイダのヘルスレコードはブローカーに保持されず、電話に送られます。</li>
+            <li><strong>フィードバック：</strong>メールまたはコミュニティのissueツールは、ユーザーが選択した場合にのみ開きます。あらかじめ入力され、編集可能な診断情報には、アプリのバージョン／ビルド、OSのバージョン、デバイスのおおまかな種類が含まれる場合があります。メッセージにはユーザーが送信すると決めた内容が含まれます。公開issueまたはコミュニティチャンネルは公開されます。</li>
+          </ul>
+          <p>スケジュールの代わりに手動エクスポートを使用し、プロバイダを接続せず、フィードバックを送らないこともできます。ストアサービスは引き続き、AppleまたはGoogleの規約に基づいて購入およびアプリ更新に関するアクティビティを処理します。</p>
+        </section>
+
+        <section id="website">
+          <h2>ウェブサイトデータと外部リクエスト</h2>
+          <p>healthmd.appは、簡易的な分析利用可否の判定後にCloudflare Web Analyticsを使用します。これはトラフィック、パフォーマンス、人気ページを集計して把握するために役立ちます。本サイトでは、クライアント側の分析はCookieを設定せず、ヘルスレコード、エクスポートファイル、購入状態、直接ペアリング、アプリ内設定とも関連付けられません。</p>
+          <p>当社のウェブサイトホストおよびセキュリティ基盤であるCloudflareは、サイトの配信と保護に必要なIPアドレス、要求されたURL、ブラウザ情報、時刻など、通常のウェブリクエスト情報を同社の規約および保持管理に基づいて処理します。</p>
+          <p>一部のランディングページ、ドキュメントページ、可視化ページは、<code>img.logo.dev</code>、Google Fonts、jsDelivr、地図タイルプロバイダなどのサービスからアセットを要求します。これらのサービスは、ブラウザが送る通常のリクエスト情報を受け取ります。App Store、Google Play、GitHub、Obsidian、サポート、その他のウェブサイトへのリンクを開くと、当該サービスのプライバシー慣行が適用されます。</p>
+          <p>ウェブサイト分析およびキャンペーン分析は、アプリにおけるヘルスデータ処理とは別のものです。本サイトを閲覧しても、Health.mdがApple HealthまたはHealth Connectにアクセスできるようになることはありません。</p>
+        </section>
+
+        <section id="retention">
+          <h2>保存と保持</h2>
+          <ul>
+            <li><strong>元のヘルスデータ</strong>は、ユーザーがエクスポートまたはクエリを指示しない限り、HealthKit、Health Connect、または接続したプロバイダに残ります。</li>
+            <li><strong>アプリの設定と履歴</strong>は、プラットフォームのストレージを使用してユーザーのデバイス上に保存されます。対応している場合、プロバイダの認証情報には保護されたプラットフォームの認証情報ストレージを使用します。</li>
+            <li><strong>エクスポート済みファイルとAPI配信データ</strong>は、選択した送信先の管理機能により削除されるまで、その送信先に残ります。</li>
+            <li><strong>ペアリング済みのMac、CLI、MCPのデータ</strong>は、ユーザーのワークフローによって作成されたローカル出力、ジョブ状態、認証情報ストア、トランスクリプト、その他のコンピューターストレージに残ります。</li>
+            <li><strong>製品分析行およびキャンペーン行</strong>は最長13か月間保持され、キャンペーンの取り込みレートカウンターは24時間後に削除されます。</li>
+            <li><strong>スケジュール、購入、サポート、通常のネットワークに関する記録</strong>は、該当するプラットフォームおよびプロバイダの規約に従い、これらのサービスの提供、保護、記録、要件遵守に必要な期間に限って保持されます。</li>
+          </ul>
+          <p>Health.mdをアンインストールすると、OSの仕組みに従ってアプリ内のローカル状態は削除されますが、別のフォルダまたはサービスにすでにエクスポートしたファイル、ペアリング済みクライアントが保存したデータ、送信済みのメッセージ、送信先プロバイダが保有するデータは削除されません。</p>
+        </section>
+
+        <section id="services">
+          <h2>当社が利用するサービス</h2>
+          <p>Health.mdは、広告SDKまたは第三者のアプリ内分析・アトリビューションSDKを使用しません。必要に応じて、次のプラットフォーム、インフラストラクチャ、およびユーザーが選択するサービスを利用します。</p>
+          <ul>
+            <li>Apple HealthKitおよびWorkoutKit</li>
+            <li>Android Health Connect</li>
+            <li>Apple Files、Android Storage Access Framework、およびユーザーが選択するファイルプロバイダ</li>
+            <li>StoreKit、App Store、Google Play、およびGoogle Play Billing</li>
+            <li>Androidのサニタイズ済みキャンペーンアトリビューションに使用するGoogle Play Install Referrer</li>
+            <li>スケジュール済みエクスポートの起動に使用するApple Push Notification service</li>
+            <li>ファーストパーティ分析、キャンペーンサービス、D1ストレージ、不正利用の抑制、ウェブサイト配信、ウェブサイト分析に使用するCloudflare</li>
+            <li>ユーザーが設定する任意のプロバイダAPI、OAuthサービス、APIエンドポイント、同期サービス、AI／モデルプロバイダ、ローカルクライアント</li>
+          </ul>
+          <p>これらのプロバイダは、事業を行う国でデータを処理する場合があります。その取扱いには、各社の規約および適用法令が適用されます。当社はヘルスデータまたは個人情報を販売せず、コンテキスト横断型行動広告のために共有することもありません。</p>
+        </section>
+
+        <section id="security">
+          <h2>データを保護する方法</h2>
+          <p>完全な安全を保証できる保存または転送システムはありませんが、当社は各経路に応じた保護措置を講じています。</p>
+          <ul>
+            <li>ヘルスデータへのアクセスは、HealthKitおよびHealth Connectの権限とデバイスの保護機能によって管理されます。</li>
+            <li>MacおよびCLIとの直接ペアリングでは、認証済みの暗号化セッション、上限付きフレーム、整合性チェック、明示的な承認を使用します。</li>
+            <li>保護されたAPI EndpointモードではHTTPSが必要です。配信後の取扱いはエンドポイントの運営者が管理します。</li>
+            <li>分析およびキャンペーンの取り込みでは、未知またはサイズ超過の項目を拒否し、ヘルスデータのペイロードを意図的に表現できないようにしています。</li>
+            <li>ローカルファイルには、保存先のデバイス、フォルダ、Vault、プロバイダが提供するアクセス、暗号化、バックアップ、同期の管理が適用されます。</li>
+          </ul>
+          <p>ローカルのMacクエリAPIは、ループバックからのみ到達できることをアクセス境界としており、Bearerトークンはありません。そのポートをプロキシ経由で公開したり、他のマシンに公開したりしないでください。iPhoneとの直接ペアリングは、信頼できるコンピューターとネットワークに対してのみ有効にしてください。デバイスを最新の状態に保ち、パスコードとディスク暗号化を使用し、送信先、エージェントホスト、モデルプロバイダの保持設定とログ設定を確認してください。</p>
+        </section>
+
+        <section id="choices">
+          <h2>ユーザーの選択肢とプライバシー権</h2>
+          <ul>
+            <li><strong>権限：</strong>プラットフォームの設定でHealthKitおよびHealth Connectのカテゴリを許可または取り消すことができます。</li>
+            <li><strong>送信先：</strong>ローカルフォルダを選択する、ファイルプロバイダのアクセスを削除する、プロバイダを切断する、APIエンドポイントを消去する、直接クライアントとのペアリングを解除することができます。</li>
+            <li><strong>スケジュール：</strong>ヘルスデータではないスケジュール情報とAPNsメタデータを登録したくない場合は、手動エクスポートを利用できます。</li>
+            <li><strong>ファイルと結果：</strong>送信先またはペアリング済みコンピューターの管理機能を使って、アクセス、移動、削除できます。</li>
+            <li><strong>ポータビリティ：</strong>エクスポートしたMarkdown、Obsidian、CSV、JSON、FHIR、その他の対応ファイルをHealth.mdの外部で使用できます。</li>
+            <li><strong>法的権利：</strong>居住地によっては、当社が管理する個人データへのアクセス、訂正、削除、処理の制限、異議申立て、コピーの取得を求める権利、および不服申立てまたはデータ保護当局への苦情申立てを行う権利が認められる場合があります。</li>
+          </ul>
+          <p>適用される権利を行使するには、当社にご連絡ください。本人確認および関連記録の特定に必要な情報をお願いする場合があります。分析識別子はランダムであり、アカウントまたはメールアドレスに関連付けられていないため、メールによる依頼を特定の分析行と関連付けられない場合があります。それらの行も、上記の期間内に自動的に失効します。</p>
+        </section>
+
+        <section id="children">
+          <h2>児童のプライバシー</h2>
+          <p>Health.mdは一般利用者向けのヘルスデータポータビリティツールであり、児童を対象としたものではありません。当社は、児童向けの広告またはプロファイリングにヘルスデータや分析を意図的に使用しません。児童がHealth.mdの管理するサービスに個人情報を送信したと考える親権者または保護者は、当社に連絡して確認を求めることができます。</p>
+        </section>
+
+        <section id="changes">
+          <h2>本ポリシーの変更</h2>
+          <p>当社の取扱いが変更された場合は、本ページおよび「最終更新日」を更新します。アプリによるデータの取扱いに重大な影響を及ぼす変更については、アプリ内、リリースノート、その他適切な方法でもお知らせすることがあります。</p>
+        </section>
+
+        <section id="contact">
+          <h2>お問い合わせ</h2>
+          <p>プライバシーに関するご質問またはご依頼は、<a href="mailto:privacy@isolated.tech">privacy@isolated.tech</a>までメールでお寄せください。Health.mdは、Cody Bontecouが<a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>の名称で運営しています。</p>
+          <p>通常のサポートメールまたは公開issueには、ヘルスレコード、エクスポートファイル、認証情報、その他の機密情報を含めないでください。追加情報が必要な場合は、調査に最低限必要な情報を当社からお尋ねします。</p>
+        </section>
+      </article>
     </div>
   </main>
 
-  <footer>
-    <div class="container">
-      <div class="footer-inner">
-        <p class="footer-text">© 2026 health.md. 心を込めて作りました。</p>
-        <div class="footer-links">
-          <a href="privacy-policy.html">プライバシーポリシー</a>
-          <a href="terms-of-service.html">利用規約</a>
-          <a href="mailto:cody@isolated.tech">サポート</a>
-        </div>
-      </div>
+  <footer class="site-footer">
+    <div class="footer-shell footer-inner">
+      <nav class="language-selector" aria-label="言語選択">
+        <span aria-current="page" lang="ja">日本語</span>
+        <span aria-hidden="true">/</span>
+        <a href="../privacy-policy.html" hreflang="en" lang="en">English</a>
+      </nav>
+      <a class="footer-brand" href="../ja/" aria-label="Health.md ホーム">health.md</a>
+      <nav class="footer-links" aria-label="フッターナビゲーション">
+        <a href="../ja/docs/">ドキュメント</a>
+        <a href="privacy-policy.html">プライバシー</a>
+        <a href="terms-of-service.html">利用規約</a>
+        <a href="mailto:cody@isolated.tech">サポート</a>
+      </nav>
     </div>
   </footer>
+
   <script src="../assets/analytics.js" defer></script>
 </body>
 </html>

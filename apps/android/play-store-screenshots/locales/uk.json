@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "uk",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "Ваші дані про здоров’я. Ваші файли.",
+      "supportingLine": "Експортуйте дозволені записи Health Connect у файли під вашим контролем."
+    },
+    {
+      "id": "export-formats",
+      "headline": "Експортуйте по-своєму",
+      "supportingLine": "Markdown, Obsidian Bases, JSON і CSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "Понад 100 показників здоров’я",
+      "supportingLine": "Сон, активність, серце, життєві показники, харчування тощо."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "Лише читання. Конфіденційність за задумом.",
+      "supportingLine": "Без облікового запису. Без хмари медичних даних Health.md."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "Підтримуйте актуальність архіву",
+      "supportingLine": "Плануйте експорт до вибраного місця призначення."
+    },
+    {
+      "id": "file-preview",
+      "headline": "Перегляньте перед експортом",
+      "supportingLine": "Перевірте назви, шляхи та вміст файлів до початку запису."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "Здоров’я як на долоні",
+      "supportingLine": "Віджети активності, сну, серця та загального зведення."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "Прямо на ваш комп’ютер",
+      "supportingLine": "Спарте Health.md CLI для автентифікованого шифрованого експорту без хмарного посередника."
+    }
+  ]
+}

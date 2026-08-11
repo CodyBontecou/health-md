@@ -61,6 +61,8 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel(),
     paywallViewModel: PaywallViewModel = hiltViewModel(),
     onComplete: () -> Unit,
+    initialPage: Int = 0,
+    allowAutomaticAdvance: Boolean = true,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
@@ -133,7 +135,7 @@ fun OnboardingScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val pagerState = rememberPagerState(pageCount = { 5 })
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { 5 })
 
     LaunchedEffect(Unit) {
         viewModel.recordInitialOnboarding()
@@ -149,15 +151,15 @@ fun OnboardingScreen(
 
     // Key auto-advance to the settled page. currentPage changes around the halfway
     // point of an animation, which would cancel this effect and leave the pager mid-swipe.
-    LaunchedEffect(uiState.hasPermissions, pagerState.settledPage) {
-        if (pagerState.settledPage == 1 && uiState.hasPermissions) {
+    LaunchedEffect(uiState.hasPermissions, pagerState.settledPage, allowAutomaticAdvance) {
+        if (allowAutomaticAdvance && pagerState.settledPage == 1 && uiState.hasPermissions) {
             kotlinx.coroutines.delay(800)
             pagerState.animateScrollToPage(2)
         }
     }
 
-    LaunchedEffect(uiState.folderUri, pagerState.settledPage) {
-        if (pagerState.settledPage == 2 && uiState.folderUri != null) {
+    LaunchedEffect(uiState.folderUri, pagerState.settledPage, allowAutomaticAdvance) {
+        if (allowAutomaticAdvance && pagerState.settledPage == 2 && uiState.folderUri != null) {
             kotlinx.coroutines.delay(800)
             pagerState.animateScrollToPage(3)
         }

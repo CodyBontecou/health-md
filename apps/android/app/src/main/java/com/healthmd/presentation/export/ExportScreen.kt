@@ -47,6 +47,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -101,6 +102,7 @@ fun ExportScreen(
     viewModel: ExportViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToAdvancedSettings: () -> Unit = {},
+    onNavigateToClinicianReport: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -247,18 +249,33 @@ fun ExportScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // In-app review flow
+    // In-app review flow. Persist the attempt only after Play accepts and completes the
+    // launch task; a request failure remains eligible for a later meaningful success.
     val activity = context as? Activity
     LaunchedEffect(Unit) {
         viewModel.requestReview.collect {
-            activity?.let { act ->
-                val reviewManager = ReviewManagerFactory.create(act)
-                reviewManager.requestReviewFlow().addOnSuccessListener { reviewInfo ->
-                    reviewManager.launchReviewFlow(act, reviewInfo)
-                }.addOnFailureListener { e ->
-                    Timber.e(e, "Failed to request in-app review")
-                }
+            val act = activity
+            if (act == null) {
+                viewModel.onReviewRequestFailed()
+                return@collect
             }
+            val reviewManager = ReviewManagerFactory.create(act)
+            reviewManager.requestReviewFlow()
+                .addOnSuccessListener { reviewInfo ->
+                    reviewManager.launchReviewFlow(act, reviewInfo)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                viewModel.onReviewFlowCompleted()
+                            } else {
+                                Timber.e(task.exception, "Failed to launch in-app review")
+                                viewModel.onReviewRequestFailed()
+                            }
+                        }
+                }
+                .addOnFailureListener { error ->
+                    Timber.e(error, "Failed to request in-app review")
+                    viewModel.onReviewRequestFailed()
+                }
         }
     }
 
@@ -566,6 +583,36 @@ fun ExportScreen(
                     dismissedFeatureErrorGeneration = capabilityRefreshGeneration
                     viewModel.clearHealthConnectActionError()
                 },
+            )
+        }
+
+        GeistCardClickable(
+            onClick = onNavigateToClinicianReport,
+            modifier = Modifier.testTag("clinician_report_entry"),
+        ) {
+            Icon(
+                Icons.Outlined.Description,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.clinician_report_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppColors.textPrimary,
+                )
+                Text(
+                    stringResource(R.string.clinician_report_entry_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textSecondary,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = AppColors.textMuted,
             )
         }
 

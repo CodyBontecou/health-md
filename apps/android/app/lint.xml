@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <issue id="UnusedResources" severity="error" />
+    <issue id="TypographyEllipsis" severity="error" />
+    <issue id="PluralsCandidate" severity="error" />
+</lint>

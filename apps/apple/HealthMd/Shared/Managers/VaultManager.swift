@@ -988,6 +988,46 @@ final class VaultManager: ObservableObject {
     @Published private(set) var destinationState: VaultDestinationState = .notSelected
     @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
     @Published var lastExportStatus: String?
+    #if DEBUG && os(macOS)
+    @Published private var marketingCaptureDisplayPath: String?
+    private var marketingCaptureAccessOverride = false
+    #endif
+
+    var pathForDisplay: String? {
+        #if DEBUG && os(macOS)
+        if let marketingCaptureDisplayPath { return marketingCaptureDisplayPath }
+        #endif
+        return vaultURL?.path(percentEncoded: false)
+    }
+
+    /// Localized semantic presentation for `lastExportStatus`. The stored value remains
+    /// unchanged because it can contain paths or technical error detail.
+    var localizedLastExportStatus: String? {
+        guard let status = lastExportStatus else { return nil }
+        switch status {
+        case Self.staleBookmarkRefreshStatus:
+            return String(localized: "Saved folder access needs to be refreshed. Reconnect or re-select the folder.")
+        case Self.savedFolderUnavailableStatus:
+            return String(localized: "Saved folder unavailable. Reconnect the location in Files or re-select the folder.")
+        case Self.folderAccessDeniedStatus:
+            return String(localized: "Cannot access the selected folder. Reconnect the location in Files or re-select the folder.")
+        case Self.destinationChangedMessage:
+            return String(localized: "The saved export folder now resolves to a different location. Health.md stopped before writing any files. Review the location in Files, then re-select the intended folder.")
+        case Self.missingExpectedPathMessage:
+            return String(localized: "Health.md cannot verify the saved export folder. Re-select the intended folder before exporting.")
+        case "Failed to access folder":
+            return String(localized: "Failed to access folder")
+        case "Skipped daily files in summary-only mode":
+            return String(localized: "Skipped daily files in summary-only mode")
+        case "Daily note update was not performed":
+            return String(localized: "Daily note update was not performed")
+        case "Prepared files for ZIP archive":
+            return String(localized: "Prepared files for ZIP archive")
+        default:
+            return String(localized: "Export status: \(status)")
+        }
+    }
+
     /// The exact file selected for post-export preview and its containing folder.
     /// This is transient UI state; the vault bookmark remains the durable access grant.
     @Published private(set) var lastExportPresentationTarget: ExportPresentationTarget?
@@ -1048,9 +1088,9 @@ final class VaultManager: ObservableObject {
         switch destinationState {
         case .requiresReselectionDestinationChanged,
              .requiresReselectionMissingExpectedPath:
-            return "Review the location in Files, then re-select the intended folder."
+            return String(localized: "Review the location in Files, then re-select the intended folder.")
         case .temporarilyUnavailable:
-            return "Reconnect the location in Files or re-select the folder."
+            return String(localized: "Reconnect the location in Files or re-select the folder.")
         case .notSelected, .available:
             return nil
         }
@@ -1310,6 +1350,26 @@ final class VaultManager: ObservableObject {
         destinationState = .available
     }
 
+    #if DEBUG && os(macOS)
+    /// Uses an isolated writable folder while displaying a stable anonymized path.
+    func setMarketingCaptureVault() {
+        guard MacMarketingCapture.isActive else { return }
+        let captureRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Health.md Demo", isDirectory: true)
+            .appendingPathComponent("Exports", isDirectory: true)
+        try? FileManager.default.createDirectory(
+            at: captureRoot,
+            withIntermediateDirectories: true
+        )
+        vaultURL = captureRoot
+        vaultName = "Exports"
+        destinationState = .available
+        lastExportStatus = nil
+        marketingCaptureDisplayPath = "~/Health.md Demo/Exports"
+        marketingCaptureAccessOverride = true
+    }
+    #endif
+
     // MARK: - Background Access
 
     /// Check if we have a currently resolved vault URL (for background tasks).
@@ -1332,6 +1392,9 @@ final class VaultManager: ObservableObject {
     /// its security-scoped bookmark. Used by the Mac export-agent readiness
     /// status before iOS sends an export job.
     func canAccessSelectedVaultFolder() -> Bool {
+        #if DEBUG && os(macOS)
+        if marketingCaptureAccessOverride { return true }
+        #endif
         guard destinationState == .available, let vaultURL else { return false }
         guard bookmarkResolver.startAccessing(vaultURL) else { return false }
         bookmarkResolver.stopAccessing(vaultURL)
@@ -3192,17 +3255,17 @@ enum ExportError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .noVaultSelected:
-            return "Please select an Obsidian vault folder first"
+            return String(localized: "Please select an Obsidian vault folder first")
         case .noHealthData:
-            return "No health data available for the selected date"
+            return String(localized: "No health data available for the selected date")
         case .accessDenied:
-            return "Cannot access the vault folder. Reconnect it in Files or re-select it."
+            return String(localized: "Cannot access the vault folder. Reconnect it in Files or re-select it.")
         case .destinationChanged:
-            return VaultManager.destinationChangedMessage
+            return String(localized: "The saved export folder now resolves to a different location. Health.md stopped before writing any files. Review the location in Files, then re-select the intended folder.")
         case .noFormatsSelected:
-            return "At least one export format must be selected"
+            return String(localized: "At least one export format must be selected")
         case .dailyNotePathConflict(let path):
-            return "Daily Note Injection target conflicts with export output: \(path). Change Output folder/filename or Daily Note Injection folder/filename."
+            return String(localized: "Daily Note Injection target conflicts with export output: \(path). Change Output folder/filename or Daily Note Injection folder/filename.")
         }
     }
 }

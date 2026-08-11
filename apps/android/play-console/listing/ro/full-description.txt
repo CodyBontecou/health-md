@@ -1,0 +1,45 @@
+Health.md transformă datele Android Health Connect autorizate în fișiere portabile pe care le alegi și le controlezi.
+
+EXPORTĂ DATELE HEALTH CONNECT CUM VREI
+Creează rezumate ușor de citit în Markdown, Obsidian Bases, CSV și JSON sau instantanee native ale furnizorului în JSON/NDJSON. Alege indicatorii, intervalul de date și destinația, previzualizează numele și conținutul fișierelor, apoi exportă într-un dosar local, un seif Obsidian, alt furnizor de documente Android, propriul endpoint API sau un Health.md CLI asociat. Health.md nu necesită cont și nu operează un cloud pentru date medicale.
+
+ALEGE DIN PESTE 100 DE INDICATORI DE SĂNĂTATE
+Exportă înregistrări Health Connect autorizate despre somn, pași, antrenamente, ritm cardiac, variabilitatea ritmului cardiac (HRV), tensiune arterială, glicemie, saturația oxigenului, frecvență respiratorie, greutate, compoziție corporală, nutriție, hidratare, mobilitate, mindfulness, sănătate reproductivă și altele. Refuzarea unei categorii nu împiedică exportul altor categorii autorizate.
+
+PREVIZUALIZEAZĂ, PERSONALIZEAZĂ ȘI AUTOMATIZEAZĂ
+Alege unitățile, formatele, modurile de scriere, organizarea dosarelor și mostrele detaliate. Previzualizează exact căile și conținutul fișierelor înainte de a scrie ceva. Rulează exporturile manual sau programează-le către destinația aleasă, apoi consultă rulările reușite și nereușite în istoricul exporturilor.
+
+SĂNĂTATEA DINTR-O PRIVIRE
+Patru widgeturi opționale pentru ecranul principal afișează rezumate autorizate despre activitate, somn și inimă dintr-un mic cache de pe dispozitiv. Accesul widgeturilor și actualizarea în fundal rămân sub controlul tău.
+
+DOSARE MEDICALE PERSONALE (FHIR)
+Când dispozitivul acceptă Dosare medicale personale, opțiunea „Dosare medicale (FHIR)” îți permite să păstrezi resursele medicale autorizate în aceeași arhivă controlată de utilizator. Categoriile acceptate sunt:
+
+• Vaccinuri și imunizări
+• Alergii și intoleranțe
+• Afecțiuni și istoricul listei de probleme
+• Rezultate de laborator
+• Medicamente și rețete
+• Date personale folosite la identificarea dosarului
+• Date despre practicieni și rolurile lor
+• Înregistrări privind sarcina
+• Proceduri
+• Istoric social
+• Vizite și consultații
+• Semne vitale clinice
+
+Fiecare permisiune medicală este doar pentru citire și este solicitată pentru ca un export de dosar medical cerut de utilizator să includă categoria FHIR respectivă, în loc să o omită fără avertisment. Exporturile JSON și cele native ale furnizorului păstrează datele resursei FHIR și metadatele sursei furnizate de Health Connect; rezumatele Markdown și CSV raportează numărul resurselor medicale pe categorie. Poți refuza sau revoca orice categorie în Health Connect, iar celelalte exporturi autorizate vor continua să funcționeze.
+
+Health.md nu diagnostichează afecțiuni, nu recomandă tratamente, nu gestionează îngrijirea clinică și nu modifică Health Connect. Dosarele medicale sunt citite numai pentru portabilitatea controlată de utilizator și gestionarea arhivei personale.
+
+CONFIDENȚIALITATE ȘI CONTROL
+• Acces doar pentru citire la Health Connect; Health.md nu scrie niciodată înregistrări medicale
+• Fără cont Health.md sau cloud pentru date medicale
+• Datele medicale nu sunt folosite pentru publicitate, creare de profiluri, credite, asigurări sau angajare
+• Fără SDK de analiză sau atribuire terț
+• Datele medicale sunt procesate pe dispozitiv și exportate numai către destinația aleasă
+• Endpointurile configurate de utilizator sunt contactate numai pentru exporturile trimise explicit
+• Permisiunile pot fi consultate sau revocate oricând în Health Connect
+• Atribuirea limitată, proprie, a instalării și analiza integrării inițiale sau a prețurilor nu includ niciodată dosare medicale, detalii despre permisiunile Health Connect, conținut exportat, textul contului sau căi de fișiere
+
+Health.md include 10 acțiuni gratuite de export manual. O achiziție unică deblochează exporturi nelimitate și programarea; nu există abonament.

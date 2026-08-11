@@ -12,6 +12,8 @@
     "edit:localized-slide": "tsx edit-localized-slide.ts",
     "plan:localized-set": "tsx run-localized-set.ts",
     "generate:localized-set": "tsx run-localized-set.ts --generate",
+    "plan:android-localized-set": "tsx run-android-localized-set.ts",
+    "generate:android-localized-set": "tsx run-android-localized-set.ts --generate",
     "prepare:localized-captures": "python3 prepare-localized-captures.py",
     "build:localized-slide:local": "python3 build-localized-slide-locally.py",
     "finalize:localized-set": "python3 finalize-localized-set.py",

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.healthmd.domain.billing.FreemiumPolicy
@@ -42,7 +43,8 @@ class SettingsRepositoryImpl(
         val IS_PURCHASED = booleanPreferencesKey("is_purchased")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
-        val HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
+        val LAST_REVIEW_ATTEMPT_EPOCH_MILLIS = longPreferencesKey("last_review_attempt_epoch_millis")
+        val LEGACY_HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
         val FIRST_HEALTH_PERMISSION_GRANT_DATE = stringPreferencesKey("first_health_permission_grant_date")
         val SELECTED_HEALTH_PROVIDER_ID = stringPreferencesKey("selected_health_provider_id")
         val CONNECTED_HEALTH_PROVIDER_IDS = stringSetPreferencesKey("connected_health_provider_ids")
@@ -176,12 +178,28 @@ class SettingsRepositoryImpl(
         }
     }
 
-    override suspend fun hasRequestedReview(): Boolean =
-        dataStore.data.map { it[Keys.HAS_REQUESTED_REVIEW] ?: false }.first()
-
-    override suspend fun setReviewRequested() {
+    override suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long? {
+        require(migrationEpochMillis >= 0)
+        var resolved: Long? = null
         dataStore.edit { prefs ->
-            prefs[Keys.HAS_REQUESTED_REVIEW] = true
+            resolved = resolveReviewAttemptEpochMillis(
+                currentAttemptEpochMillis = prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS],
+                legacyRequested = prefs[Keys.LEGACY_HAS_REQUESTED_REVIEW] ?: false,
+                migrationEpochMillis = migrationEpochMillis,
+            )
+            if (prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] == null && resolved != null) {
+                prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] = requireNotNull(resolved)
+            }
+            prefs.remove(Keys.LEGACY_HAS_REQUESTED_REVIEW)
+        }
+        return resolved
+    }
+
+    override suspend fun recordReviewAttempt(epochMillis: Long) {
+        require(epochMillis >= 0)
+        dataStore.edit { prefs ->
+            prefs[Keys.LAST_REVIEW_ATTEMPT_EPOCH_MILLIS] = epochMillis
+            prefs.remove(Keys.LEGACY_HAS_REQUESTED_REVIEW)
         }
     }
 
@@ -256,6 +274,16 @@ internal fun resolveFreeExportsUsed(currentUsed: Int?, legacyRemaining: Int?): I
     currentUsed != null -> FreemiumPolicy.sanitizedUsedCount(currentUsed)
     legacyRemaining != null -> FreemiumPolicy.usedCountFromLegacyRemaining(legacyRemaining)
     else -> 0
+}
+
+internal fun resolveReviewAttemptEpochMillis(
+    currentAttemptEpochMillis: Long?,
+    legacyRequested: Boolean,
+    migrationEpochMillis: Long,
+): Long? {
+    require(migrationEpochMillis >= 0)
+    return currentAttemptEpochMillis?.takeIf { it >= 0 }
+        ?: migrationEpochMillis.takeIf { legacyRequested }
 }
 
 internal fun decodePersistedExportSettings(rawJson: String): ExportSettings {

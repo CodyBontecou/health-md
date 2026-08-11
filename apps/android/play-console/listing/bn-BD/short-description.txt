@@ -1,0 +1,1 @@
+Health Connect ডেটা নিজের Markdown, CSV, JSON বা Obsidian ফাইলে রপ্তানি করুন।

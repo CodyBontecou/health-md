@@ -26,7 +26,13 @@ private enum ExportSchemaSignatureFixtures {
     }()
 
     static var extendedCSVDay: HealthData {
-        var data = HealthData(date: ExportFixtures.referenceDate)
+        // Keep the committed v7 signature independent of the test runner's
+        // local timezone. The original fixture was generated in Puerto Rico,
+        // so pin that context instead of rewriting a shipped schema fixture.
+        var data = HealthData(
+            date: ExportFixtures.referenceDate,
+            timeContext: ExportTimeContext(calendarTimeZoneIdentifier: "America/Puerto_Rico")
+        )
         data.cyclingPerformance = CyclingPerformanceData(
             cyclingSpeed: 8.2,
             cyclingPower: 215,

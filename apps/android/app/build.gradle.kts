@@ -54,8 +54,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 25
-        versionName = "1.5.4"
+        versionCode = 27
+        versionName = "1.6.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -120,6 +120,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            isPseudoLocalesEnabled = true
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -229,6 +232,12 @@ dependencies {
     // Play In-App Review
     implementation(libs.play.review)
     implementation(libs.play.review.ktx)
+
+    // Tagged, on-device PDF authoring. The port is Apache-2.0. Its obsolete
+    // Bouncy Castle transitives are excluded because direct-protocol already supplies bcprov-jdk18on.
+    implementation(libs.pdfbox.android) {
+        exclude(group = "org.bouncycastle")
+    }
 
     // Logging
     implementation(libs.timber)

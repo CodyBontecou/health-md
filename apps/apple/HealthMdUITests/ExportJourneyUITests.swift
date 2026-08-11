@@ -84,6 +84,12 @@ final class ExportJourneyUITests: XCTestCase {
             "The simulated multi-file export should still be running"
         )
 
+        let activityBanner = app.descendants(matching: .any)[UITestLaunchHelper.Export.activityBanner]
+        XCTAssertTrue(
+            activityBanner.exists,
+            "The top export activity banner should remain visible while the export is running"
+        )
+
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertFalse(
             statusBadge.waitForExistence(timeout: 0.8),
@@ -94,6 +100,10 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(
             statusBadge.waitForExistence(timeout: 5),
             "The success view should appear after the complete export finishes"
+        )
+        XCTAssertFalse(
+            activityBanner.exists,
+            "The top export activity banner should disappear after the export completes"
         )
         XCTAssertTrue(app.buttons["View Exported File"].exists)
     }

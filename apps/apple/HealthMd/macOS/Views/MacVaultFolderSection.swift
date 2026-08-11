@@ -23,7 +23,7 @@ struct MacVaultFolderSection: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(vaultManager.vaultName)
                             .font(BrandTypography.bodyMedium())
-                        Text(url.path(percentEncoded: false))
+                        Text(vaultManager.pathForDisplay ?? url.path(percentEncoded: false))
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
                             .lineLimit(1)
@@ -37,7 +37,11 @@ struct MacVaultFolderSection: View {
                         .foregroundStyle(Color.textMuted)
                 }
                 Spacer()
-                Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
+                Button(
+                    vaultManager.vaultURL != nil
+                        ? String(localized: "Change…")
+                        : String(localized: "Choose…")
+                ) {
                     MacFolderPicker.show { url in
                         vaultManager.setVaultFolder(url)
                     }

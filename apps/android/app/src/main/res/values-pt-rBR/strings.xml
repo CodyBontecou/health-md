@@ -3,7 +3,6 @@
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
-    <string name="ok">OK</string>
     <string name="cancel">Cancelar</string>
     <string name="back">Voltar</string>
     <string name="close">Fechar</string>
@@ -111,11 +110,6 @@
 
     <!-- Date range -->
     <string name="section_date_range">Intervalo de Datas</string>
-    <string name="date_shortcut_1d">1d</string>
-    <string name="date_shortcut_7d">7d</string>
-    <string name="date_shortcut_30d">30d</string>
-    <string name="date_shortcut_90d">90d</string>
-    <string name="date_shortcut_all">Tudo</string>
 
     <!-- Export format -->
     <string name="section_export_format">Formato de Exportação</string>
@@ -135,8 +129,6 @@
     <string name="export_preview_device_destination">Pasta do dispositivo</string>
     <string name="export_preview_complete_file">Exibindo o arquivo completo de %1$s que será exportado.</string>
     <string name="export_preview_truncated_file">Exibindo uma pré-visualização reduzida deste arquivo de %1$s. A exportação completa ainda incluirá todos os dados.</string>
-    <string name="export_preview_limited_one">Pré-visualização do dia mais recente com dados. A exportação completa será executada para cada data selecionada.</string>
-    <string name="export_preview_limited_other">Pré-visualização dos %1$d dias mais recentes com dados. A exportação completa será executada para cada data selecionada.</string>
     <string name="export_preview_no_data_title">Nenhum dado para pré-visualizar</string>
     <string name="export_preview_no_data_message">Não há dados de saúde para as datas selecionadas ou nenhum formato foi selecionado.</string>
     <plurals name="free_exports_remaining">
@@ -145,19 +137,10 @@
         <item quantity="other">%1$d exportações gratuitas restantes</item>
     </plurals>
     <string name="unlock_button">Desbloquear Health.md</string>
-    <string name="export_result_days">%1$d/%2$d dias exportados</string>
     <string name="open_folder">Abrir pasta</string>
     <string name="open_with_files">Arquivos</string>
     <string name="open_with_obsidian">Obsidian</string>
 
-    <!-- Export failure messages -->
-    <string name="error_no_health_data">Nenhum dado de saúde encontrado para este intervalo de datas</string>
-    <string name="error_file_write">Falha ao escrever arquivo — verifique o acesso à pasta</string>
-    <string name="error_access_denied">Acesso negado à pasta de exportação</string>
-    <string name="error_no_folder">Nenhuma pasta de exportação selecionada</string>
-    <string name="error_health_connect">Erro no Health Connect — verifique as permissões</string>
-    <string name="error_device_locked">O celular não foi desbloqueado desde a última reinicialização — desbloqueie-o e tente novamente</string>
-    <string name="error_unknown">Ocorreu um erro inesperado</string>
 
     <!-- Debug panel -->
     <string name="debug_panel_title">Informações de Depuração</string>
@@ -174,7 +157,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">Configure\nSeu App</string>
     <string name="settings_subtitle">Gerencie o Premium e o suporte</string>
     <string name="section_write_mode">Modo de Escrita</string>
     <string name="section_filename_template">Modelo de Nome de Arquivo</string>
@@ -337,11 +319,6 @@
     <string name="action_suggested">Sugerido</string>
     <string name="action_all">Tudo</string>
     <string name="action_none">Nenhum</string>
-    <string name="section_tracked_metrics">Métricas Rastreadas</string>
-    <string name="metric_workouts">Treinos</string>
-    <string name="metric_blood_pressure">Pressão Arterial</string>
-    <string name="metric_blood_glucose">Glicose no Sangue</string>
-    <string name="metric_weight">Peso</string>
     <string name="section_entries_folder">Nome da Pasta de Entradas</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
@@ -368,50 +345,17 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Agendamento</string>
-    <string name="schedule_active">Agendamento\nativo</string>
-    <string name="schedule_not_set">Nenhum agendamento\nconfigurado</string>
     <string name="automatic_export_title">Exportação Automática</string>
     <string name="automatic_export_subtitle">Exporte seus dados de saúde automaticamente</string>
     <string name="schedule_exact_background_note">O horário exato usa o acesso a Alarmes e lembretes do Android. O acesso em segundo plano ao Health Connect continua necessário. Uma rede indisponível ou o telefone desligado pode atrasar a conclusão.</string>
     <string name="exact_timing_needed_title">O horário exato está desativado</string>
     <string name="exact_timing_needed_body">Permita Alarmes e lembretes para iniciar as exportações no horário selecionado. Sem esse acesso, o Android usa o WorkManager como alternativa com atraso.</string>
     <string name="exact_timing_enable_button">Permitir horário exato</string>
-    <string name="section_cadence">Frequência</string>
-    <string name="cadence_unit_minutes">Minutos</string>
-    <string name="cadence_unit_hours">Horas</string>
-    <string name="cadence_unit_days">Dias</string>
-    <string name="cadence_unit_weeks">Semanas</string>
     <string name="cadence_minutes_minimum">A frequência mínima é de 15 minutos.</string>
-    <string name="section_export_time">Hora da Exportação</string>
-    <string name="label_hour">Hora</string>
-    <string name="label_minute">Minuto</string>
-    <string name="schedule_next_export_every">Próxima exportação: a cada %1$s</string>
-    <string name="schedule_next_export_every_at">Próxima exportação: a cada %1$s às %2$s</string>
-    <plurals name="schedule_cadence_minutes_count">
-        <item quantity="one">%d minuto</item>
-                <item quantity="many">%d minutos</item>
-        <item quantity="other">%d minutos</item>
-    </plurals>
-    <plurals name="schedule_cadence_hours_count">
-        <item quantity="one">%d hora</item>
-                <item quantity="many">%d horas</item>
-        <item quantity="other">%d horas</item>
-    </plurals>
-    <plurals name="schedule_cadence_days_count">
-        <item quantity="one">%d dia</item>
-                <item quantity="many">%d dias</item>
-        <item quantity="other">%d dias</item>
-    </plurals>
-    <plurals name="schedule_cadence_weeks_count">
-        <item quantity="one">%d semana</item>
-                <item quantity="many">%d semanas</item>
-        <item quantity="other">%d semanas</item>
-    </plurals>
     <string name="notifications_needed_title">Notificações estão desativadas</string>
     <string name="notifications_needed_body">As exportações agendadas ainda estão funcionando, mas você não receberá notificações quando forem concluídas até que as notificações sejam ativadas.</string>
     <string name="notifications_enable_button">Ativar</string>
     <string name="notifications_open_settings_button">Abrir configurações</string>
-    <string name="schedule_workmanager_notice">As exportações são executadas em segundo plano usando o WorkManager. Para um agendamento confiável, permita o acesso em segundo plano ao Health Connect e exclua o Health.md da otimização de bateria.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Exportações Agendadas</string>
@@ -419,7 +363,6 @@
     <string name="export_notification_title_complete">Exportação Concluída</string>
     <string name="export_notification_title_partial">Exportação Parcial</string>
     <string name="export_notification_title_failed">Exportação Falhou</string>
-    <string name="export_notification_message_days_exported">%1$d/%2$d dias exportados para %3$s</string>
     <string name="export_notification_unknown_error">Erro desconhecido</string>
 
     <!-- Paywall screen -->
@@ -434,7 +377,6 @@
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Exportando Dados de Saúde</string>
-    <string name="export_progress_days">%1$d / %2$d dias</string>
 
     <!-- Navigation labels -->
     <string name="nav_export">Exportar</string>
@@ -449,11 +391,6 @@
     <string name="feedback_email_subject">Comentários do Health.md</string>
     <string name="feedback_send_chooser">Enviar Comentários</string>
 
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
 
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">Markdown</string>
@@ -470,7 +407,7 @@
     <string name="write_mode_desc_update">Atualize seções gerenciadas pelo aplicativo enquanto preserva seu conteúdo personalizado</string>
 
     <!-- DateFormatPreference display names -->
-    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US Curto (01/13/2026)</string>
     <string name="date_format_display_us_long">US Longo (janeiro 13, 2026)</string>
     <string name="date_format_display_eu_short">EU Curto (13/01/2026)</string>
@@ -507,8 +444,6 @@
 
     <!-- Completed localization from canonical translatable resources -->
     <string name="add">Adicionar</string>
-    <string name="increase">Aumentar</string>
-    <string name="decrease">Diminuir</string>
     <string name="action_cancel_export">Cancelar exportação</string>
     <string name="action_close_options">Fechar opções</string>
     <string name="action_set_start_date">Definir data inicial</string>
@@ -555,7 +490,6 @@
         <item quantity="other">%1$s: %2$d dias</item>
     </plurals>
     <string name="export_diagnostics_date_list">Datas com falha: %s</string>
-    <string name="export_diagnostics_date_list_more">Datas com falha: %1$s, +%2$d a mais</string>
     <string name="export_diagnostics_no_details">Nenhum detalhe por dia foi registrado. Tente um intervalo menor e verifique as permissões do Health Connect.</string>
     <string name="export_diagnostics_use_failed_range">Usar intervalo com falha</string>
     <string name="export_failure_no_folder_label">Nenhuma pasta selecionada</string>
@@ -582,8 +516,6 @@
     <string name="export_guidance_network">Verifique sua conexão e o certificado TLS do endpoint e tente novamente.</string>
     <string name="export_guidance_api_rejected">Verifique o caminho do endpoint, a autorização salva ou os cabeçalhos personalizados, os limites de requisição e os logs do servidor antes de tentar novamente.</string>
     <string name="export_guidance_unknown">Tente novamente com um intervalo menor. Se continuar falhando, envie comentários com este histórico de exportação.</string>
-    <string name="error_background_permission_denied">As exportações agendadas precisam de acesso em segundo plano ao Health Connect</string>
-    <string name="error_rate_limited">O Health Connect está limitando as exportações — aguarde um pouco e tente novamente as datas restantes</string>
     <string name="debug_has_history_permission">Tem permissão de histórico</string>
     <string name="debug_requires_history_permission">O intervalo precisa de histórico</string>
     <string name="debug_first_permission_grant">Primeira concessão de permissão</string>
@@ -595,16 +527,14 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">Falha no login da fonte de saúde</string>
     <string name="health_provider_connected">%s conectado</string>
-    <string name="section_health_diagnostics">Diagnósticos de saúde</string>
+    <string name="section_health_diagnostics">Diagnóstico da fonte de dados de saúde</string>
     <string name="health_diagnostics_description">Compartilhe um relatório do provedor com dados ocultados com testadores beta ou com o suporte. Ele inclui a configuração do provedor, permissões, indicadores de OAuth configurado/token presente e categorias do último erro de exportação, sem medições de saúde nem valores de token.</string>
-    <string name="health_diagnostics_share_title">Compartilhar diagnósticos com dados ocultados</string>
+    <string name="health_diagnostics_share_title">Compartilhar relatório técnico com dados ocultos</string>
     <string name="health_diagnostics_share_subtitle">Sem tokens, segredos do provedor, caminhos completos de arquivos nem medições de saúde</string>
-    <string name="health_diagnostics_share_subject">Diagnósticos com dados ocultados do Health.md</string>
-    <string name="health_diagnostics_share_chooser">Compartilhar diagnósticos</string>
+    <string name="health_diagnostics_share_subject">Relatório técnico do Health.md com dados ocultos</string>
+    <string name="health_diagnostics_share_chooser">Compartilhar relatório técnico</string>
     <string name="settings_upgrade_title">Fazer upgrade para o Premium</string>
     <string name="settings_upgrade_subtitle">Exportações ilimitadas, exportações agendadas e mais</string>
-    <string name="settings_premium_active">Premium ativo</string>
-    <string name="settings_premium_active_subtitle">Você tem exportações ilimitadas</string>
     <string name="feedback_discord_title">Entre no nosso Discord</string>
     <string name="feedback_discord_subtitle">Converse com a comunidade do Health.md</string>
     <string name="feedback_no_app_available">Nenhum app disponível para abrir este link</string>
@@ -670,25 +600,12 @@
     <string name="toggle_legacy_android_aliases">Duplicar chaves e rótulos legados do Android</string>
     <string name="schedule_enable_scheduled_exports">Ativar exportações agendadas</string>
     <string name="schedule_automatic_export_body">As exportações agendadas são gravadas na pasta de exportação do Android que você selecionou. As exportações manuais continuam disponíveis na aba Exportar.</string>
-    <string name="schedule_background_note">Observação: o Android controla o momento exato da execução em segundo plano. Mantenha o acesso em segundo plano do Health Connect ativado e exclua o Health.md da otimização de bateria para que as exportações agendadas sejam confiáveis.</string>
     <string name="schedule_frequency">Frequência</string>
-    <string name="schedule_frequency_15_minutes">A cada 15 min</string>
-    <string name="schedule_frequency_every_minutes">A cada %1$d min</string>
-    <string name="schedule_frequency_hourly">A cada hora</string>
-    <string name="schedule_frequency_every_hours">A cada %1$d h</string>
-    <string name="schedule_frequency_daily">Diariamente</string>
-    <string name="schedule_frequency_every_days">A cada %1$d dias</string>
-    <string name="schedule_frequency_weekly">Semanalmente</string>
-    <string name="schedule_frequency_every_weeks">A cada %1$d semanas</string>
     <string name="schedule_time">Horário</string>
-    <string name="schedule_time_period_am">AM</string>
-    <string name="schedule_time_period_pm">PM</string>
     <string name="schedule_date_window">Datas</string>
     <string name="schedule_date_window_past_complete_days">Dias completos anteriores</string>
     <string name="schedule_date_window_today">Hoje</string>
     <string name="schedule_export_past_days">Exportar dias anteriores</string>
-    <string name="schedule_lookback_ios_single">Cada execução exporta os dados de ontem.</string>
-    <string name="schedule_lookback_ios_plural">Cada execução exporta os últimos %1$d dias, terminando ontem.</string>
     <string name="schedule_today_summary">Cada execução exporta os dados de hoje para manter seu arquivo diário atualizado. Use o modo de gravação Sobrescrever ou Atualizar para evitar conteúdo duplicado do mesmo dia.</string>
     <string name="schedule_next_export_at_datetime">Próxima exportação: %1$s</string>
     <string name="background_health_permission_needed_title">É necessário acesso em segundo plano ao Health Connect</string>
@@ -711,7 +628,6 @@
     <string name="scheduled_recovery_blocked_running">Uma recuperação de exportações agendadas já está em andamento.</string>
     <string name="scheduled_recovery_no_pending">Nenhuma data de exportação agendada está pendente de recuperação.</string>
     <string name="scheduled_recovery_result_complete">Recuperação das exportações agendadas concluída.</string>
-    <string name="scheduled_recovery_result_partial">A recuperação exportou %1$d de %2$d datas. Ainda há %3$d pendentes.</string>
     <string name="scheduled_recovery_result_blocked">A recuperação das exportações agendadas ainda não está pronta.</string>
     <string name="not_now">Agora não</string>
     <string name="release_notes_title">Novidades no %s</string>
@@ -722,7 +638,6 @@
     <string name="release_notes_highlight_export_parity">Novos detalhes exclusivos do Android incluem intensidade da atividade, tipos de refeição nos registros de nutrição, períodos menstruais, treinos planejados e amostras granulares, quando disponíveis.</string>
     <string name="release_notes_highlight_templates">As exportações em Markdown, JSON, CSV e Obsidian agora incluem valores de métricas mais completos em todo o catálogo ampliado.</string>
     <string name="release_notes_highlight_workouts">A explicação das permissões do Health Connect foi atualizada para descrever as permissões ampliadas de exportação somente leitura.</string>
-    <string name="release_notes_highlight_accessibility">Os rótulos do TalkBack e as áreas de toque foram melhorados nos fluxos de exportação, agendamento e configurações.</string>
     <string name="export_notification_background_permission_required">As exportações agendadas precisam de acesso em segundo plano do Health Connect. Abra Health.md &gt; Agendamento para ativá-lo.</string>
     <string name="paywall_unlock_button_price">Desbloquear por %s</string>
     <string name="paywall_purchasing">Processando…</string>
@@ -779,7 +694,6 @@
     <string name="privacy_category_history_exports">Usado apenas para exportações manuais grandes, como 90 dias ou todo o período, para que o Health.md possa ler dados do Health Connect mais antigos que a janela padrão de 30 dias</string>
     <string name="privacy_policy_direct_cli">As exportações via Direct CLI só ocorrem depois que você faz o pareamento e se conecta explicitamente ao seu computador. Os registros de saúde são enviados por uma conexão autenticada e criptografada, mantidos de forma privada para permitir a retomada da transferência por no máximo sete dias e excluídos antes disso quando você cancela ou remove o pareamento.</string>
     <string name="privacy_policy_footer">O Health.md não opera uma nuvem de dados de saúde. A atribuição de campanha própria pode enviar UUIDs aleatórios de instalação/evento gerados pelo app e metadados de campanha validados, mas nunca dados de saúde, informações brutas sobre a origem da instalação, IDs de dispositivo, exportações, contas ou caminhos.</string>
-    <string name="privacy_policy_body">O Health.md lê dados do Health Connect apenas para criar as exportações que você solicita. As exportações para pasta vão para o armazenamento selecionado, as exportações para API Endpoint vão diretamente para um serviço que você configura, e uma exportação via Direct CLI conectada explicitamente passa por criptografia autenticada até o seu computador pareado. Separadamente, a atribuição de campanha própria pode associar uma instalação pela Play Store a uma campanha usando UUIDs aleatórios gerados pelo app e metadados de campanha filtrados. Nenhum dado de saúde, informação bruta sobre a origem da instalação, identificador de dispositivo, conteúdo exportado, dado de conta ou caminho de arquivo é incluído.</string>
     <string name="section_export_type">Tipo de exportação</string>
     <string name="export_type_compatibility">Exportação de compatibilidade</string>
     <string name="export_type_compatibility_description">Arquivos diários em Markdown, Bases, JSON ou CSV para fluxos de trabalho existentes do Health.md</string>
@@ -809,9 +723,6 @@
     <string name="raw_snapshot_cancelled_label">Raw Snapshot cancelado</string>
     <string name="raw_snapshot_result_created">Raw Snapshot criado</string>
     <string name="raw_snapshot_result_uploaded">Raw Snapshot enviado</string>
-    <string name="raw_snapshot_result_count">Ações de Raw Snapshot concluídas: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count">Ações de Raw Snapshot: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count">Ações de Raw Snapshot incompletas: %d</string>
     <plurals name="raw_snapshot_diagnostics_reason_count">
         <item quantity="one">%1$s: %2$d ação</item>
         <item quantity="many">%1$s: %2$d ações</item>
@@ -821,7 +732,6 @@
     <string name="raw_snapshot_diagnostics_no_details">Nenhum diagnóstico do Raw Snapshot foi registrado. Verifique o acesso ao provedor e tente novamente o intervalo.</string>
     <string name="raw_snapshot_guidance_provider">Revise o acesso do provedor selecionado e o manifesto do artefato bruto antes de tentar novamente.</string>
     <string name="raw_snapshot_guidance_cancelled">Nenhum artefato bruto foi disponibilizado. Tente novamente quando estiver pronto.</string>
-    <string name="raw_snapshot_history_entry">Ações de Raw Snapshot: %1$d/%2$d \u2022 %3$s a %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">Diagnósticos do Raw Snapshot</string>
     <string name="raw_snapshot_notification_message">Intervalo do Raw Snapshot com término em %1$s: %2$s</string>
     <string name="raw_snapshot_status_complete">concluído</string>
@@ -861,8 +771,6 @@
     <string name="schedule_unlock_required_title">Desbloqueie as exportações agendadas</string>
     <string name="schedule_unlock_required_body">As exportações manuais incluem 10 execuções grátis. As exportações automáticas agendadas estão incluídas no desbloqueio vitalício com pagamento único.</string>
     <string name="schedule_unlock_required_short">Desbloqueie o Health.md para ativar exportações agendadas.</string>
-    <string name="section_schedule_lookback">Período retroativo</string>
-    <string name="schedule_lookback_summary">Em cada execução agendada, são exportados os dias completos até ontem (%1$d no total), além de todas as datas com falha ainda pendentes.</string>
     <string name="export_folder_root_label">Pasta de exportação</string>
     <string name="history_clear_title">Limpar histórico de exportação?</string>
     <string name="history_clear_body">Isso remove todas as entradas locais do histórico de exportação. Os arquivos exportados não são excluídos.</string>
@@ -883,10 +791,6 @@
     <string name="history_detail_failure">Falha</string>
     <string name="history_detail_warning">Aviso</string>
     <string name="history_detail_failed_dates">Datas com falha</string>
-    <string name="clear">Limpar</string>
-    <string name="retry">Tentar novamente</string>
-    <string name="retrying">Tentando novamente…</string>
-    <string name="delete">Excluir</string>
     <string name="section_file_organization">Organização de arquivos</string>
     <string name="health_subfolder_label">Subpasta de saúde</string>
     <string name="folder_organization_label">Pastas automáticas</string>
@@ -1075,12 +979,6 @@
     <string name="feedback_issue_steps_heading">Passos para reproduzir</string>
     <string name="feedback_issue_expected_heading">Comportamento esperado</string>
     <string name="feedback_issue_expected_hint">O que você esperava que acontecesse</string>
-    <string name="automation_history_permissions_missing">Permissões do Health Connect ausentes</string>
-    <plurals name="automation_history_failed_dates">
-        <item quantity="one">%1$d data com falha</item>
-        <item quantity="many">%1$d datas com falha</item>
-        <item quantity="other">%1$d datas com falha</item>
-    </plurals>
     <string name="action_edit_endpoint">Editar endpoint da API</string>
     <string name="history_date_range">%1$s – %2$s</string>
     <string name="history_failed_date_reason">%1$s: %2$s</string>
@@ -1110,13 +1008,7 @@
     <string name="schedule_target_folder_choose">Escolha uma pasta na tela Exportar</string>
     <string name="schedule_target_folder_ready">Grave os arquivos agendados na pasta selecionada do dispositivo</string>
     <string name="schedule_toggle_time_period">Alternar AM ou PM</string>
-    <string name="scheduled_recovery_history_cancelled">Recuperação cancelada; as datas ainda não processadas permanecem pendentes.</string>
     <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
-    <plurals name="export_history_failed_dates_pending_retry">
-        <item quantity="one">%1$d data com falha aguardando nova tentativa</item>
-        <item quantity="many">%1$d datas com falha aguardando nova tentativa</item>
-        <item quantity="other">%1$d datas com falha aguardando nova tentativa</item>
-    </plurals>
     <plurals name="export_notification_days_exported">
         <item quantity="one">%1$d/%2$d dia exportado para %3$s</item>
         <item quantity="many">%1$d/%2$d dias exportados para %3$s</item>
@@ -1187,11 +1079,6 @@
         <item quantity="many">Cada execução exporta os últimos %1$d dias completos, até ontem.</item>
         <item quantity="other">Cada execução exporta os últimos %1$d dias completos, até ontem.</item>
     </plurals>
-    <plurals name="scheduled_recovery_history_failed_dates">
-        <item quantity="one">A recuperação foi concluída com %1$d data com falha ainda pendente.</item>
-        <item quantity="many">A recuperação foi concluída com %1$d datas com falha ainda pendentes.</item>
-        <item quantity="other">A recuperação foi concluída com %1$d datas com falha ainda pendentes.</item>
-    </plurals>
     <plurals name="scheduled_recovery_result_exported_dates">
         <item quantity="one">A recuperação exportou uma data (%1$d/%2$d).</item>
         <item quantity="many">A recuperação exportou %1$d de %2$d datas.</item>
@@ -1203,7 +1090,7 @@
         <item quantity="other">%1$d datas permanecem pendentes.</item>
     </plurals>
     <string name="export_api_action_edit">Editar</string>
-    <string name="export_api_authorization_secure">Authorization armazenado com segurança</string>
+    <string name="export_api_authorization_secure">Autorização armazenada com segurança</string>
     <string name="export_api_compatibility_mode_description">As exportações de API sempre enviam JSON. Aplicam-se configurações de métricas e séries temporais; caminhos de arquivo e modos de gravação não.</string>
     <string name="export_api_configure_endpoint">Configurar um endpoint de API</string>
     <string name="export_api_error_invalid_endpoint">Insira um URL HTTP ou HTTPS válido sem um fragmento ou nome de usuário/senha incorporados.</string>
@@ -1342,4 +1229,160 @@
         <item quantity="many">Ações de Raw Snapshot concluídas: %1$d/%2$d</item>
         <item quantity="other">Ações de Raw Snapshot concluídas: %1$d/%2$d</item>
     </plurals>
+
+    <!-- Clinician Report -->
+
+    <!-- Clinician Report: locale-pinned, local-only workflow and document vocabulary. -->
+    <string name="clinician_report_title">Relatório clínico</string>
+    <string name="clinician_report_entry_subtitle">Crie um PDF privado com um resumo de saúde para compartilhar com um profissional de saúde.</string>
+    <string name="clinician_report_intro">Escolha um período e as medições, visualize um resumo objetivo e gere um PDF inteiramente neste dispositivo.</string>
+    <string name="clinician_report_period">Período do relatório</string>
+    <string name="clinician_report_7_days">7 dias</string>
+    <string name="clinician_report_30_days">30 dias</string>
+    <string name="clinician_report_90_days">90 dias</string>
+    <string name="clinician_report_custom">Personalizado</string>
+    <string name="clinician_report_select_date">Selecionar data</string>
+    <string name="clinician_report_start_date">Data de início</string>
+    <string name="clinician_report_end_date">Data de término</string>
+    <string name="clinician_report_metrics">Medições de saúde</string>
+    <string name="clinician_report_detail">Detalhes do relatório</string>
+    <string name="clinician_report_summary_only">Somente resumo</string>
+    <string name="clinician_report_summary_readings">Resumo + medições individuais</string>
+    <string name="clinician_report_display_name">Nome de exibição (opcional)</string>
+    <string name="clinician_report_display_name_hint">Usado somente neste relatório e não salvo pelo Health.md.</string>
+    <string name="clinician_report_preview">Visualizar relatório</string>
+    <string name="clinician_report_select_metric">Selecione pelo menos uma medição.</string>
+    <string name="clinician_report_preview_heading">Prévia do relatório</string>
+    <string name="clinician_report_generate_pdf">Gerar PDF</string>
+    <string name="clinician_report_share_pdf">Compartilhar PDF</string>
+    <string name="clinician_report_save_pdf">Salvar PDF</string>
+    <string name="clinician_report_share_or_save_pdf">Compartilhar ou salvar PDF</string>
+    <string name="clinician_report_preparing">Preparando relatório…</string>
+    <string name="clinician_report_generating">Gerando PDF…</string>
+    <string name="clinician_report_close">Fechar</string>
+    <string name="clinician_report_selected">Selecionado</string>
+    <string name="clinician_report_not_selected">Não selecionado</string>
+    <string name="clinician_report_metric_blood_pressure">Pressão arterial</string>
+    <string name="clinician_report_metric_resting_heart_rate">Frequência cardíaca em repouso</string>
+    <string name="clinician_report_metric_heart_rate">Frequência cardíaca</string>
+    <string name="clinician_report_metric_weight">Peso</string>
+    <string name="clinician_report_metric_blood_glucose">Glicemia</string>
+    <string name="clinician_report_metric_oxygen_saturation">Saturação de oxigênio</string>
+    <string name="clinician_report_metric_respiratory_rate">Frequência respiratória</string>
+    <string name="clinician_report_metric_body_temperature">Temperatura corporal</string>
+    <string name="clinician_report_metric_sleep_duration">Duração do sono</string>
+    <string name="clinician_report_metric_steps">Passos</string>
+    <string name="clinician_report_metric_workouts">Exercício / Treinos</string>
+    <string name="clinician_report_document_title">Resumo de saúde</string>
+    <string name="clinician_report_no_data">Não há dados disponíveis para esta medição durante o período selecionado.</string>
+    <string name="clinician_report_disclaimer">Este relatório resume os dados de saúde selecionados e autorizados pelo paciente. O Health.md não diagnostica condições nem fornece orientação médica. A integridade dos dados depende dos dispositivos conectados, aplicativos, permissões e práticas de registro.</string>
+    <string name="clinician_report_attribution">Gerado de forma privada com o Health.md a partir de dados de saúde autorizados pelo paciente.</string>
+    <string name="clinician_report_practice_line">Para instituições de saúde interessadas em receber relatórios gerados por pacientes antes das consultas: %1$s</string>
+    <string name="clinician_report_manual_entry">Entrada manual</string>
+    <string name="clinician_report_manual_entry_source">%1$s (entrada manual)</string>
+    <string name="clinician_report_fact_readings">Medições</string>
+    <string name="clinician_report_fact_available_values">Valores disponíveis</string>
+    <string name="clinician_report_fact_daily_values">Valores diários</string>
+    <string name="clinician_report_fact_days_with_data">Dias com dados</string>
+    <string name="clinician_report_fact_average">Média</string>
+    <string name="clinician_report_fact_median">Mediana</string>
+    <string name="clinician_report_fact_range">Intervalo</string>
+    <string name="clinician_report_fact_most_recent">Mais recente</string>
+    <string name="clinician_report_fact_first">Primeiro</string>
+    <string name="clinician_report_fact_change">Variação no período</string>
+    <string name="clinician_report_fact_total">Total</string>
+    <string name="clinician_report_fact_average_data_days">Média nos dias com dados</string>
+    <string name="clinician_report_fact_nights_with_data">Noites com dados</string>
+    <string name="clinician_report_fact_median_sleep">Duração mediana do sono</string>
+    <string name="clinician_report_fact_sessions">Sessões</string>
+    <string name="clinician_report_fact_total_duration">Duração total</string>
+    <string name="clinician_report_fact_workout_type">Por tipo de treino</string>
+    <string name="clinician_report_table_blood_pressure">Medições de pressão arterial</string>
+    <string name="clinician_report_table_metric_readings">Medições de %1$s</string>
+    <string name="clinician_report_table_sleep">Durações do sono</string>
+    <string name="clinician_report_table_workouts">Sessões de treino</string>
+    <string name="clinician_report_column_date">Data</string>
+    <string name="clinician_report_column_time">Hora</string>
+    <string name="clinician_report_column_systolic">Sistólica</string>
+    <string name="clinician_report_column_diastolic">Diastólica</string>
+    <string name="clinician_report_column_source">Fonte</string>
+    <string name="clinician_report_column_value">Valor</string>
+    <string name="clinician_report_column_weight">Peso</string>
+    <string name="clinician_report_column_steps">Passos</string>
+    <string name="clinician_report_column_night">Noite</string>
+    <string name="clinician_report_column_duration">Duração</string>
+    <string name="clinician_report_column_type">Tipo</string>
+    <string name="clinician_report_value_on_date">%1$s em %2$s</string>
+    <string name="clinician_report_coverage">Há dados disponíveis em %1$d de %2$d dias. O Health.md não teve dados disponíveis nos %3$d dias restantes.</string>
+    <string name="clinician_report_sources">Fontes: %1$s</string>
+    <string name="clinician_report_step_total">%1$s passos</string>
+    <string name="clinician_report_step_average">%1$s passos/dia</string>
+    <string name="clinician_report_duration_hours">%1$d h</string>
+    <string name="clinician_report_duration_minutes">%1$d min</string>
+    <string name="clinician_report_duration_hours_minutes">%1$s %2$s</string>
+    <string name="clinician_report_workout_breakdown_item">%1$s: %2$d</string>
+    <string name="clinician_report_detail_readings_count">%1$d medições individuais serão incluídas no PDF.</string>
+    <string name="clinician_report_metadata_period">Período do relatório</string>
+    <string name="clinician_report_metadata_generated">Gerado</string>
+    <string name="clinician_report_metadata_timezone">Fuso horário</string>
+    <string name="clinician_report_metadata_patient">Paciente</string>
+    <string name="clinician_report_availability_note">Nota sobre a disponibilidade dos dados</string>
+    <string name="clinician_report_about">Sobre este relatório</string>
+    <string name="clinician_report_page_footer">Health.md • Página %1$d</string>
+    <string name="clinician_report_warning_read_failure">Não foi possível ler alguns dados de saúde selecionados. Seções vazias podem indicar acesso indisponível ou nenhum registro retornado.</string>
+    <string name="clinician_report_warning_source_failure_date">Não foi possível ler algumas fontes de dados de saúde conectadas em %1$s.</string>
+    <string name="clinician_report_warning_apple_read_failure_date">Não foi possível ler alguns dados selecionados do Apple Health em %1$s. Seções vazias podem indicar acesso indisponível ou nenhum registro retornado.</string>
+    <string name="clinician_report_warning_apple_source_failure_date">Não foi possível ler alguns registros de fontes selecionados do Apple Health em %1$s.</string>
+    <string name="clinician_report_warning_apple_integrity_date">O Apple Health informou um aviso de integridade dos registros de origem em %1$s.</string>
+    <string name="clinician_report_warning_apple_summary_fallback">Os registros do Apple Health por fonte não estavam disponíveis em parte deste relatório; os valores resumidos são usados quando disponíveis.</string>
+    <string name="clinician_report_error_prepare_android">Não foi possível preparar o relatório. Verifique o acesso aos dados de saúde e tente novamente.</string>
+    <string name="clinician_report_error_prepare_apple">Não foi possível preparar o relatório. Verifique o acesso ao Apple Health e tente novamente.</string>
+    <string name="clinician_report_error_pdf">Não foi possível gerar o PDF. Tente novamente.</string>
+    <string name="clinician_report_saved">Resumo de saúde salvo</string>
+    <string name="clinician_report_error_save">Não foi possível salvar o PDF. Escolha outro local e tente novamente.</string>
+    <string name="clinician_report_error_open_destination">Não foi possível abrir o documento selecionado.</string>
+    <string name="clinician_report_accessibility_hint">Criar um PDF privado com um resumo de saúde neste dispositivo</string>
+    <string name="clinician_report_workout_type_running">Corrida</string>
+    <string name="clinician_report_workout_type_walking">Caminhada</string>
+    <string name="clinician_report_workout_type_cycling">Ciclismo</string>
+    <string name="clinician_report_workout_type_swimming">Natação</string>
+    <string name="clinician_report_workout_type_hiking">Trilha</string>
+    <string name="clinician_report_workout_type_yoga">Ioga</string>
+    <string name="clinician_report_workout_type_strength_training">Treino de força</string>
+    <string name="clinician_report_workout_type_core_training">Treino de core</string>
+    <string name="clinician_report_workout_type_hiit">HIIT</string>
+    <string name="clinician_report_workout_type_elliptical">Elíptico</string>
+    <string name="clinician_report_workout_type_rowing">Remo</string>
+    <string name="clinician_report_workout_type_stair_climbing">Subida de escadas</string>
+    <string name="clinician_report_workout_type_pilates">Pilates</string>
+    <string name="clinician_report_workout_type_dance">Dança</string>
+    <string name="clinician_report_workout_type_cooldown">Desaquecimento</string>
+    <string name="clinician_report_workout_type_mixed_cardio">Cardio misto</string>
+    <string name="clinician_report_workout_type_pickleball">Pickleball</string>
+    <string name="clinician_report_workout_type_tennis">Tênis</string>
+    <string name="clinician_report_workout_type_badminton">Badminton</string>
+    <string name="clinician_report_workout_type_table_tennis">Tênis de mesa</string>
+    <string name="clinician_report_workout_type_golf">Golfe</string>
+    <string name="clinician_report_workout_type_soccer">Futebol</string>
+    <string name="clinician_report_workout_type_basketball">Basquete</string>
+    <string name="clinician_report_workout_type_baseball">Beisebol</string>
+    <string name="clinician_report_workout_type_softball">Softbol</string>
+    <string name="clinician_report_workout_type_volleyball">Vôlei</string>
+    <string name="clinician_report_workout_type_american_football">Futebol americano</string>
+    <string name="clinician_report_workout_type_rugby">Rúgbi</string>
+    <string name="clinician_report_workout_type_hockey">Hóquei</string>
+    <string name="clinician_report_workout_type_lacrosse">Lacrosse</string>
+    <string name="clinician_report_workout_type_skating">Patinação</string>
+    <string name="clinician_report_workout_type_snow_sports">Esportes na neve</string>
+    <string name="clinician_report_workout_type_water_sports">Esportes aquáticos</string>
+    <string name="clinician_report_workout_type_wheelchair">Atividade em cadeira de rodas</string>
+    <string name="clinician_report_workout_type_martial_arts">Artes marciais</string>
+    <string name="clinician_report_workout_type_boxing">Boxe</string>
+    <string name="clinician_report_workout_type_kickboxing">Kickboxing</string>
+    <string name="clinician_report_workout_type_wrestling">Luta</string>
+    <string name="clinician_report_workout_type_climbing">Escalada</string>
+    <string name="clinician_report_workout_type_jump_rope">Pular corda</string>
+    <string name="clinician_report_workout_type_flexibility">Flexibilidade</string>
+    <string name="clinician_report_workout_type_other">Outro</string>
+    <string name="clinician_report_unit_respiratory_rate">respirações/min</string>
 </resources>

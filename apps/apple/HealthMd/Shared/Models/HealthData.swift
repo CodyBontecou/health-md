@@ -1368,6 +1368,12 @@ nonisolated struct ExportPartialFailure: Codable, Equatable, Sendable {
     var summary: String {
         "\(dataType) for \(dateRangeDescription): \(errorDescription)"
     }
+
+    /// Localized UI framing around raw data-type, date-range, and technical error detail.
+    /// Keep `summary` unchanged for exports, protocols, and query-context consumers.
+    var localizedSummary: String {
+        String(localized: "\(dataType) for \(dateRangeDescription): \(errorDescription)")
+    }
 }
 
 nonisolated struct HealthData: Codable, Sendable {

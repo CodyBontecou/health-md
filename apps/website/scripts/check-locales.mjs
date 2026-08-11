@@ -50,7 +50,7 @@ assert.equal(defaultLocale, 'en');
 assert.deepEqual(enabledLocales, expectedLocales);
 assert.deepEqual(publishedLocales('landing').map(({ code }) => code), expectedLocales);
 assert.deepEqual(publishedLocales('docs').map(({ code }) => code), expectedLocales);
-assert.deepEqual(publishedLocales('legal').map(({ code }) => code), ['en', 'es']);
+assert.deepEqual(publishedLocales('legal').map(({ code }) => code), expectedLocales);
 assert.deepEqual(
   publishedLocales('redirect').map(({ code }) => code),
   expectedLocales.filter((code) => code !== defaultLocale),
@@ -425,18 +425,25 @@ function tagText(html, tag) {
   return tagBlocks(html, tag)[0]?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function legalSectionIds(html) {
+  return [...html.matchAll(/<section\b[^>]*\bid="([^"]+)"/gi)].map((match) => match[1]);
+}
+
 for (const locale of localeConfigs.filter(({ code }) => code !== defaultLocale)) {
   for (const filename of ['privacy-policy.html', 'terms-of-service.html']) {
     const [source, translation] = await Promise.all([
       fs.readFile(path.join(ROOT, filename), 'utf8'),
       fs.readFile(path.join(ROOT, locale.path, filename), 'utf8'),
     ]);
-    assert.equal(countTag(translation, 'h2'), countTag(source, 'h2'), `${locale.code}/${filename} must preserve every legal section`);
-    assert.equal(countTag(translation, 'li'), countTag(source, 'li'), `${locale.code}/${filename} must preserve every legal list item`);
+    if (locale.surfaces.legal) {
+      assert.equal(countTag(translation, 'h2'), countTag(source, 'h2'), `${locale.code}/${filename} must preserve every legal section`);
+      assert.equal(countTag(translation, 'li'), countTag(source, 'li'), `${locale.code}/${filename} must preserve every legal list item`);
+      assert.deepEqual(legalSectionIds(translation), legalSectionIds(source), `${locale.code}/${filename} must preserve every legal section id`);
+      assert.deepEqual(tagBlocks(translation, 'style'), tagBlocks(source, 'style'), `${locale.code}/${filename} must preserve inline styles`);
+      assert.deepEqual(tagBlocks(translation, 'script'), tagBlocks(source, 'script'), `${locale.code}/${filename} must preserve inline scripts`);
+    }
     assert.notEqual(tagText(translation, 'title'), tagText(source, 'title'), `${locale.code}/${filename} must translate its title`);
     assert.notEqual(tagText(translation, 'h1'), tagText(source, 'h1'), `${locale.code}/${filename} must translate its heading`);
-    assert.deepEqual(tagBlocks(translation, 'style'), tagBlocks(source, 'style'), `${locale.code}/${filename} must preserve styles`);
-    assert.deepEqual(tagBlocks(translation, 'script'), tagBlocks(source, 'script'), `${locale.code}/${filename} must preserve scripts`);
     assert.match(
       translation,
       new RegExp(`<html\\b(?=[^>]*\\blang="${locale.lang}")(?=[^>]*\\bdir="${locale.dir}")[^>]*>`),
@@ -462,7 +469,10 @@ for (const locale of localeConfigs.filter(({ code }) => code !== defaultLocale))
       new RegExp(`<meta\\b(?=[^>]*\\bproperty="og:locale")(?=[^>]*\\bcontent="${escapeRegExp(locale.ogLocale)}")[^>]*>`),
       `${locale.code}/${filename} must keep its Open Graph locale`,
     );
-    assert.ok(translation.includes('.language-selector {'), `${locale.code}/${filename} must style its language selector`);
+    assert.ok(
+      translation.includes('.language-selector {') || translation.includes('assets/legal.css'),
+      `${locale.code}/${filename} must style its language selector`,
+    );
     assert.match(
       translation,
       new RegExp(`<meta\\b(?=[^>]*\\bname="robots")(?=[^>]*\\bcontent="${locale.surfaces.legal ? 'index,follow' : 'noindex,follow'}")[^>]*>`),

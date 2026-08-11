@@ -201,8 +201,16 @@
     <loc>https://healthmd.app/privacy-policy.html</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
     <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-06</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -210,8 +218,152 @@
     <loc>https://healthmd.app/es/privacy-policy.html</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
     <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/de/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/fr/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/pt-br/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/it/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/nl/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/ja/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/ko/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/zh-hans/privacy-policy.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/privacy-policy.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html" />
+    <lastmod>2026-08-06</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -219,8 +371,16 @@
     <loc>https://healthmd.app/terms-of-service.html</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
     <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-06</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
@@ -228,8 +388,152 @@
     <loc>https://healthmd.app/es/terms-of-service.html</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
     <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/de/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/fr/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/pt-br/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/it/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/nl/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/ja/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/ko/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  <url>
+    <loc>https://healthmd.app/zh-hans/terms-of-service.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://healthmd.app/de/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://healthmd.app/fr/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://healthmd.app/pt-br/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://healthmd.app/it/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="nl" href="https://healthmd.app/nl/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://healthmd.app/zh-hans/terms-of-service.html" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html" />
+    <lastmod>2026-08-06</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>

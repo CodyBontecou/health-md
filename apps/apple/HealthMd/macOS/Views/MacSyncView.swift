@@ -10,6 +10,7 @@ import SwiftUI
 /// listens, validates the local destination, writes received jobs, and exposes
 /// recent activity.
 struct MacSyncView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var vaultManager: VaultManager
     @EnvironmentObject var healthDataStore: HealthDataStore
@@ -26,41 +27,68 @@ struct MacSyncView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.s8) {
-                    heroSection
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.s8) {
+                        heroSection
+                            .id("marketing-sync")
 
-                    if !syncService.discoveredPeers.isEmpty && syncService.connectionState != .connected {
-                        nearbyDevicesCard
+                        if let progress = activeExportProgress {
+                            activeExportCard(progress)
+                                .transition(
+                                    reduceMotion
+                                        ? .opacity
+                                        : .move(edge: .top).combined(with: .opacity)
+                                )
+                        }
+
+                        if !syncService.discoveredPeers.isEmpty && displayConnectionState != .connected {
+                            nearbyDevicesCard
+                        }
+
+                        dashboardGrid(width: proxy.size.width)
+
+                        if let error = displayLastError {
+                            errorBanner(error)
+                        }
                     }
-
-                    dashboardGrid(width: proxy.size.width)
-
-                    if let error = syncService.lastError {
-                        errorBanner(error)
-                    }
+                    .padding(.horizontal, horizontalPadding(for: proxy.size.width))
+                    .padding(.vertical, Spacing.s8)
+                    .frame(maxWidth: 1_200, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
-                .padding(.horizontal, horizontalPadding(for: proxy.size.width))
-                .padding(.vertical, Spacing.s8)
-                .frame(maxWidth: 1_200, alignment: .topLeading)
-                .frame(maxWidth: .infinity, alignment: .top)
+                .background(GeistMacBackdrop())
+                #if DEBUG
+                .task {
+                    guard MacMarketingCapture.isActive,
+                          let target = MacMarketingCapture.scrollTarget else { return }
+                    try? await Task.sleep(for: .milliseconds(650))
+                    scrollProxy.scrollTo(target, anchor: .top)
+                }
+                #endif
             }
-            .background(GeistMacBackdrop())
         }
         .foregroundStyle(Color.textPrimary)
         .tint(Color.accent)
+        .animation(
+            reduceMotion ? nil : AnimationTimings.standard,
+            value: activeExportProgress
+        )
         .onAppear {
             receivingPaused = false
+            #if DEBUG
+            if MacMarketingCapture.isActive { return }
+            #endif
             syncService.startBrowsing()
             trackMacSetupMilestones()
         }
         .onChange(of: vaultManager.vaultURL) { _, _ in
             trackMacSetupMilestones()
         }
-        .onChange(of: syncService.connectionState) { _, _ in
+        .onChange(of: displayConnectionState) { _, _ in
             trackMacSetupMilestones()
         }
-        .onChange(of: syncService.remoteCapabilities) { _, _ in
+        .onChange(of: displayRemoteCapabilities) { _, _ in
             trackMacSetupMilestones()
         }
         .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
@@ -179,7 +207,7 @@ struct MacSyncView: View {
                                 .tracking(-0.9)
                                 .accessibilityAddTraits(.isHeader)
 
-                            Text("Receive Health.md exports from your iPhone and save Markdown, JSON, or CSV files directly into your vault.")
+                            Text("Receive Health.md exports from your iPhone and save Markdown, JSON, or CSV files directly into your destination folder.")
                                 .font(Typography.body())
                                 .foregroundStyle(Color.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -208,25 +236,33 @@ struct MacSyncView: View {
                 ) {
                     GeistMetricTile(
                         icon: "iphone",
-                        title: "iPhone",
-                        value: syncService.connectionState == .connected ? (syncService.connectedPeerName ?? "Connected") : "Listening",
-                        detail: syncService.connectionState == .connected ? "Local network" : "Open Health.md on iPhone",
-                        color: syncService.connectionState == .connected ? Color.success : Color.textMuted
+                        title: String(localized: "iPhone"),
+                        value: displayConnectionState == .connected
+                            ? (displayConnectedPeerName ?? String(localized: "Connected"))
+                            : String(localized: "Listening"),
+                        detail: displayConnectionState == .connected
+                            ? String(localized: "Local network")
+                            : String(localized: "Open Health.md on iPhone"),
+                        color: displayConnectionState == .connected ? Color.success : Color.textMuted
                     )
 
                     GeistMetricTile(
                         icon: "folder",
-                        title: "Destination",
-                        value: vaultManager.vaultURL == nil ? "Choose Folder" : vaultManager.vaultName,
-                        detail: folderAccessHealthy ? "Ready to write" : "Required before exports",
+                        title: String(localized: "Destination"),
+                        value: vaultManager.vaultURL == nil
+                            ? String(localized: "Choose Folder")
+                            : vaultManager.vaultName,
+                        detail: folderAccessHealthy
+                            ? String(localized: "Ready to write")
+                            : String(localized: "Required before exports"),
                         color: folderAccessHealthy ? Color.success : Color.warning
                     )
 
                     GeistMetricTile(
                         icon: "internaldrive",
-                        title: "Storage",
+                        title: String(localized: "Storage"),
                         value: storageSummary.shortFree,
-                        detail: storageSummary.usedPercentText + " used",
+                        detail: String(localized: "\(storageSummary.usedPercentText) used"),
                         color: Color.textSecondary
                     )
                 }
@@ -238,11 +274,235 @@ struct MacSyncView: View {
         Button {
             toggleReceivingPaused()
         } label: {
-            Label(receivingPaused ? "Resume Receiving" : "Pause Receiving",
-                  systemImage: receivingPaused ? "play.fill" : "pause.fill")
+            Label(
+                receivingPaused
+                    ? String(localized: "Resume Receiving")
+                    : String(localized: "Pause Receiving"),
+                systemImage: receivingPaused ? "play.fill" : "pause.fill"
+            )
         }
         .buttonStyle(GeistMacButtonStyle(kind: .primary))
-        .disabled(syncService.connectionState == .connecting)
+        .disabled(displayConnectionState == .connecting)
+    }
+
+    // MARK: - Active Export
+
+    private var activeExportProgress: MacExportProgress? {
+        guard let progress = syncService.activeMacExportProgress,
+              ![MacExportPhase.completed, .failed, .cancelled].contains(progress.phase) else {
+            return nil
+        }
+        return progress
+    }
+
+    private func activeExportCard(_ progress: MacExportProgress) -> some View {
+        let clampedProgress = min(max(progress.fractionComplete, 0), 0.99)
+        let percentage = Int((clampedProgress * 100).rounded())
+
+        return GeistMacCard(padding: Spacing.s6) {
+            VStack(alignment: .leading, spacing: Spacing.s6) {
+                HStack(alignment: .center, spacing: Spacing.s4) {
+                    Image(systemName: exportPhaseIcon(progress.phase))
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(Color.accent)
+                        .frame(width: 48, height: 48)
+                        .background(
+                            Color.accentSubtle,
+                            in: RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                                .strokeBorder(Color.accent.opacity(0.25), lineWidth: 1)
+                        )
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        HStack(spacing: Spacing.s2) {
+                            Text(exportPhaseTitle(progress.phase))
+                                .font(Typography.heading20())
+                                .foregroundStyle(Color.textPrimary)
+                                .accessibilityAddTraits(.isHeader)
+
+                            Text(String(localized: "In Progress"))
+                                .font(Typography.label())
+                                .foregroundStyle(Color.accent)
+                                .padding(.horizontal, Spacing.s2)
+                                .padding(.vertical, 3)
+                                .background(Color.accentSubtle, in: Capsule())
+                                .overlay(Capsule().strokeBorder(Color.accent.opacity(0.25), lineWidth: 1))
+                        }
+
+                        Text(localizedProgressMessage(progress))
+                            .font(Typography.body())
+                            .foregroundStyle(Color.textSecondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: Spacing.s4)
+
+                    if progress.totalDays > 0 {
+                        Text(String(localized: "\(percentage) percent complete"))
+                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.textPrimary)
+                            .monospacedDigit()
+                    } else {
+                        VStack(alignment: .trailing, spacing: Spacing.s1) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(String(localized: "In Progress"))
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(String(localized: "Export in Progress"))
+                    }
+                }
+
+                exportPhaseRail(progress)
+
+                if progress.totalDays > 0 {
+                    ProgressView(value: clampedProgress)
+                        .progressViewStyle(.linear)
+                        .tint(Color.accent)
+                        .accessibilityLabel(String(localized: "Export progress"))
+                        .accessibilityValue(String(localized: "\(percentage) percent complete"))
+                } else {
+                    ProgressView()
+                        .progressViewStyle(.linear)
+                        .tint(Color.accent)
+                        .accessibilityLabel(String(localized: "Export in Progress"))
+                }
+
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.s3)],
+                    alignment: .leading,
+                    spacing: Spacing.s3
+                ) {
+                    if progress.totalDays > 0 {
+                        GeistInfoChip(
+                            icon: "calendar",
+                            title: String(localized: "Source days processed"),
+                            value: "\(min(max(progress.processedDays, 0), progress.totalDays)) / \(progress.totalDays)",
+                            color: Color.textSecondary
+                        )
+                    }
+
+                    GeistInfoChip(
+                        icon: "doc.on.doc",
+                        title: String(localized: "Files Exported"),
+                        value: "\(max(progress.filesWritten, 0))",
+                        color: progress.filesWritten > 0 ? Color.success : Color.textSecondary
+                    )
+
+                    GeistInfoChip(
+                        icon: "folder",
+                        title: String(localized: "Destination"),
+                        value: vaultManager.vaultURL == nil
+                            ? String(localized: "Mac folder")
+                            : vaultManager.vaultName,
+                        color: Color.textSecondary
+                    )
+                }
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
+                .strokeBorder(Color.accent.opacity(0.28), lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.Mac.exportActivity)
+    }
+
+    private func exportPhaseRail(_ progress: MacExportProgress) -> some View {
+        let currentIndex = exportPhaseIndex(progress.phase)
+        let steps: [(title: String, icon: String)] = [
+            (String(localized: "Receiving export"), "arrow.down.doc"),
+            (String(localized: "Validating export"), "checkmark.shield"),
+            (String(localized: "Preparing export"), "gearshape.2"),
+            (String(localized: "Writing export files"), "externaldrive")
+        ]
+
+        return HStack(alignment: .top, spacing: 0) {
+            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                let isComplete = index < currentIndex
+                let isCurrent = index == currentIndex
+                let stepColor = isComplete ? Color.success : (isCurrent ? Color.accent : Color.textMuted)
+
+                VStack(spacing: Spacing.s2) {
+                    HStack(spacing: 0) {
+                        Rectangle()
+                            .fill(index == 0
+                                  ? Color.clear
+                                  : (index <= currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                            .frame(height: 2)
+
+                        ZStack {
+                            Circle()
+                                .fill(isComplete || isCurrent ? stepColor.opacity(0.14) : Color.bgSecondary)
+                            Circle()
+                                .strokeBorder(stepColor.opacity(isComplete || isCurrent ? 0.75 : 0.35), lineWidth: 1)
+                            Image(systemName: isComplete ? "checkmark" : step.icon)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(stepColor)
+                        }
+                        .frame(width: 28, height: 28)
+
+                        Rectangle()
+                            .fill(index == steps.count - 1
+                                  ? Color.clear
+                                  : (index < currentIndex ? Color.success.opacity(0.65) : Color.borderDefault))
+                            .frame(height: 2)
+                    }
+
+                    Text(step.title)
+                        .font(Typography.label())
+                        .foregroundStyle(stepColor)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(step.title)
+                .accessibilityValue(
+                    isComplete
+                        ? String(localized: "Done")
+                        : (isCurrent ? String(localized: "In Progress") : String(localized: "Pending"))
+                )
+            }
+        }
+    }
+
+    private func exportPhaseIndex(_ phase: MacExportPhase) -> Int {
+        switch phase {
+        case .receiving: return 0
+        case .validating: return 1
+        case .exporting: return 2
+        case .writing: return 3
+        case .completed, .failed, .cancelled: return 3
+        }
+    }
+
+    private func exportPhaseTitle(_ phase: MacExportPhase) -> String {
+        switch phase {
+        case .receiving: return String(localized: "Receiving export")
+        case .validating: return String(localized: "Validating export")
+        case .exporting: return String(localized: "Preparing export")
+        case .writing: return String(localized: "Writing export files")
+        case .completed: return String(localized: "Export complete")
+        case .failed: return String(localized: "Export failed")
+        case .cancelled: return String(localized: "Export cancelled")
+        }
+    }
+
+    private func exportPhaseIcon(_ phase: MacExportPhase) -> String {
+        switch phase {
+        case .receiving: return "arrow.down.doc.fill"
+        case .validating: return "checkmark.shield.fill"
+        case .exporting: return "gearshape.2.fill"
+        case .writing: return "externaldrive.fill.badge.checkmark"
+        case .completed: return "checkmark.circle.fill"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .cancelled: return "xmark.circle.fill"
+        }
     }
 
     // MARK: - Cards
@@ -251,8 +511,8 @@ struct MacSyncView: View {
         GeistMacCard(padding: Spacing.s4) {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 GeistSectionHeader(
-                    title: "Nearby iPhones",
-                    subtitle: "Select a discovered device to connect over the local network."
+                    title: String(localized: "Nearby iPhones"),
+                    subtitle: String(localized: "Select a discovered device to connect over the local network.")
                 )
 
                 HStack(spacing: Spacing.s2) {
@@ -277,14 +537,22 @@ struct MacSyncView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Destination Folder",
-                    subtitle: "Where this Mac writes files received from iPhone."
+                    title: String(localized: "Destination Folder"),
+                    subtitle: String(localized: "Where this Mac writes files received from iPhone.")
                 ) {
-                    Button(vaultManager.vaultURL == nil ? "Choose Folder" : "Change Folder") {
+                    Button(
+                        vaultManager.vaultURL == nil
+                            ? String(localized: "Choose Folder")
+                            : String(localized: "Change Folder")
+                    ) {
                         chooseDestinationFolder()
                     }
                     .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
-                    .accessibilityLabel(vaultManager.vaultURL == nil ? "Choose destination folder" : "Change destination folder")
+                    .accessibilityLabel(
+                        vaultManager.vaultURL == nil
+                            ? String(localized: "Choose destination folder")
+                            : String(localized: "Change destination folder")
+                    )
                 }
 
                 HStack(alignment: .center, spacing: Spacing.s4) {
@@ -319,22 +587,28 @@ struct MacSyncView: View {
                 ) {
                     GeistInfoChip(
                         icon: "folder",
-                        title: vaultManager.vaultURL == nil ? "No Folder" : "Folder Exists",
-                        value: vaultManager.vaultURL == nil ? "Required" : (folderExists ? "Ready" : "Missing"),
+                        title: vaultManager.vaultURL == nil
+                            ? String(localized: "No Folder")
+                            : String(localized: "Folder Exists"),
+                        value: vaultManager.vaultURL == nil
+                            ? String(localized: "Required")
+                            : (folderExists ? String(localized: "Ready") : String(localized: "Missing")),
                         color: folderExists ? Color.textSecondary : Color.warning
                     )
 
                     GeistInfoChip(
                         icon: "checkmark.square",
-                        title: "Writable",
-                        value: folderAccessHealthy ? "Verified" : "Needs Access",
+                        title: String(localized: "Writable"),
+                        value: folderAccessHealthy
+                            ? String(localized: "Verified")
+                            : String(localized: "Needs Access"),
                         color: folderAccessHealthy ? Color.success : Color.warning
                     )
 
                     GeistInfoChip(
                         icon: "internaldrive",
                         title: storageSummary.shortFree,
-                        value: storageSummary.usedPercentText + " used",
+                        value: String(localized: "\(storageSummary.usedPercentText) used"),
                         color: Color.textSecondary
                     )
 
@@ -349,6 +623,7 @@ struct MacSyncView: View {
                 StorageUsageBar(summary: storageSummary)
             }
         }
+        .id("marketing-destination")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Destination folder")
         .accessibilityValue(folderAccessibilityValue)
@@ -358,8 +633,8 @@ struct MacSyncView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "System Status",
-                    subtitle: "Connection, permissions, and receiver version."
+                    title: String(localized: "System Status"),
+                    subtitle: String(localized: "Connection, permissions, and receiver version.")
                 ) {
                     Button {
                         syncService.stopBrowsing()
@@ -377,17 +652,21 @@ struct MacSyncView: View {
                 ) {
                     SystemStatusBlock(
                         icon: "antenna.radiowaves.left.and.right",
-                        title: "Receiver",
-                        value: "v\(appVersion)",
-                        badge: receivingPaused ? "Paused" : "Listening",
+                        title: String(localized: "Receiver"),
+                        value: String(localized: "Version \(appVersion)"),
+                        badge: receivingPaused
+                            ? String(localized: "Paused")
+                            : String(localized: "Listening"),
                         color: receivingPaused ? Color.warning : Color.success
                     )
 
                     SystemStatusBlock(
                         icon: "lock.shield",
-                        title: "Permissions",
+                        title: String(localized: "Permissions"),
                         value: permissionValue,
-                        badge: folderAccessHealthy ? "Granted" : "Needs Access",
+                        badge: folderAccessHealthy
+                            ? String(localized: "Granted")
+                            : String(localized: "Needs Access"),
                         color: folderAccessHealthy ? Color.success : Color.warning
                     )
                 }
@@ -416,14 +695,15 @@ struct MacSyncView: View {
                 }
             }
         }
+        .id("marketing-system-status")
     }
 
     private var manualIPConnectionCard: some View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Manual IP / Tailscale",
-                    subtitle: "Use this when your iPhone cannot discover the Mac automatically."
+                    title: String(localized: "Manual IP / Tailscale"),
+                    subtitle: String(localized: "Use this when your iPhone cannot discover the Mac automatically.")
                 ) {
                     Button {
                         syncService.refreshManualIPAddresses()
@@ -457,7 +737,7 @@ struct MacSyncView: View {
                                 Text("Pairing Code")
                                     .font(Typography.label())
                                     .foregroundStyle(Color.textMuted)
-                                Text(syncService.manualIPPairingCode ?? "Generate a code")
+                                Text(syncService.manualIPPairingCode ?? String(localized: "Generate a code"))
                                     .font(.system(size: 28, weight: .bold, design: .monospaced))
                                     .foregroundStyle(Color.textPrimary)
                                     .textSelection(.enabled)
@@ -465,7 +745,11 @@ struct MacSyncView: View {
 
                             Spacer()
 
-                            Button(syncService.manualIPPairingCode == nil ? "Generate Code" : "New Code") {
+                            Button(
+                                syncService.manualIPPairingCode == nil
+                                    ? String(localized: "Generate Code")
+                                    : String(localized: "New Code")
+                            ) {
                                 syncService.generateManualIPPairingCode()
                             }
                             .buttonStyle(GeistMacButtonStyle(kind: .primary, size: .small))
@@ -523,15 +807,15 @@ struct MacSyncView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Setup Steps",
-                    subtitle: "Use your iPhone to configure and send exports."
+                    title: String(localized: "Setup Steps"),
+                    subtitle: String(localized: "Use your iPhone to configure and send exports.")
                 )
 
                 VStack(alignment: .leading, spacing: Spacing.s3) {
-                    setupStep(1, "Open Health.md on iPhone")
-                    setupStep(2, "Enable Mac Destination")
-                    setupStep(3, "Choose a destination folder")
-                    setupStep(4, "Select this Mac and export")
+                    setupStep(1, String(localized: "Open Health.md on iPhone"))
+                    setupStep(2, String(localized: "Enable Mac Destination"))
+                    setupStep(3, String(localized: "Choose a destination folder"))
+                    setupStep(4, String(localized: "Select this Mac and export"))
                 }
 
                 GeistDivider()
@@ -568,8 +852,8 @@ struct MacSyncView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Activity Feed",
-                    subtitle: "Recent sync and export events on this Mac."
+                    title: String(localized: "Activity Feed"),
+                    subtitle: String(localized: "Recent sync and export events on this Mac.")
                 ) {
                     Button("Clear Activity") {
                         showActivityClearConfirmation = true
@@ -587,13 +871,14 @@ struct MacSyncView: View {
                 )
             }
         }
+        .id("marketing-activity")
     }
 
     private var legacyCacheCard: some View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Legacy Cache",
+                    title: String(localized: "Legacy Cache"),
                     subtitle: legacyCacheText
                 )
 
@@ -631,22 +916,53 @@ struct MacSyncView: View {
 
     // MARK: - State
 
+    private var displayConnectionState: SyncConnectionState {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return .connected }
+        #endif
+        return syncService.connectionState
+    }
+
+    private var displayConnectedPeerName: String? {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return String(localized: "iPhone") }
+        #endif
+        return syncService.connectedPeerName
+    }
+
+    private var displayRemoteCapabilities: SyncPeerCapabilities? {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            return SyncPeerCapabilities.current(platform: .iOS)
+        }
+        #endif
+        return syncService.remoteCapabilities
+    }
+
+    private var displayLastError: String? {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return nil }
+        #endif
+        return syncService.lastError
+    }
+
     private var manualIPServerStatusText: String {
         if !syncService.manualIPServerEnabled {
-            return "Disabled. Nearby discovery still works over local Wi‑Fi/Bluetooth."
+            return String(localized: "Disabled. Nearby discovery still works over local Wi‑Fi/Bluetooth.")
         }
-        if syncService.activeTransport == .manualIP && syncService.connectionState == .connected {
-            return "Connected to \(syncService.connectedPeerName ?? "iPhone") by manual IP / Tailscale."
+        if syncService.activeTransport == .manualIP && displayConnectionState == .connected {
+            let peerName = displayConnectedPeerName ?? String(localized: "iPhone")
+            return String(localized: "Connected to \(peerName) by manual IP / Tailscale.")
         }
         if syncService.manualIPServerListening {
-            return "Listening on port \(SyncService.manualIPPort). Generate a pairing code before connecting from iPhone."
+            return String(localized: "Listening on port \(SyncService.manualIPPort). Generate a pairing code before connecting from iPhone.")
         }
-        return "Starting listener…"
+        return String(localized: "Starting listener…")
     }
 
     private var connectionDotColor: Color {
         if receivingPaused { return Color.warning }
-        switch syncService.connectionState {
+        switch displayConnectionState {
         case .connected: return Color.success
         case .connecting: return Color.warning
         case .disconnected: return Color.textMuted
@@ -655,62 +971,108 @@ struct MacSyncView: View {
 
     private var connectionStatusIcon: String {
         if receivingPaused { return "pause.fill" }
-        switch syncService.connectionState {
+        switch displayConnectionState {
         case .connected: return "checkmark.circle.fill"
         case .connecting: return "arrow.triangle.2.circlepath"
         case .disconnected: return "dot.radiowaves.left.and.right"
         }
     }
 
+    private enum ReadinessState: Equatable {
+        case paused
+        case active
+        case ready
+        case attention
+    }
+
+    private var readinessState: ReadinessState {
+        if receivingPaused { return .paused }
+        if hasActiveExport { return .active }
+        return isReadyForExports ? .ready : .attention
+    }
+
     private var readinessHeroTitle: String {
-        if receivingPaused { return "Receiving Paused" }
-        if syncService.isSyncing { return "Receiving Export" }
-        if isReadyForExports { return "Ready to Receive" }
-        if syncService.connectionState == .connected && !folderAccessHealthy { return "Choose Destination" }
-        if syncService.connectionState == .connecting { return "Connecting to iPhone" }
-        return "Listening for iPhone"
+        if readinessState == .paused { return String(localized: "Receiving Paused") }
+        if readinessState == .active { return String(localized: "Receiving Export") }
+        if readinessState == .ready { return String(localized: "Ready to Receive") }
+        if displayConnectionState == .connected && !folderAccessHealthy {
+            return String(localized: "Choose Destination")
+        }
+        if displayConnectionState == .connecting {
+            return String(localized: "Connecting to iPhone")
+        }
+        return String(localized: "Listening for iPhone")
     }
 
     private var readinessText: String {
-        if syncService.isSyncing { return "Receiving Export" }
-        if receivingPaused { return "Paused" }
-        if syncService.connectionState != .connected { return "Connect iPhone" }
-        if !iPhoneSupportsMacExports { return "Update iPhone App" }
-        if vaultManager.vaultURL == nil { return "Choose Folder" }
-        if !folderAccessHealthy { return "Re-select Folder" }
-        return "Ready"
+        if readinessState == .paused { return String(localized: "Paused") }
+        if readinessState == .active { return String(localized: "Receiving Export") }
+        if displayConnectionState != .connected { return String(localized: "Connect iPhone") }
+        if !iPhoneSupportsMacExports { return String(localized: "Update iPhone App") }
+        if vaultManager.vaultURL == nil { return String(localized: "Choose Folder") }
+        if !folderAccessHealthy { return String(localized: "Re-select Folder") }
+        return String(localized: "Ready")
     }
 
     private var readinessColor: Color {
-        readinessText == "Ready" ? Color.success : Color.warning
+        switch readinessState {
+        case .ready: return Color.success
+        case .active: return Color.accent
+        case .paused, .attention: return Color.warning
+        }
     }
 
     private var readinessIcon: String {
-        readinessText == "Ready" ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
+        switch readinessState {
+        case .ready: return "checkmark.circle.fill"
+        case .active: return "arrow.down.doc.fill"
+        case .paused: return "pause.circle.fill"
+        case .attention: return "exclamationmark.circle.fill"
+        }
     }
 
     private var statusPrimaryLine: String {
-        switch syncService.connectionState {
+        switch displayConnectionState {
         case .connected:
-            return "Connected to \(syncService.connectedPeerName ?? "iPhone")"
+            let peerName = displayConnectedPeerName ?? String(localized: "iPhone")
+            return String(localized: "Connected to \(peerName)")
         case .connecting:
-            return "Establishing local connection"
+            return String(localized: "Establishing local connection")
         case .disconnected:
-            return receivingPaused ? "Discovery paused" : "Searching nearby devices"
+            return receivingPaused
+                ? String(localized: "Discovery paused")
+                : String(localized: "Searching nearby devices")
         }
     }
 
     private var statusSecondaryLine: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            let device = displayConnectedPeerName ?? String(localized: "iPhone")
+            let localizedStatus = String(localized: "\(device) · local network · encrypted handoff")
+            let devicePrefix = "\(device) · "
+            return localizedStatus.hasPrefix(devicePrefix)
+                ? String(localizedStatus.dropFirst(devicePrefix.count))
+                : localizedStatus
+        }
+        #endif
         if let progress = syncService.activeMacExportProgress,
            ![MacExportPhase.completed, .failed, .cancelled].contains(progress.phase) {
-            return progress.message
+            return localizedProgressMessage(progress)
         }
-        if let error = syncService.lastError { return error }
-        if syncService.connectionState == .connected {
-            let device = syncService.connectedPeerName ?? "iPhone"
-            return "\(device) · local network · encrypted handoff"
+        if let error = displayLastError {
+            return localizedStatusSummary(
+                String(localized: "Receiver needs attention"),
+                technicalDetail: error
+            )
         }
-        return folderAccessHealthy ? "Destination validated · waiting on iPhone" : "Choose a folder to start receiving"
+        if displayConnectionState == .connected {
+            let device = displayConnectedPeerName ?? String(localized: "iPhone")
+            return String(localized: "\(device) · local network · encrypted handoff")
+        }
+        return folderAccessHealthy
+            ? String(localized: "Destination validated · waiting on iPhone")
+            : String(localized: "Choose a folder to start receiving")
     }
 
     private var folderAccessHealthy: Bool {
@@ -723,41 +1085,53 @@ struct MacSyncView: View {
     }
 
     private var folderTitle: String {
-        guard vaultManager.vaultURL != nil else { return "No folder selected" }
-        return folderAccessHealthy ? vaultManager.vaultName : "Folder access needs attention"
+        guard vaultManager.vaultURL != nil else { return String(localized: "No folder selected") }
+        return folderAccessHealthy
+            ? vaultManager.vaultName
+            : String(localized: "Folder access needs attention")
     }
 
     private var folderSubtitle: String {
         guard let url = vaultManager.vaultURL else {
-            return "Choose where this Mac should save exports."
+            return String(localized: "Choose where this Mac should save exports.")
         }
         if folderAccessHealthy {
-            return url.path(percentEncoded: false)
+            return vaultManager.pathForDisplay ?? url.path(percentEncoded: false)
         }
-        return "Re-select \(url.lastPathComponent) so Health.md can write exports."
+        return String(localized: "Re-select \(url.lastPathComponent) so Health.md can write exports.")
     }
 
     private var folderAccessibilityValue: String {
-        if vaultManager.vaultURL == nil { return "No folder selected" }
-        return folderAccessHealthy ? "Selected and accessible: \(vaultManager.vaultName)" : "Selected but access denied"
+        if vaultManager.vaultURL == nil { return String(localized: "No folder selected") }
+        return folderAccessHealthy
+            ? String(localized: "Selected and accessible: \(vaultManager.vaultName)")
+            : String(localized: "Selected but access denied")
+    }
+
+    private var hasActiveExport: Bool {
+        if syncService.isSyncing { return true }
+        guard let phase = syncService.activeMacExportProgress?.phase else { return false }
+        return ![MacExportPhase.completed, .failed, .cancelled].contains(phase)
     }
 
     private var isReadyForExports: Bool {
-        syncService.connectionState == .connected
+        !receivingPaused
+            && !hasActiveExport
+            && displayConnectionState == .connected
             && iPhoneSupportsMacExports
             && folderAccessHealthy
-            && syncService.activeMacExportProgress?.phase != .writing
-            && syncService.activeMacExportProgress?.phase != .exporting
     }
 
     private var iPhoneSupportsMacExports: Bool {
-        guard syncService.connectionState == .connected else { return false }
-        guard let capabilities = syncService.remoteCapabilities else { return false }
+        guard displayConnectionState == .connected else { return false }
+        guard let capabilities = displayRemoteCapabilities else { return false }
         return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
     }
 
     private var permissionValue: String {
-        folderAccessHealthy ? "Folder Access" : "Select Folder"
+        folderAccessHealthy
+            ? String(localized: "Folder Access")
+            : String(localized: "Select Folder")
     }
 
     private var appVersion: String {
@@ -765,19 +1139,22 @@ struct MacSyncView: View {
     }
 
     private var lastCheckText: String {
-        if syncService.isSyncing { return "In Progress" }
-        if syncService.connectionState == .connected { return "Just Now" }
-        return receivingPaused ? "Paused" : "Scanning"
+        if hasActiveExport { return String(localized: "In Progress") }
+        if displayConnectionState == .connected { return String(localized: "Just Now") }
+        return receivingPaused ? String(localized: "Paused") : String(localized: "Scanning")
     }
 
     private var legacyCacheText: String {
         if healthDataStore.recordCount > 0 {
-            return "\(healthDataStore.recordCount) cached day(s) from the old sync flow. New exports are received directly."
+            return String(localized: "\(healthDataStore.recordCount) cached days from the old sync flow. New exports are received directly.")
         }
-        return "No legacy records cached from the old sync flow."
+        return String(localized: "No legacy records cached from the old sync flow.")
     }
 
     private var volumeKind: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return "APFS" }
+        #endif
         guard let url = vaultManager.vaultURL,
               let values = try? url.resourceValues(forKeys: [.volumeLocalizedFormatDescriptionKey]),
               let description = values.volumeLocalizedFormatDescription,
@@ -788,6 +1165,14 @@ struct MacSyncView: View {
     }
 
     private var storageSummary: StorageSummary {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            return StorageSummary(
+                freeBytes: 750_000_000_000,
+                totalBytes: 1_000_000_000_000
+            )
+        }
+        #endif
         let targetURL = vaultManager.vaultURL ?? FileManager.default.homeDirectoryForCurrentUser
         guard let attributes = try? FileManager.default.attributesOfFileSystem(forPath: targetURL.path),
               let total = attributes[.systemSize] as? NSNumber,
@@ -805,10 +1190,14 @@ struct MacSyncView: View {
             items.append(ActivityFeedItem(
                 timestamp: Date(),
                 icon: "arrow.down.doc.fill",
-                title: "Export in Progress",
-                headline: progress.message,
-                detail: progress.totalDays > 0 ? "\(progress.processedDays)/\(progress.totalDays) records" : "Receiving from iPhone",
-                trailing: progress.filesWritten > 0 ? "\(progress.filesWritten) files" : nil,
+                title: String(localized: "Export in Progress"),
+                headline: localizedProgressMessage(progress),
+                detail: progress.totalDays > 0
+                    ? String(localized: "\(progress.processedDays)/\(progress.totalDays) records")
+                    : String(localized: "Receiving from iPhone"),
+                trailing: progress.filesWritten > 0
+                    ? String(localized: "\(progress.filesWritten) files")
+                    : nil,
                 color: Color.accent
             ))
         }
@@ -816,13 +1205,13 @@ struct MacSyncView: View {
         items.append(contentsOf: historyManager.history.prefix(6).map(activityItem(for:)))
 
         if items.isEmpty {
-            if syncService.connectionState == .connected {
+            if displayConnectionState == .connected {
                 items.append(ActivityFeedItem(
                     timestamp: Date().addingTimeInterval(-60),
                     icon: "link",
-                    title: "Connection Established",
-                    headline: syncService.connectedPeerName ?? "iPhone",
-                    detail: "Wi‑Fi / local network",
+                    title: String(localized: "Connection Established"),
+                    headline: displayConnectedPeerName ?? String(localized: "iPhone"),
+                    detail: String(localized: "Wi‑Fi / local network"),
                     trailing: nil,
                     color: Color.success
                 ))
@@ -831,9 +1220,15 @@ struct MacSyncView: View {
             items.append(ActivityFeedItem(
                 timestamp: Date().addingTimeInterval(-180),
                 icon: folderAccessHealthy ? "checkmark" : "folder.badge.questionmark",
-                title: folderAccessHealthy ? "Destination Validated" : "Destination Needed",
-                headline: folderAccessHealthy ? storageSummary.shortFree + " available" : "Choose a folder",
-                detail: folderAccessHealthy ? "Good to go" : "Required before exports",
+                title: folderAccessHealthy
+                    ? String(localized: "Destination Validated")
+                    : String(localized: "Destination Needed"),
+                headline: folderAccessHealthy
+                    ? String(localized: "\(storageSummary.shortFree) available")
+                    : String(localized: "Choose a folder"),
+                detail: folderAccessHealthy
+                    ? String(localized: "Good to go")
+                    : String(localized: "Required before exports"),
                 trailing: nil,
                 color: folderAccessHealthy ? Color.success : Color.warning
             ))
@@ -841,9 +1236,11 @@ struct MacSyncView: View {
             items.append(ActivityFeedItem(
                 timestamp: Date().addingTimeInterval(-420),
                 icon: "paperplane.fill",
-                title: "App Launched",
-                headline: "Mac Destination ready",
-                detail: receivingPaused ? "Discovery paused" : "Listening for Health.md",
+                title: String(localized: "App Launched"),
+                headline: String(localized: "Mac Destination ready"),
+                detail: receivingPaused
+                    ? String(localized: "Discovery paused")
+                    : String(localized: "Listening for Health.md"),
                 trailing: nil,
                 color: Color.accent
             ))
@@ -859,31 +1256,31 @@ struct MacSyncView: View {
 
         switch event.kind {
         case .dataReceived:
-            title = "Export Received"
+            title = String(localized: "Export Received")
             icon = "tray.and.arrow.down.fill"
             color = Color.accent
         case .progressComplete:
-            title = "Sync Complete"
+            title = String(localized: "Sync Complete")
             icon = "checkmark.seal.fill"
             color = Color.success
         case .failed:
-            title = "Sync Failed"
+            title = String(localized: "Sync Failed")
             icon = "xmark.circle.fill"
             color = Color.error
         case .macExportSucceeded:
-            title = "Export Written"
+            title = String(localized: "Export Written")
             icon = "checkmark"
             color = Color.success
         case .macExportPartialSuccess:
-            title = "Export Partial"
+            title = String(localized: "Export Partial")
             icon = "exclamationmark"
             color = Color.warning
         case .macExportFailed:
-            title = "Export Failed"
+            title = String(localized: "Export Failed")
             icon = "xmark"
             color = Color.error
         case .macExportCancelled:
-            title = "Export Cancelled"
+            title = String(localized: "Export Cancelled")
             icon = "stop.fill"
             color = Color.warning
         }
@@ -931,6 +1328,29 @@ struct MacSyncView: View {
         MacFolderPicker.show { url in
             vaultManager.setVaultFolder(url)
         }
+    }
+
+    private func localizedProgressMessage(_ progress: MacExportProgress) -> String {
+        let summary: String
+        switch progress.phase {
+        case .receiving: summary = String(localized: "Receiving export from iPhone")
+        case .validating: summary = String(localized: "Validating export")
+        case .exporting: summary = String(localized: "Preparing export")
+        case .writing: summary = String(localized: "Writing export files")
+        case .completed: summary = String(localized: "Export complete")
+        case .failed: summary = String(localized: "Export failed")
+        case .cancelled: summary = String(localized: "Export cancelled")
+        }
+        return localizedStatusSummary(summary, technicalDetail: progress.message)
+    }
+
+    private func localizedStatusSummary(_ summary: String, technicalDetail: String?) -> String {
+        guard let technicalDetail = technicalDetail?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !technicalDetail.isEmpty,
+              technicalDetail != summary else {
+            return summary
+        }
+        return String(localized: "\(summary). Details: \(technicalDetail)")
     }
 
     private func byteString(_ bytes: Int) -> String {
@@ -1169,12 +1589,13 @@ private struct GeistMetricTile: View {
                 Text(value)
                     .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Spacing.s4)
@@ -1206,11 +1627,13 @@ private struct GeistInfoChip: View {
                 Text(title)
                     .font(Typography.caption())
                     .foregroundStyle(Color.textSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(value)
                     .font(Typography.label())
                     .foregroundStyle(color)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Spacing.s3)
@@ -1411,10 +1834,12 @@ private struct StorageSummary {
     var free: String { Self.format(bytes: freeBytes) }
     var total: String { Self.format(bytes: totalBytes) }
     var shortFree: String {
-        if freeBytes == 0 { return "— free" }
-        return "\(free) free"
+        if freeBytes == 0 { return String(localized: "— free") }
+        return String(localized: "\(free) free")
     }
-    var volumeLabel: String { totalBytes > 0 ? "Local SSD" : "Unknown" }
+    var volumeLabel: String {
+        totalBytes > 0 ? String(localized: "Local SSD") : String(localized: "Unknown")
+    }
 
     private static func format(bytes: Int64) -> String {
         guard bytes > 0 else { return "—" }

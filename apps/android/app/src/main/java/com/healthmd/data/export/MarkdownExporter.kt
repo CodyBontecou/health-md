@@ -270,7 +270,7 @@ class MarkdownExporter {
             "medical_resources" to data.medicalResources.hasData,
         )
         for ((name, include) in sections) {
-            rendered = applyConditionalSection(rendered, name, include)
+            rendered = applyMarkdownConditionalSection(rendered, name, include)
         }
 
         // Replacements
@@ -295,15 +295,6 @@ class MarkdownExporter {
             rendered = rendered.replace("{{$key}}", value)
         }
         return rendered
-    }
-
-    private fun applyConditionalSection(template: String, section: String, include: Boolean): String {
-        val pattern = Regex("\\{\\{#$section}}(.*?)\\{\\{/$section}}", RegexOption.DOT_MATCHES_ALL)
-        return if (include) {
-            pattern.replace(template) { it.groupValues[1] }
-        } else {
-            pattern.replace(template, "")
-        }
     }
 
     // MARK: - Section renderers

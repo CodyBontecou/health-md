@@ -347,6 +347,31 @@ struct HealthMetricDefinition: Identifiable, Hashable {
         return parts.joined(separator: " · ")
     }
 
+    /// UI-only localization. The generated registry's raw names and units remain
+    /// stable for exports, schemas, query context, and cross-platform consumers.
+    var localizedDisplayName: String {
+        NSLocalizedString(name, tableName: nil, bundle: .main, value: name, comment: "Health metric name")
+    }
+
+    var localizedSelectionDetail: String {
+        var parts: [String] = []
+        if !unit.isEmpty {
+            parts.append(NSLocalizedString(
+                unit,
+                tableName: nil,
+                bundle: .main,
+                value: unit,
+                comment: "Health metric selection unit"
+            ))
+        }
+        if isArchiveOnly {
+            parts.append(String(localized: "Source records only"))
+        }
+        // Availability strings are technical platform/version tokens.
+        if let availability = availability.displayDescription { parts.append(availability) }
+        return parts.joined(separator: " · ")
+    }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

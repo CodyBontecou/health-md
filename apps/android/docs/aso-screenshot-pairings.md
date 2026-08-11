@@ -1,62 +1,61 @@
-# Health MD — ASO Screenshot Pairings
+# Android store screenshot plan
 
-## Screenshots Provided (6)
+The current audit and copy template replace the old `200027.png`–`200059.png` pairing notes:
 
-### 1. Export Screen (200027.png)
-- **What it shows**: Export dialog with format options (Markdown, Obsidian, JSON, CSV), Connected/Vault status, date range picker
-- **Rating**: ✅ Great
-- **Why**: Beautiful UI, shows multiple export formats with Obsidian prominence, clear and intuitive interface
-- **Assessment**: Perfect showcase of the export functionality
+- Audit: [`aso-audit-2026-08-04.md`](aso-audit-2026-08-04.md)
+- Localized campaign copy: [`../play-store-screenshots/locales/`](../play-store-screenshots/locales/)
+- Store assets: [`../play-console/screenshots/`](../play-console/screenshots/)
 
-### 2. Schedule Screen (200034.png)
-- **What it shows**: "SCHEDULE ACTIVE" with Automatic Export toggle ON, Cadence settings (15 min configurable)
-- **Rating**: ✅ Great
-- **Why**: Visually striking with clock icon, clearly shows automation is active and running, simple cadence control
-- **Assessment**: Powerfully communicates the automation feature
+## Canonical sequence
 
-### 3. History Screen (200043.png)
-- **What it shows**: List of successful exports with timestamps and Scheduled/Manual labels
-- **Rating**: ⚠️ Usable
-- **Why**: Proves automation works with concrete success records, shows consistent usage
-- **Assessment**: Less visually compelling than others (list of cards), but valuable for showing proof of automation
+| Order | Theme | Interface evidence |
+| ---: | --- | --- |
+| 1 | Export Health Connect data | Export screen with formats, date range and destination |
+| 2 | Export in the format you need | Markdown, CSV, JSON, NDJSON, Obsidian Bases and FHIR options |
+| 3 | Choose from 100+ metrics | Metric categories and selection controls |
+| 4 | Private by design | User-selected destination and preview flow |
+| 5 | Automate your health archive | Schedule and export-history screens |
+| 6 | Preview every file first | File preview, path and structure |
+| 7 | Health widgets at a glance | Activity, sleep, heart and combined widgets |
+| 8 | Connect your own tools | Configured endpoint or paired desktop CLI |
 
-### 4. Settings Screen (200047.png)
-- **What it shows**: "CONFIGURE YOUR APP" headline, Export format + Write mode options (Overwrite/Append/Update)
-- **Rating**: ✅ Great
-- **Why**: Emphasizes customization and user control, clear settings layout, demonstrates personalization
-- **Assessment**: Perfect for the "OWN YOUR DATA" benefit
+Use `100+`, not an exact metric total. Keep one headline and one supporting line per image. Give the app interface most of each frame and avoid repeated logo blocks.
 
-### 5. Export Settings Screen (200054.png)
-- **What it shows**: "Health Metrics" showing 61/61 metrics enabled, Current format (Obsidian Bases), Advanced options
-- **Rating**: ✅ Great
-- **Why**: Directly shows the metric count! Shows Obsidian integration, demonstrates depth of configuration
-- **Assessment**: Excellent for showing the Obsidian integration in context
+## Current assets
 
-### 6. Health Metrics Selection (200059.png)
-- **What it shows**: "Health Metrics" title with 61/61 in top right, Sleep category (6/6), Activity (10/10), all checkmarks
-- **Rating**: ✅ Great
-- **Why**: Visually rich, shows metric breadth clearly, beautiful categorization, all enabled
-- **Assessment**: Most compelling visual for demonstrating the 60+ metrics
+### Phone
 
-## Confirmed Pairings
+`play-console/screenshots/en-US/phone/` contains the reviewed eight-image English campaign at 1080×1920. It follows the canonical sequence above and replaces the older five-image, 941×1672 set. Store graphics remain user-owned work.
 
-| Benefit | Screenshot | File | Reasoning |
-|---------|-----------|------|-----------|
-| 1. EXPORT HEALTH DATA LOCALLY | Export dialog | 200027.png | Shows export options, local file destination, clear control over data |
-| 2. OWN YOUR HEALTH DATA | Settings screen | 200047.png | "CONFIGURE YOUR APP" + write mode options directly emphasize user control |
-| 3. TRACK 60+ HEALTH METRICS | Health Metrics selection | 200059.png | **Most visually impactful** — shows 61/61 prominently, rich category breakdown |
-| 4. AUTOMATE DAILY EXPORTS | Schedule screen | 200034.png | "SCHEDULE ACTIVE" + toggle clearly shows automation is ON and easy to configure |
-| 5. SYNC TO OBSIDIAN SEAMLESSLY | Export Settings | 200054.png | Shows "Obsidian Bases" as current format + 61/61 metrics enabled |
+Draft locale phone campaigns are generated through the repository's `appstore-ai-images` reference-swap workflow. Each edit supplies `gpt-image-2` with the English master, the matching genuine localized API 35 app capture and the exact localized marketing copy. Completed paid outputs are imported only after manifest and dimension validation by `scripts/finalize-ai-localized-play-screenshots.py`. This workflow does not upload or publish Play assets.
 
-## Notes
+### Seven-inch tablet
 
-- All screenshots use consistent dark theme, purple accent, clean UI
-- Status bar is clean (no distracting elements like low battery)
-- Screenshots have good content density and visual hierarchy
-- Unused: History screen (200043.png) — valuable proof of automation but less visually compelling than the 5 selected
+`play-console/screenshots/en-US/sevenInch/` contains four genuine 1200×1920 captures from an API 35 Nexus 7 profile:
 
-## ASO Phase Status
+1. Welcome
+2. Export
+3. Schedule
+4. Settings
 
-✅ Benefits: Confirmed (5 core benefits)
-✅ Screenshots: Analysed and paired (5 selected, 1 unused)
-⏳ Generation: Next — creating polished App Store screenshots with device frames and headlines
+### Ten-inch tablet
+
+`play-console/screenshots/en-US/tenInch/` contains four genuine 2560×1600 captures from an API 35 Pixel Tablet profile:
+
+1. Welcome
+2. Export
+3. Schedule
+4. Settings
+
+These are direct large-screen renders of the current app, not resized phone images. They intentionally contain no marketing overlay that could be cropped on tablet placements.
+
+## Validation
+
+Run:
+
+```bash
+cd apps/android
+./scripts/validate-play-listing.sh
+```
+
+The command prepares canonical Fastlane metadata, checks listing limits and screenshot dimensions, and runs `gplay validate` for both reviewed and draft locales. It does not upload anything.

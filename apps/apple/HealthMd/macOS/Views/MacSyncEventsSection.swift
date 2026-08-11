@@ -58,7 +58,11 @@ struct MacSyncEventsSection: View {
                     .controlSize(.small)
                     .tint(Color.accent)
                     .padding(.top, 4)
-                    .accessibilityHint(showAll ? "Collapses the list to the most recent syncs" : "Expands the list to show all stored sync events")
+                    .accessibilityHint(
+                        showAll
+                            ? String(localized: "Collapses the list to the most recent syncs")
+                            : String(localized: "Expands the list to show all stored sync events")
+                    )
                 }
             }
         }
@@ -194,19 +198,19 @@ struct MacSyncEventsSection: View {
 
     private func accessibilityLabel(for entry: SyncEvent) -> String {
         let date = Self.timestampFormatter.string(from: entry.timestamp)
-        return "\(accessibilityStatus(for: entry)). \(entry.summaryDescription). From \(entry.peerName). \(date)."
+        return String(localized: "\(accessibilityStatus(for: entry)). \(entry.summaryDescription). From \(entry.peerName). \(date).")
     }
 
     private func accessibilityStatus(for entry: SyncEvent) -> String {
         switch entry.kind {
         case .failed, .macExportFailed:
-            return "Failed"
+            return String(localized: "Failed")
         case .macExportPartialSuccess:
-            return "Partial success"
+            return String(localized: "Partial success")
         case .macExportCancelled:
-            return "Cancelled"
+            return String(localized: "Cancelled")
         case .dataReceived, .progressComplete, .macExportSucceeded:
-            return "Success"
+            return String(localized: "Success")
         }
     }
 }

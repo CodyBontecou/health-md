@@ -1,0 +1,45 @@
+Health.md convierte datos autorizados de Android Health Connect en archivos portátiles bajo tu control.
+
+EXPORTA LOS DATOS DE HEALTH CONNECT A TU MANERA
+Crea resúmenes legibles en Markdown, Obsidian Bases, CSV y JSON, o instantáneas nativas del proveedor en JSON/NDJSON. Elige métricas, fechas y destino; previsualiza nombres y contenido; y exporta a una carpeta local, una bóveda de Obsidian, otro proveedor de documentos de Android, tu endpoint de API o una Health.md CLI emparejada. Health.md no requiere una cuenta ni opera una nube de datos de salud.
+
+ELIGE ENTRE MÁS DE 100 MÉTRICAS DE SALUD
+Exporta datos autorizados de sueño, pasos, entrenamientos, frecuencia cardiaca, HRV, presión arterial, glucosa en sangre, saturación de oxígeno, frecuencia respiratoria, peso, composición corporal, nutrición, hidratación, movilidad, atención plena, salud reproductiva y otros registros de Health Connect. Rechazar una categoría no impide exportar otras categorías autorizadas.
+
+PREVISUALIZA, PERSONALIZA Y AUTOMATIZA
+Elige unidades, formatos, modos de escritura, carpetas y muestras detalladas. Previsualiza rutas y contenido antes de escribir. Exporta manualmente o programa un destino, y consulta los resultados y fallos en el historial.
+
+TU SALUD DE UN VISTAZO
+Cuatro widgets opcionales de la pantalla de inicio muestran resúmenes autorizados de actividad, sueño y corazón desde una pequeña caché del dispositivo. Tú mantienes el control sobre el acceso de los widgets y la actualización en segundo plano.
+
+HISTORIALES MÉDICOS PERSONALES (FHIR)
+Cuando el dispositivo admita historiales médicos personales, la opción «Historiales médicos (FHIR)» te permite conservar recursos médicos autorizados en el mismo archivo bajo tu control. Las categorías compatibles son:
+
+• Vacunas e inmunizaciones
+• Alergias e intolerancias
+• Afecciones e historial de la lista de problemas
+• Resultados de laboratorio
+• Medicamentos y recetas
+• Datos personales utilizados para identificar el historial
+• Datos de profesionales sanitarios y sus funciones
+• Registros de embarazo
+• Procedimientos
+• Historial social
+• Visitas y encuentros
+• Constantes vitales clínicas
+
+Cada permiso médico es de solo lectura y se solicita para que una exportación de historiales médicos iniciada por ti incluya esa categoría FHIR concreta en vez de omitirla sin avisar. Las exportaciones en JSON y las nativas del proveedor conservan los datos de recursos FHIR y los metadatos de origen proporcionados por Health Connect; los resúmenes en Markdown y CSV indican el número de recursos médicos por categoría. Puedes rechazar o revocar cualquier categoría en Health Connect y las demás exportaciones autorizadas seguirán funcionando.
+
+Health.md no diagnostica enfermedades, recomienda tratamientos, gestiona la atención clínica ni modifica Health Connect. Los historiales médicos solo se leen para facilitar la portabilidad de registros bajo tu control y la gestión de tu archivo personal.
+
+PRIVACIDAD Y CONTROL
+• Acceso de solo lectura a Health Connect; Health.md nunca escribe historiales de salud
+• Sin cuenta de Health.md ni nube de datos de salud
+• Los datos de salud no se usan para publicidad, elaboración de perfiles, crédito, seguros ni empleo
+• Sin SDK de análisis o atribución de terceros
+• Los datos de salud se procesan en el dispositivo y solo se exportan a un destino que elijas
+• Los endpoints configurados por el usuario solo se contactan para exportaciones que envías explícitamente
+• Los permisos pueden revisarse o revocarse en Health Connect en cualquier momento
+• Los análisis limitados y propios sobre atribución de instalaciones, incorporación o precios nunca incluyen historiales de salud, detalles de permisos de Health Connect, contenido exportado, texto de cuentas ni rutas de archivo
+
+Health.md incluye 10 acciones de exportación manual gratuitas. Una compra única desbloquea exportaciones ilimitadas y programación; no hay suscripción.

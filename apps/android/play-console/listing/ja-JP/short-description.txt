@@ -1,0 +1,1 @@
+Health Connectのデータを、自分で管理できるMarkdown、CSV、JSON、Obsidianファイルに書き出せます。

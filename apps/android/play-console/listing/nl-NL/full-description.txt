@@ -1,0 +1,45 @@
+Health.md zet toegestane Android Health Connect-gegevens om in overdraagbare bestanden die jij kiest en beheert.
+
+EXPORTEER HEALTH CONNECT-GEGEVENS OP JOUW MANIER
+Maak leesbare overzichten in Markdown, Obsidian Bases, CSV en JSON of provider-eigen momentopnamen in JSON/NDJSON. Kies metingen, periode en bestemming, bekijk bestandsnamen en inhoud vooraf en exporteer naar een lokale map, een Obsidian-kluis, een andere Android-documentprovider, je eigen API-endpoint of een gekoppelde Health.md CLI. Health.md vereist geen account en beheert geen cloud voor gezondheidsdata.
+
+KIES UIT MEER DAN 100 GEZONDHEIDSMETINGEN
+Exporteer toegestane gegevens over slaap, stappen, trainingen, hartslag, HRV, bloeddruk, bloedglucose, zuurstofsaturatie, ademhalingsfrequentie, gewicht, lichaamssamenstelling, voeding, hydratatie, mobiliteit, mindfulness, reproductieve gezondheid en andere Health Connect-records. Als je één categorie weigert, kun je andere toegestane categorieën blijven exporteren.
+
+BEKIJK VOORAF, PAS AAN EN AUTOMATISEER
+Kies eenheden, indelingen, schrijfmodi, mapindeling en gedetailleerde metingen. Bekijk exacte bestandspaden en inhoud voordat er iets wordt geschreven. Voer exports handmatig uit of plan ze voor een bestemming die jij kiest. Bekijk voltooide en mislukte uitvoeringen in de exportgeschiedenis.
+
+GEZONDHEID IN ÉÉN OOGOPSLAG
+Vier optionele widgets op het startscherm tonen toegestane overzichten van activiteit, slaap en hart uit een kleine cache op het apparaat. Jij houdt controle over widgettoegang en verversen op de achtergrond.
+
+PERSOONLIJKE MEDISCHE DOSSIERS (FHIR)
+Als het apparaat persoonlijke medische dossiers ondersteunt, kun je met de optie ‘Medische dossiers (FHIR)’ toegestane medische resources bewaren in hetzelfde archief dat jij beheert. Ondersteunde categorieën:
+
+• Vaccins en immunisaties
+• Allergieën en intoleranties
+• Aandoeningen en geschiedenis van de probleemlijst
+• Laboratoriumuitslagen
+• Medicijnen en voorschriften
+• Persoonlijke gegevens om het dossier te identificeren
+• Gegevens van zorgverleners en hun rollen
+• Zwangerschapsgegevens
+• Procedures
+• Sociale anamnese
+• Bezoeken en ontmoetingen
+• Klinische vitale functies
+
+Elke medische toestemming is alleen-lezen en wordt gevraagd zodat een door jou aangevraagde export van medische dossiers die specifieke FHIR-categorie bevat, in plaats van deze ongemerkt weg te laten. Exports in JSON en provider-eigen exports behouden de FHIR-resourcegegevens en bronmetadata van Health Connect; overzichten in Markdown en CSV vermelden het aantal medische resources per categorie. Je kunt elke categorie in Health Connect weigeren of intrekken. Andere toegestane exports blijven werken.
+
+Health.md stelt geen diagnoses, beveelt geen behandeling aan, beheert geen klinische zorg en wijzigt Health Connect niet. Medische dossiers worden alleen gelezen voor overdraagbaarheid van gegevens onder jouw controle en beheer van je persoonlijke archief.
+
+PRIVACY EN CONTROLE
+• Alleen-lezen toegang tot Health Connect; Health.md schrijft nooit gezondheidsrecords
+• Geen Health.md-account of cloud voor gezondheidsdata
+• Gezondheidsdata worden niet gebruikt voor advertenties, profilering, krediet, verzekeringen of werk
+• Geen SDK van derden voor analyse of attributie
+• Gezondheidsdata worden op het apparaat verwerkt en alleen geëxporteerd naar een bestemming die jij kiest
+• Door gebruikers ingestelde endpoints worden alleen benaderd voor exports die je uitdrukkelijk verzendt
+• Toestemmingen kunnen op elk moment in Health Connect worden bekeken of ingetrokken
+• Beperkte eigen analyses voor installatieattributie, onboarding of prijzen bevatten nooit gezondheidsrecords, details van Health Connect-toestemmingen, exportinhoud, accounttekst of bestandspaden
+
+Health.md bevat 10 gratis handmatige exportacties. Een eenmalige aankoop ontgrendelt onbeperkte exports en planning; er is geen abonnement.

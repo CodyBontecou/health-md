@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "ar",
+  "status": "draft",
+  "direction": "rtl",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "بياناتك الصحية. ملفاتك.",
+      "supportingLine": "صدّر سجلات Health Connect المصرّح بها إلى ملفات تتحكم بها."
+    },
+    {
+      "id": "export-formats",
+      "headline": "صدّر بطريقتك",
+      "supportingLine": "Markdown وObsidian Bases وJSON وCSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "اختر من أكثر من 100 مقياس صحي",
+      "supportingLine": "النوم والنشاط والقلب والعلامات الحيوية والتغذية والمزيد."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "للقراءة فقط. خصوصية من الأساس.",
+      "supportingLine": "لا حساب. لا سحابة لبيانات الصحة لدى Health.md."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "حافظ على تحديث أرشيفك",
+      "supportingLine": "جدوِل التصدير إلى الوجهة التي اخترتها."
+    },
+    {
+      "id": "file-preview",
+      "headline": "عاين قبل التصدير",
+      "supportingLine": "شاهد أسماء الملفات ومساراتها ومحتواها قبل كتابة أي شيء."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "صحتك في لمحة",
+      "supportingLine": "أدوات للنشاط والنوم والقلب والملخص."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "مباشرة إلى حاسوبك",
+      "supportingLine": "اقترن مع Health.md CLI لتصدير موثّق ومشفّر من دون وسيط سحابي."
+    }
+  ]
+}

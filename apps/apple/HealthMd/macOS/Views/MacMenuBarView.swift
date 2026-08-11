@@ -22,21 +22,21 @@ struct MacMenuBarView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 statusRow(
-                    label: "iPhone",
+                    label: String(localized: "iPhone"),
                     connected: syncService.connectionState == .connected,
                     detail: syncService.connectionState == .connected
-                        ? syncService.connectedPeerName ?? "Connected"
-                        : "Not connected"
+                        ? syncService.connectedPeerName ?? String(localized: "Connected")
+                        : String(localized: "Not connected")
                 )
 
                 statusRow(
-                    label: "Destination",
+                    label: String(localized: "Destination"),
                     connected: folderAccessHealthy,
                     detail: destinationDetail
                 )
 
                 statusRow(
-                    label: "Readiness",
+                    label: String(localized: "Readiness"),
                     connected: readinessIsPositive,
                     detail: readinessText
                 )
@@ -69,14 +69,16 @@ struct MacMenuBarView: View {
             VStack(spacing: 2) {
                 menuAction(
                     icon: vaultManager.vaultURL == nil ? "folder.badge.plus" : "folder",
-                    label: vaultManager.vaultURL == nil ? "Choose Destination…" : "Change Destination…"
+                    label: vaultManager.vaultURL == nil
+                        ? String(localized: "Choose Destination…")
+                        : String(localized: "Change Destination…")
                 ) {
                     chooseDestinationFolder()
                 }
 
                 menuAction(
                     icon: "macwindow",
-                    label: "Open Mac Destination",
+                    label: String(localized: "Open Mac Destination"),
                     shortcut: "⌘0"
                 ) {
                     WindowManager.shared.openMainWindow?()
@@ -84,7 +86,7 @@ struct MacMenuBarView: View {
 
                 menuAction(
                     icon: "gearshape",
-                    label: "Destination Settings…",
+                    label: String(localized: "Destination Settings…"),
                     shortcut: "⌘,"
                 ) {
                     openSettingsWindow()
@@ -162,7 +164,9 @@ struct MacMenuBarView: View {
         .font(BrandTypography.caption())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label) status")
-        .accessibilityValue("\(connected ? "Ready" : "Not ready"): \(detail)")
+        .accessibilityValue(
+            String(localized: "\(connected ? String(localized: "Ready") : String(localized: "Not ready")): \(detail)")
+        )
     }
 
     @ViewBuilder
@@ -196,7 +200,9 @@ struct MacMenuBarView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .accessibilityLabel(label)
-        .accessibilityHint(shortcut != nil ? "Keyboard shortcut: \(shortcut!)" : "")
+        .accessibilityHint(
+            shortcut.map { String(localized: "Keyboard shortcut: \($0)") } ?? ""
+        )
     }
 
     // MARK: - State
@@ -206,21 +212,24 @@ struct MacMenuBarView: View {
     }
 
     private var destinationDetail: String {
-        guard vaultManager.vaultURL != nil else { return "Choose folder" }
-        return folderAccessHealthy ? vaultManager.vaultName : "Access denied"
+        guard vaultManager.vaultURL != nil else { return String(localized: "Choose folder") }
+        return folderAccessHealthy ? vaultManager.vaultName : String(localized: "Access denied")
     }
 
     private var readinessIsPositive: Bool {
-        readinessText == "Ready"
+        syncService.connectionState == .connected
+            && iPhoneSupportsMacExports
+            && folderAccessHealthy
+            && !syncService.isSyncing
     }
 
     private var readinessText: String {
-        if syncService.isSyncing { return "Receiving export" }
-        if syncService.connectionState != .connected { return "Connect iPhone" }
-        if !iPhoneSupportsMacExports { return "Update iPhone app" }
-        if vaultManager.vaultURL == nil { return "Choose folder" }
-        if !folderAccessHealthy { return "Re-select folder" }
-        return "Ready"
+        if syncService.isSyncing { return String(localized: "Receiving export") }
+        if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
+        if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
+        if vaultManager.vaultURL == nil { return String(localized: "Choose folder") }
+        if !folderAccessHealthy { return String(localized: "Re-select folder") }
+        return String(localized: "Ready")
     }
 
     private var iPhoneSupportsMacExports: Bool {
@@ -231,30 +240,53 @@ struct MacMenuBarView: View {
 
     private var lastExportSummary: String? {
         if let failure = syncService.lastMacExportFailure {
-            return failure.message
+            return localizedFailureSummary(failure.reason)
         }
         if let result = syncService.lastMacExportResult {
             switch result.status {
             case .success:
                 if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
-                    return "\(result.dailyNoteUpdateCount) daily note(s) updated"
+                    return String(localized: "\(result.dailyNoteUpdateCount) daily notes updated")
                 }
-                return "\(result.totalFilesWritten) file(s)"
+                return String(localized: "\(result.totalFilesWritten) files")
             case .partialSuccess:
                 if result.dailyNoteSkipCount > 0 && result.totalFilesWritten == 0 {
-                    return "\(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) daily note(s) skipped"
+                    return String(localized: "\(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) daily notes skipped")
                 }
                 if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
-                    return "Partial: \(result.dailyNoteUpdateCount) daily note(s) updated"
+                    return String(localized: "Partial: \(result.dailyNoteUpdateCount) daily notes updated")
                 }
-                return "Partial: \(result.totalFilesWritten) file(s)"
+                return String(localized: "Partial: \(result.totalFilesWritten) files")
             case .failure:
-                return "Failed"
+                return String(localized: "Failed")
             case .cancelled:
-                return "Cancelled"
+                return String(localized: "Cancelled")
             }
         }
-        return vaultManager.lastExportStatus
+        return vaultManager.localizedLastExportStatus
+    }
+
+    private func localizedFailureSummary(_ reason: MacExportFailureReason) -> String {
+        switch reason {
+        case .incompatibleProtocol:
+            return String(localized: "Update Health.md on both devices")
+        case .noMacFolderSelected:
+            return String(localized: "Choose a destination folder")
+        case .macFolderAccessDenied:
+            return String(localized: "Destination folder access denied")
+        case .noFormatsSelected:
+            return String(localized: "No export formats selected")
+        case .noHealthRecordsReceived:
+            return String(localized: "No health records received")
+        case .payloadDecodeFailure:
+            return String(localized: "Export data could not be read")
+        case .exportWriteFailure:
+            return String(localized: "Export files could not be written")
+        case .macBusy:
+            return String(localized: "Mac is busy with another export")
+        case .cancelled:
+            return String(localized: "Cancelled")
+        }
     }
 
     // MARK: - Actions

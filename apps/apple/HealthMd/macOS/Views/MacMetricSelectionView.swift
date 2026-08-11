@@ -42,7 +42,11 @@ struct MacMetricSelectionView: View {
                         }
                     }
                 )) {
-                    Text(allEnabled ? "All Metrics Enabled" : "Enable All Metrics")
+                    Text(
+                        allEnabled
+                            ? String(localized: "All Metrics Enabled")
+                            : String(localized: "Enable All Metrics")
+                    )
                         .font(BrandTypography.body())
                 }
                 .toggleStyle(.switch)
@@ -105,15 +109,15 @@ struct MacMetricSelectionView: View {
         if searchText.isEmpty { return HealthMetricCategory.availableCases }
         return HealthMetricCategory.availableCases.filter { category in
             let metrics = HealthMetrics.byCategory[category] ?? []
-            return metrics.contains { $0.name.localizedCaseInsensitiveContains(searchText) }
-                || category.rawValue.localizedCaseInsensitiveContains(searchText)
+            return metrics.contains { $0.localizedDisplayName.localizedCaseInsensitiveContains(searchText) }
+                || category.displayName.localizedCaseInsensitiveContains(searchText)
         }
     }
 
     private func filteredMetrics(for category: HealthMetricCategory) -> [HealthMetricDefinition] {
         let metrics = HealthMetrics.byCategory[category] ?? []
         if searchText.isEmpty { return metrics }
-        return metrics.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return metrics.filter { $0.localizedDisplayName.localizedCaseInsensitiveContains(searchText) }
     }
 
     // MARK: - Sections
@@ -138,7 +142,7 @@ struct MacMetricSelectionView: View {
                     .frame(width: 20)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(category.rawValue)
+                    Text(category.displayName)
                         .font(BrandTypography.bodyMedium())
                         .foregroundStyle(Color.textPrimary)
                     Text("Pending Apple permission")
@@ -177,7 +181,7 @@ struct MacMetricSelectionView: View {
                     .foregroundStyle(Color.accent)
                     .frame(width: 20)
 
-                Text(category.rawValue)
+                Text(category.displayName)
                     .font(BrandTypography.bodyMedium())
 
                 Spacer()
@@ -217,10 +221,10 @@ struct MacMetricSelectionView: View {
             set: { _ in selectionState.toggleMetric(metric.id) }
         )) {
             HStack {
-                Text(metric.name)
+                Text(metric.localizedDisplayName)
                     .font(BrandTypography.body())
-                if !metric.selectionDetail.isEmpty {
-                    Text("(\(metric.selectionDetail))")
+                if !metric.localizedSelectionDetail.isEmpty {
+                    Text("(\(metric.localizedSelectionDetail))")
                         .font(BrandTypography.caption())
                         .foregroundStyle(Color.textMuted)
                 }

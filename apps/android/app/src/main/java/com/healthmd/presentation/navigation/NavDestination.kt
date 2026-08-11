@@ -29,6 +29,7 @@ object SubRoutes {
     const val DAILY_NOTE_INJECTION = "daily_note_injection"
     const val INDIVIDUAL_TRACKING = "individual_tracking"
     const val ADVANCED_SETTINGS = "advanced_settings"
+    const val CLINICIAN_REPORT = "clinician_report"
     const val DIRECT_CLI = "direct_cli"
     const val PAYWALL = "paywall"
 }

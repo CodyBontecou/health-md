@@ -2,7 +2,7 @@
 
 This is a small, repo-aware first draft for generating App Store marketing images for the app in the current repository.
 
-It inspects the repo for an app name, product copy, brand colors, typography hints, feature names, and existing screenshots. AI is used only for abstract backgrounds and visual treatments. Real app UI screenshots are composited into a phone frame when available; if no screenshots are found, the final images are marked draft-only with placeholders.
+It inspects the repo for an app name, product copy, brand colors, typography hints, feature names and existing screenshots. The generic draft campaign sends only abstract-background prompts to OpenAI and composites app UI locally. The explicit Health.md localized reference-swap workflows described below instead send the English master, localized app capture and copy reference to `gpt-image-2` for masked image editing. If no screenshots are found, generic outputs are marked draft-only with placeholders.
 
 ## Setup
 
@@ -94,6 +94,26 @@ npm --prefix scripts/app-store-images run generate:localized-set -- --locale de-
 `--slide` accepts `1` through `9`. Outputs are written under `app-store-output/ai-edits/<locale>-slide-<n>-reference-swap/`; accepted review copies belong under `app-store-output/localized-tests/<locale>/`. The `edit:es-slide` alias remains available for Spanish.
 
 This workflow makes one paid image-edit request per generated slide and never uploads assets to App Store Connect.
+
+### Android Google Play localized reference swaps
+
+The Android campaign uses the same OpenAI reference-swap approach with eight 1080×1920 English masters and genuine 1080×2340 localized API 35 captures. Each paid edit sends the English master, localized Android capture and rendered localized-copy reference to `gpt-image-2`. The resulting image is kept as a seamless AI-regenerated image; no screenshot or typography layer is pasted over it afterwards.
+
+Dry-run or generate a locale:
+
+```bash
+npm --prefix scripts/app-store-images run plan:android-localized-set -- --locale de-DE
+npm --prefix scripts/app-store-images run generate:android-localized-set -- --locale de-DE
+```
+
+The eight-edit locale set costs approximately $0.32 at medium quality before manual retries. Outputs and per-slide manifests are written beneath `app-store-output/android-ai-edits/<locale>/`. Validate and import completed paid sets into the authored Play tree with:
+
+```bash
+cd apps/android
+./scripts/finalize-ai-localized-play-screenshots.py --locales de-DE
+```
+
+The capture, generation and finalization commands do not upload or publish anything to Google Play.
 
 If the image API is unavailable or reaches its billing limit, a reviewed paid locale can be reused as the masked artwork donor. The fallback removes only the donor copy, draws exact localized typography, and still composites the target locale’s real simulator UI locally:
 

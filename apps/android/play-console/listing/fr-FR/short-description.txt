@@ -1,0 +1,1 @@
+Exportez les données Health Connect en Markdown, CSV, JSON ou fichiers Obsidian.

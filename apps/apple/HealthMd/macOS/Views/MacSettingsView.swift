@@ -1,6 +1,10 @@
 #if os(macOS)
 import SwiftUI
 
+private func macEnabledState(_ isEnabled: Bool) -> String {
+    isEnabled ? String(localized: "Enabled") : String(localized: "Disabled")
+}
+
 // MARK: - Settings Window (⌘,) — Branded
 
 struct MacSettingsWindow: View {
@@ -96,8 +100,8 @@ private enum MacSettingsDestination: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "General"
-        case .cli: return "CLI"
+        case .general: return String(localized: "General")
+        case .cli: return String(localized: "CLI")
         }
     }
 
@@ -178,17 +182,13 @@ struct MacGeneralSettingsView: View {
                         .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
                         .frame(width: 8, height: 8)
                         .accessibilityHidden(true)
-                    Text(syncService.connectionState == .connected
-                         ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
-                         : "Not connected")
+                    Text(connectionStatusText)
                         .font(BrandTypography.bodyMedium())
                     Spacer()
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Connection status")
-                .accessibilityValue(syncService.connectionState == .connected
-                    ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
-                    : "Not connected")
+                .accessibilityValue(connectionStatusText)
 
                 HStack {
                     Text("Readiness")
@@ -367,20 +367,42 @@ struct MacGeneralSettingsView: View {
         vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder()
     }
 
+    private var connectionStatusText: String {
+        #if DEBUG
+        if MacMarketingCapture.isActive {
+            let peerName = String(localized: "iPhone")
+            return String(localized: "Connected to \(peerName)")
+        }
+        #endif
+        guard syncService.connectionState == .connected else {
+            return String(localized: "Not connected")
+        }
+        let peerName = syncService.connectedPeerName ?? String(localized: "iPhone")
+        return String(localized: "Connected to \(peerName)")
+    }
+
     private var readinessText: String {
-        if syncService.isSyncing { return "Receiving export" }
-        if syncService.connectionState != .connected { return "Connect iPhone" }
-        if !iPhoneSupportsMacExports { return "Update iPhone app" }
-        if vaultManager.vaultURL == nil { return "Choose folder" }
-        if !folderAccessHealthy { return "Re-select folder" }
-        return "Ready"
+        #if DEBUG
+        if MacMarketingCapture.isActive { return String(localized: "Ready") }
+        #endif
+        if syncService.isSyncing { return String(localized: "Receiving export") }
+        if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
+        if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
+        if vaultManager.vaultURL == nil { return String(localized: "Choose folder") }
+        if !folderAccessHealthy { return String(localized: "Re-select folder") }
+        return String(localized: "Ready")
     }
 
     private var readinessColor: Color {
-        readinessText == "Ready" ? Color.success : Color.warning
+        iPhoneSupportsMacExports && folderAccessHealthy && !syncService.isSyncing
+            ? Color.success
+            : Color.warning
     }
 
     private var iPhoneSupportsMacExports: Bool {
+        #if DEBUG
+        if MacMarketingCapture.isActive { return true }
+        #endif
         guard syncService.connectionState == .connected else { return false }
         guard let capabilities = syncService.remoteCapabilities else { return false }
         return capabilities.platform == .iOS && capabilities.isCompatibleWithMacExportJobs
@@ -553,17 +575,13 @@ struct MacGeneralSettingsTab: View {
                         .fill(syncService.connectionState == .connected ? Color.success : Color.textMuted)
                         .frame(width: 8, height: 8)
                         .accessibilityHidden(true)
-                    Text(syncService.connectionState == .connected
-                         ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
-                         : "Not Connected")
+                    Text(tabConnectionStatusText)
                         .font(BrandTypography.bodyMedium())
                     Spacer()
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Connection status")
-                .accessibilityValue(syncService.connectionState == .connected
-                    ? "Connected to \(syncService.connectedPeerName ?? "iPhone")"
-                    : "Not connected")
+                .accessibilityValue(tabConnectionStatusText)
 
                 HStack {
                     Text("Synced Records")
@@ -595,6 +613,14 @@ struct MacGeneralSettingsTab: View {
         }
         .formStyle(.grouped)
     }
+
+    private var tabConnectionStatusText: String {
+        guard syncService.connectionState == .connected else {
+            return String(localized: "Not connected")
+        }
+        let peerName = syncService.connectedPeerName ?? String(localized: "iPhone")
+        return String(localized: "Connected to \(peerName)")
+    }
 }
 
 struct MacFormatSettingsTab: View {
@@ -605,7 +631,7 @@ struct MacFormatSettingsTab: View {
         Form {
             Section {
                 ForEach(ExportFormat.allCases, id: \.self) { format in
-                    Toggle(format.rawValue, isOn: Binding(
+                    Toggle(format.localizedDisplayName, isOn: Binding(
                         get: { advancedSettings.exportFormats.contains(format) },
                         set: { isOn in
                             if isOn { advancedSettings.exportFormats.insert(format) }
@@ -613,8 +639,8 @@ struct MacFormatSettingsTab: View {
                         }
                     ))
                     .tint(Color.accent)
-                    .accessibilityLabel(format.rawValue)
-                    .accessibilityValue(advancedSettings.exportFormats.contains(format) ? "Enabled" : "Disabled")
+                    .accessibilityLabel(format.localizedDisplayName)
+                    .accessibilityValue(macEnabledState(advancedSettings.exportFormats.contains(format)))
                 }
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     Text("Daily Notes Only is active. Format choices are saved but aggregate files are skipped.")
@@ -641,22 +667,22 @@ struct MacFormatSettingsTab: View {
 
                 Picker("Write Mode", selection: $advancedSettings.writeMode) {
                     ForEach(WriteMode.allCases, id: \.self) { mode in
-                        Text(mode.rawValue).tag(mode)
+                        Text(mode.localizedDisplayName).tag(mode)
                     }
                 }
                 .tint(Color.accent)
                 .accessibilityLabel("Write mode")
-                .accessibilityValue(advancedSettings.writeMode.rawValue)
+                .accessibilityValue(advancedSettings.writeMode.localizedDisplayName)
 
                 if advancedSettings.exportFormats.contains(.markdown) {
                     Toggle("Include Frontmatter", isOn: $advancedSettings.includeMetadata)
                         .tint(Color.accent)
                         .accessibilityLabel("Include frontmatter")
-                        .accessibilityValue(advancedSettings.includeMetadata ? "Enabled" : "Disabled")
+                        .accessibilityValue(macEnabledState(advancedSettings.includeMetadata))
                     Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
                         .tint(Color.accent)
                         .accessibilityLabel("Group by category")
-                        .accessibilityValue(advancedSettings.groupByCategory ? "Enabled" : "Disabled")
+                        .accessibilityValue(macEnabledState(advancedSettings.groupByCategory))
                 }
             } header: {
                 HStack(spacing: 6) {
@@ -676,23 +702,23 @@ struct MacFormatSettingsTab: View {
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Weekly roll-up summaries")
-                    .accessibilityValue(advancedSettings.generateWeeklyRollups ? "Enabled" : "Disabled")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateWeeklyRollups))
                 Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Monthly roll-up summaries")
-                    .accessibilityValue(advancedSettings.generateMonthlyRollups ? "Enabled" : "Disabled")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateMonthlyRollups))
                 Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Yearly roll-up summaries")
-                    .accessibilityValue(advancedSettings.generateYearlyRollups ? "Enabled" : "Disabled")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateYearlyRollups))
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
                     .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Export roll-up summaries only")
-                    .accessibilityValue(advancedSettings.summaryOnlyModeEnabled ? "Enabled" : "Disabled")
+                    .accessibilityValue(macEnabledState(advancedSettings.summaryOnlyModeEnabled))
 
                 Text("Skips daily files and side effects. Health.md still fetches the full touched periods to build the enabled summaries.")
                     .font(BrandTypography.caption())
@@ -731,7 +757,7 @@ struct MacFormatSettingsTab: View {
                 Toggle("Organize by File Type", isOn: $advancedSettings.organizeFormatsIntoFolders)
                     .tint(Color.accent)
                     .accessibilityLabel("Organize exports by file type")
-                    .accessibilityValue(advancedSettings.organizeFormatsIntoFolders ? "Enabled" : "Disabled")
+                    .accessibilityValue(macEnabledState(advancedSettings.organizeFormatsIntoFolders))
 
                 Text("Placeholders: {date}, {year}, {YR}, {month}, {day}, {weekday}, {monthName}, {quarter}.")
                     .font(BrandTypography.caption())
@@ -933,7 +959,7 @@ struct MacDataSettingsTab: View {
                         Image(systemName: category.icon)
                             .foregroundStyle(Color.accent)
                             .frame(width: 20)
-                        Text(category.rawValue)
+                        Text(category.displayName)
                         Spacer()
                         if category.isPendingAppleApproval {
                             Image(systemName: "lock.fill")
@@ -984,7 +1010,11 @@ struct MacDataSettingsTab: View {
                             get: { tracksAllEnabledIndividualMetrics },
                             set: { setTracksAllEnabledIndividualMetrics($0) }
                         )) {
-                            Text(tracksAllEnabledIndividualMetrics ? "All Enabled Metrics Tracked" : "Track All Enabled Metrics")
+                            Text(
+                                tracksAllEnabledIndividualMetrics
+                                    ? String(localized: "All Enabled Metrics Tracked")
+                                    : String(localized: "Track All Enabled Metrics")
+                            )
                                 .font(BrandTypography.body())
                         }
                         .toggleStyle(.switch)
@@ -1024,7 +1054,7 @@ struct MacDataSettingsTab: View {
                 Toggle("Inject into daily notes", isOn: $advancedSettings.dailyNoteInjection.enabled)
                     .tint(Color.accent)
                     .accessibilityLabel("Inject health metrics into daily notes")
-                    .accessibilityValue(advancedSettings.dailyNoteInjection.enabled ? "Enabled" : "Disabled")
+                    .accessibilityValue(macEnabledState(advancedSettings.dailyNoteInjection.enabled))
 
                 if advancedSettings.dailyNoteInjection.enabled {
                     LabeledContent("Notes Folder") {

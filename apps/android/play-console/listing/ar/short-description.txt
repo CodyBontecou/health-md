@@ -1,0 +1,1 @@
+صدّر بيانات Health Connect إلى ملفات Markdown وCSV وJSON وObsidian تتحكم بها.

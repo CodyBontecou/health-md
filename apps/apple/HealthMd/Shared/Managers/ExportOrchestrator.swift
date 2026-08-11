@@ -155,6 +155,14 @@ struct ExportOrchestrator {
             }
             return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
         }
+
+        var localizedPartialFailureSummary: String {
+            guard let first = partialFailures.first else { return "" }
+            if partialFailures.count == 1 {
+                return String(localized: "Warning: \(first.localizedSummary)")
+            }
+            return String(localized: "Warning: \(partialFailures.count) export warnings, including \(first.localizedSummary)")
+        }
         /// Whether every requested date completed, even if retained records include
         /// non-fatal partial-capture warnings.
         var didCompleteAllRequestedDates: Bool {
