@@ -223,7 +223,7 @@ Geben Sie rohe Datensätze, Routen, klinische Texte, Medikamentendetails, Stimmu
 
 <div class="related">
   <a href="/de/docs/agent-queries/"><span>CLI-Rezepte</span>Typisierte Agentenabfragen für Metriken, Schlafsitzungen, Trainingszuordnung, Trainingseinheiten, Abdeckung, Vergleich und Nachweise.</a>
-  <a href="/de/docs/mcp/"><span>Toolprotokoll</span>Codex- und Claude-Einrichtung, portable Tools, MCP-App-Diagramme, Exporte, Paginierung und Sandbox-Grenzen.</a>
+  <a href="/de/docs/mcp/"><span>Toolprotokoll</span>Codex- und Claude-Einrichtung, 21 veröffentlichte Mac-Tools, 19 portable Vorschau-Tools, MCP-App-Diagramme, Exporte, Paginierung und Sandbox-Grenzen.</a>
   <a href="/de/docs/agent-api/"><span>Low-Level</span>Loopback-Abfrage-API: Routen, direkte Anfrage-JSON-Daten, Cursor und persistente Erfassungsaufträge.</a>
   <a href="/de/docs/cli-extract/"><span>Quellobjekte</span>Kanonische Extraktion: ausgewählte Schema-v7-Dokumente, Datensätze, Projektionen und Belege.</a>
   <a href="/de/docs/reference/evidence-packets/"><span>Verträge</span>Kompakte Abfragen und Nachweispakete: typisierte Werte, Abdeckung, Vorgänge und deterministische IDs.</a>

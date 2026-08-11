@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Start Codex opnieuw, roep `healthmd_doctor` aan en gebruik daarna `healthmd_metrics` en een kleine getypeerde tool, bijvoorbeeld `healthmd_metric_chart`. De gebundelde server biedt 21 tools, waaronder gereedheidscontrole voor de Mac, verversingstaken voor versleutelde context, bewijs en visualisaties.
+Start Codex opnieuw, roep `healthmd_doctor` aan, zoek ID's op met `healthmd_metrics`, haal met de vernieuwingstool expliciet een klein bereik op en vraag dat daarna op met een getypeerde tool, bijvoorbeeld `healthmd_metric_chart`. De gebundelde server biedt 21 tools, waaronder gereedheidscontrole voor de Mac, verversingstaken voor versleutelde context, bewijs en visualisaties.
 
 ## Claude Desktop of Claude Code op de Mac
 
@@ -124,7 +124,7 @@ Controleer voor een volledig resultaat niet alleen of het proces is geslaagd, ma
 ## Lees verder
 
 <div class="related">
-  <a href="/nl/docs/mcp/"><span>Toolinterface</span>Bekijk de 21 beschikbare Mac-tools, de platformonafhankelijke preview met 17 tools, MCP Apps, schema's, paginering, exports en sandboxgrenzen.</a>
+  <a href="/nl/docs/mcp/"><span>Toolinterface</span>Bekijk de 21 uitgebrachte Mac-tools, de platformonafhankelijke preview met 19 tools, MCP Apps, schema's, paginering, exports en sandboxgrenzen.</a>
   <a href="/nl/docs/agent-queries/"><span>Eerste vragen</span>Voer getypeerde workflows uit voor meetwaarden, slaap, work-outs, vergelijkingen, dekking en bewijs.</a>
   <a href="/nl/docs/cli-extract/"><span>Canonieke gegevens</span>Extraheer geselecteerde documenten en bronrecords uit schema v7 zonder grote gegevensblokken in een chat te plaatsen.</a>
   <a href="/nl/docs/reference/"><span>Contracten</span>Bekijk gegevensstructuren met versiebeheer, veldinventarissen, gegenereerde fixtures en integratierecepten.</a>

@@ -1,6 +1,9 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
+import { buildDocsMetadataMap } from './lib/docs-metadata.mjs';
 import {
   defaultLocale,
   localeFor,
@@ -18,6 +21,11 @@ import {
 
 const site = 'https://healthmd.app';
 const docsLocales = publishedLocales('docs');
+const docsRoot = path.dirname(fileURLToPath(import.meta.url));
+const docsMetadata = await buildDocsMetadataMap({
+  contentRoot: path.join(docsRoot, 'src/content/docs'),
+  repositoryRoot: path.resolve(docsRoot, '../../..'),
+});
 
 function localizedSitemapLinks(pathname) {
   const slug = docSlugFromPath(pathname);
@@ -56,14 +64,20 @@ export default defineConfig({
         return locale === defaultLocale || hasDocTranslation(pathname, locale);
       },
       namespaces: { xhtml: true },
-      serialize: (entry) => ({
-        ...entry,
-        links: localizedSitemapLinks(new URL(entry.url).pathname),
-      }),
+      serialize: (entry) => {
+        const pathname = new URL(entry.url).pathname;
+        const lastModified = docsMetadata.get(pathname)?.lastModified;
+        return {
+          ...entry,
+          links: localizedSitemapLinks(pathname),
+          ...(lastModified ? { lastmod: lastModified } : {}),
+        };
+      },
     }),
     starlight({
       title: localizedTitles,
       description: 'Configure Health.md for agents, MCP, and CLI workflows, then explore versioned health-data contracts and private export tools.',
+      lastUpdated: true,
       favicon: '/docs/favicon.png',
       defaultLocale: 'root',
       locales: starlightLocales,

@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## Requisitos
 
 - Health.md para Mac instalado y abierto.
-- Health.md abierto en el iPhone emparejado cuando una herramienta inicia una nueva lectura o exportación.
+- Health.md abierto en el iPhone conectado cuando la herramienta de actualización o una exportación inicia una nueva lectura de HealthKit.
 - Un host MCP local con soporte stdio.
 - La ruta del asistente firmado que se muestra en **Health.md para Mac → CLI**.
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Reinicia Codex, llama a `healthmd_doctor`, enumera las métricas con `healthmd_metrics` y luego solicita un pequeño `healthmd_metric_chart`. Los hosts sin aplicaciones MCP interactivas aún reciben JSON exacto más un gráfico PNG estándar.
+Reinicia Codex, llama a `healthmd_doctor`, resuelve los ID con `healthmd_metrics`, adquiere explícitamente un alcance pequeño y exacto con la herramienta de actualización y luego consulta ese alcance con `healthmd_metric_chart`. Los hosts sin aplicaciones MCP interactivas aún reciben JSON exacto más un gráfico PNG estándar.
 
 ## Configuración de Claude
 
@@ -108,7 +108,7 @@ Si el host no admite aplicaciones MCP, las herramientas aún funcionan. `healthm
 
 ## Herramientas disponibles
 
-El servidor Mac incluido expone 21 herramientas fijas. La vista previa portátil expone las mismas herramientas de disponibilidad, análisis y exportación de archivos generados, pero omite las cuatro herramientas de adquisición de contexto cifrado.
+El servidor Mac incluido expone 21 herramientas fijas: 13 de disponibilidad y consulta, cuatro de tareas de archivos generados y cuatro de tareas de actualización del contexto cifrado. La vista previa portátil de 19 herramientas conserva las 13 herramientas de disponibilidad y consulta y las cuatro de exportación, sustituye las tareas de actualización de Mac por dos herramientas de emparejamiento directo y ejecuta las consultas tipadas directamente en el iPhone en primer plano.
 
 ### Disponibilidad y descubrimiento
 
@@ -161,7 +161,7 @@ ejemplos concretos. Un agente debe llamar directamente a la herramienta tipada c
 genérica del shell. En particular, las preguntas sobre el sueño usan `healthmd_sleep_sessions`; `healthmd extract` produce una
 proyección diferente de los datos de origen canónicos.
 
-Puede inspeccionar el mismo esquema localmente sin abrir un servicio de escucha de red ni contactar al iPhone:
+La vista previa portátil permite inspeccionar el mismo esquema localmente sin abrir un servicio de escucha de red ni contactar al iPhone. Para el asistente Mac publicado, usa tools/list de MCP.
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -189,7 +189,7 @@ Las métricas canónicas del sueño y el detalle sin pérdidas de la sesión se 
 
 ## Analizar y representar datos gráficamente
 
-Llama primero a `healthmd_doctor`. Obtén los ID de métricas con `healthmd_metrics` y después representa una serie con un alcance directo. Cada consulta solicita explícitamente una lectura acotada de datos recientes del iPhone:
+Llama primero a `healthmd_doctor` y obtén los ID de métricas con `healthmd_metrics`. En la topología Mac publicada, las herramientas de consulta tipada leen el contexto cifrado del Mac; no contactan implícitamente al iPhone. Para obtener datos actuales, llama a la herramienta de actualización con fechas, métricas y fuentes explícitas, espera a que termine su tarea persistente y luego representa el mismo alcance:
 
 ```json
 {
@@ -214,11 +214,11 @@ Llama primero a `healthmd_doctor`. Obtén los ID de métricas con `healthmd_metr
 
 Pasa ese objeto a `healthmd_metric_chart`. La vista interactiva utiliza pequeños múltiplos que mantienen separadas las unidades. Un punto faltante o parcial rompe la línea en lugar de convertirse en cero.
 
-Las herramientas de consulta tipada contactan sólo con el iPhone emparejado en primer plano. El iPhone captura los días solicitados, proyecta un contexto tipado y compacto, evalúa la solicitud localmente y devuelve una página de respuesta acotada con cobertura, datos ausentes, evidencia y limitaciones.
+Las herramientas tipadas publicadas para Mac evalúan el contexto local cifrado y devuelven páginas acotadas con cobertura, datos ausentes, evidencia y limitaciones. Solo una actualización explícita contacta al iPhone conectado en primer plano y reemplaza el alcance solicitado del contexto. La vista previa portátil evalúa cada solicitud tipada directamente en su iPhone emparejado en primer plano.
 
 ## Ejecutar una exportación de archivo generado
 
-Primero cree un directorio de destino existente en la computadora. Después de que el host muestre los argumentos completos y el usuario los apruebe, llame a `healthmd_export_files`:
+Primero selecciona y conserva una carpeta de destino con permisos de escritura en Health.md para Mac. Después de que el host muestre los argumentos completos y el usuario los apruebe, llama a `healthmd_export_files`:
 
 ```json
 {
@@ -228,7 +228,6 @@ Primero cree un directorio de destino existente en la computadora. Después de q
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -275,7 +274,7 @@ La aplicación MCP muestra estos campos en lugar de ocultarlos. Si el recorrido 
 
 ## Límites de seguridad y privacidad
 
-El asistente no tiene mensajes, raíces, muestreo, shell, SQL, lecturas de archivos arbitrarias, recuperaciones de URL arbitrarias, escrituras de HealthKit, servicio HTTP de loopback ni punto final MCP remoto. Su único recurso MCP es el documento de la aplicación incluido. Las escrituras de archivos generados son una operación fija sujeta a aprobación y requieren un destino existente explícito que esté validado y vinculado de forma persistente antes de la transferencia.
+El asistente no tiene mensajes, raíces, muestreo, shell, SQL, lecturas de archivos arbitrarias, recuperaciones de URL arbitrarias, escrituras de HealthKit, servicio HTTP de loopback ni punto final MCP remoto. Su único recurso MCP es el documento de la aplicación incluido. Las escrituras de archivos generados son una operación fija sujeta a aprobación. El asistente Mac publicado usa la carpeta seleccionada en Health.md para Mac; la vista previa portátil requiere un destino existente explícito que valida y vincula de forma persistente antes de la transferencia.
 
 La confianza directa se almacena en Keychain, Secret Service o Windows Credential Manager. El emparejamiento utiliza el protocolo cifrado autenticado existente; el iPhone debe estar en primer plano y conectado explícitamente a la dirección LAN o Tailscale de la computadora. Las páginas de consulta están limitadas a los límites de bytes/elementos negociados, y la agregación automática de todas las páginas tiene límites de bytes/páginas adicionales. Los cuerpos de datos sin procesar y sin límite permanecen en la ruta CLI de transmisión validada.
 
@@ -291,7 +290,7 @@ Health.md informa observaciones fácticas con unidades, procedencia, cobertura y
 | `healthmd_unavailable` | Desbloquea Health.md en el iPhone y ponlo en primer plano, habilita el acceso directo de la CLI y conéctate a la computadora |
 | `query_scope_too_large` | Fechas de partición o ID de métricas entre llamadas; el corpus lógico permanece disponible en todas las solicitudes |
 | Sin gráfico interactivo | Actualizar el host; el servidor aún devuelve JSON exacto y un gráfico alternativo de métricas PNG |
-| Destino de exportación no disponible | Crea y proporciona un directorio de escritorio absoluto existente sin enlace simbólico |
+| Destino de exportación no disponible | Mac: vuelve a seleccionar la carpeta guardada en Health.md. Vista previa portátil: crea y proporciona un directorio de escritorio absoluto existente sin enlace simbólico. |
 | Se agota el tiempo de espera de la exportación | Inspeccionar la tarea persistente de exportación por ID antes de reanudarlo |
 | El resultado tiene `next_cursor` | Configura `all_pages: true` o continúa con el cursor manualmente |
 

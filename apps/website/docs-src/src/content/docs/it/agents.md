@@ -223,7 +223,7 @@ Non includere record grezzi, percorsi, testo clinico, dettagli sui farmaci, regi
 
 <div class="related">
   <a href="/it/docs/agent-queries/"><span>Guida CLI</span>Query tipizzate per agenti: metriche, sessioni di sonno, allineamento degli allenamenti, allenamenti, copertura, confronto ed evidenze.</a>
-  <a href="/it/docs/mcp/"><span>Protocollo degli strumenti</span>Configurazione di Codex e Claude, 17 strumenti multipiattaforma, grafici dell'app MCP, esportazioni, paginazione e limiti dell’ambiente isolato.</a>
+  <a href="/it/docs/mcp/"><span>Protocollo degli strumenti</span>Configurazione di Codex e Claude, 21 strumenti Mac pubblicati, 19 strumenti multipiattaforma in anteprima, grafici dell'app MCP, esportazioni, paginazione e limiti dell’ambiente isolato.</a>
   <a href="/it/docs/agent-api/"><span>Basso livello</span>API di query su loopback: endpoint, richieste JSON dirette, cursori e attività persistenti di acquisizione.</a>
   <a href="/it/docs/cli-extract/"><span>Oggetti sorgente</span>Estrazione canonica: documenti schema v7, record, proiezioni e ricevute selezionati.</a>
   <a href="/it/docs/reference/evidence-packets/"><span>Contratti</span>Query compatte e pacchetti di evidenze: valori tipizzati, copertura, operazioni e ID deterministici.</a>
