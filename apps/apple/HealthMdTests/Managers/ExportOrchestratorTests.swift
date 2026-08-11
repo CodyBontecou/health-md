@@ -174,6 +174,25 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.primaryFailureReason, .accessDenied)
     }
 
+    func testExportResult_cancelledAfterConfirmedDerivedFileIsPartial() {
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: 2,
+            failedDateDetails: [],
+            formatsPerDate: 0,
+            rollupFileCount: 1,
+            wasCancelled: true
+        )
+
+        XCTAssertEqual(result.totalFilesWritten, 1)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertFalse(result.isFailure)
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.contains("1 generated file"))
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.contains("0"))
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.contains("2"))
+    }
+
     @MainActor
     func testExportDates_foregroundMapsDeviceLockedHealthKitError() async {
         let store = FakeHealthStore()

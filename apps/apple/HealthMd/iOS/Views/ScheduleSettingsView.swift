@@ -1320,25 +1320,9 @@ struct ExportHistoryRow: View {
         }
     }
 
-    private var statusIcon: String {
-        if entry.isFullSuccess {
-            return "checkmark.circle.fill"
-        } else if entry.isPartialSuccess {
-            return "exclamationmark.circle.fill"
-        } else {
-            return "xmark.circle.fill"
-        }
-    }
+    private var statusIcon: String { entry.statusSystemImage }
 
-    private var statusDescription: String {
-        if entry.isFullSuccess {
-            return "Success"
-        } else if entry.isPartialSuccess {
-            return "Partial Success"
-        } else {
-            return "Failed"
-        }
-    }
+    private var statusDescription: String { entry.localizedShortStatusDescription }
 
     var body: some View {
         HStack(spacing: Spacing.s3) {
@@ -1410,7 +1394,7 @@ struct ExportHistoryRow: View {
     }
 
     private var accessibilityDescription: String {
-        let status = "\(statusDescription): \(entry.summaryDescription)"
+        let status = "\(entry.localizedStatusDescription): \(entry.summaryDescription)"
         guard let message = entry.failureListMessage else { return status }
         return "\(status). \(message)"
     }
@@ -1458,7 +1442,7 @@ struct ExportHistoryDetailView: View {
                         Text("Status")
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text(entry.isFullSuccess ? "Success" : (entry.isPartialSuccess ? "Partial" : "Failed"))
+                        Text(entry.localizedShortStatusDescription)
                             .foregroundStyle(statusColor)
                             .fontWeight(.medium)
                     }

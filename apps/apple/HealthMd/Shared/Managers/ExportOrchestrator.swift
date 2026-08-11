@@ -222,11 +222,16 @@ struct ExportOrchestrator {
             successCount == totalCount && didCompleteAllRequestedDates && failedDateDetails.isEmpty && !hasPartialFailures
         }
         var isPartialSuccess: Bool {
-            let confirmed = successCount > 0 || dailyNoteSkipCount > 0 || knownFileCount > 0
-            return confirmed && (successCount < totalCount || wasCancelled || hadTerminalRangeFailure
-                || !failedDateDetails.isEmpty || hasPartialFailures)
+            guard !isFullSuccess else { return false }
+            let hasConfirmedOutput = successCount > 0
+                || dailyNoteUpdateCount > 0
+                || dailyNoteSkipCount > 0
+                || knownFileCount > 0
+            return hasConfirmedOutput
         }
-        var isFailure: Bool { successCount == 0 && dailyNoteSkipCount == 0 && totalCount > 0 }
+        var isFailure: Bool {
+            !isFullSuccess && !isPartialSuccess && totalCount > 0
+        }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
         var categorizedFileCount: Int {
             looseAggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
@@ -253,6 +258,16 @@ struct ExportOrchestrator {
                 isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
             )
         }
+
+        var localizedGeneratedFileAndDataDayDescription: String {
+            if hasAuthoritativeFileCount {
+                return String(localized: "\(totalFilesWritten) generated file(s) · \(successCount) of \(totalCount) data day(s)")
+            }
+            let confirmedFiles = String(localized: "\(totalFilesWritten) generated file(s)")
+            let dataDays = String(localized: "\(successCount) of \(totalCount) data day(s)")
+            return "≥ \(confirmedFiles) · \(dataDays)"
+        }
+
         var fileBreakdownDescription: String {
             var parts: [String] = []
             if looseAggregateFileCount > 0 { parts.append("\(looseAggregateFileCount) loose files") }
