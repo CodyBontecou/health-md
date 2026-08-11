@@ -78,13 +78,52 @@ enum HealthRollupExporter {
         format: ExportFormat,
         settings: AdvancedExportSettings
     ) -> String {
-        let suffix: String
-        if format == .obsidianBases && !settings.organizeFormatsIntoFolders {
-            suffix = "-bases"
-        } else {
-            suffix = ""
+        rollupFilename(periodID: summary.periodID, format: format, settings: settings)
+    }
+
+    static func outputRelativePaths(
+        for dates: [Date],
+        healthSubfolder: String,
+        settings: AdvancedExportSettings,
+        calendar: Calendar
+    ) -> [String] {
+        guard isEnabled(settings: settings), !dates.isEmpty else { return [] }
+        return settings.enabledRollupPeriods.flatMap { period in
+            Set(dates.map {
+                HealthRollupPeriodWindow.window(
+                    containing: $0,
+                    period: period,
+                    calendar: calendar
+                )
+            }).sorted { $0.startDate < $1.startDate }.flatMap { window in
+                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+                    relativePath([
+                        relativeFolderPath(
+                            healthSubfolder: healthSubfolder,
+                            period: period,
+                            format: format,
+                            settings: settings
+                        ),
+                        rollupFilename(
+                            periodID: window.id,
+                            format: format,
+                            settings: settings
+                        )
+                    ])
+                }
+            }
         }
-        return "\(summary.periodID)\(suffix).\(format.fileExtension)"
+    }
+
+    private static func rollupFilename(
+        periodID: String,
+        format: ExportFormat,
+        settings: AdvancedExportSettings
+    ) -> String {
+        let suffix = format == .obsidianBases && !settings.organizeFormatsIntoFolders
+            ? "-bases"
+            : ""
+        return "\(periodID)\(suffix).\(format.fileExtension)"
     }
 
     static func relativeFolderPath(healthSubfolder: String, period: HealthRollupPeriod) -> String {

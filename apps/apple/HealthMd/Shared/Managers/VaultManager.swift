@@ -1688,6 +1688,11 @@ final class VaultManager: ObservableObject {
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
 
+        try preflightExportArtifactPaths(
+            materialized.operation.artifacts.map(\.artifact.relativePath)
+                + (materialized.dataDictionary.map { [$0.relativePath] } ?? [])
+        )
+
         let dictionaryRequest = try materialized.dataDictionary.map { file in
             guard let content = String(data: file.data, encoding: .utf8) else {
                 throw CocoaError(.fileWriteInapplicableStringEncoding)
@@ -1909,12 +1914,11 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings
     ) throws {
-        guard !settings.dailyNotesOnlyModeEnabled else { return }
-        try ensureNoDailyNoteExportCollision(
-            vaultURL: vaultURL,
+        try preflightExportDestinations(
+            settings: settings,
             healthSubfolder: healthSubfolder,
-            date: date,
-            settings: settings
+            dates: [date],
+            rollupDates: []
         )
     }
 
@@ -2288,11 +2292,18 @@ final class VaultManager: ObservableObject {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
 
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder ?? self.healthSubfolder
+            healthSubfolder: effectiveHealthSubfolder
         )
         let integrationsFolderURL = healthFolderURL.appendingPathComponent("integrations", isDirectory: true)
+        let relativePaths = records.filter(\.shouldExport).map {
+            [effectiveHealthSubfolder, "integrations", $0.provider.exportFolderName, "\($0.date).json"]
+                .filter { !$0.isEmpty }
+                .joined(separator: "/")
+        }
+        try validateExportArtifactPaths(relativePaths, vaultURL: vaultURL)
 
         var writtenCount = 0
         for record in records where record.shouldExport {
@@ -2393,13 +2404,42 @@ final class VaultManager: ObservableObject {
         let rollupEntries = rollupArchiveEntries(from: rollupHealthData, settings: settings)
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
 
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        let archiveName = archiveFilename(
+            startDate: startDate,
+            endDate: endDate,
+            timeZone: settings.exportTimeZoneOverride
+        )
+        let archiveEntryPaths = (settings.writesDataDictionary
+            ? [HealthMdExportSchema.dataDictionaryFilename]
+            : []) + sources.flatMap { source -> [String] in
+                if settings.summaryOnlyModeEnabled { return [] }
+                switch source {
+                case .inMemory(let data):
+                    return archivedFormats.map {
+                        archiveEntryPath(for: data.date, format: $0, settings: settings)
+                    }
+                case .file(let file):
+                    return [file.archivePath]
+                }
+            } + rollupEntries.map(\.path)
+        do {
+            try ExportPathPlanner.validatePortableArtifactPaths(archiveEntryPaths)
+        } catch let error as ExportPathPlanner.PathValidationError {
+            throw invalidExportPathError(error)
+        }
+        let archiveRelativePath = [effectiveHealthSubfolder, archiveName]
+            .filter { !$0.isEmpty }
+            .joined(separator: "/")
+        try validateExportArtifactPaths([archiveRelativePath], vaultURL: vaultURL)
+
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
-            healthSubfolder: healthSubfolder ?? self.healthSubfolder
+            healthSubfolder: effectiveHealthSubfolder
         )
         try ensureCoordinatedDirectoryExists(at: healthFolderURL)
         let archiveURL = healthFolderURL.appendingPathComponent(
-            archiveFilename(startDate: startDate, endDate: endDate),
+            archiveName,
             isDirectory: false
         )
         let archiveWorkDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(
@@ -2586,6 +2626,12 @@ final class VaultManager: ObservableObject {
         guard !summaries.isEmpty else { return [] }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        try preflightExportDestinations(
+            settings: settings,
+            healthSubfolder: effectiveHealthSubfolder,
+            dates: [],
+            rollupDates: healthData.map(\.date)
+        )
         if shouldWriteDataDictionary {
             try writeDataDictionary(
                 vaultURL: vaultURL,
@@ -2740,6 +2786,12 @@ final class VaultManager: ObservableObject {
         }
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
+        try preflightExportDestinations(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: requestedDates,
+            rollupDates: requestedDates
+        )
 
         var sourceCalendar = Calendar.current
         sourceCalendar.timeZone = settings.exportTimeZoneOverride ?? .current
@@ -3067,6 +3119,187 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Collision Safety
 
+    /// Freezes every predictable destination for a range and rejects unsafe or aliased paths
+    /// before the first operation write. Archive entry names are validated separately from the
+    /// destination ZIP path because entries are portable names, not selected-root destinations.
+    func preflightExportDestinations(
+        settings: AdvancedExportSettings,
+        healthSubfolder: String? = nil,
+        dates: [Date],
+        rollupDates: [Date]? = nil
+    ) throws {
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
+        }
+        let requiresSecurityScope = fileSystem is SystemFileSystem
+        if requiresSecurityScope, !bookmarkResolver.startAccessing(vaultURL) {
+            throw ExportError.accessDenied
+        }
+        defer {
+            if requiresSecurityScope { bookmarkResolver.stopAccessing(vaultURL) }
+        }
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        var calendar = Calendar.current
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+
+        if !settings.archiveModeEnabled,
+           settings.dailyNoteInjection.enabled,
+           settings.writesDailyAggregateFiles {
+            do {
+                for date in dates {
+                    let dailyNotePath = ExportPathPlanner.dailyNoteRelativePath(
+                        settings: settings.dailyNoteInjection,
+                        date: date
+                    )
+                    let dailyNoteKey = try ExportPathPlanner.canonicalPortablePathKey(
+                        dailyNotePath
+                    )
+                    let collides = settings.exportFormats.contains { format in
+                        let aggregatePath = ExportPathPlanner.aggregateRelativePath(
+                            healthSubfolder: effectiveHealthSubfolder,
+                            settings: settings,
+                            date: date,
+                            format: format
+                        )
+                        guard let aggregateKey = try? ExportPathPlanner.canonicalPortablePathKey(
+                            aggregatePath
+                        ) else { return false }
+                        return aggregateKey == dailyNoteKey
+                    }
+                    if collides {
+                        throw ExportError.dailyNotePathConflict(path: dailyNotePath)
+                    }
+                }
+            } catch let error as ExportPathPlanner.PathValidationError {
+                throw invalidExportPathError(error)
+            }
+        }
+
+        if settings.archiveModeEnabled {
+            var entryPaths = dates.flatMap { date in
+                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map {
+                    archiveEntryPath(for: date, format: $0, settings: settings)
+                }
+            }
+            entryPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+                for: rollupDates ?? dates,
+                healthSubfolder: "",
+                settings: settings,
+                calendar: calendar
+            ))
+            if settings.writesDataDictionary {
+                entryPaths.append(HealthMdExportSchema.dataDictionaryFilename)
+            }
+            do {
+                try ExportPathPlanner.validatePortableArtifactPaths(entryPaths)
+            } catch let error as ExportPathPlanner.PathValidationError {
+                throw invalidExportPathError(error)
+            }
+
+            let startDate = dates.min() ?? rollupDates?.min() ?? Date()
+            let endDate = dates.max() ?? rollupDates?.max() ?? startDate
+            let archivePath = [
+                effectiveHealthSubfolder,
+                archiveFilename(
+                    startDate: startDate,
+                    endDate: endDate,
+                    timeZone: settings.exportTimeZoneOverride
+                )
+            ].filter { !$0.isEmpty }.joined(separator: "/")
+            var destinationPaths = [archivePath]
+            if settings.dailyNoteInjection.enabled {
+                destinationPaths.append(contentsOf: dates.map {
+                    ExportPathPlanner.dailyNoteRelativePath(
+                        settings: settings.dailyNoteInjection,
+                        date: $0
+                    )
+                })
+            }
+            try validateExportArtifactPaths(destinationPaths, vaultURL: vaultURL)
+            return
+        }
+
+        var artifactPaths: [String] = []
+        if settings.writesDailyAggregateFiles {
+            artifactPaths.append(contentsOf: dates.flatMap { date in
+                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map {
+                    ExportPathPlanner.aggregateRelativePath(
+                        healthSubfolder: effectiveHealthSubfolder,
+                        settings: settings,
+                        date: date,
+                        format: $0
+                    )
+                }
+            })
+        }
+        if settings.dailyNoteInjection.enabled {
+            artifactPaths.append(contentsOf: dates.map {
+                ExportPathPlanner.dailyNoteRelativePath(
+                    settings: settings.dailyNoteInjection,
+                    date: $0
+                )
+            })
+        }
+        artifactPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
+            for: rollupDates ?? dates,
+            healthSubfolder: effectiveHealthSubfolder,
+            settings: settings,
+            calendar: calendar
+        ))
+        if settings.writesDataDictionary && !settings.dailyNotesOnlyModeEnabled {
+            artifactPaths.append(
+                ExportPathPlanner.dataDictionaryRelativePath(
+                    healthSubfolder: effectiveHealthSubfolder
+                )
+            )
+        }
+        try validateExportArtifactPaths(artifactPaths, vaultURL: vaultURL)
+    }
+
+    func preflightExportArtifactPaths(_ relativePaths: [String]) throws {
+        guard destinationState == .available, let vaultURL else {
+            throw unavailableExportError
+        }
+        let requiresSecurityScope = fileSystem is SystemFileSystem
+        if requiresSecurityScope, !bookmarkResolver.startAccessing(vaultURL) {
+            throw ExportError.accessDenied
+        }
+        defer {
+            if requiresSecurityScope { bookmarkResolver.stopAccessing(vaultURL) }
+        }
+        try validateExportArtifactPaths(relativePaths, vaultURL: vaultURL)
+    }
+
+    private func validateExportArtifactPaths(
+        _ relativePaths: [String],
+        vaultURL: URL
+    ) throws {
+        guard !relativePaths.isEmpty else { return }
+        do {
+            if fileSystem is SystemFileSystem {
+                try ExportPathPlanner.validateUniqueDestinationArtifactPaths(
+                    vaultURL: vaultURL,
+                    artifactRelativePaths: relativePaths
+                )
+            } else {
+                try ExportPathPlanner.validatePortableArtifactPaths(relativePaths)
+            }
+        } catch let error as ExportPathPlanner.PathValidationError {
+            throw invalidExportPathError(error)
+        }
+    }
+
+    private func invalidExportPathError(
+        _ error: ExportPathPlanner.PathValidationError
+    ) -> ExportError {
+        switch error {
+        case .invalidRelativePath(let path),
+             .destinationUnavailable(let path),
+             .destinationOutsideVault(let path):
+            return .invalidExportPath(path: path)
+        }
+    }
+
     private func ensureNoDailyNoteExportCollision(
         vaultURL: URL,
         healthSubfolder: String? = nil,
@@ -3251,6 +3484,7 @@ enum ExportError: LocalizedError, Equatable {
     case destinationChanged
     case noFormatsSelected
     case dailyNotePathConflict(path: String)
+    case invalidExportPath(path: String)
 
     var errorDescription: String? {
         switch self {
@@ -3266,6 +3500,8 @@ enum ExportError: LocalizedError, Equatable {
             return String(localized: "At least one export format must be selected")
         case .dailyNotePathConflict(let path):
             return String(localized: "Daily Note Injection target conflicts with export output: \(path). Change Output folder/filename or Daily Note Injection folder/filename.")
+        case .invalidExportPath(let path):
+            return String(localized: "Export path is unsafe or conflicts with another output: \(path). Change the output folder or filename before exporting.")
         }
     }
 }

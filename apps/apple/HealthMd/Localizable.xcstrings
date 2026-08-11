@@ -14311,6 +14311,70 @@
         }
       }
     },
+    "Export path is unsafe or conflicts with another output: %@. Change the output folder or filename before exporting.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Exportpfad ist unsicher oder steht mit einer anderen Ausgabe in Konflikt: %@. Ändere vor dem Export den Ausgabeordner oder Dateinamen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export path is unsafe or conflicts with another output: %@. Change the output folder or filename before exporting."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La ruta de exportación no es segura o entra en conflicto con otra salida: %@. Cambia la carpeta de salida o el nombre del archivo antes de exportar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le chemin d’exportation n’est pas sûr ou entre en conflit avec une autre sortie : %@. Modifiez le dossier de sortie ou le nom du fichier avant d’exporter."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il percorso di esportazione non è sicuro o è in conflitto con un altro output: %@. Modifica la cartella di output o il nome del file prima di esportare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エクスポートパスが安全でないか、別の出力と競合しています：%@。エクスポートする前に、出力フォルダまたはファイル名を変更してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내보내기 경로가 안전하지 않거나 다른 출력과 충돌합니다: %@. 내보내기 전에 출력 폴더 또는 파일 이름을 변경하세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het exportpad is onveilig of conflicteert met andere uitvoer: %@. Wijzig de uitvoermap of bestandsnaam voordat je exporteert."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O caminho de exportação não é seguro ou entra em conflito com outra saída: %@. Altere a pasta de saída ou o nome do arquivo antes de exportar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出路径不安全或与其他输出冲突：%@。请在导出前更改输出文件夹或文件名。"
+          }
+        }
+      }
+    },
     "Export preview": {
       "localizations": {
         "de": {

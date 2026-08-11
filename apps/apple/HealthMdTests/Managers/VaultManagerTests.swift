@@ -203,6 +203,160 @@ final class VaultManagerTests: XCTestCase {
         return manager
     }
 
+    // MARK: - Export path admission
+
+    func testArchiveRejectsParentTraversalBeforeCreatingDestination() async throws {
+        let root = makeTempDir()
+        let outside = root.deletingLastPathComponent()
+            .appendingPathComponent("healthmd_archive_escape_\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "../\(outside.lastPathComponent)"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.archiveExportFiles = true
+
+        do {
+            _ = try await manager.exportArchive(
+                from: [ExportFixtures.fullDay],
+                settings: settings,
+                startDate: ExportFixtures.referenceDate,
+                endDate: ExportFixtures.referenceDate
+            )
+            XCTFail("Archive traversal must be rejected")
+        } catch let error as ExportError {
+            guard case .invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: outside.path))
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testRangePreflightRejectsFixedFilenameAcrossDatesWithZeroWrites() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.filenameFormat = "health"
+        let secondDate = try XCTUnwrap(
+            Calendar.current.date(byAdding: .day, value: 1, to: ExportFixtures.referenceDate)
+        )
+
+        XCTAssertThrowsError(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: [ExportFixtures.referenceDate, secondDate]
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testPreflightRejectsCaseWidthUnicodeAndAncestorAliases() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+
+        let unsafePlans = [
+            ["Health/A.json", "health/a.JSON"],
+            ["Health/Ａ.json", "Health/A.json"],
+            ["Health/café.json", "Health/cafe\u{301}.json"],
+            ["Health/output", "Health/output/day.json"],
+            ["Health/output", "Health/output-a", "Health/output/day.json"],
+            ["Health/CON.json"],
+            ["Health/COM¹.json"],
+            ["Health/LPT³.txt"],
+            ["Health/day.json."],
+            ["Health/file:stream.json"]
+        ]
+        for paths in unsafePlans {
+            XCTAssertThrowsError(try manager.preflightExportArtifactPaths(paths)) { error in
+                guard case ExportError.invalidExportPath = error else {
+                    return XCTFail("Expected invalidExportPath for \(paths), got \(error)")
+                }
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testPreflightRejectsSymlinkEscapeAndHardLinkAlias() throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent("Escaped"),
+            withDestinationURL: outside
+        )
+        XCTAssertThrowsError(try manager.preflightExportArtifactPaths([
+            "Escaped/day.json"
+        ]))
+
+        let health = root.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: health, withIntermediateDirectories: true)
+        let first = health.appendingPathComponent("first.json")
+        let second = health.appendingPathComponent("second.json")
+        try Data("{}".utf8).write(to: first)
+        try FileManager.default.linkItem(at: first, to: second)
+        XCTAssertThrowsError(try manager.preflightExportArtifactPaths([
+            "Health/first.json",
+            "Health/second.json"
+        ]))
+    }
+
+    func testArchivePreflightRejectsCrossDateDailyNoteCollision() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.archiveExportFiles = true
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.filenamePattern = "health"
+        let secondDate = try XCTUnwrap(
+            Calendar.current.date(byAdding: .day, value: 1, to: ExportFixtures.referenceDate)
+        )
+
+        XCTAssertThrowsError(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: [ExportFixtures.referenceDate, secondDate]
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testPreflightAcceptsNormalNestedPortablePaths() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+
+        bookmarkResolver.startAccessCalls = []
+        bookmarkResolver.stopAccessCalls = []
+        XCTAssertNoThrow(try manager.preflightExportArtifactPaths([
+            "Health/JSON/2026/08/10.json",
+            "Health/Markdown/2026/08/10.md",
+            "Daily/2026-08-10.md"
+        ]))
+        XCTAssertEqual(bookmarkResolver.startAccessCalls, [root])
+        XCTAssertEqual(bookmarkResolver.stopAccessCalls, [root])
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
     // MARK: - Durable exact artifact I/O
 
     func testExactArtifactIOUsesRawBytesAndAtomicDescriptorRelativeWrite() async throws {

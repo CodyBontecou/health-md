@@ -314,8 +314,26 @@ class SchedulingManager: ObservableObject {
         var dailyNoteSkipCount = 0
         let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
         let usesPinnedRange = frozenSettingsSnapshot?.appleExportEnginePin != nil
+        let preflightSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
+        var preflightFailed = false
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: preflightSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            preflightFailed = true
+            failedDateDetails = dates.map {
+                FailedDateDetail(
+                    date: $0,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                )
+            }
+        }
 
-        if usesPinnedRange,
+        if !preflightFailed, usesPinnedRange,
            let frozenSettingsSnapshot,
            let timeZoneIdentifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
            let timeZone = TimeZone(identifier: timeZoneIdentifier) {
@@ -362,7 +380,7 @@ class SchedulingManager: ObservableObject {
                     })
                 }
             }
-        } else if usesPinnedRange {
+        } else if !preflightFailed && usesPinnedRange {
             failedDateDetails = dates.map {
                 FailedDateDetail(
                     date: $0,
@@ -372,7 +390,7 @@ class SchedulingManager: ObservableObject {
             }
         }
 
-        if !usesPinnedRange {
+        if !preflightFailed && !usesPinnedRange {
         for date in dates {
             guard let healthData = healthDataStore.fetchHealthData(for: date) else {
                 // Mac cache absence is retryable: iPhone sync may populate it later.
