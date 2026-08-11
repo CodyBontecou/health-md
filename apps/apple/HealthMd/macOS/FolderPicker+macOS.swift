@@ -13,9 +13,9 @@ struct MacFolderPicker {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
-        panel.title = "Select Export Folder"
-        panel.prompt = "Choose"
-        panel.message = "Select the folder where Health.md will export your health data (e.g. your Obsidian vault)"
+        panel.title = String(localized: "Select Export Folder")
+        panel.prompt = String(localized: "Choose")
+        panel.message = String(localized: "Select the destination folder where Health.md will save your exported health data (for example, an Obsidian vault).")
 
         if panel.runModal() == .OK, let url = panel.url {
             completion(url)

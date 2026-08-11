@@ -234,10 +234,6 @@ function localizeLandingRoutes(html, locale, catalog) {
       `href="${htmlAttribute(catalog.landing.runtime.sampleMarkdownHref)}" download data-sample-download`,
     );
 
-  const languageMarker = /\s*<!-- HEALTHMD_LANGUAGE_SELECTOR -->/;
-  if (!languageMarker.test(html)) throw new Error('Landing source is missing the language selector marker');
-  html = html.replace(languageMarker, `\n${renderLandingLanguageSelector(locale)}`);
-
   const footerLanguageMarker = /\s*<!-- HEALTHMD_FOOTER_LANGUAGE_SELECTOR -->/;
   if (!footerLanguageMarker.test(html)) throw new Error('Landing source is missing the footer language selector marker');
   html = html.replace(

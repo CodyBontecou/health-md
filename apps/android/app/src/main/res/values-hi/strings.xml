@@ -2,14 +2,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
     <!-- Common -->
-    <string name="ok">ठीक है</string>
     <string name="cancel">रद्द करें</string>
     <string name="back">वापस</string>
     <string name="close">बंद करें</string>
     <string name="refresh">ताज़ा करें</string>
     <string name="add">जोड़ें</string>
-    <string name="increase">वृद्धि</string>
-    <string name="decrease">कमी</string>
     <string name="action_cancel_export">निर्यात रद्द करें</string>
     <string name="action_close_options">विकल्प बंद करें</string>
     <string name="action_set_start_date">आरंभ तिथि निर्धारित करें</string>
@@ -20,7 +17,7 @@
     <string name="action_clear_history">इतिहास साफ़ करें</string>
     <string name="action_keep_history">इतिहास रखें</string>
     <string name="action_retry_export">निर्यात का पुनः प्रयास करें</string>
-    <string name="action_retrying_export">निर्यात का पुनः प्रयास किया जा रहा है...</string>
+    <string name="action_retrying_export">निर्यात का पुनः प्रयास किया जा रहा है…</string>
     <string name="action_delete_field">फ़ील्ड हटाएँ</string>
     <!-- Export Screen -->
     <string name="export_subtitle">अपने वेलनेस डेटा को कॉन्फ़िगर और निर्यात करें</string>
@@ -130,11 +127,6 @@
     </plurals>
     <!-- Date range -->
     <string name="section_date_range">तारीख की सीमा</string>
-    <string name="date_shortcut_1d">1 दिन</string>
-    <string name="date_shortcut_7d">7 दिन</string>
-    <string name="date_shortcut_30d">30 दिन</string>
-    <string name="date_shortcut_90d">90 दिन</string>
-    <string name="date_shortcut_all">सभी</string>
     <string name="date_option_today">आज</string>
     <string name="date_option_yesterday">कल</string>
     <string name="date_option_all_time">पूरी अवधि</string>
@@ -158,8 +150,6 @@
     <string name="export_preview_api_destination">API एंडपॉइंट</string>
     <string name="export_preview_complete_file">निर्यात की जाने वाली पूरी %1$s फ़ाइल दिखाई जा रही है।</string>
     <string name="export_preview_truncated_file">इस %1$s फ़ाइल का संक्षिप्त पूर्वावलोकन दिखाया जा रहा है। पूर्ण निर्यात में सभी डेटा शामिल रहेगा।</string>
-    <string name="export_preview_limited_one">डेटा वाले सबसे हाल के दिन का पूर्वावलोकन। पूर्ण निर्यात हर चुनी गई तारीख के लिए चलेगा।</string>
-    <string name="export_preview_limited_other">डेटा वाले सबसे हाल के %1$d दिनों का पूर्वावलोकन। पूर्ण निर्यात हर चुनी गई तारीख के लिए चलेगा।</string>
     <string name="export_preview_no_data_title">पूर्वावलोकन के लिए कोई डेटा नहीं</string>
     <string name="export_preview_no_data_message">चुनी गई तारीखों के लिए कोई स्वास्थ्य डेटा नहीं है, या कोई फ़ॉर्मैट नहीं चुना गया है।</string>
     <plurals name="free_exports_remaining">
@@ -167,7 +157,6 @@
         <item quantity="other">%1$d निःशुल्क निर्यात शेष</item>
     </plurals>
     <string name="unlock_button">Health.md अनलॉक करें</string>
-    <string name="export_result_days">%1$d/%2$d दिन निर्यात किए गए</string>
     <string name="open_folder">फ़ोल्डर खोलें</string>
     <string name="open_with_files">फ़ाइलें</string>
     <string name="open_with_obsidian">Obsidian</string>
@@ -186,7 +175,6 @@
         <item quantity="other">%1$s: %2$d दिन</item>
     </plurals>
     <string name="export_diagnostics_date_list">विफल दिनांक: %s</string>
-    <string name="export_diagnostics_date_list_more">विफल दिनांक: %1$s, +%2$d अधिक</string>
     <string name="export_diagnostics_no_details">प्रतिदिन का कोई विवरण दर्ज नहीं किया गया। छोटी रेंज आज़माएं और Health Connect अनुमतियां जांचें।</string>
     <string name="export_diagnostics_use_failed_range">विफल श्रेणी का उपयोग करें</string>
     <string name="export_failure_no_folder_label">कोई फ़ोल्डर चयनित नहीं</string>
@@ -213,16 +201,6 @@
     <string name="export_guidance_network">अपना कनेक्शन और एंडपॉइंट का TLS प्रमाणपत्र जांचें, फिर पुनः प्रयास करें।</string>
     <string name="export_guidance_api_rejected">दोबारा कोशिश करने से पहले एंडपॉइंट पाथ, सहेजा गया Authorization या कस्टम हेडर, अनुरोध सीमाएँ और सर्वर लॉग जाँचें।</string>
     <string name="export_guidance_unknown">छोटी रेंज के साथ पुनः प्रयास करें. यदि यह विफल रहता है, तो इस निर्यात इतिहास के साथ प्रतिक्रिया भेजें।</string>
-    <!-- Export failure messages -->
-    <string name="error_no_health_data">इस तारीख सीमा के लिए कोई स्वास्थ्य डेटा नहीं मिला</string>
-    <string name="error_file_write">फ़ाइल लिखने में विफल \u2014 फ़ोल्डर पहुँच जाँचें</string>
-    <string name="error_access_denied">निर्यात फ़ोल्डर तक पहुँच अस्वीकृत</string>
-    <string name="error_no_folder">कोई निर्यात फ़ोल्डर चुना नहीं गया</string>
-    <string name="error_health_connect">Health Connect त्रुटि \u2014 अनुमतियाँ जाँचें</string>
-    <string name="error_device_locked">पिछले रीबूट के बाद से फ़ोन अनलॉक नहीं किया गया है — इसे अनलॉक करके फिर से कोशिश करें</string>
-    <string name="error_background_permission_denied">शेड्यूल किए गए निर्यात के लिए Health Connect का बैकग्राउंड एक्सेस ज़रूरी है</string>
-    <string name="error_rate_limited">Health Connect निर्यात की दर सीमित कर रहा है — थोड़ी देर प्रतीक्षा करें, फिर बाकी तारीखों के लिए दोबारा कोशिश करें</string>
-    <string name="error_unknown">एक अप्रत्याशित त्रुटि हुई</string>
     <!-- Debug panel -->
     <string name="debug_panel_title">डिबग जानकारी</string>
     <string name="debug_loading">लोड हो रहा है\u2026</string>
@@ -240,7 +218,6 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
-    <string name="settings_title">अपने ऐप को\nकॉन्फ़िगर करें</string>
     <string name="settings_subtitle">प्रीमियम और सहायता प्रबंधित करें</string>
     <string name="section_health_sources">स्वास्थ्य सूत्र</string>
     <string name="health_sources_description">Health Connect डिफ़ॉल्ट निर्यात मार्ग बना रहता है। ये समर्थित इकोसिस्टम अभी Health Connect के ज़रिए Health.md को डेटा दे सकते हैं, या क्रेडेंशियल/पार्टनर एक्सेस कॉन्फ़िगर होने के बाद सीधे SDK/OAuth अडैप्टर के ज़रिए।</string>
@@ -250,12 +227,12 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">स्वास्थ्य स्रोत साइन-इन विफल रहा</string>
     <string name="health_provider_connected">जुड़ा हुआ %s</string>
-    <string name="section_health_diagnostics">स्वास्थ्य निदान</string>
+    <string name="section_health_diagnostics">स्वास्थ्य डेटा स्रोत की डायग्नोस्टिक जानकारी</string>
     <string name="health_diagnostics_description">ऐसी प्रदाता रिपोर्ट बीटा परीक्षकों या सहायता टीम के साथ साझा करें जिससे संवेदनशील जानकारी हटा दी गई है। इसमें प्रदाता सेटअप, अनुमतियाँ, OAuth कॉन्फ़िगर होने और टोकन मौजूद होने के संकेत, तथा अंतिम निर्यात त्रुटि श्रेणियाँ शामिल हैं; स्वास्थ्य माप या टोकन मान शामिल नहीं होते।</string>
-    <string name="health_diagnostics_share_title">संवेदनशील जानकारी हटाए गए निदान साझा करें</string>
+    <string name="health_diagnostics_share_title">संवेदनशील जानकारी रहित तकनीकी रिपोर्ट साझा करें</string>
     <string name="health_diagnostics_share_subtitle">कोई टोकन, प्रदाता का गोपनीय डेटा, रॉ फ़ाइल पाथ या स्वास्थ्य माप नहीं</string>
-    <string name="health_diagnostics_share_subject">Health.md निदान (संवेदनशील जानकारी हटाई गई)</string>
-    <string name="health_diagnostics_share_chooser">निदान साझा करें</string>
+    <string name="health_diagnostics_share_subject">Health.md की संवेदनशील जानकारी रहित तकनीकी रिपोर्ट</string>
+    <string name="health_diagnostics_share_chooser">तकनीकी रिपोर्ट साझा करें</string>
     <string name="section_write_mode">लिखने की विधि</string>
     <string name="section_filename_template">फ़ाइल नाम टेम्पलेट</string>
     <string name="filename_template_hint">{date}</string>
@@ -270,8 +247,6 @@
     <!-- Settings upgrade -->
     <string name="settings_upgrade_title">प्रीमियम में अपग्रेड करें</string>
     <string name="settings_upgrade_subtitle">असीमित निर्यात, अनुसूचित निर्यात और बहुत कुछ</string>
-    <string name="settings_premium_active">प्रीमियम सक्रिय</string>
-    <string name="settings_premium_active_subtitle">आपके पास असीमित निर्यात हैं</string>
     <string name="section_feedback">प्रतिक्रिया</string>
     <string name="feedback_send_title">प्रतिक्रिया भेजें</string>
     <string name="feedback_send_subtitle">आपके ईमेल क्लाइंट को खोलता है</string>
@@ -303,7 +278,7 @@
     <string name="granular_data_description">संगतता निर्यात में हृदय गति और नींद के चरण जैसे टाइमस्टैम्प वाले नमूने जोड़ें। API-पूर्ण प्रतिलिपि के लिए, Raw API Snapshot का उपयोग करें।</string>
     <!-- Metric selection screen -->
     <string name="metric_selection_title">स्वास्थ्य मेट्रिक्स</string>
-    <string name="search_metrics_hint">मेट्रिक्स खोजें...</string>
+    <string name="search_metrics_hint">मेट्रिक्स खोजें…</string>
     <string name="select_all">सभी चुनें</string>
     <string name="deselect_all">सभी का चयन हटाएँ</string>
     <string name="metrics_enabled_category">%1$d/%2$d सक्षम किए गए</string>
@@ -317,7 +292,7 @@
     <string name="metric_category_nutrition">पोषण</string>
     <string name="metric_category_mobility">गतिशीलता</string>
     <string name="metric_category_cycling">साइकिल चलाना</string>
-    <string name="metric_category_hearing">सुनवाई</string>
+    <string name="metric_category_hearing">श्रवण</string>
     <string name="metric_category_mindfulness">सचेतनता</string>
     <string name="metric_category_reproductive">प्रजनन स्वास्थ्य</string>
     <string name="metric_category_symptoms">लक्षण</string>
@@ -475,11 +450,6 @@
     <string name="action_suggested">सुझाया गया</string>
     <string name="action_all">सभी</string>
     <string name="action_none">कोई नहीं</string>
-    <string name="section_tracked_metrics">ट्रैक किए गए मेट्रिक्स</string>
-    <string name="metric_workouts">व्यायाम</string>
-    <string name="metric_blood_pressure">रक्तचाप</string>
-    <string name="metric_blood_glucose">रक्त शर्करा</string>
-    <string name="metric_weight">वजन</string>
     <string name="section_entries_folder">प्रविष्टियों के फ़ोल्डर का नाम</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
@@ -503,64 +473,23 @@
     <string name="export_source_scheduled">निर्धारित</string>
     <!-- Schedule screen -->
     <string name="section_schedule">अनुसूची</string>
-    <string name="schedule_active">अनुसूची\nसक्रिय है</string>
-    <string name="schedule_not_set">कोई अनुसूची\nसेट नहीं</string>
     <string name="automatic_export_title">स्वचालित निर्यात</string>
     <string name="automatic_export_subtitle">अपने स्वास्थ्य डेटा को स्वचालित रूप से निर्यात करें</string>
     <string name="schedule_enable_scheduled_exports">अनुसूचित निर्यात सक्षम करें</string>
     <string name="schedule_automatic_export_body">निर्धारित निर्यात आपके चुने हुए Android निर्यात फ़ोल्डर में लिखे जाते हैं। निर्यात टैब से मैन्युअल निर्यात भी उपलब्ध रहते हैं।</string>
-    <string name="schedule_background_note">नोट: Android सटीक पृष्ठभूमि समय को नियंत्रित करता है। विश्वसनीय अनुसूचित निर्यात के लिए Health Connect बैकग्राउंड एक्सेस को सक्षम रखें और Health.md को बैटरी ऑप्टिमाइज़ेशन से बाहर रखें।</string>
     <string name="schedule_exact_background_note">सटीक समय के लिए Android की अलार्म और रिमाइंडर अनुमति का उपयोग होता है। Health Connect की बैकग्राउंड अनुमति अभी भी ज़रूरी है, और नेटवर्क न होने या फ़ोन बंद होने पर प्रक्रिया पूरी होने में देरी हो सकती है।</string>
     <string name="exact_timing_needed_title">सटीक समय बंद है</string>
     <string name="exact_timing_needed_body">चुने गए समय पर निर्यात शुरू करने के लिए अलार्म और रिमाइंडर की अनुमति दें। इस अनुमति के बिना Android देरी वाले विकल्प के रूप में WorkManager का उपयोग करता है।</string>
     <string name="exact_timing_enable_button">सटीक समय की अनुमति दें</string>
-    <string name="section_cadence">आवृत्ति</string>
-    <string name="cadence_unit_minutes">मिनट</string>
-    <string name="cadence_unit_hours">घंटे</string>
-    <string name="cadence_unit_days">दिन</string>
-    <string name="cadence_unit_weeks">सप्ताह</string>
     <string name="cadence_minutes_minimum">न्यूनतम आवृत्ति 15 मिनट है।</string>
-    <string name="section_export_time">निर्यात समय</string>
-    <string name="label_hour">घंटा</string>
-    <string name="label_minute">मिनट</string>
     <string name="schedule_frequency">आवृत्ति</string>
-    <string name="schedule_frequency_15_minutes">हर 15 मिनट पर</string>
-    <string name="schedule_frequency_every_minutes">हर %1$d मिनट</string>
-    <string name="schedule_frequency_hourly">प्रति घंटा</string>
-    <string name="schedule_frequency_every_hours">हर %1$d घंटा</string>
-    <string name="schedule_frequency_daily">दैनिक</string>
-    <string name="schedule_frequency_every_days">हर %1$d दिन</string>
-    <string name="schedule_frequency_weekly">साप्ताहिक</string>
-    <string name="schedule_frequency_every_weeks">हर %1$d सप्ताह</string>
     <string name="schedule_time">समय</string>
-    <string name="schedule_time_period_am">पूर्वाह्न</string>
-    <string name="schedule_time_period_pm">अपराह्न</string>
     <string name="schedule_date_window">तारीखें</string>
     <string name="schedule_date_window_past_complete_days">पिछले पूरे दिन</string>
     <string name="schedule_date_window_today">आज</string>
     <string name="schedule_export_past_days">पिछले दिनों निर्यात करें</string>
-    <string name="schedule_lookback_ios_single">हर बार कल तक के पिछले 1 दिन का डेटा निर्यात होता है।</string>
-    <string name="schedule_lookback_ios_plural">हर बार कल तक के पिछले %1$d दिनों का डेटा निर्यात होता है।</string>
     <string name="schedule_today_summary">हर बार आज का डेटा निर्यात होता है, ताकि मौजूदा दैनिक फ़ाइल अप-टू-डेट रहे। एक ही दिन की सामग्री दो बार जुड़ने से बचाने के लिए Overwrite या Update लेखन मोड का उपयोग करें।</string>
-    <string name="schedule_next_export_every">अगला निर्यात: हर %1$s</string>
-    <string name="schedule_next_export_every_at">अगला निर्यात: हर %1$s को %2$s पर</string>
     <string name="schedule_next_export_at_datetime">अगला निर्यात: %1$s</string>
-    <plurals name="schedule_cadence_minutes_count">
-        <item quantity="one">%d मिनट</item>
-        <item quantity="other">%d मिनट</item>
-    </plurals>
-    <plurals name="schedule_cadence_hours_count">
-        <item quantity="one">%d घंटा</item>
-        <item quantity="other">%d घंटे</item>
-    </plurals>
-    <plurals name="schedule_cadence_days_count">
-        <item quantity="one">%d दिन</item>
-        <item quantity="other">%d दिन</item>
-    </plurals>
-    <plurals name="schedule_cadence_weeks_count">
-        <item quantity="one">%d सप्ताह</item>
-        <item quantity="other">%d सप्ताह</item>
-    </plurals>
     <string name="notifications_needed_title">सूचनाएं बंद हैं</string>
     <string name="notifications_needed_body">निर्धारित निर्यात अभी भी चल रहे हैं, लेकिन जब तक सूचनाएं सक्षम नहीं की जाएं, तब तक आप पूरी होने पर सूचित नहीं होंगे।</string>
     <string name="notifications_enable_button">सक्षम करें</string>
@@ -568,7 +497,6 @@
     <string name="background_health_permission_needed_title">Health Connect पृष्ठभूमि पहुंच की आवश्यकता है</string>
     <string name="background_health_permission_needed_body">अनुसूचित निर्यात के लिए Health Connect की "पृष्ठभूमि में डेटा तक पहुंच" अनुमति की आवश्यकता होती है ताकि WorkManager ऐप बंद होने पर स्वास्थ्य डेटा पढ़ सके।</string>
     <string name="background_health_permission_enable_button">पृष्ठभूमि पहुंच सक्षम करें</string>
-    <string name="schedule_workmanager_notice">निर्यात WorkManager का उपयोग करके बैकग्राउंड में चलते हैं। भरोसेमंद शेड्यूलिंग के लिए Health Connect का बैकग्राउंड एक्सेस दें और Health.md को बैटरी ऑप्टिमाइज़ेशन से बाहर रखें।</string>
     <string name="scheduled_recovery_title">छूटे हुए निर्धारित निर्यात पुनर्प्राप्त करें?</string>
     <plurals name="scheduled_recovery_body">
         <item quantity="one">Health.md को %1$d लंबित निर्धारित तारीख मिली: %2$s। अगर रीबूट के बाद फ़ोन लॉक होने, बैकग्राउंड एक्सेस न होने या Health Connect अनुपलब्ध होने के कारण निर्धारित निर्यात छूट गया, तो ऐप खुला और अनलॉक होने पर Health.md अभी उसी तारीख के लिए दोबारा निर्यात कर सकता है। आगे ऐसी चूक रोकने के लिए बैकग्राउंड एक्सेस दें।</item>
@@ -585,7 +513,6 @@
     <string name="scheduled_recovery_blocked_running">एक निर्धारित पुनर्प्राप्ति निर्यात पहले से ही चल रहा है।</string>
     <string name="scheduled_recovery_no_pending">कोई भी निर्धारित निर्यात तिथि पुनर्प्राप्ति के लिए लंबित नहीं है।</string>
     <string name="scheduled_recovery_result_complete">निर्धारित पुनर्प्राप्ति पूर्ण हुई.</string>
-    <string name="scheduled_recovery_result_partial">पुनर्प्राप्ति में %2$d में से %1$d तारीखें निर्यात हुईं। %3$d तारीखें अभी लंबित हैं।</string>
     <string name="scheduled_recovery_result_blocked">निर्धारित पुनर्प्राप्ति अभी तैयार नहीं है।</string>
     <string name="not_now">अभी नहीं</string>
     <!-- Release notes -->
@@ -597,14 +524,12 @@
     <string name="release_notes_highlight_export_parity">नए Android-विशिष्ट विवरणों में गतिविधि की तीव्रता, भोजन का पोषण डेटा, मासिक धर्म की अवधि, नियोजित वर्कआउट और उपलब्ध होने पर टाइमस्टैम्प वाले विस्तृत नमूने शामिल हैं।</string>
     <string name="release_notes_highlight_templates">Markdown, JSON, CSV और Obsidian निर्यातों में अब बड़े कैटलॉग के ज़्यादा विस्तृत मेट्रिक मान शामिल हैं।</string>
     <string name="release_notes_highlight_workouts">केवल-पढ़ने वाली विस्तृत निर्यात अनुमतियों को समझाने के लिए Health Connect की अनुमति संबंधी जानकारी अपडेट की गई है।</string>
-    <string name="release_notes_highlight_accessibility">निर्यात, शेड्यूल और सेटिंग्स की पूरी प्रक्रिया में TalkBack लेबल और टच टार्गेट बेहतर किए गए हैं।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">निर्धारित निर्यात</string>
     <string name="notification_channel_scheduled_exports_description">जब निर्धारित स्वास्थ्य निर्यात पूरे हों या विफल हों तो सूचनाएं</string>
     <string name="export_notification_title_complete">निर्यात पूर्ण</string>
     <string name="export_notification_title_partial">निर्यात आंशिक</string>
     <string name="export_notification_title_failed">निर्यात विफल</string>
-    <string name="export_notification_message_days_exported">%1$d/%2$d दिन %3$s के लिए निर्यात किए गए</string>
     <string name="export_notification_background_permission_required">शेड्यूल किए गए निर्यात के लिए Health Connect का बैकग्राउंड एक्सेस ज़रूरी है। इसे चालू करने के लिए Health.md &gt; शेड्यूल खोलें।</string>
     <string name="export_notification_unknown_error">अज्ञात त्रुटि</string>
     <!-- Paywall screen -->
@@ -629,7 +554,6 @@
     <string name="debug_reset_state">स्थिति रीसेट करें</string>
     <!-- Export progress dialog -->
     <string name="export_progress_title">स्वास्थ्य डेटा निर्यात किया जा रहा है</string>
-    <string name="export_progress_days">%1$d / %2$d दिन</string>
     <!-- Navigation labels -->
     <string name="nav_export">निर्यात</string>
     <string name="nav_schedule">अनुसूची</string>
@@ -654,7 +578,7 @@
     <string name="privacy_category_heart">दिल</string>
     <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
     <string name="privacy_category_heart_exports">निर्यातित फ़ील्ड: आराम की हृदय गति, औसत/न्यूनतम/अधिकतम हृदय गति, चलने के दौरान औसत हृदय गति, हृदय गति परिवर्तनशीलता (HRV)</string>
-    <string name="privacy_category_vitals">वाइटल्स</string>
+    <string name="privacy_category_vitals">महत्वपूर्ण संकेत</string>
     <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
     <string name="privacy_category_vitals_exports">निर्यातित क्षेत्र: श्वसन दर, रक्त ऑक्सीजन, शरीर का तापमान, रक्तचाप (सिस्टोलिक/डायस्टोलिक), रक्त ग्लूकोज, बेसल शरीर का तापमान, त्वचा का तापमान</string>
     <string name="privacy_category_body">शरीर</string>
@@ -683,16 +607,9 @@
     <string name="privacy_category_history_exports">केवल बड़े मैन्युअल निर्यातों के लिए उपयोग होता है, जैसे 90 दिन या पूरी अवधि, ताकि Health.md मानक 30-दिन की सीमा से पुराना Health Connect डेटा पढ़ सके</string>
     <string name="privacy_policy_direct_cli">Direct CLI निर्यात तभी होता है जब आप स्पष्ट रूप से अपने कंप्यूटर से पेयर और कनेक्ट करते हैं। स्वास्थ्य रिकॉर्ड प्रमाणित, एन्क्रिप्टेड कनेक्शन से भेजे जाते हैं। ट्रांसफ़र दोबारा शुरू किया जा सके, इसके लिए उन्हें अधिकतम सात दिन निजी रूप से रखा जाता है; रद्द करने या पेयरिंग हटाने पर वे इससे पहले ही मिटा दिए जाते हैं।</string>
     <string name="privacy_policy_footer">Health.md कोई स्वास्थ्य-डेटा क्लाउड संचालित नहीं करता। अभियान एट्रिब्यूशन ऐप के बनाए रैंडम इंस्टॉल/इवेंट UUIDs और सत्यापित अभियान मेटाडेटा भेज सकता है। यह कभी स्वास्थ्य डेटा, रॉ रेफ़रर, डिवाइस IDs, निर्यात, खाते या पाथ नहीं भेजता।</string>
-    <!-- Legacy body string kept for locale fallback -->
-    <string name="privacy_policy_body">Health.md केवल आपके अनुरोध वाले निर्यात बनाने के लिए Health Connect डेटा पढ़ता है। फ़ोल्डर निर्यात चुने गए स्टोरेज में जाते हैं, API Endpoint निर्यात सीधे आपकी कॉन्फ़िगर की हुई सेवा में जाते हैं और स्पष्ट रूप से कनेक्ट किया गया Direct CLI निर्यात प्रमाणित एन्क्रिप्शन के जरिए आपके पेयर किए गए कंप्यूटर तक जाता है। अलग से, प्रथम-पक्ष अभियान एट्रिब्यूशन ऐप के बनाए रैंडम UUIDs और साफ़ किए गए अभियान मेटाडेटा से Play इंस्टॉल को किसी अभियान से जोड़ सकता है। इसमें स्वास्थ्य डेटा, रॉ रेफ़रर, डिवाइस पहचानकर्ता, निर्यात सामग्री, खाता डेटा या फ़ाइल पथ शामिल नहीं होता।</string>
     <!-- Feedback helper -->
     <string name="feedback_email_subject">Health.md प्रतिक्रिया</string>
     <string name="feedback_send_chooser">प्रतिक्रिया भेजें</string>
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
     <!-- Raw snapshot product controls -->
     <string name="section_export_type">निर्यात प्रकार</string>
     <string name="export_type_compatibility">संगतता निर्यात</string>
@@ -723,9 +640,6 @@
     <string name="raw_snapshot_cancelled_label">रॉ स्नैपशॉट रद्द किया गया</string>
     <string name="raw_snapshot_result_created">रॉ स्नैपशॉट बनाया गया</string>
     <string name="raw_snapshot_result_uploaded">रॉ स्नैपशॉट अपलोड किया गया</string>
-    <string name="raw_snapshot_result_count">स्नैपशॉट क्रियाएँ पूर्ण: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count">स्नैपशॉट क्रियाएँ: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count">अपूर्ण स्नैपशॉट क्रियाएँ: %d</string>
     <plurals name="raw_snapshot_diagnostics_reason_count">
         <item quantity="one">%1$s: %2$d कार्रवाई</item>
         <item quantity="other">%1$s: %2$d कार्रवाइयाँ</item>
@@ -734,9 +648,8 @@
     <string name="raw_snapshot_diagnostics_no_details">कोई स्नैपशॉट डायग्नोस्टिक्स रिकॉर्ड नहीं किया गया। प्रदाता पहुंच की जाँच करें और सीमा का पुनः प्रयास करें।</string>
     <string name="raw_snapshot_guidance_provider">दोबारा कोशिश करने से पहले चुने गए प्रदाता का एक्सेस और रॉ आर्टिफ़ैक्ट मैनिफ़ेस्ट जाँचें।</string>
     <string name="raw_snapshot_guidance_cancelled">कोई रॉ आर्टिफ़ैक्ट प्रकाशित नहीं किया गया। तैयार होने पर पुनः प्रयास करें।</string>
-    <string name="raw_snapshot_history_entry">स्नैपशॉट क्रियाएँ: %1$d/%2$d \u2022 %3$s से %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">स्नैपशॉट निदान</string>
-    <string name="raw_snapshot_notification_message">रॉ स्नैपशॉट रेंज समाप्त होने वाली %1$s: %2$s</string>
+    <string name="raw_snapshot_notification_message">%1$s को समाप्त होने वाली रॉ स्नैपशॉट अवधि: %2$s</string>
     <string name="raw_snapshot_status_complete">पूर्ण</string>
     <string name="raw_snapshot_status_failed">विफल</string>
     <!-- ExportFormat display names -->
@@ -752,7 +665,7 @@
     <string name="write_mode_display_update">अपडेट</string>
     <string name="write_mode_desc_update">अपनी कस्टम सामग्री को संरक्षित करते हुए ऐप-प्रबंधित अनुभागों को अपडेट करें</string>
     <!-- DateFormatPreference display names -->
-    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">US लघु (01/13/2026)</string>
     <string name="date_format_display_us_long">US दीर्घ (जनवरी 13, 2026)</string>
     <string name="date_format_display_eu_short">EU लघु (13/01/2026)</string>
@@ -819,8 +732,6 @@
     <string name="schedule_unlock_required_title">निर्धारित निर्यात अनलॉक करें</string>
     <string name="schedule_unlock_required_body">मैन्युअल निर्यात 10 बार मुफ़्त चलाए जा सकते हैं। एकमुश्त लाइफ़टाइम अनलॉक में स्वचालित निर्धारित निर्यात शामिल हैं।</string>
     <string name="schedule_unlock_required_short">शेड्यूल किए गए निर्यात चालू करने के लिए Health.md अनलॉक करें।</string>
-    <string name="section_schedule_lookback">निर्धारित निर्यात की पिछली अवधि</string>
-    <string name="schedule_lookback_summary">हर निर्धारित निर्यात में कल तक के पिछले %1$d पूरे दिन और लंबित विफल तारीखें निर्यात होती हैं।</string>
     <string name="export_folder_root_label">निर्यात फ़ोल्डर</string>
     <string name="history_clear_title">निर्यात इतिहास साफ़ करें?</string>
     <string name="history_clear_body">यह सभी स्थानीय निर्यात इतिहास प्रविष्टियाँ हटा देता है। निर्यात की गई फ़ाइलें हटाई नहीं जातीं.</string>
@@ -840,10 +751,6 @@
     <string name="history_detail_failure">विफलता</string>
     <string name="history_detail_warning">चेतावनी</string>
     <string name="history_detail_failed_dates">असफल तारीखें</string>
-    <string name="clear">साफ़ करें</string>
-    <string name="retry">पुनः प्रयास करें</string>
-    <string name="retrying">पुनः प्रयास किया जा रहा है...</string>
-    <string name="delete">हटाएँ</string>
     <string name="section_file_organization">फ़ाइल संगठन</string>
     <string name="health_subfolder_label">स्वास्थ्य उपफ़ोल्डर</string>
     <string name="folder_organization_label">स्वचालित फ़ोल्डर</string>
@@ -1032,11 +939,6 @@
     <string name="feedback_issue_steps_heading">समस्या दोहराने के चरण</string>
     <string name="feedback_issue_expected_heading">अपेक्षित व्यवहार</string>
     <string name="feedback_issue_expected_hint">आपको क्या होने की उम्मीद थी</string>
-    <string name="automation_history_permissions_missing">Health Connect अनुमतियाँ अनुपलब्ध</string>
-    <plurals name="automation_history_failed_dates">
-        <item quantity="one">%1$d असफल तारीख</item>
-        <item quantity="other">%1$d असफल तारीखें</item>
-    </plurals>
     <string name="action_edit_endpoint">API एंडपॉइंट संपादित करें</string>
     <string name="history_date_range">%1$s – %2$s</string>
     <string name="history_failed_date_reason">%1$s: %2$s</string>
@@ -1066,12 +968,7 @@
     <string name="schedule_target_folder_choose">निर्यात स्क्रीन से फ़ोल्डर चुनें</string>
     <string name="schedule_target_folder_ready">निर्धारित फ़ाइलें चयनित उपकरण फ़ोल्डर में लिखें</string>
     <string name="schedule_toggle_time_period">पूर्वाह्न या अपराह्न बदलें</string>
-    <string name="scheduled_recovery_history_cancelled">पुनर्प्राप्ति रद्द की गई; अधूरी तारीखें लंबित रहेंगी।</string>
     <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
-    <plurals name="export_history_failed_dates_pending_retry">
-        <item quantity="one">पुनः प्रयास के लिए लंबित %1$d असफल तारीख</item>
-        <item quantity="other">पुनः प्रयास के लिए लंबित %1$d असफल तारीखें</item>
-    </plurals>
     <plurals name="export_notification_days_exported">
         <item quantity="one">%1$d/%2$d दिन %3$s के लिए निर्यात किया गया</item>
         <item quantity="other">%1$d/%2$d दिन %3$s के लिए निर्यात किए गए</item>
@@ -1127,10 +1024,6 @@
     <plurals name="schedule_lookback_days_summary">
         <item quantity="one">हर बार कल तक के पिछले %1$d दिन का डेटा निर्यात होता है।</item>
         <item quantity="other">हर बार कल तक के पिछले %1$d दिनों का डेटा निर्यात होता है।</item>
-    </plurals>
-    <plurals name="scheduled_recovery_history_failed_dates">
-        <item quantity="one">रिकवरी पूरी हुई; %1$d असफल तारीख अभी भी लंबित है।</item>
-        <item quantity="other">रिकवरी पूरी हुई; %1$d असफल तारीखें अभी भी लंबित हैं।</item>
     </plurals>
     <plurals name="scheduled_recovery_result_exported_dates">
         <item quantity="one">पुनर्प्राप्ति ने %1$d/%2$d तारीख निर्यात की।</item>
@@ -1262,4 +1155,160 @@
         <item quantity="one">स्नैपशॉट कार्रवाई पूरी हुई: %1$d/%2$d</item>
         <item quantity="other">स्नैपशॉट कार्रवाइयाँ पूरी हुईं: %1$d/%2$d</item>
     </plurals>
+
+    <!-- Clinician Report -->
+
+    <!-- Clinician Report: locale-pinned, local-only workflow and document vocabulary. -->
+    <string name="clinician_report_title">चिकित्सक रिपोर्ट</string>
+    <string name="clinician_report_entry_subtitle">चिकित्सक के साथ साझा करने के लिए एक निजी स्वास्थ्य सारांश PDF बनाएँ।</string>
+    <string name="clinician_report_intro">एक अवधि और माप चुनें, तथ्यात्मक सारांश का पूर्वावलोकन करें, फिर पूरी तरह इसी डिवाइस पर PDF बनाएँ।</string>
+    <string name="clinician_report_period">रिपोर्ट की अवधि</string>
+    <string name="clinician_report_7_days">7 दिन</string>
+    <string name="clinician_report_30_days">30 दिन</string>
+    <string name="clinician_report_90_days">90 दिन</string>
+    <string name="clinician_report_custom">कस्टम</string>
+    <string name="clinician_report_select_date">तारीख चुनें</string>
+    <string name="clinician_report_start_date">आरंभ की तारीख</string>
+    <string name="clinician_report_end_date">समाप्ति की तारीख</string>
+    <string name="clinician_report_metrics">स्वास्थ्य माप</string>
+    <string name="clinician_report_detail">रिपोर्ट का विवरण</string>
+    <string name="clinician_report_summary_only">केवल सारांश</string>
+    <string name="clinician_report_summary_readings">सारांश + अलग-अलग रीडिंग</string>
+    <string name="clinician_report_display_name">दिखाया जाने वाला नाम (वैकल्पिक)</string>
+    <string name="clinician_report_display_name_hint">केवल इस रिपोर्ट में उपयोग किया जाता है और Health.md द्वारा सहेजा नहीं जाता।</string>
+    <string name="clinician_report_preview">रिपोर्ट का पूर्वावलोकन</string>
+    <string name="clinician_report_select_metric">कम से कम एक माप चुनें।</string>
+    <string name="clinician_report_preview_heading">रिपोर्ट का पूर्वावलोकन</string>
+    <string name="clinician_report_generate_pdf">PDF बनाएँ</string>
+    <string name="clinician_report_share_pdf">PDF साझा करें</string>
+    <string name="clinician_report_save_pdf">PDF सहेजें</string>
+    <string name="clinician_report_share_or_save_pdf">PDF साझा करें या सहेजें</string>
+    <string name="clinician_report_preparing">रिपोर्ट तैयार की जा रही है…</string>
+    <string name="clinician_report_generating">PDF बनाया जा रहा है…</string>
+    <string name="clinician_report_close">बंद करें</string>
+    <string name="clinician_report_selected">चुना गया</string>
+    <string name="clinician_report_not_selected">नहीं चुना गया</string>
+    <string name="clinician_report_metric_blood_pressure">रक्तचाप</string>
+    <string name="clinician_report_metric_resting_heart_rate">आराम के समय हृदय गति</string>
+    <string name="clinician_report_metric_heart_rate">हृदय गति</string>
+    <string name="clinician_report_metric_weight">वज़न</string>
+    <string name="clinician_report_metric_blood_glucose">रक्त ग्लूकोज़</string>
+    <string name="clinician_report_metric_oxygen_saturation">ऑक्सीजन संतृप्ति</string>
+    <string name="clinician_report_metric_respiratory_rate">श्वसन दर</string>
+    <string name="clinician_report_metric_body_temperature">शरीर का तापमान</string>
+    <string name="clinician_report_metric_sleep_duration">नींद की अवधि</string>
+    <string name="clinician_report_metric_steps">कदम</string>
+    <string name="clinician_report_metric_workouts">व्यायाम / वर्कआउट</string>
+    <string name="clinician_report_document_title">स्वास्थ्य सारांश</string>
+    <string name="clinician_report_no_data">चुनी गई अवधि के दौरान इस माप के लिए कोई डेटा उपलब्ध नहीं है।</string>
+    <string name="clinician_report_disclaimer">यह रिपोर्ट रोगी द्वारा चुने और अधिकृत किए गए स्वास्थ्य डेटा का सारांश देती है। Health.md स्थितियों का निदान नहीं करता या चिकित्सीय सलाह नहीं देता। डेटा की पूर्णता कनेक्ट किए गए डिवाइस, ऐप्लिकेशन, अनुमतियों और रिकॉर्ड करने के तरीके पर निर्भर करती है।</string>
+    <string name="clinician_report_attribution">रोगी द्वारा अधिकृत स्वास्थ्य डेटा से Health.md का उपयोग करके निजी रूप से बनाया गया।</string>
+    <string name="clinician_report_practice_line">मुलाकात से पहले रोगियों द्वारा बनाई गई रिपोर्ट पाने में रुचि रखने वाली स्वास्थ्य सेवा संस्थाओं के लिए: %1$s</string>
+    <string name="clinician_report_manual_entry">मैन्युअल प्रविष्टि</string>
+    <string name="clinician_report_manual_entry_source">%1$s (मैन्युअल प्रविष्टि)</string>
+    <string name="clinician_report_fact_readings">रीडिंग</string>
+    <string name="clinician_report_fact_available_values">उपलब्ध मान</string>
+    <string name="clinician_report_fact_daily_values">दैनिक मान</string>
+    <string name="clinician_report_fact_days_with_data">डेटा वाले दिन</string>
+    <string name="clinician_report_fact_average">औसत</string>
+    <string name="clinician_report_fact_median">मध्यिका</string>
+    <string name="clinician_report_fact_range">सीमा</string>
+    <string name="clinician_report_fact_most_recent">सबसे हाल का</string>
+    <string name="clinician_report_fact_first">पहला</string>
+    <string name="clinician_report_fact_change">अवधि के दौरान बदलाव</string>
+    <string name="clinician_report_fact_total">कुल</string>
+    <string name="clinician_report_fact_average_data_days">डेटा वाले दिनों का औसत</string>
+    <string name="clinician_report_fact_nights_with_data">डेटा वाली रातें</string>
+    <string name="clinician_report_fact_median_sleep">नींद की अवधि की मध्यिका</string>
+    <string name="clinician_report_fact_sessions">सत्र</string>
+    <string name="clinician_report_fact_total_duration">कुल अवधि</string>
+    <string name="clinician_report_fact_workout_type">वर्कआउट के प्रकार के अनुसार</string>
+    <string name="clinician_report_table_blood_pressure">रक्तचाप रीडिंग</string>
+    <string name="clinician_report_table_metric_readings">%1$s की रीडिंग</string>
+    <string name="clinician_report_table_sleep">नींद की अवधियाँ</string>
+    <string name="clinician_report_table_workouts">वर्कआउट सत्र</string>
+    <string name="clinician_report_column_date">तारीख</string>
+    <string name="clinician_report_column_time">समय</string>
+    <string name="clinician_report_column_systolic">सिस्टोलिक</string>
+    <string name="clinician_report_column_diastolic">डायस्टोलिक</string>
+    <string name="clinician_report_column_source">स्रोत</string>
+    <string name="clinician_report_column_value">मान</string>
+    <string name="clinician_report_column_weight">वज़न</string>
+    <string name="clinician_report_column_steps">कदम</string>
+    <string name="clinician_report_column_night">रात</string>
+    <string name="clinician_report_column_duration">अवधि</string>
+    <string name="clinician_report_column_type">प्रकार</string>
+    <string name="clinician_report_value_on_date">%1$s — %2$s को</string>
+    <string name="clinician_report_coverage">%1$d दिन का डेटा उपलब्ध है, कुल %2$d दिनों में। शेष %3$d दिनों का कोई डेटा Health.md को उपलब्ध नहीं था।</string>
+    <string name="clinician_report_sources">स्रोत: %1$s</string>
+    <string name="clinician_report_step_total">%1$s कदम</string>
+    <string name="clinician_report_step_average">%1$s कदम/दिन</string>
+    <string name="clinician_report_duration_hours">%1$d घंटा</string>
+    <string name="clinician_report_duration_minutes">%1$d मिनट</string>
+    <string name="clinician_report_duration_hours_minutes">%1$s %2$s</string>
+    <string name="clinician_report_workout_breakdown_item">%1$s: %2$d</string>
+    <string name="clinician_report_detail_readings_count">PDF में %1$d अलग-अलग रीडिंग शामिल की जाएँगी।</string>
+    <string name="clinician_report_metadata_period">रिपोर्ट की अवधि</string>
+    <string name="clinician_report_metadata_generated">बनाने का समय</string>
+    <string name="clinician_report_metadata_timezone">समय क्षेत्र</string>
+    <string name="clinician_report_metadata_patient">रोगी</string>
+    <string name="clinician_report_availability_note">डेटा उपलब्धता नोट</string>
+    <string name="clinician_report_about">इस रिपोर्ट के बारे में</string>
+    <string name="clinician_report_page_footer">Health.md • पृष्ठ %1$d</string>
+    <string name="clinician_report_warning_read_failure">कुछ चुना हुआ स्वास्थ्य डेटा पढ़ा नहीं जा सका। खाली अनुभाग अनुपलब्ध पहुँच या कोई रिकॉर्ड न मिलने को दर्शा सकते हैं।</string>
+    <string name="clinician_report_warning_source_failure_date">%1$s के लिए कुछ कनेक्ट किए गए स्वास्थ्य स्रोत पढ़े नहीं जा सके।</string>
+    <string name="clinician_report_warning_apple_read_failure_date">%1$s के लिए कुछ चुना हुआ Apple Health डेटा पढ़ा नहीं जा सका। खाली अनुभाग अनुपलब्ध पहुँच या कोई रिकॉर्ड न मिलने को दर्शा सकते हैं।</string>
+    <string name="clinician_report_warning_apple_source_failure_date">%1$s के लिए कुछ चुने हुए Apple Health स्रोत रिकॉर्ड पढ़े नहीं जा सके।</string>
+    <string name="clinician_report_warning_apple_integrity_date">Apple Health ने %1$s के लिए स्रोत-रिकॉर्ड की अखंडता संबंधी चेतावनी दी।</string>
+    <string name="clinician_report_warning_apple_summary_fallback">इस रिपोर्ट के कुछ भाग के लिए स्रोत-स्तर के Apple Health रिकॉर्ड उपलब्ध नहीं थे; जहाँ उपलब्ध हैं, वहाँ सारांश मानों का उपयोग किया गया है।</string>
+    <string name="clinician_report_error_prepare_android">रिपोर्ट तैयार नहीं की जा सकी। स्वास्थ्य डेटा की पहुँच जाँचें और फिर से कोशिश करें।</string>
+    <string name="clinician_report_error_prepare_apple">रिपोर्ट तैयार नहीं की जा सकी। Apple Health की पहुँच जाँचें और फिर से कोशिश करें।</string>
+    <string name="clinician_report_error_pdf">PDF नहीं बनाया जा सका। फिर से कोशिश करें।</string>
+    <string name="clinician_report_saved">स्वास्थ्य सारांश सहेजा गया</string>
+    <string name="clinician_report_error_save">PDF सहेजा नहीं जा सका। कोई दूसरा स्थान चुनें और फिर से कोशिश करें।</string>
+    <string name="clinician_report_error_open_destination">चुना गया दस्तावेज़ खोला नहीं जा सका।</string>
+    <string name="clinician_report_accessibility_hint">इस डिवाइस पर एक निजी स्वास्थ्य सारांश PDF बनाएँ</string>
+    <string name="clinician_report_workout_type_running">दौड़ना</string>
+    <string name="clinician_report_workout_type_walking">पैदल चलना</string>
+    <string name="clinician_report_workout_type_cycling">साइकिल चलाना</string>
+    <string name="clinician_report_workout_type_swimming">तैराकी</string>
+    <string name="clinician_report_workout_type_hiking">पदयात्रा</string>
+    <string name="clinician_report_workout_type_yoga">योग</string>
+    <string name="clinician_report_workout_type_strength_training">शक्ति प्रशिक्षण</string>
+    <string name="clinician_report_workout_type_core_training">कोर प्रशिक्षण</string>
+    <string name="clinician_report_workout_type_hiit">HIIT</string>
+    <string name="clinician_report_workout_type_elliptical">एलिप्टिकल</string>
+    <string name="clinician_report_workout_type_rowing">चप्पू चलाना</string>
+    <string name="clinician_report_workout_type_stair_climbing">सीढ़ियाँ चढ़ना</string>
+    <string name="clinician_report_workout_type_pilates">पिलाटीज़</string>
+    <string name="clinician_report_workout_type_dance">नृत्य</string>
+    <string name="clinician_report_workout_type_cooldown">कूलडाउन</string>
+    <string name="clinician_report_workout_type_mixed_cardio">मिश्रित कार्डियो</string>
+    <string name="clinician_report_workout_type_pickleball">पिकलबॉल</string>
+    <string name="clinician_report_workout_type_tennis">टेनिस</string>
+    <string name="clinician_report_workout_type_badminton">बैडमिंटन</string>
+    <string name="clinician_report_workout_type_table_tennis">टेबल टेनिस</string>
+    <string name="clinician_report_workout_type_golf">गोल्फ़</string>
+    <string name="clinician_report_workout_type_soccer">फ़ुटबॉल</string>
+    <string name="clinician_report_workout_type_basketball">बास्केटबॉल</string>
+    <string name="clinician_report_workout_type_baseball">बेसबॉल</string>
+    <string name="clinician_report_workout_type_softball">सॉफ़्टबॉल</string>
+    <string name="clinician_report_workout_type_volleyball">वॉलीबॉल</string>
+    <string name="clinician_report_workout_type_american_football">अमेरिकी फ़ुटबॉल</string>
+    <string name="clinician_report_workout_type_rugby">रग्बी</string>
+    <string name="clinician_report_workout_type_hockey">हॉकी</string>
+    <string name="clinician_report_workout_type_lacrosse">लैक्रोस</string>
+    <string name="clinician_report_workout_type_skating">स्केटिंग</string>
+    <string name="clinician_report_workout_type_snow_sports">हिम खेल</string>
+    <string name="clinician_report_workout_type_water_sports">जल क्रीड़ाएँ</string>
+    <string name="clinician_report_workout_type_wheelchair">व्हीलचेयर गतिविधि</string>
+    <string name="clinician_report_workout_type_martial_arts">मार्शल आर्ट</string>
+    <string name="clinician_report_workout_type_boxing">मुक्केबाज़ी</string>
+    <string name="clinician_report_workout_type_kickboxing">किकबॉक्सिंग</string>
+    <string name="clinician_report_workout_type_wrestling">कुश्ती</string>
+    <string name="clinician_report_workout_type_climbing">चढ़ाई</string>
+    <string name="clinician_report_workout_type_jump_rope">रस्सी कूदना</string>
+    <string name="clinician_report_workout_type_flexibility">लचीलापन</string>
+    <string name="clinician_report_workout_type_other">अन्य</string>
+    <string name="clinician_report_unit_respiratory_rate">श्वास/मिनट</string>
 </resources>

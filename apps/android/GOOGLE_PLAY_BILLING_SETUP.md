@@ -22,10 +22,10 @@ Google Play Billing Client
 
 1. **BillingRepository** (`domain/repository/BillingRepository.kt`)
    - Interface defining the billing contract
-   - `isPurchased`: StateFlow tracking purchase state
-   - `launchPurchaseFlow()`: Initiates purchase flow
-   - `restorePurchases()`: Queries existing purchases
-   - `connect()/disconnect()`: Manages billing client lifecycle
+   - `isUnlocked`: StateFlow tracking purchase state
+   - `launchPurchase()`: Initiates purchase flow
+   - `restorePurchase()`: Queries existing purchases
+   - `startConnection()`: Idempotently connects the application-scoped billing client
 
 2. **BillingRepositoryImpl** (`data/billing/BillingRepositoryImpl.kt`)
    - Concrete implementation using Google Play Billing Client v7.1+
@@ -42,6 +42,11 @@ Google Play Billing Client
    - Purchase and restore buttons
    - Error messaging support
 
+The repository and `BillingClient` are Hilt singletons with process lifetime. Screen
+ViewModels may call `startConnection()` but must never call `BillingClient.endConnection()`:
+Google marks a closed client as terminal, and closing it when onboarding or the schedule
+screen is removed would break purchases elsewhere until the app process restarted.
+
 ## Setup Instructions
 
 ### Step 1: Create Product in Google Play Console
@@ -49,7 +54,7 @@ Google Play Billing Client
 1. Go to [Google Play Console](https://play.google.com/console)
 2. Select your app → **Monetize** → **Products** → **In-app products**
 3. Create a new product with:
-   - **Product ID**: `health_md_premium_lifetime` (must match `PRODUCT_ID_PREMIUM` in code)
+   - **Product ID**: `health_md_premium_lifetime` (must match `PRODUCT_ID` in code)
    - **Product type**: In-app product (one-time purchase)
    - **Title**: "Health MD Premium"
    - **Description**: "Unlimited exports and scheduled backups"
@@ -64,7 +69,7 @@ If you use a different product ID, update:
 **File**: `app/src/main/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`
 
 ```kotlin
-private const val PRODUCT_ID_PREMIUM = "health_md_premium_lifetime"  // ← Update this
+private const val PRODUCT_ID = "health_md_premium_lifetime"  // ← Update this
 ```
 
 ### Step 3: Build and Test

@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Health.md</string>
 
     <!-- Common -->
-    <string name="ok">OK</string>
     <string name="cancel">Annuleren</string>
     <string name="back">Terug</string>
     <string name="close">Sluiten</string>
@@ -108,11 +107,6 @@
 
     <!-- Date range -->
     <string name="section_date_range">Datumbereik</string>
-    <string name="date_shortcut_1d">1d</string>
-    <string name="date_shortcut_7d">7d</string>
-    <string name="date_shortcut_30d">30d</string>
-    <string name="date_shortcut_90d">90d</string>
-    <string name="date_shortcut_all">Alles</string>
 
     <!-- Export format -->
     <string name="section_export_format">Exportformaat</string>
@@ -132,8 +126,6 @@
     <string name="export_preview_device_destination">Apparaatmap</string>
     <string name="export_preview_complete_file">Je ziet het volledige %1$s-bestand dat wordt geëxporteerd.</string>
     <string name="export_preview_truncated_file">Je ziet een beknopt voorbeeld van dit %1$s-bestand. De volledige export bevat nog steeds alle gegevens.</string>
-    <string name="export_preview_limited_one">Voorbeeld van de recentste dag met gegevens. De volledige export wordt uitgevoerd voor elke geselecteerde datum.</string>
-    <string name="export_preview_limited_other">Voorbeeld van de %1$d recentste dagen met gegevens. De volledige export wordt uitgevoerd voor elke geselecteerde datum.</string>
     <string name="export_preview_no_data_title">Geen gegevens om weer te geven</string>
     <string name="export_preview_no_data_message">Er zijn geen gezondheidsgegevens voor de geselecteerde datums of er zijn geen indelingen geselecteerd.</string>
     <plurals name="free_exports_remaining">
@@ -141,19 +133,10 @@
         <item quantity="other">Nog %1$d gratis exports beschikbaar</item>
     </plurals>
     <string name="unlock_button">Health.md ontgrendelen</string>
-    <string name="export_result_days">%1$d/%2$d dagen geëxporteerd</string>
     <string name="open_folder">Map openen</string>
     <string name="open_with_files">Bestanden</string>
     <string name="open_with_obsidian">Obsidian</string>
 
-    <!-- Export failure messages -->
-    <string name="error_no_health_data">Geen gezondheidsgegevens gevonden voor dit datumbereik</string>
-    <string name="error_file_write">Kan bestand niet schrijven — controleer maptoegang</string>
-    <string name="error_access_denied">Toegang geweigerd tot de exportmap</string>
-    <string name="error_no_folder">Geen exportmap geselecteerd</string>
-    <string name="error_health_connect">Health Connect-fout — controleer machtigingen</string>
-    <string name="error_device_locked">De telefoon is sinds de laatste herstart niet ontgrendeld — ontgrendel hem en probeer het opnieuw</string>
-    <string name="error_unknown">Er is een onverwachte fout opgetreden</string>
 
     <!-- Debug panel -->
     <string name="debug_panel_title">Debuggegevens</string>
@@ -170,7 +153,6 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
 
     <!-- Settings screen -->
-    <string name="settings_title">Configureer\nje app</string>
     <string name="settings_subtitle">Beheer Premium en ondersteuning</string>
     <string name="section_write_mode">Schrijfmodus</string>
     <string name="section_filename_template">Bestandsnaamsjabloon</string>
@@ -211,7 +193,7 @@
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Gezondheidsmetingen</string>
-    <string name="search_metrics_hint">Metingen zoeken...</string>
+    <string name="search_metrics_hint">Metingen zoeken…</string>
     <string name="select_all">Alles selecteren</string>
     <string name="deselect_all">Alles deselecteren</string>
     <string name="metrics_enabled_category">%1$d/%2$d ingeschakeld</string>
@@ -330,11 +312,6 @@
     <string name="action_suggested">Aanbevolen</string>
     <string name="action_all">Alles</string>
     <string name="action_none">Geen</string>
-    <string name="section_tracked_metrics">Bijgehouden metingen</string>
-    <string name="metric_workouts">Trainingen</string>
-    <string name="metric_blood_pressure">Bloeddruk</string>
-    <string name="metric_blood_glucose">Bloedglucose</string>
-    <string name="metric_weight">Gewicht</string>
     <string name="section_entries_folder">Mapnaam voor registraties</string>
     <string name="entries_folder_hint">entries</string>
     <string name="individual_tracking_filename_hint">{metric}-{date}-{time}</string>
@@ -360,46 +337,17 @@
 
     <!-- Schedule screen -->
     <string name="section_schedule">Planning</string>
-    <string name="schedule_active">Planning\nactief</string>
-    <string name="schedule_not_set">Geen planning\ningesteld</string>
     <string name="automatic_export_title">Automatische export</string>
     <string name="automatic_export_subtitle">Exporteer je gezondheidsgegevens automatisch</string>
     <string name="schedule_exact_background_note">Exacte timing gebruikt de Android-toegang voor Wekkers en herinneringen. Achtergrondtoegang tot Health Connect blijft vereist. Een onbeschikbaar netwerk of uitgeschakelde telefoon kan de voltooiing vertragen.</string>
     <string name="exact_timing_needed_title">Exacte timing is uitgeschakeld</string>
     <string name="exact_timing_needed_body">Sta Wekkers en herinneringen toe om exports op het gekozen tijdstip te starten. Zonder deze toegang gebruikt Android WorkManager als vertraagde terugvaloptie.</string>
     <string name="exact_timing_enable_button">Exacte timing toestaan</string>
-    <string name="section_cadence">Interval</string>
-    <string name="cadence_unit_minutes">Minuten</string>
-    <string name="cadence_unit_hours">Uren</string>
-    <string name="cadence_unit_days">Dagen</string>
-    <string name="cadence_unit_weeks">Weken</string>
     <string name="cadence_minutes_minimum">Minimaal interval is 15 minuten.</string>
-    <string name="section_export_time">Exporttijd</string>
-    <string name="label_hour">Uur</string>
-    <string name="label_minute">Minuut</string>
-    <string name="schedule_next_export_every">Volgende export: elke %1$s</string>
-    <string name="schedule_next_export_every_at">Volgende export: elke %1$s om %2$s</string>
-    <plurals name="schedule_cadence_minutes_count">
-        <item quantity="one">%d minuut</item>
-        <item quantity="other">%d minuten</item>
-    </plurals>
-    <plurals name="schedule_cadence_hours_count">
-        <item quantity="one">%d uur</item>
-        <item quantity="other">%d uur</item>
-    </plurals>
-    <plurals name="schedule_cadence_days_count">
-        <item quantity="one">%d dag</item>
-        <item quantity="other">%d dagen</item>
-    </plurals>
-    <plurals name="schedule_cadence_weeks_count">
-        <item quantity="one">%d week</item>
-        <item quantity="other">%d weken</item>
-    </plurals>
     <string name="notifications_needed_title">Meldingen zijn uit</string>
     <string name="notifications_needed_body">Geplande exports worden nog uitgevoerd, maar je krijgt geen melding wanneer ze klaar zijn totdat meldingen zijn ingeschakeld.</string>
     <string name="notifications_enable_button">Inschakelen</string>
     <string name="notifications_open_settings_button">Instellingen openen</string>
-    <string name="schedule_workmanager_notice">Exports worden op de achtergrond uitgevoerd met WorkManager. Sta voor betrouwbare planning achtergrondtoegang tot Health Connect toe en sluit Health.md uit van batterijoptimalisatie.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Geplande exports</string>
@@ -407,7 +355,6 @@
     <string name="export_notification_title_complete">Export voltooid</string>
     <string name="export_notification_title_partial">Export gedeeltelijk voltooid</string>
     <string name="export_notification_title_failed">Export mislukt</string>
-    <string name="export_notification_message_days_exported">%1$d/%2$d dagen geëxporteerd voor %3$s</string>
     <string name="export_notification_unknown_error">Onbekende fout</string>
 
     <!-- Paywall screen -->
@@ -422,7 +369,6 @@
 
     <!-- Export progress dialog -->
     <string name="export_progress_title">Gezondheidsgegevens worden geëxporteerd</string>
-    <string name="export_progress_days">%1$d / %2$d dagen</string>
 
     <!-- Navigation labels -->
     <string name="nav_export">Export</string>
@@ -437,11 +383,6 @@
     <string name="feedback_email_subject">Health.md feedback</string>
     <string name="feedback_send_chooser">Feedback verzenden</string>
 
-    <!--
-        Enum UI labels and descriptions.
-        These are consumed via composable mappings in
-        app/src/main/java/com/healthmd/presentation/i18n/LocalizedEnumText.kt.
-    -->
 
     <!-- ExportFormat display names -->
     <string name="format_display_markdown">Markdown</string>
@@ -458,7 +399,7 @@
     <string name="write_mode_desc_update">Werk door app beheerde secties bij terwijl je aangepaste inhoud behouden blijft</string>
 
     <!-- DateFormatPreference display names -->
-    <string name="date_format_display_iso8601">ISO 8601 (2026-01-13)</string>
+    <string name="date_format_display_iso8601" tools:ignore="TypographyDashes">ISO 8601 (2026-01-13)</string>
     <string name="date_format_display_us_short">VS kort (01/13/2026)</string>
     <string name="date_format_display_us_long">VS lang (januari 13, 2026)</string>
     <string name="date_format_display_eu_short">EU kort (13/01/2026)</string>
@@ -495,8 +436,6 @@
 
     <!-- Completed localization from canonical translatable resources -->
     <string name="add">Toevoegen</string>
-    <string name="increase">Verhogen</string>
-    <string name="decrease">Verlagen</string>
     <string name="action_cancel_export">Export annuleren</string>
     <string name="action_close_options">Opties sluiten</string>
     <string name="action_set_start_date">Startdatum instellen</string>
@@ -541,7 +480,6 @@
         <item quantity="other">%1$s: %2$d dagen</item>
     </plurals>
     <string name="export_diagnostics_date_list">Mislukte datums: %s</string>
-    <string name="export_diagnostics_date_list_more">Mislukte datums: %1$s, +%2$d meer</string>
     <string name="export_diagnostics_no_details">Er zijn geen details per dag opgeslagen. Probeer een kleiner bereik en controleer de Health Connect-machtigingen.</string>
     <string name="export_diagnostics_use_failed_range">Mislukt bereik gebruiken</string>
     <string name="export_failure_no_folder_label">Geen map geselecteerd</string>
@@ -568,8 +506,6 @@
     <string name="export_guidance_network">Controleer je verbinding en het TLS-certificaat van het endpoint en probeer het opnieuw.</string>
     <string name="export_guidance_api_rejected">Controleer het endpointpad, opgeslagen autorisatie of aangepaste headers, aanvraaglimieten en serverlogs voordat je het opnieuw probeert.</string>
     <string name="export_guidance_unknown">Probeer het opnieuw met een kleiner bereik. Als het blijft mislukken, stuur dan feedback met deze exportgeschiedenis.</string>
-    <string name="error_background_permission_denied">Geplande exports hebben Health Connect achtergrondtoegang nodig</string>
-    <string name="error_rate_limited">Health Connect beperkt exports — wacht even en probeer daarna de resterende datums opnieuw</string>
     <string name="debug_has_history_permission">Heeft toegang tot geschiedenis</string>
     <string name="debug_requires_history_permission">Bereik heeft geschiedenis nodig</string>
     <string name="debug_first_permission_grant">Eerste toestemming verleend</string>
@@ -581,16 +517,14 @@
     <string name="health_provider_integration_details">%1$s \u2022 %2$s</string>
     <string name="health_provider_sign_in_failed">Aanmelden bij gezondheidsbron mislukt</string>
     <string name="health_provider_connected">Verbonden met %s</string>
-    <string name="section_health_diagnostics">Gezondheidsdiagnose</string>
+    <string name="section_health_diagnostics">Diagnostische gegevens van de gezondheidsbron</string>
     <string name="health_diagnostics_description">Deel een providerrapport waaruit gevoelige gegevens zijn verwijderd met bètatesters of support. Het bevat providerinstellingen, machtigingen, vlaggen voor OAuth-configuratie en tokenaanwezigheid en categorieën van de laatste exportfouten, zonder gezondheidsmetingen of tokenwaarden.</string>
-    <string name="health_diagnostics_share_title">Diagnostiek zonder gevoelige gegevens delen</string>
+    <string name="health_diagnostics_share_title">Technisch rapport zonder gevoelige gegevens delen</string>
     <string name="health_diagnostics_share_subtitle">Geen tokens, providergeheimen, paden naar ruwe bestanden of gezondheidsmetingen</string>
-    <string name="health_diagnostics_share_subject">Health.md-diagnostiek zonder gevoelige gegevens</string>
-    <string name="health_diagnostics_share_chooser">Diagnose delen</string>
+    <string name="health_diagnostics_share_subject">Technisch rapport van Health.md zonder gevoelige gegevens</string>
+    <string name="health_diagnostics_share_chooser">Technisch rapport delen</string>
     <string name="settings_upgrade_title">Upgrade naar Premium</string>
     <string name="settings_upgrade_subtitle">Onbeperkte exports, geplande exports en meer</string>
-    <string name="settings_premium_active">Premium actief</string>
-    <string name="settings_premium_active_subtitle">Je hebt onbeperkte exports</string>
     <string name="feedback_discord_title">Word lid van onze Discord</string>
     <string name="feedback_discord_subtitle">Praat met de Health.md-community</string>
     <string name="feedback_no_app_available">Geen app beschikbaar om deze link te openen</string>
@@ -656,25 +590,12 @@
     <string name="toggle_legacy_android_aliases">Verouderde Android-sleutels en labels dupliceren</string>
     <string name="schedule_enable_scheduled_exports">Geplande exports inschakelen</string>
     <string name="schedule_automatic_export_body">Geplande exports worden naar je geselecteerde Android-exportmap geschreven. Handmatige exports blijven beschikbaar op het tabblad Exporteren.</string>
-    <string name="schedule_background_note">Let op: Android bepaalt de exacte timing op de achtergrond. Houd achtergrondtoegang voor Health Connect ingeschakeld en sluit Health.md uit van batterijoptimalisatie voor betrouwbare geplande exports.</string>
     <string name="schedule_frequency">Frequentie</string>
-    <string name="schedule_frequency_15_minutes">Elke 15 min</string>
-    <string name="schedule_frequency_every_minutes">Elke %1$d min</string>
-    <string name="schedule_frequency_hourly">Elk uur</string>
-    <string name="schedule_frequency_every_hours">Elke %1$d uur</string>
-    <string name="schedule_frequency_daily">Dagelijks</string>
-    <string name="schedule_frequency_every_days">Elke %1$d dagen</string>
-    <string name="schedule_frequency_weekly">Wekelijks</string>
-    <string name="schedule_frequency_every_weeks">Elke %1$d weken</string>
     <string name="schedule_time">Tijd</string>
-    <string name="schedule_time_period_am">AM</string>
-    <string name="schedule_time_period_pm">PM</string>
     <string name="schedule_date_window">Datums</string>
     <string name="schedule_date_window_past_complete_days">Afgelopen volledige dagen</string>
     <string name="schedule_date_window_today">Vandaag</string>
     <string name="schedule_export_past_days">Afgelopen dagen exporteren</string>
-    <string name="schedule_lookback_ios_single">Bij elke uitvoering wordt de laatste volledige dag tot en met gisteren geëxporteerd.</string>
-    <string name="schedule_lookback_ios_plural">Bij elke uitvoering worden de afgelopen %1$d dagen geëxporteerd, eindigend met gisteren.</string>
     <string name="schedule_today_summary">Bij elke uitvoering worden de gegevens van vandaag geëxporteerd, zodat je huidige dagbestand up-to-date blijft. Gebruik de schrijfmodus Overschrijven of Bijwerken om dubbele inhoud van dezelfde dag te voorkomen.</string>
     <string name="schedule_next_export_at_datetime">Volgende export: %1$s</string>
     <string name="background_health_permission_needed_title">Achtergrondtoegang voor Health Connect vereist</string>
@@ -696,7 +617,6 @@
     <string name="scheduled_recovery_blocked_running">Er wordt al een herstel van geplande exports uitgevoerd.</string>
     <string name="scheduled_recovery_no_pending">Er wachten geen geplande exportdatums op herstel.</string>
     <string name="scheduled_recovery_result_complete">Herstel van geplande exports voltooid.</string>
-    <string name="scheduled_recovery_result_partial">Bij het herstel zijn %1$d van %2$d datums geëxporteerd. Er staan er nog %3$d open.</string>
     <string name="scheduled_recovery_result_blocked">Herstel van geplande exports is nog niet mogelijk.</string>
     <string name="not_now">Nu niet</string>
     <string name="release_notes_title">Wat is er nieuw in %s</string>
@@ -707,7 +627,6 @@
     <string name="release_notes_highlight_export_parity">Nieuwe details die alleen op Android beschikbaar zijn, zijn onder meer activiteitsintensiteit, geregistreerde maaltijden, menstruatieperioden, geplande trainingen en gedetailleerde meetwaarden waar beschikbaar.</string>
     <string name="release_notes_highlight_templates">Markdown-, JSON-, CSV- en Obsidian-exports bevatten nu rijkere metriekwaarden in de grotere catalogus.</string>
     <string name="release_notes_highlight_workouts">De toelichting op Health Connect-machtigingen is vernieuwd om de uitgebreide alleen-lezenmachtigingen voor export uit te leggen.</string>
-    <string name="release_notes_highlight_accessibility">TalkBack-labels en aanraakdoelen zijn verbeterd in de schermen voor export, planning en instellingen.</string>
     <string name="export_notification_background_permission_required">Geplande exports hebben achtergrondtoegang voor Health Connect nodig. Open Health.md &gt; Planning om dit in te schakelen.</string>
     <string name="paywall_unlock_button_price">Ontgrendel voor %s</string>
     <string name="paywall_purchasing">Verwerken\u2026</string>
@@ -735,7 +654,7 @@
     <string name="privacy_category_heart">Hart</string>
     <string name="privacy_category_heart_permissions">HeartRate, RestingHeartRate, HeartRateVariabilityRmssd</string>
     <string name="privacy_category_heart_exports">Geëxporteerde velden: rusthartslag, gemiddelde/min/max-hartslag, gemiddelde hartslag tijdens wandelen, hartslagvariabiliteit (HRV)</string>
-    <string name="privacy_category_vitals">Vitale waarden</string>
+    <string name="privacy_category_vitals">Vitale functies</string>
     <string name="privacy_category_vitals_permissions">RespiratoryRate, OxygenSaturation, BodyTemperature, BloodPressure, BloodGlucose, BasalBodyTemperature, SkinTemperature</string>
     <string name="privacy_category_vitals_exports">Geëxporteerde velden: ademhalingsfrequentie, zuurstofsaturatie, lichaamstemperatuur, bloeddruk (systolisch/diastolisch), bloedglucose, basale lichaamstemperatuur, huidtemperatuur</string>
     <string name="privacy_category_body">Lichaam</string>
@@ -764,7 +683,6 @@
     <string name="privacy_category_history_exports">Wordt alleen gebruikt voor grote handmatige exports, zoals 90 dagen of de volledige geschiedenis, zodat Health.md Health Connect-data kan lezen die ouder is dan het standaardvenster van 30 dagen</string>
     <string name="privacy_policy_direct_cli">Direct CLI-exports vinden alleen plaats nadat je expliciet hebt gekoppeld met en verbinding hebt gemaakt met je computer. Gezondheidsgegevens worden verzonden via een geauthenticeerde, versleutelde verbinding, maximaal zeven dagen privé bewaard om de overdracht te kunnen hervatten en eerder verwijderd wanneer je annuleert of de koppeling verwijdert.</string>
     <string name="privacy_policy_footer">Health.md beheert geen cloud voor gezondheidsdata. Campagneattributie van de app zelf kan willekeurige, door de app gegenereerde installatie-/gebeurtenis-UUID\'s en gevalideerde campagnemetadata verzenden, maar nooit gezondheidsdata, onbewerkte referrergegevens, apparaat-ID\'s, exports, accounts of paden.</string>
-    <string name="privacy_policy_body">Health.md leest Health Connect-data uitsluitend om exports te maken die jij aanvraagt. Mapexports gaan naar de geselecteerde opslag, exports via een API-endpoint gaan rechtstreeks naar een service die je configureert en een expliciet verbonden Direct CLI-export gaat versleuteld en geauthenticeerd naar je gekoppelde computer. Daarnaast kan campagneattributie van de app zelf een Play Store-installatie aan een campagne koppelen met willekeurige, door de app gegenereerde UUID\'s en opgeschoonde campagnemetadata. Daarbij worden geen gezondheidsdata, onbewerkte referrergegevens, apparaat-ID, exportinhoud, accountgegevens of bestandspad opgenomen.</string>
     <string name="section_export_type">Exporttype</string>
     <string name="export_type_compatibility">Compatibiliteitsexport</string>
     <string name="export_type_compatibility_description">Dagelijkse Markdown-, Bases-, JSON- of CSV-bestanden voor bestaande Health.md-workflows</string>
@@ -794,9 +712,6 @@
     <string name="raw_snapshot_cancelled_label">Ruwe snapshot geannuleerd</string>
     <string name="raw_snapshot_result_created">Ruwe snapshot gemaakt</string>
     <string name="raw_snapshot_result_uploaded">Ruwe snapshot geüpload</string>
-    <string name="raw_snapshot_result_count">Snapshotacties voltooid: %1$d/%2$d</string>
-    <string name="raw_snapshot_progress_count">Snapshotacties: %1$d / %2$d</string>
-    <string name="raw_snapshot_diagnostics_failed_count">Onvolledige snapshotacties: %d</string>
     <plurals name="raw_snapshot_diagnostics_reason_count">
         <item quantity="one">%1$s: %2$d actie</item>
         <item quantity="other">%1$s: %2$d acties</item>
@@ -805,7 +720,6 @@
     <string name="raw_snapshot_diagnostics_no_details">Er zijn geen snapshotdiagnostische gegevens vastgelegd. Controleer de toegang tot de provider en probeer het bereik opnieuw.</string>
     <string name="raw_snapshot_guidance_provider">Controleer de toegang van de geselecteerde provider en het manifest van het ruwe artefact voordat je het opnieuw probeert.</string>
     <string name="raw_snapshot_guidance_cancelled">Er is geen ruw artefact gepubliceerd. Probeer het opnieuw wanneer je klaar bent.</string>
-    <string name="raw_snapshot_history_entry">Snapshotacties: %1$d/%2$d \u2022 %3$s tot %4$s</string>
     <string name="raw_snapshot_history_detail_diagnostics">Snapshotdiagnostiek</string>
     <string name="raw_snapshot_notification_message">Ruwe snapshot voor het bereik tot %1$s: %2$s</string>
     <string name="raw_snapshot_status_complete">voltooid</string>
@@ -845,8 +759,6 @@
     <string name="schedule_unlock_required_title">Ontgrendel geplande exports</string>
     <string name="schedule_unlock_required_body">Handmatige exports zijn 10 keer gratis. Automatische geplande exports zijn inbegrepen bij de eenmalige levenslange ontgrendeling.</string>
     <string name="schedule_unlock_required_short">Ontgrendel Health.md om geplande exports in te schakelen.</string>
-    <string name="section_schedule_lookback">Terugkijkperiode voor geplande exports</string>
-    <string name="schedule_lookback_summary">Aantal dagen in de terugkijkperiode: %1$d. Elke geplande uitvoering exporteert de bijbehorende volledige dagen tot en met gisteren, plus eventuele openstaande mislukte datums.</string>
     <string name="export_folder_root_label">Exportmap</string>
     <string name="history_clear_title">Exportgeschiedenis wissen?</string>
     <string name="history_clear_body">Hiermee verwijder je alle lokale vermeldingen uit de exportgeschiedenis. Geëxporteerde bestanden worden niet verwijderd.</string>
@@ -866,10 +778,6 @@
     <string name="history_detail_failure">Fout</string>
     <string name="history_detail_warning">Waarschuwing</string>
     <string name="history_detail_failed_dates">Mislukte datums</string>
-    <string name="clear">Wissen</string>
-    <string name="retry">Opnieuw proberen</string>
-    <string name="retrying">Opnieuw proberen…</string>
-    <string name="delete">Verwijderen</string>
     <string name="section_file_organization">Bestanden ordenen</string>
     <string name="health_subfolder_label">Health-submap</string>
     <string name="folder_organization_label">Automatische mappen</string>
@@ -972,7 +880,7 @@
     <string name="api_export_collapse_custom_headers">Aangepaste headers inklappen</string>
     <string name="api_export_expand_custom_headers">Aangepaste headers uitklappen</string>
     <string name="api_export_error_invalid_endpoint">Voer een geldige %1$s- of %2$s-URL in zonder fragment of ingesloten gebruikersnaam/wachtwoord.</string>
-    <string name="api_export_error_authorization_empty">Voer een geldig %1$s-token of %2$s-waarde in.</string>
+    <string name="api_export_error_authorization_empty">Voer een geldige %1$s-token of een geldige %2$s-waarde in.</string>
     <string name="api_export_error_authorization_characters">%1$s-waarden mogen geen controletekens of niet-ASCII-tekens bevatten.</string>
     <string name="api_export_error_headers_total_size">Requestheaders mogen samen maximaal %1$d tekens bevatten.</string>
     <string name="api_export_error_headers_line_break">Requestheaders bevatten een niet-ondersteund regeleinde.</string>
@@ -997,7 +905,7 @@
         <item quantity="one">Configureer niet meer dan %1$d requestheader.</item>
         <item quantity="other">Configureer niet meer dan %1$d requestheaders.</item>
     </plurals>
-    <string name="settings_direct_cli_subtitle">Koppel met de desktop-CLI voor gecodeerde iOS- of Android-compatibele exports.</string>
+    <string name="settings_direct_cli_subtitle">Koppel met de desktop-CLI voor veilig versleutelde exports die compatibel zijn met iOS of Android.</string>
     <string name="health_provider_health_connect_summary">Standaard Android-gezondheidshub die wordt gebruikt voor privé-exports op het apparaat.</string>
     <string name="health_provider_health_connect_setup_description">Verleen Health Connect-machtigingen vanuit het scherm Exporteren. Health.md leest records lokaal en schrijft ze rechtstreeks naar je map.</string>
     <string name="health_provider_samsung_health_summary">Samsung-telefoons, Galaxy Watch, slaap, stappen, trainingen, vitale functies.</string>
@@ -1057,11 +965,6 @@
     <string name="feedback_issue_steps_heading">Stappen om te reproduceren</string>
     <string name="feedback_issue_expected_heading">Verwacht gedrag</string>
     <string name="feedback_issue_expected_hint">Wat je verwachtte dat er zou gebeuren</string>
-    <string name="automation_history_permissions_missing">Health Connect-machtigingen ontbreken</string>
-    <plurals name="automation_history_failed_dates">
-        <item quantity="one">%1$d mislukte datum</item>
-        <item quantity="other">%1$d mislukte datums</item>
-    </plurals>
     <string name="action_edit_endpoint">API-endpoint bewerken</string>
     <string name="history_date_range">%1$s – %2$s</string>
     <string name="history_failed_date_reason">%1$s: %2$s</string>
@@ -1083,7 +986,7 @@
     <string name="schedule_error_invalid_headers">Voer geldige requestheaders in, één naam en waarde per regel.</string>
     <string name="schedule_error_save_api_settings">Kan API-requestinstellingen niet veilig opslaan.</string>
     <string name="schedule_increase_hour">Uur verhogen</string>
-    <string name="schedule_increase_lookback_days">Vergroot de terugkijkdagen</string>
+    <string name="schedule_increase_lookback_days">Aantal terugkijkdagen verhogen</string>
     <string name="schedule_increase_minute">Minuut verhogen</string>
     <string name="schedule_next_export_datetime">%1$s om %2$s</string>
     <string name="schedule_target_api_configured">POST JSON naar %1$s</string>
@@ -1091,12 +994,7 @@
     <string name="schedule_target_folder_choose">Kies een map in het scherm Exporteren</string>
     <string name="schedule_target_folder_ready">Schrijf geplande bestanden naar de geselecteerde apparaatmap</string>
     <string name="schedule_toggle_time_period">Schakelen tussen AM en PM</string>
-    <string name="scheduled_recovery_history_cancelled">Herstel geannuleerd; onvoltooide datums blijven in behandeling.</string>
     <string name="scheduled_recovery_result_summary">%1$s %2$s</string>
-    <plurals name="export_history_failed_dates_pending_retry">
-        <item quantity="one">%1$d mislukte datum in afwachting van nieuwe poging</item>
-        <item quantity="other">%1$d mislukte datums in afwachting van nieuwe poging</item>
-    </plurals>
     <plurals name="export_notification_days_exported">
         <item quantity="one">%1$d/%2$d dag geëxporteerd voor %3$s</item>
         <item quantity="other">%1$d/%2$d dagen geëxporteerd voor %3$s</item>
@@ -1152,10 +1050,6 @@
     <plurals name="schedule_lookback_days_summary">
         <item quantity="one">Elke uitvoering exporteert %1$d afgelopen dag, tot en met gisteren.</item>
         <item quantity="other">Elke uitvoering exporteert de afgelopen %1$d dagen, tot en met gisteren.</item>
-    </plurals>
-    <plurals name="scheduled_recovery_history_failed_dates">
-        <item quantity="one">Herstel voltooid en %1$d mislukte datum is nog in behandeling.</item>
-        <item quantity="other">Herstel voltooid en %1$d mislukte datums zijn nog in behandeling.</item>
     </plurals>
     <plurals name="scheduled_recovery_result_exported_dates">
         <item quantity="one">Herstel: %1$d/%2$d datum geëxporteerd.</item>
@@ -1287,4 +1181,160 @@
         <item quantity="one">Snapshotactie voltooid: %1$d/%2$d</item>
         <item quantity="other">Snapshotacties voltooid: %1$d/%2$d</item>
     </plurals>
+
+    <!-- Clinician Report -->
+
+    <!-- Clinician Report: locale-pinned, local-only workflow and document vocabulary. -->
+    <string name="clinician_report_title">Rapport voor zorgverlener</string>
+    <string name="clinician_report_entry_subtitle">Maak een privé-PDF met een gezondheidsoverzicht om te delen met een zorgverlener.</string>
+    <string name="clinician_report_intro">Kies een periode en metingen, bekijk een feitelijke samenvatting en genereer vervolgens volledig op dit apparaat een PDF.</string>
+    <string name="clinician_report_period">Rapportperiode</string>
+    <string name="clinician_report_7_days">7 dagen</string>
+    <string name="clinician_report_30_days">30 dagen</string>
+    <string name="clinician_report_90_days">90 dagen</string>
+    <string name="clinician_report_custom">Aangepast</string>
+    <string name="clinician_report_select_date">Datum selecteren</string>
+    <string name="clinician_report_start_date">Startdatum</string>
+    <string name="clinician_report_end_date">Einddatum</string>
+    <string name="clinician_report_metrics">Gezondheidsmetingen</string>
+    <string name="clinician_report_detail">Detailniveau van rapport</string>
+    <string name="clinician_report_summary_only">Alleen samenvatting</string>
+    <string name="clinician_report_summary_readings">Samenvatting + afzonderlijke metingen</string>
+    <string name="clinician_report_display_name">Weergavenaam (optioneel)</string>
+    <string name="clinician_report_display_name_hint">Wordt alleen in dit rapport gebruikt en niet opgeslagen door Health.md.</string>
+    <string name="clinician_report_preview">Rapport bekijken</string>
+    <string name="clinician_report_select_metric">Selecteer ten minste één meting.</string>
+    <string name="clinician_report_preview_heading">Rapportvoorbeeld</string>
+    <string name="clinician_report_generate_pdf">PDF genereren</string>
+    <string name="clinician_report_share_pdf">PDF delen</string>
+    <string name="clinician_report_save_pdf">PDF opslaan</string>
+    <string name="clinician_report_share_or_save_pdf">PDF delen of opslaan</string>
+    <string name="clinician_report_preparing">Rapport voorbereiden…</string>
+    <string name="clinician_report_generating">PDF genereren…</string>
+    <string name="clinician_report_close">Sluiten</string>
+    <string name="clinician_report_selected">Geselecteerd</string>
+    <string name="clinician_report_not_selected">Niet geselecteerd</string>
+    <string name="clinician_report_metric_blood_pressure">Bloeddruk</string>
+    <string name="clinician_report_metric_resting_heart_rate">Hartslag in rust</string>
+    <string name="clinician_report_metric_heart_rate">Hartslag</string>
+    <string name="clinician_report_metric_weight">Gewicht</string>
+    <string name="clinician_report_metric_blood_glucose">Bloedglucose</string>
+    <string name="clinician_report_metric_oxygen_saturation">Zuurstofsaturatie</string>
+    <string name="clinician_report_metric_respiratory_rate">Ademhalingsfrequentie</string>
+    <string name="clinician_report_metric_body_temperature">Lichaamstemperatuur</string>
+    <string name="clinician_report_metric_sleep_duration">Slaapduur</string>
+    <string name="clinician_report_metric_steps">Stappen</string>
+    <string name="clinician_report_metric_workouts">Lichaamsbeweging / trainingen</string>
+    <string name="clinician_report_document_title">Gezondheidsoverzicht</string>
+    <string name="clinician_report_no_data">Voor deze meting zijn in de geselecteerde periode geen gegevens beschikbaar.</string>
+    <string name="clinician_report_disclaimer">Dit rapport bevat een samenvatting van gezondheidsgegevens die door de patiënt zijn geselecteerd en goedgekeurd. Health.md stelt geen diagnoses en geeft geen medisch advies. De volledigheid van de gegevens hangt af van gekoppelde apparaten, apps, machtigingen en registratiegedrag.</string>
+    <string name="clinician_report_attribution">Privé gegenereerd met Health.md op basis van gezondheidsgegevens die door de patiënt zijn goedgekeurd.</string>
+    <string name="clinician_report_practice_line">Voor zorgpraktijken die vóór afspraken door patiënten gegenereerde rapporten willen ontvangen: %1$s</string>
+    <string name="clinician_report_manual_entry">Handmatige invoer</string>
+    <string name="clinician_report_manual_entry_source">%1$s (handmatige invoer)</string>
+    <string name="clinician_report_fact_readings">Metingen</string>
+    <string name="clinician_report_fact_available_values">Beschikbare waarden</string>
+    <string name="clinician_report_fact_daily_values">Dagwaarden</string>
+    <string name="clinician_report_fact_days_with_data">Dagen met gegevens</string>
+    <string name="clinician_report_fact_average">Gemiddelde</string>
+    <string name="clinician_report_fact_median">Mediaan</string>
+    <string name="clinician_report_fact_range">Bereik</string>
+    <string name="clinician_report_fact_most_recent">Meest recent</string>
+    <string name="clinician_report_fact_first">Eerste</string>
+    <string name="clinician_report_fact_change">Verandering over periode</string>
+    <string name="clinician_report_fact_total">Totaal</string>
+    <string name="clinician_report_fact_average_data_days">Gemiddelde op dagen met gegevens</string>
+    <string name="clinician_report_fact_nights_with_data">Nachten met gegevens</string>
+    <string name="clinician_report_fact_median_sleep">Mediane slaapduur</string>
+    <string name="clinician_report_fact_sessions">Sessies</string>
+    <string name="clinician_report_fact_total_duration">Totale duur</string>
+    <string name="clinician_report_fact_workout_type">Per trainingstype</string>
+    <string name="clinician_report_table_blood_pressure">Bloeddrukmetingen</string>
+    <string name="clinician_report_table_metric_readings">%1$s-metingen</string>
+    <string name="clinician_report_table_sleep">Slaapduur</string>
+    <string name="clinician_report_table_workouts">Trainingssessies</string>
+    <string name="clinician_report_column_date">Datum</string>
+    <string name="clinician_report_column_time">Tijd</string>
+    <string name="clinician_report_column_systolic">Systolisch</string>
+    <string name="clinician_report_column_diastolic">Diastolisch</string>
+    <string name="clinician_report_column_source">Bron</string>
+    <string name="clinician_report_column_value">Waarde</string>
+    <string name="clinician_report_column_weight">Gewicht</string>
+    <string name="clinician_report_column_steps">Stappen</string>
+    <string name="clinician_report_column_night">Nacht</string>
+    <string name="clinician_report_column_duration">Duur</string>
+    <string name="clinician_report_column_type">Type</string>
+    <string name="clinician_report_value_on_date">%1$s op %2$s</string>
+    <string name="clinician_report_coverage">Gegevens beschikbaar op %1$d van %2$d dagen. Voor de resterende %3$d dagen waren geen gegevens beschikbaar voor Health.md.</string>
+    <string name="clinician_report_sources">Bronnen: %1$s</string>
+    <string name="clinician_report_step_total">%1$s stappen</string>
+    <string name="clinician_report_step_average">%1$s stappen/dag</string>
+    <string name="clinician_report_duration_hours">%1$d uur</string>
+    <string name="clinician_report_duration_minutes">%1$d min</string>
+    <string name="clinician_report_duration_hours_minutes">%1$s %2$s</string>
+    <string name="clinician_report_workout_breakdown_item">%1$s: %2$d</string>
+    <string name="clinician_report_detail_readings_count">%1$d afzonderlijke metingen worden opgenomen in de PDF.</string>
+    <string name="clinician_report_metadata_period">Rapportperiode</string>
+    <string name="clinician_report_metadata_generated">Gegenereerd</string>
+    <string name="clinician_report_metadata_timezone">Tijdzone</string>
+    <string name="clinician_report_metadata_patient">Patiënt</string>
+    <string name="clinician_report_availability_note">Opmerking over gegevensbeschikbaarheid</string>
+    <string name="clinician_report_about">Over dit rapport</string>
+    <string name="clinician_report_page_footer">Health.md • Pagina %1$d</string>
+    <string name="clinician_report_warning_read_failure">Sommige geselecteerde gezondheidsgegevens konden niet worden gelezen. Lege secties kunnen het gevolg zijn van ontbrekende toegang of het ontbreken van geretourneerde records.</string>
+    <string name="clinician_report_warning_source_failure_date">Sommige gekoppelde gezondheidsbronnen konden voor %1$s niet worden gelezen.</string>
+    <string name="clinician_report_warning_apple_read_failure_date">Sommige geselecteerde gegevens uit Apple Health konden voor %1$s niet worden gelezen. Lege secties kunnen het gevolg zijn van ontbrekende toegang of het ontbreken van geretourneerde records.</string>
+    <string name="clinician_report_warning_apple_source_failure_date">Sommige geselecteerde bronrecords uit Apple Health konden voor %1$s niet worden gelezen.</string>
+    <string name="clinician_report_warning_apple_integrity_date">Apple Health heeft voor %1$s een integriteitswaarschuwing voor een bronrecord gemeld.</string>
+    <string name="clinician_report_warning_apple_summary_fallback">Voor een deel van dit rapport waren Apple Health-records op bronniveau niet beschikbaar; waar beschikbaar worden samenvattingswaarden gebruikt.</string>
+    <string name="clinician_report_error_prepare_android">Het rapport kon niet worden voorbereid. Controleer de toegang tot gezondheidsgegevens en probeer het opnieuw.</string>
+    <string name="clinician_report_error_prepare_apple">Het rapport kon niet worden voorbereid. Controleer de toegang tot Apple Health en probeer het opnieuw.</string>
+    <string name="clinician_report_error_pdf">De PDF kon niet worden gegenereerd. Probeer het opnieuw.</string>
+    <string name="clinician_report_saved">Gezondheidsoverzicht opgeslagen</string>
+    <string name="clinician_report_error_save">De PDF kon niet worden opgeslagen. Kies een andere locatie en probeer het opnieuw.</string>
+    <string name="clinician_report_error_open_destination">Het geselecteerde document kon niet worden geopend.</string>
+    <string name="clinician_report_accessibility_hint">Op dit apparaat een privé-PDF met een gezondheidsoverzicht maken</string>
+    <string name="clinician_report_workout_type_running">Hardlopen</string>
+    <string name="clinician_report_workout_type_walking">Wandelen</string>
+    <string name="clinician_report_workout_type_cycling">Fietsen</string>
+    <string name="clinician_report_workout_type_swimming">Zwemmen</string>
+    <string name="clinician_report_workout_type_hiking">Wandelen</string>
+    <string name="clinician_report_workout_type_yoga">Yoga</string>
+    <string name="clinician_report_workout_type_strength_training">Krachttraining</string>
+    <string name="clinician_report_workout_type_core_training">Coretraining</string>
+    <string name="clinician_report_workout_type_hiit">HIIT</string>
+    <string name="clinician_report_workout_type_elliptical">Crosstrainer</string>
+    <string name="clinician_report_workout_type_rowing">Roeien</string>
+    <string name="clinician_report_workout_type_stair_climbing">Traplopen</string>
+    <string name="clinician_report_workout_type_pilates">Pilates</string>
+    <string name="clinician_report_workout_type_dance">Dansen</string>
+    <string name="clinician_report_workout_type_cooldown">Cooling-down</string>
+    <string name="clinician_report_workout_type_mixed_cardio">Gemengde cardiotraining</string>
+    <string name="clinician_report_workout_type_pickleball">Pickleball</string>
+    <string name="clinician_report_workout_type_tennis">Tennis</string>
+    <string name="clinician_report_workout_type_badminton">Badminton</string>
+    <string name="clinician_report_workout_type_table_tennis">Tafeltennis</string>
+    <string name="clinician_report_workout_type_golf">Golf</string>
+    <string name="clinician_report_workout_type_soccer">Voetbal</string>
+    <string name="clinician_report_workout_type_basketball">Basketbal</string>
+    <string name="clinician_report_workout_type_baseball">Honkbal</string>
+    <string name="clinician_report_workout_type_softball">Softbal</string>
+    <string name="clinician_report_workout_type_volleyball">Volleybal</string>
+    <string name="clinician_report_workout_type_american_football">American football</string>
+    <string name="clinician_report_workout_type_rugby">Rugby</string>
+    <string name="clinician_report_workout_type_hockey">Hockey</string>
+    <string name="clinician_report_workout_type_lacrosse">Lacrosse</string>
+    <string name="clinician_report_workout_type_skating">Schaatsen</string>
+    <string name="clinician_report_workout_type_snow_sports">Wintersport</string>
+    <string name="clinician_report_workout_type_water_sports">Watersport</string>
+    <string name="clinician_report_workout_type_wheelchair">Rolstoelactiviteit</string>
+    <string name="clinician_report_workout_type_martial_arts">Vechtsport</string>
+    <string name="clinician_report_workout_type_boxing">Boksen</string>
+    <string name="clinician_report_workout_type_kickboxing">Kickboksen</string>
+    <string name="clinician_report_workout_type_wrestling">Worstelen</string>
+    <string name="clinician_report_workout_type_climbing">Klimmen</string>
+    <string name="clinician_report_workout_type_jump_rope">Touwtjespringen</string>
+    <string name="clinician_report_workout_type_flexibility">Lenigheid</string>
+    <string name="clinician_report_workout_type_other">Overig</string>
+    <string name="clinician_report_unit_respiratory_rate">ademhalingen/min</string>
 </resources>

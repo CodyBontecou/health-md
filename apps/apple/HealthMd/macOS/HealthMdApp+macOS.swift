@@ -319,8 +319,24 @@ struct HealthMdApp: App {
                 .environmentObject(healthDataStore)
                 .environmentObject(encryptedHealthContextManager)
                 .frame(minWidth: 1_100, minHeight: 680)
-                        .tint(Color.accent)
+                .tint(Color.accent)
+                #if DEBUG
+                .preferredColorScheme(MacMarketingCapture.isActive ? .light : nil)
+                #endif
                 .task {
+                    #if DEBUG
+                    if MacMarketingCapture.isActive {
+                        MacMarketingCapture.configure(
+                            syncService: syncService,
+                            vaultManager: vaultManager
+                        )
+                        await MacMarketingCapture.captureWindowAndTerminate(
+                            syncService: syncService,
+                            vaultManager: vaultManager
+                        )
+                        return
+                    }
+                    #endif
                     setupSyncMessageHandler()
                     setupControlServer()
                     syncService.startBrowsing()
@@ -346,7 +362,14 @@ struct HealthMdApp: App {
                 .withWindowManagerBridge()
                 .gradientMatchedTitleBar()
         }
+        #if DEBUG
+        .defaultSize(
+            width: MacMarketingCapture.isActive ? 1_100 : 1_360,
+            height: MacMarketingCapture.isActive ? 700 : 900
+        )
+        #else
         .defaultSize(width: 1_360, height: 900)
+        #endif
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
@@ -1386,7 +1409,7 @@ struct HealthMdApp: App {
             recordCount: 0,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
-            failureMessage: failure.message
+            failureMessage: activityFailureMessage(for: failure)
         ))
     }
 
@@ -1410,16 +1433,28 @@ struct HealthMdApp: App {
         case .partialSuccess:
             if result.dailyNoteSkipCount > 0,
                result.completedDates?.count == result.totalCount {
-                return "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created."
+                return String(localized: "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created.")
             }
-            return "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention."
+            return String(localized: "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention.")
         case .failure:
-            return result.failedDateDetails.first?.reason.shortDescription ?? "Mac export failed"
+            guard let detail = result.failedDateDetails.first?.reason.shortDescription else {
+                return String(localized: "Mac export failed")
+            }
+            return String(localized: "Mac export failed. Details: \(detail)")
         case .cancelled:
             return result.successCount > 0
-                ? "Mac export stopped after writing \(result.totalFilesWritten) file(s)."
-                : "Mac export cancelled"
+                ? String(localized: "Mac export stopped after writing \(result.totalFilesWritten) file(s).")
+                : String(localized: "Mac export cancelled")
         }
+    }
+
+    private func activityFailureMessage(for failure: MacExportFailure) -> String {
+        let detail = failure.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        let summary = failure.reason == .cancelled
+            ? String(localized: "Mac export cancelled")
+            : String(localized: "Mac export failed")
+        guard !detail.isEmpty, detail != summary else { return summary }
+        return String(localized: "\(summary). Details: \(detail)")
     }
 
     private func exportFailureReason(for reason: MacExportFailureReason) -> ExportFailureReason {

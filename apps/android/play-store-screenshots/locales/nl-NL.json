@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "nl-NL",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "Jouw gezondheidsdata. Jouw bestanden.",
+      "supportingLine": "Exporteer toegestane Health Connect-gegevens naar bestanden die jij beheert."
+    },
+    {
+      "id": "export-formats",
+      "headline": "Exporteer op jouw manier",
+      "supportingLine": "Markdown, Obsidian Bases, JSON en CSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "Kies uit meer dan 100 gezondheidsmetingen",
+      "supportingLine": "Slaap, activiteit, hart, vitale functies, voeding en meer."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "Alleen-lezen. Privacy als uitgangspunt.",
+      "supportingLine": "Geen account. Geen Health.md-cloud voor gezondheidsdata."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "Houd je archief actueel",
+      "supportingLine": "Plan exports naar de bestemming die jij kiest."
+    },
+    {
+      "id": "file-preview",
+      "headline": "Bekijk alles vóór de export",
+      "supportingLine": "Bekijk bestandsnamen, paden en inhoud voordat er iets wordt geschreven."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "Gezondheid in één oogopslag",
+      "supportingLine": "Widgets voor activiteit, slaap, hart en overzicht."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "Rechtstreeks naar je computer",
+      "supportingLine": "Koppel met de Health.md CLI voor geverifieerde, versleutelde exports zonder cloudrelay."
+    }
+  ]
+}

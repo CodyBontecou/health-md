@@ -6,6 +6,7 @@
 
 # Local agent and browser state
 .pi/
+.pi-subagents/
 .codex/
 .playwright-cli/
 .isolated.json

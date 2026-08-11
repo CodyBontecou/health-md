@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.StateFlow
  * 
  * Handles purchase state, product details, and billing operations for the
  * health_md_premium_lifetime one-time purchase product.
+ *
+ * This repository is application-scoped. Feature owners may request an idempotent
+ * connection, but do not own the shared BillingClient lifecycle.
  */
 interface BillingRepository {
     /** Whether the user has unlocked premium features */
@@ -69,12 +72,6 @@ interface BillingRepository {
      * Clears any current error message.
      */
     fun clearError()
-    
-    /**
-     * Disconnects from billing service.
-     * Should be called when billing features are no longer needed.
-     */
-    fun endConnection()
     
     // Debug-only methods (only functional in debug builds)
     

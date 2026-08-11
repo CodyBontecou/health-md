@@ -1,5 +1,32 @@
 # gradle-play-publisher Commands Reference
 
+## Offline listing validation
+
+The files under `play-console/` use an authored layout. Prepare the canonical Fastlane layout before passing metadata to `gplay` or another publisher:
+
+```bash
+./scripts/validate-play-listing.sh
+```
+
+This validates all draft locales, then prepares reviewed-only input at `build/play-metadata/reviewed/`. It does not authenticate, upload, publish or change Play Console. Do not run `gplay validate` directly against `play-console/listing/` or `play-console/screenshots/`; those custom paths can produce incomplete results.
+
+## Localized phone screenshot generation
+
+Capture genuine localized Android UI, then run the paid `gpt-image-2` reference-swap workflow from the repository root:
+
+```bash
+cd apps/android
+./scripts/capture-localized-play-screenshots.py --serial emulator-5554 --locales de-DE
+cd ../..
+npm --prefix scripts/app-store-images run plan:android-localized-set -- --locale de-DE
+npm --prefix scripts/app-store-images run generate:android-localized-set -- --locale de-DE
+cd apps/android
+./scripts/finalize-ai-localized-play-screenshots.py --locales de-DE
+./scripts/validate-play-listing.sh
+```
+
+Generation sends the English master, localized emulator capture and localized-copy reference to OpenAI for each slide. It makes eight paid image edits per complete locale, writes ignored working output under `app-store-output/android-ai-edits/`, and does not upload or publish to Google Play.
+
 ## Authentication
 Before using any commands, ensure `play-console-key.json` is in the project root.
 

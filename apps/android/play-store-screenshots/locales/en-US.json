@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "en-US",
+  "status": "reviewed",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "Your health data. Your files.",
+      "supportingLine": "Export authorized Health Connect records into files you control."
+    },
+    {
+      "id": "export-formats",
+      "headline": "Export your way",
+      "supportingLine": "Markdown, Obsidian Bases, JSON and CSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "Choose from 100+ health metrics",
+      "supportingLine": "Sleep, activity, heart, vitals, nutrition and more."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "Read-only. Private by design.",
+      "supportingLine": "No account. No Health.md health-data cloud."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "Keep your archive current",
+      "supportingLine": "Schedule exports to your selected destination."
+    },
+    {
+      "id": "file-preview",
+      "headline": "Preview before you export",
+      "supportingLine": "See filenames, paths and content before anything is written."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "Health at a glance",
+      "supportingLine": "Activity, sleep, heart and summary widgets."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "Direct to your computer",
+      "supportingLine": "Pair with the Health.md CLI for authenticated, encrypted exports with no cloud relay."
+    }
+  ]
+}

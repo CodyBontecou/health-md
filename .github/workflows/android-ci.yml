@@ -53,6 +53,22 @@ jobs:
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@v3
 
+      - name: Install pinned Google Play CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          download="$RUNNER_TEMP/gplay-download"
+          curl -fsSL \
+            https://github.com/tamtom/play-console-cli/releases/download/v0.8.0/gplay-linux-amd64 \
+            -o "$download"
+          echo "ea9d812878dcc61faa0401a306f3f648ab6779d87358e07afb8590e9c96a313a  $download" \
+            | sha256sum --check --strict
+          install -m 0755 "$download" "$RUNNER_TEMP/gplay"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Validate Google Play listing metadata
+        run: ./scripts/validate-play-listing.sh
+
       - name: Set up pinned Rust Android toolchain
         working-directory: ${{ github.workspace }}
         shell: bash
@@ -91,6 +107,9 @@ jobs:
 
       - name: Run debug unit and protocol tests
         run: ./gradlew testDebugUnitTest :direct-protocol:test --stacktrace
+
+      - name: Run Android lint
+        run: ./gradlew :app:lintDebug --stacktrace
 
       - name: Assemble debug app
         run: ./gradlew :app:assembleDebug --stacktrace

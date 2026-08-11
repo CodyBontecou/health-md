@@ -1,7 +1,5 @@
-v1.5.4 — More free exports and reliable Health Connect
+v1.6.1 — Better sleep summaries and localized guidance
 
-• Increases free manual exports from 3 to 10.
-• Fixes Health Connect setup and permissions on Android 13 and newer.
-• Improves permission, scheduling, and export error handling.
-• Adds raw API snapshot previews before export.
-• Adds clearer guidance across all supported languages.
+• Improves sleep summaries across overnight and noon-to-noon windows.
+• Adds localized Play Store guidance and screenshots across supported languages.
+• Includes reliability and compatibility improvements for exports, widgets, and Direct CLI.

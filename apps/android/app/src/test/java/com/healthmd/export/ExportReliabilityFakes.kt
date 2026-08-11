@@ -126,7 +126,7 @@ class FakeSettingsRepository(
         private set
     var successfulExportCount: Int = 0
         private set
-    var reviewRequested: Boolean = false
+    var lastReviewAttemptEpochMillis: Long? = null
         private set
 
     override val exportSettings: Flow<ExportSettings> = exportSettingsState
@@ -188,10 +188,11 @@ class FakeSettingsRepository(
         successfulExportCount++
     }
 
-    override suspend fun hasRequestedReview(): Boolean = reviewRequested
+    override suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long? =
+        lastReviewAttemptEpochMillis
 
-    override suspend fun setReviewRequested() {
-        reviewRequested = true
+    override suspend fun recordReviewAttempt(epochMillis: Long) {
+        lastReviewAttemptEpochMillis = epochMillis
     }
 
     override val selectedHealthProviderId: Flow<String> = selectedHealthProviderIdState
@@ -282,8 +283,6 @@ class FakeBillingRepository(initialUnlocked: Boolean = false) : BillingRepositor
     override fun clearError() {
         purchaseError.value = null
     }
-
-    override fun endConnection() = Unit
 
     override fun debugSetUnlocked(unlocked: Boolean) {
         isUnlocked.value = unlocked

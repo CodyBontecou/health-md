@@ -209,26 +209,26 @@ enum ExportDateRangePreset: String, CaseIterable, Codable, Equatable, Identifiab
     var title: String {
         switch self {
         case .today:
-            return "Today"
+            return String(localized: "Today")
         case .yesterday:
-            return "Yesterday"
+            return String(localized: "Yesterday")
         case .allTime:
-            return "All Time"
+            return String(localized: "All Time")
         case .custom:
-            return "Custom"
+            return String(localized: "Custom")
         }
     }
 
     var accessibilityHint: String {
         switch self {
         case .today:
-            return "Sets the export date range to today."
+            return String(localized: "Sets the export date range to today.")
         case .yesterday:
-            return "Sets the export date range to yesterday."
+            return String(localized: "Sets the export date range to yesterday.")
         case .allTime:
-            return "Sets the export date range to all available health data."
+            return String(localized: "Sets the export date range to all available health data.")
         case .custom:
-            return "Shows start and end date pickers for a custom export range."
+            return String(localized: "Shows start and end date pickers for a custom export range.")
         }
     }
 

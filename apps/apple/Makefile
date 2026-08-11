@@ -14,6 +14,8 @@
 ##   make check-warnings    check build log for targeted warnings
 ##   make check-apns-scheduling
 ##                           verify production APNs scheduled-export release config
+##   make check-macos-localizations
+##                           validate production macOS catalog coverage and placeholders
 ##   make update-export-schema-signature
 ##                           refresh versioned export schema fingerprint fixture
 ##                           set ALLOW_UNSHIPPED_SCHEMA_SIGNATURE_REWRITE=1 only
@@ -32,7 +34,7 @@
 SHELL       := /bin/bash
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
-IOS_SIM     ?= platform=iOS Simulator,name=iPhone 16 Pro,arch=$(HOST_ARCH)
+IOS_SIM     ?=
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
@@ -41,20 +43,29 @@ CORE_RUST_PREPARE := ../../packages/healthmd-core-rust/scripts/prepare-apple-xcf
 COVERAGE_DIR  := build/coverage
 XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 prepare-healthmd-core-rust:
 	@$(CORE_RUST_PREPARE)
 
 test: test-ios test-macos
 
+check-macos-localizations:
+	@python3 -m unittest discover -s scripts/tests -p 'test_validate_macos_localizations.py'
+	@python3 scripts/validate-macos-localizations.py
+
 test-ios: prepare-healthmd-core-rust
 	@echo "\n━━━  iOS Tests  ━━━"
 	@set -o pipefail; \
-	xcodebuild test \
+	  ios_sim='$(IOS_SIM)'; \
+	  if [[ -z "$$ios_sim" ]]; then \
+	    ios_sim="$$(scripts/select-ios-simulator.sh)"; \
+	  fi; \
+	  echo "Using iOS Simulator destination: $$ios_sim"; \
+	  xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-iOS \
-	  -destination '$(IOS_SIM)' \
+	  -destination "$$ios_sim" \
 	  -configuration Debug-iOS \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | \

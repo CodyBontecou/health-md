@@ -1,5 +1,11 @@
 import SwiftUI
 
+private func localizedSourceDayCount(_ count: Int) -> String {
+    count == 1
+        ? String(localized: "1 source day")
+        : String(localized: "\(count) source days")
+}
+
 struct ExportPreviewScope: Equatable {
     let maximumRenderedDates: Int
     let formats: [ExportFormat]
@@ -298,15 +304,23 @@ struct ExportPreviewView: View {
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                     Spacer()
-                    Text(settings.dailyNotesOnlyModeEnabled
-                         ? "0 (daily notes only)"
-                         : (settings.summaryOnlyModeEnabled ? "0 (summary-only)" : "\(settings.exportFormats.count)"))
+                    Text(
+                        settings.dailyNotesOnlyModeEnabled
+                            ? String(localized: "0 (daily notes only)")
+                            : (settings.summaryOnlyModeEnabled
+                                ? String(localized: "0 (summary-only)")
+                                : String(localized: "\(settings.exportFormats.count)"))
+                    )
                         .font(.footnote.monospaced())
                         .foregroundStyle(Color.textPrimary)
                 }
                 if let estimatedExportSize {
                     HStack {
-                        Text(targetType == .apiEndpoint ? "Estimated payload" : "Estimated output")
+                        Text(
+                            targetType == .apiEndpoint
+                                ? String(localized: "Estimated payload")
+                                : String(localized: "Estimated output")
+                        )
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
@@ -317,8 +331,8 @@ struct ExportPreviewView: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(
                         targetType == .apiEndpoint
-                            ? "Estimated payload, approximately \(estimatedExportSize.sizeLabel), based on \(estimatedExportSize.sampledDataDayCount) sampled data day\(estimatedExportSize.sampledDataDayCount == 1 ? "" : "s")"
-                            : "Estimated final export output, approximately \(estimatedExportSize.sizeLabel), based on \(estimatedExportSize.sampledDataDayCount) sampled data day\(estimatedExportSize.sampledDataDayCount == 1 ? "" : "s") and the configured roll-up scope"
+                            ? String(localized: "Estimated payload, approximately \(estimatedExportSize.sizeLabel), based on \(localizedSourceDayCount(estimatedExportSize.sampledDataDayCount))")
+                            : String(localized: "Estimated final export output, approximately \(estimatedExportSize.sizeLabel), based on \(localizedSourceDayCount(estimatedExportSize.sampledDataDayCount)) and the configured roll-up scope")
                     )
                     .accessibilityHint("Actual output size can vary across the selected date range")
 
@@ -376,7 +390,7 @@ struct ExportPreviewView: View {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
-                        Text("Previewing \(renderedDayPreviewCount) recent source day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full summary-only export processes \(estimatedExportSize.projectedProcessingDayCount) source days across the complete touched roll-up windows. Estimated output does not represent that processing work.")
+                        Text("Previewing \(localizedSourceDayCount(renderedDayPreviewCount)) with data. The full summary-only export processes \(estimatedExportSize.projectedProcessingDayCount) source days across the complete touched roll-up windows. Estimated output does not represent that processing work.")
                             .font(.caption)
                     }
                     .foregroundStyle(Color.textMuted)
@@ -385,9 +399,11 @@ struct ExportPreviewView: View {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
-                        Text(settings.summaryOnlyModeEnabled
-                             ? "Previewing \(renderedDayPreviewCount) recent source day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full summary-only export will fetch the complete touched roll-up windows."
-                             : "Previewing the \(renderedDayPreviewCount) most recent day\(renderedDayPreviewCount == 1 ? "" : "s") with data. The full export will run on every selected date.")
+                        Text(
+                            settings.summaryOnlyModeEnabled
+                                ? String(localized: "Previewing \(localizedSourceDayCount(renderedDayPreviewCount)) with data. The full summary-only export will fetch the complete touched roll-up windows.")
+                                : String(localized: "Previewing \(localizedSourceDayCount(renderedDayPreviewCount)) with data. The full export will run on every selected date.")
+                        )
                             .font(.caption)
                     }
                     .foregroundStyle(Color.textMuted)
@@ -399,11 +415,7 @@ struct ExportPreviewView: View {
     }
 
     private func localizedRollupPeriodName(_ period: HealthRollupPeriod) -> String {
-        switch period {
-        case .weekly: return String(localized: "Weekly")
-        case .monthly: return String(localized: "Monthly")
-        case .yearly: return String(localized: "Yearly")
-        }
+        period.localizedDisplayName
     }
 
     private var bloodPressurePermissionFailures: [ExportPartialFailure] {
@@ -439,7 +451,7 @@ struct ExportPreviewView: View {
                             .frame(width: 44, height: 44)
                             .accessibilityHidden(true)
 
-                        Text(failure.summary)
+                        Text(failure.localizedSummary)
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1312,10 +1324,14 @@ private enum PreviewFileKind: Equatable {
 
     var displayName: String {
         switch self {
-        case .exportFormat(let format): return format.rawValue
-        case .rollupSummary(let period, let format): return "\(period.displayName) Roll-up · \(format.rawValue)"
-        case .dailyNoteInjection: return "Daily Note Injection"
-        case .individualEntry: return "Individual Entry"
+        case .exportFormat(let format):
+            return format.localizedDisplayName
+        case .rollupSummary(let period, let format):
+            return String(localized: "\(period.localizedDisplayName) Roll-up · \(format.localizedDisplayName)")
+        case .dailyNoteInjection:
+            return String(localized: "Daily Note Injection")
+        case .individualEntry:
+            return String(localized: "Individual Entry")
         }
     }
 

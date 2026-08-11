@@ -129,7 +129,7 @@ cloud service. See [Android desktop destination strategy](docs/android-desktop-d
 
 ## Pricing
 
-Health.md includes **3 free manual export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
+Health.md includes **10 free manual export actions** so you can verify permissions, folder access, formats, and your Obsidian workflow.
 
 Unlimited exports and scheduled automation are unlocked with a **one-time lifetime purchase** through Google Play Billing. No subscription. No recurring charge. The live price is shown by Google Play inside the app.
 

@@ -1,28 +1,23 @@
-# Phone Screenshots
+# English phone screenshots
 
-Add phone screenshots in this directory.
+These eight 1080×1920 RGB PNGs are the reviewed English Google Play sequence:
 
-## Requirements
-- **Dimensions**: 1080x1920px (9:16 aspect ratio)
-- **Format**: PNG
-- **Quantity**: 2-8 screenshots (5+ recommended)
-- **Naming**: 1.png, 2.png, 3.png, etc.
+1. Core export
+2. Export formats
+3. Health metrics
+4. Privacy and read-only access
+5. Scheduled exports
+6. File preview
+7. Home-screen widgets
+8. Direct desktop CLI
 
-## Tips
-- Show your app's key features and benefits
-- Include user workflows (not just static screens)
-- Avoid cluttered or confusing layouts
-- Consider adding text overlays explaining features
-- Order them logically (onboarding → main features → advanced)
+Filenames determine upload order. The images follow the matching copy in `play-store-screenshots/locales/en-US.json` and use `100+` rather than a brittle exact metric count in the marketing headline.
 
-## Example Order
-1. Main dashboard/home screen
-2. Key feature highlight
-3. Health data visualization
-4. Export/sharing feature
-5. Settings/preferences
+Validate them through the authored-to-canonical pipeline rather than passing this directory directly to `gplay`:
 
-## Related Directories
-- `sevenInch/` - 7" tablet screenshots (1920x1280px, if needed)
-- `tenInch/` - 10" tablet screenshots (2560x1600px, if needed)
-- `wear/` - Wear OS screenshots (if applicable)
+```bash
+cd apps/android
+./scripts/validate-play-listing.sh
+```
+
+Validation does not upload or publish anything.

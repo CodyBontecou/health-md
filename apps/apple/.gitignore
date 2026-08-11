@@ -67,6 +67,10 @@ screenshots/*
 screenshots/app-store/*
 !screenshots/app-store/ios-iphone-67/
 !screenshots/app-store/ios-iphone-67/*.png
+!screenshots/macos/
+screenshots/macos/*
+!screenshots/macos/README.md
+!screenshots/macos/copy.json
 
 # asc release run checkpoints (per-release artifacts)
 .asc/
@@ -78,8 +82,14 @@ screenshots/app-store/*
 # Sales/analytics reports
 *.gz
 
-# App Store metadata pulled locally
+# App Store metadata pulled locally. Keep canonical app-info and IAP localization
+# sources in Git; version files are force-tracked per release.
 metadata/
+!metadata/
+metadata/*
+!metadata/app-info/
+!metadata/app-info/*.json
+!metadata/in-app-purchases.json
 
 # Local capture script
 scripts/capture-docs.sh

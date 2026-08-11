@@ -32,6 +32,38 @@ enum AccessibilityID {
         static let pathPreview = "export.pathPreview"
         static let exportProgress = "export.progressView"
         static let statusMessage = "export.statusMessage"
+        static let activityBanner = "export.activityBanner"
+    }
+
+    // MARK: - Mac Destination
+    enum Mac {
+        static let exportActivity = "mac.exportActivity"
+    }
+
+    // MARK: - Clinician Report
+    enum ClinicianReport {
+        static let entry = "clinicianReport.entry"
+        static let displayName = "clinicianReport.displayName"
+        static let customStartDate = "clinicianReport.dateRange.custom.start"
+        static let customEndDate = "clinicianReport.dateRange.custom.end"
+        static let detail = "clinicianReport.detail"
+        static let recommended = "clinicianReport.metrics.recommended"
+        static let selectAll = "clinicianReport.metrics.selectAll"
+        static let clear = "clinicianReport.metrics.clear"
+        static let preview = "clinicianReport.preview"
+        static let previewContent = "clinicianReport.preview.content"
+        static let edit = "clinicianReport.edit"
+        static let generate = "clinicianReport.generate"
+        static let share = "clinicianReport.share"
+        static let exportSuccess = "clinicianReport.exportSuccess"
+
+        static func preset(_ preset: ReportDateRangePreset) -> String {
+            "clinicianReport.dateRange.preset.\(preset.rawValue)"
+        }
+
+        static func metric(_ metric: ReportMetric) -> String {
+            "clinicianReport.metric.\(metric.rawValue)"
+        }
     }
 
     // MARK: - CLI Export Activity

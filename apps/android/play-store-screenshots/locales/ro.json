@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "ro",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "Datele tale de sănătate. Fișierele tale.",
+      "supportingLine": "Exportă înregistrările Health Connect autorizate în fișiere controlate de tine."
+    },
+    {
+      "id": "export-formats",
+      "headline": "Exportă cum vrei",
+      "supportingLine": "Markdown, Obsidian Bases, JSON și CSV."
+    },
+    {
+      "id": "health-metrics",
+      "headline": "Alege din peste 100 de indicatori de sănătate",
+      "supportingLine": "Somn, activitate, inimă, semne vitale, nutriție și altele."
+    },
+    {
+      "id": "private-by-design",
+      "headline": "Doar citire. Confidențial din proiectare.",
+      "supportingLine": "Fără cont. Fără cloud Health.md pentru date medicale."
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "Păstrează arhiva la zi",
+      "supportingLine": "Programează exporturi către destinația aleasă."
+    },
+    {
+      "id": "file-preview",
+      "headline": "Previzualizează înainte de export",
+      "supportingLine": "Vezi numele, căile și conținutul fișierelor înainte de a scrie ceva."
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "Sănătatea dintr-o privire",
+      "supportingLine": "Widgeturi pentru activitate, somn, inimă și rezumat."
+    },
+    {
+      "id": "direct-cli",
+      "headline": "Direct pe computerul tău",
+      "supportingLine": "Asociază Health.md CLI pentru exporturi autentificate și criptate, fără releu cloud."
+    }
+  ]
+}

@@ -236,6 +236,14 @@ struct ExportHistoryEntry: Codable, Identifiable {
         return "Warning: \(partialFailures.count) metric fetches failed, including \(first.summary)"
     }
 
+    var localizedPartialFailureSummary: String? {
+        guard let first = partialFailures.first else { return nil }
+        if partialFailures.count == 1 {
+            return String(localized: "Warning: \(first.localizedSummary)")
+        }
+        return String(localized: "Warning: \(partialFailures.count) metric fetches failed, including \(first.localizedSummary)")
+    }
+
     /// Resolves the most useful reason available, including older history entries
     /// that only persisted a reason on their per-date failure details.
     var failureReasonForDisplay: ExportFailureReason? {
@@ -327,31 +335,28 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     var resultCountDescription: String {
         if isDailyNoteOnlyResult {
-            return "\(dailyNoteUpdateCount) note\(dailyNoteUpdateCount == 1 ? "" : "s") (\(successCount)/\(totalCount) days)"
+            return String(localized: "\(dailyNoteUpdateCount) daily note(s) (\(successCount)/\(totalCount) days)")
         }
-        if isCLIRawDelivery {
-            return "\(successCount) of \(totalCount)"
-        }
-        if isAPIEndpointDelivery {
-            return "\(successCount) of \(totalCount)"
+        if isCLIRawDelivery || isAPIEndpointDelivery {
+            return String(localized: "\(successCount) of \(totalCount)")
         }
         if let fileCount {
-            return "\(fileCount) file\(fileCount == 1 ? "" : "s") (\(successCount)/\(totalCount) days)"
+            return String(localized: "\(fileCount) file(s) (\(successCount)/\(totalCount) days)")
         }
-        return "\(successCount) of \(totalCount)"
+        return String(localized: "\(successCount) of \(totalCount)")
     }
 
     var resultCountAccessibilityDescription: String {
         if isDailyNoteOnlyResult {
-            return "\(dailyNoteUpdateCount) daily notes updated across \(successCount) of \(totalCount) days"
+            return String(localized: "\(dailyNoteUpdateCount) daily note(s) updated across \(successCount) of \(totalCount) days")
         }
         if isCLIRawDelivery {
-            return "\(successCount) of \(totalCount) days sent to the CLI"
+            return String(localized: "\(successCount) of \(totalCount) days sent to the CLI")
         }
         if isAPIEndpointDelivery {
-            return "\(successCount) of \(totalCount) days uploaded"
+            return String(localized: "\(successCount) of \(totalCount) days uploaded")
         }
-        return "\(fileCount ?? successCount) files exported across \(successCount) of \(totalCount) days"
+        return String(localized: "\(fileCount ?? successCount) file(s) exported across \(successCount) of \(totalCount) days")
     }
 
     /// Summary description for display
@@ -396,6 +401,15 @@ enum ExportSource: String, Codable {
     case scheduled = "Scheduled"
     case shortcut = "Shortcut"
     case macAgent = "iPhone → Mac"
+
+    var localizedDisplayName: String {
+        switch self {
+        case .manual: return String(localized: "Manual")
+        case .scheduled: return String(localized: "Scheduled")
+        case .shortcut: return String(localized: "Shortcut")
+        case .macAgent: return String(localized: "iPhone → Mac")
+        }
+    }
 
     var icon: String {
         switch self {
@@ -512,7 +526,7 @@ struct FailedDateDetail: Codable {
     /// Returns the detailed error message, including raw error details if available
     var detailedMessage: String {
         if let details = errorDetails, !details.isEmpty {
-            return "\(reason.detailedDescription)\n\nDetails: \(details)"
+            return String(localized: "\(reason.detailedDescription). Details: \(details)")
         }
         return reason.detailedDescription
     }

@@ -62,7 +62,9 @@ jobs:
   release:
     name: Build & Submit iOS
     if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.login != 'github-actions[bot]') }}
-    runs-on: self-hosted
+    # Keep releases available when the optional self-hosted Mac is offline. The
+    # Apple CI suite qualifies this same hosted image and its Xcode toolchain.
+    runs-on: macos-26
     timeout-minutes: 90
     defaults:
       run:
@@ -125,9 +127,29 @@ jobs:
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
-      - name: Verify asc CLI
+      - name: Install asc CLI
         run: |
-          asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
+          if ! command -v asc >/dev/null 2>&1; then
+            brew install asc
+          fi
+          asc --version
+
+      - name: Validate canonical App Store metadata
+        run: |
+          asc metadata validate --dir metadata --output table
+          jq -e '
+            .schemaVersion == 1 and
+            (.products | length > 0) and
+            all(.products[];
+              (.id | type == "string" and length > 0) and
+              (.productId | type == "string" and length > 0) and
+              (.localizations | length > 0) and
+              all(.localizations[];
+                (.name | type == "string" and length >= 2 and length <= 30) and
+                (.description | type == "string" and length > 0 and length <= 45)
+              )
+            )
+          ' metadata/in-app-purchases.json >/dev/null
 
       - name: Configure App Store Connect API key
         env:
@@ -494,34 +516,73 @@ jobs:
             --version-id "$VERSION_ID" \
             --build "${{ steps.asc_upload.outputs.build_id }}"
 
-          DEFAULT_WHATS_NEW=$(cat "${{ steps.notes.outputs.asc_notes_file }}")
-          LOCALES=$(asc localizations list --version "$VERSION_ID" --output json \
-            | python3 -c '
-          import sys, json
-          data = json.load(sys.stdin)
-          items = data.get("data", data) if isinstance(data, dict) else data
-          for item in items:
-              locale = item.get("attributes", {}).get("locale")
-              if locale:
-                  print(locale)
-          ')
-          if [[ -z "$LOCALES" ]]; then
-            LOCALES="en-US"
-          fi
-          while IFS= read -r LOCALE; do
-            [[ -z "$LOCALE" ]] && continue
-            METADATA_FILE="metadata/version/$VERSION/$LOCALE.json"
-            WHATS_NEW="$DEFAULT_WHATS_NEW"
-            if [[ -f "$METADATA_FILE" ]]; then
-              LOCALIZED_WHATS_NEW=$(jq -r '.whatsNew // empty' "$METADATA_FILE")
-              [[ -n "$LOCALIZED_WHATS_NEW" ]] && WHATS_NEW="$LOCALIZED_WHATS_NEW"
+          echo "Applying canonical app-info and $VERSION metadata"
+          asc metadata apply \
+            --app "$ASC_APP_ID" \
+            --version "$VERSION" \
+            --platform IOS \
+            --dir metadata \
+            --include localizations \
+            --output table
+
+          IAP_VERSION_IDS=()
+          while IFS= read -r PRODUCT; do
+            IAP_ID=$(printf '%s' "$PRODUCT" | jq -r '.id')
+            PRODUCT_ID=$(printf '%s' "$PRODUCT" | jq -r '.productId')
+
+            REMOTE_IAP=$(asc iap view --id "$IAP_ID" --output json)
+            REMOTE_PRODUCT_ID=$(printf '%s' "$REMOTE_IAP" \
+              | jq -r '.data.attributes.productId // .attributes.productId // empty')
+            if [[ "$REMOTE_PRODUCT_ID" != "$PRODUCT_ID" ]]; then
+              echo "::error::IAP $IAP_ID resolved to '$REMOTE_PRODUCT_ID', expected '$PRODUCT_ID'"
+              exit 1
             fi
-            echo "Updating What's New for $LOCALE"
-            asc localizations update \
-              --locale "$LOCALE" \
-              --version "$VERSION_ID" \
-              --whats-new "$WHATS_NEW"
-          done <<< "$LOCALES"
+
+            IAP_VERSIONS=$(asc iap versions list \
+              --iap-id "$IAP_ID" \
+              --state PREPARE_FOR_SUBMISSION \
+              --paginate \
+              --output json)
+            IAP_VERSION_ID=$(printf '%s' "$IAP_VERSIONS" \
+              | jq -r '[.data[] | select(.attributes.state == "PREPARE_FOR_SUBMISSION")][0].id // empty')
+            if [[ -z "$IAP_VERSION_ID" ]]; then
+              echo "::error::IAP $PRODUCT_ID has no PREPARE_FOR_SUBMISSION version for localized metadata"
+              exit 1
+            fi
+
+            IAP_LOCALIZATIONS=$(asc iap versions localizations list \
+              --version-id "$IAP_VERSION_ID" \
+              --paginate \
+              --output json)
+            while IFS= read -r LOCALIZATION; do
+              LOCALE=$(printf '%s' "$LOCALIZATION" | jq -r '.locale')
+              NAME=$(printf '%s' "$LOCALIZATION" | jq -r '.name')
+              DESCRIPTION=$(printf '%s' "$LOCALIZATION" | jq -r '.description')
+              LOCALIZATION_ID=$(printf '%s' "$IAP_LOCALIZATIONS" \
+                | jq -r --arg locale "$LOCALE" \
+                  '[.data[] | select(.attributes.locale == $locale)][0].id // empty')
+
+              if [[ -n "$LOCALIZATION_ID" ]]; then
+                asc iap versions localizations update \
+                  --localization-id "$LOCALIZATION_ID" \
+                  --name "$NAME" \
+                  --description "$DESCRIPTION"
+              else
+                asc iap versions localizations create \
+                  --version-id "$IAP_VERSION_ID" \
+                  --locale "$LOCALE" \
+                  --name "$NAME" \
+                  --description "$DESCRIPTION"
+              fi
+            done < <(printf '%s' "$PRODUCT" \
+              | jq -c '.localizations | to_entries[] | {
+                  locale: .key,
+                  name: .value.name,
+                  description: .value.description
+                }')
+
+            IAP_VERSION_IDS+=("$IAP_VERSION_ID")
+          done < <(jq -c '.products[]' metadata/in-app-purchases.json)
 
           asc validate \
             --app "$ASC_APP_ID" \
@@ -539,6 +600,13 @@ jobs:
             --submission "$SUBMISSION_ID" \
             --item-type appStoreVersions \
             --item-id "$VERSION_ID"
+
+          for IAP_VERSION_ID in "${IAP_VERSION_IDS[@]}"; do
+            asc review items-add \
+              --submission "$SUBMISSION_ID" \
+              --item-type inAppPurchaseVersions \
+              --item-id "$IAP_VERSION_ID"
+          done
 
           asc review submissions-submit \
             --id "$SUBMISSION_ID" \

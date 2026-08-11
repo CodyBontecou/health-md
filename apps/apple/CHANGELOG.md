@@ -4,14 +4,21 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.0.5] - 2026-08-09
+
 ### Added
+- Added private, on-device clinician reports on iPhone and iPad with inclusive 7-, 30-, 90-day, and custom date ranges; 11 focused health metrics; previewable summaries and readings; an optional display name; and accessible Letter or A4 PDF output.
 - Added an in-app Direct CLI QR scanner with camera-permission recovery, strict private-LAN/Tailscale payload validation, and automatic pairing after a valid scan.
 
 ### Changed
 - Scanning a Direct CLI or MCP pairing QR from **Sync → Direct CLI Access → Scan Pairing QR** now starts the authenticated connection immediately, with no second **Pair** tap. External custom-URL opens no longer authorize pairing.
+- The Mac app is now fully localized in every supported language, with a clearer dashboard and layouts that preserve longer localized labels and status details.
 
 ### Fixed
 - New Direct CLI trust remains provisional until a valid peer hello; incomplete, cancelled, duplicated, expired, or interrupted QR handoffs restore previous trust and endpoint settings.
+
+### Privacy and Security
+- Clinician report generation stays on-device. Temporary report files remain private until an explicit share or save action, and missing or partial readings are labeled instead of inferred.
 
 ## [3.0.4] - 2026-08-03
 

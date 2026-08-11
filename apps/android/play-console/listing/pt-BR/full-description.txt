@@ -1,0 +1,45 @@
+Health.md transforma dados autorizados do Android Health Connect em arquivos portáteis que você escolhe e controla.
+
+EXPORTE DADOS DO HEALTH CONNECT DO SEU JEITO
+Crie resumos legíveis em Markdown, Obsidian Bases, CSV e JSON ou instantâneos nativos do provedor em JSON/NDJSON. Escolha as métricas, o período e o destino, visualize os nomes e o conteúdo dos arquivos e exporte para uma pasta local, um cofre do Obsidian, outro provedor de documentos do Android, seu próprio endpoint de API ou uma Health.md CLI pareada. Health.md não exige conta nem opera uma nuvem de dados de saúde.
+
+ESCOLHA ENTRE MAIS DE 100 MÉTRICAS DE SAÚDE
+Exporte dados autorizados de sono, passos, exercícios, frequência cardíaca, HRV, pressão arterial, glicemia, saturação de oxigênio, frequência respiratória, peso, composição corporal, nutrição, hidratação, mobilidade, atenção plena, saúde reprodutiva e outros registros do Health Connect. Negar uma categoria não impede a exportação de outras categorias autorizadas.
+
+VISUALIZE, PERSONALIZE E AUTOMATIZE
+Escolha unidades, formatos, modos de gravação, organização de pastas e amostras detalhadas. Visualize os caminhos e o conteúdo exatos antes que qualquer dado seja gravado. Execute exportações manualmente ou agende-as para um destino escolhido e consulte execuções concluídas e com falha no histórico de exportações.
+
+SUA SAÚDE EM UM INSTANTE
+Quatro widgets opcionais da tela inicial mostram resumos autorizados de atividade, sono e coração usando um pequeno cache no dispositivo. O acesso dos widgets e a atualização em segundo plano permanecem sob seu controle.
+
+PRONTUÁRIOS MÉDICOS PESSOAIS (FHIR)
+Quando o dispositivo oferece suporte a prontuários pessoais de saúde, a opção “Prontuários médicos (FHIR)” permite preservar recursos médicos autorizados no mesmo arquivo sob seu controle. As categorias compatíveis são:
+
+• Vacinas e imunizações
+• Alergias e intolerâncias
+• Condições e histórico da lista de problemas
+• Resultados laboratoriais
+• Medicamentos e prescrições
+• Dados pessoais usados para identificar o prontuário
+• Dados de profissionais e suas funções
+• Registros de gravidez
+• Procedimentos
+• Histórico social
+• Visitas e atendimentos
+• Sinais vitais clínicos
+
+Cada permissão médica é somente leitura e é solicitada para que uma exportação de prontuário médico iniciada por você inclua a categoria FHIR específica, em vez de omiti-la silenciosamente. As exportações em JSON e nativas do provedor preservam os dados dos recursos FHIR e os metadados de origem fornecidos pelo Health Connect; os resumos em Markdown e CSV informam a quantidade de recursos médicos por categoria. Você pode negar ou revogar qualquer categoria no Health Connect, e as outras exportações autorizadas continuarão funcionando.
+
+Health.md não diagnostica condições, recomenda tratamentos, gerencia cuidados clínicos nem modifica o Health Connect. Os prontuários médicos são lidos apenas para portabilidade de registros sob seu controle e gerenciamento do seu arquivo pessoal.
+
+PRIVACIDADE E CONTROLE
+• Acesso somente leitura ao Health Connect; Health.md nunca grava registros de saúde
+• Sem conta Health.md nem nuvem de dados de saúde
+• Nenhum uso de dados de saúde para anúncios, criação de perfil, crédito, seguros ou emprego
+• Sem SDK de análise ou atribuição de terceiros
+• Os dados de saúde são processados no dispositivo e exportados apenas para um destino que você escolher
+• Endpoints configurados pelo usuário são contatados apenas para exportações que você envia explicitamente
+• As permissões podem ser revisadas ou revogadas no Health Connect a qualquer momento
+• Análises próprias limitadas sobre atribuição de instalação, integração ou preços nunca incluem registros de saúde, detalhes de permissões do Health Connect, conteúdo exportado, texto de contas ou caminhos de arquivos
+
+Health.md inclui 10 ações gratuitas de exportação manual. Uma compra única libera exportações ilimitadas e agendamento; não há assinatura.

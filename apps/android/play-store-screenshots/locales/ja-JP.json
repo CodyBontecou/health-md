@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "ja-JP",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "健康データを、自分のファイルに。",
+      "supportingLine": "許可したHealth Connectの記録を、自分で管理できるファイルに書き出せます。"
+    },
+    {
+      "id": "export-formats",
+      "headline": "自分に合った形式で書き出し",
+      "supportingLine": "Markdown、Obsidian Bases、JSON、CSVに対応。"
+    },
+    {
+      "id": "health-metrics",
+      "headline": "100種類以上の健康指標",
+      "supportingLine": "睡眠、アクティビティ、心臓、バイタル、栄養など。"
+    },
+    {
+      "id": "private-by-design",
+      "headline": "読み取り専用。プライバシー重視。",
+      "supportingLine": "アカウント不要。Health.mdの健康データ用クラウドもありません。"
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "アーカイブをいつも最新に",
+      "supportingLine": "選択した保存先への書き出しをスケジュールできます。"
+    },
+    {
+      "id": "file-preview",
+      "headline": "書き出す前にプレビュー",
+      "supportingLine": "書き込み前にファイル名、パス、内容を確認できます。"
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "健康状態をひと目で",
+      "supportingLine": "アクティビティ、睡眠、心臓、概要のウィジェット。"
+    },
+    {
+      "id": "direct-cli",
+      "headline": "パソコンへ直接書き出し",
+      "supportingLine": "Health.md CLIとペアリングし、クラウドを経由せず認証・暗号化された書き出しを行えます。"
+    }
+  ]
+}

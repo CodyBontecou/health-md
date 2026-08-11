@@ -1,1 +1,1 @@
-Your health data, all in one place. Read from Health Connect.
+Export Health Connect data to Markdown, CSV, JSON or Obsidian files you control.

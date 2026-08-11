@@ -1,0 +1,1 @@
+Exportă date Health Connect în fișiere Markdown, CSV, JSON sau Obsidian proprii.

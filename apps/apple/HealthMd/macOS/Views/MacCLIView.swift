@@ -10,8 +10,8 @@ private enum InstallTab: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .agentPrompt: return "Agent Prompt"
-        case .manual: return "Manual"
+        case .agentPrompt: return String(localized: "Agent Prompt")
+        case .manual: return String(localized: "Manual")
         }
     }
 
@@ -41,6 +41,7 @@ struct MacCLIView: View {
     @State private var isSkillsPromptExpanded = false
     @State private var isInstallingSkills = false
     @State private var skillInstallMessage: String?
+    @State private var skillInstallSucceeded = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -95,7 +96,9 @@ struct MacCLIView: View {
                     Spacer(minLength: Spacing.s4)
 
                     GeistStatusPill(
-                        title: syncService.connectionState == .connected ? "iPhone connected" : "Waiting for iPhone",
+                        title: syncService.connectionState == .connected
+                            ? String(localized: "iPhone connected")
+                            : String(localized: "Waiting for iPhone"),
                         subtitle: cliReadinessSubtitle,
                         systemImage: syncService.connectionState == .connected ? "iphone" : "antenna.radiowaves.left.and.right",
                         color: syncService.connectionState == .connected ? Color.success : Color.warning
@@ -103,9 +106,9 @@ struct MacCLIView: View {
                 }
 
                 HStack(alignment: .top, spacing: Spacing.s3) {
-                    infoTile(title: "Bundled path", value: bundledCLIPath, systemImage: "shippingbox")
-                    infoTile(title: "Local server", value: "127.0.0.1:17645", systemImage: "network")
-                    infoTile(title: "Raw mode", value: "No files written", systemImage: "curlybraces")
+                    infoTile(title: String(localized: "Bundled path"), value: bundledCLIPath, systemImage: "shippingbox")
+                    infoTile(title: String(localized: "Local server"), value: "127.0.0.1:17645", systemImage: "network")
+                    infoTile(title: String(localized: "Raw mode"), value: String(localized: "No files written"), systemImage: "curlybraces")
                 }
             }
         }
@@ -141,8 +144,8 @@ struct MacCLIView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Install for Terminal",
-                    subtitle: "Choose agent-assisted setup or copy the manual shell commands."
+                    title: String(localized: "Install for Terminal"),
+                    subtitle: String(localized: "Choose agent-assisted setup or copy the manual shell commands.")
                 )
 
                 installTabBar(selection: $selectedInstallTab)
@@ -161,12 +164,12 @@ struct MacCLIView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Connect Codex or Claude",
-                    subtitle: "Add the local stdio server, restart the host, then call healthmd_doctor."
+                    title: String(localized: "Connect Codex or Claude"),
+                    subtitle: String(localized: "Add the local stdio server, restart the host, then call healthmd_doctor.")
                 )
 
                 commandBlock(
-                    title: "Codex · ~/.codex/config.toml",
+                    title: String(localized: "Codex · ~/.codex/config.toml"),
                     command: codexMCPConfig,
                     copied: copiedCodexConfig,
                     copyAction: {
@@ -176,7 +179,7 @@ struct MacCLIView: View {
                 )
 
                 commandBlock(
-                    title: "Claude Desktop or trusted .mcp.json",
+                    title: String(localized: "Claude Desktop or trusted .mcp.json"),
                     command: claudeMCPConfig,
                     copied: copiedClaudeConfig,
                     copyAction: {
@@ -197,8 +200,8 @@ struct MacCLIView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Install Agent Skill",
-                    subtitle: "Choose agent-assisted setup or install the user-facing CLI skill yourself."
+                    title: String(localized: "Install Agent Skill"),
+                    subtitle: String(localized: "Choose agent-assisted setup or install the user-facing CLI skill yourself.")
                 )
 
                 installTabBar(selection: $selectedSkillInstallTab)
@@ -247,7 +250,11 @@ struct MacCLIView: View {
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isAgentPromptExpanded ? "Hide full prompt" : "Show full prompt")
+                .accessibilityLabel(
+                    isAgentPromptExpanded
+                        ? String(localized: "Hide full prompt")
+                        : String(localized: "Show full prompt")
+                )
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("Agent install prompt")
@@ -264,7 +271,10 @@ struct MacCLIView: View {
                     copyToPasteboard(agentInstallPrompt)
                     copiedAgentPrompt = true
                 } label: {
-                    Label(copiedAgentPrompt ? "Copied" : "Copy Prompt", systemImage: copiedAgentPrompt ? "checkmark" : "doc.on.doc")
+                    Label(
+                        copiedAgentPrompt ? String(localized: "Copied") : String(localized: "Copy Prompt"),
+                        systemImage: copiedAgentPrompt ? "checkmark" : "doc.on.doc"
+                    )
                 }
                 .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
             }
@@ -306,7 +316,11 @@ struct MacCLIView: View {
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isSkillsPromptExpanded ? "Hide full prompt" : "Show full prompt")
+                .accessibilityLabel(
+                    isSkillsPromptExpanded
+                        ? String(localized: "Hide full prompt")
+                        : String(localized: "Show full prompt")
+                )
 
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text("Agent skill install prompt")
@@ -323,7 +337,10 @@ struct MacCLIView: View {
                     copyToPasteboard(agentSkillsInstallPrompt)
                     copiedSkillsPrompt = true
                 } label: {
-                    Label(copiedSkillsPrompt ? "Copied" : "Copy Prompt", systemImage: copiedSkillsPrompt ? "checkmark" : "doc.on.doc")
+                    Label(
+                        copiedSkillsPrompt ? String(localized: "Copied") : String(localized: "Copy Prompt"),
+                        systemImage: copiedSkillsPrompt ? "checkmark" : "doc.on.doc"
+                    )
                 }
                 .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
             }
@@ -395,7 +412,10 @@ struct MacCLIView: View {
                 Button {
                     installAgentSkills()
                 } label: {
-                    Label(isInstallingSkills ? "Installing…" : "Install…", systemImage: "square.and.arrow.down")
+                    Label(
+                        isInstallingSkills ? String(localized: "Installing…") : String(localized: "Install…"),
+                        systemImage: "square.and.arrow.down"
+                    )
                 }
                 .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
                 .disabled(isInstallingSkills)
@@ -408,7 +428,7 @@ struct MacCLIView: View {
             )
 
             commandBlock(
-                title: "Manual shell command",
+                title: String(localized: "Manual shell command"),
                 command: skillManualInstallCommand,
                 copied: copiedSkillManualCommand,
                 copyAction: {
@@ -425,7 +445,7 @@ struct MacCLIView: View {
             if let skillInstallMessage {
                 Text(skillInstallMessage)
                     .font(Typography.caption())
-                    .foregroundStyle(skillInstallMessage.hasPrefix("Installed") ? Color.success : Color.warning)
+                    .foregroundStyle(skillInstallSucceeded ? Color.success : Color.warning)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -434,7 +454,7 @@ struct MacCLIView: View {
     private var manualInstallContent: some View {
         VStack(alignment: .leading, spacing: Spacing.s4) {
             commandBlock(
-                title: "Aliases for this shell",
+                title: String(localized: "Aliases for this shell"),
                 command: aliasCommand,
                 copied: copiedAlias,
                 copyAction: {
@@ -444,7 +464,7 @@ struct MacCLIView: View {
             )
 
             commandBlock(
-                title: "Persistent symlink",
+                title: String(localized: "Persistent symlink"),
                 command: symlinkCommand,
                 copied: copiedSymlink,
                 copyAction: {
@@ -464,14 +484,14 @@ struct MacCLIView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "How It Works",
-                    subtitle: "App Store-safe by design."
+                    title: String(localized: "How It Works"),
+                    subtitle: String(localized: "App Store-safe by design.")
                 )
 
-                setupStep(number: "1", title: "Mac app runs the service", detail: "Health.md listens only on localhost and owns iPhone connection state.")
-                setupStep(number: "2", title: "Helpers send JSON", detail: "The sandboxed `healthmd` and `healthmd-mcp` helpers call fixed localhost routes; neither reads HealthKit directly.")
-                setupStep(number: "3", title: "iPhone remains source of truth", detail: "HealthKit reads happen on your unlocked, connected iPhone.")
-                setupStep(number: "4", title: "You opt into installation", detail: "The app never mutates `/usr/local/bin` or shell files without your action.")
+                setupStep(number: "1", title: String(localized: "Mac app runs the service"), detail: String(localized: "Health.md listens only on localhost and owns iPhone connection state."))
+                setupStep(number: "2", title: String(localized: "Helpers send JSON"), detail: String(localized: "The sandboxed `healthmd` and `healthmd-mcp` helpers call fixed localhost routes; neither reads HealthKit directly."))
+                setupStep(number: "3", title: String(localized: "iPhone remains source of truth"), detail: String(localized: "HealthKit reads happen on your unlocked, connected iPhone."))
+                setupStep(number: "4", title: String(localized: "You opt into installation"), detail: String(localized: "The app never mutates `/usr/local/bin` or shell files without your action."))
             }
         }
     }
@@ -480,27 +500,27 @@ struct MacCLIView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Commands",
-                    subtitle: "Run these after the Mac app is open and the iPhone app is connected."
+                    title: String(localized: "Commands"),
+                    subtitle: String(localized: "Run these after the Mac app is open and the iPhone app is connected.")
                 )
 
-                commandRow("Check connection readiness", "healthmd status")
-                commandRow("Check CLI and iPhone readiness", "healthmd doctor")
-                commandRow("List queryable Sleep metrics", "healthmd metrics list --category Sleep")
-                commandRow("Extract canonical Sleep data without changing iPhone settings", "healthmd extract --category Sleep --yesterday")
-                commandRow("Run a derived Sleep metric query", "healthmd query --category Sleep --yesterday")
-                commandRow("Inspect the first four hours of recent sleep", "healthmd sleep sessions --last-nights 14 --window first:4h")
-                commandRow("Align runs with preceding and following sleep", "healthmd training align --last 14 --workout running --sleep-window first:4h")
-                commandRow("List recent workouts", "healthmd workouts --last 14")
-                commandRow("Inspect Sleep coverage", "healthmd coverage --category Sleep --last 14")
-                commandRow("Export yesterday to Mac folder", "healthmd export --iphone --yesterday")
-                commandRow("Export last 7 days", "healthmd export --iphone --last 7")
-                commandRow("Export selected Sleep summaries", "healthmd export --iphone --last 7 --category Sleep --detail summary")
-                commandRow("Return raw JSON without files", "healthmd export --iphone --yesterday --raw", copyAction: {
+                commandRow(String(localized: "Check connection readiness"), "healthmd status")
+                commandRow(String(localized: "Check CLI and iPhone readiness"), "healthmd doctor")
+                commandRow(String(localized: "List queryable Sleep metrics"), "healthmd metrics list --category Sleep")
+                commandRow(String(localized: "Extract canonical Sleep data without changing iPhone settings"), "healthmd extract --category Sleep --yesterday")
+                commandRow(String(localized: "Run a derived Sleep metric query"), "healthmd query --category Sleep --yesterday")
+                commandRow(String(localized: "Inspect the first four hours of recent sleep"), "healthmd sleep sessions --last-nights 14 --window first:4h")
+                commandRow(String(localized: "Align runs with preceding and following sleep"), "healthmd training align --last 14 --workout running --sleep-window first:4h")
+                commandRow(String(localized: "List recent workouts"), "healthmd workouts --last 14")
+                commandRow(String(localized: "Inspect Sleep coverage"), "healthmd coverage --category Sleep --last 14")
+                commandRow(String(localized: "Export yesterday to Mac folder"), "healthmd export --iphone --yesterday")
+                commandRow(String(localized: "Export last 7 days"), "healthmd export --iphone --last 7")
+                commandRow(String(localized: "Export selected Sleep summaries"), "healthmd export --iphone --last 7 --category Sleep --detail summary")
+                commandRow(String(localized: "Return raw JSON without files"), "healthmd export --iphone --yesterday --raw", copyAction: {
                     copyToPasteboard("healthmd export --iphone --yesterday --raw")
                     copiedRawExample = true
                 }, copied: copiedRawExample)
-                commandRow("Use iPhone settings exactly", "healthmd export --iphone --yesterday --use-iphone-settings")
+                commandRow(String(localized: "Use iPhone settings exactly"), "healthmd export --iphone --yesterday --use-iphone-settings")
             }
         }
     }
@@ -509,14 +529,14 @@ struct MacCLIView: View {
         GeistMacCard {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 GeistSectionHeader(
-                    title: "Troubleshooting",
-                    subtitle: "What common JSON readiness states mean."
+                    title: String(localized: "Troubleshooting"),
+                    subtitle: String(localized: "What common JSON readiness states mean.")
                 )
 
-                troubleshootingRow("mac_app_unreachable", "Open Health.md on Mac. The CLI talks to the running app, not directly to iPhone.")
-                troubleshootingRow("iphone_not_connected", "Unlock iPhone, open Health.md, and wait for the Mac Destination connection.")
-                troubleshootingRow("mac_destination_unavailable", "Choose or reselect a Mac folder, or use `--raw` when you only need JSON.")
-                troubleshootingRow("can_trigger_raw_exports", "Raw JSON can work even when no Mac destination folder is selected.")
+                troubleshootingRow("mac_app_unreachable", String(localized: "Open Health.md on Mac. The CLI talks to the running app, not directly to iPhone."))
+                troubleshootingRow("iphone_not_connected", String(localized: "Unlock iPhone, open Health.md, and wait for the Mac Destination connection."))
+                troubleshootingRow("mac_destination_unavailable", String(localized: "Choose or reselect a Mac folder, or use `--raw` when you only need JSON."))
+                troubleshootingRow("can_trigger_raw_exports", String(localized: "Raw JSON can work even when no Mac destination folder is selected."))
             }
         }
     }
@@ -555,7 +575,7 @@ struct MacCLIView: View {
                 Button {
                     copyAction()
                 } label: {
-                    Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    Label(copied ? String(localized: "Copied") : String(localized: "Copy"), systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
             }
@@ -586,7 +606,7 @@ struct MacCLIView: View {
                 Button {
                     copyAction()
                 } label: {
-                    Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    Label(copied ? String(localized: "Copied") : String(localized: "Copy"), systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
                 .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
             }
@@ -750,18 +770,18 @@ struct MacCLIView: View {
     }
 
     private var cliReadinessSubtitle: String {
-        if syncService.connectionState != .connected { return "Open iPhone app" }
-        if vaultManager.vaultURL == nil { return "Raw mode available" }
-        return "Exports ready"
+        if syncService.connectionState != .connected { return String(localized: "Open iPhone app") }
+        if vaultManager.vaultURL == nil { return String(localized: "Raw mode available") }
+        return String(localized: "Exports ready")
     }
 
     private func installAgentSkills() {
         guard !isInstallingSkills else { return }
 
         let panel = NSOpenPanel()
-        panel.title = "Choose Agent Skills Folder"
-        panel.message = "Choose the folder where your coding agent reads skills. Health.md will install or update its user-facing CLI skill there."
-        panel.prompt = "Install Skills"
+        panel.title = String(localized: "Choose Agent Skills Folder")
+        panel.message = String(localized: "Choose the folder where your coding agent reads skills. Health.md will install or update its user-facing CLI skill there.")
+        panel.prompt = String(localized: "Install Skills")
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
@@ -782,9 +802,11 @@ struct MacCLIView: View {
         do {
             let installed = try HealthMdAgentSkillBundle.install(to: destinationURL)
             let names = installed.map { $0.lastPathComponent }.joined(separator: ", ")
-            skillInstallMessage = "Installed \(installed.count) Health.md CLI skill to \(destinationURL.path): \(names)."
+            skillInstallSucceeded = true
+            skillInstallMessage = String(localized: "Installed \(installed.count) Health.md CLI skills to \(destinationURL.path): \(names).")
         } catch {
-            skillInstallMessage = "Could not install skills: \(error.localizedDescription)"
+            skillInstallSucceeded = false
+            skillInstallMessage = String(localized: "Could not install skills: \(error.localizedDescription)")
         }
     }
 
@@ -809,8 +831,8 @@ private enum HealthMdAgentSkillBundle {
     static let skills: [HealthMdAgentSkill] = [
         HealthMdAgentSkill(
             directoryName: "healthmd-cli",
-            title: "Health.md CLI",
-            summary: "Help users install the command, extract selected canonical data, run exports, read status output, and fix readiness issues.",
+            title: String(localized: "Health.md CLI"),
+            summary: String(localized: "Help users install the command, extract selected canonical data, run exports, read status output, and fix readiness issues."),
             systemImage: "terminal"
         )
     ]
@@ -843,7 +865,9 @@ private enum HealthMdAgentSkillBundle {
                 throw NSError(
                     domain: "HealthMdAgentSkillBundle",
                     code: 2,
-                    userInfo: [NSLocalizedDescriptionKey: "Missing bundled skill file \(skill.resourceFileName)."]
+                    userInfo: [
+                        NSLocalizedDescriptionKey: String(localized: "Missing bundled skill file \(skill.resourceFileName).")
+                    ]
                 )
             }
 

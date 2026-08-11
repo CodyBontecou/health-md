@@ -1,13 +1,45 @@
-HealthMD gives you unified access to all your health and fitness data from Health Connect.
+Health.md turns authorized Android Health Connect data into portable files that you choose and control.
 
-FEATURES:
-• View all your health metrics in one place
-• Read data from Health Connect
-• Export your health history
-• Simple, clean interface
+EXPORT HEALTH CONNECT DATA YOUR WAY
+Create readable Markdown, Obsidian Bases, CSV and JSON summaries or provider-native JSON/NDJSON snapshots. Choose the metrics, date range and destination, preview the filenames and content, then export to a local folder, an Obsidian vault, another Android document provider, your own API endpoint or a paired Health.md CLI. Health.md requires no account and operates no health-data cloud.
 
-PRIVACY:
-Your health data is yours. Health.md reads Health Connect data only for exports you request and never includes health data in campaign attribution. No third-party analytics or attribution SDK is used. For installs resulting from a Health.md campaign link, our first-party redirect service records the click and Android can send random app-generated install/event UUIDs plus validated campaign metadata to our first-party service. Raw referrers, Advertising ID, Android ID, device details, export content, accounts, and file paths are not sent.
+CHOOSE FROM 100+ HEALTH METRICS
+Export authorized sleep, steps, workouts, heart rate, HRV, blood pressure, blood glucose, oxygen saturation, respiratory rate, weight, body composition, nutrition, hydration, mobility, mindfulness, reproductive health and other Health Connect records. Denying one category does not prevent exports of other authorized categories.
 
-PERMISSIONS:
-HealthMD requests Health Connect permissions to display your health and fitness data. You control which data sources we can access.
+PREVIEW, CUSTOMIZE AND AUTOMATE
+Choose units, formats, write modes, folder organization and granular samples. Preview exact file paths and content before anything is written. Run exports manually or schedule them for a destination you select, then review completed and failed runs in export history.
+
+HEALTH AT A GLANCE
+Four optional home-screen widgets show authorized activity, sleep and heart summaries from a small on-device cache. Widget access and background refresh remain under your control.
+
+PERSONAL MEDICAL RECORDS (FHIR)
+When Personal Health Record support is available on the device, the “Medical records (FHIR)” option lets you preserve authorized medical resources in the same user-controlled archive. Supported categories are:
+
+• Vaccines and immunizations
+• Allergies and intolerances
+• Conditions and problem-list history
+• Laboratory results
+• Medications and prescriptions
+• Personal details used to identify the record
+• Practitioner and practitioner-role details
+• Pregnancy records
+• Procedures
+• Social history
+• Visits and encounters
+• Clinical vital signs
+
+Each medical permission is read-only and is requested so that a user-requested medical-record export can include that specific FHIR category instead of silently omitting it. JSON and provider-native exports preserve the FHIR resource data and source metadata supplied by Health Connect; Markdown and CSV summaries report medical-resource counts by category. You may deny or revoke any category in Health Connect, and other authorized exports continue to work.
+
+Health.md does not diagnose conditions, recommend treatment, manage clinical care or modify Health Connect. Medical records are read only for user-controlled record portability and personal archive management.
+
+PRIVACY AND CONTROL
+• Read-only Health Connect access; Health.md never writes health records
+• No Health.md account or health-data cloud
+• No use of health data for ads, profiling, credit, insurance or employment
+• No third-party analytics or attribution SDK
+• Health data is processed on-device and exported only to a destination you select
+• User-configured endpoints are contacted only for exports you explicitly send
+• Permissions can be reviewed or revoked in Health Connect at any time
+• Limited first-party install attribution and onboarding or pricing analytics never include health records, Health Connect permission details, export content, account text or file paths
+
+Health.md includes 10 free manual export actions. A one-time purchase unlocks unlimited exports and scheduling; there is no subscription.

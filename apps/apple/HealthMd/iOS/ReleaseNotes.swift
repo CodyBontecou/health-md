@@ -27,6 +27,36 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.0.5",
+            items: [
+                .list(
+                    title: "Share a clearer health story",
+                    rows: [
+                        .init(
+                            symbolSystemName: "heart.text.clipboard",
+                            title: "Clinician-ready reports",
+                            description: "Turn selected Apple Health metrics into a focused report for the last 7, 30, or 90 days—or a custom date range."
+                        ),
+                        .init(
+                            symbolSystemName: "doc.richtext",
+                            title: "Preview before sharing",
+                            description: "Review summaries and detailed readings, then create an accessible Letter or A4 PDF with clear source and availability context."
+                        ),
+                        .init(
+                            symbolSystemName: "hand.raised.fill",
+                            title: "Private by design",
+                            description: "Reports are generated on your device and stay private until you explicitly share or save them."
+                        ),
+                        .init(
+                            symbolSystemName: "qrcode.viewfinder",
+                            title: "Faster Direct CLI pairing",
+                            description: "Scan a pairing QR inside Health.md to validate and start a trusted private-LAN or Tailscale connection."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0.4",
             items: [
                 .list(

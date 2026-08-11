@@ -9,6 +9,7 @@ const index = await readFile(path.join(ROOT, "index.html"), "utf8");
 const privacyPolicy = await readFile(path.join(ROOT, "privacy-policy.html"), "utf8");
 const terms = await readFile(path.join(ROOT, "terms-of-service.html"), "utf8");
 const styles = await readFile(path.join(ROOT, "assets/landing.css"), "utf8");
+const legalStyles = await readFile(path.join(ROOT, "assets/legal.css"), "utf8");
 const script = await readFile(path.join(ROOT, "assets/landing.js"), "utf8");
 const threeSource = await readFile(path.join(ROOT, "scripts/landing-three.source.js"), "utf8");
 const threeBuildScript = await readFile(path.join(ROOT, "scripts/build-three-hero.mjs"), "utf8");
@@ -23,6 +24,8 @@ const configurationGuide = await readFile(path.join(ROOT, "docs-src/src/content/
 const iphoneExportGuide = await readFile(path.join(ROOT, "docs-src/src/content/docs/iphone-first-export.md"), "utf8");
 const docsHead = await readFile(path.join(ROOT, "docs-src/src/components/Head.astro"), "utf8");
 const docsHeader = await readFile(path.join(ROOT, "docs-src/src/components/HeaderLinks.astro"), "utf8");
+const docsFooter = await readFile(path.join(ROOT, "docs-src/src/components/Footer.astro"), "utf8");
+const emptyLanguageSelect = await readFile(path.join(ROOT, "docs-src/src/components/EmptyLanguageSelect.astro"), "utf8");
 const lightThemeProvider = await readFile(path.join(ROOT, "docs-src/src/components/LightThemeProvider.astro"), "utf8");
 const verticalTablesScript = await readFile(path.join(ROOT, "docs-src/public/vertical-tables.js"), "utf8");
 
@@ -180,6 +183,51 @@ test("product and legal copy reject Health.md server storage without hiding user
   assert.doesNotMatch(publicCopy, /Hosted Account|hosted-data|serve-hosted|\/data\/v1\//i);
 });
 
+test("privacy policy uses the landing design and describes the current app surfaces", () => {
+  assert.match(privacyPolicy, /<body class="legal-page">/);
+  assert.match(privacyPolicy, /<link rel="stylesheet" href="assets\/landing\.css">/);
+  assert.match(privacyPolicy, /<link rel="stylesheet" href="assets\/legal\.css">/);
+  assert.match(privacyPolicy, /<header class="site-header">/);
+  assert.match(privacyPolicy, /<footer class="site-footer">/);
+  assert.match(privacyPolicy, /Privacy,<br>in plain language\./);
+  assert.match(privacyPolicy, /Last updated: August 6, 2026/);
+  assert.match(privacyPolicy, /Scheduled Apple exports:[\s\S]*?APNs token/);
+  assert.match(privacyPolicy, /Lossless files and direct results may preserve exact timestamps/);
+  assert.match(privacyPolicy, /Android medical records \(FHIR\)/);
+  assert.doesNotMatch(privacyPolicy, /<style\b|theme\.js|fonts\.googleapis\.com|theme-toggle|grid-bg/);
+  assert.match(legalStyles, /\.legal-hero h1\s*{[\s\S]*?font-size:\s*clamp\(64px, 7\.2vw, 108px\)/);
+  assert.match(legalStyles, /\.legal-promise\s*{[\s\S]*?grid-template-columns:\s*repeat\(3,/);
+  assert.match(legalStyles, /\.legal-eyebrow\s*{[\s\S]*?color:\s*#7240e8/);
+  assert.match(legalStyles, /@media \(max-width: 720px\)[\s\S]*?\.legal-promise\s*{[\s\S]*?grid-template-columns:\s*1fr/);
+});
+
+test("terms of service uses the legal design and covers the current product model", () => {
+  assert.match(terms, /<body class="legal-page">/);
+  assert.match(terms, /<link rel="stylesheet" href="assets\/landing\.css">/);
+  assert.match(terms, /<link rel="stylesheet" href="assets\/legal\.css">/);
+  assert.match(terms, /<header class="site-header">/);
+  assert.match(terms, /<footer class="site-footer">/);
+  assert.match(terms, /Terms,<br>made readable\./);
+  assert.match(terms, /Last updated: August 6, 2026/);
+  assert.match(terms, /consumer apps for iPhone, iPad, Mac, and Android/);
+  assert.match(terms, /command-line and MCP tools where made available/);
+  assert.match(terms, /preview, source-build, beta, or compatibility path/);
+  assert.match(terms, /current consumer offer is 10 free exports/);
+  assert.match(terms, /It is not a subscription and does not renew/);
+  assert.match(terms, /never exposing a local loopback API or its port to another machine/);
+  assert.match(terms, /not a medical device, healthcare provider, diagnostic service, treatment, or emergency service/);
+  assert.match(terms, /Cody Bontecou, who operates Health\.md under the isolated\.tech name/);
+  assert.match(terms, /GNU Affero General Public License version 3\.0 only \(AGPL-3\.0-only\)/);
+  assert.match(terms, /website source is distributed under the MIT License/);
+  assert.match(terms, /Nothing in these Terms restricts rights granted by the AGPL/);
+  assert.doesNotMatch(terms, /<style\b|theme\.js|fonts\.googleapis\.com|theme-toggle|grid-bg/);
+
+  const sectionIds = [...terms.matchAll(/<section id="([^"]+)"/g)].map((match) => match[1]);
+  const toc = terms.slice(terms.indexOf('<aside class="legal-toc">'), terms.indexOf('</aside>'));
+  assert.equal(sectionIds.length, 21);
+  for (const id of sectionIds) assert.ok(toc.includes(`href="#${id}"`), id);
+});
+
 test("privacy policy discloses automatic pseudonymous analytics and strict health-data exclusions", () => {
   const publicCopy = `${index}\n${privacyPolicy}\n${terms}`;
   assert.match(privacyPolicy, /First-Party Product Analytics/);
@@ -197,7 +245,8 @@ test("privacy policy discloses automatic pseudonymous analytics and strict healt
 test("landing experience follows the reference's single-screen desktop composition", () => {
   assert.match(index, /<div class="header-nav">/);
   assert.match(index, /<nav aria-label="Documentation"><a class="header-docs-link" href="docs\/">Docs<\/a><\/nav>/);
-  assert.match(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
+  assert.doesNotMatch(index, /<!-- HEALTHMD_LANGUAGE_SELECTOR -->/);
+  assert.doesNotMatch(index.slice(index.indexOf('<header'), index.indexOf('</header>')), /language-menu|language-selector/);
   assert.doesNotMatch(index, /↗/);
   assert.match(styles, /\.header-shell\s*{[\s\S]*?padding:\s*42px 13\.7% 0/);
   assert.match(styles, /\.brand-name\s*{[\s\S]*?color:\s*var\(--muted\);[\s\S]*?font-size:\s*19px;[\s\S]*?font-weight:\s*590/);
@@ -244,6 +293,10 @@ test("hero uses official store badges with direct marketplace links", () => {
   assert.match(actions, /assets\/store-badges\/get-it-on-google-play\.png/);
   assert.match(styles, /\.hero-store-badge-apple\s*{[\s\S]*?width:\s*166px;[\s\S]*?height:\s*55px/);
   assert.match(styles, /\.hero-store-badge-google\s*{[\s\S]*?width:\s*185px;[\s\S]*?height:\s*55px/);
+  assert.match(
+    styles,
+    /html:not\(:lang\(en\)\) \.hero-store-badge-google img\s*{[\s\S]*?left:\s*0;[\s\S]*?width:\s*100%;[\s\S]*?transform:\s*translateY\(-50%\)/,
+  );
 });
 
 test("hero visual routes health signals through Health.md to useful destinations", () => {
@@ -449,6 +502,16 @@ test("docs use the landing page's self-hosted light visual system", () => {
   assert.match(docsStyles, /html:lang\(zh-Hans\)[\s\S]*?line-break:\s*strict/);
   assert.match(docsStyles, /html:lang\(ko\)[\s\S]*?word-break:\s*keep-all/);
   assert.doesNotMatch(docsStyles, /cdn\.jsdelivr\.net/);
+});
+
+test("language selection lives in the landing and documentation footers", () => {
+  assert.match(index, /<div class="footer-language">[\s\S]*?<!-- HEALTHMD_FOOTER_LANGUAGE_SELECTOR -->/);
+  assert.doesNotMatch(index.slice(index.indexOf('<header'), index.indexOf('</header>')), /language-menu|language-selector/);
+  assert.match(docsConfig, /LanguageSelect: '\.\/src\/components\/EmptyLanguageSelect\.astro'/);
+  assert.match(emptyLanguageSelect, /Language selection is rendered in the documentation footer/);
+  assert.match(docsFooter, /import LanguageSelect from '@astrojs\/starlight\/components\/LanguageSelect\.astro'/);
+  assert.match(docsFooter, /class="healthmd-footer-language"[\s\S]*?<LanguageSelect \/>/);
+  assert.match(docsStyles, /\.healthmd-footer-language\s*\{[\s\S]*?margin-inline-start:\s*auto/);
 });
 
 test("docs navigation starts with user goals and labels preview surfaces", () => {

@@ -1,0 +1,1 @@
+Health Connect ਡਾਟਾ ਆਪਣੀਆਂ Markdown, CSV, JSON ਜਾਂ Obsidian ਫ਼ਾਈਲਾਂ ਵਿੱਚ ਭੇਜੋ।

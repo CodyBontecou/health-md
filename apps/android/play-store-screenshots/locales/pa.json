@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "locale": "pa",
+  "status": "draft",
+  "direction": "ltr",
+  "slides": [
+    {
+      "id": "core-export",
+      "headline": "ਤੁਹਾਡਾ ਸਿਹਤ ਡਾਟਾ। ਤੁਹਾਡੀਆਂ ਫ਼ਾਈਲਾਂ।",
+      "supportingLine": "ਅਧਿਕਾਰਤ Health Connect ਰਿਕਾਰਡ ਆਪਣੇ ਕੰਟਰੋਲ ਵਾਲੀਆਂ ਫ਼ਾਈਲਾਂ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ।"
+    },
+    {
+      "id": "export-formats",
+      "headline": "ਆਪਣੇ ਤਰੀਕੇ ਨਾਲ ਨਿਰਯਾਤ ਕਰੋ",
+      "supportingLine": "Markdown, Obsidian Bases, JSON ਅਤੇ CSV।"
+    },
+    {
+      "id": "health-metrics",
+      "headline": "100+ ਸਿਹਤ ਮੈਟ੍ਰਿਕਾਂ ਵਿੱਚੋਂ ਚੁਣੋ",
+      "supportingLine": "ਨੀਂਦ, ਸਰਗਰਮੀ, ਦਿਲ, ਜੀਵਨ-ਸੰਕੇਤ, ਪੋਸ਼ਣ ਅਤੇ ਹੋਰ ਬਹੁਤ ਕੁਝ।"
+    },
+    {
+      "id": "private-by-design",
+      "headline": "ਸਿਰਫ਼ ਪੜ੍ਹਨ ਲਈ। ਡਿਜ਼ਾਈਨ ਤੋਂ ਹੀ ਨਿੱਜੀ।",
+      "supportingLine": "ਕੋਈ ਖਾਤਾ ਨਹੀਂ। ਕੋਈ Health.md ਸਿਹਤ-ਡਾਟਾ ਕਲਾਉਡ ਨਹੀਂ।"
+    },
+    {
+      "id": "scheduled-exports",
+      "headline": "ਆਪਣਾ ਆਰਕਾਈਵ ਅੱਪ ਟੂ ਡੇਟ ਰੱਖੋ",
+      "supportingLine": "ਆਪਣੇ ਚੁਣੇ ਟਿਕਾਣੇ ਲਈ ਨਿਰਯਾਤ ਦਾ ਸਮਾਂ ਤੈਅ ਕਰੋ।"
+    },
+    {
+      "id": "file-preview",
+      "headline": "ਨਿਰਯਾਤ ਤੋਂ ਪਹਿਲਾਂ ਝਲਕ ਵੇਖੋ",
+      "supportingLine": "ਕੁਝ ਵੀ ਲਿਖੇ ਜਾਣ ਤੋਂ ਪਹਿਲਾਂ ਫ਼ਾਈਲ ਨਾਮ, ਪਾਥ ਅਤੇ ਸਮੱਗਰੀ ਵੇਖੋ।"
+    },
+    {
+      "id": "home-screen-widgets",
+      "headline": "ਇੱਕ ਨਜ਼ਰ ਵਿੱਚ ਸਿਹਤ",
+      "supportingLine": "ਸਰਗਰਮੀ, ਨੀਂਦ, ਦਿਲ ਅਤੇ ਸਾਰ ਦੇ ਵਿਜੇਟ।"
+    },
+    {
+      "id": "direct-cli",
+      "headline": "ਸਿੱਧਾ ਆਪਣੇ ਕੰਪਿਊਟਰ 'ਤੇ",
+      "supportingLine": "ਬਿਨਾਂ ਕਲਾਉਡ ਰਿਲੇ ਦੇ ਪ੍ਰਮਾਣਿਤ, ਇਨਕ੍ਰਿਪਟ ਕੀਤੇ ਨਿਰਯਾਤਾਂ ਲਈ Health.md CLI ਨਾਲ ਪੇਅਰ ਕਰੋ।"
+    }
+  ]
+}

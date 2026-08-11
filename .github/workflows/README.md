@@ -15,7 +15,9 @@ The final jobs fail unless every job in their component workflow succeeds. Main-
 
 Android releases are built from committed `android/v<version>` tags by `.github/workflows/android-release.yml`. The tag version must match `versionName`, and `versionCode` must already be higher than every build previously uploaded to Play.
 
-The workflow reconstructs the existing upload keystore and Play service-account key only under `$RUNNER_TEMP`, builds a signed AAB, and uploads it directly to Google Play's `internal` track. It does not commit the AAB, upload it as a workflow artifact, or attach it to a GitHub Release. Production promotion remains a manual Play Console decision.
+The workflow reconstructs the existing upload keystore and Play service-account key only under `$RUNNER_TEMP`, builds a signed AAB, and uploads it directly to Google Play's `internal` track. It does not commit the AAB or attach it to a GitHub Release. Production promotion remains a manual Play Console decision.
+
+Google Play does not expose an App Store Connect-style release webhook. `.github/workflows/android-announce.yml` therefore checks the read-only production release-summary endpoint hourly. When a version becomes `PUBLISHED`, it resolves the matching annotated `android/v<version>` tag by `versionCode`, requires its commit to be reachable from `origin/main`, uses that tag's English Play release notes, and posts the Android message to `#health-md-updates`. A successful `discord/android-production` commit status is the durable marker; an exact, bot-authored, bounded Discord history check reconciles a lost POST response before an immediate retry. The workflow also supports a dry-run manual dispatch and an optional `google-play-published` repository dispatch from a future external hook; every dispatch is revalidated against Google Play.
 
 The tag-restricted `google-play` environment contains:
 
@@ -28,6 +30,8 @@ The tag-restricted `google-play` environment contains:
 | `RELEASE_KEY_PASSWORD` | Upload-key password |
 
 Campaign-attribution build values are repository secrets named `CAMPAIGN_ATTRIBUTION_ENDPOINT_URL` and `CAMPAIGN_ATTRIBUTION_INGEST_TOKEN`. They match the deployed first-party Worker; the prior internal-testing token remains a temporary Worker-only overlap value during rotation.
+
+The `google-play-announce` environment is restricted to `main` and contains only `PLAY_CONSOLE_KEY_JSON`. Use a dedicated service account whose only Play Console permission is app-level **View app information (read-only)** (`CAN_VIEW_NON_FINANCIAL_DATA`) for `com.healthmd.android`; the Android Publisher OAuth scope itself is broad, so reusing the publishing service account would not make the credential read-only. Keeping the environment separate prevents the monitor from receiving the upload keystore or signing passwords. Apple and Android announcements suppress Discord mentions because the retired per-app roles no longer exist.
 
 ## Apple release trigger
 
@@ -72,7 +76,7 @@ These are configured under Settings → Secrets and variables → Actions:
 | `HEALTHMD_ASC_APP_ID` | App Store Connect app id |
 | `ISOLATED_API_KEY` | isolated.tech publish from `apple-announce.yml` |
 | `SPARKLE_ED_PRIVATE_KEY` | Sparkle signing for isolated.tech publish |
-| `DISCORD_BOT_TOKEN` | Discord release announcement |
+| `DISCORD_BOT_TOKEN` | Apple and Android Discord release announcements |
 | `INTERNAL_RELEASE_API_TOKEN` | Authenticated release-registry ingestion |
 
 Optional repository secret:

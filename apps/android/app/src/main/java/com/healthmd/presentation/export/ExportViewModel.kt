@@ -13,6 +13,7 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.export.ExportAccountingPolicy
+import com.healthmd.domain.export.ReviewPromptPolicy
 import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
@@ -38,6 +39,12 @@ enum class APIConfigurationIssue {
     INVALID_ENDPOINT,
     INVALID_HEADERS,
     SECURE_SAVE_FAILED,
+}
+
+private enum class ReviewRequestState {
+    IDLE,
+    PENDING,
+    RECORDING,
 }
 
 private val RAW_SNAPSHOT_PROVIDER_IDS = setOf(
@@ -151,6 +158,7 @@ class ExportViewModel @Inject constructor(
     private var exportJob: Job? = null
     private var dismissJob: Job? = null
     private var healthRefreshJob: Job? = null
+    private var reviewRequestState = ReviewRequestState.IDLE
 
     init {
         // Ensure billing client is connected so isUnlocked reflects real purchase state
@@ -201,6 +209,28 @@ class ExportViewModel @Inject constructor(
         }
 
         refreshPermissions()
+    }
+
+    fun onReviewRequestFailed() {
+        if (reviewRequestState == ReviewRequestState.PENDING) {
+            reviewRequestState = ReviewRequestState.IDLE
+        }
+    }
+
+    fun onReviewFlowCompleted(atEpochMillis: Long = System.currentTimeMillis()) {
+        if (reviewRequestState != ReviewRequestState.PENDING) return
+        reviewRequestState = ReviewRequestState.RECORDING
+        viewModelScope.launch {
+            try {
+                runCatchingCancellable {
+                    settingsRepository.recordReviewAttempt(atEpochMillis)
+                }.onFailure { error ->
+                    Timber.e(error, "Failed to persist in-app review attempt")
+                }
+            } finally {
+                reviewRequestState = ReviewRequestState.IDLE
+            }
+        }
     }
 
     fun setStartDate(date: LocalDate) {
@@ -462,14 +492,31 @@ class ExportViewModel @Inject constructor(
                 settingsRepository.recordFreeExportUse()
             }
 
-            // Review prompts use their own counter, separate from free-tier quota.
+            // Review prompts use their own counter, separate from free-tier quota. A Play
+            // request failure must not consume the attempt; completion is reported by the UI.
             if (ExportAccountingPolicy.shouldCountForReviewPrompt(result)) {
                 settingsRepository.incrementSuccessfulExportCount()
                 val count = settingsRepository.getSuccessfulExportCount()
-                if (count >= 2 && !settingsRepository.hasRequestedReview()) {
-                    settingsRepository.setReviewRequested()
-                    _requestReview.tryEmit(Unit)
-                    Timber.d("In-app review requested after $count successful exports")
+                if (
+                    count >= ReviewPromptPolicy.MINIMUM_SUCCESSFUL_EXPORTS &&
+                    reviewRequestState == ReviewRequestState.IDLE
+                ) {
+                    val nowEpochMillis = System.currentTimeMillis()
+                    val lastAttempt = settingsRepository.getLastReviewAttemptEpochMillis(nowEpochMillis)
+                    if (
+                        ReviewPromptPolicy.shouldRequestReview(
+                            successfulExportCount = count,
+                            lastAttemptEpochMillis = lastAttempt,
+                            nowEpochMillis = nowEpochMillis,
+                        )
+                    ) {
+                        reviewRequestState = ReviewRequestState.PENDING
+                        if (_requestReview.tryEmit(Unit)) {
+                            Timber.d("In-app review requested after $count successful exports")
+                        } else {
+                            reviewRequestState = ReviewRequestState.IDLE
+                        }
+                    }
                 }
             }
 

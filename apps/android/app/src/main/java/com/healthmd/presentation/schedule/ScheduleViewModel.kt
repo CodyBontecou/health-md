@@ -378,11 +378,6 @@ class ScheduleViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        billingRepository.endConnection()
-    }
-
     companion object {
         private const val MIN_CADENCE_MINUTES = 15
         private const val MAX_CADENCE_VALUE = 99_999

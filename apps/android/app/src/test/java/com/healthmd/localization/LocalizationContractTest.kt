@@ -44,8 +44,15 @@ class LocalizationContractTest {
         assertThat(declaredLocales).containsExactlyElementsIn(supportedLocales)
         assertThat(File(resourceRoot, "resources.properties").readText().trim())
             .isEqualTo("unqualifiedResLocale=en-US")
-        assertThat(File(appModuleRoot(), "build.gradle.kts").readText())
-            .contains("generateLocaleConfig = true")
+        val buildConfiguration = File(appModuleRoot(), "build.gradle.kts").readText()
+        assertThat(buildConfiguration).contains("generateLocaleConfig = true")
+        assertThat(buildConfiguration).contains("isPseudoLocalesEnabled = true")
+    }
+
+    @Test
+    fun punjabiTranslationUsesAnExplicitGurmukhiQualifier() {
+        assertThat(File(resourceRoot(), "values-pa").exists()).isFalse()
+        assertThat(File(resourceRoot(), "values-b+pa+Guru/strings.xml").isFile).isTrue()
     }
 
     @Test
@@ -60,7 +67,7 @@ class LocalizationContractTest {
             "ja" to setOf("other"),
             "kk" to setOf("one", "other"),
             "nl" to setOf("one", "other"),
-            "pa" to setOf("one", "other"),
+            "b+pa+Guru" to setOf("one", "other"),
             "pt-rBR" to setOf("one", "many", "other"),
             "ro" to setOf("one", "few", "other"),
             "ru" to setOf("one", "few", "many", "other"),
@@ -270,7 +277,7 @@ class LocalizationContractTest {
     private companion object {
         val supportedLocales = listOf(
             "ar", "bn", "de", "es", "fr", "hi", "ja", "kk",
-            "nl", "pa", "pt-rBR", "ro", "ru", "uk", "b+zh+Hans",
+            "nl", "b+pa+Guru", "pt-rBR", "ro", "ru", "uk", "b+zh+Hans",
         )
         val formatArgumentRegex = Regex("%(?:\\d+\\$)?[a-zA-Z]")
         val templateTokenRegex = Regex(

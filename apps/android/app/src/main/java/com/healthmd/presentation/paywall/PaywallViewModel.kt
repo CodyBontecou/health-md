@@ -58,7 +58,9 @@ class PaywallViewModel @Inject constructor(
     val debugUnlockOverride: StateFlow<Boolean?> = _debugUnlockOverride.asStateFlow()
 
     init {
-        // Connect to billing service and query product when ViewModel is created
+        // Billing state is application-scoped; do not carry an error from an earlier paywall visit.
+        billingRepository.clearError()
+        // Connect to billing service and query product when ViewModel is created.
         billingRepository.startConnection()
         viewModelScope.launch {
             billingRepository.isUnlocked
@@ -131,10 +133,5 @@ class PaywallViewModel @Inject constructor(
             settingsRepository.setPurchased(false)
             settingsRepository.resetFreeExports()
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        billingRepository.endConnection()
     }
 }
