@@ -2,11 +2,12 @@
   "format": "healthmd.reference-source",
   "format_version": 1,
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
-  "source_app_commit": "f549ed8fb556fa560510fbd69da8b4e5307983d5",
-  "docs_reference_git_tree": "969984b8c74bef4a6732425f6d792042aad8b68a",
+  "source_app_commit": null,
+  "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
+  "docs_reference_git_tree": "3ed5951c2139c238e59817a5ae5f2f5a7f5ea674",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "fd4433152430c642ec0626c3298a015ee0eb9ab7f1499042da1536e43804f092",
+    "digest": "cae26f2f3b538ace87f2c0367b489562de7ebae8e15cdc338f7ab90f9dd7e4cf",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -42,6 +43,12 @@
       ]
     },
     {
+      "identifier": "healthmd.query_error",
+      "versions": [
+        1
+      ]
+    },
+    {
       "identifier": "healthmd.query_request",
       "versions": [
         1
@@ -67,16 +74,16 @@
     }
   ],
   "counts": {
-    "source_files": 99,
+    "source_files": 101,
     "handwritten_markdown_pages": 13,
-    "generated_artifacts": 86,
-    "generated_json_artifacts": 50,
+    "generated_artifacts": 88,
+    "generated_json_artifacts": 52,
     "generated_markdown_artifacts": 33,
     "generated_csv_artifacts": 3,
     "rendered_source_pages": 26,
     "generated_landing_pages": 6,
     "rendered_pages": 32,
-    "raw_artifacts": 86
+    "raw_artifacts": 88
   },
   "files": [
     {
@@ -170,6 +177,16 @@
       }
     },
     {
+      "path": "generated/automation/agent-query-error.json",
+      "bytes": 187,
+      "sha256": "73ee1c07fe56b1d94cfce67944b40b7749a5731790684974086437ac93056d32",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/agent-query-error.json"
+      }
+    },
+    {
       "path": "generated/automation/agent-query-request.json",
       "bytes": 308,
       "sha256": "2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4",
@@ -177,6 +194,16 @@
       "routes": {
         "rendered": null,
         "raw": "/docs/reference/generated/automation/agent-query-request.json"
+      }
+    },
+    {
+      "path": "generated/automation/agent-query-response-partial.json",
+      "bytes": 1518,
+      "sha256": "62c1d2f5ec85a3a4218f504cb34d027ea4facf87175a84ca7b564f2836ff38d4",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/automation/agent-query-response-partial.json"
       }
     },
     {
@@ -361,8 +388,8 @@
     },
     {
       "path": "generated/automation/manifest.json",
-      "bytes": 5419,
-      "sha256": "408f1315562ee6c05ec4b6a6ef1caf45733fa95fdbecfbc0a58644ca5c05c3fb",
+      "bytes": 5847,
+      "sha256": "e2238d34054b08ba5ca050e148d41838cb503493d41c72974ae6f477e7b24186",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -371,8 +398,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 117653,
-      "sha256": "a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb",
+      "bytes": 120666,
+      "sha256": "962adaaef4a224f926dcc36e32711debf8173433a8b1422131e8f615b80fc557",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -1086,11 +1113,25 @@
       "route": "/docs/reference/generated/automation/agent-evidence-response.json"
     },
     {
+      "path": "public/reference/generated/automation/agent-query-error.json",
+      "bytes": 187,
+      "sha256": "73ee1c07fe56b1d94cfce67944b40b7749a5731790684974086437ac93056d32",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/agent-query-error.json"
+    },
+    {
       "path": "public/reference/generated/automation/agent-query-request.json",
       "bytes": 308,
       "sha256": "2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/agent-query-request.json"
+    },
+    {
+      "path": "public/reference/generated/automation/agent-query-response-partial.json",
+      "bytes": 1518,
+      "sha256": "62c1d2f5ec85a3a4218f504cb34d027ea4facf87175a84ca7b564f2836ff38d4",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/automation/agent-query-response-partial.json"
     },
     {
       "path": "public/reference/generated/automation/agent-query-response.json",
@@ -1220,15 +1261,15 @@
     },
     {
       "path": "public/reference/generated/automation/manifest.json",
-      "bytes": 5419,
-      "sha256": "408f1315562ee6c05ec4b6a6ef1caf45733fa95fdbecfbc0a58644ca5c05c3fb",
+      "bytes": 5847,
+      "sha256": "e2238d34054b08ba5ca050e148d41838cb503493d41c72974ae6f477e7b24186",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 117653,
-      "sha256": "a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb",
+      "bytes": 120666,
+      "sha256": "962adaaef4a224f926dcc36e32711debf8173433a8b1422131e8f615b80fc557",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
@@ -1724,15 +1765,15 @@
     },
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
-      "bytes": 6360,
-      "sha256": "415a4971142bb2553740464d82bfe15f8d434a06096e20766c8a1b77a87df359",
+      "bytes": 6751,
+      "sha256": "a71a19c6ab062961656dc3f3229f14c094fe52228c3602b8bc59da11d8e10963",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 117856,
-      "sha256": "252f4ccfa5c07daeca8f6259d4a7977a4a41c8c7a24f971615e92dd0a7d01b93",
+      "bytes": 120869,
+      "sha256": "9855b7c3308d48d5435aeffe15f24432bd1552c43fb05ec125c8454669393fee",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1801,8 +1842,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/index.md",
-      "bytes": 19216,
-      "sha256": "b3b5aa88e7587a267d463880a5fbc528e5134d4de7b5512d2cf52b1eed975fdc",
+      "bytes": 19629,
+      "sha256": "68b140e3d9cfb24e377f2716af1cad9d8e13d64cff939d92b64d4772d09126ab",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },

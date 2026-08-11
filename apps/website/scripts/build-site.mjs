@@ -14,6 +14,7 @@ const DOCS_OUTPUT = path.join(ROOT, 'docs-src', 'dist');
 const STATIC_DIRECTORIES = ['assets', 'visualizations'];
 const STATIC_FILES = [
   'favicon.ico',
+  'llms.txt',
   'robots.txt',
 ];
 

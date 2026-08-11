@@ -1,5 +1,11 @@
 export const defaultLocale = 'en';
 
+// Focused integration guides may intentionally publish canonical English fallback
+// routes while their translated editions are pending. Fallback pages stay noindex.
+export const canonicalEnglishDocSlugs = Object.freeze([
+  'docs/guides/connect-agent',
+]);
+
 // Authored user guides are translated. Generated contract/reference pages remain
 // canonical English artifacts and use the protected fallback route behavior.
 export const authoredDocSlugs = Object.freeze([

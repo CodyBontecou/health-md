@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   authoredDocSlugs,
+  canonicalEnglishDocSlugs,
   defaultLocale,
   localeFor,
   publishedLocales,
@@ -20,6 +21,7 @@ const docsLocales = publishedLocales('docs');
 const legalLocales = publishedLocales('legal');
 const defaultLocaleConfig = localeFor(defaultLocale);
 const authoredDocSlugSet = new Set(authoredDocSlugs);
+const canonicalEnglishDocSlugSet = new Set(canonicalEnglishDocSlugs);
 const firstExportScreenshotFields = [
   'firstExportOnboardingScreenshot',
   'firstExportMetricScreenshot',
@@ -47,10 +49,14 @@ async function sourceDocSlugs(directory, relative = '') {
 const englishDocSlugs = await sourceDocSlugs(path.join(ROOT, 'docs-src/src/content/docs'));
 assert.equal(new Set(englishDocSlugs).size, englishDocSlugs.length, 'English documentation slugs must be unique');
 const fallbackDocSlugs = englishDocSlugs.filter((slug) => !authoredDocSlugSet.has(slug));
-assert.ok(fallbackDocSlugs.length > 0, 'Generated/reference docs must retain protected English fallbacks');
+assert.ok(fallbackDocSlugs.length > 0, 'Canonical English docs must retain protected fallback routes');
 assert.ok(
-  fallbackDocSlugs.every((slug) => slug === 'docs/reference' || slug.startsWith('docs/reference/')),
-  'Only generated/reference documentation may use the English fallback contract',
+  fallbackDocSlugs.every((slug) => (
+    canonicalEnglishDocSlugSet.has(slug)
+      || slug === 'docs/reference'
+      || slug.startsWith('docs/reference/')
+  )),
+  'Only declared canonical-English guides and reference docs may use the fallback contract',
 );
 
 async function read(relative) {

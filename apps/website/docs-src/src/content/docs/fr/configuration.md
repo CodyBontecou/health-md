@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Redémarrez Codex, appelez `healthmd_doctor`, puis `healthmd_metrics` et un petit outil typé tel que `healthmd_metric_chart`. Le serveur intégré expose 21 outils, notamment pour vérifier l’état du Mac, gérer les tâches d’actualisation du contexte chiffré, fournir des preuves et créer des visualisations.
+Redémarrez Codex, appelez `healthmd_doctor`, résolvez les ID avec `healthmd_metrics`, acquérez explicitement une petite portée avec l’outil d’actualisation, puis interrogez-la avec un outil typé tel que `healthmd_metric_chart`. Le serveur intégré expose 21 outils, notamment pour vérifier l’état du Mac, gérer les tâches d’actualisation du contexte chiffré, fournir des preuves et créer des visualisations.
 
 ## Claude Desktop ou Claude Code sur Mac
 
@@ -124,7 +124,7 @@ Pour obtenir un résultat complet, examinez la portée demandée, la couverture,
 ## Poursuivre
 
 <div class="related">
-  <a href="/fr/docs/mcp/"><span>Interface des outils</span>Découvrez les 21 outils Mac disponibles, l’aperçu portable à 17 outils, MCP Apps, les schémas, la pagination, les exports et les limites du bac à sable.</a>
+  <a href="/fr/docs/mcp/"><span>Interface des outils</span>Découvrez les 21 outils Mac publiés, l’aperçu portable à 19 outils, MCP Apps, les schémas, la pagination, les exports et les limites du bac à sable.</a>
   <a href="/fr/docs/agent-queries/"><span>Premières questions</span>Exécutez des flux de travail typés pour les métriques, le sommeil, les entraînements, les comparaisons, la couverture et les preuves.</a>
   <a href="/fr/docs/cli-extract/"><span>Données canoniques</span>Extrayez des documents sélectionnés au schéma v7 et des enregistrements sources sans placer de corps volumineux dans la discussion.</a>
   <a href="/fr/docs/reference/"><span>Contrats</span>Parcourez les structures de données versionnées, les inventaires de champs, les fixtures générées et les recettes d’intégration.</a>
