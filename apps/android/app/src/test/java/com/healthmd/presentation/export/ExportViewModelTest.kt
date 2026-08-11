@@ -726,6 +726,9 @@ private class FakeSettingsRepository(
         if (purchased && !wasPurchased) resetFreeExports()
     }
 
+    override suspend fun resolveOnboardingCompletion(): Boolean =
+        hasCompletedOnboardingState.value
+
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         hasCompletedOnboardingState.value = completed
     }

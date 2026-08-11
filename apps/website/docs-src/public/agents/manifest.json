@@ -1,0 +1,90 @@
+{
+  "schema": "healthmd.agent_assets",
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "id": "mac_mcp_tools",
+      "availability": "released",
+      "catalog_version": 1,
+      "profile": "bundled_mac",
+      "tool_count": 21,
+      "tool_names": [
+        "healthmd_status",
+        "healthmd_doctor",
+        "healthmd_capabilities",
+        "healthmd_metrics",
+        "healthmd_metric_chart",
+        "healthmd_sleep_sessions",
+        "healthmd_training_alignment",
+        "healthmd_workouts",
+        "healthmd_coverage",
+        "healthmd_compare_periods",
+        "healthmd_training_evidence",
+        "healthmd_query",
+        "healthmd_evidence_packet",
+        "healthmd_export_files",
+        "healthmd_export_job_status",
+        "healthmd_export_job_resume",
+        "healthmd_export_job_cancel",
+        "healthmd_refresh",
+        "healthmd_job_status",
+        "healthmd_job_resume",
+        "healthmd_job_cancel"
+      ],
+      "path": "/agents/mcp/mac-tools-v1.json",
+      "media_type": "application/json",
+      "bytes": 108994,
+      "sha256": "c4c226eb9dbd1f62c779159dba9eed4c4368bfa9ffb99c3c7c18505b534c9794"
+    },
+    {
+      "id": "portable_mcp_tools",
+      "availability": "preview_until_public_healthmd_cli_release",
+      "catalog_version": 1,
+      "profile": "local_direct",
+      "tool_count": 19,
+      "tool_names": [
+        "healthmd_status",
+        "healthmd_doctor",
+        "healthmd_capabilities",
+        "healthmd_metrics",
+        "healthmd_metric_chart",
+        "healthmd_sleep_sessions",
+        "healthmd_training_alignment",
+        "healthmd_workouts",
+        "healthmd_coverage",
+        "healthmd_compare_periods",
+        "healthmd_training_evidence",
+        "healthmd_query",
+        "healthmd_evidence_packet",
+        "healthmd_pairing_start",
+        "healthmd_pairing_status",
+        "healthmd_export_files",
+        "healthmd_export_job_status",
+        "healthmd_export_job_resume",
+        "healthmd_export_job_cancel"
+      ],
+      "path": "/agents/mcp/portable-tools-v1.json",
+      "media_type": "application/json",
+      "bytes": 112422,
+      "sha256": "a5db5c6bdc306dd5b5dd181c9df4e8f58ceb9542300120ca2c32a2247cdb4ad4"
+    },
+    {
+      "id": "healthmd_cli_skill_manifest",
+      "availability": "preview_until_public_healthmd_cli_release",
+      "manifest_version": 1,
+      "path": "/agents/skills/healthmd-cli/manifest.json",
+      "media_type": "application/json",
+      "bytes": 814,
+      "sha256": "95607640c440a1711f6cacee5c1674d189c8673926442edefe0b630ae43fb2e9"
+    },
+    {
+      "id": "reference_provenance",
+      "availability": "released",
+      "manifest_version": 1,
+      "path": "/docs/reference/source-manifest.json",
+      "media_type": "application/json",
+      "bytes": 75206,
+      "sha256": "8cd8c72c318dd34734cec979a34572f750ec2c33ff801a673d0fd6c9dd142123"
+    }
+  ]
+}

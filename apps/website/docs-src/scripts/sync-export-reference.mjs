@@ -612,23 +612,52 @@ function runGit(sourceRoot, args) {
   }
 }
 
-function sourceProvenance(sourceRoot) {
+function gitObjectID(type, payload) {
+  const header = Buffer.from(`${type} ${payload.length}\0`, 'utf8');
+  return createHash('sha1').update(header).update(payload).digest();
+}
+
+function docsReferenceGitTree(sourceData) {
+  const root = { type: 'tree', children: new Map() };
+  for (const entry of sourceData) {
+    const segments = entry.path.split('/');
+    let directory = root;
+    for (const segment of segments.slice(0, -1)) {
+      if (!directory.children.has(segment)) {
+        directory.children.set(segment, { type: 'tree', children: new Map() });
+      }
+      directory = directory.children.get(segment);
+      if (directory.type !== 'tree') fail(`Git tree path collides with a file: ${entry.path}`);
+    }
+    const filename = segments.at(-1);
+    if (directory.children.has(filename)) fail(`Duplicate Git tree path: ${entry.path}`);
+    directory.children.set(filename, { type: 'blob', buffer: entry.buffer });
+  }
+
+  function treeID(tree) {
+    const children = [...tree.children.entries()].sort(([leftName, left], [rightName, right]) => (
+      compareUTF8(`${leftName}${left.type === 'tree' ? '/' : ''}`, `${rightName}${right.type === 'tree' ? '/' : ''}`)
+    ));
+    const payload = Buffer.concat(children.flatMap(([name, node]) => {
+      const id = node.type === 'tree' ? treeID(node) : gitObjectID('blob', node.buffer);
+      const mode = node.type === 'tree' ? '40000' : '100644';
+      return [Buffer.from(`${mode} ${name}\0`, 'utf8'), id];
+    }));
+    return gitObjectID('tree', payload);
+  }
+
+  return treeID(root).toString('hex');
+}
+
+function sourceProvenance(sourceRoot, sourceData) {
   let repository = runGit(sourceRoot, ['remote', 'get-url', 'origin']);
   if (repository?.startsWith('git@github.com:')) repository = `https://github.com/${repository.slice('git@github.com:'.length)}`;
   if (repository?.startsWith('https://github.com/')) repository = `${repository.replace(/\.git$/, '')}.git`;
-  const status = runGit(sourceRoot, ['status', '--porcelain=v1', '--untracked-files=all', '--', 'docs/reference']);
-  const sourceCommit = status === '' ? runGit(sourceRoot, ['log', '-1', '--format=%H', '--', 'docs/reference']) : null;
-  const gitPrefix = runGit(sourceRoot, ['rev-parse', '--show-prefix']);
-  const referenceTreePath = gitPrefix !== null
-    ? `${gitPrefix}docs/reference`.replace(/^\/+/, '')
-    : null;
-  const tree = status === '' && referenceTreePath
-    ? runGit(sourceRoot, ['rev-parse', `HEAD:${referenceTreePath}`])
-    : null;
   return {
     app_repository_url: repository,
-    source_app_commit: sourceCommit,
-    docs_reference_git_tree: tree,
+    source_app_commit: null,
+    source_revision_strategy: 'content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference',
+    docs_reference_git_tree: docsReferenceGitTree(sourceData),
   };
 }
 
@@ -809,7 +838,7 @@ async function buildExpected(sourceRoot, stagingRoot) {
   const lock = {
     format: 'healthmd.reference-source',
     format_version: 1,
-    ...sourceProvenance(sourceRoot),
+    ...sourceProvenance(sourceRoot, sourceData),
     aggregate: {
       algorithm: 'SHA-256',
       digest: aggregateSourceDigest(sourceEntries),
@@ -914,6 +943,11 @@ function validateLockShape(lock, lockBuffer) {
   if (!lock || lock.format !== 'healthmd.reference-source' || lock.format_version !== 1) fail('Unsupported reference-source.json format.');
   if (canonicalJSON(lock) !== lockBuffer.toString('utf8')) fail('reference-source.json is not in canonical deterministic JSON form.');
   if (!Array.isArray(lock.files) || !Array.isArray(lock.published_outputs)) fail('reference-source.json is missing inventories.');
+  if (lock.source_app_commit !== null
+    || lock.source_revision_strategy !== 'content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference'
+    || !/^[0-9a-f]{40}$/.test(lock.docs_reference_git_tree ?? '')) {
+    fail('reference-source.json must use deterministic content-addressed source provenance.');
+  }
   const paths = lock.files.map((entry) => entry.path);
   assertPortableInventory(paths, 'lock source');
   if ([...paths].sort(compareUTF8).join('\0') !== paths.join('\0')) {
@@ -1026,8 +1060,8 @@ async function main() {
     if (mode === 'write') {
       await replaceOutputsAtomically(expected);
       console.log(`WRITE OK: ${expected.lock.counts.source_files} source files produced ${expected.lock.counts.rendered_pages} rendered pages and ${expected.lock.counts.raw_artifacts} exact raw artifacts.`);
-      console.log(`Source commit: ${expected.lock.source_app_commit ?? 'unavailable'}`);
-      console.log(`docs/reference tree: ${expected.lock.docs_reference_git_tree ?? 'unavailable (source tree is dirty or not in Git)'}`);
+      console.log(`Source revision: ${expected.lock.source_revision_strategy}`);
+      console.log(`docs/reference tree: ${expected.lock.docs_reference_git_tree}`);
       console.log(`Aggregate SHA-256: ${expected.lock.aggregate.digest}`);
     } else {
       const differences = [

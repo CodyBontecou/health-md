@@ -96,6 +96,38 @@ final class HealthMdMCPServerTests: XCTestCase {
         }
     }
 
+    func testPublishedMacToolCatalogMatchesRuntime() throws {
+        let data = try HealthMdMCPServer.canonicalToolCatalogData()
+        let tools = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+        )
+        XCTAssertEqual(tools.count, 21)
+
+        let catalogURL = publishedMacToolCatalogURL()
+        if ProcessInfo.processInfo.environment["UPDATE_HEALTHMD_MAC_MCP_TOOL_CATALOG"] == "1" {
+            try FileManager.default.createDirectory(
+                at: catalogURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(to: catalogURL, options: .atomic)
+            return
+        }
+
+        XCTAssertEqual(
+            try Data(contentsOf: catalogURL),
+            data,
+            "Published Mac MCP catalog drifted. Rerun this test with UPDATE_HEALTHMD_MAC_MCP_TOOL_CATALOG=1."
+        )
+    }
+
+    private func publishedMacToolCatalogURL() -> URL {
+        var root = URL(fileURLWithPath: #filePath)
+        for _ in 0..<6 { root.deleteLastPathComponent() }
+        return root
+            .appendingPathComponent("apps/website/docs-src/public/agents/mcp", isDirectory: true)
+            .appendingPathComponent("mac-tools-v1.json")
+    }
+
     func testMCPAppsNegotiationExposesAuditableResourceAndConditionalToolMetadata() async throws {
         let server = HealthMdMCPServer(
             configuration: try HealthMdMCPConfiguration(),

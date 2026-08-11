@@ -33,6 +33,8 @@ interface SettingsRepository {
 
     // Onboarding
     val hasCompletedOnboarding: Flow<Boolean>
+    /** Resolves and persists the legacy-folder migration before navigation chooses its first route. */
+    suspend fun resolveOnboardingCompletion(): Boolean
     suspend fun setOnboardingCompleted(completed: Boolean)
 
     // In-app review tracking

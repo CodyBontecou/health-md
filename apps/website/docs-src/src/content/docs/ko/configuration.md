@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Codex를 다시 시작하고 `healthmd_doctor`를 호출한 다음, `healthmd_metrics`와 `healthmd_metric_chart` 같은 작은 타입 지정 도구 하나를 호출하세요. 번들 서버는 Mac 준비 상태, 암호화된 컨텍스트 새로 고침 작업, 증거 및 시각화를 포함한 21개 도구를 제공합니다.
+Codex를 다시 시작하고 `healthmd_doctor`를 호출한 다음 `healthmd_metrics`로 ID를 확인하세요. 업데이트 도구로 작은 범위를 명시적으로 가져온 뒤 `healthmd_metric_chart` 같은 타입 지정 도구로 그 범위를 조회하세요. 번들 서버는 Mac 준비 상태, 암호화된 컨텍스트 새로 고침 작업, 증거 및 시각화를 포함한 21개 도구를 제공합니다.
 
 ## Mac에서 Claude Desktop 또는 Claude Code 사용
 
@@ -124,7 +124,7 @@ healthmd export --last 7 --destination "$HOME/Documents/HealthVault"
 ## 다음 단계
 
 <div class="related">
-  <a href="/ko/docs/mcp/"><span>도구 인터페이스</span>현재 이용 가능한 21개의 Mac 도구, 이식 가능한 17개 도구 미리보기, MCP Apps, 스키마, 페이징, 내보내기 및 샌드박스 경계를 검토하세요.</a>
+  <a href="/ko/docs/mcp/"><span>도구 인터페이스</span>출시된 Mac 도구 21개, 이식 가능한 미리보기 도구 19개, MCP Apps, 스키마, 페이징, 내보내기 및 샌드박스 경계를 검토하세요.</a>
   <a href="/ko/docs/agent-queries/"><span>첫 번째 질문</span>타입 지정 측정 항목, 수면, 운동, 비교, 데이터 범위 및 증거 워크플로를 실행하세요.</a>
   <a href="/ko/docs/cli-extract/"><span>정규 데이터</span>큰 본문을 채팅에 넣지 않고 선택한 스키마 v7 문서와 소스 레코드를 추출하세요.</a>
   <a href="/ko/docs/reference/"><span>계약</span>버전이 지정된 데이터 구조, 필드 목록, 생성된 픽스처 및 통합 방법을 살펴보세요.</a>

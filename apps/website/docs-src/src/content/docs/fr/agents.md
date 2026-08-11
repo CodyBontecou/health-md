@@ -223,7 +223,7 @@ N’incluez pas d’enregistrements bruts, itinéraires, textes cliniques, déta
 
 <div class="related">
   <a href="/fr/docs/agent-queries/"><span>Recettes CLI</span>Requêtes d’agent typées : métriques, sessions de sommeil, alignement d’entraînement, entraînements, couverture, comparaison et preuves.</a>
-  <a href="/fr/docs/mcp/"><span>Protocole d’outils</span>Configuration Codex et Claude, 17 outils portables, graphiques MCP App, exports, pagination et limites du bac à sable.</a>
+  <a href="/fr/docs/mcp/"><span>Protocole d’outils</span>Configuration Codex et Claude, 21 outils Mac publiés, 19 outils portables en aperçu, graphiques MCP App, exports, pagination et limites du bac à sable.</a>
   <a href="/fr/docs/agent-api/"><span>Bas niveau</span>API de requête en boucle locale : routes, JSON de requête directe, curseurs et tâches persistantes d’acquisition.</a>
   <a href="/fr/docs/cli-extract/"><span>Objets sources</span>Extraction canonique : documents sélectionnés au schéma v7, enregistrements, projections et reçus.</a>
   <a href="/fr/docs/reference/evidence-packets/"><span>Contrats</span>Requêtes compactes et paquets de preuves : valeurs typées, couverture, opérations et ID déterministes.</a>

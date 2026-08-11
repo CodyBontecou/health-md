@@ -223,7 +223,7 @@ Health.md는 없는 값을 숫자 0으로 변환하지 않습니다. 실제 0은
 
 <div class="related">
   <a href="/ko/docs/agent-queries/"><span>CLI 활용법</span>타입 지정 에이전트 쿼리: 측정 항목, 수면 세션, 훈련 정렬, 운동, 데이터 범위, 비교 및 증거.</a>
-  <a href="/ko/docs/mcp/"><span>도구 프로토콜</span>Codex 및 Claude 설정, 17개 이식 가능한 도구, MCP App 차트, 내보내기, 페이징 및 샌드박스 경계.</a>
+  <a href="/ko/docs/mcp/"><span>도구 프로토콜</span>Codex 및 Claude 설정, 출시된 Mac 도구 21개, 이식 가능한 미리보기 도구 19개, MCP App 차트, 내보내기, 페이징 및 샌드박스 경계.</a>
   <a href="/ko/docs/agent-api/"><span>저수준</span>루프백 쿼리 API: 라우트, 직접 요청 JSON, 커서 및 영속 가져오기 작업.</a>
   <a href="/ko/docs/cli-extract/"><span>소스 객체</span>정규 추출: 선택된 스키마 v7 문서, 레코드, 프로젝션 및 수신 확인.</a>
   <a href="/ko/docs/reference/evidence-packets/"><span>계약</span>압축 쿼리 및 증거 패킷: 타입이 지정된 값, 데이터 범위, 작업 및 결정론적 ID.</a>
