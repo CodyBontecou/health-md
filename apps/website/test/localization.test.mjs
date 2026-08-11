@@ -61,23 +61,11 @@ for (const [index, locale] of translatedLocales.entries()) {
   });
 }
 
-test('unpublished legal translations remain noindex review drafts', async () => {
-  for (const locale of publishedLocales('landing').filter(({ surfaces }) => !surfaces.legal)) {
-    for (const filename of ['privacy-policy.html', 'terms-of-service.html']) {
-      const html = await readFile(path.join(ROOT, locale.path, filename), 'utf8');
-      assert.match(html, /<meta\b(?=[^>]*name="robots")(?=[^>]*content="noindex,follow")[^>]*>/);
-      assert.match(
-        html,
-        new RegExp(`<nav\\b(?=[^>]*class="language-selector")(?=[^>]*aria-label="${locale.ui.languageSelector}")[^>]*>`),
-      );
-      const rendered = renderLegalPage(html, filename.startsWith('privacy') ? 'privacy' : 'terms', locale.code);
-      const renderedHeader = rendered.slice(rendered.indexOf('<header'), rendered.indexOf('</header>'));
-      const renderedFooter = rendered.slice(rendered.indexOf('<footer'), rendered.indexOf('</footer>'));
-      assert.ok(rendered.includes('<meta name="robots" content="noindex,follow">'));
-      assert.doesNotMatch(renderedHeader, /class="language-selector"/);
-      assert.match(renderedFooter, /class="language-selector"/);
-    }
-  }
+test('every published landing locale publishes localized legal routes', () => {
+  assert.deepEqual(
+    publishedLocales('legal').map(({ code }) => code),
+    publishedLocales('landing').map(({ code }) => code),
+  );
 });
 
 test('published legal pages derive reciprocal metadata and language navigation from the manifest', async () => {

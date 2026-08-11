@@ -239,6 +239,12 @@ dependencies {
     implementation(libs.play.review)
     implementation(libs.play.review.ktx)
 
+    // Tagged, on-device PDF authoring. The port is Apache-2.0. Its obsolete
+    // Bouncy Castle transitives are excluded because direct-protocol already supplies bcprov-jdk18on.
+    implementation(libs.pdfbox.android) {
+        exclude(group = "org.bouncycastle")
+    }
+
     // Logging
     implementation(libs.timber)
 

@@ -1,854 +1,317 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>利用規約 — Health.md</title>
-  <meta name="description" content="Apple HealthおよびAndroid Health Connectのエクスポート、Full Access、ローカル優先のファイル保存先、医療上の免責事項、アプリストアでの返金手続に関するHealth.mdの規約。">
+  <meta name="description" content="Health.mdアプリ、エクスポート、直接接続するCLIおよびMCPツール、Full Access、ユーザーが選択する送信先、関連サービスの利用規約です。">
   <link rel="canonical" href="https://healthmd.app/ja/terms-of-service.html">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/terms-of-service.html">
-  <link rel="alternate" hreflang="es" href="https://healthmd.app/es/terms-of-service.html">
   <link rel="alternate" hreflang="ja" href="https://healthmd.app/ja/terms-of-service.html">
   <link rel="alternate" hreflang="x-default" href="https://healthmd.app/terms-of-service.html">
-  <meta name="robots" content="noindex,follow">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="利用規約 — Health.md">
-  <meta property="og:description" content="Apple HealthおよびAndroid Health Connectのエクスポート、Full Access、ローカル優先のファイル保存先、医療上の免責事項、アプリストアでの返金手続に関するHealth.mdの規約。">
+  <meta property="og:description" content="Health.mdアプリ、ヘルスデータのエクスポート、直接接続ツール、購入、ユーザーが選択する送信先について、わかりやすく定めた利用規約です。">
   <meta property="og:url" content="https://healthmd.app/ja/terms-of-service.html">
   <meta property="og:locale" content="ja_JP">
   <meta property="og:locale:alternate" content="en_US">
-  <meta property="og:locale:alternate" content="es_ES">
-  <meta name="theme-color" content="#6d4aff">
-  <link rel="icon" href="../assets/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="16x16" href="../assets/app-icon/icon_16x16.png">
-  <link rel="icon" type="image/png" sizes="20x20" href="../assets/app-icon/icon_20x20.png">
-  <link rel="icon" type="image/png" sizes="29x29" href="../assets/app-icon/icon_29x29.png">
+  <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/app-icon/icon_32x32.png">
-  <link rel="icon" type="image/png" sizes="40x40" href="../assets/app-icon/icon_40x40.png">
-  <link rel="icon" type="image/png" sizes="60x60" href="../assets/app-icon/icon_60x60.png">
   <link rel="icon" type="image/png" sizes="192x192" href="../assets/app-icon/icon_192x192.png">
-  <link rel="icon" type="image/png" sizes="1024x1024" href="../assets/app-icon/icon_1024x1024.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="../assets/app-icon/icon_76x76.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="../assets/app-icon/icon_120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="../assets/app-icon/icon_152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="../assets/app-icon/icon_167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script src="../assets/theme.js"></script>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg-primary: #f4f2f8;
-      --bg-secondary: #fbfaff;
-      --bg-tertiary: #e9e5f1;
-      --text-primary: #202024;
-      --text-secondary: #42404a;
-      --text-muted: #6f6a7c;
-      --accent: #6d4aff;
-      --accent-dim: #4f2bbd;
-      --accent-glow: rgba(109, 74, 255, 0.14);
-      --border: #d4cde0;
-      --success: #9b5cf6;
-      --on-accent: #ffffff;
-      --mono: 'JetBrains Mono', 'Space Mono', monospace;
-    }
-
-    :root[data-theme="dark"] {
-      color-scheme: dark;
-      --bg-primary: #18181d;
-      --bg-secondary: #24222c;
-      --bg-tertiary: #211f28;
-      --text-primary: #f0eef7;
-      --text-secondary: #d3cedf;
-      --text-muted: #aaa3b8;
-      --accent: #a78bfa;
-      --accent-dim: #6d4aff;
-      --accent-glow: rgba(167, 139, 250, 0.18);
-      --border: #3b3549;
-      --success: #c4b5fd;
-      --on-accent: #ffffff;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        color-scheme: dark;
-        --bg-primary: #18181d;
-        --bg-secondary: #24222c;
-        --bg-tertiary: #211f28;
-        --text-primary: #f0eef7;
-        --text-secondary: #d3cedf;
-        --text-muted: #aaa3b8;
-        --accent: #a78bfa;
-        --accent-dim: #6d4aff;
-        --accent-glow: rgba(167, 139, 250, 0.18);
-        --border: #3b3549;
-        --success: #c4b5fd;
-        --on-accent: #ffffff;
-      }
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: var(--mono);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 17px;
-      line-height: 1.75;
-      -webkit-text-size-adjust: 100%;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-      opacity: 0.03;
-      pointer-events: none;
-      z-index: 1000;
-    }
-
-    .grid-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px;
-      opacity: 0.15;
-      pointer-events: none;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-      position: relative;
-      z-index: 1;
-    }
-
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 20px 0;
-      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
-    }
-
-    .header-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .logo-content {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo-mark {
-      width: 36px;
-      height: 36px;
-      border: 2px solid var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .logo-mark::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-
-    .logo-text {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-primary);
-    }
-
-    .logo-subtext {
-      font-size: 12px;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-      margin-top: 4px;
-    }
-
-    .logo-subtext a {
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .logo-subtext a:hover {
-      color: var(--accent);
-    }
-
-    .back-link {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 13px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .back-link:hover {
-      color: var(--accent);
-    }
-
-    .header-actions {
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .language-selector {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-secondary);
-      font-size: 12px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .language-selector a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .language-selector a:hover {
-      color: var(--accent);
-    }
-
-    .language-selector [aria-current="page"] {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .theme-toggle {
-      flex: 0 0 auto;
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 2px;
-      background: var(--bg-secondary);
-    }
-
-    .theme-toggle button {
-      min-width: 44px;
-      border: 0;
-      border-radius: 6px;
-      padding: 6px 8px;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      font: 700 10px/1 var(--mono);
-      text-transform: uppercase;
-    }
-
-    .theme-toggle button[aria-pressed="true"] {
-      background: var(--accent);
-      color: var(--on-accent);
-    }
-
-    main {
-      padding-top: 140px;
-      padding-bottom: 80px;
-      min-height: 100vh;
-    }
-
-    .page-header {
-      margin-bottom: 60px;
-    }
-
-    .page-label {
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .page-title {
-      font-size: clamp(40px, 7vw, 56px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-      line-height: 1.05;
-    }
-
-    .page-meta {
-      font-size: 15px;
-      color: var(--text-muted);
-    }
-
-    .content-box {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 52px;
-      margin-bottom: 32px;
-    }
-
-    .content-box h2 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      margin-top: 40px;
-      color: var(--text-primary);
-      line-height: 1.2;
-    }
-
-    .content-box h2:first-child {
-      margin-top: 0;
-    }
-
-    .content-box h3 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      margin-top: 32px;
-      color: var(--text-primary);
-      line-height: 1.3;
-    }
-
-    .content-box p {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 18px;
-      line-height: 1.9;
-    }
-
-    .content-box ul {
-      margin: 20px 0;
-      padding-left: 0;
-      list-style: none;
-    }
-
-    .content-box ul li {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 14px;
-      padding-left: 28px;
-      position: relative;
-      line-height: 1.9;
-    }
-
-    .content-box ul li::before {
-      content: '→';
-      position: absolute;
-      left: 0;
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .content-box strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .highlight-box {
-      background: var(--accent-glow);
-      border: 1px solid var(--accent-dim);
-      border-radius: 4px;
-      padding: 24px;
-      margin: 32px 0;
-    }
-
-    .highlight-box p {
-      margin-bottom: 0;
-      color: var(--text-primary);
-    }
-
-    footer {
-      padding: 40px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .footer-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-text {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      font-size: 14px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover {
-      color: var(--accent);
-    }
-
-    @media (max-width: 768px) {
-      header {
-        padding: 16px 0;
-      }
-
-      .header-inner {
-        align-items: flex-start;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-
-      .header-actions {
-        margin-left: auto;
-      }
-
-      .content-box {
-        padding: 30px 22px;
-      }
-
-      .page-title {
-        font-size: 38px;
-      }
-
-      .content-box p,
-      .content-box ul li {
-        font-size: 16px;
-      }
-
-      .footer-inner {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-
-      .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 560px) {
-      main {
-        padding-top: 152px;
-      }
-
-      .container,
-      .header-inner {
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .logo-subtext {
-        display: none;
-      }
-
-      .page-label,
-      .back-link {
-        font-size: 12px;
-      }
-
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-      }
-
-      .theme-toggle button {
-        min-width: 38px;
-        padding: 6px;
-        font-size: 9px;
-      }
-
-      .content-box {
-        padding: 24px 18px;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .back-link,
-      .theme-toggle {
-        width: 100%;
-      }
-
-      .back-link {
-        justify-content: center;
-      }
-
-      .theme-toggle button {
-        min-width: 0;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="../assets/theme-icons.css">
+  <link rel="stylesheet" href="../assets/landing.css">
+  <link rel="stylesheet" href="../assets/legal.css">
 </head>
-<body>
-  <div class="grid-bg"></div>
+<body class="legal-page">
+  <a class="skip-link" href="#terms-of-service">規約本文へ移動</a>
 
-  <header>
-    <div class="header-inner">
-      <a href="../index.html" class="logo">
-        <div class="logo-mark"></div>
-        <div class="logo-content">
-          <span class="logo-text">health.md</span>
-          <span class="logo-subtext"><a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>制作</span>
-        </div>
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="../ja/" aria-label="Health.md ホーム">
+        <span class="brand-name">health.md</span>
       </a>
-      <div class="header-actions">
-        <nav class="language-selector" aria-label="言語選択">
-          <span aria-current="page">日本語</span>
-          <span aria-hidden="true">/</span>
-          <a href="../terms-of-service.html" hreflang="en" lang="en">English</a>
+      <div class="header-nav">
+        <nav aria-label="メインナビゲーション">
+          <a class="header-docs-link" href="../ja/docs/">ドキュメント</a>
+          <a class="header-docs-link" href="../ja/">ホーム</a>
         </nav>
-        <a href="../index.html" class="back-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          戻る
-        </a>
-        <div class="theme-toggle" role="group" aria-label="配色テーマ">
-          <button type="button" data-theme-option="system" aria-pressed="true">自動</button>
-          <button type="button" data-theme-option="light" aria-pressed="false">ライト</button>
-          <button type="button" data-theme-option="dark" aria-pressed="false">ダーク</button>
-        </div>
       </div>
     </div>
   </header>
 
-  <main>
-    <div class="container">
-      <div class="page-header">
-        <p class="page-label">法的事項</p>
-        <h1 class="page-title">利用規約</h1>
-        <p class="page-meta">最終更新日：2026年8月2日</p>
-      </div>
+  <main class="legal-main" id="terms-of-service">
+    <section class="legal-hero" aria-labelledby="terms-title">
+      <div class="legal-hero-inner">
+        <p class="legal-eyebrow">法的事項 · 利用規約</p>
+        <h1 id="terms-title">利用規約を、<br>読みやすく。</h1>
+        <p class="legal-updated">最終更新日：2026年8月6日</p>
+        <p class="legal-lede">Health.mdは、ヘルスデータの移動と活用を支援します。本規約では、ライセンス、製品の制限、機密データをユーザーのファイル、コンピューター、サービス、エージェントに送る際に伴う責任について説明します。</p>
 
-      <div class="content-box">
-        <div class="highlight-box">
-          <p><strong>参考訳に関する重要なお知らせ：</strong>この日本語訳は確認用の参考訳です。英語版が正文であり、英語版と本訳に相違がある場合は英語版が優先されます。</p>
+        <div class="legal-promise" role="list" aria-label="主な規約事項">
+          <div role="listitem">
+            <span>01</span>
+            <strong>適法に使用してください</strong>
+            <p>アクセス権限のあるデータ、デバイス、アカウント、送信先に限ってHealth.mdを使用してください。</p>
+          </div>
+          <div role="listitem">
+            <span>02</span>
+            <strong>出力はユーザーが管理します</strong>
+            <p>機密性の高いエクスポートと直接取得した結果の送信先および保護方法は、ユーザーが選択します。</p>
+          </div>
+          <div role="listitem">
+            <span>03</span>
+            <strong>医療上の助言ではありません</strong>
+            <p>Health.mdはデータを表示し、移動するためのものです。診断や治療を行うものでも、専門家による医療に代わるものでもありません。</p>
+          </div>
         </div>
-
-        <div class="highlight-box">
-          <p><strong>簡易版：</strong> Health.mdは無料でダウンロードでき、任意の1回限りのアプリ内購入であるFull Accessを提供します。個人用のエクスポートに使用し、ご自身でファイルを管理してください。本アプリは医療上の助言を提供するものではありません。返金は、Full Accessを購入したアプリストアで処理されます。</p>
-        </div>
-
-        <h2>1. 規約への同意</h2>
-        <p>
-          health.md（以下「本アプリ」）をダウンロード、インストール、または使用することにより、お客様は本利用規約（以下「本規約」）に拘束されることに同意したものとします。本規約に同意しない場合は、本アプリを使用しないでください。
-        </p>
-        <p>
-          本規約は、お客様とhealth.mdの運営者（以下「当社」）との間の法的拘束力のある契約を構成します。お客様による本アプリの使用には、Apple App Store利用規約またはGoogle Playの規約を含め、お客様が本アプリをダウンロードしたアプリストアの規約も適用されます。
-        </p>
-
-        <h2>2. ライセンスの許諾</h2>
-        <p>
-          お客様が本規約を遵守することを条件として、当社はお客様に対し、以下を行うための限定的、非独占的、譲渡不能、取消可能なライセンスを許諾します。
-        </p>
-        <ul>
-          <li>お客様が所有または管理するAppleデバイスまたはAndroidデバイスに本アプリをインストールし、使用すること</li>
-          <li>個人的かつ非商用の目的で、本アプリのエクスポート、スケジュール、Appleショートカット、Android自動化、およびMac保存先機能にアクセスし、使用すること</li>
-        </ul>
-        <p>
-          本アプリは無料でダウンロードできます。Full Accessは、AppleプラットフォームではStoreKit、AndroidではGoogle Play Billingにより処理される任意の1回限りのアプリ内購入であり、サブスクリプションではなく、自動更新されません。お客様は、本規約に従って当該購入によりロック解除された機能を使用する権利を有しますが、当社は新機能を提供する義務または本アプリを無期限に維持する義務を負いません。
-        </p>
-
-        <h2>3. 許容される使用</h2>
-        <p>
-          お客様は、本アプリを合法的な目的にのみ、かつ本規約に従って使用することに同意します。お客様は、以下を行わないことに同意します。
-        </p>
-        <ul>
-          <li>本アプリのリバースエンジニアリング、逆コンパイル、逆アセンブル、またはソースコードの導出を試みること（法律により禁止される場合を除く）</li>
-          <li>本アプリを変更、改変し、または本アプリに基づく派生物を作成すること</li>
-          <li>本アプリを賃貸、リース、貸与、販売、再配布、またはサブライセンスすること</li>
-          <li>本アプリ上の所有権表示を削除、変更、または不明瞭にすること</li>
-          <li>適用される法令または規制に違反する方法で本アプリを使用すること</li>
-          <li>当社のサービスを損傷、無効化、または毀損するおそれのある方法で本アプリを使用すること</li>
-        </ul>
-
-        <h2>4. 本アプリの機能</h2>
-        <p>
-          health.mdは、以下を行うよう設計されています。
-        </p>
-        <ul>
-          <li>HealthKit APIを使用してApple Healthデータを読み取ること、またはHealth Connect APIを使用してAndroidのヘルスデータを読み取ること</li>
-          <li>お客様が選択する保存先に、当該データをMarkdown、Obsidian、CSV、およびJSONファイルとしてエクスポートすること</li>
-          <li>Appleのバックグラウンド実行制限またはAndroid WorkManagerの動作に従い、お客様が定義するスケジュールでこのエクスポート処理を自動化すること</li>
-          <li>対応するワークフローにおいて、任意でペアリングしたMacまたはCLIにエクスポートジョブを直接送信すること</li>
-          <li>選択したエクスポートを、ユーザーが設定したAPIエンドポイントに直接送信すること</li>
-        </ul>
-        <p>
-          中核となるヘルスデータ処理はお客様のデバイス上でローカルに行われます。Health.mdはHealth.mdサーバー上でヘルスデータを収集または保存しません。一部のフローでは、お客様が指定するネットワーク通信またはプラットフォームサービスが使用されます。これには、App StoreまたはGoogle Playでの購入・復元、アプリのアップデート、iCloud、Androidドキュメントプロバイダまたは第三者ファイルプロバイダによる同期、ペアリング済みデバイスへの転送、およびユーザーが設定したAPIエンドポイントが含まれます。
-        </p>
-
-        <h2>5. ヘルスデータに関する免責事項</h2>
-        <p>
-          <strong>重要：health.mdはデータエクスポートツールであり、医療機器または医療サービスではありません。</strong>
-        </p>
-        <ul>
-          <li>本アプリは、医療上の助言、診断、または治療を提供しません</li>
-          <li>本アプリは、有資格の医療専門家への相談に代わるものではありません</li>
-          <li>エクスポートされたデータは、個人的な情報提供のみを目的としています</li>
-          <li>当社は、Apple Health、Health Connect、ウェアラブル、または接続された健康アプリからのデータの正確性を検証しません</li>
-          <li>医療提供者に相談することなく、エクスポートされたヘルスデータを医療上の意思決定に使用しないでください</li>
-        </ul>
-        <p>
-          医療上の緊急事態の場合は、直ちに救急サービスに連絡してください。時間的制約のある医療上の判断について、本アプリからのいかなるデータにも依拠しないでください。
-        </p>
-
-        <h2>6. データおよびプライバシー</h2>
-        <p>
-          お客様による本アプリの使用には、当社の<a href="privacy-policy.html" style="color: var(--accent); text-decoration: underline;">プライバシーポリシー</a>が適用され、同ポリシーは参照により本規約に組み込まれます。主な点は以下のとおりです。
-        </p>
-        <ul>
-          <li>当社は、お客様のヘルスデータをHealth.mdサーバー上で収集または保存しません</li>
-          <li>お客様が明示的にエクスポートしない限り、元データはApple HealthまたはHealth Connect内に残ります</li>
-          <li>エクスポートされたファイルは、お客様が選択するデバイス、フォルダ、ファイルプロバイダ、Androidドキュメントプロバイダ、またはMacの保存先に書き込まれます</li>
-          <li>お客様は、エクスポートされたデータおよび使用する同期プロバイダの管理について単独で責任を負います</li>
-          <li>お客様は、どのデータをエクスポートし、どこに保存するかを管理します</li>
-        </ul>
-
-        <h2>7. お客様の責任</h2>
-        <p>
-          お客様は、以下について責任を負います。
-        </p>
-        <ul>
-          <li><strong>デバイスのセキュリティ：</strong>パスコードの使用ならびにiOS、iPadOS、macOS、およびAndroidを最新の状態に保つことを含め、お客様のデバイスのセキュリティを維持すること</li>
-          <li><strong>データのバックアップ：</strong>お客様のデバイスならびにエクスポートされたMarkdown、Obsidian、CSV、およびJSONファイルをバックアップすること。当社はデータ損失について責任を負いません。</li>
-          <li><strong>アクセス管理：</strong>お客様のデバイス、フォルダ、保管庫、同期プロバイダ、およびエクスポートされたファイルにアクセスできる者を管理すること</li>
-          <li><strong>法令遵守：</strong>お客様による本アプリの使用が、適用されるすべての法令および規制を遵守することを確保すること</li>
-          <li><strong>ファイル保存：</strong>お客様が使用するiCloud Drive、Androidドキュメントプロバイダ、第三者ファイルプロバイダ、Obsidian保管庫、またはMacフォルダを含め、エクスポートされたファイルを管理すること</li>
-          <li><strong>API保存先：</strong>お客様が設定するAPIエンドポイントのセキュリティ、認可、ログ記録、保持、および削除の挙動を確認すること</li>
-        </ul>
-
-        <h2>8. 第三者サービス</h2>
-        <p>
-          本アプリは、以下と連携します。
-        </p>
-        <ul>
-          <li><strong>Apple HealthKit：</strong> Appleの規約およびお客様のiOSプライバシー設定に従います。</li>
-          <li><strong>Android Health Connect：</strong> Google/Androidの規約およびお客様のHealth Connectプライバシー設定に従います。</li>
-          <li><strong>任意のヘルスプロバイダAPI：</strong>直接プロバイダからのインポートは、利用可能であり明示的に有効化されている場合、そのプロバイダのOAuth、API、プライバシー、およびアカウント規約に従います。</li>
-          <li><strong>Apple Files、Android Storage Access Framework、およびファイルプロバイダ：</strong>本アプリは、プラットフォームのピッカーおよびファイルプロバイダ基盤を使用してお客様が選択したフォルダに、エクスポートされたファイルを書き込みます。</li>
-          <li><strong>StoreKit、App Store、およびGoogle Play Billing：</strong> Full Accessの購入、復元、アップデート、および返金は、該当するストアを通じて処理されます。</li>
-          <li><strong>ローカルネットワーク／近距離接続：</strong>任意のMac保存先ワークフローには、お客様のデバイス間でのローカル検出および接続が必要です。</li>
-        </ul>
-        <p>
-          当社は、第三者サービス、その可用性、またはその規約について責任を負いません。
-        </p>
-
-        <h2>9. 保証の否認</h2>
-        <p>
-          本アプリは、明示または黙示を問わず、いかなる種類の保証もなく、「現状有姿」かつ「提供可能な範囲」で提供されます。これには以下が含まれますが、これらに限定されません。
-        </p>
-        <ul>
-          <li>商品性、特定目的への適合性、または非侵害に関する保証</li>
-          <li>本アプリがエラーなく、中断なく、または安全に動作することの保証</li>
-          <li>エクスポートされたデータの正確性、信頼性、または完全性に関する保証</li>
-        </ul>
-        <p>
-          一部の法域では黙示保証の排除が認められていないため、上記の排除の一部がお客様に適用されない場合があります。
-        </p>
-
-        <h2>10. 責任の制限</h2>
-        <p>
-          法律で認められる最大限の範囲において、当社は、以下に起因または関連して生じる、間接的、付随的、特別、結果的、または懲罰的損害、あるいは利益、収益、データ、または使用機会の損失について責任を負いません。
-        </p>
-        <ul>
-          <li>お客様による本アプリの使用または使用不能</li>
-          <li>本アプリまたはエクスポートされたデータにおけるエラー、バグ、または不正確性</li>
-          <li>データの損失または破損</li>
-          <li>エクスポートされたデータに基づいて行われた判断</li>
-          <li>デバイスの損傷またはパフォーマンス上の問題</li>
-        </ul>
-        <p>
-          いかなる場合も、当社の責任総額は、お客様が本アプリについて支払った金額を超えないものとします。
-        </p>
-        <p>
-          一部の法域では付随的または結果的損害に対する責任の制限または排除が認められていないため、上記の制限がお客様に適用されない場合があります。
-        </p>
-
-        <h2>11. 補償</h2>
-        <p>
-          お客様は、以下に起因または関連して生じるあらゆる請求、責任、損害、損失、費用、または経費（合理的な弁護士費用を含む）について、health.mdの運営者を補償し、防御し、免責することに同意します。
-        </p>
-        <ul>
-          <li>お客様による本アプリの使用または誤用</li>
-          <li>お客様による本規約の違反</li>
-          <li>お客様による他の個人または法人の権利の侵害</li>
-          <li>お客様による適用される法令または規制の違反</li>
-        </ul>
-
-        <h2>12. アップデートおよび変更</h2>
-        <p>
-          当社は、以下の目的で随時本アプリをアップデートすることがあります。
-        </p>
-        <ul>
-          <li>バグの修正またはパフォーマンスの向上</li>
-          <li>新機能または機能性の追加</li>
-          <li>新しいiOS、iPadOS、macOS、Android、App Store、またはGoogle Playの要件への対応</li>
-          <li>セキュリティ上の問題への対処</li>
-        </ul>
-        <p>
-          アップデートはApp StoreまたはGoogle Playを通じて提供されます。当社はアップデートを無期限に提供する義務を負いません。一部のアップデートでは、お客様が新しい規約に同意する必要がある場合があります。
-        </p>
-
-        <h2>13. 終了</h2>
-        <p>
-          本規約は、終了するまで有効に存続します。
-        </p>
-        <ul>
-          <li><strong>お客様による終了：</strong>お客様は、すべてのデバイスから本アプリを削除することにより、いつでも終了できます</li>
-          <li><strong>当社による終了：</strong>お客様が本規約に違反した場合、当社はお客様のライセンスを終了することがあります</li>
-          <li><strong>ストアプロバイダによる終了：</strong>お客様がApple App StoreまたはGoogle Playの規約に違反した場合、お客様のライセンスが終了されることがあります</li>
-        </ul>
-        <p>
-          終了時には、お客様は本アプリのすべての使用を中止し、すべての複製物を削除しなければなりません。その性質上終了後も存続すべき条項（免責事項、責任制限、および補償を含む）は存続します。
-        </p>
-
-        <h2>14. 知的財産</h2>
-        <p>
-          本アプリならびにそのオリジナルのコンテンツ、機能、および機能性は、health.mdの運営者が所有し、国際的な著作権法、商標法、およびその他の知的財産法により保護されています。
-        </p>
-        <p>
-          本アプリの一部はオープンソースである場合がありますが（当社の文書に記載されているとおり）、本アプリ全体（その設計および実装を含む）は当社の財産です。
-        </p>
-
-        <h2>15. オープンソース</h2>
-        <p>
-          本アプリの中核ロジックの一部はオープンソースであり、個別のオープンソースライセンスに基づき許諾されています。これらのコンポーネントは、本アプリの文書またはリポジトリで特定されています。お客様によるオープンソースコンポーネントの使用には、それぞれのライセンスが適用されます。
-        </p>
-
-        <h2>16. 返金</h2>
-        <p>
-          返金請求は、お客様がFull Accessを購入したストアにより処理されます。当社は返金を直接処理しません。Appleでの購入については、<a href="https://support.apple.com/en-us/HT204084" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: underline;">Appleのサポートページ</a>をご覧ください。Androidでの購入については、Google Playの返金手続を使用してください。
-        </p>
-
-        <h2>17. 輸出コンプライアンス</h2>
-        <p>
-          お客様は、米国輸出管理規則を含め、適用されるすべての輸出および再輸出管理法令および規制を遵守することに同意します。お客様は、禁輸対象国に所在しておらず、禁止当事者として記載されていないことを表明します。
-        </p>
-
-        <h2>18. 準拠法および紛争解決</h2>
-        <p>
-          本規約は、法の抵触原則にかかわらず、当社が運営する法域の法律に準拠し、同法に従って解釈されるものとします。
-        </p>
-        <p>
-          本規約またはお客様による本アプリの使用に起因する紛争は、法律により禁止される場合を除き、関連する仲裁機関の規則に従った拘束力のある仲裁により解決されるものとします。
-        </p>
-
-        <h2>19. 分離可能性</h2>
-        <p>
-          本規約のいずれかの条項が執行不能または無効と判断された場合、当該条項は必要最小限の範囲で制限または排除され、残りの条項は引き続き完全に有効に存続します。
-        </p>
-
-        <h2>20. 完全合意</h2>
-        <p>
-          本規約は、当社のプライバシーポリシーおよび当社が本アプリ内で公表するその他の法的通知と併せて、お客様による本アプリの使用に関するお客様と当社との間の完全な合意を構成し、従前のいかなる合意にも優先します。
-        </p>
-
-        <h2>21. 規約の変更</h2>
-        <p>
-          当社は、いつでも本規約を変更する権利を留保します。当社が重要な変更を行う場合、アプリのアップデートまたはその他の合理的な方法によりお客様に通知します。変更が有効になった後もお客様が本アプリの使用を継続することは、更新後の本規約への同意を構成します。
-        </p>
-
-        <h2>22. 連絡先情報</h2>
-        <p>
-          本規約についてご質問がある場合は、以下までお問い合わせください。
-        </p>
-        <p>
-          <strong>メール：</strong> legal@isolated.tech<br>
-          <strong>ウェブサイト：</strong> https://isolated.tech
-        </p>
-
-        <h2>23. ストア固有の規約</h2>
-        <p>
-          本アプリがApple App StoreまたはGoogle Playを通じて配布される場合、以下の追加規約が適用されます。
-        </p>
-        <ul>
-          <li>AppleおよびGoogleは本規約の当事者ではなく、本アプリに関していかなる義務も負いません</li>
-          <li>許諾されるライセンスは、該当するストア規約により認められる範囲で、お客様が所有または管理するデバイス上での使用に限定されます</li>
-          <li>AppleおよびGoogleは、本アプリに関していかなる保証義務も負いません</li>
-          <li>AppleおよびGoogleは、本アプリまたはお客様による本アプリの使用に関するいかなる請求への対応についても責任を負いません</li>
-          <li>本アプリが知的財産権を侵害しているとの第三者からの請求があった場合、調査および防御について責任を負うのはストアプロバイダではなく当社です</li>
-          <li>AppleおよびAppleの子会社は、Appleを通じて配布された複製物について本規約の第三者受益者であり、お客様に対して本規約を執行することができます</li>
-        </ul>
-
-        <h2>確認</h2>
-        <p>
-          HEALTH.MDを使用することにより、お客様は、本利用規約を読み、理解し、これに拘束されることに同意したことを確認します。
-        </p>
       </div>
+    </section>
+
+    <div class="legal-shell">
+      <aside class="legal-toc">
+        <p class="legal-toc-title">本規約の内容</p>
+        <nav aria-label="利用規約の各セクション">
+          <ol>
+            <li><a href="#agreement">合意と適用範囲</a></li>
+            <li><a href="#eligibility">利用資格</a></li>
+            <li><a href="#license">ライセンス</a></li>
+            <li><a href="#acceptable-use">許容される使用</a></li>
+            <li><a href="#functionality">Health.mdの機能</a></li>
+            <li><a href="#availability">提供状況とプレビュー</a></li>
+            <li><a href="#health-disclaimer">ヘルスデータに関する免責事項</a></li>
+            <li><a href="#data">データとプライバシー</a></li>
+            <li><a href="#responsibilities">ユーザーの責任</a></li>
+            <li><a href="#purchases">購入と返金</a></li>
+            <li><a href="#third-parties">第三者</a></li>
+            <li><a href="#intellectual-property">知的財産</a></li>
+            <li><a href="#updates">更新と終了</a></li>
+            <li><a href="#warranties">保証</a></li>
+            <li><a href="#liability">責任</a></li>
+            <li><a href="#indemnity">補償と輸出管理</a></li>
+            <li><a href="#disputes">紛争</a></li>
+            <li><a href="#general">一般条項</a></li>
+            <li><a href="#stores">アプリストア</a></li>
+            <li><a href="#changes">変更</a></li>
+            <li><a href="#contact">お問い合わせ</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <article class="policy-content">
+        <section id="agreement">
+          <h2>1. 合意と適用範囲</h2>
+          <p>本利用規約（以下「本規約」）は、ユーザーと、isolated.techの名称でHealth.mdを運営するCody Bontecou（以下「Health.md」「当社」または「当社ら」）との間の拘束力ある契約です。対象製品をダウンロード、インストール、アクセス、または使用することにより、ユーザーは本規約に同意したものとみなされます。同意しない場合は、製品を使用しないでください。</p>
+          <p>「製品」とは、iPhone、iPad、Mac、Android向けのHealth.mdコンシューマーアプリ、同梱のヘルパー、提供される場合のコマンドラインおよびMCPツール、healthmd.appとそのドキュメント、直接接続プロトコル、ならびにこれらを支えるファーストパーティサービスをいいます。機能によっては、特定のプラットフォーム、バージョン、地域、デバイス、リリースチャンネルでのみ利用できます。</p>
+          <p>AppleまたはGoogleを通じて配布される複製物には、アプリストアの規約も適用されます。組織のために製品を使用する場合、ユーザーはその組織を拘束する権限を有することを表明し、本規約の「ユーザー」には当該組織も含まれます。</p>
+          <div class="policy-note">
+            <p><strong>翻訳に関するお知らせ：</strong>本ページは<a href="../terms-of-service.html" hreflang="en">英語版利用規約</a>の日本語訳です。適用法令で認められる範囲に限り英語版が優先しますが、この定めは、放棄または制限することのできない消費者の権利を制限するものではありません。</p>
+          </div>
+          <div class="policy-note">
+            <p><strong>簡単に言うと：</strong>Health.mdはヘルスデータをエクスポートおよび照会するためのツールを提供しますが、権限、送信先、セキュリティ、結果の利用については、引き続きユーザーが責任を負います。</p>
+            <p>製品は医療機器でも緊急サービスでもありません。また、すべての元データ、バックグラウンドタスク、プロバイダ、OS、第三者の送信先が常に利用できることを保証するものではありません。</p>
+          </div>
+        </section>
+
+        <section id="eligibility">
+          <h2>2. 利用資格と権限</h2>
+          <p>ユーザーは、本規約に同意する法的能力を有していなければなりません。居住地の法令により親権者または保護者の承認が必要な場合、その方がユーザーに代わって本規約を確認し、同意しなければなりません。</p>
+          <p>Health.mdは、ユーザーが所有もしくは管理している、または使用を許可されているヘルスデータ、デバイス、アカウント、コンピューター、プロバイダ接続、APIエンドポイント、その他の送信先に限って使用できます。有効な権限および法令上必要な同意を得ずに、他者のヘルスデータへアクセスし、または処理してはなりません。</p>
+        </section>
+
+        <section id="license">
+          <h2>3. ライセンス</h2>
+          <p>Health.mdソフトウェアは販売されるのではなく、ライセンスされます。Appleアプリ、Androidアプリ、CLI、共有コアは、GNU Affero General Public License version 3.0 only（AGPL-3.0-only）に基づいて配布されます。ウェブサイトのソースはMIT Licenseに基づいて配布されます。第三者のコードおよびアセットには、それぞれのライセンスが引き続き適用されます。</p>
+          <p>ライセンス対象のソースおよびバイナリの複製、改変、再配布、ホスティングには、本条ではなく、これらのソフトウェアライセンスが適用されます。本規約を遵守することを条件として、当社はユーザーに対し、Health.mdが運営するサービスへのアクセス、ストア権利、商標、アートワーク、その他個別のライセンスの対象外である素材を、適法な個人目的または組織内部の目的に限って使用するための、限定的、非独占的、譲渡不能、取消可能な権利を許諾します。</p>
+          <p>ユーザーは、自らのファイル、スクリプト、自動化、エージェントワークフロー、および医療専門家を含む、自ら選択した人またはサービスとのやり取りに、エクスポートおよび直接取得した結果を利用できます。本規約は、AGPL、MIT License、その他適用されるライセンスによって付与された権利、または法的に制限できない権利を制限するものではありません。</p>
+        </section>
+
+        <section id="acceptable-use">
+          <h2>4. 許容される使用</h2>
+          <p>ユーザーは、次の行為を行わないことに同意します。</p>
+          <ul>
+            <li>製品またはその出力を違法もしくは欺瞞的な方法で使用し、または他者のプライバシー、秘密保持、知的財産その他の権利を侵害すること。</li>
+            <li>許可なくヘルスデータ、プロバイダアカウント、ペアリング済みデバイス、ファイル、エンドポイントにアクセスすること。</li>
+            <li>購入制御、権限、ペアリング、認証、レート制限、安全上の制限、その他の技術的保護を回避すること。</li>
+            <li>製品または関連サービスを攻撃し、過負荷状態にし、妨害し、探索し、または悪意のあるコードを持ち込むこと。</li>
+            <li>非公開の認証情報、署名用素材、サービスシークレット、保護されたアセットを抽出または不正利用すること。ただし、適用されるソフトウェアライセンスまたは法令で認められた権利を制限するものではありません。</li>
+            <li>必要な著作権、商標、帰属、ライセンスの表示を削除し、またはHealth.mdがユーザーの製品、分析、医学的結論、サービスを推奨していると偽って示すこと。</li>
+            <li>緊急対応、規制対象の臨床記録管理、その他製品が想定していない用途において、製品を唯一のシステムとして使用すること。</li>
+          </ul>
+          <p>ユーザーのデバイス、ペアリング用認証情報、ローカルプロセス、組織のシステムを通じて製品を利用する者の行為については、ユーザーが責任を負います。</p>
+        </section>
+
+        <section id="functionality">
+          <h2>5. Health.mdの機能</h2>
+          <p>プラットフォームと提供状況に応じて、Health.mdは次のことを行えます。</p>
+          <ul>
+            <li>許可されたApple HealthKit、WorkoutKit、Android Health Connect、およびHealth Connectの医療記録データを読み取ること。</li>
+            <li>選択されたデータをMarkdown、Obsidian、CSV、JSON、FHIR／プロバイダ固有形式、その他文書化された形式でエクスポートすること。</li>
+            <li>選択されたローカルまたはクラウド同期フォルダ、Vault、ドキュメントプロバイダ、ペアリング済みのMacまたはCLI、ユーザー設定のAPIエンドポイントに書き込むこと。</li>
+            <li>プラットフォームの制限に従って、手動、スケジュール、Shortcut、Android自動化、直接接続、再開可能なエクスポートワークフローを実行すること。</li>
+            <li>対応するCLIおよびMCPクライアントを通じて、範囲を限定した型付きクエリに応答し、事実に基づく値、来歴、対象範囲、欠損、根拠、チャートを返すこと。</li>
+            <li>認証後に対応するヘルスプロバイダへ接続し、プロバイダの記録をデバイスに渡すこと。</li>
+            <li>プライバシーポリシーの記載に従い、スケジュール、購入、製品分析、キャンペーンアトリビューション、プロバイダ認証、ウェブサイト配信、サポートのために、限定的なヘルスデータ以外のインフラストラクチャを使用すること。</li>
+          </ul>
+          <p>当社は、ユーザーのヘルスデータをHealth.mdのサーバー上で収集または保存しません。ただし、ユーザーが同期フォルダ、ペアリング済みクライアント、プロバイダ、エージェントまたはモデルサービス、APIエンドポイント、その他の送信先を選択した場合、ヘルスデータがデバイス外へ移動することがあります。そのコピーは当該送信先が管理します。</p>
+        </section>
+
+        <section id="availability">
+          <h2>6. 提供状況、制限、プレビュー機能</h2>
+          <p>機能は、OS、デバイス、ストア版、データソースAPI、権限、地域、接続したプロバイダ、リリースチャンネルによって異なります。ドキュメントには、すべてのプラットフォームでパッケージ化またはサポートされているとは限らないプレビュー、ソースビルド、ベータ版、互換経路が記載されることがあります。「利用可能な場合」という表現は、リリース、継続的な提供、機能の同等性を約束するものではありません。</p>
+          <p>HealthKitおよびHealth Connectでは、権限が拒否されている、またはデータが利用できない場合に、結果が空に見えることがあります。デバイスのロック、バックグラウンド実行規則、ネットワーク状態、API制限、ファイルプロバイダの動作、ペアリング状態、空き容量、第三者サービスの停止により、処理が遅延、制限、または阻止される場合があります。</p>
+          <p>iPhoneへの直接リクエストには、到達可能で互換性があり、明示的にペアリングされたデータソースが必要で、Health.mdが開かれている、フォアグラウンドにある、またはロック解除されていることが必要な場合があります。永続的なジョブは、タイムアウトまたは切断後も、完了、再開、キャンセル、クリーンアップ、失効するまでデバイス上に残る場合があります。出力を完全なものとして扱う前に、状態、対象範囲、欠損期間、警告、部分的な結果の診断情報を確認してください。</p>
+          <p>当社は、製品または機能を変更、停止、終了し、または合理的な制限を設けることがあります。後方互換性、無期限の保守、プレビュー版の一般提供を保証しません。</p>
+        </section>
+
+        <section id="health-disclaimer">
+          <h2>7. ヘルスデータおよび医療に関する免責事項</h2>
+          <p><strong>Health.mdは、データポータビリティおよび事実情報を照会するためのツールです。医療機器、医療提供者、診断サービス、治療、緊急サービスではありません。</strong></p>
+          <ul>
+            <li>Health.mdは、診断、治療の推奨、因果関係の推論、または結果が健康的か、有害か、良くなったか、悪くなったかの判断を行いません。</li>
+            <li>値および記録は、データソースまたは送信先において、不完全、遅延、重複、変更、誤表示、利用不能、不正確である場合があります。</li>
+            <li>チャート、要約、根拠、エクスポートファイルは、元の記録または資格ある医療専門家の助言に代わるものではありません。</li>
+            <li>データを臨床医と共有することはできますが、医学的な解釈または判断について責任を負うのは、Health.mdではなく臨床医です。</li>
+            <li>AIツールまたはモデルプロバイダが生成した結果は当該第三者が提供するものであり、Health.mdによる医療上の助言ではありません。</li>
+          </ul>
+          <p>緊急時または時間的制約のある医療上の判断に製品を利用しないでください。地域の緊急サービスまたは資格ある専門家に連絡してください。当社が書面で別途合意しない限り、コンシューマー製品はHIPAAのbusiness associate agreementに基づいて提供されるものではなく、電子ヘルスレコードシステムの代替でもありません。</p>
+        </section>
+
+        <section id="data">
+          <h2>8. データ、プライバシー、所有権</h2>
+          <p>当社の<a href="privacy-policy.html">プライバシーポリシー</a>では、Health.mdによるヘルスデータ、ファーストパーティ製品分析、キャンペーンアトリビューション、スケジュールメタデータ、プロバイダ認証、購入情報、ウェブサイトリクエスト、サポートデータの取扱いについて説明しています。同ポリシーは、参照により本規約に組み込まれます。</p>
+          <p>ユーザーとHealth.mdとの間では、製品に処理を指示したヘルスデータおよびその他のコンテンツに関する権利はユーザーに留保されます。ユーザーは、要求した機能の実行に必要な範囲に限り、そのデータへのアクセス、変換、送信、書込みをHealth.mdに指示します。これにより、ヘルスデータの所有権が当社へ移転することはありません。</p>
+          <p>Health.mdは、Health.mdの名称と商標、運営するサービス、ストアの掲載情報と権利、個別のライセンスで公開されていないコンテンツまたはアセットに関する権利を留保します。Health.mdのソフトウェアおよびソースコードに関する権利には、該当するコンポーネントに適用されるAGPL-3.0-only、MIT、第三者のライセンス、その他のライセンスが適用されます。ユーザーが自らのデータを所有していることにより、Health.mdのブランドまたはサービスの所有権を取得することはありません。</p>
+        </section>
+
+        <section id="responsibilities">
+          <h2>9. ユーザーの責任</h2>
+          <p>ユーザーは、次の事項について責任を負います。</p>
+          <ul>
+            <li><strong>権限：</strong>適法にアクセス、処理、開示できるデータおよびアカウントのみを選択すること。</li>
+            <li><strong>デバイスのセキュリティ：</strong>必要に応じて、パスコード、アップデート、ディスク暗号化、保護された認証情報ストア、信頼できるネットワークを使用すること。</li>
+            <li><strong>送信先：</strong>フォルダ、プロバイダ、エンドポイント、AI／モデルサービス、ペアリング済みコンピューターのセキュリティ、認証、ログ、保持、削除、バックアップ、アクセス管理を評価すること。</li>
+            <li><strong>機密性の高い出力：</strong>正確なタイムスタンプ、経路と位置情報、服薬情報、心の健康に関する項目、ECG値、臨床／FHIR情報、来歴、文書、添付ファイルを含み得るファイルおよび結果を保護すること。</li>
+            <li><strong>直接アクセス：</strong>信頼できるピアのみを承認し、ペアリング用認証情報を保護し、ローカルのループバックAPIまたはそのポートを他のマシンに決して公開しないこと。</li>
+            <li><strong>完全性：</strong>欠損データをゼロとみなさず、レシート、マニフェスト、対象範囲、データソースの制限、警告、部分的な結果を確認すること。</li>
+            <li><strong>バックアップと削除：</strong>必要なバックアップを保持し、各送信先の管理機能を使ってコピーを削除すること。</li>
+            <li><strong>法令遵守：</strong>ユーザーのワークフローに適用される法令、および専門職、雇用、研究、臨床、組織上の要件を満たすこと。</li>
+          </ul>
+          <p>通常のサポートメール、公開issue、チャットのトランスクリプト、CIログ、シェルトレース、その他ヘルスデータの保存に適さない場所に、ヘルスレコード、エクスポート、認証情報、機密性の高い直接取得結果を置かないでください。</p>
+        </section>
+
+        <section id="purchases">
+          <h2>10. 無料利用、Full Access、返金</h2>
+          <p>製品では、一定回数のエクスポート処理を無料で正常完了できる場合があります。現在のコンシューマー向け提供内容は、無料エクスポート10回です。手動、スケジュール、Shortcut、直接接続による処理が正常に完了すると、処理に含まれる日付またはファイルの数にかかわらず、製品に表示される同一の利用枠から1回として数えられる場合があります。失敗した処理および再試行は、文書化された利用枠の規則に基づき別に扱われることがあります。</p>
+          <p>提供される場合、Full Accessは対応機能のエクスポート制限を解除する1回限りのアプリ内購入です。サブスクリプションではなく、更新されません。AppleプラットフォームではIndividual Lifetime、Family Lifetime、または両者間のアップグレードが提供される場合があります。他のストアでは、それぞれ対応する1回限りの製品が提供されることがあります。表示される製品、価格、通貨、税、アカウント、Family Sharingの利用資格は、ストアの購入画面によって決まります。</p>
+          <p>「lifetime」または永続的な権利とは、購入したライセンスが定期的な課金スケジュールによって失効しないことを意味します。すべての機能、OS、デバイス、プロバイダ、製品が永続的に利用またはサポートされることを保証するものではありません。当社は、ストア規約および法令で認められる場合を除き、完了済みの購入を変更することなく、将来の価格または提供内容を変更できます。</p>
+          <p>購入、復元、請求、返金は、Full Accessを購入したストアが処理します。当社は支払カードの完全な情報を受け取らず、通常、ストアの返金を直接行うことはできません。Appleでの購入には<a href="https://reportaproblem.apple.com/" target="_blank" rel="noopener">問題を報告する</a>を使用してください。Google Playでの購入には、Googleの該当する返金手続を使用してください。返金の可否はストアおよび適用法令により決まります。</p>
+        </section>
+
+        <section id="third-parties">
+          <h2>11. 第三者サービスと送信先</h2>
+          <p>製品は、Apple、Google、HealthKit、Health Connect、アプリストア、APNs、ファイルおよび同期プロバイダ、Obsidian、ヘルスプロバイダ、OAuthサービス、APIエンドポイント、ローカルネットワーク、Cloudflare、ウェブサイトホスト、AI／モデルプロバイダ、エージェントホスト、ユーザーが設定するツールなど、第三者が運営するサービスに依存し、または接続できる場合があります。</p>
+          <p>第三者のサービスには、その規約、ライセンス、プライバシー慣行、アカウント規則、利用制限、料金、提供状況、セキュリティ管理が適用されます。当社はこれらを管理せず、第三者の作為、不作為、出力、サービス停止、ポリシー変更、またはユーザーがデータの送信を指示した後の取扱いについて責任を負いません。</p>
+          <p>ブランド名およびロゴは各所有者に帰属します。第三者への言及は、後援、推奨、互換性、継続的なサポートを意味するものではありません。</p>
+        </section>
+
+        <section id="intellectual-property">
+          <h2>12. 知的財産、オープンソース、フィードバック</h2>
+          <p>Health.mdの名称、ロゴ、商標、運営するサービス、ストア用素材、別のライセンスで公開されていないオリジナルのコンテンツまたはアセットは、Health.mdまたはそのライセンサーが所有し、適用される知的財産法により保護されています。</p>
+          <p>Health.mdのAppleアプリ、Androidアプリ、CLI、共有コアはAGPL-3.0-onlyであり、ウェブサイトのソースにはMIT Licenseが適用されます。第三者の依存関係および同梱アセットには、それぞれの条件が引き続き適用されます。適用されるライセンスは、ユーザーによる利用、複製、改変、配布、および当該ライセンスに規定がある場合はネットワークホスティングを規律します。本規約は、これらのライセンス上の権利を制限しません。</p>
+          <p>ユーザーが任意でフィードバックまたは提案を送った場合、製品の改善または開発のため、対価の支払いや氏名表示の義務なくこれらを利用する、全世界的、永続的、取消不能、ロイヤルティフリーの権利を当社に許諾するものとします。ヘルスデータ、認証情報、秘密情報、または共有する権限のないコンテンツを含めないでください。</p>
+        </section>
+
+        <section id="updates">
+          <h2>13. 更新、利用停止、終了</h2>
+          <p>当社は、バグ修正、パフォーマンス改善、機能変更、プラットフォーム上または法的な要件への対応、セキュリティ問題への対処のためにアップデートを提供することがあります。アップデートによりシステム要件が変更され、改定された規約への同意が必要になる場合があります。当社はアップデートを無期限に提供する義務を負いません。</p>
+          <p>ユーザーはいつでも製品の使用を中止し、ローカルの複製物をアンインストールまたは削除できます。アンインストールしても、エクスポート、ペアリング済みコンピューターの状態、プロバイダが保有するコピー、API配信データ、サポートメッセージ、その他すでに別の場所に保存されたデータは削除されません。</p>
+          <p>ユーザーが本規約に重大な違反をした場合、セキュリティ上または法的なリスクを生じさせた場合、製品を不正利用した場合、当社は、ストアおよび法令で認められる範囲において、Health.mdが運営する関連サービスへのアクセスを停止し、またはストア権利を取り消すことがあります。オープンソースライセンスに基づく権利の終了には、当該ライセンスのみが適用されます。合理的な場合、当社は措置を影響のある製品またはサービスに限定します。</p>
+          <p>所有権、支払い、免責、責任制限、補償、紛争、一般条項など、その性質上終了後も存続すべき条項は、終了後も存続します。</p>
+        </section>
+
+        <section id="warranties">
+          <h2>14. 保証の否認</h2>
+          <p>法令で認められる最大限の範囲において、製品は「現状有姿」かつ「提供可能な範囲」で提供されます。Health.mdおよびそのライセンサーは、商品性、特定目的への適合性、権原、非侵害、取引過程または取引慣行から生じる保証を含む、明示、黙示、法定の保証を否認します。</p>
+          <p>当社は、製品が中断せず、安全で、エラーがなく、互換性があり、完全または正確であること、データが利用可能もしくは保存され、または正常にエクスポートされること、第三者のデータソース、送信先、プロバイダ、モデル、ストア、プラットフォームが期待どおりに動作することを保証しません。</p>
+          <p>法域によっては、特定の保証の排除が認められません。その場合、排除は認められる範囲に限って適用され、法律上必要な保証は、法令で認められる最短の期間および最小限の範囲に限定されます。</p>
+        </section>
+
+        <section id="liability">
+          <h2>15. 責任の制限</h2>
+          <p>法令で認められる最大限の範囲において、Health.md、その運営者、関連会社、ライセンサーは、製品に起因または関連する間接的、付随的、特別、懲罰的、結果的、制裁的な損害、または逸失利益、収益、信用、データ、使用機会、事業中断について責任を負いません。</p>
+          <p>これには、データの喪失、破損、開示、誤送信、利用不能または不完全なヘルスレコード、エクスポートまたはクエリのエラー、出力に基づく判断、第三者サービス、スケジュール、バックグラウンドタスク、転送、ペアリング、購入、連携の失敗、およびユーザーのデバイス、認証情報、送信先、設定に起因する不正アクセスが含まれます。</p>
+          <p>法令で認められる最大限の範囲において、製品に起因または関連する当社の責任総額は、ユーザーが当該製品について支払った金額を超えないものとします。</p>
+          <p>これらの制限は、詐欺、故意の違法行為、または適用法令上排除が禁止される死亡もしくは人身傷害に対する責任など、法的に排除できない責任を排除するものではありません。法域によっては追加の権利が認められるため、一部の制限がユーザーに適用されない場合があります。</p>
+        </section>
+
+        <section id="indemnity">
+          <h2>16. 補償と輸出管理</h2>
+          <p>法令で認められる範囲において、ユーザーが組織を代表して製品を使用する場合、当該組織による違法な使用、他者のデータの無断処理もしくは開示、本規約への違反、第三者の権利侵害に起因する第三者からの請求、損害、合理的な費用について、Health.mdおよびその運営者を防御し、補償するものとします。この義務は、請求がHealth.md自身の違反または不正行為に起因する範囲には適用されません。</p>
+          <p>ユーザーは、適用される輸出管理、制裁、再輸出に関する法令を遵守しなければなりません。法令で禁止される場所で製品を使用、輸出、提供してはなりません。ユーザーは、適用される制裁または輸出制限により製品の受領を禁止されていないことを表明します。</p>
+        </section>
+
+        <section id="disputes">
+          <h2>17. 準拠法と紛争</h2>
+          <p>本規約には、強行法規による保護を損なう抵触法の規則を適用せず、適用される法令が適用されます。本規約のいかなる定めも、ユーザーの居住地の法令に基づき放棄することのできない消費者の権利または救済を排除するものではありません。</p>
+          <p>正式な手続を開始する前に、<a href="mailto:legal@isolated.tech">legal@isolated.tech</a>へ連絡し、問題を非公式に解決する合理的な機会を当社に与えていただくようお願いします。いずれの当事者も、法的管轄権を有する裁判所または機関に申立てを行うことができます。本規約は、ユーザーとHealth.mdが適法に別途合意しない限り、仲裁を義務付けるものではありません。</p>
+        </section>
+
+        <section id="general">
+          <h2>18. 一般条項</h2>
+          <p>本規約、プライバシーポリシー、適用されるソフトウェアライセンスおよびストア規約、ならびに特定の製品について提示される追加規約は、ユーザーによる製品の利用に関する完全な合意を構成し、その事項に関する従前の協議に代わるものです。</p>
+          <p>条項が無効または執行不能である場合、必要最小限の範囲に限定され、その他の条項は引き続き効力を有します。当社が条項を執行しなかったとしても、権利放棄とはなりません。ユーザーは当社の同意なく本規約を譲渡できません。当社は、適用法令に従い、組織再編、合併、買収、製品の移転の一環として本規約を譲渡できます。</p>
+          <p>条項の見出しは便宜上のものです。「含む」は「これらに限られない」の意味を含みます。認められる場合、電子的な通知および同意は、紙による連絡と同じ効力を有します。</p>
+        </section>
+
+        <section id="stores">
+          <h2>19. アプリストア固有の規約</h2>
+          <h3>Appleから配布される複製物</h3>
+          <ul>
+            <li>本規約は、ユーザーとHealth.mdとの間のものであり、Appleとの間のものではありません。アプリおよびそのコンテンツについて責任を負うのはAppleではなくHealth.mdです。</li>
+            <li>ストアから配布される複製物の使用には、対象となるFamily Sharingまたは一括購入での利用を含め、AppleのUsage Rulesが適用されます。AGPLライセンス対象ソフトウェアに関する個別の権利には、引き続きAGPLが適用されます。</li>
+            <li>Appleは、保守またはサポートを提供する義務を負いません。適用される保証が満たされない場合、Appleの規則に基づいて購入代金の返金を受けるためAppleに通知できます。認められる最大限の範囲で、Appleはその他の保証義務を負いません。</li>
+            <li>本規約に従い、アプリに関する製造物責任、法令遵守、消費者保護、知的財産の請求に対応する責任を負うのは、AppleではなくHealth.mdです。</li>
+            <li>アプリの使用にあたっては、適用される第三者の規約を遵守しなければなりません。</li>
+            <li>Appleおよびその子会社は、本規約の第三者受益者であり、Appleから配布される複製物について本規約を執行できます。</li>
+          </ul>
+          <h3>Google Playから配布される複製物</h3>
+          <p>本規約は、ユーザーとHealth.mdとの間のものであり、Googleとの間のものではありません。Googleは、本規約に基づくアプリまたはサポートについて責任を負いません。ユーザーによる利用には、Google Playの該当する規約、ポリシー、アカウント規則も適用されます。Google Playの強行的な規約が本規約と抵触する場合、Googleから配布される複製物については当該強行規約が優先します。</p>
+        </section>
+
+        <section id="changes">
+          <h2>20. 本規約の変更</h2>
+          <p>当社は、製品、法令、当社の取扱いの変更に応じて本規約を更新することがあります。当社は改定された規約を掲載し、上記の日付を更新します。変更がユーザーの権利または利用に重大な影響を及ぼす場合、製品内、リリースノート、その他合理的な方法でもお知らせすることがあります。変更は効力発生日以後に適用され、法令で認められる場合、その日以後も利用を継続することで改定された本規約に同意したものとみなされます。</p>
+        </section>
+
+        <section id="contact">
+          <h2>21. お問い合わせ</h2>
+          <p>本規約に関するご質問は、<a href="mailto:legal@isolated.tech">legal@isolated.tech</a>までお寄せください。Health.mdは、Cody Bontecouが<a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>の名称で運営しています。</p>
+          <p>製品サポートについては、<a href="mailto:cody@isolated.tech">cody@isolated.tech</a>までメールでご連絡ください。通常のサポートメッセージまたは公開issueに、ヘルスレコード、エクスポート、認証情報、その他の機密データを含めないでください。</p>
+        </section>
+      </article>
     </div>
   </main>
 
-  <footer>
-    <div class="container">
-      <div class="footer-inner">
-        <p class="footer-text">© 2026 health.md. 丁寧に作りました。</p>
-        <div class="footer-links">
-          <a href="privacy-policy.html">プライバシーポリシー</a>
-          <a href="terms-of-service.html">利用規約</a>
-          <a href="mailto:cody@isolated.tech">サポート</a>
-        </div>
-      </div>
+  <footer class="site-footer">
+    <div class="footer-shell footer-inner">
+      <nav class="language-selector" aria-label="言語選択">
+        <span aria-current="page" lang="ja">日本語</span>
+        <span aria-hidden="true">/</span>
+        <a href="../terms-of-service.html" hreflang="en" lang="en">English</a>
+      </nav>
+      <a class="footer-brand" href="../ja/" aria-label="Health.md ホーム">health.md</a>
+      <nav class="footer-links" aria-label="フッターナビゲーション">
+        <a href="../ja/docs/">ドキュメント</a>
+        <a href="privacy-policy.html">プライバシー</a>
+        <a href="terms-of-service.html">利用規約</a>
+        <a href="mailto:cody@isolated.tech">サポート</a>
+      </nav>
     </div>
   </footer>
+
   <script src="../assets/analytics.js" defer></script>
 </body>
 </html>

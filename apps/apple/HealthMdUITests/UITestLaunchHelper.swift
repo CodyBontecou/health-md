@@ -32,6 +32,7 @@ enum UITestLaunchHelper {
         static let customStartDatePicker = "export.dateRange.custom.startDate"
         static let customEndDatePicker = "export.dateRange.custom.endDate"
         static let pathPreview = "export.pathPreview"
+        static let activityBanner = "export.activityBanner"
     }
 
     enum ExportModal {

@@ -1,614 +1,295 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko" dir="ltr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>개인정보 처리방침 — Health.md</title>
-  <meta name="description" content="Health.md 개인정보 처리방침: 건강 데이터는 사용자가 관리하는 기기와 대상에만 저장되며 제한된 가명 제품 분석에 건강 기록이나 내보내기 데이터가 포함되지 않습니다.">
+  <meta name="description" content="Health.md가 건강 데이터는 사용자가 관리하는 기기와 대상에 두면서 건강 정보가 포함되지 않은 제한적인 자사 분석을 이용하는 방식을 설명합니다.">
   <link rel="canonical" href="https://healthmd.app/ko/privacy-policy.html">
   <link rel="alternate" hreflang="en" href="https://healthmd.app/privacy-policy.html">
   <link rel="alternate" hreflang="ko" href="https://healthmd.app/ko/privacy-policy.html">
   <link rel="alternate" hreflang="x-default" href="https://healthmd.app/privacy-policy.html">
-  <meta name="robots" content="noindex,follow">
+  <meta name="robots" content="index,follow">
+  <meta name="theme-color" content="#fafaf8">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Health.md">
   <meta property="og:title" content="개인정보 처리방침 — Health.md">
-  <meta property="og:description" content="Health.md 개인정보 처리방침: 건강 데이터는 사용자가 관리하는 기기와 대상에만 저장되며 제한된 가명 제품 분석에 건강 기록이나 내보내기 데이터가 포함되지 않습니다.">
+  <meta property="og:description" content="건강 데이터는 사용자가 관리하는 기기와 대상에 남습니다. 제한적인 자사 분석에는 건강 기록이나 내보내기 데이터가 절대 포함되지 않습니다.">
   <meta property="og:url" content="https://healthmd.app/ko/privacy-policy.html">
   <meta property="og:locale" content="ko_KR">
   <meta property="og:locale:alternate" content="en_US">
-  <meta name="theme-color" content="#6d4aff">
   <link rel="icon" href="../favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" sizes="16x16" href="../assets/app-icon/icon_16x16.png">
-  <link rel="icon" type="image/png" sizes="20x20" href="../assets/app-icon/icon_20x20.png">
-  <link rel="icon" type="image/png" sizes="29x29" href="../assets/app-icon/icon_29x29.png">
   <link rel="icon" type="image/png" sizes="32x32" href="../assets/app-icon/icon_32x32.png">
-  <link rel="icon" type="image/png" sizes="40x40" href="../assets/app-icon/icon_40x40.png">
-  <link rel="icon" type="image/png" sizes="60x60" href="../assets/app-icon/icon_60x60.png">
   <link rel="icon" type="image/png" sizes="192x192" href="../assets/app-icon/icon_192x192.png">
-  <link rel="icon" type="image/png" sizes="1024x1024" href="../assets/app-icon/icon_1024x1024.png">
-  <link rel="apple-touch-icon" sizes="76x76" href="../assets/app-icon/icon_76x76.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="../assets/app-icon/icon_120x120.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="../assets/app-icon/icon_152x152.png">
-  <link rel="apple-touch-icon" sizes="167x167" href="../assets/app-icon/icon_167x167.png">
   <link rel="apple-touch-icon" sizes="180x180" href="../assets/app-icon/icon_180x180.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <script src="../assets/theme.js"></script>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg-primary: #f4f2f8;
-      --bg-secondary: #fbfaff;
-      --bg-tertiary: #e9e5f1;
-      --text-primary: #202024;
-      --text-secondary: #42404a;
-      --text-muted: #6f6a7c;
-      --accent: #6d4aff;
-      --accent-dim: #4f2bbd;
-      --accent-glow: rgba(109, 74, 255, 0.14);
-      --border: #d4cde0;
-      --success: #9b5cf6;
-      --on-accent: #ffffff;
-      --mono: 'JetBrains Mono', 'Space Mono', monospace;
-    }
-
-    :root[data-theme="dark"] {
-      color-scheme: dark;
-      --bg-primary: #18181d;
-      --bg-secondary: #24222c;
-      --bg-tertiary: #211f28;
-      --text-primary: #f0eef7;
-      --text-secondary: #d3cedf;
-      --text-muted: #aaa3b8;
-      --accent: #a78bfa;
-      --accent-dim: #6d4aff;
-      --accent-glow: rgba(167, 139, 250, 0.18);
-      --border: #3b3549;
-      --success: #c4b5fd;
-      --on-accent: #ffffff;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        color-scheme: dark;
-        --bg-primary: #18181d;
-        --bg-secondary: #24222c;
-        --bg-tertiary: #211f28;
-        --text-primary: #f0eef7;
-        --text-secondary: #d3cedf;
-        --text-muted: #aaa3b8;
-        --accent: #a78bfa;
-        --accent-dim: #6d4aff;
-        --accent-glow: rgba(167, 139, 250, 0.18);
-        --border: #3b3549;
-        --success: #c4b5fd;
-        --on-accent: #ffffff;
-      }
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
-
-    body {
-      font-family: var(--mono);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 17px;
-      line-height: 1.75;
-      -webkit-text-size-adjust: 100%;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-      opacity: 0.03;
-      pointer-events: none;
-      z-index: 1000;
-    }
-
-    .grid-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image:
-        linear-gradient(var(--border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--border) 1px, transparent 1px);
-      background-size: 60px 60px;
-      opacity: 0.15;
-      pointer-events: none;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-      position: relative;
-      z-index: 1;
-    }
-
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 20px 0;
-      background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
-    }
-
-    .header-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      text-decoration: none;
-    }
-
-    .logo-content {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .logo-mark {
-      width: 36px;
-      height: 36px;
-      border: 2px solid var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .logo-mark::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-
-    .logo-text {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-primary);
-    }
-
-    .logo-subtext {
-      font-size: 12px;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-      margin-top: 4px;
-    }
-
-    .logo-subtext a {
-      color: var(--text-muted);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .logo-subtext a:hover {
-      color: var(--accent);
-    }
-
-    .back-link {
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 13px;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      transition: color 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .back-link:hover {
-      color: var(--accent);
-    }
-
-    .header-actions {
-      min-width: 0;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .language-selector {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-secondary);
-      font-size: 12px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .language-selector a {
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .language-selector a:hover {
-      color: var(--accent);
-    }
-
-    .language-selector [aria-current="page"] {
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .theme-toggle {
-      flex: 0 0 auto;
-      display: inline-grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      align-items: center;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 2px;
-      background: var(--bg-secondary);
-    }
-
-    .theme-toggle button {
-      min-width: 44px;
-      border: 0;
-      border-radius: 6px;
-      padding: 6px 8px;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      font: 700 10px/1 var(--mono);
-      text-transform: uppercase;
-    }
-
-    .theme-toggle button[aria-pressed="true"] {
-      background: var(--accent);
-      color: var(--on-accent);
-    }
-
-    main {
-      padding-top: 140px;
-      padding-bottom: 80px;
-      min-height: 100vh;
-    }
-
-    .page-header {
-      margin-bottom: 60px;
-    }
-
-    .page-label {
-      font-size: 12px;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .page-title {
-      font-size: clamp(40px, 7vw, 56px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 16px;
-      line-height: 1.05;
-    }
-
-    .page-meta {
-      font-size: 15px;
-      color: var(--text-muted);
-    }
-
-    .content-box {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 52px;
-      margin-bottom: 32px;
-    }
-
-    .content-box h2 {
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      margin-top: 40px;
-      color: var(--text-primary);
-      line-height: 1.2;
-    }
-
-    .content-box h2:first-child {
-      margin-top: 0;
-    }
-
-    .content-box h3 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      margin-top: 32px;
-      color: var(--text-primary);
-      line-height: 1.3;
-    }
-
-    .content-box p {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 18px;
-      line-height: 1.9;
-    }
-
-    .content-box ul {
-      margin: 20px 0;
-      padding-left: 0;
-      list-style: none;
-    }
-
-    .content-box ul li {
-      font-size: 17px;
-      color: var(--text-secondary);
-      margin-bottom: 14px;
-      padding-left: 28px;
-      position: relative;
-      line-height: 1.9;
-    }
-
-    .content-box ul li::before {
-      content: '→';
-      position: absolute;
-      left: 0;
-      color: var(--accent);
-      font-weight: 600;
-    }
-
-    .content-box strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .highlight-box {
-      background: var(--accent-glow);
-      border: 1px solid var(--accent-dim);
-      border-radius: 4px;
-      padding: 24px;
-      margin: 32px 0;
-    }
-
-    .highlight-box p {
-      margin-bottom: 0;
-      color: var(--text-primary);
-    }
-
-    footer {
-      padding: 40px 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .footer-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-text {
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      font-size: 14px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer-links a:hover {
-      color: var(--accent);
-    }
-
-    @media (max-width: 768px) {
-      header {
-        padding: 16px 0;
-      }
-
-      .header-inner {
-        align-items: flex-start;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-
-      .header-actions {
-        margin-left: auto;
-      }
-
-      .content-box {
-        padding: 30px 22px;
-      }
-
-      .page-title {
-        font-size: 38px;
-      }
-
-      .content-box p,
-      .content-box ul li {
-        font-size: 16px;
-      }
-
-      .footer-inner {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-
-      .footer-links {
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 560px) {
-      main {
-        padding-top: 152px;
-      }
-
-      .container,
-      .header-inner {
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .logo-subtext {
-        display: none;
-      }
-
-      .page-label,
-      .back-link {
-        font-size: 12px;
-      }
-
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-        flex-wrap: wrap;
-      }
-
-      .theme-toggle button {
-        min-width: 38px;
-        padding: 6px;
-        font-size: 9px;
-      }
-
-      .content-box {
-        padding: 24px 18px;
-      }
-    }
-
-    @media (max-width: 420px) {
-      .back-link,
-      .theme-toggle {
-        width: 100%;
-      }
-
-      .back-link {
-        justify-content: center;
-      }
-
-      .theme-toggle button {
-        min-width: 0;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="../assets/theme-icons.css">
+  <link rel="stylesheet" href="../assets/landing.css">
+  <link rel="stylesheet" href="../assets/legal.css">
 </head>
-<body>
-  <div class="grid-bg"></div>
+<body class="legal-page">
+  <a class="skip-link" href="#privacy-policy">개인정보 처리방침으로 건너뛰기</a>
 
-  <header>
-    <div class="header-inner">
-      <a href="../index.html" class="logo">
-        <div class="logo-mark"></div>
-        <div class="logo-content">
-          <span class="logo-text">health.md</span>
-          <span class="logo-subtext">제작: <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a></span>
-        </div>
+  <header class="site-header">
+    <div class="header-shell">
+      <a class="brand" href="../ko/" aria-label="Health.md 홈">
+        <span class="brand-name">health.md</span>
       </a>
-      <div class="header-actions">
-        <a href="../index.html" class="back-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          뒤로
-        </a>
-        <nav class="language-selector" aria-label="언어 선택"><span aria-current="page" lang="ko">한국어</span><span aria-hidden="true">/</span><a href="../privacy-policy.html" hreflang="en" lang="en">English</a></nav>
-        <div class="theme-toggle" role="group" aria-label="색상 테마">
-          <button type="button" data-theme-option="system" aria-pressed="true">자동</button>
-          <button type="button" data-theme-option="light" aria-pressed="false">밝게</button>
-          <button type="button" data-theme-option="dark" aria-pressed="false">어둡게</button>
-        </div>
+      <div class="header-nav">
+        <nav aria-label="기본 탐색">
+          <a class="header-docs-link" href="../ko/docs/">문서</a>
+          <a class="header-docs-link" href="../ko/">홈</a>
+        </nav>
       </div>
     </div>
   </header>
 
-  <main>
-    <div class="container">
-      <div class="page-header">
-        <p class="page-label">법률 문서 · 미게시 번역 초안</p>
-        <h1 class="page-title">개인정보 처리방침</h1>
-        <p class="page-meta">최종 업데이트: 2026년 8월 2일</p><p class="page-meta"><strong>번역 안내:</strong> 이 한국어 번역은 편의를 위한 미게시 초안입니다. 상충하거나 해석상 차이가 있는 경우 <a href="../privacy-policy.html" hreflang="en" lang="en">영문 원본</a>이 우선하며 법적 효력을 가집니다.</p>
-      </div>
+  <main class="legal-main" id="privacy-policy">
+    <section class="legal-hero" aria-labelledby="privacy-title">
+      <div class="legal-hero-inner">
+        <p class="legal-eyebrow">법률 · 개인정보 보호</p>
+        <h1 id="privacy-title">개인정보 보호를<br>쉬운 말로 설명합니다.</h1>
+        <p class="legal-updated">최종 업데이트: 2026년 8월 6일</p>
+        <p class="legal-lede">Health.md는 Health.md 건강 데이터 클라우드를 만들지 않고 민감한 건강 데이터를 이동합니다. 사용자의 기기가 사용자가 승인한 기록을 읽으며, 각 내보내기 또는 직접 응답을 어디로 보낼지는 사용자가 선택합니다.</p>
 
-      <div class="content-box">
-        <div class="highlight-box"><p><strong>요약:</strong> Health.md는 Health.md 서버에서 건강 데이터를 수집하거나 저장하지 않습니다. HealthKit 및 Health Connect 데이터는 사용자의 기기에서 처리되며 폴더, 파일 제공자, 페어링된 기기 또는 사용자가 구성한 API 엔드포인트 등 사용자가 선택한 대상으로만 전송됩니다. 앱은 타사 분석·광고·기여도 SDK 없이 제한된 자사 제품 분석을 자동 수집합니다. 이러한 이벤트에는 건강 값, 측정 항목 이름, 건강 날짜, 내보낸 콘텐츠, 경로, 피어 이름, 자격 증명 또는 사용자 텍스트가 포함되지 않으며 광고나 앱 간 추적에 사용되지 않습니다.</p></div>
-<h2>개인정보 보호에 대한 약속</h2><p>건강 데이터는 사용자의 것입니다. Health.md는 플랫폼 권한을 받은 뒤에만 이를 읽으며 서버 사본을 보관하지 않습니다. 이 정책은 사용자가 지시하는 내보내기와 전송, 제한된 자사 제품·웹사이트 분석 및 최소화된 자사 캠페인 기여도 측정을 설명합니다.</p>
-<h2>데이터 수집</h2><p><strong>내보내기에 Health.md 계정은 필요하지 않으며 건강 데이터를 Health.md 서버로 전송하지 않습니다.</strong> 구체적으로:</p><ul><li>건강 데이터 내보내기에 계정 생성이나 등록이 필요하지 않습니다</li><li>Health.md 서비스는 HealthKit 샘플, Health Connect 기록, 내보내기 문서, 타입 지정 쿼리 결과 또는 건강 첨부 파일을 수집하거나 보관하지 않습니다</li><li>앱에 타사 분석, 기여도, 충돌 보고, 광고 또는 추적 SDK가 없습니다</li><li>제품 분석이나 캠페인 기여도에 Advertising ID, Android ID, 하드웨어 ID, 추적 픽셀, 건강 샘플, 내보내기 콘텐츠 또는 파일·폴더 경로가 포함되지 않습니다</li><li>제한된 자사 제품 및 캠페인 데이터는 아래 설명에 따라서만 수집됩니다</li></ul>
-<h2>자사 캠페인 기여도</h2><p>Health.md는 타사 기여도 SDK 없이 캠페인의 종합 성과를 측정하기 위해 <code>healthmd.app/v/yt-csv-001</code> 같은 자사 캠페인 링크를 사용합니다. Cloudflare 리디렉션 서비스는 캠페인 토큰, 링크 슬러그, 캠페인 플랫폼과 콘텐츠 관점, 대략적인 대상·클라이언트 범주, 제공된 경우 참조 호스트 이름, 대략적인 국가 코드 및 타임스탬프를 기록합니다. 저장되는 클릭 행에는 IP 주소나 전체 User-Agent가 포함되지 않습니다.</p><p>Android에서는 Google Play Install Referrer가 해당 설치를 캠페인과 연결할 수 있습니다. 유효한 캠페인 설치의 경우 앱은 무작위로 생성한 설치 및 이벤트 UUID, 앱 버전과 빌드 번호, 검증된 캠페인 토큰·소스·매체·콘텐츠 메타데이터, 이벤트 시간, 선택적 Play 참조 클릭 및 설치 시작 타임스탬프가 담긴 이벤트 하나를 전송합니다. 무작위 설치 UUID는 해당 설치의 지속적인 가명 식별자이며 기기 또는 광고 식별자에서 파생되지 않습니다. Health.md는 전체 원시 Install Referrer를 저장하거나 전송하지 않습니다.</p><p>캠페인 클릭과 기여 설치는 종합 보고를 위해 검증된 캠페인 토큰으로만 결합됩니다. 캠페인 기여도 기록은 최대 13개월 보관됩니다. 종합 수집 속도 카운터에는 1분 단위 구간과 건수만 포함되며 24시간 뒤 삭제됩니다. Cloudflare는 자체 약관에 따라 일반 네트워크 연결 정보를 처리하지만, Health.md는 설치 기여도 기록에 IP 주소, 전체 User-Agent, Cloudflare 요청 ID, 쿠키 또는 지문 정보를 추가하지 않습니다.</p>
-<h2>자사 제품 분석</h2><p>Health.md는 타사 분석 SDK 없이 대략적인 온보딩, 활성화, 내보내기, 결제 화면 및 구매 흐름 성과를 파악하기 위해 자사 Cloudflare Worker와 D1 데이터베이스를 사용합니다. 앱은 무작위 설치 UUID와 이벤트 UUID, 이벤트 이름, 앱 버전·빌드·플랫폼, 그리고 관련 허용 목록 필드만 전송합니다. 여기에는 온보딩 단계 또는 명시적 설정 건너뛰기, 무료 내보내기 횟수, 내보내기 대상 범주, 형식 수, 측정 항목 수와 기간 구간, 결제 화면 맥락, StoreKit 또는 Google Play 제품 식별자, 구매·복원 결과, 대략적인 권한 또는 오류 범주가 포함됩니다.</p><p>제품 분석에는 HealthKit 또는 Health Connect 값·식별자, 측정 항목 이름, 건강 날짜, 약물, 운동, 내보내기 내용, 타입 지정 쿼리 결과, 폴더·보관함·파일 이름이나 경로, 피어·기기 이름, 계정 데이터, 자격 증명·토큰, 사용자 텍스트, Advertising ID, Android ID, 하드웨어 식별자, 원시 리퍼러, 전체 User-Agent 또는 저장된 IP 주소가 절대 포함되지 않습니다. 알 수 없는 엔벨로프, 이벤트, 속성 및 속성 값 필드는 수집 서비스에서 거부됩니다. 무작위 설치 UUID는 앱 설치 기간 동안 유지되는 가명 식별자이며 기기, 계정, 광고 또는 건강 식별자에서 파생되지 않습니다.</p><p>이 제한된 제품 이벤트는 자동 수집되지만 광고주와 공유하거나 광고, 지문 인식 또는 앱 간 추적에 사용하지 않습니다. 공개 클라이언트와 Worker 허용 목록은 건강 기록 및 내보낸 콘텐츠를 분석 페이로드로 표현할 수 없도록 설계되었습니다.</p><p>검증된 분석 행은 최대 13개월 보관된 뒤 매일 자동 삭제됩니다. Health.md는 원시 IP 주소, 전체 User-Agent, 요청 URL·헤더, 자격 증명 또는 검증된 이벤트 필드 외의 요청 본문을 분석 행에 추가하지 않습니다. Cloudflare는 자체 약관에 따라 일반 네트워크 연결 정보를 처리합니다.</p>
-<h2>앱 작동 방식</h2><p>Health.md는 Apple의 HealthKit API로 Apple Health 데이터를, Health Connect로 Android 건강 데이터를 기기에서 읽습니다. HealthKit 내보내기의 원본은 iPhone이고 Health Connect 내보내기의 원본은 Android이며, Mac 동기화를 활성화하면 Mac 앱이 로컬 대상이 될 수 있습니다. 이 데이터는:</p><ul><li>명시적으로 내보내지 않는 한 Apple HealthKit 데이터베이스 또는 Android Health Connect에 남습니다</li><li>요청한 내보내기를 위해 기기에서 처리됩니다</li><li>파일, iCloud Drive, Android 문서 제공자, 타사 파일 제공자, Obsidian 보관함, 페어링된 Mac이나 CLI 또는 사용자가 구성한 API 엔드포인트 등 선택한 대상으로만 내보내집니다</li><li>Health.md 건강 데이터베이스에 업로드되거나 추후 조회를 위해 Health.md에 보관되지 않습니다</li></ul>
-<h2>Android Health Connect 의료 기록</h2><p>Health.md는 읽기 전용 건강 데이터 이동성 및 개인 기록 관리 앱입니다. 지원되는 Android 기기에서 사용자가 직접 승인한 의료 리소스를 <strong>의료 기록(FHIR)</strong> 내보내기 기능으로 읽을 수 있습니다. Health Connect가 개인 의료 기록을 다음 범주로 구분하므로 각 범주에 별도 읽기 권한을 요청합니다:</p><ul><li><strong>백신:</strong> 예방 접종 이력</li><li><strong>알레르기 및 불내증:</strong> AllergyIntolerance 기록</li><li><strong>질환:</strong> 진단 및 문제 목록 이력</li><li><strong>검사 결과:</strong> 검사 Observation 기록</li><li><strong>약물:</strong> Medication, MedicationRequest 및 MedicationStatement 기록</li><li><strong>개인 정보:</strong> 사용자의 기록을 식별하고 인구통계학적 맥락을 제공하는 Patient 기록</li><li><strong>의료인 정보:</strong> 진료 기록에서 참조하는 Practitioner 및 PractitionerRole 기록</li><li><strong>임신:</strong> 임신 관련 의료 기록</li><li><strong>시술:</strong> Procedure 이력</li><li><strong>사회력:</strong> 원본 시스템이 기록한 생활 방식 및 임상 맥락 관찰</li><li><strong>방문:</strong> Encounter 및 진료 방문 이력</li><li><strong>활력 징후:</strong> 의료 기록에 저장된 임상 활력 징후 관찰</li></ul><p>이 권한은 사용자가 시작하거나 예약한 내보내기에 승인된 범주를 포함하는 데만 사용됩니다. JSON 및 제공자 기본 형식은 Health Connect가 제공한 FHIR 리소스 데이터와 원본 메타데이터를 보존하며 Markdown과 CSV 요약은 범주별 의료 리소스 수를 표시합니다. Health.md는 진단하거나 치료를 권고하거나 Health Connect에 쓰지 않으며, 건강 데이터를 광고, 프로파일링, 신용, 보험 또는 고용 결정에 사용하지 않습니다.</p><p>모든 범주는 선택 사항이며 언제든 거부하거나 철회할 수 있습니다. 다른 승인된 내보내기는 계속 작동합니다. 서버 사본은 보관하지 않으며 내보낸 기록은 사용자가 해당 대상의 제어 기능으로 삭제할 때까지 선택한 대상에 남습니다.</p>
-<h2>데이터 저장</h2><p>Health.md는 Apple Health, Health Connect 또는 기타 건강 데이터를 Health.md 서버에 저장하지 않습니다:</p><ul><li><strong>원본 데이터:</strong> Apple Health 데이터는 HealthKit에, Android 건강 데이터는 Health Connect에 남습니다</li><li><strong>내보낸 데이터:</strong> Markdown, Obsidian, CSV 및 JSON 파일은 선택한 대상에 기록됩니다</li><li><strong>직접 전송:</strong> 페어링된 Mac과 CLI는 모바일 원본에서 직접 데이터를 받고 자체 로컬 작업 상태를 유지합니다</li><li><strong>파일 제공자 동기화:</strong> iCloud Drive, Dropbox, Google Drive, Working Copy, Syncthing, OneDrive 등은 자체 약관에 따라 저장·동기화합니다</li><li><strong>API 엔드포인트:</strong> 구성된 경우 선택한 내보내기가 직접 전송되며 해당 서비스의 보안·로그·보관·삭제 정책을 따릅니다</li><li><strong>앱 환경설정:</strong> 일정, 폴더, 템플릿, 연결 및 잠금 해제 설정은 플랫폼 저장소, StoreKit 또는 Google Play Billing에 저장됩니다</li></ul><p>당사는 원본 건강 데이터베이스, 로컬 내보내기 파일 또는 사용자가 제어하는 대상에 접근할 수 없습니다. 별도의 분석 및 캠페인 기록에는 건강 데이터나 내보내기 콘텐츠가 없습니다.</p>
-<h2>타사 서비스</h2><p>앱에는 광고 SDK, 타사 분석·기여도 SDK 또는 타사 추적이 없습니다. 앱은 플랫폼 서비스, 자사 인프라 및 사용자가 선택한 대상과 상호작용합니다:</p><ul><li><strong>Apple HealthKit:</strong> 명시적 권한으로 기기에서 Apple Health 데이터를 읽기 위해</li><li><strong>Android Health Connect:</strong> 명시적 권한으로 기기에서 Android 건강 기록을 읽기 위해</li><li><strong>선택적 건강 제공자 API:</strong> 직접 가져오기를 명시적으로 활성화한 경우 제공자 OAuth를 사용하고 토큰을 기기에 저장할 수 있습니다</li><li><strong>Apple 파일, Android Storage Access Framework 및 파일 제공자:</strong> 선택한 폴더에 파일을 쓰기 위해</li><li><strong>StoreKit, App Store 및 Google Play Billing:</strong> 일회성 Full Access 구매·복원을 위해</li><li><strong>Google Play Install Referrer:</strong> Android에서 유효한 캠페인 설치를 정제된 자사 메타데이터와 연결하기 위해</li><li><strong>Cloudflare:</strong> 허용 목록 분석, 캠페인 리디렉션, 최소화된 D1 기록, 보관 정리, 종합 오용 제한 및 웹사이트 제공·분석을 위해</li><li><strong>로컬 네트워크/근거리 연결:</strong> Mac 동기화 시 선택적 Mac 대상을 찾고 기록하기 위해</li></ul>
-<h2>웹사이트 분석</h2><p>healthmd.app은 간단한 분석 게이트 확인 후 Cloudflare Web Analytics로 종합 트래픽, 성능 및 인기 페이지를 파악합니다. 이 사이트에서는 클라이언트 쿠키를 사용하지 않으며 건강 데이터, 내보낸 파일, 구매 상태 또는 앱 설정과 연결되지 않습니다.</p><p>Google Fonts나 jsDelivr 같은 타사 CDN에 글꼴·자산을 요청할 수 있으며, 해당 제공자는 자체 정책에 따라 IP 주소, 브라우저, 참조 페이지 및 요청 URL 같은 표준 웹 요청 정보를 받을 수 있습니다.</p>
-<h2>네트워크 활동</h2><p><strong>로컬 내보내기는 건강 데이터를 Health.md로 보내지 않습니다.</strong> 네트워크 활동은 사용자가 시작한 기능이나 플랫폼 서비스로 제한됩니다:</p><ul><li>Full Access의 StoreKit, App Store 및 Google Play 구매·복원</li><li>Mac 대상을 활성화한 경우 로컬 네트워크 탐색·전송</li><li>선택한 폴더의 iCloud Drive, Android 문서 제공자 또는 타사 파일 제공자 동기화</li><li>지원되는 직접 건강 원본을 명시적으로 연결한 경우 OAuth 또는 API 요청</li><li>모바일 원본이 사용 가능할 때 명시적으로 페어링된 CLI 또는 MCP 클라이언트의 실시간 직접 쿼리</li><li>명시적으로 구성한 HTTPS API 엔드포인트로 사용자가 요청한 내보내기 전송</li><li>App Store 또는 Google Play의 앱 업데이트</li><li>앞서 설명한 허용 목록 기반 자사 제품 분석</li><li>앞서 설명한 자사 캠페인 리디렉션 및 Android 설치 기여도</li><li>브라우저로 healthmd.app 방문 시 웹사이트 분석 및 CDN 요청</li></ul>
-<h2>권한</h2><p>Health.md는 다음 플랫폼 권한을 요청할 수 있습니다:</p><ul><li><strong>건강 데이터(HealthKit):</strong> 사용자가 선택한 범주를 읽습니다. iOS 설정 → 건강 → 데이터 접근 및 기기 → Health.md에서 변경할 수 있습니다.</li><li><strong>Health Connect 피트니스 및 웰니스 데이터:</strong> 승인한 특정 Android 범주를 읽습니다.</li><li><strong>Health Connect 의료 기록:</strong> 위 FHIR 내보내기의 각 의료 범주를 별도로 읽습니다.</li><li><strong>파일 시스템 접근:</strong> Apple 파일 선택기 또는 Android Storage Access Framework로 선택한 위치에 파일을 씁니다.</li><li><strong>로컬 네트워크:</strong> Mac 동기화 시 Mac 컴패니언을 찾고 작업을 보냅니다.</li><li><strong>알림:</strong> 예약 내보내기에 수동 조치가 필요하거나 완료되었을 때 알립니다.</li></ul><p>권한은 명시된 목적으로만 사용되며 플랫폼 설정에서 언제든 철회할 수 있습니다.</p>
-<h2>아동의 개인정보</h2><p>Health.md는 광고나 아동 대상 프로파일링을 위해 이름, 연락처, 건강 데이터 또는 계정 프로필을 요구하지 않습니다. 웹사이트 및 캠페인 측정은 종합 성과 측정을 위한 것이며 아동 대상 광고·프로파일링을 위한 것이 아닙니다.</p>
-<h2>데이터 보안</h2><p>Health.md는 각 저장 경로에 적합한 기술적·조직적 보호 조치를 사용합니다:</p><ul><li>건강 데이터는 Apple·Android 기기 보안과 HealthKit·Health Connect 권한으로 보호됩니다</li><li>내보낸 파일은 저장한 파일 시스템, 보관함, 클라우드 드라이브, 문서 제공자 또는 Mac 폴더로 보호됩니다</li><li>보호되는 API 엔드포인트 내보내기 모드에는 HTTPS가 필요하며 대상 서비스가 저장·보관을 제어합니다</li><li>직접 Mac·CLI 전송은 인증·암호화 채널, 제한된 프레임, 무결성 검사 및 명시적 페어링을 사용합니다</li><li>기기 암호 사용, 운영체제 업데이트 및 동기화 제공자 권한 검토를 권장합니다</li></ul>
-<h2>사용자의 권리와 제어</h2><p>제품 분석 및 캠페인 기록은 가명 처리되며 13개월 안에 자동 만료됩니다. 사용자는 원본 권한, 로컬 기여도 상태, 직접 페어링 및 내보낸 파일을 제어합니다:</p><ul><li><strong>접근:</strong> 원본은 Apple Health·Health Connect에서, 파일은 선택한 대상에서 관리합니다</li><li><strong>권한 변경:</strong> 관련 앱이나 플랫폼에서 모든 권한 및 페어링을 철회할 수 있습니다</li><li><strong>제품 분석:</strong> 엄격한 필드 제외 조건에 따라 자동 수집되며 13개월 안에 만료됩니다</li><li><strong>삭제:</strong> 대상에서 파일을 삭제합니다. 앱 제거는 로컬 상태만 지우며 이미 전송된 파일은 삭제하지 않습니다. 분석 행은 자동 만료됩니다.</li><li><strong>이동성:</strong> 내보낸 Markdown, Obsidian, CSV 및 JSON 파일은 Health.md 밖에서도 사용할 수 있습니다</li><li><strong>캠페인 문의:</strong> 기록은 위 기간에 따라 만료되며 개인정보 문의는 당사에 연락하십시오</li></ul>
-<h2>정책 변경</h2><p>개인정보 처리 방식이 중요하게 바뀌면 이 정책을 갱신하고 앱 또는 웹사이트 업데이트로 알립니다. 위의 “최종 업데이트” 날짜는 변경일을 나타냅니다.</p>
-<h2>오픈 소스</h2><p>Health.md 데이터 처리 로직 일부는 오픈 소스 또는 문서로 공개되어 내보내기 생성 과정을 감사할 수 있습니다. 현재 공개 범위는 문서나 저장소에서 확인하십시오.</p>
-<h2>문의</h2><p>이 정책 또는 health.md의 작동 방식에 관한 문의:</p><p><strong>이메일:</strong> privacy@isolated.tech<br><strong>웹사이트:</strong> https://isolated.tech</p>
-<h2>관할권</h2><p>이 정책은 health.md가 운영되는 관할권의 법률을 따릅니다. 위에서 설명한 가명 제품 분석, 캠페인 기여도, 웹사이트 분석, 제공자 OAuth·CDN 요청 및 기타 비건강 데이터 처리는 위치에 따라 관련 개인정보 보호법의 적용을 받을 수 있습니다.</p>
+        <div class="legal-promise" role="list" aria-label="개인정보 보호 원칙">
+          <div role="listitem">
+            <span>01</span>
+            <strong>Health.md 건강 데이터 클라우드 없음</strong>
+            <p>당사는 사용자의 건강 기록, 내보내기 데이터 또는 직접 쿼리 결과의 서버 사본을 보관하지 않습니다.</p>
+          </div>
+          <div role="listitem">
+            <span>02</span>
+            <strong>대상은 사용자가 선택</strong>
+            <p>파일, 페어링된 컴퓨터, 연결된 제공자 및 API 엔드포인트는 사용자의 지시에 따릅니다.</p>
+          </div>
+          <div role="listitem">
+            <span>03</span>
+            <strong>분석에 건강 정보 미포함</strong>
+            <p>제한적인 자사 이벤트는 건강 기록이나 내보내기 내용을 나타낼 수 없는 대략적인 필드만 사용합니다.</p>
+          </div>
+        </div>
       </div>
+    </section>
+
+    <div class="legal-shell">
+      <aside class="legal-toc">
+        <p class="legal-toc-title">이 방침의 내용</p>
+        <nav aria-label="개인정보 처리방침 섹션">
+          <ol>
+            <li><a href="#scope">적용 범위</a></li>
+            <li><a href="#health-data">건강 데이터</a></li>
+            <li><a href="#destinations">전송 대상</a></li>
+            <li><a href="#medical-records">Android 의료 기록</a></li>
+            <li><a href="#product-analytics">제품 분석</a></li>
+            <li><a href="#campaigns">캠페인 기여도 측정</a></li>
+            <li><a href="#operations">예약 및 지원</a></li>
+            <li><a href="#website">웹사이트 데이터</a></li>
+            <li><a href="#retention">저장 및 보관</a></li>
+            <li><a href="#services">이용하는 서비스</a></li>
+            <li><a href="#security">보안</a></li>
+            <li><a href="#choices">사용자의 선택과 권리</a></li>
+            <li><a href="#children">아동</a></li>
+            <li><a href="#changes">변경</a></li>
+            <li><a href="#contact">문의</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <article class="policy-content">
+        <section id="scope">
+          <h2>이 방침의 적용 범위</h2>
+          <p>이 방침은 iPhone, iPad, Mac 및 Android용 Health.md 소비자 앱, 함께 제공되는 Mac CLI 및 MCP 도우미와 제공되는 경우의 휴대용 도구, healthmd.app과 그 문서, 그리고 이러한 제품을 지원하는 자사 서비스를 설명합니다. Health.md는 Cody Bontecou가 isolated.tech라는 이름으로 운영하며, 여기서는 이를 “Health.md”, “당사” 또는 “저희”라고 합니다.</p>
+          <p>이 방침은 Apple, Google, 건강 정보 제공자, 파일 또는 동기화 제공자, API 운영자, AI 도구 또는 사용자가 선택하는 다른 대상의 개인정보 보호 약관을 대체하지 않습니다. 사용자가 해당 서비스 중 하나로 데이터를 보내면 그 서비스가 보유한 사본에는 해당 서비스의 약관과 사용자의 설정이 적용됩니다.</p>
+          <div class="policy-note">
+            <p><strong>간단히 말하면:</strong> Health.md는 Health.md 서버에서 건강 데이터를 수집하거나 저장하지 않습니다. 건강 데이터는 사용자의 기기에서 처리되며 사용자가 선택한 대상이나 클라이언트로만 전송됩니다.</p>
+            <p>당사는 제한적인 자사 제품 분석 및 캠페인 데이터를 자동으로 수집합니다. 이러한 시스템은 가명 방식이고 건강 기록이나 내보내기 데이터를 포함하지 않으며 광고에 사용되지 않습니다.</p>
+          </div>
+          <div class="policy-note">
+            <p><strong>번역 안내:</strong> 이 한국어 번역은 편의를 위해 제공됩니다. 내용이 상충하는 경우 <a href="../privacy-policy.html" hreflang="en">영문본</a>은 관련 법률이 허용하는 범위에서만 우선하며, 강행적인 소비자 권리를 제한하지 않습니다.</p>
+          </div>
+        </section>
+
+        <section id="health-data">
+          <h2>사용자의 지시에 따라 처리하는 건강 데이터</h2>
+          <p>Health.md는 플랫폼 권한과 사용자 동작을 이용하여 건강 데이터를 읽거나 수신합니다. 기기 및 사용 설정한 기능에 따라 다음이 포함될 수 있습니다.</p>
+          <ul>
+            <li><strong>Apple Health:</strong> iPhone 또는 iPad에서 사용자가 승인한 HealthKit 및 WorkoutKit 범주입니다.</li>
+            <li><strong>Android 건강 데이터:</strong> Health Connect를 통해 사용자가 승인한 피트니스, 웰니스, 활동, 신체, 영양, 생식 건강, 활력 징후 및 의료 기록입니다.</li>
+            <li><strong>연결된 제공자:</strong> 사용자가 해당 제공자를 연결하고 접근을 승인한 후에만 지원되는 제공자에서 가져오는 기록입니다.</li>
+            <li><strong>직접 요청:</strong> 모바일 원본을 이용할 수 있는 동안 명시적으로 페어링된 Mac, CLI 또는 MCP 클라이언트가 요청하는 범위가 한정된 쿼리나 내보내기입니다.</li>
+          </ul>
+          <p>Health.md의 건강 정보 접근은 읽기 전용입니다. 당사는 HealthKit 또는 Health Connect에 진단이나 치료 내용을 쓰지 않으며 건강 데이터를 광고, 프로파일링, 신용, 보험 또는 고용 결정에 사용하지 않습니다.</p>
+          <p>내보내기 데이터는 매우 민감할 수 있습니다. 무손실 파일과 직접 결과에는 정확한 타임스탬프, 원본 UUID, 출처, 이동 경로와 위치, 약물, 정신적 웰빙 항목, ECG 값, 임상 내용, 문서 및 바이너리 첨부 파일이 보존될 수 있습니다. 원본 건강 데이터베이스와 동일하게 보호하십시오. 현재 Apple App Store 빌드는 과거 임상 기록을 요청하지 않으며, Android 의료 기록 접근은 아래에서 별도로 설명합니다.</p>
+        </section>
+
+        <section id="destinations">
+          <h2>건강 데이터가 전송될 수 있는 곳</h2>
+          <p>건강 데이터는 사용자가 선택한 기능에 필요한 경우에만 원본에서 벗어납니다. Health.md는 선택한 데이터를 다음 위치로 전송하거나 기록할 수 있습니다.</p>
+          <ul>
+            <li><strong>파일 및 보관함:</strong> 기기 내 폴더, Apple 파일, Android Storage Access Framework, Obsidian 보관함 또는 다른 파일 제공자입니다.</li>
+            <li><strong>클라우드 연동 폴더:</strong> 선택한 폴더가 해당 서비스와 동기화되는 경우 iCloud Drive, Dropbox, Google Drive, OneDrive, Syncthing, Working Copy 또는 다른 제공자입니다.</li>
+            <li><strong>페어링된 컴퓨터:</strong> 인증되고 암호화된 직접 연결을 통한 승인된 Mac 또는 독립 실행형 CLI입니다.</li>
+            <li><strong>로컬 도구 및 에이전트:</strong> 사용자가 구성하는 CLI 또는 MCP 클라이언트입니다. 이후 결과에는 해당 도구의 저장, 대화 기록 및 모델 제공자 설정이 적용됩니다.</li>
+            <li><strong>사용자의 API 엔드포인트:</strong> 사용자가 선택한 내보내기 데이터를 수신하도록 사용자가 구성한 API 엔드포인트입니다. 보호되는 엔드포인트 모드에는 HTTPS가 필요합니다.</li>
+            <li><strong>연결된 건강 정보 제공자:</strong> 사용자가 연결을 승인한 후 시작되는 읽기 전용 제공자 요청입니다.</li>
+          </ul>
+          <p>Health.md는 추후 쿼리를 위해 건강 데이터의 서버 사본을 보관하지 않습니다. 직접 Apple Health 쿼리의 원본은 iPhone에 계속 있습니다. 직접 전송으로 인해 페어링된 컴퓨터에 지속적인 작업 상태와 출력이 남을 수 있지만, 이 상태는 Health.md가 호스팅하는 건강 데이터 말뭉치가 아닙니다.</p>
+        </section>
+
+        <section id="medical-records">
+          <h2>Android 의료 기록(FHIR)</h2>
+          <p>지원되는 Android 기기에서 <strong>의료 기록(FHIR)</strong> 기능은 사용자가 별도로 승인한 Health Connect 범주만 읽을 수 있습니다. Health Connect는 이동 가능한 의료 기록을 다음 범주로 구분합니다.</p>
+          <details class="policy-detail">
+            <summary>Health.md가 요청하는 의료 기록 범주</summary>
+            <ul>
+              <li>백신</li>
+              <li>알레르기 및 불내증</li>
+              <li>질환 및 진단</li>
+              <li>검사 결과</li>
+              <li>약물</li>
+              <li>개인 정보</li>
+              <li>의료인 정보</li>
+              <li>임신 기록</li>
+              <li>시술</li>
+              <li>사회력</li>
+              <li>방문 및 진료</li>
+              <li>의료 활력 징후</li>
+            </ul>
+          </details>
+          <p>각 범주는 선택 사항이며 읽기 전용입니다. 직접 요청에 응답하거나 사용자가 시작 또는 예약한 내보내기에 승인된 기록을 포함하는 데만 사용됩니다. JSON 및 제공자 기본 형식 내보내기는 FHIR 리소스 데이터와 원본 메타데이터를 보존할 수 있고, Markdown 및 CSV 요약은 범주별 건수를 보고할 수 있습니다. Health.md는 서버 사본을 보관하지 않습니다. 다른 승인된 내보내기를 중지하지 않고 하나의 범주를 거부하거나 철회할 수 있습니다.</p>
+        </section>
+
+        <section id="product-analytics">
+          <h2>자사 제품 분석</h2>
+          <p>Health.md는 온보딩, 활성화, 내보내기, 예약, 결제 화면 및 구매 흐름이 제대로 작동하는지 파악하기 위해 자사 Cloudflare Worker와 D1 데이터베이스를 사용합니다. Health.md는 앱에서 Firebase Analytics, Google Analytics, AppsFlyer, 타사 충돌 보고 SDK 또는 광고 SDK를 사용하지 않고 이러한 제한적인 제품 이벤트를 자동으로 수집합니다.</p>
+          <p>플랫폼 및 이벤트에 따라 허용된 페이로드에는 무작위 앱 설치 UUID, 무작위 이벤트 UUID, 이벤트 이름, 앱 버전, 빌드 번호, 플랫폼, 실험 또는 변형, 온보딩 단계 또는 명시적 건너뛰기, 제한된 무료 내보내기 횟수, 내보내기 대상 범주, 형식 수, 대략적인 측정 항목 수 및 날짜 범위 구간, 결제 화면 맥락, 제품 식별자, 구매 또는 복원 결과, 대략적인 권한 또는 오류 범주가 포함될 수 있습니다.</p>
+          <p>설치 UUID는 해당 앱 설치 기간 동안 유지되므로 데이터는 <strong>익명이 아니라 가명 처리된 데이터</strong>입니다. 이 UUID는 무작위로 생성되며 사용자의 이름, 계정, 건강 식별자, 기기 하드웨어 식별자, Android ID 또는 Advertising ID에서 파생되지 않습니다.</p>
+          <p>제품 분석에는 <strong>HealthKit 또는 Health Connect 값이나 식별자, 측정 항목 이름, 건강 관련 날짜</strong>, 약물, 운동, 내보내기 내용, 입력한 쿼리 결과, 폴더 또는 보관함 이름, 파일 경로, 피어 또는 기기 이름, 계정 데이터, 가격, <strong>자격 증명 또는 토큰</strong>, 사용자 텍스트, 원시 리퍼러, 전체 User-Agent 문자열 또는 저장된 IP 주소가 <strong>절대 포함되지 않습니다</strong>. 알 수 없는 이벤트, 속성 및 속성 값은 거부됩니다. 공개 클라이언트와 Worker 허용 목록은 <strong>건강 기록 및 내보낸 내용을 분석 페이로드로 나타낼 수 없도록</strong> 설계되었습니다.</p>
+          <p>이러한 이벤트는 광고, 지문 인식 또는 앱 간 추적에 사용되지 않으며 광고주에게 판매되거나 공유되지 않습니다. 검증된 행은 13개월을 초과하여 보관되지 않으며 매일 자동으로 정리됩니다. Cloudflare는 자체 약관에 따라 일반적인 연결 정보를 계속 처리합니다.</p>
+        </section>
+
+        <section id="campaigns">
+          <h2>자사 캠페인 기여도 측정</h2>
+          <p>Health.md는 타사 기여도 SDK 없이 캠페인의 종합 성과를 측정하기 위해 <code>healthmd.app/v/yt-csv-001</code> 같은 자사 단축 링크를 사용합니다.</p>
+          <ul>
+            <li>리디렉션 서비스는 캠페인 토큰과 슬러그, 플랫폼과 콘텐츠 관점, 대략적인 대상 또는 클라이언트 범주, 제공된 경우 참조 호스트 이름, 대략적인 국가 코드 및 시간을 기록할 수 있습니다.</li>
+            <li>저장된 클릭 행에는 IP 주소, 전체 User-Agent, 쿠키, Cloudflare 요청 ID 또는 지문 정보가 포함되지 않습니다.</li>
+            <li>Android에서 Google Play Install Referrer는 무작위 설치 및 이벤트 UUID, 앱 버전과 빌드, 검증된 캠페인 필드, 이벤트 시간, 선택적인 Play 클릭 및 설치 타임스탬프가 포함된 정제된 기여 설치 이벤트 하나를 생성할 수 있습니다.</li>
+            <li>원시 Install Referrer는 폐기되며 Health.md가 저장하거나 전송하지 않습니다. 클릭과 설치는 종합 보고를 위해 검증된 캠페인 토큰으로만 결합됩니다.</li>
+          </ul>
+          <p>캠페인 클릭 및 설치 행은 13개월을 초과하여 보관되지 않습니다. 종합 수집 속도 구간에는 1분 단위와 건수만 포함되며 24시간 후 삭제됩니다. Cloudflare는 이러한 요청을 전달하면서 일반적인 네트워크 정보를 처리하지만 Health.md는 이를 캠페인 기록에 추가하지 않습니다.</p>
+        </section>
+
+        <section id="operations">
+          <h2>예약, 구매, 제공자 및 지원</h2>
+          <p>일부 앱 기능은 건강 정보가 아닌 운영 데이터를 사용합니다.</p>
+          <ul>
+            <li><strong>예약된 Apple 내보내기:</strong> 예약 서비스는 APNs 토큰, 무작위 설치 또는 사용자 ID, 플랫폼, 번들 ID, 예약 빈도, 시간, 요일 및 시간대를 수신할 수 있습니다. 무음 푸시에는 트리거 및 예약 버전 정보가 포함됩니다. Worker는 HealthKit 샘플, 내보내기 파일, 대상 경로, API URL 또는 API 비밀 정보를 수신하지 않습니다.</li>
+            <li><strong>구매:</strong> Apple StoreKit, App Store, Google Play Billing 및 제한적인 자사 검증 경로는 Full Access의 구매 또는 복원에 필요한 제품, 거래, 권리 또는 영수증 정보를 처리합니다. Health.md는 사용자의 결제 카드 전체 정보를 수신하지 않습니다.</li>
+            <li><strong>제공자 승인:</strong> 제공자 OAuth 브로커는 제공자/클라이언트 ID, 리디렉션 URI, 승인 코드 교환 및 토큰 갱신을 전송 중에 처리할 수 있습니다. 지원되는 경우 제공자 접근 토큰은 iOS Keychain에 저장되며, 제공자의 건강 기록은 브로커에 보관되지 않고 휴대전화로 전달됩니다.</li>
+            <li><strong>피드백:</strong> 이메일 또는 커뮤니티 이슈 도구는 사용자가 선택한 경우에만 열립니다. 미리 채워져 있고 편집 가능한 진단 정보 블록에는 앱 버전/빌드, 운영체제 버전 및 대략적인 기기 유형이 포함될 수 있습니다. 메시지에는 사용자가 보내기로 정한 내용이 포함되며, 공개 이슈 또는 커뮤니티 채널의 내용은 공개됩니다.</li>
+          </ul>
+          <p>예약 대신 수동 내보내기를 사용하고, 제공자를 연결하지 않은 상태로 두며, 피드백을 보내지 않을 수 있습니다. 스토어 서비스는 여전히 Apple 또는 Google의 약관에 따라 구매 및 앱 업데이트 활동을 처리합니다.</p>
+        </section>
+
+        <section id="website">
+          <h2>웹사이트 데이터 및 외부 요청</h2>
+          <p>healthmd.app은 소규모 분석 게이트 요청 후 Cloudflare Web Analytics를 사용합니다. 이를 통해 종합 트래픽, 성능 및 인기 페이지를 파악합니다. 이 사이트의 클라이언트 측 분석은 쿠키를 설정하지 않으며 건강 기록, 내보낸 파일, 구매 상태, 직접 페어링 또는 앱 내 설정과 연결되지 않습니다.</p>
+          <p>웹사이트 호스트이자 보안 인프라인 Cloudflare는 자체 약관과 보관 통제에 따라 IP 주소, 요청 URL, 브라우저 정보 및 시간 등 사이트를 제공하고 보호하는 데 필요한 일반적인 웹 요청 정보를 처리합니다.</p>
+          <p>일부 랜딩, 문서 또는 시각화 페이지는 <code>img.logo.dev</code>, Google Fonts, jsDelivr 또는 지도 타일 제공자 등의 서비스에서 자산을 요청합니다. 이러한 서비스는 사용자의 브라우저가 보내는 일반적인 요청 정보를 수신합니다. App Store, Google Play, GitHub, Obsidian, 지원 또는 다른 웹사이트로 연결되는 링크를 따라가면 해당 서비스의 개인정보 보호 관행이 적용됩니다.</p>
+          <p>웹사이트 및 캠페인 분석은 앱의 건강 데이터 처리와 별개입니다. 사이트를 방문해도 Health.md에 Apple Health 또는 Health Connect 접근 권한이 부여되지 않습니다.</p>
+        </section>
+
+        <section id="retention">
+          <h2>저장 및 보관</h2>
+          <ul>
+            <li><strong>원본 건강 데이터</strong>는 사용자가 내보내기 또는 쿼리를 지시하지 않는 한 HealthKit, Health Connect 또는 연결된 제공자에 남습니다.</li>
+            <li><strong>앱 설정 및 기록</strong>은 플랫폼 저장소를 이용해 사용자의 기기에 저장됩니다. 지원되는 경우 제공자 자격 증명은 보호되는 플랫폼 자격 증명 저장소를 사용합니다.</li>
+            <li><strong>내보낸 파일 및 API 전송 데이터</strong>는 해당 대상의 통제 기능에 따라 삭제할 때까지 사용자가 선택한 대상에 남습니다.</li>
+            <li><strong>페어링된 Mac, CLI 및 MCP 데이터</strong>는 사용자의 워크플로에서 생성한 로컬 출력, 작업 상태, 자격 증명 저장소, 대화 기록 또는 기타 컴퓨터 저장소에 남습니다.</li>
+            <li><strong>제품 분석 및 캠페인 행</strong>은 13개월을 초과하여 보관되지 않으며, 캠페인 수집 속도 카운터는 24시간 후 삭제됩니다.</li>
+            <li><strong>예약, 구매, 지원 및 일반 네트워크 기록</strong>은 관련 플랫폼 및 제공자 약관에 따라 해당 서비스를 제공·보호·문서화하거나 그 요건을 준수하는 데 필요한 기간 동안만 보관됩니다.</li>
+          </ul>
+          <p>Health.md를 제거하면 운영체제의 방식에 따라 앱 로컬 상태가 삭제되지만, 이미 다른 폴더나 서비스로 내보낸 파일, 페어링된 클라이언트에 저장된 데이터, 사용자가 보낸 메시지 또는 대상 제공자가 보유한 데이터는 삭제되지 않습니다.</p>
+        </section>
+
+        <section id="services">
+          <h2>당사가 이용하는 서비스</h2>
+          <p>Health.md는 광고 SDK 또는 타사 앱 내 분석 및 기여도 SDK를 사용하지 않습니다. 관련되는 경우 다음 플랫폼, 인프라 및 사용자가 선택한 서비스를 이용합니다.</p>
+          <ul>
+            <li>Apple HealthKit 및 WorkoutKit</li>
+            <li>Android Health Connect</li>
+            <li>Apple 파일, Android Storage Access Framework 및 사용자가 선택한 파일 제공자</li>
+            <li>StoreKit, App Store, Google Play 및 Google Play Billing</li>
+            <li>정제된 Android 캠페인 기여도 측정을 위한 Google Play Install Referrer</li>
+            <li>예약 내보내기 실행을 위한 Apple Push Notification service</li>
+            <li>자사 분석, 캠페인 서비스, D1 저장소, 오용 제한, 웹사이트 제공 및 웹사이트 분석을 위한 Cloudflare</li>
+            <li>사용자가 구성하는 선택적 제공자 API, OAuth 서비스, API 엔드포인트, 동기화 서비스, AI/모델 제공자 및 로컬 클라이언트</li>
+          </ul>
+          <p>이러한 제공자는 자신이 운영되는 국가에서 데이터를 처리할 수 있습니다. 해당 제공자의 처리에는 그 약관과 관련 법률이 적용됩니다. 당사는 건강 데이터나 개인정보를 판매하지 않으며 교차 맥락 행동 광고를 위해 공유하지 않습니다.</p>
+        </section>
+
+        <section id="security">
+          <h2>데이터를 보호하는 방법</h2>
+          <p>어떠한 저장 또는 전송 시스템도 완벽한 보안을 보장할 수는 없지만, 당사는 각 경로에 적합한 보호 조치를 적용합니다.</p>
+          <ul>
+            <li>건강 정보 접근은 HealthKit 및 Health Connect 권한과 기기 보호 기능으로 통제됩니다.</li>
+            <li>직접 Mac 및 CLI 페어링은 인증된 암호화 세션, 제한된 프레임, 무결성 검사 및 명시적 승인을 사용합니다.</li>
+            <li>보호되는 API 엔드포인트 모드에는 HTTPS가 필요하며, 전송 후의 처리는 엔드포인트 운영자가 통제합니다.</li>
+            <li>분석 및 캠페인 수집은 알 수 없거나 지나치게 큰 필드를 거부하며 의도적으로 건강 정보 페이로드를 나타낼 수 없게 되어 있습니다.</li>
+            <li>로컬 파일에는 사용자가 파일을 두는 기기, 폴더, 보관함 또는 제공자의 접근, 암호화, 백업 및 동기화 통제가 적용됩니다.</li>
+          </ul>
+          <p>로컬 Mac 쿼리 API는 루프백 도달 가능성을 접근 경계로 사용하며 베어러 토큰이 없습니다. 포트를 다른 컴퓨터로 프록시하거나 노출하지 마십시오. 직접 iPhone 페어링은 신뢰하는 컴퓨터와 네트워크에서만 사용해야 합니다. 기기를 최신 상태로 유지하고, 암호와 디스크 암호화를 사용하며, 대상·에이전트 호스트·모델 제공자의 보관 및 로깅 설정을 검토하십시오.</p>
+        </section>
+
+        <section id="choices">
+          <h2>사용자의 선택과 개인정보 보호 권리</h2>
+          <ul>
+            <li><strong>권한:</strong> 플랫폼 설정에서 HealthKit 및 Health Connect 범주를 허용하거나 철회할 수 있습니다.</li>
+            <li><strong>대상:</strong> 로컬 폴더를 선택하고, 파일 제공자 접근을 제거하고, 제공자 연결을 해제하고, API 엔드포인트를 지우거나 직접 클라이언트의 페어링을 해제할 수 있습니다.</li>
+            <li><strong>예약:</strong> 건강 정보가 아닌 예약 및 APNs 메타데이터를 등록하지 않으려면 수동 내보내기를 사용할 수 있습니다.</li>
+            <li><strong>파일 및 결과:</strong> 대상 또는 페어링된 컴퓨터의 통제 기능을 사용하여 접근하거나 이동하거나 삭제할 수 있습니다.</li>
+            <li><strong>이동성:</strong> 내보낸 Markdown, Obsidian, CSV, JSON, FHIR 및 기타 지원되는 파일을 Health.md 외부에서 사용할 수 있습니다.</li>
+            <li><strong>법적 권리:</strong> 거주 지역에 따라 당사가 관리하는 개인정보에 대한 접근, 정정, 삭제, 처리 제한, 이의 제기 또는 사본 수령, 그리고 이의신청이나 개인정보 보호 감독기관에 민원을 제기할 권리가 있을 수 있습니다.</li>
+          </ul>
+          <p>해당 권리를 행사하려면 당사에 문의하십시오. 관련 기록을 확인하고 찾기 위해 정보가 필요할 수 있습니다. 분석 식별자는 무작위이며 계정이나 이메일 주소와 연결되지 않으므로 이메일 요청을 특정 분석 행과 연결하지 못할 수 있습니다. 이러한 행은 그래도 위 기간 내에 자동으로 만료됩니다.</p>
+        </section>
+
+        <section id="children">
+          <h2>아동의 개인정보 보호</h2>
+          <p>Health.md는 일반 사용자를 위한 건강 데이터 이동성 도구이며 아동을 대상으로 하지 않습니다. 당사는 아동 대상 광고 또는 프로파일링에 건강 데이터나 분석을 고의로 사용하지 않습니다. 아동이 Health.md가 관리하는 서비스에 개인정보를 제출했다고 생각하는 부모 또는 보호자는 당사가 요청을 검토할 수 있도록 문의할 수 있습니다.</p>
+        </section>
+
+        <section id="changes">
+          <h2>이 방침의 변경</h2>
+          <p>당사의 관행이 변경되면 이 페이지와 “최종 업데이트” 날짜를 갱신합니다. 변경으로 인해 앱의 데이터 처리 방식이 중대하게 달라지는 경우 앱, 릴리스 노트 또는 다른 적절한 채널을 통해 알릴 수도 있습니다.</p>
+        </section>
+
+        <section id="contact">
+          <h2>문의</h2>
+          <p>개인정보 보호 관련 질문이나 요청은 <a href="mailto:privacy@isolated.tech">privacy@isolated.tech</a>으로 이메일을 보내십시오. Health.md는 Cody Bontecou가 <a href="https://isolated.tech" target="_blank" rel="noopener">isolated.tech</a>라는 이름으로 운영합니다.</p>
+          <p>일반 지원 이메일이나 공개 이슈에 건강 기록, 내보내기 파일, 자격 증명 또는 기타 민감한 내용을 포함하지 마십시오. 추가 정보가 필요한 경우 조사에 필요한 최소한의 정보만 요청하겠습니다.</p>
+        </section>
+      </article>
     </div>
   </main>
 
-  <footer>
-    <div class="container">
-      <div class="footer-inner">
-        <p class="footer-text">© 2026 health.md. 정성을 담아 만들었습니다.</p>
-        <div class="footer-links">
-          <a href="privacy-policy.html">개인정보 처리방침</a>
-          <a href="terms-of-service.html">약관</a>
-          <a href="mailto:cody@isolated.tech">지원</a>
-        </div>
-      </div>
+  <footer class="site-footer">
+    <div class="footer-shell footer-inner">
+      <nav class="language-selector" aria-label="언어 선택">
+        <a href="../privacy-policy.html" hreflang="en" lang="en">English</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page" lang="ko">한국어</span>
+      </nav>
+      <a class="footer-brand" href="../ko/" aria-label="Health.md 홈">health.md</a>
+      <nav class="footer-links" aria-label="바닥글 탐색">
+        <a href="../ko/docs/">문서</a>
+        <a href="privacy-policy.html">개인정보 보호</a>
+        <a href="terms-of-service.html">서비스 약관</a>
+        <a href="mailto:cody@isolated.tech">지원</a>
+      </nav>
     </div>
   </footer>
+
   <script src="../assets/analytics.js" defer></script>
 </body>
 </html>

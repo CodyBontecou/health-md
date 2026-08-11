@@ -278,87 +278,44 @@ struct CLIExportActivityBanner: View {
     let snapshot: CLIExportActivityTracker.Snapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.s2) {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: phaseIcon)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(phaseColor)
-                    .frame(width: 18, height: 18)
-                    .accessibilityHidden(true)
+        ExportActivityBanner(
+            title: title,
+            systemImage: phaseIcon,
+            tint: phaseColor,
+            sourceLabel: snapshot.source.label,
+            targetLabel: snapshot.targetLabel,
+            message: snapshot.message,
+            progress: snapshot.fractionComplete,
+            showsIndeterminateProgress: !snapshot.phase.isTerminal && snapshot.phase != .paused,
+            progressAccessibilityLabel: snapshot.fractionComplete == nil
+                ? String(localized: "CLI export in progress")
+                : String(localized: "CLI export progress"),
+            details: details,
+            trailingText: snapshot.phase.keepsScreenAwake
+                ? String(localized: "Keep Health.md open")
+                : nil,
+            accessibilityIdentifier: AccessibilityID.CLI.exportActivity
+        )
+    }
 
-                Text(title)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-
-                Spacer(minLength: Spacing.s2)
-
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(snapshot.source.label)
-                        .font(.caption2.weight(.semibold))
-                    Text(snapshot.targetLabel)
-                        .font(.caption2)
-                        .lineLimit(1)
-                }
-                .foregroundStyle(Color.textSecondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(Color.bgSecondary))
-                .privacySensitive()
-            }
-
-            Text(snapshot.message)
-                .font(.caption)
-                .foregroundStyle(Color.textSecondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let progress = snapshot.fractionComplete {
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .tint(phaseColor)
-                    .accessibilityLabel("CLI export progress")
-                    .accessibilityValue("\(Int((progress * 100).rounded())) percent")
-            } else if !snapshot.phase.isTerminal && snapshot.phase != .paused {
-                ProgressView()
-                    .progressViewStyle(.linear)
-                    .tint(phaseColor)
-                    .accessibilityLabel("CLI export in progress")
-            }
-
-            HStack(spacing: Spacing.s3) {
-                if snapshot.totalDays > 0 {
-                    Label(
-                        "\(min(snapshot.processedDays, snapshot.totalDays)) of \(snapshot.totalDays) days",
-                        systemImage: "calendar"
-                    )
-                }
-                if snapshot.committedBytes > 0 {
-                    Label(
-                        ByteCountFormatter.string(fromByteCount: snapshot.committedBytes, countStyle: .file),
-                        systemImage: "arrow.up.doc"
-                    )
-                }
-                Spacer(minLength: 0)
-                if snapshot.phase.keepsScreenAwake {
-                    Text("Keep Health.md open")
-                }
-            }
-            .font(.caption2)
-            .foregroundStyle(Color.textMuted)
+    private var details: [ExportActivityBannerDetail] {
+        var details: [ExportActivityBannerDetail] = []
+        if snapshot.totalDays > 0 {
+            details.append(ExportActivityBannerDetail(
+                text: "\(min(snapshot.processedDays, snapshot.totalDays)) of \(snapshot.totalDays) days",
+                systemImage: "calendar"
+            ))
         }
-        .padding(.horizontal, Spacing.s3)
-        .padding(.vertical, Spacing.s2)
-        .background(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .fill(Color.bgPrimary)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: GeistRadius.md, style: .continuous)
-                .strokeBorder(phaseColor.opacity(0.35), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(AccessibilityID.CLI.exportActivity)
+        if snapshot.committedBytes > 0 {
+            details.append(ExportActivityBannerDetail(
+                text: ByteCountFormatter.string(
+                    fromByteCount: snapshot.committedBytes,
+                    countStyle: .file
+                ),
+                systemImage: "arrow.up.doc"
+            ))
+        }
+        return details
     }
 
     private var title: String {

@@ -19,27 +19,27 @@ nonisolated enum EncryptedHealthContextStoreError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .missingEncryptionKey:
-            return "The encryption key for Health.md query context is unavailable."
+            return String(localized: "The encryption key for Health.md query context is unavailable.")
         case .invalidEncryptionKey:
-            return "The encryption key for Health.md query context is invalid."
+            return String(localized: "The encryption key for Health.md query context is invalid.")
         case .ciphertextAuthenticationFailed:
-            return "Encrypted Health.md query context failed authentication."
+            return String(localized: "Encrypted Health.md query context failed authentication.")
         case .corruptManifest:
-            return "The encrypted Health.md query-context index is corrupt."
+            return String(localized: "The encrypted Health.md query-context index is corrupt.")
         case .corruptBlob:
-            return "An encrypted Health.md query-context day is corrupt."
+            return String(localized: "An encrypted Health.md query-context day is corrupt.")
         case .unsupportedStoreContract:
-            return "This version of Health.md cannot read the query-context store contract."
+            return String(localized: "This version of Health.md cannot read the query-context store contract.")
         case .unsupportedContextDay:
-            return "This version of Health.md cannot read the stored context-day contract."
+            return String(localized: "This version of Health.md cannot read the stored context-day contract.")
         case .invalidOwnerDate:
-            return "Stored Health.md query context contains an invalid owner date."
+            return String(localized: "Stored Health.md query context contains an invalid owner date.")
         case .duplicateOwnerDate:
-            return "Stored Health.md query context contains a duplicate owner date."
+            return String(localized: "Stored Health.md query context contains a duplicate owner date.")
         case .manifestBlobMismatch:
-            return "The encrypted Health.md query-context index does not match its day blob."
+            return String(localized: "The encrypted Health.md query-context index does not match its day blob.")
         case .generationCollision:
-            return "Health.md could not allocate an immutable query-context generation."
+            return String(localized: "Health.md could not allocate an immutable query-context generation.")
         }
     }
 }

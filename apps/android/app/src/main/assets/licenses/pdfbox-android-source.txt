@@ -1,0 +1,7 @@
+PDFBox-Android
+Dependency: com.tom-roush:pdfbox-android:2.0.27.0
+Source: https://github.com/TomRoush/PdfBox-Android
+License: Apache License 2.0 (see pdfbox-android-apache-2.0.txt)
+Notice: see pdfbox-android-notice.txt
+
+PDFBox-Android is an Android port based on Apache PDFBox and FontBox. Apache, Apache PDFBox, and the Apache Software Foundation do not endorse Health.md.

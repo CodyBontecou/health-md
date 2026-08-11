@@ -20,9 +20,9 @@ concurrency:
 
 jobs:
   test-ios:
-    # Notelet requires Swift tools 6.3. GitHub-hosted macos-15 currently selects
-    # an older Swift toolchain, so use the self-hosted runner's matching Xcode.
-    runs-on: self-hosted
+    # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
+    # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
+    runs-on: macos-26
     timeout-minutes: 30
     defaults:
       run:
@@ -217,9 +217,8 @@ jobs:
           retention-days: 14
 
   test-macos:
-    # Notelet currently requires Swift tools 6.3; the self-hosted runner has the
-    # matching Xcode while GitHub-hosted macos-15 can lag on Swift toolchain.
-    runs-on: self-hosted
+    # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
+    runs-on: macos-26
     timeout-minutes: 30
     defaults:
       run:
@@ -241,6 +240,9 @@ jobs:
 
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
+
+      - name: Validate macOS localizations
+        run: make check-macos-localizations
 
       - name: Run macOS unit tests
         run: |

@@ -16,6 +16,16 @@ enum HealthRollupPeriod: String, CaseIterable, Codable, Equatable {
         }
     }
 
+    /// Localized UI label. Keep `displayName` and `folderName` stable because they
+    /// participate in exported content and destination paths.
+    var localizedDisplayName: String {
+        switch self {
+        case .weekly: return String(localized: "Weekly")
+        case .monthly: return String(localized: "Monthly")
+        case .yearly: return String(localized: "Yearly")
+        }
+    }
+
     var folderName: String {
         switch self {
         case .weekly: return "Weekly"

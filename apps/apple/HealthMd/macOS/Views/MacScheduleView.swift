@@ -110,7 +110,7 @@ struct MacScheduleView: View {
 
                         Picker("Interval Unit", selection: customUnitBinding) {
                             ForEach(ScheduleIntervalUnit.allCases, id: \.self) { unit in
-                                Text(unit.label(for: schedulingManager.schedule.customInterval).capitalized)
+                                Text(localizedUnitLabel(unit, interval: schedulingManager.schedule.customInterval))
                                     .tag(unit)
                             }
                         }
@@ -207,6 +207,17 @@ struct MacScheduleView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Schedule")
+    }
+
+    private func localizedUnitLabel(_ unit: ScheduleIntervalUnit, interval: Int) -> String {
+        switch (unit, interval == 1) {
+        case (.day, true): return String(localized: "Day")
+        case (.day, false): return String(localized: "Days")
+        case (.week, true): return String(localized: "Week")
+        case (.week, false): return String(localized: "Weeks")
+        case (.month, true): return String(localized: "Month")
+        case (.month, false): return String(localized: "Months")
+        }
     }
 }
 

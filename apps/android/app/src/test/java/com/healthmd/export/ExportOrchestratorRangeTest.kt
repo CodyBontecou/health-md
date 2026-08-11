@@ -16,6 +16,7 @@ import com.healthmd.domain.repository.HealthRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.time.Duration.Companion.hours
 
 class ExportOrchestratorRangeTest {
@@ -215,6 +216,8 @@ class ExportOrchestratorRangeTest {
             dates: List<LocalDate>,
             dataTypes: DataTypeSelection,
             includeGranularData: Boolean,
+            zoneId: ZoneId,
+            pinnedCalendarDays: Boolean,
         ): List<HealthData> {
             rangeCalls++
             rangeCallSizes += dates.size

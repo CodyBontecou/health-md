@@ -53,11 +53,11 @@ URLs stay canonical. Do not translate commands, schema keys, metric IDs, filenam
 fixtures, code examples, or generated reference artifacts. Localized sample
 fixtures preserve the source values and physical units (human-facing abbreviations may be localized); regional unit conversion is separate product work.
 
-Spanish legal pages are published convenience translations. German, French, Brazilian Portuguese,
-Italian, Dutch, Japanese, Korean, and Simplified Chinese legal translations are retained as
-`noindex` review drafts but remain disabled through each locale's `surfaces.legal` flag; those documentation footers link to the controlling English pages.
-A qualified human must review legal and health terminology before enabling any additional legal
-locale. Localized store badges and documentation social cards are required. Landing and first-export
+Localized legal pages are published as convenience translations for Spanish, German, French,
+Brazilian Portuguese, Italian, Dutch, Japanese, Korean, and Simplified Chinese. Each translation
+links to the controlling English version. A qualified human must review legal and health terminology
+before enabling any additional legal locale. Localized store badges and documentation social cards
+are required. Landing and first-export
 screenshots are configured in `i18n/locales.mjs`; any English fallback must be declared there. The
 authentic shared onboarding capture at `/docs/assets/docs/iphone-first-export/onboarding-start.webp`
 retains the app's current English foreground copy, and the shared setup-required capture is also

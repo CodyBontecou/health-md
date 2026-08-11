@@ -8,7 +8,8 @@ import { routePath } from '../i18n/routes.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.join(ROOT, 'sitemap.xml');
 const SITE_ORIGIN = 'https://healthmd.app';
-const CORE_LASTMOD = '2026-08-03';
+const HOME_LASTMOD = '2026-08-03';
+const LEGAL_LASTMOD = '2026-08-06';
 
 function absoluteRoute(routeId, locale) {
   return new URL(routePath(routeId, locale), SITE_ORIGIN).href;
@@ -22,12 +23,12 @@ function alternateLinks(routeId, surface) {
   return links.join('\n');
 }
 
-function routeEntry(routeId, locale, surface, { changefreq, priority }) {
+function routeEntry(routeId, locale, surface, { changefreq, lastmod, priority }) {
   return [
     '  <url>',
     `    <loc>${absoluteRoute(routeId, locale)}</loc>`,
     alternateLinks(routeId, surface),
-    `    <lastmod>${CORE_LASTMOD}</lastmod>`,
+    `    <lastmod>${lastmod}</lastmod>`,
     `    <changefreq>${changefreq}</changefreq>`,
     `    <priority>${priority}</priority>`,
     '  </url>',
@@ -49,10 +50,22 @@ function replaceBlock(source, name, content) {
 }
 
 export function renderLocalizedSitemap(source) {
-  const home = routeCluster('home', 'landing', { changefreq: 'weekly', priority: '1.0' });
+  const home = routeCluster('home', 'landing', {
+    changefreq: 'weekly',
+    lastmod: HOME_LASTMOD,
+    priority: '1.0',
+  });
   const legal = [
-    routeCluster('privacy', 'legal', { changefreq: 'yearly', priority: '0.4' }),
-    routeCluster('terms', 'legal', { changefreq: 'yearly', priority: '0.4' }),
+    routeCluster('privacy', 'legal', {
+      changefreq: 'yearly',
+      lastmod: LEGAL_LASTMOD,
+      priority: '0.4',
+    }),
+    routeCluster('terms', 'legal', {
+      changefreq: 'yearly',
+      lastmod: LEGAL_LASTMOD,
+      priority: '0.4',
+    }),
   ].join('\n');
   return replaceBlock(replaceBlock(source, 'LOCALIZED HOME URLS', home), 'LOCALIZED LEGAL URLS', legal);
 }

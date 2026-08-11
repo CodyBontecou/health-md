@@ -21,3 +21,8 @@
 # Room
 -keep class * extends androidx.room.RoomDatabase
 -dontwarn androidx.room.paging.**
+
+# PDFBox-Android optionally discovers Gemalto's JPEG 2000 codec. The report writer does not
+# decode or encode JPEG 2000, so these absent optional classes are safe to leave unresolved.
+-dontwarn com.gemalto.jp2.JP2Decoder
+-dontwarn com.gemalto.jp2.JP2Encoder

@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 1,
+  "canvas": {
+    "width": 2880,
+    "height": 1800,
+    "colorSpace": "sRGB",
+    "minimumOuterMargin": 120,
+    "captureWidth": 2200,
+    "captureHeight": 1464
+  },
+  "supportedLocales": [
+    "en-US",
+    "de-DE",
+    "es-ES",
+    "fr-FR",
+    "it",
+    "ja",
+    "ko",
+    "nl-NL",
+    "pt-BR",
+    "zh-Hans"
+  ],
+  "locales": {
+    "en-US": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "Sync Privately from iPhone",
+        "supportingCopy": "Move Apple Health data to your Mac over your local network.",
+        "chips": ["Local transfer", "Encrypted handoff", "Health data stays private"],
+        "reviewNote": "Approved copy retained. The current Home dashboard shows the real connected and ready Mac destination state."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "Save Every Export to Your Mac",
+        "supportingCopy": "Receive Markdown, CSV, or JSON files from iPhone in the folder you choose.",
+        "chips": ["Any folder", "Flexible formats", "Ready to write"],
+        "reviewNote": "Replaces the obsolete Mac Export screen and its Mac-side configuration claim. In 3.0.5, iPhone owns formats and date ranges; Mac validates and writes the destination."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "Ready for Every Export",
+        "supportingCopy": "Check connection, folder access, and receiver status before iPhone sends a file.",
+        "chips": ["Clear status", "Runs locally", "Always in control"],
+        "reviewNote": "Replaces the obsolete Mac Schedule screen. Scheduling is configured and run on iPhone; this current Mac surface truthfully shows receiver readiness."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "Track Every Export",
+        "supportingCopy": "See timestamps, file counts, and results at a glance.",
+        "chips": ["Clear status", "Detailed results", "Easy troubleshooting"],
+        "reviewNote": "Uses the brief's History fallback because preview is not a current macOS surface. The shipped Activity Feed is the current history-equivalent UI."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Configure Your Mac Destination",
+        "supportingCopy": "Choose where iPhone exports land and review connection, privacy, and local settings.",
+        "chips": ["Destination folder", "Local context", "Privacy controls"],
+        "reviewNote": "Replaces obsolete Mac format and filename controls. The capture uses the current General settings surface, which accurately explains that export shape is controlled on iPhone."
+      }
+    ],
+    "es-ES": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "Sincroniza en privado desde el iPhone",
+        "supportingCopy": "Transfiere los datos de Apple Health a tu Mac a través de tu red local.",
+        "chips": [
+          "Transferencia local",
+          "Entrega cifrada",
+          "Tus datos de salud siguen siendo privados"
+        ],
+        "reviewNote": "Traducción española de la historia de sincronización aprobada en inglés; la privacidad se refiere específicamente a los datos de salud."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "Guarda cada exportación en tu Mac",
+        "supportingCopy": "Recibe archivos Markdown, CSV o JSON del iPhone en la carpeta que elijas.",
+        "chips": [
+          "Cualquier carpeta",
+          "Formatos flexibles",
+          "Listo para guardar"
+        ],
+        "reviewNote": "Mantiene la historia actual del Mac como destino; los formatos y los intervalos se configuran en el iPhone."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "Todo listo para cada exportación",
+        "supportingCopy": "Comprueba la conexión, el acceso a la carpeta y el receptor antes de que el iPhone envíe un archivo.",
+        "chips": [
+          "Estado claro",
+          "Se ejecuta en local",
+          "Tú tienes el control"
+        ],
+        "reviewNote": "Mantiene la historia de disponibilidad del receptor porque la programación se configura y se ejecuta en el iPhone."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "Sigue cada exportación",
+        "supportingCopy": "Consulta las horas, el número de archivos y los resultados de un vistazo.",
+        "chips": [
+          "Estado claro",
+          "Resultados detallados",
+          "Solución de problemas sencilla"
+        ],
+        "reviewNote": "Usa la alternativa de Historial mediante el feed de actividad actual, ya que Vista previa no es una pantalla vigente de macOS."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Configura el destino en tu Mac",
+        "supportingCopy": "Elige dónde se guardan las exportaciones del iPhone y revisa la conexión, la privacidad y los ajustes locales.",
+        "chips": [
+          "Carpeta de destino",
+          "Contexto local",
+          "Controles de privacidad"
+        ],
+        "reviewNote": "Describe los controles actuales del destino en el Mac sin atribuirle los formatos ni los nombres de archivo que se configuran en el iPhone."
+      }
+    ],
+    "de-DE": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "Privat vom iPhone synchronisieren",
+        "supportingCopy": "Übertrage Apple Health-Daten über dein lokales Netzwerk auf deinen Mac.",
+        "chips": ["Lokale Übertragung", "Verschlüsselte Übergabe", "Gesundheitsdaten bleiben privat"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "Jeden Export auf deinem Mac sichern",
+        "supportingCopy": "Empfange Markdown-, CSV- oder JSON-Dateien vom iPhone im Ordner deiner Wahl.",
+        "chips": ["Beliebiger Ordner", "Flexible Formate", "Bereit zum Speichern"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "Bereit für jeden Export",
+        "supportingCopy": "Prüfe Verbindung, Ordnerzugriff und Empfängerstatus, bevor das iPhone eine Datei sendet.",
+        "chips": ["Klarer Status", "Läuft lokal", "Du behältst die Kontrolle"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "Jeden Export im Blick",
+        "supportingCopy": "Sieh Zeitangaben, Dateianzahl und Ergebnisse auf einen Blick.",
+        "chips": ["Klarer Status", "Detaillierte Ergebnisse", "Einfache Fehlerbehebung"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Mac-Ziel konfigurieren",
+        "supportingCopy": "Lege fest, wo iPhone-Exporte gespeichert werden, und prüfe Verbindung, Datenschutz und lokale Einstellungen.",
+        "chips": ["Zielordner", "Lokaler Kontext", "Datenschutzkontrollen"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ],
+    "fr-FR": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "Synchronisez en privé depuis l’iPhone",
+        "supportingCopy": "Transférez les données Apple Health vers votre Mac via votre réseau local.",
+        "chips": ["Transfert local", "Transmission chiffrée", "Vos données de santé restent privées"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "Enregistrez chaque export sur votre Mac",
+        "supportingCopy": "Recevez les fichiers Markdown, CSV ou JSON de l’iPhone dans le dossier de votre choix.",
+        "chips": ["Dossier au choix", "Formats flexibles", "Prêt à enregistrer"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "Prêt pour chaque export",
+        "supportingCopy": "Vérifiez la connexion, l’accès au dossier et l’état du récepteur avant l’envoi d’un fichier par l’iPhone.",
+        "chips": ["État clair", "Exécution locale", "Vous gardez le contrôle"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "Suivez chaque export",
+        "supportingCopy": "Consultez les horodatages, le nombre de fichiers et les résultats en un coup d’œil.",
+        "chips": ["État clair", "Résultats détaillés", "Dépannage simplifié"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Configurez la destination sur votre Mac",
+        "supportingCopy": "Choisissez où arrivent les exports de l’iPhone et vérifiez la connexion, la confidentialité et les réglages locaux.",
+        "chips": ["Dossier de destination", "Contexte local", "Contrôles de confidentialité"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ],
+    "it": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "Sincronizza in privato da iPhone",
+        "supportingCopy": "Trasferisci i dati di Apple Health sul Mac tramite la rete locale.",
+        "chips": ["Trasferimento locale", "Passaggio crittografato", "I dati sanitari restano privati"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "Salva ogni esportazione sul Mac",
+        "supportingCopy": "Ricevi file Markdown, CSV o JSON da iPhone nella cartella che scegli.",
+        "chips": ["Qualsiasi cartella", "Formati flessibili", "Pronto a salvare"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "Pronto per ogni esportazione",
+        "supportingCopy": "Controlla connessione, accesso alla cartella e stato del ricevitore prima che iPhone invii un file.",
+        "chips": ["Stato chiaro", "Esecuzione locale", "Sempre sotto controllo"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "Tieni traccia di ogni esportazione",
+        "supportingCopy": "Consulta orari, numero di file e risultati a colpo d’occhio.",
+        "chips": ["Stato chiaro", "Risultati dettagliati", "Risoluzione semplice"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Configura la destinazione sul Mac",
+        "supportingCopy": "Scegli dove salvare le esportazioni da iPhone e controlla connessione, privacy e impostazioni locali.",
+        "chips": ["Cartella di destinazione", "Contesto locale", "Controlli privacy"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ],
+    "ja": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "iPhoneからプライベートに同期",
+        "supportingCopy": "ローカルネットワーク経由でApple HealthのデータをMacへ転送します。",
+        "chips": ["ローカル転送", "暗号化された受け渡し", "ヘルスケアデータは非公開"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "すべての書き出しをMacに保存",
+        "supportingCopy": "iPhoneからMarkdown、CSV、JSONファイルを受け取り、選んだフォルダに保存します。",
+        "chips": ["任意のフォルダ", "柔軟な形式", "保存準備完了"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "すべての書き出しを受信可能",
+        "supportingCopy": "iPhoneがファイルを送信する前に、接続、フォルダアクセス、受信状態を確認します。",
+        "chips": ["明確な状態", "ローカルで実行", "いつでも管理可能"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "すべての書き出しを追跡",
+        "supportingCopy": "時刻、ファイル数、結果をひと目で確認できます。",
+        "chips": ["明確な状態", "詳しい結果", "簡単なトラブル解決"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Macの保存先を設定",
+        "supportingCopy": "iPhoneからの書き出し先を選び、接続、プライバシー、ローカル設定を確認します。",
+        "chips": ["保存先フォルダ", "ローカルコンテキスト", "プライバシー管理"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ],
+    "ko": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "iPhone에서 비공개로 동기화",
+        "supportingCopy": "로컬 네트워크를 통해 Apple Health 데이터를 Mac으로 전송하세요.",
+        "chips": ["로컬 전송", "암호화된 전달", "건강 데이터 비공개 유지"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "모든 내보내기를 Mac에 저장",
+        "supportingCopy": "iPhone에서 Markdown, CSV 또는 JSON 파일을 받아 선택한 폴더에 저장하세요.",
+        "chips": ["원하는 폴더", "유연한 형식", "저장 준비 완료"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "모든 내보내기 수신 준비 완료",
+        "supportingCopy": "iPhone이 파일을 보내기 전에 연결, 폴더 접근 권한 및 수신기 상태를 확인하세요.",
+        "chips": ["명확한 상태", "로컬에서 실행", "언제나 직접 제어"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "모든 내보내기 추적",
+        "supportingCopy": "시간, 파일 수 및 결과를 한눈에 확인하세요.",
+        "chips": ["명확한 상태", "상세 결과", "간편한 문제 해결"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Mac 대상 위치 설정",
+        "supportingCopy": "iPhone 내보내기가 저장될 위치를 선택하고 연결, 개인정보 보호 및 로컬 설정을 확인하세요.",
+        "chips": ["대상 폴더", "로컬 컨텍스트", "개인정보 보호 제어"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ],
+    "nl-NL": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "Synchroniseer privé vanaf iPhone",
+        "supportingCopy": "Zet Apple Health-gegevens via je lokale netwerk over naar je Mac.",
+        "chips": ["Lokale overdracht", "Versleutelde overdracht", "Gezondheidsgegevens blijven privé"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "Bewaar elke export op je Mac",
+        "supportingCopy": "Ontvang Markdown-, CSV- of JSON-bestanden van iPhone in een map naar keuze.",
+        "chips": ["Elke map", "Flexibele formaten", "Klaar om op te slaan"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "Klaar voor elke export",
+        "supportingCopy": "Controleer verbinding, maptoegang en ontvangerstatus voordat iPhone een bestand verstuurt.",
+        "chips": ["Duidelijke status", "Draait lokaal", "Altijd zelf de controle"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "Volg elke export",
+        "supportingCopy": "Bekijk tijdstippen, aantallen bestanden en resultaten in één oogopslag.",
+        "chips": ["Duidelijke status", "Gedetailleerde resultaten", "Eenvoudig problemen oplossen"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Configureer de Mac-bestemming",
+        "supportingCopy": "Kies waar iPhone-exports terechtkomen en controleer verbinding, privacy en lokale instellingen.",
+        "chips": ["Doelmap", "Lokale context", "Privacyregelaars"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ],
+    "pt-BR": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "Sincronize com privacidade do iPhone",
+        "supportingCopy": "Transfira dados do Apple Health para o Mac pela sua rede local.",
+        "chips": ["Transferência local", "Envio criptografado", "Seus dados de saúde ficam privados"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "Salve cada exportação no Mac",
+        "supportingCopy": "Receba arquivos Markdown, CSV ou JSON do iPhone na pasta que você escolher.",
+        "chips": ["Qualquer pasta", "Formatos flexíveis", "Pronto para salvar"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "Tudo pronto para cada exportação",
+        "supportingCopy": "Verifique a conexão, o acesso à pasta e o status do receptor antes que o iPhone envie um arquivo.",
+        "chips": ["Status claro", "Execução local", "Você mantém o controle"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "Acompanhe cada exportação",
+        "supportingCopy": "Veja horários, quantidade de arquivos e resultados de relance.",
+        "chips": ["Status claro", "Resultados detalhados", "Solução fácil de problemas"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "Configure o destino no Mac",
+        "supportingCopy": "Escolha onde as exportações do iPhone serão salvas e revise a conexão, a privacidade e os ajustes locais.",
+        "chips": ["Pasta de destino", "Contexto local", "Controles de privacidade"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ],
+    "zh-Hans": [
+      {
+        "index": 1,
+        "capture": "sync.png",
+        "output": "01_sync_with_iphone.png",
+        "headline": "从 iPhone 私密同步",
+        "supportingCopy": "通过本地网络将 Apple Health 数据传输到 Mac。",
+        "chips": ["本地传输", "加密交接", "健康数据始终私密"],
+        "reviewNote": "Localized sync story; the privacy claim remains specific to health data."
+      },
+      {
+        "index": 2,
+        "capture": "destination.png",
+        "output": "02_export_health_data.png",
+        "headline": "将每次导出保存到 Mac",
+        "supportingCopy": "从 iPhone 接收 Markdown、CSV 或 JSON 文件，并保存到你选择的文件夹。",
+        "chips": ["任意文件夹", "灵活格式", "已准备好保存"],
+        "reviewNote": "Localized Mac-destination story; formats remain iPhone-controlled."
+      },
+      {
+        "index": 3,
+        "capture": "readiness.png",
+        "output": "03_automate_every_export.png",
+        "headline": "为每次导出做好准备",
+        "supportingCopy": "在 iPhone 发送文件前检查连接、文件夹访问权限和接收器状态。",
+        "chips": ["状态清晰", "本地运行", "始终由你掌控"],
+        "reviewNote": "Localized receiver-readiness story; scheduling remains iPhone-controlled."
+      },
+      {
+        "index": 4,
+        "capture": "activity.png",
+        "output": "04_preview_before_export.png",
+        "headline": "跟踪每次导出",
+        "supportingCopy": "一目了然地查看时间、文件数量和结果。",
+        "chips": ["状态清晰", "详细结果", "轻松排查问题"],
+        "reviewNote": "Localized Activity Feed / History fallback; Preview is not a current Mac surface."
+      },
+      {
+        "index": 5,
+        "capture": "settings.png",
+        "output": "05_configure_your_app.png",
+        "headline": "配置 Mac 上的目标位置",
+        "supportingCopy": "选择 iPhone 导出的保存位置，并检查连接、隐私和本地设置。",
+        "chips": ["目标文件夹", "本地上下文", "隐私控制"],
+        "reviewNote": "Localized current Mac destination settings."
+      }
+    ]
+  }
+}

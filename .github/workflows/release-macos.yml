@@ -67,7 +67,9 @@ jobs:
   release:
     name: Build & Release
     if: ${{ github.event_name != 'release' || (startsWith(github.event.release.tag_name, 'v') && github.event.release.author.login != 'github-actions[bot]') }}
-    runs-on: self-hosted
+    # Keep releases available when the optional self-hosted Mac is offline. The
+    # Apple CI suite qualifies this same hosted image and its Xcode toolchain.
+    runs-on: macos-26
     timeout-minutes: 90
     defaults:
       run:
@@ -131,9 +133,12 @@ jobs:
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
-      - name: Verify asc CLI
+      - name: Install asc CLI
         run: |
-          asc --version || { echo "::error::asc CLI not found on runner"; exit 1; }
+          if ! command -v asc >/dev/null 2>&1; then
+            brew install asc
+          fi
+          asc --version
 
       - name: Remove iOS-only Swift packages from macOS release workspace
         run: |

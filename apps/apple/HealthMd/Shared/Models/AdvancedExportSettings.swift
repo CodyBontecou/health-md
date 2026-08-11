@@ -12,6 +12,14 @@ enum WriteMode: String, CaseIterable, Codable, Sendable {
     case overwrite = "Overwrite"
     case append = "Append"
     case update = "Update"
+
+    var localizedDisplayName: String {
+        switch self {
+        case .overwrite: return String(localized: "Overwrite")
+        case .append: return String(localized: "Append")
+        case .update: return String(localized: "Update")
+        }
+    }
     
     var description: String {
         switch self {
@@ -30,6 +38,15 @@ enum ExportFormat: String, CaseIterable, Codable, Sendable {
     case obsidianBases = "Obsidian Bases"
     case json = "JSON"
     case csv = "CSV"
+
+    var localizedDisplayName: String {
+        switch self {
+        case .markdown: return String(localized: "Markdown")
+        case .obsidianBases: return String(localized: "Obsidian Bases")
+        case .json: return String(localized: "JSON")
+        case .csv: return String(localized: "CSV")
+        }
+    }
 
     var isMarkdownFile: Bool {
         switch self {

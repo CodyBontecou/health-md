@@ -113,6 +113,14 @@ final class SyncEventHistoryManager: ObservableObject {
         saveHistory()
     }
 
+    #if DEBUG && os(macOS)
+    /// Replaces in-memory state without touching the user's persisted history.
+    func configureForMarketingCapture(_ events: [SyncEvent]) {
+        guard MacMarketingCapture.isActive else { return }
+        history = events
+    }
+    #endif
+
     // MARK: - Private Methods
 
     private func loadHistory() {
