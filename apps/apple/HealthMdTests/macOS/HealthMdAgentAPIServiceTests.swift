@@ -34,6 +34,45 @@ final class HealthMdAgentAPIServiceTests: XCTestCase {
         XCTAssertEqual(scope.allowedProviderIDs, [])
     }
 
+    func testQueryMapsStoreFailuresToPrivacySafeStableCodes() async throws {
+        let executor = DirectAgentAPIQueryExecutor()
+        let fixture = makeFixture(executor: executor)
+        let query = HealthMdQueryRequest(
+            metrics: .explicit(["sleep_total"]),
+            sources: .explicit(sourceIDs: ["apple_health"], providerIDs: []),
+            dates: .exact(.init(startDate: "2026-07-20", endDate: "2026-07-21")),
+            operation: .metricSeries
+        )
+        let cases: [(EncryptedHealthContextStoreError, String, String?)] = [
+            (.missingEncryptionKey, "query_store_key_unavailable", nil),
+            (
+                .unsupportedStoreContract(schema: "private-schema", version: 999),
+                "query_store_contract_unsupported",
+                "private-schema"
+            ),
+            (
+                .manifestBlobMismatch("private-owner-date"),
+                "query_store_integrity_failed",
+                "private-owner-date"
+            ),
+        ]
+
+        for (error, expectedCode, privateValue) in cases {
+            await executor.setExecutionError(error)
+            let response = await fixture.service.respond(request: request(
+                method: "POST",
+                path: "/v1/agent/query",
+                body: try JSONEncoder().encode(QueryBody(request: query, detailLevel: .summary))
+            ))
+
+            XCTAssertEqual(response.statusCode, 503)
+            XCTAssertEqual(try jsonObject(response.body)["code"] as? String, expectedCode)
+            if let privateValue {
+                XCTAssertFalse(String(decoding: response.body, as: UTF8.self).contains(privateValue))
+            }
+        }
+    }
+
     func testDirectEndpointsRejectRemovedAccessFieldsInsteadOfIgnoringThem() async throws {
         let executor = DirectAgentAPIQueryExecutor()
         let fixture = makeFixture(executor: executor) { _, _, _, _ in
@@ -389,6 +428,7 @@ private actor DirectAgentAPIQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
     private var request: HealthMdQueryRequest?
     private var evidenceScope: HealthMdEvidenceScope?
     private var scopeCompletion: HealthMdRequestedScopeCompletion?
+    private var executionError: EncryptedHealthContextStoreError?
     private var storeReadiness = HealthMdAgentQueryStoreReadiness(
         revision: "fixture-query-store-revision",
         ownerDateCount: 3,
@@ -403,6 +443,7 @@ private actor DirectAgentAPIQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
     ) async throws -> HealthMdQueryResponse {
         self.request = request
         self.evidenceScope = evidenceScope
+        if let executionError { throw executionError }
         return HealthMdQueryResponse(
             items: [],
             packet: nil,
@@ -418,6 +459,10 @@ private actor DirectAgentAPIQueryExecutor: HealthMdAgentQueryExecuting, HealthMd
             nextCursor: nil,
             limitations: []
         )
+    }
+
+    func setExecutionError(_ error: EncryptedHealthContextStoreError?) {
+        executionError = error
     }
 
     func queryStoreBaseline() async throws -> HealthMdAgentQueryStoreBaseline? {

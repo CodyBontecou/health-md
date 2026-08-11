@@ -575,6 +575,9 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
       for metric in day.metrics where selected.contains(metric.metricID) {
         let identity = "\(day.ownerDate)|\(metric.observationID)"
         guard seen.insert(identity).inserted else { continue }
+        let preferredEvidence = HealthMdMetricEvidenceSelector.preferred(
+          metric.evidenceIDs.compactMap { evidence[$0] }
+        )
         points.append(
           HealthMdMetricPoint(
             metricID: metric.metricID,
@@ -583,9 +586,7 @@ nonisolated struct HealthMdQueryEvaluator: Sendable {
             value: metric.value,
             status: metric.value == nil && metric.status == .available
               ? .completeEmpty : metric.status,
-            evidence: metric.evidenceIDs.compactMap { evidence[$0]?.reference }.sorted {
-              $0.evidenceID < $1.evidenceID
-            },
+            evidence: preferredEvidence.map(\.reference),
             limitations: metric.limitations
           ))
       }

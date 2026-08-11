@@ -120,10 +120,7 @@ nonisolated enum HealthMdQueryCanonicalSerializer {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let value = try decoder.singleValueContainer().decode(String.self)
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            formatter.timeZone = TimeZone(secondsFromGMT: 0)
-            guard let date = formatter.date(from: value) else {
+            guard let date = CanonicalRFC3339UTC.date(from: value) else {
                 throw DecodingError.dataCorrupted(
                     .init(codingPath: decoder.codingPath, debugDescription: "Invalid canonical RFC 3339 timestamp")
                 )

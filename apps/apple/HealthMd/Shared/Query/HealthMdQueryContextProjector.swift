@@ -62,6 +62,7 @@ enum HealthMdQueryContextProjector {
 
         var evidenceDrafts: [EvidenceDraft] = []
         var metricEvidence: [String: Set<String>] = [:]
+        var summaryMetricEvidence: [String: Set<String>] = [:]
 
         func appendEvidence(
             locator: HealthMdEvidenceLocator,
@@ -81,7 +82,12 @@ enum HealthMdQueryContextProjector {
             )
             let id = try draft.stableID()
             if !evidenceDrafts.contains(where: { $0.id == id }) { evidenceDrafts.append(draft.withID(id)) }
-            for metricID in metricIDs { metricEvidence[metricID, default: []].insert(id) }
+            for metricID in metricIDs {
+                metricEvidence[metricID, default: []].insert(id)
+                if sourceID == HealthMdEvidenceSourceIDs.healthMdSummary {
+                    summaryMetricEvidence[metricID, default: []].insert(id)
+                }
+            }
         }
 
         // Every represented summary key is independently addressable. This also
@@ -244,6 +250,11 @@ enum HealthMdQueryContextProjector {
                 : nil
             let value = summaryValue ?? archiveValue
             var evidenceIDs = metricEvidence[metricID, default: []]
+            if summaryValue != nil,
+               let summaryEvidenceIDs = summaryMetricEvidence[metricID],
+               !summaryEvidenceIDs.isEmpty {
+                evidenceIDs = summaryEvidenceIDs
+            }
             let availability = metricAvailability(
                 metricID: metricID,
                 hasValue: value != nil,
