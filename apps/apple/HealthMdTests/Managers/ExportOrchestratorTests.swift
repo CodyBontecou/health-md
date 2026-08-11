@@ -179,7 +179,7 @@ final class ExportOrchestratorTests: XCTestCase {
         let store = FakeHealthStore()
         store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.deviceLockedError
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
-        let vaultManager = VaultManager()
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/DeviceLockedExportVault")
         let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
         Self.retainedManagers.append(vaultManager)
         Self.retainedSettings.append(settings)
@@ -447,6 +447,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testExportDates_archiveModePacksRollupsIntoZip() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: vaultURL) }
 
         let store = FakeHealthStore()
@@ -498,6 +499,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testExportDates_archiveCancellationIsTerminalAndNotAPartialFailure() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveCancellation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: vaultURL) }
 
         let store = FakeHealthStore()
@@ -769,6 +771,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testExportDates_summaryOnlyArchivePacksRollupsWithoutDailyFiles() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorSummaryOnlyArchiveTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: vaultURL) }
 
         let store = FakeHealthStore()
