@@ -32,7 +32,7 @@ function login(service: SyntheticClinicalService, user: "admin" | "clinician" | 
 }
 function builder(context: RequestBuilder["context"] = "pre_visit", predecessorRequestId?: string): RequestBuilder {
   return {
-    context, period: { kind: "fixed_dates", startLocalDate: "2040-01-01", endLocalDateExclusive: "2040-01-08", timezoneRule: "acceptance_time_iana" },
+    context, period: { kind: "fixed_dates", startLocalDate: predecessorRequestId ? "2040-01-08" : "2040-01-01", endLocalDateExclusive: predecessorRequestId ? "2040-01-15" : "2040-01-08", timezoneRule: "acceptance_time_iana" },
     schedule: { type: "all_readings", windows: [] }, cadence: { type: "at_period_end" }, pulse: "preferred",
     ...(predecessorRequestId === undefined ? {} : { predecessorRequestId }),
   };
@@ -298,40 +298,40 @@ describe("relationships, templates, idempotent issuance, and invitations", () =>
   it("consumes invitation into a distinct one-time claimant receipt and enforces expiry/cancel/replay", async () => {
     const { service, advance } = harness(); const auth = login(service); const preview = preparePreview(service, auth.sessionId); const issued = await service.requestIssue(auth.sessionId, preview, "invite"); const token = issued.invitation.token!;
     expect(service.invitationHashForTest(issued.request.id)).toBe(await sha256Hex(token));
-    const claim = await service.invitationClaim(token); expect(service.invitationHashForTest(issued.request.id)).toBeUndefined(); expect(service.claimantHashForTest(issued.request.id)).toBe(await sha256Hex(claim.claimantReceipt));
-    await expect(service.invitationClaim(token)).rejects.toMatchObject({ code: "invitation_unavailable" }); expect(await service.invitationAccept(claim.claimantReceipt)).toMatchObject({ claim: "accepted" });
-    await expect(service.invitationAccept(claim.claimantReceipt)).rejects.toMatchObject({ code: "invitation_unavailable" });
+    const claim = await service.invitationClaim(token, "Etc/UTC"); expect(service.invitationHashForTest(issued.request.id)).toBeUndefined(); expect(service.claimantHashForTest(issued.request.id)).toBe(await sha256Hex(claim.claimantReceipt));
+    await expect(service.invitationClaim(token, "Etc/UTC")).rejects.toMatchObject({ code: "invitation_unavailable" }); expect(await service.invitationAccept(claim.claimantReceipt, claim.reviewSha256)).toMatchObject({ claim: "accepted" });
+    await expect(service.invitationAccept(claim.claimantReceipt, claim.reviewSha256)).rejects.toMatchObject({ code: "invitation_unavailable" });
 
-    const canceled = await service.requestIssue(auth.sessionId, preview, "cancel"); service.requestCancel(auth.sessionId, canceled.request.id, 1); await expect(service.invitationClaim(canceled.invitation.token!)).rejects.toMatchObject({ code: "invitation_unavailable" });
+    const canceled = await service.requestIssue(auth.sessionId, preview, "cancel"); service.requestCancel(auth.sessionId, canceled.request.id, 1); await expect(service.invitationClaim(canceled.invitation.token!, "Etc/UTC")).rejects.toMatchObject({ code: "invitation_unavailable" });
     const expired = await service.requestIssue(auth.sessionId, preview, "expiry"); advance(15 * 60_000 + 1);
     const refreshed = login(service); expect(service.requestList(refreshed.sessionId).find(request => request.id === expired.request.id)).toMatchObject({ lifecycle: "expired", claim: "expired", history: expect.arrayContaining([expect.objectContaining({ type: "expired", actorCode: "actor_system", revision: 1 })]) });
-    await expect(service.invitationClaim(expired.invitation.token!)).rejects.toMatchObject({ code: "invitation_unavailable" }); expect(service.invitationHashForTest(expired.request.id)).toBeUndefined();
+    await expect(service.invitationClaim(expired.invitation.token!, "Etc/UTC")).rejects.toMatchObject({ code: "invitation_unavailable" }); expect(service.invitationHashForTest(expired.request.id)).toBeUndefined();
     expect(service.auditSnapshotForTest("tenant_a")).toEqual(expect.arrayContaining([expect.objectContaining({ actorCode: "actor_system", action: "invitation_expire", outcome: "success" })]));
   });
 
   it("expires and consumes an unaccepted claimant receipt", async () => {
     const { service, advance } = harness(30 * 60_000); const auth = login(service); const preview = preparePreview(service, auth.sessionId); const issued = await service.requestIssue(auth.sessionId, preview, "claimant-expiry");
-    const claim = await service.invitationClaim(issued.invitation.token!); advance(5 * 60_000 + 1);
+    const claim = await service.invitationClaim(issued.invitation.token!, "Etc/UTC"); advance(5 * 60_000 + 1);
     expect(service.requestList(auth.sessionId).find(request => request.id === issued.request.id)).toMatchObject({ lifecycle: "expired", claim: "expired", history: expect.arrayContaining([expect.objectContaining({ type: "expired", actorCode: "actor_system", revision: 1 })]) });
-    await expect(service.invitationAccept(claim.claimantReceipt)).rejects.toMatchObject({ code: "invitation_unavailable" }); expect(service.claimantHashForTest(issued.request.id)).toBeUndefined();
+    await expect(service.invitationAccept(claim.claimantReceipt, claim.reviewSha256)).rejects.toMatchObject({ code: "invitation_unavailable" }); expect(service.claimantHashForTest(issued.request.id)).toBeUndefined();
     expect(service.auditSnapshotForTest("tenant_a")).toEqual(expect.arrayContaining([expect.objectContaining({ actorCode: "actor_system", action: "invitation_expire", outcome: "success" })]));
   });
 
   it("rate limits per token hash without one token blocking another", async () => {
     const { service } = harness(); const auth = login(service); const preview = preparePreview(service, auth.sessionId); const issued = await service.requestIssue(auth.sessionId, preview, "rate-independent");
-    for (let index = 0; index < 5; index += 1) await expect(service.invitationClaim("same_invalid_token")).rejects.toMatchObject({ code: "invitation_unavailable" });
-    await expect(service.invitationClaim("same_invalid_token")).rejects.toMatchObject({ code: "rate_limited" });
-    await expect(service.invitationClaim(issued.invitation.token!)).resolves.toHaveProperty("claimantReceipt");
+    for (let index = 0; index < 5; index += 1) await expect(service.invitationClaim("same_invalid_token", "Etc/UTC")).rejects.toMatchObject({ code: "invitation_unavailable" });
+    await expect(service.invitationClaim("same_invalid_token", "Etc/UTC")).rejects.toMatchObject({ code: "rate_limited" });
+    await expect(service.invitationClaim(issued.invitation.token!, "Etc/UTC")).resolves.toHaveProperty("claimantReceipt");
   });
 
   it("keeps renewal pending until successor acceptance and serializes replay/concurrency", async () => {
     const { service } = harness(); const auth = login(service); const recurring = preparePreview(service, auth.sessionId, builder("recurring_collection")); const first = await service.requestIssue(auth.sessionId, recurring, "first");
-    const claim = await service.invitationClaim(first.invitation.token!); await service.invitationAccept(claim.claimantReceipt);
+    const claim = await service.invitationClaim(first.invitation.token!, "Etc/UTC"); await service.invitationAccept(claim.claimantReceipt, claim.reviewSha256);
     const successorPreview = createRequestPreview({ relationshipId: first.request.relationshipId, templateId: "template_default_a", templateRevision: 1, builder: builder("recurring_collection", first.request.id), practiceDisplayName: "Fictional Practice A" });
     const [one, two] = await Promise.all([service.requestRenew(auth.sessionId, first.request.id, successorPreview, "renew"), service.requestRenew(auth.sessionId, first.request.id, successorPreview, "renew")]);
     expect(one.request.id).toBe(two.request.id); expect([one.invitation.token, two.invitation.token].filter(Boolean)).toHaveLength(1);
     const pending = service.requestList(auth.sessionId).find(item => item.id === first.request.id)!; expect(pending.lifecycle).toBe("accepted"); expect(pending.successorRequestId).toBe(one.request.id);
-    const successorToken = one.invitation.token ?? two.invitation.token!; const successorClaim = await service.invitationClaim(successorToken); await service.invitationAccept(successorClaim.claimantReceipt);
+    const successorToken = one.invitation.token ?? two.invitation.token!; const successorClaim = await service.invitationClaim(successorToken, "America/New_York"); await service.invitationAccept(successorClaim.claimantReceipt, successorClaim.reviewSha256);
     expect(service.requestList(auth.sessionId).find(item => item.id === first.request.id)?.lifecycle).toBe("renewed");
     expect((await service.requestRenew(auth.sessionId, first.request.id, successorPreview, "renew")).invitation.token).toBeNull();
     await expect(service.requestRenew(auth.sessionId, first.request.id, successorPreview, "different")).rejects.toMatchObject({ code: "successor_required" });
@@ -360,15 +360,16 @@ describe("packet projections, workflow, retention, and strict filters", () => {
     expectCode(() => service.inbox(auth.sessionId, { pageSize: 0 }), "invalid_filter"); expectCode(() => service.inbox(auth.sessionId, { cursor: -1 }), "invalid_filter"); expectCode(() => service.inbox(auth.sessionId, { shape: "unknown" } as never), "invalid_filter");
   });
 
-  it("records opened exactly once only after a successful authorized load, never a download or denied access", () => {
+  it("records opened exactly once after the first successful authorized render or download, never denied access", () => {
     const { service } = harness(); const auth = login(service);
     expect(service.inbox(auth.sessionId, { requestId: "request_fixture" }).items.find(item => item.id === "packet_complete_apple")?.opened).toBe(false);
     const downloaded = service.packetDownload(auth.sessionId, "packet_complete_apple"); expect(downloaded.artifact).not.toHaveProperty("opened");
-    expect(service.inbox(auth.sessionId, { requestId: "request_fixture" }).items.find(item => item.id === "packet_complete_apple")?.opened).toBe(false);
+    expect(service.inbox(auth.sessionId, { requestId: "request_fixture" }).items.find(item => item.id === "packet_complete_apple")?.opened).toBe(true);
     expectCode(() => service.packetLoad(auth.sessionId, "packet_quarantined"), "operation_unavailable");
     const loaded = service.packetLoad(auth.sessionId, "packet_complete_apple"); expect(loaded.opened).toMatchObject({ type: "opened", actorCode: "actor_clinician", revision: 1 });
     expect(loaded.history.filter(fact => fact.type === "opened")).toHaveLength(1);
     expect(service.packetLoad(auth.sessionId, "packet_complete_apple").history.filter(fact => fact.type === "opened")).toHaveLength(1);
+    expect(service.packetDownload(auth.sessionId, "packet_complete_apple").artifact).not.toHaveProperty("opened");
   });
 
   it("derives context from owned requests and filters and sorts before stable pagination", () => {

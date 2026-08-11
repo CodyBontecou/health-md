@@ -67,8 +67,9 @@ function builder(value: unknown): RequestBuilder {
 function preview(value: unknown): RequestPreview {
   const input = record(value); keys(input, ["representation", "canonicalJson", "canonicalBytes"]);
   const representation = record(input.representation);
-  keys(representation, ["schema", "protocolVersion", "instructionVersion", "relationshipId", "templateId", "templateRevision", "builder", "renderedInstructions"]);
+  keys(representation, ["schema", "protocolVersion", "instructionVersion", "practiceVariant", "relationshipId", "templateId", "templateRevision", "builder", "renderedInstructions"]);
   if (representation.schema !== SYNTHETIC_OPERATION_VERSION || representation.protocolVersion !== PRACTICE_PROTOCOL_VERSION || representation.instructionVersion !== PRACTICE_INSTRUCTION_VERSION) throw new SyntheticServiceError("invalid_body");
+  if (representation.practiceVariant !== null) { const variant = record(representation.practiceVariant); keys(variant, ["id", "version", "approvalStatus"]); string(variant.id); string(variant.version); if (variant.approvalStatus !== "synthetic_draft") throw new SyntheticServiceError("invalid_body"); }
   string(representation.relationshipId); string(representation.templateId);
   const templateRevision = number(representation.templateRevision); if (templateRevision < 1) throw new SyntheticServiceError("invalid_body");
   builder(representation.builder); string(representation.renderedInstructions); string(input.canonicalJson);
@@ -182,8 +183,8 @@ export async function dispatchClinicalOperation(service: SyntheticClinicalServic
   if (operation === "request_list") { noPayload(envelope); return service.requestList(sessionId); }
   if (operation === "request_preview") { const p = payload(envelope, ["templateId", "expectedTemplateRevision", "builder"]); return service.requestPreview(sessionId, string(p.templateId), number(p.expectedTemplateRevision), builder(p.builder)); }
   if (operation === "request_issue") { const p = payload(envelope, ["preview", "idempotencyKey"]); return service.requestIssue(sessionId, preview(p.preview), string(p.idempotencyKey)); }
-  if (operation === "invitation_claim") { const p = payload(envelope, ["token"]); return service.invitationClaim(string(p.token)); }
-  if (operation === "invitation_accept") { const p = payload(envelope, ["claimantReceipt"]); return service.invitationAccept(string(p.claimantReceipt)); }
+  if (operation === "invitation_claim") { const p = payload(envelope, ["token", "deviceIanaTimezone"]); return service.invitationClaim(string(p.token), string(p.deviceIanaTimezone)); }
+  if (operation === "invitation_accept") { const p = payload(envelope, ["claimantReceipt", "reviewedAcceptanceSha256"]); return service.invitationAccept(string(p.claimantReceipt), string(p.reviewedAcceptanceSha256)); }
   if (operation === "invitation_revoke") { const p = payload(envelope, ["requestId"]); service.invitationRevoke(sessionId, string(p.requestId)); return { revoked: true }; }
   if (operation === "invitation_expire") { const p = payload(envelope, ["requestId"]); service.invitationExpire(sessionId, string(p.requestId)); return { expired: true }; }
   if (operation === "request_cancel") { const p = payload(envelope, ["requestId", "expectedRevision"]); return service.requestCancel(sessionId, string(p.requestId), number(p.expectedRevision)); }

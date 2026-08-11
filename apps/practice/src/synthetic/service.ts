@@ -1,12 +1,12 @@
 import type {
-  AuditCategory, AuditEvent, Capability, ClaimState, ClaimantReceipt, DeletionProgress, HistoryFact,
+  AcceptanceReview, AuditCategory, AuditEvent, Capability, ClaimState, ClaimantReceipt, DeletionProgress, HistoryFact,
   InboxFilter, InboxPacketSummary, MembershipState, MembershipView, PacketArtifact, PacketRecord, RequestBuilder,
   RequestPreview, RequestRecord, RequestTemplateRevision, RetentionPolicyReceipt, Role,
 } from "../contracts/clinical";
-import { auditCategories, careContexts, inboxReceivedSorts, inboxSupersessionStates, packetAvailabilityStates, packetShapes, SYNTHETIC_RETENTION_POLICY_VERSION } from "../contracts/clinical";
+import { auditCategories, careContexts, inboxReceivedSorts, inboxSupersessionStates, packetAvailabilityStates, packetShapes, SYNTHETIC_PACKET_VERSION, SYNTHETIC_RETENTION_POLICY_VERSION } from "../contracts/clinical";
 import { canonicalRoleCapabilities, operationPolicy, roleSatisfiesPolicy } from "../contracts/authorization";
 import type { OperationName } from "../contracts/clinical";
-import { canonicalJson, createRequestPreview } from "./request-domain";
+import { AcceptanceMaterializationError, canonicalJson, createAcceptanceReview, createRequestPreview } from "./request-domain";
 
 export interface SyntheticFactories {
   clock: () => string;
@@ -20,7 +20,7 @@ interface User { id: string; login: string; membershipIds: string[] }
 interface Challenge { id: string; userId: string; state: "required" | "verified" | "failed" | "expired" | "exhausted" | "replayed"; attempts: number; expiresAt: number; terminalAt: number | null }
 interface Session { id: string; userId: string; membershipId: string; csrfToken: string; state: "active" | "expired" | "revoked"; expiresAt: number; selectedRelationshipId: string | null; roleAtAuthentication: Role; stepUpExpiresAt: number | null }
 interface Relationship { id: string; tenantId: string; label: string; state: "active" | "inactive"; nameProvenance: "patient_confirmed"; dobProvenance: "patient_confirmed"; practiceReferenceProvenance: "practice_supplied" }
-interface InvitationState { requestId: string; tokenHash: string | null; claimantHash: string | null; claim: ClaimState; expiresAt: number; claimantExpiresAt: number | null }
+interface InvitationState { requestId: string; tokenHash: string | null; claimantHash: string | null; claim: ClaimState; expiresAt: number; claimantExpiresAt: number | null; acceptanceReview: { review: AcceptanceReview; reviewSha256: string } | null }
 interface Reservation { fingerprint: string; promise: Promise<RequestRecord> }
 type RequestIssueResult = { request: RequestRecord; invitation: { requestId: string; token: string | null; genericText: string; displayState: "available_once" | "already_displayed" } };
 
@@ -152,10 +152,12 @@ export class SyntheticClinicalService {
     this.templates.set("template_draft_a", [{ id: "template_draft_a", tenantId: "tenant_a", revision: 1, state: "draft", builder: defaultBuilder(), authorCode: "actor_admin", modifiedAt: this.factories.clock(), previousRevision: null }]);
     this.templates.set("template_default_b", [{ id: "template_default_b", tenantId: "tenant_b", revision: 1, state: "active", builder: defaultBuilder(), authorCode: "actor_other", modifiedAt: this.factories.clock(), previousRevision: null }]);
     const lifecyclePreview = createRequestPreview({ relationshipId: "relationship_unique_a", templateId: "template_default_a", templateRevision: 1, builder: defaultBuilder("recurring_collection"), practiceDisplayName: practiceDisplayName("tenant_a") });
+    const lifecycleReview = createAcceptanceReview({ representation: lifecyclePreview.representation, requestRepresentationSha256: "a".repeat(64), practiceDisplayName: practiceDisplayName("tenant_a"), deviceIanaTimezone: "UTC" });
+    const lifecycleAcceptance = Object.freeze({ acceptedAt: this.factories.clock(), reviewSha256: "b".repeat(64), review: lifecycleReview });
     for (const [index, lifecycle] of (["created", "issued", "claimed", "accepted", "active", "completed", "expired", "canceled", "superseded", "renewed"] as const).entries()) {
       const claim = lifecycle === "claimed" ? "claimed" : ["accepted", "active", "completed", "superseded", "renewed"].includes(lifecycle) ? "accepted" : lifecycle === "expired" ? "expired" : "available";
       const submission = lifecycle === "completed" ? "complete" : lifecycle === "active" ? "partial" : "none";
-      const request: RequestRecord = { id: `request_state_${lifecycle}`, tenantId: "tenant_a", relationshipId: "relationship_unique_a", revision: 1, lifecycle, delivery: index % 2 === 0 ? "delivered" : "not_attempted", claim, submission, representation: clone(lifecyclePreview.representation), canonicalJson: lifecyclePreview.canonicalJson, predecessorRequestId: lifecycle === "renewed" ? "request_state_superseded" : null, successorRequestId: lifecycle === "superseded" ? "request_state_renewed" : null, history: [this.fact("actor_fixture", lifecycle, 1)] };
+      const request: RequestRecord = { id: `request_state_${lifecycle}`, tenantId: "tenant_a", relationshipId: "relationship_unique_a", revision: 1, lifecycle, delivery: index % 2 === 0 ? "delivered" : "not_attempted", claim, submission, representation: clone(lifecyclePreview.representation), canonicalJson: lifecyclePreview.canonicalJson, predecessorRequestId: lifecycle === "renewed" ? "request_state_superseded" : null, successorRequestId: lifecycle === "superseded" ? "request_state_renewed" : null, acceptance: claim === "accepted" ? clone(lifecycleAcceptance) : null, history: [this.fact("actor_fixture", lifecycle, 1)] };
       this.requests.set(request.id, request);
     }
     for (const [id, templateId, context] of [
@@ -164,10 +166,10 @@ export class SyntheticClinicalService {
       ["request_fixture_recurring", "template_synthetic_recurring_a", "recurring_collection"],
     ] as const) {
       const fixturePreview = createRequestPreview({ relationshipId: "relationship_unique_a", templateId, templateRevision: 1, builder: defaultBuilder(context), practiceDisplayName: practiceDisplayName("tenant_a") });
-      this.requests.set(id, { id, tenantId: "tenant_a", relationshipId: "relationship_unique_a", revision: 1, lifecycle: "completed", delivery: "delivered", claim: "accepted", submission: "complete", representation: clone(fixturePreview.representation), canonicalJson: fixturePreview.canonicalJson, predecessorRequestId: null, successorRequestId: null, history: [this.fact("actor_fixture", "completed", 1)] });
+      this.requests.set(id, { id, tenantId: "tenant_a", relationshipId: "relationship_unique_a", revision: 1, lifecycle: "completed", delivery: "delivered", claim: "accepted", submission: "complete", representation: clone(fixturePreview.representation), canonicalJson: fixturePreview.canonicalJson, predecessorRequestId: null, successorRequestId: null, acceptance: null, history: [this.fact("actor_fixture", "completed", 1)] });
     }
     const tenantBPreview = createRequestPreview({ relationshipId: "relationship_unique_b", templateId: "template_default_b", templateRevision: 1, builder: defaultBuilder(), practiceDisplayName: practiceDisplayName("tenant_b") });
-    this.requests.set("request_state_issued_b", { id: "request_state_issued_b", tenantId: "tenant_b", relationshipId: "relationship_unique_b", revision: 1, lifecycle: "issued", delivery: "delivered", claim: "available", submission: "none", representation: clone(tenantBPreview.representation), canonicalJson: tenantBPreview.canonicalJson, predecessorRequestId: null, successorRequestId: null, history: [this.fact("actor_other", "issued", 1)] });
+    this.requests.set("request_state_issued_b", { id: "request_state_issued_b", tenantId: "tenant_b", relationshipId: "relationship_unique_b", revision: 1, lifecycle: "issued", delivery: "delivered", claim: "available", submission: "none", representation: clone(tenantBPreview.representation), canonicalJson: tenantBPreview.canonicalJson, predecessorRequestId: null, successorRequestId: null, acceptance: null, history: [this.fact("actor_other", "issued", 1)] });
     for (const packet of packetFixtures()) {
       this.packets.set(packet.id, packet);
       const packetCode = packet.id.replace(/^packet_/, "artifact_");
@@ -259,7 +261,12 @@ export class SyntheticClinicalService {
   async requestIssue(sessionId: string, preview: RequestPreview, idempotencyKey: string): Promise<RequestIssueResult> {
     const initial = this.authorize(sessionId, "request:write", "request", "request_issue");
     const key = `${initial.membership.tenantId}:issue:${idempotencyKey}`; const fingerprint = preview.canonicalJson; const prior = this.issueReservations.get(key);
-    if (prior) { if (prior.fingerprint !== fingerprint) throw new SyntheticServiceError("idempotency_conflict", 409); return this.replayedIssue(await prior.promise); }
+    if (prior) {
+      if (prior.fingerprint !== fingerprint) throw new SyntheticServiceError("idempotency_conflict", 409);
+      const request = await prior.promise; const replay = this.authorize(sessionId, "request:write", "request", "request_issue_replay");
+      if (request.tenantId !== replay.membership.tenantId || replay.session.selectedRelationshipId !== request.relationshipId || preview.representation.relationshipId !== request.relationshipId) return this.deny(replay, "request_issue_replay");
+      return this.replayedIssue(request);
+    }
     const token = this.factories.token("invitation");
     const promise = (async (): Promise<RequestRecord> => {
       const tokenHash = await this.hash(token);
@@ -273,27 +280,40 @@ export class SyntheticClinicalService {
     catch (error) { this.issueReservations.delete(key); throw error; }
   }
 
-  async invitationClaim(token: string): Promise<ClaimantReceipt> {
-    this.rateLimit("invitation:claim:coarse", 100, 60_000); const now = this.nowMs(); const hash = await this.hash(token); this.rateLimit(`invitation:claim:${hash}`, 5, 60_000);
-    const invitation = [...this.invitations.values()].find(item => item.tokenHash === hash); const request = invitation ? this.requests.get(invitation.requestId) : undefined;
-    if (invitation && request && now >= invitation.expiresAt) { this.expireInvitationByClock(invitation, request); throw new SyntheticServiceError("invitation_unavailable", 404); }
+  async invitationClaim(token: string, deviceIanaTimezone: string): Promise<ClaimantReceipt> {
+    this.rateLimit("invitation:claim:coarse", 100, 60_000); const tokenHash = await this.hash(token); this.rateLimit(`invitation:claim:${tokenHash}`, 5, 60_000);
+    const invitation = [...this.invitations.values()].find(item => item.tokenHash === tokenHash); const request = invitation ? this.requests.get(invitation.requestId) : undefined; const beforeMaterialization = this.nowMs();
+    if (invitation && request && beforeMaterialization >= invitation.expiresAt) { this.expireInvitationByClock(invitation, request); throw new SyntheticServiceError("invitation_unavailable", 404); }
     if (!invitation || !request || invitation.claim !== "available" || !CLAIMABLE_LIFECYCLES.has(request.lifecycle)) throw new SyntheticServiceError("invitation_unavailable", 404);
-    const claimantReceipt = this.factories.token("claimant"); invitation.tokenHash = null; invitation.claimantHash = await this.hash(claimantReceipt); invitation.claimantExpiresAt = now + CLAIMANT_MS; invitation.claim = "claimed";
+    let review: AcceptanceReview;
+    try {
+      const requestRepresentationSha256 = await this.hash(request.canonicalJson);
+      review = createAcceptanceReview({ representation: request.representation, requestRepresentationSha256, practiceDisplayName: practiceDisplayName(request.tenantId), deviceIanaTimezone });
+    } catch (error) { if (error instanceof AcceptanceMaterializationError) throw new SyntheticServiceError(error.message, 422); throw error; }
+    this.validateSuccessorAcceptance(request, review);
+    const reviewSha256 = await this.hash(canonicalJson(review)); const claimantReceipt = this.factories.token("claimant"); const claimantHash = await this.hash(claimantReceipt); const now = this.nowMs();
+    if (invitation.tokenHash !== tokenHash || invitation.claim !== "available" || !CLAIMABLE_LIFECYCLES.has(request.lifecycle) || now >= invitation.expiresAt) {
+      if (now >= invitation.expiresAt && invitation.claim === "available") this.expireInvitationByClock(invitation, request);
+      throw new SyntheticServiceError("invitation_unavailable", 404);
+    }
+    invitation.tokenHash = null; invitation.claimantHash = claimantHash; invitation.claimantExpiresAt = now + CLAIMANT_MS; invitation.acceptanceReview = { review: clone(review), reviewSha256 }; invitation.claim = "claimed";
     request.claim = "claimed"; request.lifecycle = "claimed"; request.history = immutableHistory(request.history, this.fact("actor_patient", "claimed", request.revision)); this.appendAudit(request.tenantId, "actor_patient", "request", "invitation_claim", "success");
-    return { requestId: request.id, claimantReceipt, expiresAt: new Date(invitation.claimantExpiresAt).toISOString() };
+    return { requestId: request.id, claimantReceipt, expiresAt: new Date(invitation.claimantExpiresAt).toISOString(), review: clone(review), reviewSha256 };
   }
 
-  async invitationAccept(claimantReceipt: string): Promise<{ requestId: string; claim: "accepted" }> {
-    this.rateLimit("invitation:accept:coarse", 100, 60_000); const now = this.nowMs(); const hash = await this.hash(claimantReceipt); this.rateLimit(`invitation:accept:${hash}`, 5, 60_000);
-    const invitation = [...this.invitations.values()].find(item => item.claimantHash === hash); const request = invitation ? this.requests.get(invitation.requestId) : undefined;
-    if (invitation && request && invitation.claimantExpiresAt !== null && now >= invitation.claimantExpiresAt) { this.expireInvitationByClock(invitation, request); throw new SyntheticServiceError("invitation_unavailable", 404); }
-    if (!invitation || !request || invitation.claim !== "claimed" || invitation.claimantExpiresAt === null || !ACCEPTABLE_LIFECYCLES.has(request.lifecycle)) throw new SyntheticServiceError("invitation_unavailable", 404);
-    const predecessor = request.predecessorRequestId ? this.requests.get(request.predecessorRequestId) : undefined;
-    if (request.predecessorRequestId && (!predecessor || predecessor.tenantId !== request.tenantId || predecessor.relationshipId !== request.relationshipId || predecessor.successorRequestId !== request.id || !["accepted", "active", "expired"].includes(predecessor.lifecycle))) throw new SyntheticServiceError("invitation_unavailable", 404);
-    invitation.claimantHash = null; invitation.claimantExpiresAt = null; invitation.claim = "accepted"; request.claim = "accepted"; request.lifecycle = "accepted";
+  async invitationAccept(claimantReceipt: string, reviewedAcceptanceSha256: string): Promise<{ requestId: string; claim: "accepted"; acceptance: NonNullable<RequestRecord["acceptance"]> }> {
+    this.rateLimit("invitation:accept:coarse", 100, 60_000); const hash = await this.hash(claimantReceipt); this.rateLimit(`invitation:accept:${hash}`, 5, 60_000);
+    const invitation = [...this.invitations.values()].find(item => item.claimantHash === hash); const request = invitation ? this.requests.get(invitation.requestId) : undefined; const observedNow = this.nowMs();
+    if (invitation && request && invitation.claimantExpiresAt !== null && observedNow >= invitation.claimantExpiresAt) { this.expireInvitationByClock(invitation, request); throw new SyntheticServiceError("invitation_unavailable", 404); }
+    if (!invitation || !request || invitation.claim !== "claimed" || invitation.claimantExpiresAt === null || !invitation.acceptanceReview || !ACCEPTABLE_LIFECYCLES.has(request.lifecycle)) throw new SyntheticServiceError("invitation_unavailable", 404);
+    if (!/^[a-f0-9]{64}$/.test(reviewedAcceptanceSha256) || reviewedAcceptanceSha256 !== invitation.acceptanceReview.reviewSha256) throw new SyntheticServiceError("acceptance_review_mismatch", 409);
+    const predecessor = this.validateSuccessorAcceptance(request, invitation.acceptanceReview.review); const commitNow = this.nowMs();
+    if (commitNow >= invitation.claimantExpiresAt) { this.expireInvitationByClock(invitation, request); throw new SyntheticServiceError("invitation_unavailable", 404); }
+    const acceptance = Object.freeze({ acceptedAt: new Date(commitNow).toISOString(), reviewSha256: invitation.acceptanceReview.reviewSha256, review: clone(invitation.acceptanceReview.review) });
+    invitation.claimantHash = null; invitation.claimantExpiresAt = null; invitation.acceptanceReview = null; invitation.claim = "accepted"; request.claim = "accepted"; request.lifecycle = "accepted"; request.acceptance = acceptance;
     request.history = immutableHistory(request.history, this.fact("actor_patient", "accepted", request.revision));
     if (predecessor) { predecessor.lifecycle = "renewed"; predecessor.history = immutableHistory(predecessor.history, this.fact("actor_patient", "renewed", predecessor.revision)); }
-    this.appendAudit(request.tenantId, "actor_patient", "request", "invitation_accept", "success"); return { requestId: request.id, claim: "accepted" };
+    this.appendAudit(request.tenantId, "actor_patient", "request", "invitation_accept", "success"); return { requestId: request.id, claim: "accepted", acceptance: clone(acceptance) };
   }
 
   invitationRevoke(sessionId: string, requestId: string): void { const context = this.authorize(sessionId, "request:write", "revocation", "invitation_revoke"); const request = this.ownedRequest(context, requestId, "invitation_revoke"); const invitation = this.invitations.get(requestId); if (!invitation || !["available", "claimed"].includes(invitation.claim)) throw new SyntheticServiceError("invalid_transition", 409); this.consumeInvitation(invitation, "revoked"); request.claim = "revoked"; this.appendAudit(context.membership.tenantId, context.membership.actorCode, "revocation", "invitation_revoke", "success"); }
@@ -312,14 +332,21 @@ export class SyntheticClinicalService {
   async requestRenew(sessionId: string, predecessorId: string, preview: RequestPreview, idempotencyKey: string): Promise<RequestIssueResult> {
     const initial = this.authorize(sessionId, "request:write", "request", "request_renew");
     const fingerprint = `${predecessorId}:${preview.canonicalJson}`; const key = `${initial.membership.tenantId}:renew:${idempotencyKey}`; const prior = this.renewalReservations.get(key);
-    if (prior) { if (prior.fingerprint !== fingerprint) throw new SyntheticServiceError("idempotency_conflict", 409); return this.replayedIssue(await prior.promise); }
+    if (prior) {
+      if (prior.fingerprint !== fingerprint) throw new SyntheticServiceError("idempotency_conflict", 409);
+      const successor = await prior.promise; const replay = this.authorize(sessionId, "request:write", "request", "request_renew_replay"); const predecessor = this.ownedRequest(replay, predecessorId, "request_renew_replay");
+      if (replay.session.selectedRelationshipId !== successor.relationshipId || predecessor.relationshipId !== successor.relationshipId || predecessor.successorRequestId !== successor.id || successor.predecessorRequestId !== predecessor.id) return this.deny(replay, "request_renew_replay");
+      return this.replayedIssue(successor);
+    }
     const token = this.factories.token("invitation");
     const promise = (async (): Promise<RequestRecord> => {
       const tokenHash = await this.hash(token);
       const commit = this.authorize(sessionId, "request:write", "request", "request_renew");
       this.validatePreview(commit, preview, "request_renew");
       const predecessor = this.ownedRequest(commit, predecessorId, "request_renew");
-      if (predecessor.relationshipId !== preview.representation.relationshipId || predecessor.representation.builder.context !== "recurring_collection" || !["accepted", "active", "expired"].includes(predecessor.lifecycle) || preview.representation.builder.predecessorRequestId !== predecessorId || predecessor.successorRequestId) throw new SyntheticServiceError("successor_required", 409);
+      if (predecessor.relationshipId !== preview.representation.relationshipId || predecessor.representation.builder.context !== "recurring_collection" || preview.representation.builder.context !== "recurring_collection" || !["accepted", "active", "expired"].includes(predecessor.lifecycle) || !predecessor.acceptance || preview.representation.builder.predecessorRequestId !== predecessorId || predecessor.successorRequestId) throw new SyntheticServiceError("successor_required", 409);
+      const predecessorPeriod = predecessor.representation.builder.period; const successorPeriod = preview.representation.builder.period;
+      if (predecessorPeriod.kind !== "fixed_dates" || successorPeriod.kind !== "fixed_dates" || successorPeriod.startLocalDate < predecessorPeriod.endLocalDateExclusive) throw new SyntheticServiceError("successor_period_invalid", 422);
       const successor = this.createIssuedRequest(commit, preview, tokenHash, predecessorId);
       predecessor.successorRequestId = successor.id;
       return successor;
@@ -351,12 +378,11 @@ export class SyntheticClinicalService {
     const items = rows.slice(cursor, cursor + pageSize).map(({ packet, context }) => this.inboxSummary(packet, context)); this.appendAudit(auth.membership.tenantId, auth.membership.actorCode, "access_download", "inbox", "success"); return { items, nextCursor: cursor + pageSize < rows.length ? cursor + pageSize : null };
   }
   packetLoad(sessionId: string, packetId: string): PacketRecord {
-    const { context, packet } = this.authorizedPacketAccess(sessionId, packetId, "packet:read", "packet_load");
-    if (!packet.opened) { const fact = this.fact(context.membership.actorCode, "opened", packet.revision); packet.opened = fact; packet.history = immutableHistory(packet.history, fact); }
+    const { context, packet } = this.authorizedPacketAccess(sessionId, packetId, "packet:read", "packet_load"); this.recordOpened(context, packet);
     this.appendAudit(context.membership.tenantId, context.membership.actorCode, "access_download", "packet_load", "success"); return clone(packet);
   }
   packetDownload(sessionId: string, packetId: string): { filename: "practice-document.json"; canonicalJson: string; artifact: PacketArtifact } {
-    const { context, packet } = this.authorizedPacketAccess(sessionId, packetId, "packet:download", "packet_download"); const artifact = this.packetArtifact(packet);
+    const { context, packet } = this.authorizedPacketAccess(sessionId, packetId, "packet:download", "packet_download"); this.recordOpened(context, packet); const artifact = this.packetArtifact(packet);
     this.appendAudit(context.membership.tenantId, context.membership.actorCode, "access_download", "packet_download", "success"); return { filename: "practice-document.json", canonicalJson: canonicalJson(artifact), artifact };
   }
   packetAcknowledge(sessionId: string, packetId: string, expectedRevision: number, idempotencyKey: string): PacketRecord { const result = this.packetWorkflow(sessionId, packetId, expectedRevision, idempotencyKey, "packet:acknowledge", "acknowledged"); const progress = this.deletions.get(`${result.tenantId}:${result.id}:${result.revision}`); if (progress && progress.state !== "held" && progress.trigger !== "explicit_acknowledgment") { progress.state = "scheduled"; progress.scheduledDeleteAt = addDays(this.factories.clock(), 30); progress.trigger = "explicit_acknowledgment"; } return result; }
@@ -394,15 +420,24 @@ export class SyntheticClinicalService {
     const template = this.activeCurrentTemplate(context.membership.tenantId, preview.representation.templateId, preview.representation.templateRevision); if (!template) return this.deny(context, action);
     const authoritative = createRequestPreview({ relationshipId: context.session.selectedRelationshipId, templateId: template.id, templateRevision: template.revision, builder: preview.representation.builder, practiceDisplayName: practiceDisplayName(context.membership.tenantId) }); if (authoritative.canonicalJson !== preview.canonicalJson) throw new SyntheticServiceError("preview_conflict", 409);
   }
+  private validateSuccessorAcceptance(request: RequestRecord, review: AcceptanceReview): RequestRecord | undefined {
+    if (!request.predecessorRequestId) return undefined;
+    const predecessor = this.requests.get(request.predecessorRequestId);
+    if (!predecessor || predecessor.tenantId !== request.tenantId || predecessor.relationshipId !== request.relationshipId || predecessor.successorRequestId !== request.id || !predecessor.acceptance || !["accepted", "active", "expired"].includes(predecessor.lifecycle)) throw new SyntheticServiceError("invitation_unavailable", 404);
+    const predecessorEnd = Date.parse(predecessor.acceptance.review.materializedPeriod.endUtcExclusive); const successorStart = Date.parse(review.materializedPeriod.startUtcInclusive);
+    if (!Number.isFinite(predecessorEnd) || !Number.isFinite(successorStart) || successorStart < predecessorEnd) throw new SyntheticServiceError("successor_period_invalid", 422);
+    return predecessor;
+  }
   private activeCurrentTemplate(tenantId: string, templateId: string, revision: number): RequestTemplateRevision | undefined { const current = this.templates.get(templateId)?.at(-1); return current?.tenantId === tenantId && current.revision === revision && current.state === "active" ? current : undefined; }
-  private createIssuedRequest(context: { session: Session; membership: Membership }, preview: RequestPreview, tokenHash: string, predecessorId: string | null): RequestRecord { const requestId = this.factories.id("request"); const request: RequestRecord = { id: requestId, tenantId: context.membership.tenantId, relationshipId: context.session.selectedRelationshipId!, revision: 1, lifecycle: "issued", delivery: "not_attempted", claim: "available", submission: "none", representation: clone(preview.representation), canonicalJson: preview.canonicalJson, predecessorRequestId: predecessorId, successorRequestId: null, history: [this.fact(context.membership.actorCode, "issued", 1)] }; this.requests.set(requestId, request); this.invitations.set(requestId, { requestId, tokenHash, claimantHash: null, claim: "available", expiresAt: this.nowMs() + INVITATION_MS, claimantExpiresAt: null }); return request; }
+  private createIssuedRequest(context: { session: Session; membership: Membership }, preview: RequestPreview, tokenHash: string, predecessorId: string | null): RequestRecord { const requestId = this.factories.id("request"); const request: RequestRecord = { id: requestId, tenantId: context.membership.tenantId, relationshipId: context.session.selectedRelationshipId!, revision: 1, lifecycle: "issued", delivery: "not_attempted", claim: "available", submission: "none", representation: clone(preview.representation), canonicalJson: preview.canonicalJson, predecessorRequestId: predecessorId, successorRequestId: null, acceptance: null, history: [this.fact(context.membership.actorCode, "issued", 1)] }; this.requests.set(requestId, request); this.invitations.set(requestId, { requestId, tokenHash, claimantHash: null, claim: "available", expiresAt: this.nowMs() + INVITATION_MS, claimantExpiresAt: null, acceptanceReview: null }); return request; }
   private displayInvitation(requestId: string, token: string): RequestIssueResult["invitation"] { return { requestId, token, genericText: "A synthetic Health.md Practice document request is available.", displayState: "available_once" }; }
   private replayedIssue(request: RequestRecord): RequestIssueResult { return { request: clone(request), invitation: { requestId: request.id, token: null, genericText: "A synthetic Health.md Practice document request is available.", displayState: "already_displayed" } }; }
-  private consumeInvitation(invitation: InvitationState, claim: "revoked" | "expired"): void { invitation.tokenHash = null; invitation.claimantHash = null; invitation.claimantExpiresAt = null; invitation.claim = claim; }
+  private consumeInvitation(invitation: InvitationState, claim: "revoked" | "expired"): void { invitation.tokenHash = null; invitation.claimantHash = null; invitation.claimantExpiresAt = null; invitation.acceptanceReview = null; invitation.claim = claim; }
   private expireInvitationByClock(invitation: InvitationState, request: RequestRecord): void { this.consumeInvitation(invitation, "expired"); if (CANCELLATION_TERMINAL.has(request.lifecycle)) return; request.claim = "expired"; request.lifecycle = "expired"; const fact = this.fact("actor_system", "expired", request.revision); request.history = immutableHistory(request.history, fact); this.appendAudit(request.tenantId, "actor_system", "request", "invitation_expire", "success"); }
   private inboxSummary(packet: PacketRecord, context: RequestBuilder["context"]): InboxPacketSummary { return { id: packet.id, relationshipLabel: packet.relationshipLabel, requestId: packet.requestId, context, revision: packet.revision, shape: packet.shape, availability: packet.availability, receivedAt: packet.receivedAt, requestedPeriod: packet.requestedPeriod, submittedPeriod: packet.submittedPeriod, coverage: packet.coverage, supersedesPacketId: packet.supersedesPacketId, supersededByPacketId: packet.supersededByPacketId, opened: packet.opened !== null, acknowledged: packet.acknowledged !== null, reviewed: packet.reviewed !== null }; }
-  private packetArtifact(packet: PacketRecord): PacketArtifact { return { schema: "practice.synthetic.packet/1.0-draft.1", id: packet.id, requestId: packet.requestId, relationshipLabel: packet.relationshipLabel, revision: packet.revision, shape: packet.shape, receivedAt: packet.receivedAt, requestedPeriod: packet.requestedPeriod, submittedPeriod: packet.submittedPeriod, timezone: packet.timezone, coverage: packet.coverage, readings: clone(packet.readings), disclosures: clone(packet.disclosures), limitations: packet.limitations, supersedesPacketId: packet.supersedesPacketId, supersededByPacketId: packet.supersededByPacketId }; }
+  private packetArtifact(packet: PacketRecord): PacketArtifact { return { schema: SYNTHETIC_PACKET_VERSION, id: packet.id, requestId: packet.requestId, relationshipLabel: packet.relationshipLabel, revision: packet.revision, shape: packet.shape, receivedAt: packet.receivedAt, requestedPeriod: packet.requestedPeriod, submittedPeriod: packet.submittedPeriod, timezone: packet.timezone, coverage: packet.coverage, readings: clone(packet.readings), disclosures: clone(packet.disclosures), limitations: packet.limitations, supersedesPacketId: packet.supersedesPacketId }; }
   private authorizedPacketAccess(sessionId: string, packetId: string, capability: Capability, action: string): { context: { session: Session; membership: Membership }; packet: PacketRecord } { const context = this.authorize(sessionId, capability, "access_download", action); return { context, packet: this.availablePacket(context, packetId, action) }; }
+  private recordOpened(context: { membership: Membership }, packet: PacketRecord): void { if (!packet.opened) { const fact = this.fact(context.membership.actorCode, "opened", packet.revision); packet.opened = fact; packet.history = immutableHistory(packet.history, fact); } }
   private packetWorkflow(sessionId: string, packetId: string, revision: number, keyValue: string, capability: Capability, field: "acknowledged" | "reviewed"): PacketRecord { const context = this.authorize(sessionId, capability, "acknowledgment_review", `packet_${field}`); const packet = this.availablePacket(context, packetId, `packet_${field}`); if (packet.revision !== revision) { this.appendAudit(context.membership.tenantId, context.membership.actorCode, "denied_access", `packet_${field}_stale_revision`, "denied"); throw new SyntheticServiceError("stale_revision", 409); } const key = `${context.membership.tenantId}:${field}:${keyValue}`; const fingerprint = `${packetId}:${revision}`; const prior = this.workflowIdempotency.get(key); if (prior) { if (prior.fingerprint !== fingerprint) { this.appendAudit(context.membership.tenantId, context.membership.actorCode, "denied_access", `packet_${field}_idempotency_conflict`, "denied"); throw new SyntheticServiceError("idempotency_conflict", 409); } return clone(packet); } if (!packet[field]) { const fact = this.fact(context.membership.actorCode, field, revision); packet[field] = fact; packet.history = immutableHistory(packet.history, fact); } this.workflowIdempotency.set(key, { fingerprint }); this.appendAudit(context.membership.tenantId, context.membership.actorCode, "acknowledgment_review", `packet_${field}`, "success"); return clone(packet); }
   private availablePacket(context: { session: Session; membership: Membership }, id: string, action: string): PacketRecord { const packet = this.ownedPacket(context, id, action); if (!PACKET_ACCESSIBLE.has(packet.availability)) return this.deny(context, action); return packet; }
   private validateInboxFilter(filter: InboxFilter): void { const allowed = ["shape", "availability", "context", "requestId", "receivedFromUtcDate", "receivedToExclusiveUtcDate", "acknowledged", "reviewed", "supersession", "sort", "cursor", "pageSize"]; if (!filter || typeof filter !== "object" || Object.keys(filter).some(key => !allowed.includes(key))) throw new SyntheticServiceError("invalid_filter"); if (filter.shape !== undefined && !packetShapes.includes(filter.shape)) throw new SyntheticServiceError("invalid_filter"); if (filter.availability !== undefined && !packetAvailabilityStates.includes(filter.availability)) throw new SyntheticServiceError("invalid_filter"); if (filter.context !== undefined && !careContexts.includes(filter.context)) throw new SyntheticServiceError("invalid_filter"); if (filter.requestId !== undefined && (typeof filter.requestId !== "string" || filter.requestId.length < 1 || filter.requestId.length > 128)) throw new SyntheticServiceError("invalid_filter"); if (filter.receivedFromUtcDate !== undefined && !realUtcDate(filter.receivedFromUtcDate) || filter.receivedToExclusiveUtcDate !== undefined && !realUtcDate(filter.receivedToExclusiveUtcDate) || filter.receivedFromUtcDate && filter.receivedToExclusiveUtcDate && filter.receivedFromUtcDate >= filter.receivedToExclusiveUtcDate) throw new SyntheticServiceError("invalid_filter"); if (filter.acknowledged !== undefined && typeof filter.acknowledged !== "boolean" || filter.reviewed !== undefined && typeof filter.reviewed !== "boolean") throw new SyntheticServiceError("invalid_filter"); if (filter.supersession !== undefined && !inboxSupersessionStates.includes(filter.supersession) || filter.sort !== undefined && !inboxReceivedSorts.includes(filter.sort)) throw new SyntheticServiceError("invalid_filter"); if (filter.cursor !== undefined && (!Number.isSafeInteger(filter.cursor) || filter.cursor < 0)) throw new SyntheticServiceError("invalid_filter"); if (filter.pageSize !== undefined && (!Number.isSafeInteger(filter.pageSize) || filter.pageSize < 1 || filter.pageSize > 25)) throw new SyntheticServiceError("invalid_filter"); }
@@ -422,7 +457,9 @@ export class SyntheticClinicalService {
   private fact(actorCode: string, type: string, revision: number): HistoryFact { return { type, actorCode, at: this.factories.clock(), revision }; }
   private revokeMembershipSessions(membership: Membership): void { membership.sessionsRevokedAt = this.factories.clock(); for (const session of this.sessions.values()) if (session.membershipId === membership.membershipId) { session.state = "revoked"; session.selectedRelationshipId = null; session.stepUpExpiresAt = null; } }
   private rateLimit(key: string, maximum: number, windowMs: number): void {
-    const now = this.nowMs(); const existing = this.rateBuckets.get(key); const values = (existing ?? []).filter(value => now - value < windowMs);
+    const now = this.nowMs();
+    for (const [bucketKey, timestamps] of this.rateBuckets) { const current = timestamps.filter(value => now - value < RATE_WINDOW_MS); if (current.length === 0) this.rateBuckets.delete(bucketKey); else this.rateBuckets.set(bucketKey, current); }
+    const existing = this.rateBuckets.get(key); const values = (existing ?? []).filter(value => now - value < windowMs);
     if (values.length >= maximum) throw new SyntheticServiceError("rate_limited", 429);
     if (!existing && this.rateBuckets.size >= MAX_RATE_BUCKETS) throw new SyntheticServiceError("rate_limited", 429);
     values.push(now); this.rateBuckets.set(key, values);

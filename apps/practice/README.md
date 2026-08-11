@@ -18,7 +18,7 @@ Requires Node 24 and npm.
 npm ci                 # reproducible install
 npm run typecheck      # TypeScript boundary
 npm test               # unit, component, jsdom integration, and automated axe tests
-npm run check:synthetic       # scan source, built assets, fixtures, and qualification fields
+npm run check:synthetic       # scan governed source, tests, docs, scripts, config, workflows, build, and reviewed binaries
 npm run check:scanner-canary  # prove seeded prohibited data is rejected
 npm run check:security        # verify exact route/34-operation traceability inventory
 npm run build                 # browser production bundle
@@ -47,8 +47,9 @@ The response must report `"mode":"synthetic"`, use `Cache-Control: no-store`, an
 - Deterministic fictional development data in `src/synthetic/catalog.ts` and injected-factory domain behavior in `src/synthetic/service.ts`; tests inject deterministic values while the HTTP runtime uses Web Crypto randomness.
 - Stable blocking validation codes for unresolved relative date, DST, cadence-anchor, and overnight/touching-window semantics; no browser date-library defaults.
 - Draft synthetic retention receipts explicitly report `legalApproval: false`; only explicit acknowledgment changes the synthetic schedule, and fake audit records are health-value/token free.
-- Invitation claim and acceptance use separate expiring one-time hashes with per-secret abuse buckets; the browser keeps the one-time artifact only in invitation-route memory and destroys it on navigation/pagehide/action/logout. QR and mobile deep-link rendering remain blocked pending an approved mobile contract. Immutable packet artifact bytes exclude mutable workflow and availability.
-- A cookie-authenticated `session_bootstrap` operation rotates CSRF after refresh without browser storage and supplies authoritative role/capabilities after MFA. Protected terminal-session handling clears client state fail-closed. Issue/renew commits reauthorize after hashing, each preview intent owns a unique memory-only retry key, and renewal remains pending until successor acceptance.
+- Invitation claim and acceptance use separate expiring one-time hashes with bounded, self-pruning per-secret abuse buckets. Claim canonicalizes the device IANA timezone, materializes fixed-date local midnights to half-open UTC bounds, and returns the exact acceptance instructions and review SHA-256; acceptance persists those immutable reviewed facts. The browser keeps the artifacts only in invitation-route memory and destroys them on navigation/pagehide/action/logout. QR and mobile deep-link rendering remain blocked pending an approved mobile contract.
+- Canonical request representations record the common instruction version and either `none` or a clearly unapproved synthetic-draft practice variant reference. A synthetic-draft variant version includes the immutable template revision and a SHA-256 digest of the exact optional paragraphs plus common-instruction version, so distinct wording cannot reuse one identity; this is content binding, not clinical approval. Immutable Practice packet schema `practice.synthetic.packet/1.0-draft.2` excludes mutable workflow, availability, and reverse-supersession state; authorized render or download may establish `opened` but never acknowledgment or review.
+- A cookie-authenticated `session_bootstrap` operation rotates CSRF after refresh without browser storage and supplies authoritative role/capabilities after MFA. Protected terminal-session handling clears client state fail-closed. Issue/renew commits and coalesced replays reauthorize after hashing, each preview intent owns a unique memory-only retry key, and renewal requires a newly entered non-overlapping period and remains pending until successor acceptance.
 - No inline scripts, eval, raw HTML rendering API, remote asset, service worker, browser persistence, or runtime third-party request.
 
 See `docs/architecture.md`, `docs/threat-model.md`, and the proposed repository ADR at `docs/architecture/adr-0003-practice-clinical-boundary.md`.

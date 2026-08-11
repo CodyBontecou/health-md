@@ -26,7 +26,7 @@ function payload(operation: OperationName, foreign = false): Record<string, unkn
     relationship_search: { query: "unique" }, relationship_select: { relationshipId: id("relationship", "relationship_unique_a") },
     template_create: { builder }, template_revise: { templateId: foreign ? "template_default_b" : "template_default_a", expectedRevision: 1, builder }, template_archive: { templateId: foreign ? "template_default_b" : "template_default_a", expectedRevision: 1 },
     request_preview: { templateId: foreign ? "template_default_b" : "template_default_a", expectedTemplateRevision: 1, builder }, request_issue: { preview: operationPreview, idempotencyKey: "matrix-issue" },
-    invitation_claim: { token: "invitation_unknown" }, invitation_accept: { claimantReceipt: "claimant_unknown" }, invitation_revoke: { requestId: foreign ? "request_state_issued_b" : "request_state_issued" }, invitation_expire: { requestId: foreign ? "request_state_issued_b" : "request_state_issued" },
+    invitation_claim: { token: "invitation_unknown", deviceIanaTimezone: "Etc/UTC" }, invitation_accept: { claimantReceipt: "claimant_unknown", reviewedAcceptanceSha256: "0".repeat(64) }, invitation_revoke: { requestId: foreign ? "request_state_issued_b" : "request_state_issued" }, invitation_expire: { requestId: foreign ? "request_state_issued_b" : "request_state_issued" },
     request_cancel: { requestId: foreign ? "request_state_issued_b" : "request_state_issued", expectedRevision: 1 }, request_renew: { predecessorId: foreign ? "request_state_issued_b" : "request_state_active", preview: operationPreview, idempotencyKey: "matrix-renew" },
     inbox: { filter: { pageSize: 2 } }, packet_load: { packetId: foreign ? "packet_complete_b" : "packet_complete_apple" }, packet_download: { packetId: foreign ? "packet_complete_b" : "packet_complete_apple" },
     packet_acknowledge: { packetId: foreign ? "packet_complete_b" : "packet_complete_apple", expectedRevision: 1, idempotencyKey: "matrix-ack" }, packet_review: { packetId: foreign ? "packet_complete_b" : "packet_complete_apple", expectedRevision: 1, idempotencyKey: "matrix-review" }, packet_passive_event: { packetId: foreign ? "packet_complete_b" : "packet_complete_apple", event: "print" },
@@ -101,7 +101,7 @@ describe("machine-traceable route and operation security inventory", () => {
     const { service, clinician, admin } = setup(); const operation = item.operation as OperationName; const session = item.authorizedRoles[0] === "practice_admin" ? admin : clinician;
     let operationPayload = payload(operation);
     if (operation === "request_renew") {
-      const renewalBuilder = structuredClone(builder); renewalBuilder.predecessorRequestId = "request_state_active";
+      const renewalBuilder = structuredClone(builder); renewalBuilder.context = "recurring_collection"; renewalBuilder.period = { kind: "fixed_dates", startLocalDate: "2040-01-08", endLocalDateExclusive: "2040-01-15", timezoneRule: "acceptance_time_iana" }; renewalBuilder.predecessorRequestId = "request_state_active";
       operationPayload = { predecessorId: "request_state_active", preview: createRequestPreview({ relationshipId: "relationship_unique_a", templateId: "template_default_a", templateRevision: 1, builder: renewalBuilder, practiceDisplayName: "Fictional Practice A" }), idempotencyKey: "matrix-renew-success" };
     }
     if (operation === "invitation_revoke" || operation === "invitation_expire") {

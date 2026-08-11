@@ -208,9 +208,9 @@ describe("static same-origin synthetic operation handler", () => {
     const preview = (await previewResponse.json() as { data: unknown }).data;
     const issueResponse = await invoke(service, auth, "request_issue", { preview, idempotencyKey: "handler-issue" }); expect(issueResponse.status).toBe(200);
     const issued = (await issueResponse.json() as { data: { invitation: { token: string } } }).data;
-    const claimResponse = await handleClinicalOperation(request(envelope("invitation_claim", { token: issued.invitation.token })), service); expect(claimResponse.status).toBe(200);
-    const claimantReceipt = (await claimResponse.json() as { data: { claimantReceipt: string } }).data.claimantReceipt;
-    expect((await handleClinicalOperation(request(envelope("invitation_accept", { claimantReceipt })), service)).status).toBe(200);
+    const claimResponse = await handleClinicalOperation(request(envelope("invitation_claim", { token: issued.invitation.token, deviceIanaTimezone: "America/New_York" })), service); expect(claimResponse.status).toBe(200);
+    const claim = (await claimResponse.json() as { data: { claimantReceipt: string; reviewSha256: string } }).data;
+    expect((await handleClinicalOperation(request(envelope("invitation_accept", { claimantReceipt: claim.claimantReceipt, reviewedAcceptanceSha256: claim.reviewSha256 })), service)).status).toBe(200);
   });
 
   it("exercises inbox/load/download/workflow/passive handlers with generic unavailable denial", async () => {
@@ -218,7 +218,7 @@ describe("static same-origin synthetic operation handler", () => {
     const inbox = await invoke(service, auth, "inbox", { filter: { requestId: "request_fixture", context: "pre_visit", sort: "received_asc", pageSize: 25 } }); const item = (await inbox.json() as { data: { items: Array<Record<string, unknown>> } }).data.items.find(row => row.id === "packet_complete_apple")!;
     expect(item).not.toHaveProperty("readings"); expect(item).toMatchObject({ context: "pre_visit", opened: false });
     expect((await invoke(service, auth, "packet_download", { packetId: "packet_complete_apple" })).status).toBe(200);
-    const afterDownload = await invoke(service, auth, "inbox", { filter: { requestId: "request_fixture", pageSize: 25 } }); expect((await afterDownload.json() as { data: { items: Array<Record<string, unknown>> } }).data.items.find(row => row.id === "packet_complete_apple")).toMatchObject({ opened: false });
+    const afterDownload = await invoke(service, auth, "inbox", { filter: { requestId: "request_fixture", pageSize: 25 } }); expect((await afterDownload.json() as { data: { items: Array<Record<string, unknown>> } }).data.items.find(row => row.id === "packet_complete_apple")).toMatchObject({ opened: true });
     const loaded = await invoke(service, auth, "packet_load", { packetId: "packet_complete_apple" }); expect(loaded.status).toBe(200); expect(await loaded.json()).toMatchObject({ data: { opened: { actorCode: "actor_clinician", revision: 1 }, history: [{ type: "opened" }] } });
     expect(await (await invoke(service, auth, "packet_passive_event", { packetId: "packet_complete_apple", event: "scroll" })).json()).toMatchObject({ data: { recorded: false } });
     expect((await invoke(service, auth, "packet_acknowledge", { packetId: "packet_quarantined", expectedRevision: 1, idempotencyKey: "x" })).status).toBe(404);

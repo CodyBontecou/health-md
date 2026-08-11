@@ -14,6 +14,7 @@ on:
       - 'apps/android/app/build.gradle.kts'
       - 'docs/product/practice/**'
       - 'docs/architecture/adr-0003-practice-clinical-boundary.md'
+      - 'docs/features/clinician-report-v1.md'
       - 'AGENTS.md'
       - 'LICENSES.md'
       - 'Makefile'
@@ -55,6 +56,8 @@ jobs:
         run: npx playwright install --with-deps chromium firefox webkit
 
       - name: Run full synthetic gate with isolated browser services and moderate audit
+        env:
+          PRACTICE_SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run check:ci
 
       - name: Verify deterministic fictional ingest fixture

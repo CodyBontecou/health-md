@@ -62,10 +62,10 @@ describe("practice component and production-disabled runtime boundary", () => {
 
   it("configures PHI-free current-tree build provenance while operational evidence stays unimplemented", async () => {
     const script = await readFile(join(root, "scripts/build-provenance.mjs"), "utf8");
-    expect(script).toContain('schema: "practice.synthetic.provenance/2"');
+    expect(script).toContain('schema: "practice.synthetic.provenance/3"');
     expect(script).toContain("productionEnabled: false");
-    expect(script).toContain('const sourceRoots = ["src", "static", "fixtures", "qualification/v1", "scripts", "test", "e2e", "docs"]');
-    expect(script).toContain('candidateCommit: dirty ? null : run("git", ["rev-parse", "HEAD"], repositoryRoot)');
+    expect(script).toContain("syntheticBoundaryFiles(root, repositoryRoot, { includeDist: false })");
+    expect(script).toContain("candidateCommit: dirty ? null : sourceHeadCommit");
     expect(script).toContain("safeProvenanceMetadataPath");
     expect(script).toContain("statusDigest");
     expect(script).toContain("pathSha256: digest(item.display)");
@@ -78,6 +78,8 @@ describe("practice component and production-disabled runtime boundary", () => {
       { name: "backup_restore", status: "not_implemented" },
       { name: "authoritative_purge", status: "not_implemented" },
     ]);
+    expect(script).toContain("qualifiedTreeCommit: repositoryHead");
+    expect(script).toContain("sourceHeadCommit");
   });
 
   it("rejects identity-like or raw-status path metadata before provenance serialization", () => {

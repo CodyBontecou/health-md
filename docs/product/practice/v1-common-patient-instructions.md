@@ -90,6 +90,12 @@ Protocol revision reviewed:
 Status: draft | approved | rejected
 ```
 
+The synthetic-only candidate uses an explicitly unapproved reference of the form
+`<template-id>.synthetic-draft/<template-revision>.sha256-<digest>`. The digest binds the common
+instruction version and both exact optional paragraph values (including an absent value as `null`).
+This prevents different draft wording from sharing an identity; it is not approval evidence and must
+be replaced by the governed variant record and final approval reference before a pilot.
+
 ## Review checklist
 
 - [ ] Clinical owner approved the exact practice collection wording.

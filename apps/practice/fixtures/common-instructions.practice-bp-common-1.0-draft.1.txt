@@ -1,0 +1,19 @@
+Blood-pressure document request from Fictional Practice A
+
+Your practice requested a pre visit blood-pressure document.
+
+Collection period: 2040-01-01 through before 2040-01-08; IANA timezone freezes at acceptance
+
+Requested schedule: all available readings
+
+Submission schedule: at period end
+
+Requested values: systolic and diastolic; pulse preferred
+
+Health.md reads eligible blood-pressure and heart-rate records from Apple Health or Health Connect. Health.md Practice does not let you enter or change measurement values. Records marked as manually entered by the source can be included and will be labeled in the document.
+
+Review the requested dates, timezone, schedule, identity, readings, sources, and any proposed pulse associations before submitting. If a source value is wrong, correct it in the app or health source that recorded it and generate a new document.
+
+Health.md Practice exchanges a document. It does not continuously monitor your readings, provide medical advice or emergency alerts, or promise that a clinician will respond within a particular time.
+
+If you need medical help or have a time-sensitive concern, use the contact and emergency channels provided by your practice or local emergency services. Do not rely on this document submission for urgent help.

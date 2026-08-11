@@ -6,7 +6,7 @@ import axe from "axe-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OperationName, PacketRecord, RequestBuilder, RequestRecord, RequestTemplateRevision } from "../src/contracts/clinical";
 import { SYNTHETIC_OPERATION_VERSION } from "../src/contracts/clinical";
-import { createRequestPreview } from "../src/synthetic/request-domain";
+import { createAcceptanceReview, createRequestPreview } from "../src/synthetic/request-domain";
 import { App, RootErrorBoundary } from "../src/web/App";
 import type { OperationClient } from "../src/web/api-client";
 
@@ -14,7 +14,9 @@ const clinicianSession = { role: "clinician" as const, capabilities: ["relations
 const adminSession = { role: "practice_admin" as const, capabilities: ["template:manage", "member:manage", "retention:manage", "audit:read"] as const, tenantCode: "tenant_a", practiceDisplayName: "Fictional Practice A" };
 const builder: RequestBuilder = { context: "pre_visit", period: { kind: "fixed_dates", startLocalDate: "2040-01-01", endLocalDateExclusive: "2040-01-08", timezoneRule: "acceptance_time_iana" }, schedule: { type: "all_readings", windows: [] }, cadence: { type: "at_period_end" }, pulse: "preferred" };
 const preview = createRequestPreview({ relationshipId: "relationship_unique_a", templateId: "template_default_a", templateRevision: 1, builder, practiceDisplayName: "Fictional Practice A" });
-const request: RequestRecord = { id: "request_memory", tenantId: "tenant_a", relationshipId: "relationship_unique_a", revision: 1, lifecycle: "issued", delivery: "not_attempted", claim: "available", submission: "none", representation: preview.representation, canonicalJson: preview.canonicalJson, predecessorRequestId: null, successorRequestId: null, history: [] };
+const acceptanceReview = createAcceptanceReview({ representation: preview.representation, requestRepresentationSha256: "1".repeat(64), practiceDisplayName: "Fictional Practice A", deviceIanaTimezone: "Etc/UTC" });
+const acceptanceReviewSha256 = "2".repeat(64);
+const request: RequestRecord = { id: "request_memory", tenantId: "tenant_a", relationshipId: "relationship_unique_a", revision: 1, lifecycle: "issued", delivery: "not_attempted", claim: "available", submission: "none", representation: preview.representation, canonicalJson: preview.canonicalJson, predecessorRequestId: null, successorRequestId: null, acceptance: null, history: [] };
 const packet: PacketRecord = { id: "packet_memory", tenantId: "tenant_a", requestId: "request_memory", relationshipLabel: "Taylor <script> Fictional", revision: 1, shape: "complete", availability: "available", receivedAt: "2040-01-09T12:00:00Z", requestedPeriod: "2040-01-01/2040-01-08", submittedPeriod: "2040-01-01/2040-01-08", timezone: "Etc/UTC", coverage: "satisfied", readings: [
   { key: "one", observedAt: "2040-01-02T08:00:00Z", systolicMmHg: 118, diastolicMmHg: 76, pulseBeatsPerMinute: 68, source: "apple_health", manual: "not_marked_manual", pulseAssociation: "patient_confirmed_same_source_nearby", windowName: null },
   { key: "two", observedAt: "2040-01-03T08:00:00Z", systolicMmHg: 121, diastolicMmHg: 78, pulseBeatsPerMinute: null, source: "apple_health", manual: "manual", pulseAssociation: "none", windowName: null },
@@ -24,9 +26,9 @@ function fakeClient(overrides: Partial<Record<OperationName, unknown | ((payload
   const defaults: Partial<Record<OperationName, unknown | ((payload: Record<string, unknown>) => unknown)>> = {
     sign_in: { authState: "mfa_required", challengeId: "challenge_memory" }, verify_mfa: { authState: "authenticated" }, session_bootstrap: clinicianSession, logout: { authState: "signed_out" },
     relationship_search: { state: "unique", results: [{ id: "relationship_unique_a", label: "Avery Fiction — synthetic", state: "active", nameProvenance: "patient_confirmed", dobProvenance: "patient_confirmed", practiceReferenceProvenance: "practice_supplied" }] }, relationship_select: { selected: true },
-    request_list: [request], template_list: [{ id: "template_default_a", tenantId: "tenant_a", revision: 1, state: "active", builder, authorCode: "actor_admin", modifiedAt: "2040-01-01T00:00:00Z", previousRevision: null } satisfies RequestTemplateRevision], request_preview: preview, request_issue: { request, invitation: { requestId: request.id, token: "invitation_synthetic_memory_only", genericText: "A synthetic document request is available.", displayState: "available_once" } }, invitation_claim: { claimantReceipt: "claimant_memory", expiresAt: "2040-01-01T00:05:00Z" }, invitation_accept: { claim: "accepted" }, invitation_revoke: { revoked: true },
+    request_list: [request], template_list: [{ id: "template_default_a", tenantId: "tenant_a", revision: 1, state: "active", builder, authorCode: "actor_admin", modifiedAt: "2040-01-01T00:00:00Z", previousRevision: null } satisfies RequestTemplateRevision], request_preview: preview, request_issue: { request, invitation: { requestId: request.id, token: "invitation_synthetic_memory_only", genericText: "A synthetic document request is available.", displayState: "available_once" } }, invitation_claim: { claimantReceipt: "claimant_memory", expiresAt: "2040-01-01T00:05:00Z", review: acceptanceReview, reviewSha256: acceptanceReviewSha256 }, invitation_accept: { claim: "accepted" }, invitation_revoke: { revoked: true },
     inbox: { items: [{ id: packet.id, relationshipLabel: packet.relationshipLabel, requestId: packet.requestId, revision: 1, shape: "complete", availability: "available", receivedAt: packet.receivedAt, requestedPeriod: packet.requestedPeriod, submittedPeriod: packet.submittedPeriod, coverage: "satisfied", supersedesPacketId: null, supersededByPacketId: null, opened: false, acknowledged: false, reviewed: false }], nextCursor: null },
-    packet_load: packet, packet_download: { filename: "practice-document.json", canonicalJson: JSON.stringify({ schema: "practice.synthetic.packet/1.0-draft.1" }) }, packet_acknowledge: { ...packet, acknowledged: { type: "acknowledged", actorCode: "actor_clinician", at: "2040-01-09T12:02:00Z", revision: 1 } }, packet_review: { ...packet, reviewed: { type: "reviewed", actorCode: "actor_clinician", at: "2040-01-09T12:03:00Z", revision: 1 } },
+    packet_load: packet, packet_download: { filename: "practice-document.json", canonicalJson: JSON.stringify({ schema: "practice.synthetic.packet/1.0-draft.2" }) }, packet_acknowledge: { ...packet, acknowledged: { type: "acknowledged", actorCode: "actor_clinician", at: "2040-01-09T12:02:00Z", revision: 1 } }, packet_review: { ...packet, reviewed: { type: "reviewed", actorCode: "actor_clinician", at: "2040-01-09T12:03:00Z", revision: 1 } },
     members: [{ membershipId: "membership_clinician", actorCode: "actor_clinician", role: "clinician", state: "active", sessionsRevokedAt: null }], reauthenticate: { authState: "authenticated" }, member_revoke_sessions: { membershipId: "membership_clinician", actorCode: "actor_clinician", role: "clinician", state: "active", sessionsRevokedAt: "2040-01-09T12:04:00Z" }, member_role_change: { membershipId: "membership_clinician", actorCode: "actor_clinician", role: "practice_admin", state: "role_changed", sessionsRevokedAt: "2040-01-09T12:04:00Z" }, member_offboard: { membershipId: "membership_clinician", actorCode: "actor_clinician", role: "clinician", state: "offboarded", sessionsRevokedAt: "2040-01-09T12:04:00Z" },
     retention: { policy: { version: "practice.synthetic.retention/1.0-draft.1", status: "authoritative_synthetic_draft_only", acknowledgedDays: 30, unacknowledgedDays: 90, backupTargetDays: 35, legalApproval: false }, deletion: [] }, audit: { events: [], nextCursor: null },
   };
@@ -125,9 +127,9 @@ describe("portal flows", () => {
     await user.click(screen.getByRole("button", { name: "Synthetic claim" }));
     expect(screen.queryByText("invitation_synthetic_memory_only")).toBeNull();
     expect(await screen.findByText(/Original one-time token cleared/)).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Synthetic accept" }));
+    await user.click(screen.getByRole("button", { name: "Accept these exact instructions" }));
     expect(await screen.findByText(/Claimant receipt cleared/)).toBeVisible();
-    expect(client.invoke).toHaveBeenCalledWith("invitation_accept", { claimantReceipt: "claimant_memory" });
+    expect(client.invoke).toHaveBeenCalledWith("invitation_accept", { claimantReceipt: "claimant_memory", reviewedAcceptanceSha256: acceptanceReviewSha256 });
   });
 
   it("renders exact independent delivery, claim, and submission lifecycle facts through claim and acceptance", async () => {
@@ -135,7 +137,7 @@ describe("portal flows", () => {
     const lifecycleRequest = () => ({ ...request, lifecycle: phase, delivery: "delivered" as const, claim: phase === "issued" ? "available" as const : phase, submission: "none" as const });
     const client = fakeClient({
       request_issue: () => ({ request: lifecycleRequest(), invitation: { requestId: request.id, token: "invitation_synthetic_memory_only", genericText: "A synthetic document request is available.", displayState: "available_once" } }),
-      invitation_claim: () => { phase = "claimed"; return { claimantReceipt: "claimant_memory", expiresAt: "2040-01-01T00:05:00Z" }; },
+      invitation_claim: () => { phase = "claimed"; return { claimantReceipt: "claimant_memory", expiresAt: "2040-01-01T00:05:00Z", review: acceptanceReview, reviewSha256: acceptanceReviewSha256 }; },
       invitation_accept: () => { phase = "accepted"; return { claim: "accepted" }; },
       request_list: () => [lifecycleRequest()],
     });
@@ -144,7 +146,7 @@ describe("portal flows", () => {
     expect(screen.getByText("Synthetic notification delivery is not implemented.", { exact: false })).toBeVisible();
     expect(within(screen.getByRole("table", { name: "Separate lifecycle facts" })).getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Lifecycle", "Delivery", "Claim", "Submission", "Predecessor", "Successor"]); assertLifecycleFacts("issued", "available");
     await user.click(screen.getByRole("button", { name: "Synthetic claim" })); await screen.findByText(/Original one-time token cleared/); assertLifecycleFacts("claimed", "claimed");
-    await user.click(screen.getByRole("button", { name: "Synthetic accept" })); await screen.findByText(/Claimant receipt cleared/); assertLifecycleFacts("accepted", "accepted");
+    await user.click(screen.getByRole("button", { name: "Accept these exact instructions" })); await screen.findByText(/Claimant receipt cleared/); assertLifecycleFacts("accepted", "accepted");
   });
 
   it("renders every report reading and disclosure, has chart alternative, and keeps print/download separate from acknowledgment", async () => {
@@ -168,7 +170,7 @@ describe("portal flows", () => {
     await user.click(screen.getByRole("button", { name: "Download canonical JSON" }));
     expect(client.invoke).not.toHaveBeenCalledWith("packet_acknowledge", expect.anything());
     expect(client.invoke).not.toHaveBeenCalledWith("packet_review", expect.anything());
-    expect(createUrl).toHaveBeenCalledOnce(); const blob = createUrl.mock.calls[0]?.[0] as Blob; expect(blob.type).toBe("application/json"); expect(blob.size).toBe(new TextEncoder().encode(JSON.stringify({ schema: "practice.synthetic.packet/1.0-draft.1" })).byteLength); expect(anchorDownload).toBe("practice-document.json"); expect(anchorHref).toContain("blob:memory"); expect(revoke).toHaveBeenCalledWith("blob:memory");
+    expect(createUrl).toHaveBeenCalledOnce(); const blob = createUrl.mock.calls[0]?.[0] as Blob; expect(blob.type).toBe("application/json"); expect(blob.size).toBe(new TextEncoder().encode(JSON.stringify({ schema: "practice.synthetic.packet/1.0-draft.2" })).byteLength); expect(anchorDownload).toBe("practice-document.json"); expect(anchorHref).toContain("blob:memory"); expect(revoke).toHaveBeenCalledWith("blob:memory");
     await user.click(screen.getByRole("button", { name: "Acknowledge receipt" }));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Acknowledge receipt" }));
     expect(await screen.findByText("Explicit receipt acknowledgment recorded.")).toBeVisible();

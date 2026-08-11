@@ -147,7 +147,7 @@ test.describe("serial real local Wrangler qualification", () => {
     await page.getByRole("button", { name: "Synthetic claim" }).click();
     await expect(page.getByText(/Original one-time token cleared/)).toBeVisible();
     await expect(page.locator("body")).not.toContainText(secret!);
-    await page.getByRole("button", { name: "Synthetic accept" }).click();
+    await page.getByRole("button", { name: "Accept these exact instructions" }).click();
     await expect(page.getByText(/Claimant receipt cleared/)).toBeVisible();
     expect(issueResponses).toHaveLength(1);
     await page.getByRole("link", { name: "Requests" }).click();
@@ -159,11 +159,13 @@ test.describe("serial real local Wrangler qualification", () => {
     const acceptedRecurring = page.getByRole("row").filter({ hasText: "recurring collection" }).filter({ hasText: "accepted" }).last();
     await acceptedRecurring.getByRole("button", { name: "Open" }).click();
     await page.getByRole("button", { name: "Start explicit successor" }).click();
+    await page.getByLabel("Inclusive start date").fill("2040-01-08");
+    await page.getByLabel("Exclusive end date").fill("2040-01-15");
     await page.getByRole("button", { name: "Validate and preview" }).click();
     await expect(page.getByRole("table", { name: "Canonical request fields" })).toContainText("recurring_collection");
     await page.getByRole("button", { name: "Issue this exact preview" }).click();
     await page.getByRole("button", { name: "Synthetic claim" }).click();
-    await page.getByRole("button", { name: "Synthetic accept" }).click();
+    await page.getByRole("button", { name: "Accept these exact instructions" }).click();
     await page.getByRole("link", { name: "Requests" }).click();
     const successor = page.getByRole("row").filter({ hasText: "recurring collection" }).filter({ hasText: "accepted" }).last();
     await successor.getByRole("button", { name: "Open" }).click();
@@ -216,7 +218,7 @@ test.describe("serial real local Wrangler qualification", () => {
     const stream = await download.createReadStream(); expect(stream).not.toBeNull();
     const chunks: Buffer[] = []; for await (const chunk of stream!) chunks.push(Buffer.from(chunk)); const downloadedBytes = Buffer.concat(chunks);
     expect(downloadedBytes.byteLength).toBeGreaterThan(100); const json = downloadedBytes.toString("utf8"); const artifact = JSON.parse(json);
-    expect(artifact).toMatchObject({ schema: "practice.synthetic.packet/1.0-draft.1", id: "packet_complete_apple", shape: "complete", revision: 1 }); expect(artifact.readings).toHaveLength(2);
+    expect(artifact).toMatchObject({ schema: "practice.synthetic.packet/1.0-draft.2", id: "packet_complete_apple", shape: "complete", revision: 1 }); expect(artifact.readings).toHaveLength(2);
     expect(await page.evaluate(() => (globalThis as typeof globalThis & { __practiceBlobFacts?: { type: string; size: number }[] }).__practiceBlobFacts)).toEqual([{ type: "application/json", size: downloadedBytes.byteLength }]);
     expect(await workflowFacts.textContent()).toBe(freshFacts);
 

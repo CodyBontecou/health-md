@@ -1,6 +1,8 @@
 import { PRACTICE_INSTRUCTION_VERSION, PRACTICE_PROTOCOL_VERSION } from "./api";
 
-export const SYNTHETIC_OPERATION_VERSION = "practice.synthetic.operation/1.0-draft.1" as const;
+export const SYNTHETIC_OPERATION_VERSION = "practice.synthetic.operation/1.0-draft.2" as const;
+export const SYNTHETIC_ACCEPTANCE_REVIEW_VERSION = "practice.synthetic.acceptance-review/1.0-draft.1" as const;
+export const SYNTHETIC_PACKET_VERSION = "practice.synthetic.packet/1.0-draft.2" as const;
 export const SYNTHETIC_RETENTION_POLICY_VERSION = "practice.synthetic.retention/1.0-draft.1" as const;
 
 export const roles = ["practice_admin", "clinician"] as const;
@@ -80,10 +82,17 @@ export interface InstructionVariables {
   practice_contact_text?: string;
 }
 
+export interface PracticeInstructionVariantRef {
+  id: string;
+  version: string;
+  approvalStatus: "synthetic_draft";
+}
+
 export interface CanonicalRequestRepresentation {
   schema: typeof SYNTHETIC_OPERATION_VERSION;
   protocolVersion: typeof PRACTICE_PROTOCOL_VERSION;
   instructionVersion: typeof PRACTICE_INSTRUCTION_VERSION;
+  practiceVariant: PracticeInstructionVariantRef | null;
   relationshipId: string;
   templateId: string;
   templateRevision: number;
@@ -91,6 +100,27 @@ export interface CanonicalRequestRepresentation {
   renderedInstructions: string;
 }
 export interface RequestPreview { representation: CanonicalRequestRepresentation; canonicalJson: string; canonicalBytes: number[] }
+
+export interface MaterializedCollectionPeriod {
+  deviceIanaTimezone: string;
+  startLocalDate: string;
+  endLocalDateExclusive: string;
+  startUtcInclusive: string;
+  endUtcExclusive: string;
+}
+export interface AcceptanceReview {
+  schema: typeof SYNTHETIC_ACCEPTANCE_REVIEW_VERSION;
+  requestRepresentationSha256: string;
+  instructionVersion: typeof PRACTICE_INSTRUCTION_VERSION;
+  practiceVariant: PracticeInstructionVariantRef | null;
+  materializedPeriod: MaterializedCollectionPeriod;
+  renderedInstructions: string;
+}
+export interface AcceptedRequestFacts {
+  acceptedAt: string;
+  reviewSha256: string;
+  review: AcceptanceReview;
+}
 
 export const templateStates = ["draft", "active", "superseded", "archived"] as const;
 export type TemplateState = (typeof templateStates)[number];
@@ -114,10 +144,10 @@ export interface RequestRecord {
   id: string; tenantId: string; relationshipId: string; revision: number; lifecycle: RequestLifecycleState;
   delivery: DeliveryState; claim: ClaimState; submission: SubmissionState; representation: CanonicalRequestRepresentation;
   canonicalJson: string; predecessorRequestId: string | null; successorRequestId: string | null;
-  history: readonly HistoryFact[];
+  acceptance: AcceptedRequestFacts | null; history: readonly HistoryFact[];
 }
 export interface InvitationDisplay { requestId: string; token: string | null; genericText: string; displayState: "available_once" | "already_displayed" }
-export interface ClaimantReceipt { requestId: string; claimantReceipt: string; expiresAt: string }
+export interface ClaimantReceipt { requestId: string; claimantReceipt: string; expiresAt: string; review: AcceptanceReview; reviewSha256: string }
 
 export const packetShapes = ["complete", "partial", "empty", "manual_source", "missing_pulse"] as const;
 export type PacketShape = (typeof packetShapes)[number];
@@ -155,10 +185,10 @@ export interface InboxPacketSummary {
   opened: boolean; acknowledged: boolean; reviewed: boolean;
 }
 export interface PacketArtifact {
-  schema: "practice.synthetic.packet/1.0-draft.1"; id: string; requestId: string; relationshipLabel: string;
+  schema: typeof SYNTHETIC_PACKET_VERSION; id: string; requestId: string; relationshipLabel: string;
   revision: number; shape: PacketShape; receivedAt: string; requestedPeriod: string; submittedPeriod: string;
   timezone: string; coverage: CoverageState; readings: readonly PacketReading[]; disclosures: readonly string[];
-  limitations: string; supersedesPacketId: string | null; supersededByPacketId: string | null;
+  limitations: string; supersedesPacketId: string | null;
 }
 
 export interface HistoryFact { type: string; actorCode: string; at: string; revision: number }
