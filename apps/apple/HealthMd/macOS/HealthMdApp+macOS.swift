@@ -488,6 +488,14 @@ struct HealthMdApp: App {
                 case .macExportRequest(let job):
                     await executeMacExportJob(job)
                 case .macExportStreamStart(let start):
+                    guard syncService.remoteCapabilities?.supportsAuthoritativeMacExportFileAccounting == true else {
+                        syncService.send(.macExportFailed(MacExportFailure(
+                            jobID: start.jobID,
+                            reason: .incompatibleProtocol,
+                            message: "Update Health.md on iPhone before exporting to this Mac."
+                        )))
+                        break
+                    }
                     syncService.isSyncing = true
                     syncService.activeMacExportProgress = nil
                     syncService.lastMacExportResult = nil
@@ -619,6 +627,18 @@ struct HealthMdApp: App {
                 case .iphoneExportRequest, .iphoneExportCancel:
                     break // iOS receives these requests
                 case .connectedCorpusTransferOpen(let open):
+                    guard syncService.remoteCapabilities?.supportsAuthoritativeMacExportFileAccounting == true else {
+                        syncService.send(.connectedCorpusTransferDisposition(ConnectedCorpusTransferDisposition(
+                            sessionID: open.session.sessionID,
+                            jobID: open.session.jobID,
+                            partitionIndex: open.partition.index,
+                            partitionSHA256: open.partition.sha256,
+                            disposition: .reject,
+                            nextPartitionIndex: 0,
+                            message: "Update Health.md on iPhone before exporting to this Mac."
+                        )))
+                        break
+                    }
                     let isDirectFileExport = iphoneExportRequestCoordinator.activeJobID == nil
                         && open.exportManifest?.mode == .writeFiles
                     guard isDirectFileExport || iphoneExportRequestCoordinator.accepts(
@@ -1068,6 +1088,16 @@ struct HealthMdApp: App {
     }
 
     private func executeMacExportJob(_ job: MacExportJob) async {
+        guard syncService.remoteCapabilities?.supportsAuthoritativeMacExportFileAccounting == true else {
+            let failure = MacExportFailure(
+                jobID: job.jobID,
+                reason: .incompatibleProtocol,
+                message: "Update Health.md on iPhone before exporting to this Mac."
+            )
+            syncService.lastMacExportFailure = failure
+            syncService.send(.macExportFailed(failure))
+            return
+        }
         if !macExportJobExecutor.isBusy,
            vaultManager.vaultURL != nil,
            vaultManager.canAccessSelectedVaultFolder(),
@@ -1347,23 +1377,15 @@ struct HealthMdApp: App {
     }
 
     private func recordMacAgentHistory(for job: MacExportJob, result: MacExportResultPayload) {
-        let exportResult = ExportOrchestrator.ExportResult(
-            successCount: result.successCount,
-            totalCount: result.totalCount,
-            failedDateDetails: result.failedDateDetails,
-            formatsPerDate: result.formatsPerDate,
-            externalRecordFileCount: result.externalRecordFileCount,
-            dailyNoteUpdateCount: result.dailyNoteUpdateCount,
-            dailyNoteSkipCount: result.dailyNoteSkipCount,
-            wasCancelled: result.status == .cancelled
-        )
+        let exportResult = ExportOrchestrator.ExportResult(macExportPayload: result)
         ExportOrchestrator.recordResult(
             exportResult,
             source: .macAgent,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
             targetLabel: job.requestedTarget?.destinationDisplayName ?? job.requestedTarget?.displayName ?? "Mac",
-            fileCount: result.totalFilesWritten
+            fileCount: result.isTotalFilesWrittenAuthoritative
+                ? result.totalFilesWritten : nil
         )
     }
 
@@ -1396,6 +1418,7 @@ struct HealthMdApp: App {
             peerName: job.sourceDeviceName,
             kind: syncEventKind(for: result.status),
             recordCount: max(result.totalFilesWritten, result.dailyNoteUpdateCount),
+            recordCountIsLowerBound: result.isTotalFilesWrittenAuthoritative ? nil : true,
             dateRangeStart: job.dateRangeStart,
             dateRangeEnd: job.dateRangeEnd,
             failureMessage: activityFailureMessage(for: result)
@@ -1432,8 +1455,13 @@ struct HealthMdApp: App {
             return nil
         case .partialSuccess:
             if result.dailyNoteSkipCount > 0,
+               result.isTotalFilesWrittenAuthoritative,
+               result.totalFilesWritten == 0,
                result.completedDates?.count == result.totalCount {
                 return String(localized: "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily note(s); no export files were created.")
+            }
+            guard result.isTotalFilesWrittenAuthoritative else {
+                return String(localized: "Mac export partially completed")
             }
             return String(localized: "Mac export wrote \(result.totalFilesWritten) file(s); \(result.failedDateDetails.count) date(s) need attention.")
         case .failure:
@@ -1442,7 +1470,7 @@ struct HealthMdApp: App {
             }
             return String(localized: "Mac export failed. Details: \(detail)")
         case .cancelled:
-            return result.successCount > 0
+            return result.successCount > 0 && result.isTotalFilesWrittenAuthoritative
                 ? String(localized: "Mac export stopped after writing \(result.totalFilesWritten) file(s).")
                 : String(localized: "Mac export cancelled")
         }
