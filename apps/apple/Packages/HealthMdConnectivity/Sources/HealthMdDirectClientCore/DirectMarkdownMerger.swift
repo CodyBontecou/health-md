@@ -31,6 +31,13 @@ struct MarkdownMerger {
         var sections: [Section]
     }
 
+    /// Detailed result used by destination writers so a conservative parser rejection is never
+    /// reported as a successful update. Compatibility string APIs still preserve existing bytes.
+    enum MergeOutcome: Equatable {
+        case merged(String)
+        case rejected
+    }
+
     // MARK: - Public API
 
     /// Merge new health-data markdown into an existing file's content.
@@ -40,7 +47,14 @@ struct MarkdownMerger {
     ///   - new: The freshly generated health-data markdown.
     /// - Returns: Merged markdown with app sections updated and user sections preserved.
     static func merge(existing: String, new: String) -> String {
-        merge(existing: existing, new: new, preservingPreamble: false)
+        switch mergeOutcome(existing: existing, new: new) {
+        case .merged(let content): content
+        case .rejected: existing
+        }
+    }
+
+    static func mergeOutcome(existing: String, new: String) -> MergeOutcome {
+        mergeOutcome(existing: existing, new: new, preservingPreamble: false)
     }
 
     /// Same section-aware merge as `merge`, but preserves the existing file's preamble
@@ -49,10 +63,21 @@ struct MarkdownMerger {
     ///
     /// Used by daily-note injection, where the preamble is owned by the user, not the app.
     static func mergePreservingPreamble(existing: String, new: String) -> String {
-        merge(existing: existing, new: new, preservingPreamble: true)
+        switch mergePreservingPreambleOutcome(existing: existing, new: new) {
+        case .merged(let content): content
+        case .rejected: existing
+        }
     }
 
-    private static func merge(existing: String, new: String, preservingPreamble: Bool) -> String {
+    static func mergePreservingPreambleOutcome(existing: String, new: String) -> MergeOutcome {
+        mergeOutcome(existing: existing, new: new, preservingPreamble: true)
+    }
+
+    private static func mergeOutcome(
+        existing: String,
+        new: String,
+        preservingPreamble: Bool
+    ) -> MergeOutcome {
         let newLevel = detectSectionLevel(in: new)
         let existingLevel = detectSectionLevel(in: existing)
 
@@ -71,7 +96,13 @@ struct MarkdownMerger {
         }
 
         // Merge frontmatter: preserve existing properties, add/update with new properties.
-        let mergedFrontmatter = mergeFrontmatter(existing: existingDoc.frontmatter, new: newDoc.frontmatter)
+        let mergedFrontmatter: String
+        switch mergeFrontmatterOutcome(existing: existingDoc.frontmatter, new: newDoc.frontmatter) {
+        case .merged(let content):
+            mergedFrontmatter = content
+        case .rejected:
+            return .rejected
+        }
         let boundaryLineEnding = firstLineEnding(in: existing) ?? firstLineEnding(in: new) ?? "\n"
 
         // Choose preamble: existing (daily-note injection) or new (full export rewrite).
@@ -106,7 +137,7 @@ struct MarkdownMerger {
             }
         }
 
-        return result
+        return .merged(result)
     }
 
     /// Join independently parsed Markdown fragments without changing a fragment's EOF bytes unless
@@ -142,8 +173,13 @@ struct MarkdownMerger {
         var raw: String { content + ending }
     }
 
+    private enum FrontmatterPropertyKey: Hashable {
+        case string(String)
+        case implicitlyTypedPlain(String)
+    }
+
     private struct FrontmatterPropertyBlock {
-        let key: String
+        let key: FrontmatterPropertyKey
         let range: Range<Int>
     }
 
@@ -160,33 +196,41 @@ struct MarkdownMerger {
     /// every existing block with the same key at the first block's position; genuinely new blocks are
     /// appended immediately before the closing delimiter.
     static func mergeFrontmatter(existing: String, new: String) -> String {
+        switch mergeFrontmatterOutcome(existing: existing, new: new) {
+        case .merged(let content): content
+        case .rejected: existing
+        }
+    }
+
+    static func mergeFrontmatterOutcome(existing: String, new: String) -> MergeOutcome {
         let existingDocument = frontmatterDocument(from: existing)
         let newDocument = frontmatterDocument(from: new)
 
         guard let existingDocument else {
-            return newDocument == nil ? "" : new
+            return .merged(newDocument == nil ? "" : new)
         }
         guard let newDocument else {
-            return existing
+            return .merged(existing)
         }
 
-        guard let incomingBlocks = propertyBlocks(in: newDocument.content),
-              !incomingBlocks.isEmpty else {
-            return existing
+        guard let incomingBlocks = propertyBlocks(in: newDocument.content) else {
+            return .rejected
+        }
+        guard !incomingBlocks.isEmpty else {
+            return .merged(existing)
         }
 
         let lineEnding = preferredLineEnding(in: existingDocument)
-        var incomingOrder: [String] = []
-        var incomingLinesByKey: [String: [PhysicalLine]] = [:]
+        var incomingOrder: [FrontmatterPropertyKey] = []
+        var incomingLinesByKey: [FrontmatterPropertyKey: [PhysicalLine]] = [:]
 
         for block in incomingBlocks {
-            let lookupKey = propertyLookupKey(block.key)
-            if incomingLinesByKey[lookupKey] == nil {
-                incomingOrder.append(lookupKey)
+            if incomingLinesByKey[block.key] == nil {
+                incomingOrder.append(block.key)
             }
             // Generated frontmatter should not contain duplicate keys. If it does, retain its last value,
             // matching the previous merge policy while still emitting one authoritative block.
-            incomingLinesByKey[lookupKey] = newDocument.content[block.range].map {
+            incomingLinesByKey[block.key] = newDocument.content[block.range].map {
                 PhysicalLine(content: $0.content, ending: lineEnding)
             }
         }
@@ -194,7 +238,7 @@ struct MarkdownMerger {
         guard let existingBlocks = propertyBlocks(in: existingDocument.content) else {
             // Unsupported or ambiguous YAML must remain byte-for-byte intact rather than risk a
             // partial replacement that leaves continuations attached to the wrong property.
-            return existing
+            return .rejected
         }
         let existingBlocksByStart = Dictionary(uniqueKeysWithValues: existingBlocks.map {
             ($0.range.lowerBound, $0)
@@ -205,9 +249,9 @@ struct MarkdownMerger {
         var preservedAliases: Set<String> = []
         for block in existingBlocks {
             guard let references = anchorReferences(in: Array(existingDocument.content[block.range])) else {
-                return existing
+                return .rejected
             }
-            if incomingKeys.contains(propertyLookupKey(block.key)) {
+            if incomingKeys.contains(block.key) {
                 replacedAnchors.formUnion(references.anchors)
             } else {
                 preservedAliases.formUnion(references.aliases)
@@ -215,11 +259,11 @@ struct MarkdownMerger {
         }
         guard replacedAnchors.isDisjoint(with: preservedAliases) else {
             // Replacing the defining block would leave a preserved alias with changed or missing meaning.
-            return existing
+            return .rejected
         }
 
         var mergedContent: [PhysicalLine] = []
-        var emittedIncomingKeys: Set<String> = []
+        var emittedIncomingKeys: Set<FrontmatterPropertyKey> = []
         var index = 0
 
         while index < existingDocument.content.count {
@@ -229,11 +273,10 @@ struct MarkdownMerger {
                 continue
             }
 
-            let lookupKey = propertyLookupKey(block.key)
-            if let replacement = incomingLinesByKey[lookupKey] {
-                if !emittedIncomingKeys.contains(lookupKey) {
+            if let replacement = incomingLinesByKey[block.key] {
+                if !emittedIncomingKeys.contains(block.key) {
                     mergedContent.append(contentsOf: replacement)
-                    emittedIncomingKeys.insert(lookupKey)
+                    emittedIncomingKeys.insert(block.key)
                 }
                 // Skip every stale occurrence of an incoming key after replacing the first one.
             } else {
@@ -249,12 +292,12 @@ struct MarkdownMerger {
             }
         }
 
-        return render(
+        return .merged(render(
             [existingDocument.opening]
                 + mergedContent
                 + [existingDocument.closing]
                 + existingDocument.suffix
-        )
+        ))
     }
 
     /// Split a complete Markdown document at a valid column-zero frontmatter envelope.
@@ -288,7 +331,7 @@ struct MarkdownMerger {
     }
 
     private struct FrontmatterPropertyHeader {
-        let key: String
+        let key: FrontmatterPropertyKey
         let value: String
     }
 
@@ -371,6 +414,59 @@ struct MarkdownMerger {
 
             // A backslash at the end of a double-quoted flow line escapes the physical line break,
             // not the first character on the continuation line.
+            escaped = false
+            return true
+        }
+    }
+
+    /// Tracks a top-level quoted scalar value across physical lines. A continuation line remains
+    /// owned by its original property even when it looks like another `key: value` pair.
+    private struct QuotedScalarState {
+        private let quote: Character
+        private var escaped = false
+        private(set) var isOpen = true
+
+        init(quote: Character) {
+            self.quote = quote
+        }
+
+        mutating func scan(_ text: Substring) -> Bool {
+            var index = text.startIndex
+            while index < text.endIndex {
+                let character = text[index]
+                let nextIndex = text.index(after: index)
+
+                if quote == "\"" {
+                    if escaped {
+                        escaped = false
+                    } else if character == "\\" {
+                        escaped = true
+                    } else if character == "\"" {
+                        isOpen = false
+                        let remainder = text[nextIndex...].drop(while: {
+                            $0 == " " || $0 == "\t"
+                        })
+                        return remainder.isEmpty || remainder.first == "#"
+                    }
+                    index = nextIndex
+                    continue
+                }
+
+                if character == "'" {
+                    if nextIndex < text.endIndex, text[nextIndex] == "'" {
+                        index = text.index(after: nextIndex)
+                        continue
+                    }
+                    isOpen = false
+                    let remainder = text[nextIndex...].drop(while: {
+                        $0 == " " || $0 == "\t"
+                    })
+                    return remainder.isEmpty || remainder.first == "#"
+                }
+                index = nextIndex
+            }
+
+            // A trailing backslash consumes the physical line break, not the first continuation byte.
             escaped = false
             return true
         }
@@ -531,10 +627,6 @@ struct MarkdownMerger {
         return references
     }
 
-    private static func propertyLookupKey(_ key: String) -> String {
-        key.precomposedStringWithCanonicalMapping
-    }
-
     /// Discover complete top-level property blocks. Returning nil means some non-trivia line could
     /// not be assigned safely, so callers must preserve the original frontmatter unchanged.
     private static func propertyBlocks(in lines: [PhysicalLine]) -> [FrontmatterPropertyBlock]? {
@@ -568,9 +660,14 @@ struct MarkdownMerger {
                 end = scalarEnd
             case .notBlockScalar:
                 var flowState = FlowCollectionState()
+                var quotedScalarState: QuotedScalarState?
                 guard let initialNode = yamlNode(in: header.value[...]) else { return nil }
                 if initialNode.first == "[" || initialNode.first == "{" {
                     guard flowState.scan(initialNode) else { return nil }
+                } else if let quote = initialNode.first, quote == "\"" || quote == "'" {
+                    var state = QuotedScalarState(quote: quote)
+                    guard state.scan(initialNode.dropFirst()) else { return nil }
+                    quotedScalarState = state
                 }
 
                 let allowsIndentationlessSequence = initialNode.isEmpty || initialNode.first == "#"
@@ -579,6 +676,12 @@ struct MarkdownMerger {
                     let continuation = lines[continuationEnd].content
                     guard !hasTabInYAMLIndentation(continuation) else { return nil }
 
+                    if var state = quotedScalarState, state.isOpen {
+                        guard state.scan(continuation[...]) else { return nil }
+                        quotedScalarState = state
+                        continuationEnd += 1
+                        continue
+                    }
                     if flowState.isOpen {
                         guard flowState.scan(continuation[...]) else { return nil }
                         continuationEnd += 1
@@ -655,7 +758,7 @@ struct MarkdownMerger {
                     return nil
                 }
 
-                guard !flowState.isOpen else { return nil }
+                guard !flowState.isOpen, quotedScalarState?.isOpen != true else { return nil }
                 end = continuationEnd
             }
 
@@ -701,7 +804,7 @@ struct MarkdownMerger {
             let valueStart = line.index(after: separator)
             guard valueStart == line.endIndex || isWhitespace(line[valueStart]) else { return nil }
             return FrontmatterPropertyHeader(
-                key: quoted.key,
+                key: .string(quoted.key.precomposedStringWithCanonicalMapping),
                 value: String(line[valueStart...])
             )
         }
@@ -714,7 +817,7 @@ struct MarkdownMerger {
                     let key = String(line[..<separator]).trimmingCharacters(in: .whitespaces)
                     guard isSupportedPlainKey(key) else { return nil }
                     return FrontmatterPropertyHeader(
-                        key: key,
+                        key: propertyKey(forPlainKey: key),
                         value: String(line[valueStart...])
                     )
                 }
@@ -803,6 +906,41 @@ struct MarkdownMerger {
             index = afterEscape
         }
         return nil
+    }
+
+    private static func propertyKey(forPlainKey key: String) -> FrontmatterPropertyKey {
+        let normalized = key.precomposedStringWithCanonicalMapping
+        let lowercased = normalized.lowercased()
+        let typedKeywords: Set<String> = [
+            "~", "null", "y", "n", "true", "false", "yes", "no", "on", "off",
+            ".nan", ".inf", "+.inf", "-.inf"
+        ]
+        if typedKeywords.contains(lowercased) {
+            return .implicitlyTypedPlain(lowercased)
+        }
+        if isImplicitNumericOrTimestampKey(normalized) {
+            return .implicitlyTypedPlain(normalized)
+        }
+        return .string(normalized)
+    }
+
+    /// Obsidian YAML implementations have used both YAML 1.1- and 1.2-style implicit schemas.
+    /// Keep their scalar-looking plain keys in a separate identity domain from quoted strings.
+    private static func isImplicitNumericOrTimestampKey(_ key: String) -> Bool {
+        let digitRun = #"[0-9][0-9_]*"#
+        let patterns = [
+            #"^[+-]?\#(digitRun)$"#,
+            #"^[+-]?0[bB][01][01_]*$"#,
+            #"^[+-]?0[oO][0-7][0-7_]*$"#,
+            #"^[+-]?0[xX][0-9a-fA-F][0-9a-fA-F_]*$"#,
+            #"^[+-]?(?:(?:\#(digitRun))?\.\#(digitRun)|\#(digitRun)\.)(?:[eE][+-]?[0-9]+)?$"#,
+            #"^[+-]?\#(digitRun)[eE][+-]?[0-9]+$"#,
+            #"^[+-]?\#(digitRun)(?::[0-5]?[0-9])+(?:\.\#(digitRun))?$"#,
+            #"^[0-9]{4}-[0-9]{2}-[0-9]{2}(?:$|[Tt \t])"#
+        ]
+        return patterns.contains { pattern in
+            key.range(of: pattern, options: .regularExpression) != nil
+        }
     }
 
     private static func isSupportedPlainKey(_ key: String) -> Bool {

@@ -167,7 +167,7 @@ object HealthMdRenderInputAdapter {
         put("registry_version", registry.registryVersion.toInt())
         put("registry_sha256", registry.registrySha256)
         put("profile_revision", registry.profileRevision.toInt())
-        put("render_profile_revision", 1)
+        put("render_profile_revision", 2)
         put("request_id", options.requestId)
         put("session_id", sessionId)
         put("profile", registry.profileId)

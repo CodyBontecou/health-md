@@ -5,10 +5,47 @@
 //  Tests for MarkdownMerger - critical for "Update" write mode
 //
 
+import Foundation
 import XCTest
 @testable import HealthMd
 
 final class MarkdownMergerTests: XCTestCase {
+    private struct MergeVectorFixture: Decodable {
+        let renderProfileRevision: Int
+        let vectors: [MergeVector]
+
+        enum CodingKeys: String, CodingKey {
+            case renderProfileRevision = "render_profile_revision"
+            case vectors
+        }
+    }
+
+    private struct MergeVector: Decodable {
+        let id: String
+        let existing: String
+        let generated: String
+        let preservePreamble: Bool
+        let outcome: String
+        let expected: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id, existing, generated, outcome, expected
+            case preservePreamble = "preserve_preamble"
+        }
+    }
+
+    private func sharedMergeFixture() throws -> MergeVectorFixture {
+        guard let fixtureURL = Bundle(for: Self.self).url(
+            forResource: "markdown-merge-v1",
+            withExtension: "json"
+        ) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        return try JSONDecoder().decode(
+            MergeVectorFixture.self,
+            from: Data(contentsOf: fixtureURL)
+        )
+    }
     
     // MARK: - headingLevel Tests
     
@@ -727,6 +764,28 @@ final class MarkdownMergerTests: XCTestCase {
         
         let result = MarkdownMerger.merge(existing: existing, new: new)
         XCTAssertTrue(result.contains("## Sleep"))
+    }
+
+    func testSharedManagedMarkdownMergeVectors() throws {
+        let fixture = try sharedMergeFixture()
+        XCTAssertEqual(fixture.renderProfileRevision, 2)
+
+        for vector in fixture.vectors {
+            let result = vector.preservePreamble
+                ? MarkdownMerger.mergePreservingPreambleOutcome(
+                    existing: vector.existing,
+                    new: vector.generated
+                )
+                : MarkdownMerger.mergeOutcome(existing: vector.existing, new: vector.generated)
+            switch (vector.outcome, result) {
+            case ("merged", .merged(let content)):
+                XCTAssertEqual(content, vector.expected, vector.id)
+            case ("rejected", .rejected):
+                XCTAssertNil(vector.expected, vector.id)
+            default:
+                XCTFail("Unexpected merge outcome for \(vector.id): \(result)")
+            }
+        }
     }
 
     func testMergeAddsOnlyRequiredLineBoundaries() {

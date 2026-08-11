@@ -189,10 +189,20 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "59fee27e488f76da193d8013fba4ff82d76887fe12df45439ea7de286feb4bc3",
+          "sha256": "1181e644cd224c8c0e4126133890830f5af9ec8c39995db6e90a471fae608c7d",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json",
+          "sha256": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+          "provenance": "Reviewed synthetic managed-Markdown merge vectors shared by app Swift, direct-package Swift, and Rust; exact bytes contain no production health data.",
+          "mirrors": [
+            "apps/apple/HealthMdTests/Fixtures/Export/markdown-merge-v1.json",
+            "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests/Fixtures/markdown-merge-v1.json",
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/markdown-merge-v1.json"
           ]
         },
         {
@@ -209,7 +219,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "a312c8032c1b33bbcd74368193a7a111b7971405d3275c1f5a7181be8ed9b404",
+          "sha256": "5b98aaa0620492e2ff5fab943ae58c5d7f5a6e129f7aed7ad9e9409b7bdcdf8c",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -217,7 +227,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "e989e50d2fc81cec95d938a19c40a6ce39428cfc83e45eb23b69703b656037bf",
+          "sha256": "0f6f8ce69bf0babddff87e4e4d1990b96633a754a10043a37475dc3d29b9bfef",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"

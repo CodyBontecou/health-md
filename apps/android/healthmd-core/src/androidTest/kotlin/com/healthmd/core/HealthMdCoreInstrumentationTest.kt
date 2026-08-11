@@ -23,7 +23,7 @@ class HealthMdCoreInstrumentationTest {
         assertThat(buildInfo.registryVersion).isEqualTo(1u)
         assertThat(buildInfo.renderInputVersion).isEqualTo(1u)
         assertThat(buildInfo.artifactPlanVersion).isEqualTo(1u)
-        assertThat(buildInfo.renderProfileRevision).isEqualTo(1u)
+        assertThat(buildInfo.renderProfileRevision).isEqualTo(2u)
         assertThat(buildInfo.persistedStateVersion).isEqualTo(1u)
         assertThat(selfTest.passed).isTrue()
         assertThat(selfTest.buildInfo).isEqualTo(buildInfo)

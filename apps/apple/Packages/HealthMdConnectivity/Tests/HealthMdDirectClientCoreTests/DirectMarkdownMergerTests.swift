@@ -1,7 +1,66 @@
+import Foundation
 import XCTest
 @testable import HealthMdDirectClientCore
 
 final class DirectMarkdownMergerTests: XCTestCase {
+    private struct MergeVectorFixture: Decodable {
+        let renderProfileRevision: Int
+        let vectors: [MergeVector]
+
+        enum CodingKeys: String, CodingKey {
+            case renderProfileRevision = "render_profile_revision"
+            case vectors
+        }
+    }
+
+    private struct MergeVector: Decodable {
+        let id: String
+        let existing: String
+        let generated: String
+        let preservePreamble: Bool
+        let outcome: String
+        let expected: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id, existing, generated, outcome, expected
+            case preservePreamble = "preserve_preamble"
+        }
+    }
+
+    private func sharedMergeFixture() throws -> MergeVectorFixture {
+        guard let fixtureURL = Bundle.module.url(
+            forResource: "markdown-merge-v1",
+            withExtension: "json"
+        ) else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        return try JSONDecoder().decode(
+            MergeVectorFixture.self,
+            from: Data(contentsOf: fixtureURL)
+        )
+    }
+
+    func testSharedManagedMarkdownMergeVectors() throws {
+        let fixture = try sharedMergeFixture()
+        XCTAssertEqual(fixture.renderProfileRevision, 2)
+
+        for vector in fixture.vectors {
+            let result = vector.preservePreamble
+                ? MarkdownMerger.mergePreservingPreambleOutcome(
+                    existing: vector.existing,
+                    new: vector.generated
+                )
+                : MarkdownMerger.mergeOutcome(existing: vector.existing, new: vector.generated)
+            switch (vector.outcome, result) {
+            case ("merged", .merged(let content)):
+                XCTAssertEqual(content, vector.expected, vector.id)
+            case ("rejected", .rejected):
+                XCTAssertNil(vector.expected, vector.id)
+            default:
+                XCTFail("Unexpected merge outcome for \(vector.id): \(result)")
+            }
+        }
+    }
     func testMergeFrontmatterPreservesListsNestedMappingsCommentsAndBlankLinesExactly() {
         let existing = "---\ndate: 2026-08-03\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\n---\n"
         let incoming = "---\ndate: 2026-07-30\nsteps: 2119\n---\n"

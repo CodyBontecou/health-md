@@ -25,7 +25,7 @@ internal fun syntheticExportEnginePin(
     registryVersion = 1u,
     registrySha256 = "a".repeat(64),
     semanticProfileRevision = 1u,
-    renderProfileRevision = 1u,
+    renderProfileRevision = 2u,
     coreSourceRevision = "synthetic-migration-evidence",
     ianaTimeZone = zoneId,
 )

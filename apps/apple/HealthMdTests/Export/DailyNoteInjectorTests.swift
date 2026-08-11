@@ -499,6 +499,32 @@ final class DailyNoteInjectorTests: XCTestCase {
         XCTAssertEqual(updated, expected)
     }
 
+    func testInject_rejectedYAMLLeavesExistingNoteUnchangedAndReportsFailure() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let filename = Self.enabledNoCreateSettings.formatFilename(for: Self.testDate) + ".md"
+        let fileURL = tmpDir.appendingPathComponent(filename)
+        let existing = "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\nBody without a trailing newline"
+        try existing.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 10_432
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.enabledNoCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+        guard case .failed(let error) = result else {
+            return XCTFail("Expected merge rejection, got \(result)")
+        }
+        XCTAssertEqual(error as? ExportError, .markdownMergeRejected)
+        XCTAssertEqual(try String(contentsOf: fileURL, encoding: .utf8), existing)
+    }
+
     // MARK: - inject: preserves body on empty file
 
     func testInject_emptyFile_writesFrontmatterOnly() throws {

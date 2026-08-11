@@ -1063,7 +1063,7 @@ class APIEndpointExportRunner private constructor(
     }
 
     private object HealthMdCoreServiceRevision {
-        const val renderProfileRevision: UInt = 1u
+        const val renderProfileRevision: UInt = 2u
     }
 
     companion object {

@@ -105,7 +105,7 @@ struct DailyNoteInjector {
                     return .skipped(reason: "No data available for enabled metrics on this date")
                 }
 
-                let updatedContent = mergedContent(
+                let updatedContent = try mergedContent(
                     existing: existingContent,
                     injectionContent: injectionContent,
                     settings: settings
@@ -150,11 +150,16 @@ struct DailyNoteInjector {
             existingContent = ""
         }
 
-        let content = mergedContent(
-            existing: existingContent,
-            injectionContent: injectionContent,
-            settings: settings
-        )
+        let content: String
+        do {
+            content = try mergedContent(
+                existing: existingContent,
+                injectionContent: injectionContent,
+                settings: settings
+            )
+        } catch {
+            return .skipped(reason: error.localizedDescription)
+        }
         let filename = settings.formatFilename(for: healthData.date) + ".md"
 
         return .preview(InjectionPreview(
@@ -215,15 +220,20 @@ struct DailyNoteInjector {
         existing: String,
         injectionContent: InjectionContent,
         settings: DailyNoteInjectionSettings
-    ) -> String {
+    ) throws -> String {
         if settings.injectMarkdownSections {
-            return MarkdownMerger.mergePreservingPreamble(
+            switch MarkdownMerger.mergePreservingPreambleOutcome(
                 existing: existing,
                 new: injectionContent.frontmatter + injectionContent.body
-            )
+            ) {
+            case .merged(let content):
+                return content
+            case .rejected:
+                throw ExportError.markdownMergeRejected
+            }
         }
 
-        return mergeIntoContent(
+        return try mergeIntoContent(
             existing: existing,
             injectionFrontmatter: injectionContent.frontmatter
         )
@@ -249,7 +259,10 @@ struct DailyNoteInjector {
         return originalKey
     }
 
-    private static func mergeIntoContent(existing: String, injectionFrontmatter: String) -> String {
+    private static func mergeIntoContent(
+        existing: String,
+        injectionFrontmatter: String
+    ) throws -> String {
         guard let parts = MarkdownMerger.splitFrontmatter(from: existing) else {
             if existing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 return injectionFrontmatter
@@ -257,10 +270,14 @@ struct DailyNoteInjector {
             return injectionFrontmatter + "\n" + existing
         }
 
-        let mergedFrontmatter = MarkdownMerger.mergeFrontmatter(
+        switch MarkdownMerger.mergeFrontmatterOutcome(
             existing: parts.frontmatter,
             new: injectionFrontmatter
-        )
-        return mergedFrontmatter + parts.body
+        ) {
+        case .merged(let frontmatter):
+            return frontmatter + parts.body
+        case .rejected:
+            throw ExportError.markdownMergeRejected
+        }
     }
 }

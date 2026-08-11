@@ -26,12 +26,12 @@ pub fn merge_profile_markdown(
     preserve_preamble: bool,
 ) -> Result<String, RenderError> {
     validate(existing, generated)?;
-    Ok(match profile {
+    match profile {
         SemanticProfile::AppleHealthDataV7 => apple_merge(existing, generated, preserve_preamble),
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => {
-            android_merge(existing, generated)
+            Ok(android_merge(existing, generated))
         }
-    })
+    }
 }
 
 fn validate(existing: &str, generated: &str) -> Result<(), RenderError> {
@@ -58,9 +58,15 @@ impl PhysicalLine {
     }
 }
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+enum FrontmatterPropertyKey {
+    String(String),
+    ImplicitlyTypedPlain(String),
+}
+
 #[derive(Clone)]
 struct FrontmatterPropertyBlock {
-    key: String,
+    key: FrontmatterPropertyKey,
     range: Range<usize>,
 }
 
@@ -84,7 +90,11 @@ struct AppleDocument {
     sections: Vec<AppleSection>,
 }
 
-fn apple_merge(existing: &str, generated: &str, preserve_preamble: bool) -> String {
+fn apple_merge(
+    existing: &str,
+    generated: &str,
+    preserve_preamble: bool,
+) -> Result<String, RenderError> {
     let boundary_line_ending = first_line_ending(existing)
         .or_else(|| first_line_ending(generated))
         .unwrap_or("\n");
@@ -98,7 +108,8 @@ fn apple_merge(existing: &str, generated: &str, preserve_preamble: bool) -> Stri
             generated_order.push(section.name.clone());
         }
     }
-    let merged_frontmatter = apple_merge_frontmatter(&existing.frontmatter, &generated.frontmatter);
+    let merged_frontmatter =
+        apple_merge_frontmatter(&existing.frontmatter, &generated.frontmatter)?;
     let mut output = String::new();
     append_markdown_fragment(&mut output, &merged_frontmatter, boundary_line_ending);
     append_markdown_fragment(
@@ -129,7 +140,7 @@ fn apple_merge(existing: &str, generated: &str, preserve_preamble: bool) -> Stri
             }
         }
     }
-    output
+    Ok(output)
 }
 
 fn append_markdown_fragment(output: &mut String, fragment: &str, line_ending: &str) {
@@ -243,31 +254,30 @@ fn apple_section_level(content: &str) -> usize {
     2
 }
 
-fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
+fn apple_merge_frontmatter(existing: &str, generated: &str) -> Result<String, RenderError> {
     let existing_document = frontmatter_document(existing);
     let generated_document = frontmatter_document(generated);
 
     let Some(existing_document) = existing_document else {
-        return generated_document.map_or_else(String::new, |_| generated.to_owned());
+        return Ok(generated_document.map_or_else(String::new, |_| generated.to_owned()));
     };
     let Some(generated_document) = generated_document else {
-        return existing.to_owned();
+        return Ok(existing.to_owned());
     };
 
     let Some(incoming_blocks) = property_blocks(&generated_document.content) else {
-        return existing.to_owned();
+        return Err(RenderError::InvalidArtifact);
     };
     if incoming_blocks.is_empty() {
-        return existing.to_owned();
+        return Ok(existing.to_owned());
     }
 
     let line_ending = preferred_line_ending(&existing_document);
     let mut incoming_order = Vec::new();
-    let mut incoming_by_key: HashMap<String, Vec<PhysicalLine>> = HashMap::new();
+    let mut incoming_by_key: HashMap<FrontmatterPropertyKey, Vec<PhysicalLine>> = HashMap::new();
     for block in incoming_blocks {
-        let lookup_key = property_lookup_key(&block.key);
-        if !incoming_by_key.contains_key(&lookup_key) {
-            incoming_order.push(lookup_key.clone());
+        if !incoming_by_key.contains_key(&block.key) {
+            incoming_order.push(block.key.clone());
         }
         let lines = generated_document.content[block.range]
             .iter()
@@ -276,20 +286,20 @@ fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
                 ending: line_ending,
             })
             .collect();
-        incoming_by_key.insert(lookup_key, lines);
+        incoming_by_key.insert(block.key, lines);
     }
 
     let Some(existing_blocks) = property_blocks(&existing_document.content) else {
         // Unsupported or ambiguous YAML remains byte-for-byte intact rather than risking a
         // partial replacement that leaves continuations attached to the wrong property.
-        return existing.to_owned();
+        return Err(RenderError::InvalidArtifact);
     };
     if !anchor_replacements_are_safe(
         &existing_document.content,
         &existing_blocks,
         &incoming_by_key,
     ) {
-        return existing.to_owned();
+        return Err(RenderError::InvalidArtifact);
     }
     let existing_by_start = existing_blocks
         .into_iter()
@@ -306,9 +316,8 @@ fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
             continue;
         };
 
-        let lookup_key = property_lookup_key(&block.key);
-        if let Some(replacement) = incoming_by_key.get(&lookup_key) {
-            if emitted.insert(lookup_key) {
+        if let Some(replacement) = incoming_by_key.get(&block.key) {
+            if emitted.insert(block.key.clone()) {
                 merged.extend(replacement.iter().cloned());
             }
         } else {
@@ -334,7 +343,7 @@ fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
     append_lines(&mut output, &merged);
     existing_document.closing.append_to(&mut output);
     append_lines(&mut output, &existing_document.suffix);
-    output
+    Ok(output)
 }
 
 fn frontmatter_document(text: &str) -> Option<FrontmatterDocument> {
@@ -356,7 +365,7 @@ fn frontmatter_document(text: &str) -> Option<FrontmatterDocument> {
 }
 
 struct FrontmatterPropertyHeader {
-    key: String,
+    key: FrontmatterPropertyKey,
     value: String,
 }
 
@@ -445,6 +454,62 @@ impl FlowCollectionState {
     }
 }
 
+struct QuotedScalarState {
+    quote: u8,
+    escaped: bool,
+    open: bool,
+}
+
+impl QuotedScalarState {
+    fn new(quote: u8) -> Self {
+        Self {
+            quote,
+            escaped: false,
+            open: true,
+        }
+    }
+
+    fn is_open(&self) -> bool {
+        self.open
+    }
+
+    fn scan(&mut self, text: &str) -> bool {
+        let bytes = text.as_bytes();
+        let mut index = 0;
+        while index < bytes.len() {
+            let byte = bytes[index];
+            if self.quote == b'"' {
+                if self.escaped {
+                    self.escaped = false;
+                } else if byte == b'\\' {
+                    self.escaped = true;
+                } else if byte == b'"' {
+                    self.open = false;
+                    let remainder = trim_horizontal(&text[index + 1..]);
+                    return remainder.is_empty() || remainder.starts_with('#');
+                }
+                index += 1;
+                continue;
+            }
+
+            if byte == b'\'' {
+                if bytes.get(index + 1) == Some(&b'\'') {
+                    index += 2;
+                    continue;
+                }
+                self.open = false;
+                let remainder = trim_horizontal(&text[index + 1..]);
+                return remainder.is_empty() || remainder.starts_with('#');
+            }
+            index += 1;
+        }
+
+        // A trailing backslash consumes the line break, not the first continuation byte.
+        self.escaped = false;
+        true
+    }
+}
+
 /// Discover complete top-level property blocks. None means some non-trivia line could not be
 /// assigned safely, so callers must preserve the original frontmatter unchanged.
 fn property_blocks(lines: &[PhysicalLine]) -> Option<Vec<FrontmatterPropertyBlock>> {
@@ -486,11 +551,18 @@ fn property_blocks(lines: &[PhysicalLine]) -> Option<Vec<FrontmatterPropertyBloc
 
 fn non_scalar_property_end(lines: &[PhysicalLine], start: usize, value: &str) -> Option<usize> {
     let mut flow_state = FlowCollectionState::default();
+    let mut quoted_scalar_state = None;
     let initial_node = yaml_node(value)?;
-    if matches!(initial_node.as_bytes().first(), Some(b'[' | b'{'))
-        && !flow_state.scan(initial_node)
-    {
-        return None;
+    if matches!(initial_node.as_bytes().first(), Some(b'[' | b'{')) {
+        if !flow_state.scan(initial_node) {
+            return None;
+        }
+    } else if let Some(quote @ (b'"' | b'\'')) = initial_node.as_bytes().first().copied() {
+        let mut state = QuotedScalarState::new(quote);
+        if !state.scan(&initial_node[1..]) {
+            return None;
+        }
+        quoted_scalar_state = Some(state);
     }
     let allows_indentationless_sequence = is_empty_or_comment_only_node(initial_node);
     let mut end = start;
@@ -501,6 +573,13 @@ fn non_scalar_property_end(lines: &[PhysicalLine], start: usize, value: &str) ->
             return None;
         }
 
+        if let Some(state) = quoted_scalar_state.as_mut().filter(|state| state.is_open()) {
+            if !state.scan(continuation) {
+                return None;
+            }
+            end += 1;
+            continue;
+        }
         if flow_state.is_open() {
             if !flow_state.scan(continuation) {
                 return None;
@@ -561,11 +640,11 @@ fn non_scalar_property_end(lines: &[PhysicalLine], start: usize, value: &str) ->
         return None;
     }
 
-    (!flow_state.is_open()).then_some(end)
-}
-
-fn property_lookup_key(key: &str) -> String {
-    key.nfc().collect()
+    (!flow_state.is_open()
+        && quoted_scalar_state
+            .as_ref()
+            .is_none_or(|state| !state.is_open()))
+    .then_some(end)
 }
 
 fn is_empty_or_comment_only_node(node: &str) -> bool {
@@ -618,7 +697,7 @@ fn property_header(line: &str) -> Option<FrontmatterPropertyHeader> {
             return None;
         }
         return Some(FrontmatterPropertyHeader {
-            key,
+            key: FrontmatterPropertyKey::String(key.nfc().collect()),
             value: value.to_owned(),
         });
     }
@@ -634,7 +713,7 @@ fn property_header(line: &str) -> Option<FrontmatterPropertyHeader> {
                 return None;
             }
             return Some(FrontmatterPropertyHeader {
-                key: key.to_owned(),
+                key: property_key_for_plain(key),
                 value: value.to_owned(),
             });
         }
@@ -714,6 +793,124 @@ fn decoded_quoted_key(line: &str, quote: char) -> Option<(String, usize)> {
         index = after_escape;
     }
     None
+}
+
+fn property_key_for_plain(key: &str) -> FrontmatterPropertyKey {
+    let normalized = key.nfc().collect::<String>();
+    let lowercase = normalized.to_ascii_lowercase();
+    if matches!(
+        lowercase.as_str(),
+        "~" | "null"
+            | "y"
+            | "n"
+            | "true"
+            | "false"
+            | "yes"
+            | "no"
+            | "on"
+            | "off"
+            | ".nan"
+            | ".inf"
+            | "+.inf"
+            | "-.inf"
+    ) {
+        return FrontmatterPropertyKey::ImplicitlyTypedPlain(lowercase);
+    }
+    if is_implicit_numeric_or_timestamp_key(&normalized) {
+        FrontmatterPropertyKey::ImplicitlyTypedPlain(normalized)
+    } else {
+        FrontmatterPropertyKey::String(normalized)
+    }
+}
+
+fn is_implicit_numeric_or_timestamp_key(key: &str) -> bool {
+    let bytes = key.as_bytes();
+    let timestamp = bytes.len() >= 10
+        && bytes[0..4].iter().all(u8::is_ascii_digit)
+        && bytes[4] == b'-'
+        && bytes[5..7].iter().all(u8::is_ascii_digit)
+        && bytes[7] == b'-'
+        && bytes[8..10].iter().all(u8::is_ascii_digit)
+        && (bytes.len() == 10 || matches!(bytes[10], b'T' | b't' | b' ' | b'\t'));
+    if timestamp {
+        return true;
+    }
+
+    let unsigned = key.strip_prefix(['+', '-']).unwrap_or(key);
+    let radix_number = unsigned
+        .strip_prefix("0b")
+        .or_else(|| unsigned.strip_prefix("0B"))
+        .is_some_and(|digits| yaml_digit_run(digits, |byte| matches!(byte, b'0' | b'1')))
+        || unsigned
+            .strip_prefix("0o")
+            .or_else(|| unsigned.strip_prefix("0O"))
+            .is_some_and(|digits| yaml_digit_run(digits, |byte| matches!(byte, b'0'..=b'7')))
+        || unsigned
+            .strip_prefix("0x")
+            .or_else(|| unsigned.strip_prefix("0X"))
+            .is_some_and(|digits| yaml_digit_run(digits, |byte| byte.is_ascii_hexdigit()));
+    if radix_number || yaml_decimal_number(unsigned) {
+        return true;
+    }
+
+    let (sexagesimal, fraction) = unsigned
+        .split_once('.')
+        .map_or((unsigned, None), |(base, fraction)| (base, Some(fraction)));
+    if unsigned.matches('.').count() > 1
+        || fraction.is_some_and(|digits| !yaml_digit_run(digits, |byte| byte.is_ascii_digit()))
+    {
+        return false;
+    }
+    let mut parts = sexagesimal.split(':');
+    let Some(first) = parts.next() else {
+        return false;
+    };
+    let remaining = parts.collect::<Vec<_>>();
+    yaml_digit_run(first, |byte| byte.is_ascii_digit())
+        && !remaining.is_empty()
+        && remaining.iter().all(|part| {
+            (1..=2).contains(&part.len())
+                && part.bytes().all(|byte| byte.is_ascii_digit())
+                && part.parse::<u8>().is_ok_and(|value| value < 60)
+        })
+}
+
+fn yaml_decimal_number(unsigned: &str) -> bool {
+    let exponent_indices = unsigned
+        .match_indices(['e', 'E'])
+        .map(|(index, _)| index)
+        .collect::<Vec<_>>();
+    if exponent_indices.len() > 1 {
+        return false;
+    }
+    let (mantissa, exponent) = exponent_indices.first().map_or((unsigned, None), |index| {
+        let (mantissa, exponent) = unsigned.split_at(*index);
+        (mantissa, Some(&exponent[1..]))
+    });
+    if exponent.is_some_and(|value| {
+        let unsigned_exponent = value.strip_prefix(['+', '-']).unwrap_or(value);
+        unsigned_exponent.is_empty() || !unsigned_exponent.bytes().all(|byte| byte.is_ascii_digit())
+    }) {
+        return false;
+    }
+
+    if let Some((whole, fraction)) = mantissa.split_once('.') {
+        if fraction.contains('.') {
+            return false;
+        }
+        let whole_is_valid =
+            whole.is_empty() || yaml_digit_run(whole, |byte| byte.is_ascii_digit());
+        let fraction_is_valid =
+            fraction.is_empty() || yaml_digit_run(fraction, |byte| byte.is_ascii_digit());
+        return whole_is_valid && fraction_is_valid && !(whole.is_empty() && fraction.is_empty());
+    }
+
+    yaml_digit_run(mantissa, |byte| byte.is_ascii_digit())
+}
+
+fn yaml_digit_run(value: &str, is_digit: impl Fn(u8) -> bool) -> bool {
+    value.as_bytes().first().is_some_and(|byte| is_digit(*byte))
+        && value.bytes().all(|byte| is_digit(byte) || byte == b'_')
 }
 
 fn is_supported_plain_key(key: &str) -> bool {
@@ -968,7 +1165,7 @@ struct AnchorLexerState {
 fn anchor_replacements_are_safe(
     lines: &[PhysicalLine],
     blocks: &[FrontmatterPropertyBlock],
-    incoming_by_key: &HashMap<String, Vec<PhysicalLine>>,
+    incoming_by_key: &HashMap<FrontmatterPropertyKey, Vec<PhysicalLine>>,
 ) -> bool {
     let mut replaced_definitions = HashSet::new();
     let mut preserved_aliases = HashSet::new();
@@ -977,7 +1174,7 @@ fn anchor_replacements_are_safe(
         let Some(references) = yaml_anchor_references(&lines[block.range.clone()]) else {
             return false;
         };
-        if incoming_by_key.contains_key(&property_lookup_key(&block.key)) {
+        if incoming_by_key.contains_key(&block.key) {
             replaced_definitions.extend(references.definitions);
         } else {
             preserved_aliases.extend(references.aliases);
@@ -1450,6 +1647,47 @@ fn android_merge_body(existing: &str, generated: &str) -> String {
 mod tests {
     use super::*;
 
+    #[derive(serde::Deserialize)]
+    struct MergeVectorFixture {
+        render_profile_revision: u32,
+        vectors: Vec<MergeVector>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct MergeVector {
+        id: String,
+        existing: String,
+        generated: String,
+        preserve_preamble: bool,
+        outcome: String,
+        expected: Option<String>,
+    }
+
+    #[test]
+    fn shared_managed_markdown_merge_vectors_match_exactly() {
+        let fixture: MergeVectorFixture =
+            serde_json::from_str(include_str!("../../tests/fixtures/markdown-merge-v1.json"))
+                .expect("shared merge fixture");
+        assert_eq!(fixture.render_profile_revision, 2);
+
+        for vector in fixture.vectors {
+            let result = merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV7,
+                &vector.existing,
+                &vector.generated,
+                vector.preserve_preamble,
+            );
+            match vector.outcome.as_str() {
+                "merged" => assert_eq!(result.unwrap(), vector.expected.unwrap(), "{}", vector.id),
+                "rejected" => {
+                    assert_eq!(result, Err(RenderError::InvalidArtifact), "{}", vector.id);
+                    assert!(vector.expected.is_none(), "{}", vector.id);
+                }
+                other => panic!("unknown merge outcome {other} for {}", vector.id),
+            }
+        }
+    }
+
     #[test]
     fn apple_and_android_keep_their_distinct_preamble_contracts() {
         let existing =
@@ -1639,9 +1877,8 @@ mod tests {
                 existing,
                 generated,
                 true,
-            )
-            .unwrap(),
-            existing
+            ),
+            Err(RenderError::InvalidArtifact)
         );
     }
 
@@ -1694,9 +1931,8 @@ mod tests {
                     existing,
                     generated,
                     true,
-                )
-                .unwrap(),
-                existing
+                ),
+                Err(RenderError::InvalidArtifact)
             );
         }
 
@@ -1724,9 +1960,8 @@ mod tests {
                 existing,
                 generated,
                 true,
-            )
-            .unwrap(),
-            existing
+            ),
+            Err(RenderError::InvalidArtifact)
         );
     }
 
@@ -1803,9 +2038,8 @@ mod tests {
                     existing,
                     generated,
                     true,
-                )
-                .unwrap(),
-                existing
+                ),
+                Err(RenderError::InvalidArtifact)
             );
         }
     }
