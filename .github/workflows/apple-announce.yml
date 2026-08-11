@@ -298,6 +298,7 @@ jobs:
           echo "Recorded $APP_NAME v${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.platform_label }}) in internal registry"
 
       - name: Post Discord update
+        if: github.event_name != 'repository_dispatch' || github.event.client_payload.discordOwner != 'central'
         env:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
         run: |
