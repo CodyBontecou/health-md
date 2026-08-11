@@ -1,0 +1,3480 @@
+[
+  {
+    "description" : "Check the running Mac app and connected iPhone readiness.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+
+      },
+      "required" : [
+
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_status"
+  },
+  {
+    "description" : "Diagnose encrypted-cache and fresh-iPhone readiness with actionable next steps.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+
+      },
+      "required" : [
+
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_doctor"
+  },
+  {
+    "description" : "List versioned local query, evidence, refresh, and pagination capabilities. Typed-tool schemas contain complete nested selector shapes and examples.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+
+      },
+      "required" : [
+
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_capabilities"
+  },
+  {
+    "description" : "List canonical queryable metric IDs, categories, units, and availability requirements.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+
+      },
+      "required" : [
+
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_metrics"
+  },
+  {
+    "description" : "Preferred tool for factual metric-series questions. Call it directly with dates and canonical metrics; its schema includes exact nested selector shapes and examples. Renders units, coverage, missingness, evidence, and limitations.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "examples" : [
+        {
+          "all_pages" : true,
+          "dates" : {
+            "range" : {
+              "end_date" : "2026-07-28",
+              "start_date" : "2026-07-22"
+            },
+            "type" : "exact"
+          },
+          "metrics" : {
+            "metric_ids" : [
+              "sleep_total"
+            ],
+            "type" : "explicit"
+          }
+        }
+      ],
+      "properties" : {
+        "all_pages" : {
+          "description" : "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type" : "boolean"
+        },
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "page" : {
+          "additionalProperties" : false,
+          "default" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+          "properties" : {
+            "cursor" : {
+              "default" : null,
+              "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+              "type" : [
+                "string",
+                "null"
+              ]
+            },
+            "max_bytes" : {
+              "default" : 262144,
+              "maximum" : 1048576,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "max_items" : {
+              "default" : 250,
+              "maximum" : 1000,
+              "minimum" : 1,
+              "type" : "integer"
+            }
+          },
+          "required" : [
+            "max_items",
+            "max_bytes"
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "dates",
+        "metrics"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_metric_chart"
+  },
+  {
+    "description" : "Preferred tool for sleep questions. Call it directly with a dates selector; canonical sleep metrics and lossless session detail are supplied automatically. Do not substitute the shell healthmd extract command, which returns a different canonical projection. Supports an optional fixed session-relative physiology window.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "examples" : [
+        {
+          "all_pages" : true,
+          "dates" : {
+            "range" : {
+              "end_date" : "2026-07-28",
+              "start_date" : "2026-07-22"
+            },
+            "type" : "exact"
+          }
+        }
+      ],
+      "properties" : {
+        "all_pages" : {
+          "description" : "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type" : "boolean"
+        },
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "include_naps" : {
+          "default" : false,
+          "description" : "Include nap sessions. The typed tool defaults to false when omitted.",
+          "type" : "boolean"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "page" : {
+          "additionalProperties" : false,
+          "default" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+          "properties" : {
+            "cursor" : {
+              "default" : null,
+              "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+              "type" : [
+                "string",
+                "null"
+              ]
+            },
+            "max_bytes" : {
+              "default" : 262144,
+              "maximum" : 1048576,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "max_items" : {
+              "default" : 250,
+              "maximum" : 1000,
+              "minimum" : 1,
+              "type" : "integer"
+            }
+          },
+          "required" : [
+            "max_items",
+            "max_bytes"
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "window" : {
+          "additionalProperties" : false,
+          "description" : "Optional fixed session-relative physiology window.",
+          "properties" : {
+            "duration_seconds" : {
+              "exclusiveMinimum" : 0,
+              "maximum" : 86400,
+              "type" : "number"
+            },
+            "start_offset_seconds" : {
+              "default" : 0,
+              "minimum" : 0,
+              "type" : "number"
+            }
+          },
+          "required" : [
+            "start_offset_seconds",
+            "duration_seconds"
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "dates"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_sleep_sessions"
+  },
+  {
+    "description" : "Preferred tool for workout/sleep timing questions. Call it directly with a dates selector; it aligns workouts with nearest preceding/following sleep sessions using factual timing only.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "examples" : [
+        {
+          "all_pages" : true,
+          "dates" : {
+            "range" : {
+              "end_date" : "2026-07-28",
+              "start_date" : "2026-07-22"
+            },
+            "type" : "exact"
+          },
+          "include_naps" : false
+        }
+      ],
+      "properties" : {
+        "all_pages" : {
+          "description" : "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type" : "boolean"
+        },
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "include_naps" : {
+          "default" : false,
+          "description" : "Include nap sessions. The typed tool defaults to false when omitted.",
+          "type" : "boolean"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "page" : {
+          "additionalProperties" : false,
+          "default" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+          "properties" : {
+            "cursor" : {
+              "default" : null,
+              "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+              "type" : [
+                "string",
+                "null"
+              ]
+            },
+            "max_bytes" : {
+              "default" : 262144,
+              "maximum" : 1048576,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "max_items" : {
+              "default" : 250,
+              "maximum" : 1000,
+              "minimum" : 1,
+              "type" : "integer"
+            }
+          },
+          "required" : [
+            "max_items",
+            "max_bytes"
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "window" : {
+          "additionalProperties" : false,
+          "description" : "Optional fixed session-relative physiology window.",
+          "properties" : {
+            "duration_seconds" : {
+              "exclusiveMinimum" : 0,
+              "maximum" : 86400,
+              "type" : "number"
+            },
+            "start_offset_seconds" : {
+              "default" : 0,
+              "minimum" : 0,
+              "type" : "number"
+            }
+          },
+          "required" : [
+            "start_offset_seconds",
+            "duration_seconds"
+          ],
+          "type" : "object"
+        },
+        "workout_activity" : {
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "dates"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_training_alignment"
+  },
+  {
+    "description" : "Preferred tool for workout-listing questions. Call it directly with a dates selector; the schema includes exact nested shapes and an example.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "examples" : [
+        {
+          "all_pages" : true,
+          "dates" : {
+            "range" : {
+              "end_date" : "2026-07-28",
+              "start_date" : "2026-07-22"
+            },
+            "type" : "exact"
+          }
+        }
+      ],
+      "properties" : {
+        "all_pages" : {
+          "description" : "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type" : "boolean"
+        },
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "page" : {
+          "additionalProperties" : false,
+          "default" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+          "properties" : {
+            "cursor" : {
+              "default" : null,
+              "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+              "type" : [
+                "string",
+                "null"
+              ]
+            },
+            "max_bytes" : {
+              "default" : 262144,
+              "maximum" : 1048576,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "max_items" : {
+              "default" : 250,
+              "maximum" : 1000,
+              "minimum" : 1,
+              "type" : "integer"
+            }
+          },
+          "required" : [
+            "max_items",
+            "max_bytes"
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "dates"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_workouts"
+  },
+  {
+    "description" : "Inspect and visualize factual metric/date coverage and explicit missingness. Call directly with dates and canonical metrics.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "all_pages" : {
+          "description" : "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type" : "boolean"
+        },
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "page" : {
+          "additionalProperties" : false,
+          "default" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+          "properties" : {
+            "cursor" : {
+              "default" : null,
+              "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+              "type" : [
+                "string",
+                "null"
+              ]
+            },
+            "max_bytes" : {
+              "default" : 262144,
+              "maximum" : 1048576,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "max_items" : {
+              "default" : 250,
+              "maximum" : 1000,
+              "minimum" : 1,
+              "type" : "integer"
+            }
+          },
+          "required" : [
+            "max_items",
+            "max_bytes"
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "dates",
+        "metrics"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_coverage"
+  },
+  {
+    "description" : "Compare and visualize two exact periods. Supply concrete inclusive first/second date ranges and explicit per-metric aggregation semantics; the schema includes exact nested shapes.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "aggregations" : {
+          "items" : {
+            "additionalProperties" : false,
+            "properties" : {
+              "expected_unit" : {
+                "type" : "string"
+              },
+              "kind" : {
+                "enum" : [
+                  "sum",
+                  "average",
+                  "minimum",
+                  "maximum",
+                  "latest",
+                  "count",
+                  "duration_sum"
+                ],
+                "type" : "string"
+              },
+              "metric_id" : {
+                "type" : "string"
+              }
+            },
+            "required" : [
+              "metric_id",
+              "kind"
+            ],
+            "type" : "object"
+          },
+          "minItems" : 1,
+          "type" : "array"
+        },
+        "all_pages" : {
+          "description" : "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type" : "boolean"
+        },
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "first" : {
+          "additionalProperties" : false,
+          "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+          "properties" : {
+            "end_date" : {
+              "description" : "Inclusive yyyy-MM-dd end date.",
+              "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+              "type" : "string"
+            },
+            "start_date" : {
+              "description" : "Inclusive yyyy-MM-dd start date.",
+              "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+              "type" : "string"
+            }
+          },
+          "required" : [
+            "start_date",
+            "end_date"
+          ],
+          "type" : "object"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "page" : {
+          "additionalProperties" : false,
+          "default" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+          "properties" : {
+            "cursor" : {
+              "default" : null,
+              "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+              "type" : [
+                "string",
+                "null"
+              ]
+            },
+            "max_bytes" : {
+              "default" : 262144,
+              "maximum" : 1048576,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "max_items" : {
+              "default" : 250,
+              "maximum" : 1000,
+              "minimum" : 1,
+              "type" : "integer"
+            }
+          },
+          "required" : [
+            "max_items",
+            "max_bytes"
+          ],
+          "type" : "object"
+        },
+        "second" : {
+          "additionalProperties" : false,
+          "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+          "properties" : {
+            "end_date" : {
+              "description" : "Inclusive yyyy-MM-dd end date.",
+              "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+              "type" : "string"
+            },
+            "start_date" : {
+              "description" : "Inclusive yyyy-MM-dd start date.",
+              "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+              "type" : "string"
+            }
+          },
+          "required" : [
+            "start_date",
+            "end_date"
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "dates",
+        "metrics",
+        "first",
+        "second",
+        "aggregations"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_compare_periods"
+  },
+  {
+    "description" : "Create and visualize a factual training evidence packet with selected workout details.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "all_pages" : {
+          "description" : "Traverse opaque cursors within bounded aggregate limits and return healthmd.mcp_query_pages/1",
+          "type" : "boolean"
+        },
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_ids" : {
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "page" : {
+          "additionalProperties" : false,
+          "default" : {
+            "cursor" : null,
+            "max_bytes" : 262144,
+            "max_items" : 250
+          },
+          "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+          "properties" : {
+            "cursor" : {
+              "default" : null,
+              "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+              "type" : [
+                "string",
+                "null"
+              ]
+            },
+            "max_bytes" : {
+              "default" : 262144,
+              "maximum" : 1048576,
+              "minimum" : 1,
+              "type" : "integer"
+            },
+            "max_items" : {
+              "default" : 250,
+              "maximum" : 1000,
+              "minimum" : 1,
+              "type" : "integer"
+            }
+          },
+          "required" : [
+            "max_items",
+            "max_bytes"
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "dates"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_training_evidence"
+  },
+  {
+    "description" : "Advanced fallback when no typed tool matches. Supply a complete healthmd.query_request/1 object using the fully expanded nested schema. Prefer healthmd_sleep_sessions, healthmd_workouts, healthmd_metric_chart, or another typed tool.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+        "all_pages" : {
+          "type" : "boolean"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "request" : {
+          "additionalProperties" : false,
+          "description" : "Complete healthmd.query_request/1. Prefer typed tools such as healthmd_sleep_sessions; use this advanced shape only when no typed tool matches.",
+          "properties" : {
+            "dates" : {
+              "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+              "examples" : [
+                {
+                  "range" : {
+                    "end_date" : "2026-07-28",
+                    "start_date" : "2026-07-22"
+                  },
+                  "type" : "exact"
+                },
+                {
+                  "type" : "all_available"
+                }
+              ],
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "range" : {
+                      "additionalProperties" : false,
+                      "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                      "properties" : {
+                        "end_date" : {
+                          "description" : "Inclusive yyyy-MM-dd end date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        },
+                        "start_date" : {
+                          "description" : "Inclusive yyyy-MM-dd start date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        }
+                      },
+                      "required" : [
+                        "start_date",
+                        "end_date"
+                      ],
+                      "type" : "object"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "exact"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "range"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "all_available"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            },
+            "metrics" : {
+              "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+              "examples" : [
+                {
+                  "metric_ids" : [
+                    "sleep_total",
+                    "sleep_bedtime",
+                    "sleep_wake"
+                  ],
+                  "type" : "explicit"
+                },
+                {
+                  "type" : "all_available"
+                }
+              ],
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "metric_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "maxItems" : 512,
+                      "minItems" : 1,
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "type" : {
+                      "enum" : [
+                        "explicit"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "metric_ids"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "all_available"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            },
+            "operation" : {
+              "description" : "Fixed factual query operation. Prefer the corresponding typed MCP tool when one exists.",
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "metric_series"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "workout_listing"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "source_record_listing"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "coverage"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "include_naps" : {
+                      "default" : true,
+                      "type" : "boolean"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "sleep_session_listing"
+                      ],
+                      "type" : "string"
+                    },
+                    "window" : {
+                      "additionalProperties" : false,
+                      "description" : "Optional fixed session-relative physiology window.",
+                      "properties" : {
+                        "duration_seconds" : {
+                          "exclusiveMinimum" : 0,
+                          "maximum" : 86400,
+                          "type" : "number"
+                        },
+                        "start_offset_seconds" : {
+                          "default" : 0,
+                          "minimum" : 0,
+                          "type" : "number"
+                        }
+                      },
+                      "required" : [
+                        "start_offset_seconds",
+                        "duration_seconds"
+                      ],
+                      "type" : "object"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "include_naps" : {
+                      "default" : false,
+                      "type" : "boolean"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "workout_sleep_alignment"
+                      ],
+                      "type" : "string"
+                    },
+                    "window" : {
+                      "additionalProperties" : false,
+                      "description" : "Optional fixed session-relative physiology window.",
+                      "properties" : {
+                        "duration_seconds" : {
+                          "exclusiveMinimum" : 0,
+                          "maximum" : 86400,
+                          "type" : "number"
+                        },
+                        "start_offset_seconds" : {
+                          "default" : 0,
+                          "minimum" : 0,
+                          "type" : "number"
+                        }
+                      },
+                      "required" : [
+                        "start_offset_seconds",
+                        "duration_seconds"
+                      ],
+                      "type" : "object"
+                    },
+                    "workout_activity" : {
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "aggregations" : {
+                      "items" : {
+                        "additionalProperties" : false,
+                        "properties" : {
+                          "expected_unit" : {
+                            "type" : "string"
+                          },
+                          "kind" : {
+                            "enum" : [
+                              "sum",
+                              "average",
+                              "minimum",
+                              "maximum",
+                              "latest",
+                              "count",
+                              "duration_sum"
+                            ],
+                            "type" : "string"
+                          },
+                          "metric_id" : {
+                            "type" : "string"
+                          }
+                        },
+                        "required" : [
+                          "metric_id",
+                          "kind"
+                        ],
+                        "type" : "object"
+                      },
+                      "minItems" : 1,
+                      "type" : "array"
+                    },
+                    "first" : {
+                      "additionalProperties" : false,
+                      "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                      "properties" : {
+                        "end_date" : {
+                          "description" : "Inclusive yyyy-MM-dd end date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        },
+                        "start_date" : {
+                          "description" : "Inclusive yyyy-MM-dd start date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        }
+                      },
+                      "required" : [
+                        "start_date",
+                        "end_date"
+                      ],
+                      "type" : "object"
+                    },
+                    "second" : {
+                      "additionalProperties" : false,
+                      "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                      "properties" : {
+                        "end_date" : {
+                          "description" : "Inclusive yyyy-MM-dd end date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        },
+                        "start_date" : {
+                          "description" : "Inclusive yyyy-MM-dd start date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        }
+                      },
+                      "required" : [
+                        "start_date",
+                        "end_date"
+                      ],
+                      "type" : "object"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "period_comparison"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "first",
+                    "second",
+                    "aggregations"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "detail_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "kind" : {
+                      "enum" : [
+                        "daily_wellness",
+                        "training",
+                        "doctor_visit"
+                      ],
+                      "type" : "string"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "derive_packet"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "kind"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            },
+            "page" : {
+              "additionalProperties" : false,
+              "default" : {
+                "cursor" : null,
+                "max_bytes" : 262144,
+                "max_items" : 250
+              },
+              "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+              "properties" : {
+                "cursor" : {
+                  "default" : null,
+                  "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+                  "type" : [
+                    "string",
+                    "null"
+                  ]
+                },
+                "max_bytes" : {
+                  "default" : 262144,
+                  "maximum" : 1048576,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "max_items" : {
+                  "default" : 250,
+                  "maximum" : 1000,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "required" : [
+                "max_items",
+                "max_bytes"
+              ],
+              "type" : "object"
+            },
+            "schema" : {
+              "enum" : [
+                "healthmd.query_request"
+              ],
+              "type" : "string"
+            },
+            "schema_version" : {
+              "enum" : [
+                1
+              ],
+              "type" : "integer"
+            },
+            "sources" : {
+              "default" : {
+                "type" : "all_available"
+              },
+              "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "provider_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "source_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "type" : {
+                      "enum" : [
+                        "explicit"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "all_available"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            }
+          },
+          "required" : [
+            "schema",
+            "schema_version",
+            "metrics",
+            "dates",
+            "operation",
+            "page"
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "request"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_query"
+  },
+  {
+    "description" : "Advanced fallback for a directly scoped factual evidence packet. Supply a complete healthmd.query_request/1 object using the fully expanded nested schema; prefer a typed tool when available.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+        "all_pages" : {
+          "type" : "boolean"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "request" : {
+          "additionalProperties" : false,
+          "description" : "Complete healthmd.query_request/1. Prefer typed tools such as healthmd_sleep_sessions; use this advanced shape only when no typed tool matches.",
+          "properties" : {
+            "dates" : {
+              "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+              "examples" : [
+                {
+                  "range" : {
+                    "end_date" : "2026-07-28",
+                    "start_date" : "2026-07-22"
+                  },
+                  "type" : "exact"
+                },
+                {
+                  "type" : "all_available"
+                }
+              ],
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "range" : {
+                      "additionalProperties" : false,
+                      "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                      "properties" : {
+                        "end_date" : {
+                          "description" : "Inclusive yyyy-MM-dd end date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        },
+                        "start_date" : {
+                          "description" : "Inclusive yyyy-MM-dd start date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        }
+                      },
+                      "required" : [
+                        "start_date",
+                        "end_date"
+                      ],
+                      "type" : "object"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "exact"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "range"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "all_available"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            },
+            "metrics" : {
+              "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+              "examples" : [
+                {
+                  "metric_ids" : [
+                    "sleep_total",
+                    "sleep_bedtime",
+                    "sleep_wake"
+                  ],
+                  "type" : "explicit"
+                },
+                {
+                  "type" : "all_available"
+                }
+              ],
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "metric_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "maxItems" : 512,
+                      "minItems" : 1,
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "type" : {
+                      "enum" : [
+                        "explicit"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "metric_ids"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "all_available"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            },
+            "operation" : {
+              "description" : "Fixed factual query operation. Prefer the corresponding typed MCP tool when one exists.",
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "metric_series"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "workout_listing"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "source_record_listing"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "coverage"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "include_naps" : {
+                      "default" : true,
+                      "type" : "boolean"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "sleep_session_listing"
+                      ],
+                      "type" : "string"
+                    },
+                    "window" : {
+                      "additionalProperties" : false,
+                      "description" : "Optional fixed session-relative physiology window.",
+                      "properties" : {
+                        "duration_seconds" : {
+                          "exclusiveMinimum" : 0,
+                          "maximum" : 86400,
+                          "type" : "number"
+                        },
+                        "start_offset_seconds" : {
+                          "default" : 0,
+                          "minimum" : 0,
+                          "type" : "number"
+                        }
+                      },
+                      "required" : [
+                        "start_offset_seconds",
+                        "duration_seconds"
+                      ],
+                      "type" : "object"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "include_naps" : {
+                      "default" : false,
+                      "type" : "boolean"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "workout_sleep_alignment"
+                      ],
+                      "type" : "string"
+                    },
+                    "window" : {
+                      "additionalProperties" : false,
+                      "description" : "Optional fixed session-relative physiology window.",
+                      "properties" : {
+                        "duration_seconds" : {
+                          "exclusiveMinimum" : 0,
+                          "maximum" : 86400,
+                          "type" : "number"
+                        },
+                        "start_offset_seconds" : {
+                          "default" : 0,
+                          "minimum" : 0,
+                          "type" : "number"
+                        }
+                      },
+                      "required" : [
+                        "start_offset_seconds",
+                        "duration_seconds"
+                      ],
+                      "type" : "object"
+                    },
+                    "workout_activity" : {
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "aggregations" : {
+                      "items" : {
+                        "additionalProperties" : false,
+                        "properties" : {
+                          "expected_unit" : {
+                            "type" : "string"
+                          },
+                          "kind" : {
+                            "enum" : [
+                              "sum",
+                              "average",
+                              "minimum",
+                              "maximum",
+                              "latest",
+                              "count",
+                              "duration_sum"
+                            ],
+                            "type" : "string"
+                          },
+                          "metric_id" : {
+                            "type" : "string"
+                          }
+                        },
+                        "required" : [
+                          "metric_id",
+                          "kind"
+                        ],
+                        "type" : "object"
+                      },
+                      "minItems" : 1,
+                      "type" : "array"
+                    },
+                    "first" : {
+                      "additionalProperties" : false,
+                      "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                      "properties" : {
+                        "end_date" : {
+                          "description" : "Inclusive yyyy-MM-dd end date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        },
+                        "start_date" : {
+                          "description" : "Inclusive yyyy-MM-dd start date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        }
+                      },
+                      "required" : [
+                        "start_date",
+                        "end_date"
+                      ],
+                      "type" : "object"
+                    },
+                    "second" : {
+                      "additionalProperties" : false,
+                      "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                      "properties" : {
+                        "end_date" : {
+                          "description" : "Inclusive yyyy-MM-dd end date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        },
+                        "start_date" : {
+                          "description" : "Inclusive yyyy-MM-dd start date.",
+                          "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                          "type" : "string"
+                        }
+                      },
+                      "required" : [
+                        "start_date",
+                        "end_date"
+                      ],
+                      "type" : "object"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "period_comparison"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "first",
+                    "second",
+                    "aggregations"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "detail_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "kind" : {
+                      "enum" : [
+                        "daily_wellness",
+                        "training",
+                        "doctor_visit"
+                      ],
+                      "type" : "string"
+                    },
+                    "type" : {
+                      "enum" : [
+                        "derive_packet"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type",
+                    "kind"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            },
+            "page" : {
+              "additionalProperties" : false,
+              "default" : {
+                "cursor" : null,
+                "max_bytes" : 262144,
+                "max_items" : 250
+              },
+              "description" : "Optional per-page wire bounds. Omit for defaults. Cursors are opaque; return next_cursor unchanged or set all_pages=true.",
+              "properties" : {
+                "cursor" : {
+                  "default" : null,
+                  "description" : "Opaque continuation cursor returned by Health.md; never construct or alter it.",
+                  "type" : [
+                    "string",
+                    "null"
+                  ]
+                },
+                "max_bytes" : {
+                  "default" : 262144,
+                  "maximum" : 1048576,
+                  "minimum" : 1,
+                  "type" : "integer"
+                },
+                "max_items" : {
+                  "default" : 250,
+                  "maximum" : 1000,
+                  "minimum" : 1,
+                  "type" : "integer"
+                }
+              },
+              "required" : [
+                "max_items",
+                "max_bytes"
+              ],
+              "type" : "object"
+            },
+            "schema" : {
+              "enum" : [
+                "healthmd.query_request"
+              ],
+              "type" : "string"
+            },
+            "schema_version" : {
+              "enum" : [
+                1
+              ],
+              "type" : "integer"
+            },
+            "sources" : {
+              "default" : {
+                "type" : "all_available"
+              },
+              "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+              "oneOf" : [
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "provider_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "source_ids" : {
+                      "items" : {
+                        "type" : "string"
+                      },
+                      "type" : "array",
+                      "uniqueItems" : true
+                    },
+                    "type" : {
+                      "enum" : [
+                        "explicit"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                },
+                {
+                  "additionalProperties" : false,
+                  "properties" : {
+                    "type" : {
+                      "enum" : [
+                        "all_available"
+                      ],
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "type"
+                  ],
+                  "type" : "object"
+                }
+              ],
+              "type" : "object"
+            }
+          },
+          "required" : [
+            "schema",
+            "schema_version",
+            "metrics",
+            "dates",
+            "operation",
+            "page"
+          ],
+          "type" : "object"
+        }
+      },
+      "required" : [
+        "request"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_evidence_packet"
+  },
+  {
+    "_meta" : {
+      "anthropic/requiresUserInteraction" : true
+    },
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false
+    },
+    "description" : "After explicit user approval, run a durable connected-iPhone export into the folder already selected in Health.md. Use explicit_range with date_range, or all_available without date_range. Optional metric/category/all-metrics selection may include summary/lossless detail and narrows iPhone acquisition without changing saved settings.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "all_metrics" : {
+          "type" : "boolean"
+        },
+        "categories" : {
+          "items" : {
+            "type" : "string"
+          },
+          "maxItems" : 64,
+          "type" : "array",
+          "uniqueItems" : true
+        },
+        "date_range" : {
+          "additionalProperties" : false,
+          "properties" : {
+            "end" : {
+              "description" : "Inclusive yyyy-MM-dd end date",
+              "type" : "string"
+            },
+            "start" : {
+              "description" : "Inclusive yyyy-MM-dd start date",
+              "type" : "string"
+            }
+          },
+          "required" : [
+            "start",
+            "end"
+          ],
+          "type" : "object"
+        },
+        "date_selection" : {
+          "enum" : [
+            "explicit_range",
+            "all_available"
+          ],
+          "type" : "string"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "metric_ids" : {
+          "items" : {
+            "type" : "string"
+          },
+          "maxItems" : 512,
+          "type" : "array",
+          "uniqueItems" : true
+        },
+        "settings_policy" : {
+          "enum" : [
+            "requested_dates_only",
+            "current_iphone_settings"
+          ],
+          "type" : "string"
+        },
+        "wait_timeout_seconds" : {
+          "maximum" : 900,
+          "minimum" : 5,
+          "type" : "number"
+        }
+      },
+      "required" : [
+        "date_selection"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_export_files"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true
+    },
+    "description" : "Inspect a durable generated-file export job and its destination/progress receipt.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "job_id" : {
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "job_id"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_export_job_status"
+  },
+  {
+    "_meta" : {
+      "anthropic/requiresUserInteraction" : true
+    },
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false
+    },
+    "description" : "After explicit user approval, resume the exact immutable durable generated-file export job.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "job_id" : {
+          "type" : "string"
+        },
+        "wait_timeout_seconds" : {
+          "maximum" : 900,
+          "minimum" : 5,
+          "type" : "number"
+        }
+      },
+      "required" : [
+        "job_id"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_export_job_resume"
+  },
+  {
+    "_meta" : {
+      "anthropic/requiresUserInteraction" : true
+    },
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false
+    },
+    "description" : "After explicit user approval, explicitly cancel a durable generated-file export job. This cannot be undone.",
+    "inputSchema" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "job_id" : {
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "job_id"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_export_job_cancel"
+  },
+  {
+    "_meta" : {
+      "anthropic/requiresUserInteraction" : true
+    },
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false
+    },
+    "description" : "After explicit user approval, request iPhone acquisition for the supplied scope; all history remains resumable.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+        "dates" : {
+          "description" : "Choose exactly one shape: {type:'exact',range:{start_date:'yyyy-MM-dd',end_date:'yyyy-MM-dd'}} or {type:'all_available'}. Dates are inclusive; examples are illustrative.",
+          "examples" : [
+            {
+              "range" : {
+                "end_date" : "2026-07-28",
+                "start_date" : "2026-07-22"
+              },
+              "type" : "exact"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "range" : {
+                  "additionalProperties" : false,
+                  "description" : "Inclusive Health.md calendar-date range. Resolve relative phrases such as last week to concrete dates before calling.",
+                  "properties" : {
+                    "end_date" : {
+                      "description" : "Inclusive yyyy-MM-dd end date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    },
+                    "start_date" : {
+                      "description" : "Inclusive yyyy-MM-dd start date.",
+                      "pattern" : "^\\d{4}-\\d{2}-\\d{2}$",
+                      "type" : "string"
+                    }
+                  },
+                  "required" : [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type" : "object"
+                },
+                "type" : {
+                  "enum" : [
+                    "exact"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "range"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "detail_level" : {
+          "enum" : [
+            "summary",
+            "lossless"
+          ],
+          "type" : "string"
+        },
+        "metrics" : {
+          "description" : "Choose {type:'explicit',metric_ids:[...]} using canonical IDs from healthmd_metrics, or {type:'all_available'}. Typed sleep/workout tools supply required metrics when omitted.",
+          "examples" : [
+            {
+              "metric_ids" : [
+                "sleep_total",
+                "sleep_bedtime",
+                "sleep_wake"
+              ],
+              "type" : "explicit"
+            },
+            {
+              "type" : "all_available"
+            }
+          ],
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "metric_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "maxItems" : 512,
+                  "minItems" : 1,
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type",
+                "metric_ids"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "sources" : {
+          "default" : {
+            "type" : "all_available"
+          },
+          "description" : "Usually omit or use all_available. Explicit source_ids are stable Health.md evidence-source IDs; provider_ids are separate from source IDs.",
+          "oneOf" : [
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "provider_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "source_ids" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array",
+                  "uniqueItems" : true
+                },
+                "type" : {
+                  "enum" : [
+                    "explicit"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            },
+            {
+              "additionalProperties" : false,
+              "properties" : {
+                "type" : {
+                  "enum" : [
+                    "all_available"
+                  ],
+                  "type" : "string"
+                }
+              },
+              "required" : [
+                "type"
+              ],
+              "type" : "object"
+            }
+          ],
+          "type" : "object"
+        },
+        "wait_timeout_seconds" : {
+          "maximum" : 900,
+          "minimum" : 5,
+          "type" : "number"
+        }
+      },
+      "required" : [
+        "dates",
+        "metrics",
+        "sources"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_refresh"
+  },
+  {
+    "annotations" : {
+      "destructiveHint" : false,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : true
+    },
+    "description" : "Inspect a durable local acquisition job.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+        "job_id" : {
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "job_id"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_job_status"
+  },
+  {
+    "_meta" : {
+      "anthropic/requiresUserInteraction" : true
+    },
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : false,
+      "openWorldHint" : false,
+      "readOnlyHint" : false
+    },
+    "description" : "After explicit user approval, resume a durable local acquisition job.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+        "job_id" : {
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "job_id"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_job_resume"
+  },
+  {
+    "_meta" : {
+      "anthropic/requiresUserInteraction" : true
+    },
+    "annotations" : {
+      "destructiveHint" : true,
+      "idempotentHint" : true,
+      "openWorldHint" : false,
+      "readOnlyHint" : false
+    },
+    "description" : "After explicit user approval, explicitly cancel a durable local acquisition job.",
+    "inputSchema" : {
+      "additionalProperties" : true,
+      "properties" : {
+        "job_id" : {
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "job_id"
+      ],
+      "type" : "object"
+    },
+    "name" : "healthmd_job_cancel"
+  }
+]

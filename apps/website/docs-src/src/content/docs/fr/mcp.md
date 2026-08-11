@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## Prérequis
 
 - Health.md for Mac installée et ouverte.
-- Health.md ouverte sur l’iPhone jumelé lorsqu’un outil démarre une nouvelle lecture ou un nouvel export.
+- Health.md ouverte sur l’iPhone connecté lorsque l’outil d’actualisation ou un export démarre une nouvelle opération HealthKit.
 - Un hôte MCP local avec prise en charge de stdio.
 - Le chemin de l’utilitaire signé affiché sous **Health.md for Mac → CLI**.
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Redémarrez Codex, appelez `healthmd_doctor`, listez les métriques avec `healthmd_metrics`, puis demandez un petit `healthmd_metric_chart`. Les hôtes sans MCP Apps interactives reçoivent tout de même le JSON exact ainsi qu’un graphique PNG standard.
+Redémarrez Codex, appelez `healthmd_doctor`, résolvez les ID avec `healthmd_metrics`, acquérez explicitement une petite portée exacte avec l’outil d’actualisation, puis interrogez cette portée avec `healthmd_metric_chart`. Les hôtes sans MCP Apps interactives reçoivent tout de même le JSON exact ainsi qu’un graphique PNG standard.
 
 ## Configuration Claude
 
@@ -108,7 +108,7 @@ Si l’hôte ne prend pas en charge MCP Apps, les outils fonctionnent quand mêm
 
 ## Outils disponibles
 
-Le serveur Mac intégré expose 21 outils fixes. L’aperçu portable expose les mêmes outils de préparation, d’analyse et d’export de fichiers générés, mais omet les quatre outils d’acquisition de contexte chiffré.
+Le serveur Mac intégré expose 21 outils fixes : 13 outils de préparation et de requête, quatre outils de tâche de fichiers générés et quatre outils de tâche d’actualisation du contexte chiffré. L’aperçu portable à 19 outils conserve les 13 outils de préparation/requête et les quatre outils d’export, remplace les tâches d’actualisation Mac par deux outils de jumelage direct et exécute les requêtes typées directement sur l’iPhone au premier plan.
 
 ### Préparation et découverte
 
@@ -161,7 +161,7 @@ Un agent doit appeler directement l’outil typé correspondant plutôt qu’ins
 les questions sur le sommeil utilisent `healthmd_sleep_sessions` ; `healthmd extract` produit une projection canonique
 différente de données sources.
 
-Vous pouvez inspecter localement le même schéma sans ouvrir d’écouteur réseau ni contacter l’iPhone :
+L’aperçu portable permet d’inspecter localement le même schéma sans ouvrir d’écouteur réseau ni contacter l’iPhone. Pour l’utilitaire Mac publié, utilisez tools/list de MCP.
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -189,7 +189,7 @@ Les métriques de sommeil canoniques et le détail de session sans perte sont fo
 
 ## Analyser et représenter les données
 
-Appelez d’abord `healthmd_doctor`. Résolvez les ID de métriques avec `healthmd_metrics`, puis représentez une série directement ciblée. Chaque requête demande explicitement une nouvelle lecture bornée sur l’iPhone :
+Appelez d’abord `healthmd_doctor` et résolvez les ID de métriques avec `healthmd_metrics`. Dans la topologie Mac publiée, les outils de requête typés lisent le contexte Mac chiffré ; ils ne contactent pas implicitement l’iPhone. Pour obtenir des données actuelles, appelez l’outil d’actualisation avec des dates, métriques et sources explicites, attendez la fin de sa tâche persistante, puis représentez la même portée :
 
 ```json
 {
@@ -214,11 +214,11 @@ Appelez d’abord `healthmd_doctor`. Résolvez les ID de métriques avec `health
 
 Passez cet objet à `healthmd_metric_chart`. La vue interactive utilise de petits graphiques multiples qui ne mélangent pas les unités. Un point manquant ou partiel interrompt la ligne au lieu de devenir zéro.
 
-Les outils de requête typés contactent uniquement l’iPhone jumelé au premier plan. L’iPhone capture les jours demandés, projette un contexte typé compact, évalue la requête localement et renvoie une page de réponse bornée avec couverture, données manquantes, preuves et limites.
+Les outils typés Mac publiés évaluent le contexte local chiffré et renvoient des pages bornées avec couverture, données manquantes, preuves et limites. Seule une actualisation explicite contacte l’iPhone connecté au premier plan et remplace la portée de contexte demandée. L’aperçu portable évalue chaque requête typée directement sur son iPhone jumelé au premier plan.
 
 ## Lancer un export de fichiers générés
 
-Créez d’abord un répertoire de destination existant sur l’ordinateur. Une fois que l’hôte affiche les arguments complets et que l’utilisateur approuve, appelez `healthmd_export_files` :
+Sélectionnez et conservez d’abord un dossier de destination accessible en écriture dans Health.md for Mac. Une fois que l’hôte affiche les arguments complets et que l’utilisateur approuve, appelez `healthmd_export_files` :
 
 ```json
 {
@@ -228,7 +228,6 @@ Créez d’abord un répertoire de destination existant sur l’ordinateur. Une 
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -275,7 +274,7 @@ La MCP App affiche ces champs au lieu de les masquer. Si le parcours automatique
 
 ## Limites de sécurité et de confidentialité
 
-L’utilitaire ne propose ni invites, ni racines, ni échantillonnage, ni shell, ni SQL, ni lecture arbitraire de fichiers, ni récupération d’URL arbitraires, ni écritures HealthKit, ni service HTTP en boucle locale, ni point de terminaison MCP distant. Sa seule ressource MCP est le document App intégré. Les écritures de fichiers générés sont une opération fixe soumise à approbation et nécessitent une destination existante explicite, validée et liée de façon persistante avant le transfert.
+L’utilitaire ne propose ni invites, ni racines, ni échantillonnage, ni shell, ni SQL, ni lecture arbitraire de fichiers, ni récupération d’URL arbitraires, ni écritures HealthKit, ni service HTTP en boucle locale, ni point de terminaison MCP distant. Sa seule ressource MCP est le document App intégré. Les écritures de fichiers générés sont une opération fixe soumise à approbation. L’utilitaire Mac publié utilise le dossier sélectionné dans Health.md for Mac ; l’aperçu portable exige une destination existante explicite qu’il valide et lie durablement avant le transfert.
 
 La confiance directe est stockée dans Keychain, Secret Service ou Windows Credential Manager. Le jumelage utilise le protocole chiffré authentifié existant ; l’iPhone doit être au premier plan et explicitement connecté à l’adresse LAN ou Tailscale de l’ordinateur. Les pages de requête sont bornées aux limites d’octets/d’éléments négociées, et l’agrégation automatique de toutes les pages possède des plafonds d’octets/pages supplémentaires. Les corps bruts non bornés restent sur le chemin CLI de streaming validé.
 
@@ -291,7 +290,7 @@ Health.md rapporte des observations factuelles avec unités, provenance, couvert
 | `healthmd_unavailable` | Déverrouillez Health.md et placez-la au premier plan sur l’iPhone, activez Direct CLI Access et connectez-vous à l’ordinateur |
 | `query_scope_too_large` | Répartissez les dates ou ID de métriques entre plusieurs appels ; le corpus logique reste disponible entre requêtes |
 | Aucun graphique interactif | Mettez à jour l’hôte ; le serveur renvoie toujours le JSON exact et un repli PNG de graphique métrique |
-| Destination d’export indisponible | Créez et passez un répertoire existant sur l’ordinateur, absolu et sans lien symbolique |
+| Destination d’export indisponible | Mac : resélectionnez le dossier enregistré dans Health.md. Aperçu portable : créez et passez un répertoire existant sur l’ordinateur, absolu et sans lien symbolique. |
 | L’attente d’export expire | Inspectez la tâche persistante d’export par ID avant de reprendre |
 | Le résultat contient `next_cursor` | Définissez `all_pages: true` ou continuez le curseur manuellement |
 

@@ -1,5 +1,5 @@
 {
-  "artifact_count" : 30,
+  "artifact_count" : 32,
   "artifacts" : [
     {
       "bytes" : 2525,
@@ -7,9 +7,19 @@
       "sha256" : "7f1db6f29a9e1754db199d53ddbbd8bfdf60b232a68a93ea1b3b165770e76ec2"
     },
     {
+      "bytes" : 187,
+      "path" : "agent-query-error.json",
+      "sha256" : "73ee1c07fe56b1d94cfce67944b40b7749a5731790684974086437ac93056d32"
+    },
+    {
       "bytes" : 308,
       "path" : "agent-query-request.json",
       "sha256" : "2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4"
+    },
+    {
+      "bytes" : 1518,
+      "path" : "agent-query-response-partial.json",
+      "sha256" : "62c1d2f5ec85a3a4218f504cb34d027ea4facf87175a84ca7b564f2836ff38d4"
     },
     {
       "bytes" : 1487,
@@ -102,9 +112,9 @@
       "sha256" : "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87"
     },
     {
-      "bytes" : 117653,
+      "bytes" : 120666,
       "path" : "message-fields.md",
-      "sha256" : "a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb"
+      "sha256" : "962adaaef4a224f926dcc36e32711debf8173433a8b1422131e8f615b80fc557"
     },
     {
       "bytes" : 1496,
@@ -150,6 +160,9 @@
   "contracts" : [
     "healthmd.api_export/v1",
     "healthmd.api_export/v2",
+    "healthmd.query_error/v1",
+    "healthmd.query_request/v1",
+    "healthmd.query_response/v1",
     "healthmd.raw_result/v1",
     "localhost-control/v1",
     "sync-protocol/v2",
@@ -165,7 +178,7 @@
   ],
   "generated_group" : "automation",
   "generator" : "HealthMdTests/Documentation/GeneratedAutomationReferenceDocumentation.swift",
-  "hashed_artifact_count" : 29,
+  "hashed_artifact_count" : 31,
   "sync_message_count" : 38,
   "synthetic_data_only" : true
 }

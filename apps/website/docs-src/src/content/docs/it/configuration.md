@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Riavvia Codex, chiama `healthmd_doctor`, quindi chiama `healthmd_metrics` e un piccolo strumento tipizzato come `healthmd_metric_chart`. Il server incluso espone 21 strumenti, tra cui verifica dell'idoneità del Mac, processi di aggiornamento del contesto crittografato, evidenze e visualizzazioni.
+Riavvia Codex, chiama `healthmd_doctor`, risolvi gli ID con `healthmd_metrics`, acquisisci esplicitamente un piccolo ambito con lo strumento di aggiornamento e interrogalo con uno strumento tipizzato come `healthmd_metric_chart`. Il server incluso espone 21 strumenti, tra cui verifica dell'idoneità del Mac, processi di aggiornamento del contesto crittografato, evidenze e visualizzazioni.
 
 ## Claude Desktop o Claude Code su Mac
 
@@ -124,7 +124,7 @@ Per ottenere un risultato completo, esamina l'ambito richiesto, la copertura, l'
 ## Continua
 
 <div class="related">
-  <a href="/it/docs/mcp/"><span>Interfaccia degli strumenti</span>Esamina i 21 strumenti disponibili per Mac, l'anteprima multipiattaforma con 17 strumenti, MCP Apps, gli schemi, la paginazione, le esportazioni e i limiti dell’ambiente isolato.</a>
+  <a href="/it/docs/mcp/"><span>Interfaccia degli strumenti</span>Esamina i 21 strumenti Mac pubblicati, l'anteprima multipiattaforma con 19 strumenti, MCP Apps, gli schemi, la paginazione, le esportazioni e i limiti dell’ambiente isolato.</a>
   <a href="/it/docs/agent-queries/"><span>Prime domande</span>Esegui flussi di lavoro tipizzati per metriche, sonno, allenamenti, confronti, copertura ed evidenze.</a>
   <a href="/it/docs/cli-extract/"><span>Dati canonici</span>Estrai documenti schema-v7 selezionati e record di origine senza inserire corpi di grandi dimensioni nella chat.</a>
   <a href="/it/docs/reference/"><span>Contratti</span>Consulta strutture dati con versionamento, inventari dei campi, fixture generate e procedure di integrazione.</a>

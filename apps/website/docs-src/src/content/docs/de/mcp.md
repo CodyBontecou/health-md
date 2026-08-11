@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## Anforderungen
 
 - Health.md für Mac installiert und geöffnet.
-- Health.md wird auf dem gekoppelten iPhone geöffnet, wenn ein Tool einen neuen Lese- oder Exportvorgang startet.
+- Health.md ist auf dem verbundenen iPhone geöffnet, wenn das Aktualisierungstool oder ein Export neue HealthKit-Arbeit startet.
 - Ein lokaler MCP-Host mit stdio-Unterstützung.
 - Der Pfad des signierten Helfers, der unter **Health.md für Mac → CLI** angezeigt wird.
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Starten Sie Codex neu, rufen Sie `healthmd_doctor` auf, listen Sie die Metriken mit `healthmd_metrics` auf und fordern Sie dann ein kleines `healthmd_metric_chart` an. Hosts ohne interaktives MCP Apps erhalten weiterhin das exakte JSON sowie ein Standard-PNG-Diagramm.
+Starten Sie Codex neu, rufen Sie `healthmd_doctor` auf, ermitteln Sie IDs mit `healthmd_metrics`, erfassen Sie mit dem Aktualisierungstool ausdrücklich einen kleinen exakten Umfang und fragen Sie diesen dann mit `healthmd_metric_chart` ab. Hosts ohne interaktive MCP Apps erhalten weiterhin exaktes JSON und ein Standard-PNG-Diagramm.
 
 ## Claude-Setup
 
@@ -108,7 +108,7 @@ Wenn der Host MCP Apps nicht unterstützt, funktionieren die Tools trotzdem. `he
 
 ## Verfügbare Tools
 
-Der mitgelieferte Mac-Server stellt 21 feste Tools zur Verfügung. Die portable Vorschau stellt die gleichen Tools für Bereitschaft, Analyse und Export generierter Dateien bereit, lässt jedoch die vier Tools zur Erfassung verschlüsselten Kontexts weg.
+Der mitgelieferte Mac-Server stellt 21 feste Tools bereit: 13 für Bereitschaft und Abfragen, vier für Aufträge mit generierten Dateien und vier für Aktualisierungsaufträge des verschlüsselten Kontexts. Die portable Vorschau mit 19 Tools behält die 13 Bereitschafts-/Abfragetools und vier Exporttools bei, ersetzt Mac-Aktualisierungsaufträge durch zwei Tools zur direkten Kopplung und führt typisierte Abfragen direkt auf dem im Vordergrund geöffneten iPhone aus.
 
 ### Bereitschaft und Entdeckung
 
@@ -157,7 +157,7 @@ Die Tools zum Exportieren, Fortsetzen und Abbrechen werden als potenziell destru
 
 MCP `tools/list` enthält ein vollständiges verschachteltes JSON-Schema für Datumsangaben, Metriken, Quellen, Paginierung, Zeiträume, Aggregationen und das erweiterte `healthmd.query_request`. Die typisierten Tools enthalten auch konkrete Beispiele. Ein Agent sollte direkt das passende typisierte Tool aufrufen, statt die allgemeine Shell-Hilfe auszuwerten. Insbesondere verwenden Fragen zum Schlaf `healthmd_sleep_sessions`; `healthmd extract` erzeugt eine andere kanonische Quelldatenprojektion.
 
-Sie können dasselbe Schema lokal prüfen, ohne einen Netzwerk-Listener zu öffnen oder das iPhone zu kontaktieren:
+In der portablen Vorschau können Sie dasselbe Schema lokal prüfen, ohne einen Netzwerk-Listener zu öffnen oder das iPhone zu kontaktieren. Verwenden Sie für den veröffentlichten Mac-Helfer MCP tools/list.
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -184,7 +184,7 @@ Kanonische Schlafmetriken und verlustfreie Sitzungsdetails stellt `healthmd_slee
 
 ## Daten analysieren und grafisch darstellen
 
-Rufen Sie zuerst `healthmd_doctor` auf. Ermitteln Sie Metrik-IDs mit `healthmd_metrics` und zeichnen Sie dann eine Reihe mit ausdrücklich festgelegtem Umfang. Jede Abfrage fordert explizit einen neuen begrenzten iPhone-Lesevorgang an:
+Rufen Sie zuerst `healthmd_doctor` auf und ermitteln Sie Metrik-IDs mit `healthmd_metrics`. In der veröffentlichten Mac-Topologie lesen typisierte Abfragetools den verschlüsselten Mac-Kontext; sie kontaktieren das iPhone nicht implizit. Rufen Sie für aktuelle Daten das Aktualisierungstool mit ausdrücklichen Datumsangaben, Metriken und Quellen auf, warten Sie auf den Abschluss des persistenten Auftrags und zeichnen Sie dann denselben Umfang:
 
 ```json
 {
@@ -209,11 +209,11 @@ Rufen Sie zuerst `healthmd_doctor` auf. Ermitteln Sie Metrik-IDs mit `healthmd_m
 
 Übergeben Sie dieses Objekt an `healthmd_metric_chart`. Die interaktive Ansicht verwendet einheitensichere kleine Vielfache. Ein fehlender oder teilweiser Punkt unterbricht die Linie, anstatt zu Null zu werden.
 
-Typisierte Abfragetools kontaktieren nur das gekoppelte, im Vordergrund geöffnete iPhone. Das iPhone erfasst die angeforderten Tage, projiziert kompakten typisierten Kontext, wertet die Anfrage lokal aus und gibt eine begrenzte Antwortseite mit Abdeckung, fehlenden Daten, Nachweisen und Einschränkungen zurück.
+Die veröffentlichten typisierten Mac-Tools werten verschlüsselten lokalen Kontext aus und geben begrenzte Seiten mit Abdeckung, fehlenden Daten, Nachweisen und Einschränkungen zurück. Nur eine ausdrückliche Aktualisierung kontaktiert das verbundene, im Vordergrund geöffnete iPhone und ersetzt den angeforderten Kontextumfang. Die portable Vorschau wertet jede typisierte Anfrage stattdessen direkt auf ihrem gekoppelten, im Vordergrund geöffneten iPhone aus.
 
 ## Export generierter Dateien ausführen
 
-Erstellen Sie zunächst ein vorhandenes Zielverzeichnis auf dem Computer. Nachdem der Host die vollständigen Argumente angezeigt hat und der Benutzer zustimmt, rufen Sie `healthmd_export_files` auf:
+Wählen und speichern Sie zuerst in Health.md für Mac einen beschreibbaren Zielordner. Nachdem der Host die vollständigen Argumente angezeigt hat und der Benutzer zustimmt, rufen Sie `healthmd_export_files` auf:
 
 ```json
 {
@@ -223,7 +223,6 @@ Erstellen Sie zunächst ein vorhandenes Zielverzeichnis auf dem Computer. Nachde
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -270,7 +269,7 @@ Die MCP-App zeigt diese Felder an, anstatt sie auszublenden. Wenn die automatisc
 
 ## Sicherheits- und Datenschutzgrenzen
 
-Der Helfer verfügt über keine Eingabeaufforderungen, Roots, Sampling, Shell, SQL, beliebige Dateilesevorgänge, beliebige URL-Abrufe, HealthKit-Schreibvorgänge, Loopback-HTTP-Dienste oder Remote-MCP-Endpunkte. Die einzige MCP-Ressource ist das mitgelieferte App-Dokument. Schreibvorgänge in generierte Dateien sind ein fester, genehmigungsgesteuerter Vorgang und erfordern ein explizites vorhandenes Ziel, das vor der Übertragung validiert und dauerhaft gebunden wird.
+Der Helfer verfügt über keine Eingabeaufforderungen, Roots, Sampling, Shell, SQL, beliebige Dateilesevorgänge, beliebige URL-Abrufe, HealthKit-Schreibvorgänge, Loopback-HTTP-Dienste oder Remote-MCP-Endpunkte. Die einzige MCP-Ressource ist das mitgelieferte App-Dokument. Schreibvorgänge in generierte Dateien sind ein fester, genehmigungsgesteuerter Vorgang. Der veröffentlichte Mac-Helfer verwendet den in Health.md für Mac ausgewählten Ordner; die portable Vorschau erfordert ein ausdrückliches vorhandenes Ziel, das sie vor der Übertragung validiert und dauerhaft bindet.
 
 Direkte Vertrauensstellung wird in Keychain, Secret Service oder Windows Credential Manager gespeichert. Beim Pairing wird das vorhandene authentifizierte verschlüsselte Protokoll verwendet. Das iPhone muss im Vordergrund stehen und explizit mit der LAN- oder Tailscale-Adresse des Computers verbunden sein. Abfrageseiten sind an die ausgehandelten Byte-/Elementgrenzen gebunden, und die automatische Aggregation aller Seiten weist zusätzliche Byte-/Seitenobergrenzen auf. Unbegrenzte Rohdateninhalte bleiben auf dem validierten Streaming-CLI-Pfad.
 
@@ -286,7 +285,7 @@ Health.md meldet sachliche Beobachtungen mit Einheiten, Herkunft, Abdeckung und 
 | `healthmd_unavailable` | Entsperren Sie das iPhone, öffnen Sie Health.md im Vordergrund, aktivieren Sie Direct CLI Access und stellen Sie die Verbindung zum Computer her |
 | `query_scope_too_large` | Verteilen Sie Datumsbereiche oder Metrik-IDs auf mehrere Aufrufe; das logische Korpus bleibt über mehrere Anfragen hinweg verfügbar |
 | Kein interaktives Diagramm | Aktualisieren Sie den Host; der Server gibt weiterhin exaktes JSON und ersatzweise ein PNG-Metrikdiagramm zurück |
-| Exportziel nicht verfügbar | Erstellen und übergeben Sie ein vorhandenes absolutes Desktop-Verzeichnis, das kein symbolischer Link ist |
+| Exportziel nicht verfügbar | Mac: Wählen Sie den gespeicherten Ordner in Health.md erneut aus. Portable Vorschau: Erstellen und übergeben Sie ein vorhandenes absolutes Desktop-Verzeichnis, das kein symbolischer Link ist. |
 | Zeitüberschreitung beim Warten auf den Export | Prüfen Sie den persistenten Exportauftrag anhand der ID, bevor Sie ihn fortsetzen |
 | Ergebnis hat `next_cursor` | Setzen Sie `all_pages: true` oder setzen Sie den Cursor manuell fort |
 

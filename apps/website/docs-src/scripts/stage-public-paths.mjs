@@ -2,10 +2,16 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  docsRouteForSource,
+  markdownPathForDocsPath,
+  walkMarkdownSources,
+} from '../lib/docs-metadata.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const DOCS = path.join(DIST, 'docs');
+const CONTENT = path.join(ROOT, 'src/content/docs');
 
 const entries = [
   ['favicon.png', 'favicon.png'],
@@ -22,4 +28,18 @@ for (const [sourceRelative, destinationRelative] of entries) {
   await fs.cp(source, destination, { recursive: true, force: true });
 }
 
-console.log('Staged documentation public assets under /docs/.');
+let markdownCount = 0;
+for (const source of await walkMarkdownSources(CONTENT)) {
+  const relative = path.relative(CONTENT, source).split(path.sep).join('/');
+  const markdownRoute = markdownPathForDocsPath(docsRouteForSource(relative));
+  const destination = path.join(DIST, ...markdownRoute.replace(/^\/+/, '').split('/'));
+  const existing = await fs.access(destination).then(() => true).catch(() => false);
+  if (existing) {
+    throw new Error(`Markdown alternate route collides with a staged public asset: ${markdownRoute}`);
+  }
+  await fs.mkdir(path.dirname(destination), { recursive: true });
+  await fs.copyFile(source, destination);
+  markdownCount += 1;
+}
+
+console.log(`Staged documentation public assets and ${markdownCount} source Markdown alternatives under /docs/.`);

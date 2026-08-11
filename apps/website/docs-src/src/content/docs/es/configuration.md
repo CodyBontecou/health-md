@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Reinicia Codex, llama a `healthmd_doctor` y, después, a `healthmd_metrics` y a una herramienta tipada sencilla, como `healthmd_metric_chart`. El servidor incluido ofrece 21 herramientas, entre ellas la comprobación de la aplicación para Mac, los trabajos de actualización del contexto cifrado, la evidencia y las visualizaciones.
+Reinicia Codex, llama a `healthmd_doctor`, resuelve los ID con `healthmd_metrics`, adquiere explícitamente un alcance pequeño con la herramienta de actualización y luego consulta ese alcance con una herramienta tipada como `healthmd_metric_chart`. El servidor incluido ofrece 21 herramientas, entre ellas la comprobación de la aplicación para Mac, los trabajos de actualización del contexto cifrado, la evidencia y las visualizaciones.
 
 ## Claude Desktop o Claude Code en el Mac
 
@@ -124,7 +124,7 @@ Para obtener un resultado completo, revisa el alcance solicitado, la cobertura, 
 ## Continúa
 
 <div class="related">
-  <a href="/es/docs/mcp/"><span>Interfaz de herramientas</span>Consulta las 21 herramientas disponibles para Mac, la vista previa portátil con 17 herramientas, MCP Apps, los esquemas, la paginación, las exportaciones y los límites del sandbox.</a>
+  <a href="/es/docs/mcp/"><span>Interfaz de herramientas</span>Consulta las 21 herramientas Mac publicadas, las 19 herramientas portátiles en vista previa, MCP Apps, los esquemas, la paginación, las exportaciones y los límites del sandbox.</a>
   <a href="/es/docs/agent-queries/"><span>Primeras preguntas</span>Ejecuta flujos de trabajo tipados para métricas, sueño, entrenamientos, comparaciones, cobertura y evidencia.</a>
   <a href="/es/docs/cli-extract/"><span>Datos canónicos</span>Extrae documentos seleccionados del esquema v7 y registros de origen sin colocar cuerpos de datos grandes en el chat.</a>
   <a href="/es/docs/reference/"><span>Contratos</span>Consulta estructuras de datos versionadas, inventarios de campos, fixtures generados y recetas de integración (en inglés).</a>

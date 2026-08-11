@@ -223,7 +223,7 @@ Não inclua registros brutos, rotas, texto clínico, detalhes de medicamentos, r
 
 <div class="related">
   <a href="/pt-br/docs/agent-queries/"><span>Guia da CLI</span>Consultas tipadas de agentes: métricas, sessões de sono, alinhamento de treinos, treinos, cobertura, comparação e evidências.</a>
-  <a href="/pt-br/docs/mcp/"><span>Protocolo de ferramentas</span>Configuração do Codex e Claude, 17 ferramentas portáteis, gráficos em MCP App, exportações, paginação e limites do sandbox.</a>
+  <a href="/pt-br/docs/mcp/"><span>Protocolo de ferramentas</span>Configuração do Codex e Claude, 21 ferramentas Mac publicadas, 19 ferramentas portáteis em prévia, gráficos em MCP App, exportações, paginação e limites do sandbox.</a>
   <a href="/pt-br/docs/agent-api/"><span>Baixo nível</span>API de consulta de loopback: rotas, JSON de solicitação direta, cursores e tarefas persistentes de aquisição.</a>
   <a href="/pt-br/docs/cli-extract/"><span>Objetos de origem</span>Extração canônica: documentos selecionados do schema v7, registros, projeções e comprovantes.</a>
   <a href="/pt-br/docs/reference/evidence-packets/"><span>Contratos</span>Consultas compactas e pacotes de evidências: valores tipados, cobertura, operações e IDs determinísticos.</a>

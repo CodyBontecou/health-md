@@ -8,7 +8,9 @@
     "reference:sync": "node scripts/sync-export-reference.mjs --write",
     "reference:check": "node scripts/sync-export-reference.mjs --check",
     "reference:verify": "node scripts/sync-export-reference.mjs --verify",
-    "build": "npm run reference:verify && astro build && node scripts/stage-public-paths.mjs",
+    "agent-assets:sync": "node scripts/sync-agent-assets.mjs --write",
+    "agent-assets:check": "node scripts/sync-agent-assets.mjs --check",
+    "build": "npm run reference:verify && npm run agent-assets:check && astro build && node scripts/stage-public-paths.mjs",
     "check": "npm run build && node scripts/check-built-links.mjs",
     "preview": "astro preview --host 127.0.0.1"
   },
