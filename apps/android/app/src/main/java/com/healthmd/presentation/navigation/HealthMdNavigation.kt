@@ -138,7 +138,7 @@ fun HealthMdNavigation(
     } else {
         emptyList()
     }
-    val knownStartRoutes = NavDestination.entries.map { it.route } + SubRoutes.PAYWALL + debugStartRoutes
+    val knownStartRoutes = NavDestination.entries.map { it.route } + PaywallEntryPoint.UPGRADE.route + debugStartRoutes
     val startDestination = if (shouldSkipOnboarding) {
         initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
     } else {
@@ -191,19 +191,27 @@ fun HealthMdNavigation(
 
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
-                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
+                    onNavigateToPaywall = {
+                        navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                    },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
                     onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
-                ScheduleScreen(onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) })
+                ScheduleScreen(
+                    onNavigateToPaywall = {
+                        navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                    },
+                )
             }
             composable(NavDestination.HISTORY.route) { HistoryScreen() }
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
-                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
+                    onNavigateToPaywall = {
+                        navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                    },
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
                 )
             }
@@ -266,42 +274,45 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(SubRoutes.PAYWALL) {
-                val paywallViewModel: PaywallViewModel = hiltViewModel()
-                val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
-                val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
-                val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
-                val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
-                val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
-                val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
-                val context = LocalContext.current
+            PaywallEntryPoint.entries.forEach { entryPoint ->
+                composable(entryPoint.route) {
+                    val paywallViewModel: PaywallViewModel = hiltViewModel()
+                    val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+                    val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
+                    val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
+                    val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
+                    val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+                    val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
+                    val context = LocalContext.current
 
-                // Navigate back automatically if purchase is successful
-                LaunchedEffect(isUnlocked) {
-                    if (isUnlocked) {
-                        navController.popBackStack()
-                    }
-                }
-
-                PaywallScreen(
-                    onPurchase = {
-                        val activity = context as? android.app.Activity
-                        if (activity != null) {
-                            paywallViewModel.launchPurchaseFlow(activity)
+                    // Navigate back automatically if purchase is successful
+                    LaunchedEffect(isUnlocked) {
+                        if (isUnlocked) {
+                            navController.popBackStack()
                         }
-                    },
-                    onRestore = { paywallViewModel.restorePurchases() },
-                    onDismiss = { navController.popBackStack() },
-                    isPurchasing = isPurchasing,
-                    isRestoring = isRestoring,
-                    priceText = priceText,
-                    purchaseError = purchaseError,
-                    onClearError = { paywallViewModel.clearError() },
-                    isDebugBuild = paywallViewModel.isDebugBuild,
-                    debugUnlockOverride = debugUnlockOverride,
-                    onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
-                    onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
-                )
+                    }
+
+                    PaywallScreen(
+                        onPurchase = {
+                            val activity = context as? android.app.Activity
+                            if (activity != null) {
+                                paywallViewModel.launchPurchaseFlow(activity)
+                            }
+                        },
+                        onRestore = { paywallViewModel.restorePurchases() },
+                        onDismiss = { navController.popBackStack() },
+                        subtitle = stringResource(entryPoint.subtitleResource),
+                        isPurchasing = isPurchasing,
+                        isRestoring = isRestoring,
+                        priceText = priceText,
+                        purchaseError = purchaseError,
+                        onClearError = { paywallViewModel.clearError() },
+                        isDebugBuild = paywallViewModel.isDebugBuild,
+                        debugUnlockOverride = debugUnlockOverride,
+                        onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
+                        onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
+                    )
+                }
             }
         }
 
