@@ -264,6 +264,10 @@ final class CIQualityGateTests: XCTestCase {
             "CI must report the structured iOS test result"
         )
         XCTAssertTrue(
+            content.contains("raise SystemExit(1)"),
+            "An inconsistent or failed iOS xcresult must fail the reporting step"
+        )
+        XCTAssertTrue(
             content.contains("scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log"),
             "The iOS warning gate must scan unfiltered compiler output"
         )

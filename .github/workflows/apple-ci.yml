@@ -156,6 +156,7 @@ jobs:
           )
           if result != "Passed" or failures:
               print(f"::error::xcresult reports {result} with {failures} failed tests: {details}")
+              raise SystemExit(1)
           else:
               print(f"xcresult reports Passed: {summary.get('passedTests', 0)} passed, "
                     f"{summary.get('skippedTests', 0)} skipped")
