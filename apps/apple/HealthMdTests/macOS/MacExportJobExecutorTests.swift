@@ -916,6 +916,85 @@ final class MacExportJobExecutorTests: XCTestCase {
         )
     }
 
+    func testStream_rejectsLateChunkWhileCompletionIsSuspended() async throws {
+        let planner = ConnectedMacPlannerProbe()
+        let manager = makeManagerWithVault(planner: planner)
+        let executor = MacExportJobExecutor()
+        let barrier = StreamWriteBarrier()
+        let firstDate = Self.day(2026, 5, 12)
+        let secondDate = Self.day(2026, 5, 13)
+        let firstRecord = Self.healthData(on: firstDate)
+        let secondRecord = Self.healthData(on: secondDate)
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: makeConnectedSimpleSettings(),
+            record: firstRecord
+        )
+        let jobID = UUID()
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: firstDate,
+            end: secondDate,
+            totalTransferDays: 2,
+            snapshot: snapshot
+        )
+        guard case .success = executor.startStream(start, vaultManager: manager),
+              case .success = await executor.receiveChunk(
+                MacExportStreamChunk(
+                    jobID: jobID,
+                    sequence: 1,
+                    records: [firstRecord],
+                    externalDailyRecords: [],
+                    processedTransferDays: 1,
+                    totalTransferDays: 2
+                ),
+                vaultManager: manager
+              ) else {
+            return XCTFail("Expected pinned stream setup")
+        }
+        executor.completeStreamDidWriteForTesting = {
+            await barrier.suspendAfterWrite()
+        }
+        let completionTask = Task { @MainActor in
+            await executor.completeStream(
+                MacExportStreamComplete(
+                    jobID: jobID,
+                    totalChunks: 1,
+                    iphoneFailedDateDetails: []
+                ),
+                vaultManager: manager
+            )
+        }
+
+        await barrier.waitUntilEntered()
+        guard case .success(let lateChunkAck) = await executor.receiveChunk(
+            MacExportStreamChunk(
+                jobID: jobID,
+                sequence: 2,
+                records: [secondRecord],
+                externalDailyRecords: [],
+                processedTransferDays: 2,
+                totalTransferDays: 2
+            ),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected a structured late-chunk rejection")
+        }
+        XCTAssertFalse(lateChunkAck.accepted)
+        XCTAssertEqual(lateChunkAck.message, "Stream completion is already committing.")
+        XCTAssertNil(fileSystem.files["/tmp/MacVault/Health/2026-05-13.json"])
+
+        await barrier.release()
+        guard case .success(let payload) = await completionTask.value else {
+            return XCTFail("Expected the in-flight completion to retain terminal ownership")
+        }
+        XCTAssertEqual(payload.status, .partialSuccess)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertNil(fileSystem.files["/tmp/MacVault/Health/2026-05-13.json"])
+        XCTAssertFalse(executor.isBusy)
+    }
+
     func testStream_dailyNotesOnlyWritesNoAdditionalFiles() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("MacExecutorDailyNotesOnlyStream-\(UUID().uuidString)", isDirectory: true)

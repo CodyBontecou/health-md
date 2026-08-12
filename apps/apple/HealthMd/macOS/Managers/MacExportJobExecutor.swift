@@ -681,6 +681,16 @@ final class MacExportJobExecutor {
                 filesWritten: session.totalFilesWritten
             ))
         }
+        guard streamCompletionInFlightGeneration == nil else {
+            return .success(MacExportStreamChunkAck(
+                jobID: chunk.jobID,
+                sequence: chunk.sequence,
+                accepted: false,
+                message: "Stream completion is already committing.",
+                processedDays: session.processedDays,
+                filesWritten: session.totalFilesWritten
+            ))
+        }
         let generation = session.generation
         streamChunkInFlightGeneration = generation
         defer {
