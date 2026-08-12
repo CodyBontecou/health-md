@@ -1,5 +1,6 @@
 ---
 import DefaultHead from '@astrojs/starlight/components/Head.astro';
+
 import {
   defaultLocale,
   localeFor,
@@ -26,7 +27,9 @@ const markdownPath = englishPath.startsWith('/docs/')
   ? markdownPathForDocsPath(isFallback ? englishPath : Astro.url.pathname)
   : undefined;
 const markdownURL = markdownPath ? new URL(markdownPath, site).href : undefined;
-const dateModified = lastUpdated?.toISOString();
+const dateModified = entry.data.lastUpdated instanceof Date
+  ? entry.data.lastUpdated.toISOString()
+  : lastUpdated?.toISOString();
 
 const canonicalEntry = head.find(
   ({ tag, attrs }) => tag === 'link' && attrs?.rel === 'canonical',
