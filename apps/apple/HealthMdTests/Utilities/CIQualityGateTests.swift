@@ -214,13 +214,67 @@ final class CIQualityGateTests: XCTestCase {
             content.contains("-test-timeouts-enabled YES"),
             "UI tests must fail diagnostically instead of hanging indefinitely"
         )
+        let smokeStep = try XCTUnwrap(
+            content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
+                .components(separatedBy: "- name: Run App Review export regression (iPad)").first
+        )
+        XCTAssertFalse(
+            smokeStep.contains("continue-on-error: true"),
+            "Selected PR UI smoke failures must remain blocking"
+        )
+        let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
+        XCTAssertGreaterThan(smokeSelectionCount, 0, "PR smoke must select tests explicitly")
+        XCTAssertLessThanOrEqual(smokeSelectionCount, 10, "PR smoke must not expand into the full UI suite")
+        XCTAssertTrue(
+            smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
+            "PR smoke must cover deterministic returning-user release notes"
+        )
+        XCTAssertTrue(
+            content.contains("-only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError"),
+            "The blocking iPad App Review regression must remain selected"
+        )
         let makefile = try String(
             contentsOf: projectDir.appendingPathComponent("Makefile"),
             encoding: .utf8
         )
         XCTAssertTrue(
             makefile.contains("XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES"),
-            "Unit and coverage commands must enable per-test execution timeouts"
+            "macOS, coverage, and sanitizer tests must enable per-test execution timeouts"
+        )
+        XCTAssertTrue(
+            makefile.contains("-resultBundlePath \"$(IOS_XCRESULT_PATH)\""),
+            "iOS unit tests must retain an xcresult bundle"
+        )
+        XCTAssertTrue(
+            makefile.contains("tee \"$(IOS_TEST_RAW_LOG)\""),
+            "iOS unit tests must retain unfiltered xcodebuild output"
+        )
+        let iosTestTarget = makefile.components(separatedBy: "test-ios: prepare-healthmd-core-rust").last?
+            .components(separatedBy: "test-macos: prepare-healthmd-core-rust").first ?? ""
+        XCTAssertFalse(
+            iosTestTarget.contains("$(XCODE_TEST_TIMEOUT_FLAGS)"),
+            "iOS unit tests must not use Xcode's flaky hosted-simulator timeout allowances"
+        )
+        XCTAssertTrue(
+            iosTestTarget.contains("-test-timeouts-enabled NO"),
+            "iOS unit tests must explicitly disable hosted-simulator timeout handling"
+        )
+        XCTAssertTrue(
+            content.contains("xcrun xcresulttool get test-results summary --path \"$result\""),
+            "CI must report the structured iOS test result"
+        )
+        XCTAssertTrue(
+            content.contains("raise SystemExit(1)"),
+            "An inconsistent or failed iOS xcresult must fail the reporting step"
+        )
+        XCTAssertTrue(
+            content.contains("scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log"),
+            "The iOS warning gate must scan unfiltered compiler output"
+        )
+        XCTAssertTrue(
+            content.contains("apps/apple/build/logs/xcodebuild-ios-raw.log") &&
+                content.contains("apps/apple/build/test-results/HealthMd-iOS.xcresult"),
+            "CI must upload raw iOS diagnostics and the xcresult bundle"
         )
         XCTAssertFalse(
             content.contains("make test-macos"),

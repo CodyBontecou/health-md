@@ -103,15 +103,15 @@ Before using any commands, ensure `play-console-key.json` is in the project root
 # View current version
 grep versionCode app/build.gradle.kts
 
-# Auto-increment for next release
-# gradle-play-publisher handles this automatically
-./gradlew publishReleaseBundle
+# Before each upload, commit a versionCode higher than every build in Play Console.
+# Also update versionName when preparing a new customer-facing release.
+grep -E 'versionCode|versionName' app/build.gradle.kts
 ```
 
 ## Typical Release Workflow
 
 ```bash
-# 1. Update version in build.gradle.kts (optional - auto-increments)
+# 1. Update and commit versionCode/versionName in app/build.gradle.kts
 # 2. Update release notes
 # nano play-console/listing/en-US/release-notes/en-US/default.txt
 

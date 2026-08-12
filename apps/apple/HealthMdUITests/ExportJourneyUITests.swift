@@ -536,10 +536,15 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.staticTexts["Date Range"].waitForExistence(timeout: 5), "Date Range section should be visible")
-        XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.datePresetTodayButton].waitForExistence(timeout: 3), "Today preset should be visible")
-        XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton].waitForExistence(timeout: 3), "Yesterday preset should be visible")
-        XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton].waitForExistence(timeout: 3), "All Time preset should be visible")
-        XCTAssertTrue(app.buttons[UITestLaunchHelper.Export.datePresetCustomButton].waitForExistence(timeout: 3), "Custom preset should be visible")
+        let todayPreset = app.buttons[UITestLaunchHelper.Export.datePresetTodayButton]
+        let yesterdayPreset = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
+        let allTimePreset = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
+        let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
+        XCTAssertTrue(todayPreset.exists, "Today preset should be visible")
+        XCTAssertTrue(yesterdayPreset.exists, "Yesterday preset should be visible")
+        scrollUntilExists(allTimePreset, in: app)
+        XCTAssertTrue(allTimePreset.exists, "All Time preset should be reachable by scrolling")
+        XCTAssertTrue(customPreset.exists, "Custom preset should be visible beside All Time")
 
         let startPicker = app.descendants(matching: .any)[UITestLaunchHelper.Export.customStartDatePicker]
         let endPicker = app.descendants(matching: .any)[UITestLaunchHelper.Export.customEndDatePicker]
@@ -552,7 +557,9 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        XCTAssertTrue(customPreset.waitForExistence(timeout: 5), "Custom preset should be visible")
+        scrollUntilHittable(customPreset, in: app, swipingUp: true)
+        XCTAssertTrue(customPreset.exists, "Custom preset should be visible")
+        XCTAssertTrue(customPreset.isHittable, "Custom preset should be tappable")
         customPreset.tap()
 
         let startPicker = app.descendants(matching: .any)[UITestLaunchHelper.Export.customStartDatePicker]
