@@ -349,10 +349,10 @@ nonisolated struct ClinicianReportGenerator {
     private func dateTime(_ value: Date, calendar: Calendar) -> String { formatter(.medium, timeStyle: .short, calendar: calendar).string(from: value) }
 }
 
-private extension Array where Element == Double {
+nonisolated private extension Array where Element == Double {
     var average: Double { reduce(0, +) / Double(count) }
 }
 
-private extension String {
+nonisolated private extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }

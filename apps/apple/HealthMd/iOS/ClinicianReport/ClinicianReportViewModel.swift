@@ -267,7 +267,10 @@ final class ClinicianReportViewModel: ObservableObject {
         }
     }
 
-    deinit {
+    // Final ownership makes task cancellation safe without a main-actor hop. Avoid
+    // Swift 6.2+'s broken isolated-deinit path for synchronously released iOS VMs
+    // (swiftlang/swift#85663).
+    nonisolated deinit {
         activeTask?.cancel()
     }
 }
