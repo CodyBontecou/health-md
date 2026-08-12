@@ -215,8 +215,12 @@ final class CIQualityGateTests: XCTestCase {
             "UI tests must fail diagnostically instead of hanging indefinitely"
         )
         let smokeStep = try XCTUnwrap(
-            content.components(separatedBy: "- name: Run UI smoke tests (iOS, non-blocking)").last?
+            content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
                 .components(separatedBy: "- name: Run App Review export regression (iPad)").first
+        )
+        XCTAssertFalse(
+            smokeStep.contains("continue-on-error: true"),
+            "Selected PR UI smoke failures must remain blocking"
         )
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
         XCTAssertGreaterThan(smokeSelectionCount, 0, "PR smoke must select tests explicitly")
@@ -258,6 +262,10 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(
             content.contains("xcrun xcresulttool get test-results summary --path \"$result\""),
             "CI must report the structured iOS test result"
+        )
+        XCTAssertTrue(
+            content.contains("scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log"),
+            "The iOS warning gate must scan unfiltered compiler output"
         )
         XCTAssertTrue(
             content.contains("apps/apple/build/logs/xcodebuild-ios-raw.log") &&

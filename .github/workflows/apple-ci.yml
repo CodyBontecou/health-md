@@ -129,7 +129,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
+          make test-ios IOS_SIM="${{ steps.simulator.outputs.ios_destination }}" 2>&1 | tee build/logs/build-ios.log
 
       - name: Report iOS test result
         if: ${{ !cancelled() }}
@@ -142,7 +142,7 @@ jobs:
           fi
           summary=$(xcrun xcresulttool get test-results summary --path "$result")
           printf '%s\n' "$summary" | tee build/logs/ios-test-summary.json
-          printf '## iOS test result\n\n```json\n%s\n```\n' "$summary" >> "$GITHUB_STEP_SUMMARY"
+          printf "## iOS test result\n\n\`\`\`json\n%s\n\`\`\`\n" "$summary" >> "$GITHUB_STEP_SUMMARY"
           RESULT_SUMMARY="$summary" python3 - <<'PY'
           import json
           import os
@@ -163,7 +163,7 @@ jobs:
 
       - name: Check warnings (iOS)
         if: ${{ !cancelled() }}
-        run: scripts/check-warnings.sh build/logs/build-ios.log
+        run: scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log
 
       - name: Check TDD evidence
         if: ${{ !cancelled() }}
@@ -311,9 +311,7 @@ jobs:
           echo "Using simulator: ${IOS_DEVICE} (${IOS_UDID:-no-udid}), arch=${SIM_ARCH}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
 
-      - name: Run UI smoke tests (iOS, non-blocking)
-        id: smoke
-        continue-on-error: true
+      - name: Run UI smoke tests (iOS)
         timeout-minutes: 25
         run: |
           set -euo pipefail
