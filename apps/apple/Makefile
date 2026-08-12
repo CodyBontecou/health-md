@@ -37,6 +37,7 @@ PROJECT     := HealthMd.xcodeproj
 IOS_SIM     ?=
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
+XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
 CORE_RUST_PREPARE := ../../packages/healthmd-core-rust/scripts/prepare-apple-xcframework.sh
 
@@ -67,6 +68,7 @@ test-ios: prepare-healthmd-core-rust
 	  -scheme HealthMd-Tests-iOS \
 	  -destination "$$ios_sim" \
 	  -configuration Debug-iOS \
+	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
@@ -82,6 +84,7 @@ test-macos: prepare-healthmd-core-rust
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
+	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
@@ -101,6 +104,7 @@ test-tsan: prepare-healthmd-core-rust
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
 	  -enableThreadSanitizer YES \
+	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
@@ -119,6 +123,7 @@ coverage: prepare-healthmd-core-rust
 	  -destination '$(MACOS_DEST)' \
 	  -enableCodeCoverage YES \
 	  -resultBundlePath $(XCRESULT_PATH) \
+	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS)
 	@$(MAKE) coverage-report
 

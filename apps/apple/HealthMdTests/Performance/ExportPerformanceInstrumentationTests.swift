@@ -7,6 +7,49 @@ final class ExportPerformanceInstrumentationTests: XCTestCase {
         case failure
     }
 
+    nonisolated private final class SampleSequence: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [UInt64]
+        private let fallback: UInt64
+
+        init(values: [UInt64], fallback: UInt64) {
+            self.values = values
+            self.fallback = fallback
+        }
+
+        func next() -> UInt64 {
+            lock.lock()
+            defer { lock.unlock() }
+            guard !values.isEmpty else { return fallback }
+            return values.removeFirst()
+        }
+    }
+
+    nonisolated private final class SampleCallState: @unchecked Sendable {
+        private let lock = NSLock()
+        private var callCount = 0
+        private var stopReturned = false
+
+        func nextCall() -> Int {
+            lock.lock()
+            defer { lock.unlock() }
+            callCount += 1
+            return callCount
+        }
+
+        func markStopReturned() {
+            lock.lock()
+            stopReturned = true
+            lock.unlock()
+        }
+
+        var didStopReturn: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return stopReturned
+        }
+    }
+
     private actor TwoTaskBarrier {
         private var waiters: [CheckedContinuation<Void, Never>] = []
 
@@ -422,6 +465,61 @@ final class ExportPerformanceInstrumentationTests: XCTestCase {
         let sampler = ExportPerformanceFootprintSampler(sample: { nil })
         sampler.startSampling()
         XCTAssertNil(sampler.stopSampling())
+    }
+
+    func testFootprintSamplerTracksPeriodicPeakWithoutBlockingStop() {
+        let values = SampleSequence(values: [10, 30, 20], fallback: 20)
+        let sampledPeak = expectation(description: "sampled periodic peak")
+        let sampler = ExportPerformanceFootprintSampler {
+            let value = values.next()
+            if value == 30 { sampledPeak.fulfill() }
+            return value
+        }
+
+        sampler.startSampling()
+        wait(for: [sampledPeak], timeout: 1)
+        let footprint = sampler.stopSampling()
+
+        XCTAssertEqual(footprint?.startBytes, 10)
+        XCTAssertEqual(footprint?.peakBytes, 30)
+        XCTAssertEqual(footprint?.endBytes, 20)
+    }
+
+    func testFootprintSamplerCanBeAbandonedWithoutOccupyingAWorker() {
+        weak var releasedSampler: ExportPerformanceFootprintSampler?
+        autoreleasepool {
+            let sampler = ExportPerformanceFootprintSampler(sample: { 10 })
+            releasedSampler = sampler
+            sampler.startSampling()
+        }
+        XCTAssertNil(releasedSampler)
+    }
+
+    func testFootprintSamplerDrainsInFlightSampleBeforeReturning() {
+        let sampleStarted = expectation(description: "periodic sample started")
+        let allowSampleToFinish = DispatchSemaphore(value: 0)
+        let stopReturned = expectation(description: "stop returned")
+        let state = SampleCallState()
+        let sampler = ExportPerformanceFootprintSampler {
+            let currentCall = state.nextCall()
+            if currentCall == 2 {
+                sampleStarted.fulfill()
+                allowSampleToFinish.wait()
+            }
+            return UInt64(currentCall * 10)
+        }
+
+        sampler.startSampling()
+        wait(for: [sampleStarted], timeout: 1)
+        DispatchQueue.global().async {
+            _ = sampler.stopSampling()
+            state.markStopReturned()
+            stopReturned.fulfill()
+        }
+        Thread.sleep(forTimeInterval: 0.05)
+        XCTAssertFalse(state.didStopReturn)
+        allowSampleToFinish.signal()
+        wait(for: [stopReturned], timeout: 1)
     }
 
     func testThrowingQueryIsCountedAndClosesActiveMeasurement() async {
