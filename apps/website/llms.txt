@@ -1,0 +1,32 @@
+# Health.md
+
+> Health.md moves Apple Health and Health Connect data into local files, scripts, and bounded agent workflows without requiring a Health.md health-data cloud.
+
+This is a curated discovery aid for language-model clients. `llms.txt` is an emerging convention, not a web standard. The linked HTML documentation and versioned contracts remain authoritative. Documentation pages also publish an exact source Markdown alternate at `index.md` beneath the page URL (for example, `/docs/mcp/index.md`).
+
+## Start here
+
+- [Connect an agent in 10 minutes](https://healthmd.app/docs/guides/connect-agent/): released Health.md for Mac setup, iPhone connection, Codex or Claude configuration, explicit refresh, first bounded query, completeness checks, and timeout recovery.
+- [Configure your agent](https://healthmd.app/docs/configuration/): interface selection and complete host configuration.
+- [MCP server and tools](https://healthmd.app/docs/mcp/): released Mac tools and clearly marked portable preview.
+- [Health.md CLI](https://healthmd.app/docs/cli/): bundled Mac CLI and portable-preview boundaries.
+- [Typed query cookbook](https://healthmd.app/docs/agent-queries/): metric, sleep, workout, coverage, comparison, and evidence workflows.
+
+## Contracts and machine-readable artifacts
+
+- [Contract overview](https://healthmd.app/docs/reference/)
+- [Loopback query API](https://healthmd.app/docs/agent-api/)
+- [Generated fixtures](https://healthmd.app/docs/reference/generated/)
+- [Reference provenance manifest](https://healthmd.app/docs/reference/source-manifest.json)
+- [Agent asset manifest](https://healthmd.app/agents/manifest.json)
+- [Released Mac MCP tool catalog](https://healthmd.app/agents/mcp/mac-tools-v1.json)
+- [Portable MCP tool catalog — preview](https://healthmd.app/agents/mcp/portable-tools-v1.json)
+- [Health.md CLI skill manifest — preview](https://healthmd.app/agents/skills/healthmd-cli/manifest.json)
+
+## Trust, privacy, and source
+
+- [Local-agent architecture and reporting rules](https://healthmd.app/docs/agents/)
+- [Privacy policy](https://healthmd.app/privacy-policy.html)
+- [Source repository](https://github.com/CodyBontecou/health-md)
+
+Health.md reports factual observations with units, scope, coverage, missingness, evidence, and limitations. It does not diagnose, recommend treatment, or infer causation.

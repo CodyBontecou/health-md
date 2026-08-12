@@ -223,7 +223,7 @@ Neem geen onbewerkte records, routes, klinische tekst, medicatiegegevens, stemmi
 
 <div class="related">
   <a href="/nl/docs/agent-queries/"><span>CLI-recepten</span>Getypeerde agentquery's: meetwaarden, slaapsessies, trainingsafstemming, work-outs, dekking, vergelijkingen en bewijs.</a>
-  <a href="/nl/docs/mcp/"><span>Toolprotocol</span>Configuratie voor Codex en Claude, 17 platformonafhankelijke tools, grafieken in MCP App, exports, paginering en sandboxgrenzen.</a>
+  <a href="/nl/docs/mcp/"><span>Toolprotocol</span>Configuratie voor Codex en Claude, 21 uitgebrachte Mac-tools, 19 platformonafhankelijke previewtools, grafieken in MCP App, exports, paginering en sandboxgrenzen.</a>
   <a href="/nl/docs/agent-api/"><span>Laag niveau</span>Loopback-query-API: routes, rechtstreekse JSON-verzoeken, cursors en persistente taken voor gegevensophaling.</a>
   <a href="/nl/docs/cli-extract/"><span>Bronobjecten</span>Canonieke extractie: geselecteerde documenten, records, samenvattingsweergaven en ontvangstbewijzen uit schema v7.</a>
   <a href="/nl/docs/reference/evidence-packets/"><span>Contracten</span>Compacte queries en bewijsbundels: getypeerde waarden, dekking, bewerkingen en deterministische ID's.</a>

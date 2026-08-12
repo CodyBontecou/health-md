@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## 요구 사항
 
 - 설치되어 열려 있는 Mac용 Health.md
-- 도구가 새 읽기 또는 내보내기를 시작할 때 페어링된 iPhone에서 열려 있는 Health.md
+- 업데이트 도구나 내보내기가 새 HealthKit 작업을 시작할 때 연결된 iPhone에서 열려 있는 Health.md
 - stdio를 지원하는 로컬 MCP 호스트
 - **Mac용 Health.md → CLI**에 표시되는 서명된 도우미 경로
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Codex를 다시 시작하고 `healthmd_doctor`를 호출한 뒤 `healthmd_metrics`로 측정 항목을 나열하고 작은 `healthmd_metric_chart`를 요청합니다. 대화형 MCP Apps가 없는 호스트도 정확한 JSON과 표준 PNG 차트를 받습니다.
+Codex를 다시 시작하고 `healthmd_doctor`를 호출한 뒤 `healthmd_metrics`로 ID를 확인합니다. 업데이트 도구로 작고 정확한 범위를 명시적으로 가져온 다음 그 범위를 `healthmd_metric_chart`로 조회합니다. 대화형 MCP Apps가 없는 호스트도 정확한 JSON과 표준 PNG 차트를 받습니다.
 
 ## Claude 설정
 
@@ -108,7 +108,7 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 
 ## 사용 가능한 도구
 
-번들 Mac 서버는 고정된 도구 21개를 제공합니다. 이식 가능한 미리보기는 동일한 준비 상태, 분석 및 생성 파일 내보내기 도구를 제공하지만 암호화 컨텍스트 가져오기 도구 4개는 제외합니다.
+번들 Mac 서버는 준비 상태/쿼리 도구 13개, 생성 파일 작업 도구 4개, 암호화 컨텍스트 업데이트 작업 도구 4개로 구성된 고정 도구 21개를 제공합니다. 19개 도구의 이식 가능한 미리보기는 준비 상태/쿼리 도구 13개와 내보내기 도구 4개를 유지하고, Mac 업데이트 작업을 직접 페어링 도구 2개로 대체하며, 포그라운드 iPhone에서 타입 지정 쿼리를 직접 실행합니다.
 
 ### 준비 상태 및 검색
 
@@ -157,7 +157,7 @@ Health.md는 안정적인 `io.modelcontextprotocol/ui` 협상에 `text/html;prof
 
 MCP `tools/list`에는 날짜, 측정 항목, 소스, 페이징, 기간 범위, 집계 및 고급 `healthmd.query_request`에 대한 완전한 중첩 JSON Schema가 포함됩니다. 타입 지정 도구에는 구체적인 예제도 포함됩니다. 에이전트는 일반 셸 도움말을 살펴보는 대신 일치하는 타입 지정 도구를 직접 호출해야 합니다. 특히 수면 질문에는 `healthmd_sleep_sessions`를 사용합니다. `healthmd extract`는 다른 정규 소스 데이터 프로젝션을 생성합니다.
 
-네트워크 리스너를 열거나 iPhone에 연결하지 않고도 동일한 스키마를 로컬에서 확인할 수 있습니다.
+이식 가능한 미리보기에서는 네트워크 리스너를 열거나 iPhone에 연결하지 않고도 동일한 스키마를 로컬에서 확인할 수 있습니다. 출시된 Mac 도우미에서는 MCP tools/list를 사용하세요.
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -184,7 +184,7 @@ healthmd mcp schema # complete fixed catalog
 
 ## 데이터 분석 및 차트
 
-먼저 `healthmd_doctor`를 호출하세요. `healthmd_metrics`로 측정 항목 ID를 확인한 뒤 직접 범위를 지정한 계열을 차트로 만드세요. 각 쿼리는 제한된 새 iPhone 읽기를 명시적으로 요청합니다.
+먼저 `healthmd_doctor`를 호출하고 `healthmd_metrics`로 측정 항목 ID를 확인하세요. 출시된 Mac 토폴로지에서 타입 지정 쿼리 도구는 암호화된 Mac 컨텍스트를 읽으며 iPhone에 암시적으로 연결하지 않습니다. 최신 데이터가 필요하면 날짜, 측정 항목, 소스를 명시해 업데이트 도구를 호출하고 영속 작업이 완료될 때까지 기다린 뒤 같은 범위를 차트로 만드세요.
 
 ```json
 {
@@ -209,11 +209,11 @@ healthmd mcp schema # complete fixed catalog
 
 이 객체를 `healthmd_metric_chart`에 전달하세요. 대화형 보기는 단위별 소형 다중 차트를 사용합니다. 누락되거나 부분적인 데이터 지점은 0으로 바뀌지 않고 선을 끊습니다.
 
-타입 지정 쿼리 도구는 페어링되어 포그라운드에 있는 iPhone에만 연결합니다. iPhone은 요청 날짜를 캡처하고 압축된 타입 지정 컨텍스트를 투영하며 요청을 로컬에서 평가한 뒤 데이터 범위, 누락 상태, 증거 및 제한 사항이 포함된 제한된 응답 페이지를 반환합니다.
+출시된 Mac 타입 지정 도구는 암호화된 로컬 컨텍스트를 평가하고 데이터 범위, 누락 상태, 증거 및 제한 사항이 포함된 제한된 페이지를 반환합니다. 연결되어 포그라운드에 있는 iPhone에 접속하고 요청한 컨텍스트 범위를 교체하는 것은 명시적 업데이트뿐입니다. 이식 가능한 미리보기는 각 타입 지정 요청을 페어링되어 포그라운드에 있는 iPhone에서 직접 평가합니다.
 
 ## 생성 파일 내보내기 실행
 
-먼저 컴퓨터에 기존 대상 디렉터리를 만드세요. 호스트가 전체 인수를 표시하고 사용자가 승인한 뒤 `healthmd_export_files`를 호출합니다.
+먼저 Mac용 Health.md에서 쓰기 가능한 대상 폴더를 선택하고 유지하세요. 호스트가 전체 인수를 표시하고 사용자가 승인한 뒤 `healthmd_export_files`를 호출합니다.
 
 ```json
 {
@@ -223,7 +223,6 @@ healthmd mcp schema # complete fixed catalog
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -270,7 +269,7 @@ MCP App은 이러한 필드를 숨기지 않고 표시합니다. 자동 순회�
 
 ## 보안 및 개인정보 보호 경계
 
-도우미에는 프롬프트, 루트, 샘플링, 셸, SQL, 임의 파일 읽기, 임의 URL 가져오기, HealthKit 쓰기, 루프백 HTTP 서비스 또는 원격 MCP 엔드포인트가 없습니다. 유일한 MCP 리소스는 번들 App 문서입니다. 생성 파일 쓰기는 승인이 필요한 고정 작업 하나이며, 전송 전에 검증되어 영속적으로 결합되는 명시적 기존 대상이 필요합니다.
+도우미에는 프롬프트, 루트, 샘플링, 셸, SQL, 임의 파일 읽기, 임의 URL 가져오기, HealthKit 쓰기, 루프백 HTTP 서비스 또는 원격 MCP 엔드포인트가 없습니다. 유일한 MCP 리소스는 번들 App 문서입니다. 생성 파일 쓰기는 승인이 필요한 고정 작업 하나입니다. 출시된 Mac 도우미는 Mac용 Health.md에서 선택한 폴더를 사용합니다. 이식 가능한 미리보기는 전송 전에 검증하고 영속적으로 결합하는 명시적 기존 대상을 요구합니다.
 
 직접 신뢰는 키체인, Secret Service 또는 Windows Credential Manager에 저장됩니다. 페어링은 기존 인증 암호화 프로토콜을 사용합니다. iPhone은 포그라운드에 있어야 하며 컴퓨터의 LAN 또는 Tailscale 주소에 명시적으로 연결되어야 합니다. 쿼리 페이지는 협상된 바이트/항목 한도로 제한되며 자동 전체 페이지 집계에는 추가 바이트/페이지 한도가 있습니다. 제한 없는 원시 본문은 검증된 스트리밍 CLI 경로에 유지됩니다.
 
@@ -286,7 +285,7 @@ Health.md는 단위, 출처, 데이터 범위 및 누락 상태와 함께 사실
 | `healthmd_unavailable` | iPhone에서 Health.md를 잠금 해제하고 포그라운드에 두며 Direct CLI 액세스를 활성화하고 컴퓨터에 연결하세요. |
 | `query_scope_too_large` | 호출 간에 날짜 또는 측정 항목 ID를 분할하세요. 논리적 데이터 모음은 여러 요청에서 계속 사용할 수 있습니다. |
 | 대화형 차트가 없음 | 호스트를 업데이트하세요. 서버는 계속 정확한 JSON과 PNG 측정 항목 차트 대체 출력을 반환합니다. |
-| 내보내기 대상을 사용할 수 없음 | 기존 절대 경로이며 심볼릭 링크가 아닌 데스크톱 디렉터리를 만들어 전달하세요. |
+| 내보내기 대상을 사용할 수 없음 | Mac: Health.md에서 저장된 폴더를 다시 선택하세요. 이식 가능한 미리보기: 기존 절대 경로이며 심볼릭 링크가 아닌 데스크톱 디렉터리를 만들어 전달하세요. |
 | 내보내기 대기 시간 초과 | 재개하기 전에 ID로 영속 내보내기 작업을 확인하세요. |
 | 결과에 `next_cursor`가 있음 | `all_pages: true`를 설정하거나 커서를 수동으로 계속하세요. |
 

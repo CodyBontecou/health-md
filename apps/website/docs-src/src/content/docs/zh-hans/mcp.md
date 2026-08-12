@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## 要求
 
 - 已安装并打开 Health.md Mac 版。
-- 工具开始获取新数据或导出时，已配对 iPhone 上的 Health.md 保持打开。
+- 更新工具或导出启动新的 HealthKit 工作时，已连接 iPhone 上的 Health.md 保持打开。
 - 支持 stdio 的本地 MCP 主机。
 - **Health.md Mac 版 → CLI** 中显示的已签名辅助程序路径。
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-重启 Codex，调用 `healthmd_doctor`，使用 `healthmd_metrics` 列出指标，再请求一个小范围的 `healthmd_metric_chart`。不支持交互式 MCP Apps 的主机仍会收到精确 JSON 和标准 PNG 图表。
+重启 Codex，调用 `healthmd_doctor`，使用 `healthmd_metrics` 确定 ID，通过更新工具明确获取一个小而精确的范围，然后使用 `healthmd_metric_chart` 查询该范围。不支持交互式 MCP Apps 的主机仍会收到精确 JSON 和标准 PNG 图表。
 
 ## Claude 设置
 
@@ -108,7 +108,7 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 
 ## 可用工具
 
-内置 Mac 服务器提供 21 个固定工具。可移植预览版提供相同的就绪状态、分析和生成文件导出工具，但省略四个加密上下文获取工具。
+内置 Mac 服务器提供 21 个固定工具：13 个就绪状态/查询工具、四个生成文件作业工具和四个加密上下文更新作业工具。包含 19 个工具的可移植预览版保留 13 个就绪状态/查询工具和四个导出工具，用两个直连配对工具替换 Mac 更新作业，并直接在前台 iPhone 上运行类型化查询。
 
 ### 就绪状态与发现
 
@@ -157,7 +157,7 @@ Health.md 实现稳定的 `io.modelcontextprotocol/ui` 协商，并使用 `text/
 
 MCP `tools/list` 包含日期、指标、来源、分页、周期范围、聚合方式和高级 `healthmd.query_request` 的完整嵌套 JSON Schema。类型化工具也包含具体示例。智能体应直接调用与任务匹配的类型化工具，而不是查看通用 shell 帮助。尤其是睡眠问题应使用 `healthmd_sleep_sessions`；`healthmd extract` 生成的是另一种规范来源数据投影。
 
-无需打开网络监听器或联系 iPhone，也可以在本地查看相同架构：
+可移植预览版无需打开网络监听器或联系 iPhone，即可在本地查看相同架构。对于已发布的 Mac 辅助程序，请使用 MCP tools/list。
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -184,7 +184,7 @@ healthmd mcp schema # complete fixed catalog
 
 ## 分析数据并绘制图表
 
-先调用 `healthmd_doctor`。使用 `healthmd_metrics` 确定指标 ID，再绘制明确限定范围的指标序列。每次查询都会明确请求一次全新且有界的 iPhone 读取：
+先调用 `healthmd_doctor`，并使用 `healthmd_metrics` 确定指标 ID。在已发布的 Mac 拓扑中，类型化查询工具读取加密的 Mac 上下文；它们不会隐式联系 iPhone。若需要当前数据，请使用明确的日期、指标和来源调用更新工具，等待持久作业完成，再绘制相同范围：
 
 ```json
 {
@@ -209,11 +209,11 @@ healthmd mcp schema # complete fixed catalog
 
 将该对象传给 `healthmd_metric_chart`。交互式视图使用单位安全的小多图；缺失或部分数据点会让折线中断，而不会变成零。
 
-类型化查询工具只联系已配对且在前台运行的 iPhone。iPhone 会采集请求日期、投影精简的类型化上下文、在本地执行请求，并返回有界响应页面，其中包含覆盖范围、缺失状态、证据和限制。
+已发布的 Mac 类型化工具评估加密的本地上下文，并返回包含覆盖范围、缺失状态、证据和限制的有界页面。只有明确更新才会联系已连接且在前台运行的 iPhone，并替换请求的上下文范围。可移植预览版则直接在已配对且在前台运行的 iPhone 上评估每个类型化请求。
 
 ## 执行生成文件导出
 
-先在计算机上创建目标目录。主机显示完整参数并获得用户批准后，调用 `healthmd_export_files`：
+先在 Health.md Mac 版中选择并保留一个可写目标文件夹。主机显示完整参数并获得用户批准后，调用 `healthmd_export_files`：
 
 ```json
 {
@@ -223,7 +223,6 @@ healthmd mcp schema # complete fixed catalog
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -270,7 +269,7 @@ MCP App 会显示这些字段，而不是将其隐藏。自动遍历达到安全
 
 ## 安全与隐私边界
 
-辅助程序不提供提示、根目录、采样、shell、SQL、任意文件读取、任意 URL 获取、HealthKit 写入、环回 HTTP 服务或远程 MCP 端点。它唯一的 MCP 资源是内置 App 文档。生成文件写入是固定且受批准控制的操作，必须提供明确、已存在的目标位置，并在传输前完成验证和持久绑定。
+辅助程序不提供提示、根目录、采样、shell、SQL、任意文件读取、任意 URL 获取、HealthKit 写入、环回 HTTP 服务或远程 MCP 端点。它唯一的 MCP 资源是内置 App 文档。生成文件写入是固定且受批准控制的操作。已发布的 Mac 辅助程序使用 Health.md Mac 版中选择的文件夹；可移植预览版要求提供明确、已存在的目标位置，并在传输前完成验证和持久绑定。
 
 直连信任信息存储在钥匙串、Secret Service 或 Windows Credential Manager 中。配对使用现有的身份验证加密协议；iPhone 必须位于前台，并明确连接到计算机的 LAN 或 Tailscale 地址。查询页面受协商的字节数和项目数限制，自动遍历全部页面还设有额外的总字节数和页数上限。无界原始正文只通过经过验证的流式 CLI 路径处理。
 
@@ -286,7 +285,7 @@ Health.md 报告带单位、溯源信息、覆盖范围和缺失状态的事实�
 | `healthmd_unavailable` | 解锁 iPhone 并将 Health.md 置于前台，启用 Direct CLI 访问，再连接到计算机 |
 | `query_scope_too_large` | 将日期或指标 ID 拆分到多次调用中；仍可通过多个请求访问完整逻辑语料库 |
 | 没有交互式图表 | 更新主机；服务器仍会返回精确 JSON 和 PNG 指标图表后备内容 |
-| 导出目标位置不可用 | 创建并传入已存在、使用绝对路径且不经过符号链接的桌面目录 |
+| 导出目标位置不可用 | Mac：在 Health.md 中重新选择已保存的文件夹。可移植预览版：创建并传入已存在、使用绝对路径且不经过符号链接的桌面目录。 |
 | 等待导出时超时 | 恢复前先按 ID 检查持久导出作业 |
 | 结果包含 `next_cursor` | 设置 `all_pages: true`，或手动继续游标 |
 

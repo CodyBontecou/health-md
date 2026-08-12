@@ -7,6 +7,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -71,9 +72,16 @@ fun HealthMdNavigation(
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
-    // Check onboarding status and existing setup
+    // Resolve the initial route once. A folder selected during onboarding is persisted to
+    // settings, but must not turn into a live signal that rebuilds the navigation graph.
+    var initialShouldSkipOnboarding by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(settingsRepository) {
+        if (initialShouldSkipOnboarding == null) {
+            initialShouldSkipOnboarding = settingsRepository.resolveOnboardingCompletion()
+        }
+    }
+
     val hasCompletedOnboarding by settingsRepository.hasCompletedOnboarding.collectAsStateWithLifecycle(initialValue = null)
-    val existingFolderUri by settingsRepository.exportFolderUri.collectAsStateWithLifecycle(initialValue = null)
 
     // Adaptive navigation: bottom bar on compact screens, navigation rail on larger layouts.
     val showMainNav = currentRoute in NavDestination.entries.map { it.route }
@@ -81,8 +89,9 @@ fun HealthMdNavigation(
     val showBottomNav = showMainNav && !useNavigationRail
     val showNavigationRail = showMainNav && useNavigationRail
 
-    // Wait for onboarding check to complete
-    if (hasCompletedOnboarding == null) {
+    // Wait until the explicit completion state has loaded or the legacy-folder state has been
+    // migrated. The saved decision survives activity recreation and remains stable for this entry.
+    if (initialShouldSkipOnboarding == null) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -91,9 +100,10 @@ fun HealthMdNavigation(
         return
     }
 
-    // Skip onboarding if already completed OR if user already has a folder set up
-    // (handles existing users upgrading from pre-onboarding versions)
-    val shouldSkipOnboarding = hasCompletedOnboarding == true || !existingFolderUri.isNullOrEmpty()
+    // Existing users with a pre-onboarding folder still skip setup, but later folder updates
+    // cannot eject a new user from an active onboarding flow.
+    val shouldSkipOnboarding = requireNotNull(initialShouldSkipOnboarding)
+    val hasCompletedSetup = hasCompletedOnboarding == true
     val releaseNotes = remember(appContext) { AndroidReleaseNotes.current(appContext) }
     var releaseNotesDismissed by remember(releaseNotes?.versionKey) { mutableStateOf(false) }
     val lastPresentedReleaseVersion by settingsRepository.lastPresentedReleaseVersion.collectAsStateWithLifecycle(initialValue = null)
@@ -101,7 +111,7 @@ fun HealthMdNavigation(
     val shouldShowReleaseNotes = !releaseNotesDismissed && ReleaseNotesGate.shouldPresent(
         currentVersionKey = releaseNotes?.versionKey,
         lastPresentedVersionKey = lastPresentedReleaseVersion,
-        hasCompletedSetup = shouldSkipOnboarding,
+        hasCompletedSetup = hasCompletedSetup,
         suppressForAutomationOrDebug = suppressReleaseNotes,
     )
     val markReleaseNotesSeen: () -> Unit = {
@@ -128,7 +138,7 @@ fun HealthMdNavigation(
     } else {
         emptyList()
     }
-    val knownStartRoutes = NavDestination.entries.map { it.route } + SubRoutes.PAYWALL + debugStartRoutes
+    val knownStartRoutes = NavDestination.entries.map { it.route } + PaywallEntryPoint.UPGRADE.route + debugStartRoutes
     val startDestination = if (shouldSkipOnboarding) {
         initialRoute?.takeIf { it in knownStartRoutes } ?: NavDestination.EXPORT.route
     } else {
@@ -143,7 +153,7 @@ fun HealthMdNavigation(
         ScheduledRecoveryHost(
             recoveryPromptRequestId = scheduledRecoveryPromptRequestId,
             onNavigateToSchedule = {
-                if (shouldSkipOnboarding && currentRoute != NavDestination.SCHEDULE.route) {
+                if (hasCompletedSetup && currentRoute != NavDestination.SCHEDULE.route) {
                     navController.navigate(NavDestination.SCHEDULE.route) {
                         launchSingleTop = true
                     }
@@ -181,19 +191,27 @@ fun HealthMdNavigation(
 
             composable(NavDestination.EXPORT.route) {
                 ExportScreen(
-                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
+                    onNavigateToPaywall = {
+                        navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
+                    },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
                     onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
-                ScheduleScreen(onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) })
+                ScheduleScreen(
+                    onNavigateToPaywall = {
+                        navController.navigate(PaywallEntryPoint.SCHEDULE.route)
+                    },
+                )
             }
             composable(NavDestination.HISTORY.route) { HistoryScreen() }
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
-                    onNavigateToPaywall = { navController.navigate(SubRoutes.PAYWALL) },
+                    onNavigateToPaywall = {
+                        navController.navigate(PaywallEntryPoint.UPGRADE.route)
+                    },
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
                 )
             }
@@ -256,42 +274,45 @@ fun HealthMdNavigation(
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable(SubRoutes.PAYWALL) {
-                val paywallViewModel: PaywallViewModel = hiltViewModel()
-                val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
-                val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
-                val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
-                val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
-                val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
-                val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
-                val context = LocalContext.current
+            PaywallEntryPoint.entries.forEach { entryPoint ->
+                composable(entryPoint.route) {
+                    val paywallViewModel: PaywallViewModel = hiltViewModel()
+                    val isUnlocked by paywallViewModel.isUnlocked.collectAsStateWithLifecycle()
+                    val isPurchasing by paywallViewModel.isPurchasing.collectAsStateWithLifecycle()
+                    val isRestoring by paywallViewModel.isRestoring.collectAsStateWithLifecycle()
+                    val purchaseError by paywallViewModel.purchaseError.collectAsStateWithLifecycle()
+                    val priceText by paywallViewModel.priceText.collectAsStateWithLifecycle()
+                    val debugUnlockOverride by paywallViewModel.debugUnlockOverride.collectAsStateWithLifecycle()
+                    val context = LocalContext.current
 
-                // Navigate back automatically if purchase is successful
-                LaunchedEffect(isUnlocked) {
-                    if (isUnlocked) {
-                        navController.popBackStack()
-                    }
-                }
-
-                PaywallScreen(
-                    onPurchase = {
-                        val activity = context as? android.app.Activity
-                        if (activity != null) {
-                            paywallViewModel.launchPurchaseFlow(activity)
+                    // Navigate back automatically if purchase is successful
+                    LaunchedEffect(isUnlocked) {
+                        if (isUnlocked) {
+                            navController.popBackStack()
                         }
-                    },
-                    onRestore = { paywallViewModel.restorePurchases() },
-                    onDismiss = { navController.popBackStack() },
-                    isPurchasing = isPurchasing,
-                    isRestoring = isRestoring,
-                    priceText = priceText,
-                    purchaseError = purchaseError,
-                    onClearError = { paywallViewModel.clearError() },
-                    isDebugBuild = paywallViewModel.isDebugBuild,
-                    debugUnlockOverride = debugUnlockOverride,
-                    onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
-                    onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
-                )
+                    }
+
+                    PaywallScreen(
+                        onPurchase = {
+                            val activity = context as? android.app.Activity
+                            if (activity != null) {
+                                paywallViewModel.launchPurchaseFlow(activity)
+                            }
+                        },
+                        onRestore = { paywallViewModel.restorePurchases() },
+                        onDismiss = { navController.popBackStack() },
+                        subtitle = stringResource(entryPoint.subtitleResource),
+                        isPurchasing = isPurchasing,
+                        isRestoring = isRestoring,
+                        priceText = priceText,
+                        purchaseError = purchaseError,
+                        onClearError = { paywallViewModel.clearError() },
+                        isDebugBuild = paywallViewModel.isDebugBuild,
+                        debugUnlockOverride = debugUnlockOverride,
+                        onDebugToggleUnlock = { paywallViewModel.debugToggleUnlock() },
+                        onDebugResetState = { paywallViewModel.debugResetPurchaseState() },
+                    )
+                }
             }
         }
 

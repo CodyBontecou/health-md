@@ -228,6 +228,17 @@ public actor HealthMdMCPServer {
         self.maximumTraversalPages = max(1, maximumTraversalPages)
     }
 
+    /// Returns the deterministic non-UI `tools/list` catalog published for agents and docs.
+    public nonisolated static func canonicalToolCatalogData() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        var data = try encoder.encode(MCPJSONValue.array(
+            tools.map { $0.jsonValue(uiEnabled: false) }
+        ))
+        data.append(0x0a)
+        return data
+    }
+
     /// Handles one newline-delimited JSON-RPC message. Notifications return nil.
     /// MCP App resources are exposed only after negotiating `io.modelcontextprotocol/ui`.
     /// The server has no prompts, roots, sampling, shell, SQL, file, or URL-fetch capability.

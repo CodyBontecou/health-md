@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## Vereisten
 
 - Health.md voor Mac is geïnstalleerd en geopend.
-- Health.md is geopend op de gekoppelde iPhone wanneer een tool een nieuwe uitlezing of export start.
+- Health.md is geopend op de verbonden iPhone wanneer de vernieuwingstool of een export nieuw HealthKit-werk start.
 - Een lokale MCP-host met ondersteuning voor stdio.
 - Het pad van het ondertekende hulpprogramma onder **Health.md voor Mac → CLI**.
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Start Codex opnieuw, roep `healthmd_doctor` aan, geef meetwaarden weer met `healthmd_metrics` en vraag daarna een kleine `healthmd_metric_chart` op. Hosts zonder interactieve MCP Apps ontvangen nog steeds exacte JSON en een standaardgrafiek in PNG-formaat.
+Start Codex opnieuw, roep `healthmd_doctor` aan, zoek ID's op met `healthmd_metrics`, haal met de vernieuwingstool expliciet een klein exact bereik op en vraag dat bereik daarna op met `healthmd_metric_chart`. Hosts zonder interactieve MCP Apps ontvangen nog steeds exacte JSON en een standaardgrafiek in PNG-formaat.
 
 ## Claude configureren
 
@@ -108,7 +108,7 @@ De tools blijven werken als de host MCP Apps niet ondersteunt. `healthmd_metric_
 
 ## Beschikbare tools
 
-De gebundelde Mac-server biedt 21 vaste tools. De platformonafhankelijke preview biedt dezelfde tools voor gereedheid, analyse en exports van gegenereerde bestanden, maar laat de vier tools voor het ophalen van versleutelde context weg.
+De gebundelde Mac-server biedt 21 vaste tools: 13 voor gereedheid en query's, vier voor taken met gegenereerde bestanden en vier voor vernieuwingstaken van versleutelde context. De platformonafhankelijke preview met 19 tools behoudt de 13 gereedheids-/querytools en vier exporttools, vervangt Mac-vernieuwingstaken door twee tools voor rechtstreekse koppeling en voert getypeerde query's rechtstreeks uit op de iPhone op de voorgrond.
 
 ### Gereedheid en ontdekking
 
@@ -157,7 +157,7 @@ De tools voor exporteren, hervatten en annuleren zijn gemarkeerd als mogelijk de
 
 MCP `tools/list` bevat het volledige geneste JSON Schema voor datums, meetwaarden, bronnen, paginering, perioden, aggregaties en de geavanceerde `healthmd.query_request`. Getypeerde tools bevatten ook concrete voorbeelden. Een agent hoort de bijpassende getypeerde tool rechtstreeks aan te roepen in plaats van algemene shellhelp te bekijken. Gebruik voor vragen over slaap in het bijzonder `healthmd_sleep_sessions`; `healthmd extract` levert een andere canonieke projectie van brongegevens.
 
-Je kunt hetzelfde schema lokaal bekijken zonder een netwerklistener te openen of verbinding te maken met de iPhone:
+In de platformonafhankelijke preview kun je hetzelfde schema lokaal bekijken zonder een netwerklistener te openen of verbinding te maken met de iPhone. Gebruik voor het uitgebrachte Mac-hulpprogramma MCP tools/list.
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -184,7 +184,7 @@ Canonieke slaapmeetwaarden en verliesvrije sessiedetails worden automatisch door
 
 ## Gegevens analyseren en in een grafiek tonen
 
-Roep eerst `healthmd_doctor` aan. Zoek meetwaarde-ID's op met `healthmd_metrics` en maak daarna een grafiek van een rechtstreeks afgebakende reeks. Elke query vraagt expliciet een nieuwe, afgebakende iPhone-uitlezing aan:
+Roep eerst `healthmd_doctor` aan en zoek meetwaarde-ID's op met `healthmd_metrics`. In de uitgebrachte Mac-topologie lezen getypeerde querytools de versleutelde Mac-context; ze maken niet impliciet verbinding met de iPhone. Roep voor actuele gegevens de vernieuwingstool aan met expliciete datums, meetwaarden en bronnen, wacht tot de persistente taak is voltooid en maak daarna een grafiek van hetzelfde bereik:
 
 ```json
 {
@@ -209,11 +209,11 @@ Roep eerst `healthmd_doctor` aan. Zoek meetwaarde-ID's op met `healthmd_metrics`
 
 Geef dit object door aan `healthmd_metric_chart`. De interactieve weergave gebruikt compacte deelgrafieken met veilige eenheden. Een ontbrekend of gedeeltelijk punt onderbreekt de lijn en wordt niet nul.
 
-Getypeerde querytools maken alleen verbinding met de gekoppelde iPhone-app op de voorgrond. De iPhone legt de gevraagde dagen vast, projecteert compacte getypeerde context, voert het verzoek lokaal uit en geeft een afgebakende antwoordpagina terug met dekking, ontbrekende gegevens, bewijs en beperkingen.
+De uitgebrachte getypeerde Mac-tools verwerken versleutelde lokale context en geven afgebakende pagina's terug met dekking, ontbrekende gegevens, bewijs en beperkingen. Alleen een expliciete vernieuwing maakt verbinding met de verbonden iPhone op de voorgrond en vervangt het gevraagde contextbereik. De platformonafhankelijke preview verwerkt elke getypeerde aanvraag rechtstreeks op de gekoppelde iPhone op de voorgrond.
 
 ## Een export met gegenereerde bestanden uitvoeren
 
-Maak eerst een bestaande bestemmingsmap op de computer. Nadat de host alle argumenten heeft getoond en de gebruiker ze heeft goedgekeurd, roep je `healthmd_export_files` aan:
+Selecteer en bewaar eerst een beschrijfbare bestemmingsmap in Health.md voor Mac. Nadat de host alle argumenten heeft getoond en de gebruiker ze heeft goedgekeurd, roep je `healthmd_export_files` aan:
 
 ```json
 {
@@ -223,7 +223,6 @@ Maak eerst een bestaande bestemmingsmap op de computer. Nadat de host alle argum
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -270,7 +269,7 @@ De MCP App toont deze velden in plaats van ze te verbergen. Verklein het bereik 
 
 ## Beveiligings- en privacygrenzen
 
-Het hulpprogramma heeft geen prompts, rootmappen, sampling, shell, SQL, willekeurige bestandslezingen, willekeurige URL-ophaalacties, HealthKit-schrijfbewerkingen, loopback-HTTP-dienst of extern MCP-eindpunt. De enige MCP-resource is het gebundelde App-document. Schrijven van gegenereerde bestanden is één vaste bewerking waarvoor goedkeuring nodig is. Deze vereist een expliciete bestaande bestemming die vóór de overdracht wordt gevalideerd en blijvend gebonden.
+Het hulpprogramma heeft geen prompts, rootmappen, sampling, shell, SQL, willekeurige bestandslezingen, willekeurige URL-ophaalacties, HealthKit-schrijfbewerkingen, loopback-HTTP-dienst of extern MCP-eindpunt. De enige MCP-resource is het gebundelde App-document. Schrijven van gegenereerde bestanden is één vaste bewerking waarvoor goedkeuring nodig is. Het uitgebrachte Mac-hulpprogramma gebruikt de map die in Health.md voor Mac is geselecteerd; de platformonafhankelijke preview vereist een expliciete bestaande bestemming die vóór de overdracht wordt gevalideerd en blijvend gebonden.
 
 Rechtstreeks vertrouwen wordt opgeslagen in de sleutelhanger, Secret Service of Windows Credential Manager. De koppeling gebruikt het bestaande geauthenticeerde, versleutelde protocol. De iPhone moet op de voorgrond staan en expliciet verbonden zijn met het LAN- of Tailscale-adres van de computer. Querypagina's zijn begrensd op de overeengekomen limieten voor bytes en items. Automatische samenvoeging van alle pagina's heeft aanvullende grenzen voor bytes en pagina's. Onbegrensde onbewerkte hoofdteksten blijven op het gevalideerde streamingpad van de CLI.
 
@@ -286,7 +285,7 @@ Health.md meldt feitelijke waarnemingen met eenheden, herkomst, dekking en ontbr
 | `healthmd_unavailable` | Ontgrendel Health.md op de iPhone en breng de app naar de voorgrond, schakel Direct CLI-toegang in en maak verbinding met de computer |
 | `query_scope_too_large` | Verdeel datums of meetwaarde-ID's over meerdere aanroepen; het logische corpus blijft tussen verzoeken beschikbaar |
 | Geen interactieve grafiek | Werk de host bij; de server geeft nog steeds exacte JSON en een PNG-alternatief voor meetwaardegrafieken terug |
-| Exportbestemming niet beschikbaar | Maak een bestaande absolute map op de computer die geen symbolische koppeling is en geef deze door |
+| Exportbestemming niet beschikbaar | Mac: selecteer de opgeslagen map opnieuw in Health.md. Platformonafhankelijke preview: maak een bestaande absolute map op de computer die geen symbolische koppeling is en geef deze door. |
 | Wachter voor export verloopt | Bekijk de persistente exporttaak aan de hand van de ID voordat je hervat |
 | Resultaat bevat `next_cursor` | Stel `all_pages: true` in of ga handmatig verder met de cursor |
 
