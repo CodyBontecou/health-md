@@ -131,6 +131,36 @@ jobs:
           mkdir -p build/logs
           make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
+      - name: Report iOS test result
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          result=build/test-results/HealthMd-iOS.xcresult
+          if [[ ! -d "$result" ]]; then
+            echo "::error::xcodebuild did not create the iOS xcresult bundle"
+            exit 1
+          fi
+          summary=$(xcrun xcresulttool get test-results summary --path "$result")
+          printf '%s\n' "$summary" | tee build/logs/ios-test-summary.json
+          printf '## iOS test result\n\n```json\n%s\n```\n' "$summary" >> "$GITHUB_STEP_SUMMARY"
+          RESULT_SUMMARY="$summary" python3 - <<'PY'
+          import json
+          import os
+
+          summary = json.loads(os.environ["RESULT_SUMMARY"])
+          result = summary.get("result", "Unknown")
+          failures = summary.get("failedTests", 0)
+          details = "; ".join(
+              failure.get("failureText", failure.get("testName", "unknown test failure"))
+              for failure in summary.get("testFailures", [])[:5]
+          )
+          if result != "Passed" or failures:
+              print(f"::error::xcresult reports {result} with {failures} failed tests: {details}")
+          else:
+              print(f"xcresult reports Passed: {summary.get('passedTests', 0)} passed, "
+                    f"{summary.get('skippedTests', 0)} skipped")
+          PY
+
       - name: Check warnings (iOS)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/build-ios.log
@@ -143,8 +173,12 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-logs
-          path: apps/apple/build/logs/build-ios.log
+          name: ios-test-diagnostics
+          path: |
+            apps/apple/build/logs/build-ios.log
+            apps/apple/build/logs/xcodebuild-ios-raw.log
+            apps/apple/build/logs/ios-test-summary.json
+            apps/apple/build/test-results/HealthMd-iOS.xcresult
           retention-days: 14
 
   test-macos:
