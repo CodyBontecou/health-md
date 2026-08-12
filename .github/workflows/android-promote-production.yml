@@ -269,6 +269,104 @@ jobs:
           echo "lifecycle_state=$lifecycle_state" >> "$GITHUB_OUTPUT"
           echo "Verified production versionCode $VERSION_CODE with lifecycle state $lifecycle_state."
 
+      - name: Send production changes for review
+        id: submit-review
+        if: steps.verify.outputs.lifecycle_state == 'RELEASE_LIFECYCLE_STATE_NOT_SENT_FOR_REVIEW'
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          set -euo pipefail
+          edit_response=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits" \
+            --data '{}')
+          edit_id=$(printf '%s' "$edit_response" | jq -er '.id')
+
+          cleanup_edit() {
+            if [[ -n "${edit_id:-}" ]]; then
+              curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+                -X DELETE \
+                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}" \
+                >/dev/null || true
+            fi
+          }
+          trap cleanup_edit EXIT
+
+          production_track="$RUNNER_TEMP/google-play-production-edit.json"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}/tracks/production" \
+            -o "$production_track"
+          jq -e --argjson code "$VERSION_CODE" '
+            any(.releases[]?.versionCodes[]?; tonumber == $code)
+          ' "$production_track" >/dev/null
+
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X PUT \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}/tracks/production" \
+            --data-binary "@$production_track" \
+            >/dev/null
+
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X POST \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
+            --data '' \
+            >/dev/null
+          edit_id=''
+          trap - EXIT
+          echo "Submitted production versionCode $VERSION_CODE for Google Play review."
+
+      - name: Verify review submission lifecycle
+        id: verify-review
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          set -euo pipefail
+          production="$RUNNER_TEMP/google-play-production-review.json"
+          candidate=''
+          for _ in $(seq 1 40); do
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/production/releases" \
+              -o "$production"
+            candidate=$(jq -c --argjson code "$VERSION_CODE" '
+              first(
+                .releases[]? as $release
+                | $release.activeArtifacts[]?
+                | select((.versionCode | tonumber) == $code)
+                | {
+                    release_name: $release.releaseName,
+                    lifecycle_state: $release.releaseLifecycleState
+                  }
+              ) // empty
+            ' "$production")
+            lifecycle_state=$(printf '%s' "$candidate" | jq -r '.lifecycle_state // empty')
+            case "$lifecycle_state" in
+              RELEASE_LIFECYCLE_STATE_IN_REVIEW|\
+              RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED|\
+              RELEASE_LIFECYCLE_STATE_PUBLISHED)
+                echo "release_name=$(printf '%s' "$candidate" | jq -r '.release_name // ""')" >> "$GITHUB_OUTPUT"
+                echo "lifecycle_state=$lifecycle_state" >> "$GITHUB_OUTPUT"
+                echo "Verified review-submission lifecycle: $lifecycle_state"
+                exit 0
+                ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Production versionCode $VERSION_CODE remains not sent for review"
+          exit 1
+
       - name: Remove ephemeral credentials
         if: ${{ always() }}
         shell: bash
@@ -284,8 +382,10 @@ jobs:
           ALREADY_PRODUCTION: ${{ steps.preflight.outputs.already_production }}
           PROMOTE_OUTCOME: ${{ steps.promote.outcome }}
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
-          RELEASE_NAME: ${{ steps.verify.outputs.release_name }}
-          LIFECYCLE_STATE: ${{ steps.verify.outputs.lifecycle_state }}
+          REVIEW_SUBMISSION_OUTCOME: ${{ steps.submit-review.outcome }}
+          REVIEW_VERIFICATION_OUTCOME: ${{ steps.verify-review.outcome }}
+          RELEASE_NAME: ${{ steps.verify-review.outputs.release_name || steps.verify.outputs.release_name }}
+          LIFECYCLE_STATE: ${{ steps.verify-review.outputs.lifecycle_state || steps.verify.outputs.lifecycle_state }}
         run: |
           {
             echo "## Android production promotion"
@@ -296,7 +396,9 @@ jobs:
             echo "- Destination track: production"
             echo "- Already on production: ${ALREADY_PRODUCTION:-unknown}"
             echo "- Promotion step: ${PROMOTE_OUTCOME:-skipped}"
-            echo "- Verification: ${VERIFY_OUTCOME:-not-run}"
+            echo "- Production verification: ${VERIFY_OUTCOME:-not-run}"
+            echo "- Review submission: ${REVIEW_SUBMISSION_OUTCOME:-skipped}"
+            echo "- Review lifecycle verification: ${REVIEW_VERIFICATION_OUTCOME:-not-run}"
             echo "- Google Play lifecycle: ${LIFECYCLE_STATE:-unknown}"
             echo "- Google Play release name: ${RELEASE_NAME:-unknown}"
             echo "- Tag: ${TAG:-unknown}"
