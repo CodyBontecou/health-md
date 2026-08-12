@@ -25,6 +25,11 @@ enum TestMode {
         env("UITEST_SHOW_ONBOARDING") == "true"
     }
 
+    /// Deterministic persisted onboarding state for this UI-test launch.
+    static var hasCompletedOnboarding: Bool {
+        env("UITEST_HAS_COMPLETED_ONBOARDING") != "false"
+    }
+
     /// Whether Notelet release notes should use their production presentation path in UI tests.
     static var showsReleaseNotes: Bool {
         env("UITEST_SHOW_RELEASE_NOTES") == "true"
