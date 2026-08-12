@@ -214,6 +214,21 @@ final class CIQualityGateTests: XCTestCase {
             content.contains("-test-timeouts-enabled YES"),
             "UI tests must fail diagnostically instead of hanging indefinitely"
         )
+        let smokeStep = try XCTUnwrap(
+            content.components(separatedBy: "- name: Run UI smoke tests (iOS, non-blocking)").last?
+                .components(separatedBy: "- name: Run App Review export regression (iPad)").first
+        )
+        let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
+        XCTAssertGreaterThan(smokeSelectionCount, 0, "PR smoke must select tests explicitly")
+        XCTAssertLessThanOrEqual(smokeSelectionCount, 10, "PR smoke must not expand into the full UI suite")
+        XCTAssertTrue(
+            smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
+            "PR smoke must cover deterministic returning-user release notes"
+        )
+        XCTAssertTrue(
+            content.contains("-only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError"),
+            "The blocking iPad App Review regression must remain selected"
+        )
         let makefile = try String(
             contentsOf: projectDir.appendingPathComponent("Makefile"),
             encoding: .utf8
