@@ -22,27 +22,30 @@ class ReleaseReadinessTest {
         }.readText()
 
     @Test
-    fun appVersion_isBumpedForSleepSummaryAndLocalizationRelease() {
+    fun appVersion_isBumpedForClinicianReportRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 27"))
-        assertTrue(buildGradle.contains("versionName = \"1.6.1\""))
+        assertTrue(buildGradle.contains("versionCode = 28"))
+        assertTrue(buildGradle.contains("versionName = \"1.7.0\""))
     }
 
     @Test
-    fun playStoreReleaseNotes_describeSleepSummaryAndLocalizationRelease() {
+    fun playStoreReleaseNotes_describeClinicianReportRelease() {
         val releaseNotePaths = listOf(
             "play-console/listing/en-US/release-notes/en-US/default.txt",
             "app/src/main/play/release-notes/en-US/default.txt",
         )
 
-        releaseNotePaths.forEach { path ->
-            val releaseNotes = readRepoFile(path)
+        val releaseNotesByPath = releaseNotePaths.associateWith(::readRepoFile)
+        val canonicalReleaseNotes = releaseNotesByPath.getValue(releaseNotePaths.first())
 
-            assertTrue(releaseNotes.contains("v1.6.1"))
-            assertTrue(releaseNotes.contains("sleep summaries"))
-            assertTrue(releaseNotes.contains("localized Play Store guidance"))
-            assertTrue(releaseNotes.contains("Direct CLI"))
+        releaseNotesByPath.forEach { (path, releaseNotes) ->
+            assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
+            assertTrue(releaseNotes.contains("v1.7.0"))
+            assertTrue(releaseNotes.contains("Private health reports"))
+            assertTrue(releaseNotes.contains("Health Connect"))
+            assertTrue(releaseNotes.contains("entirely on your device"))
+            assertTrue(releaseNotes.contains("selected export folder"))
             assertTrue("Play Store release notes should stay within the 500-character limit", releaseNotes.trim().length <= 500)
         }
     }
