@@ -102,7 +102,7 @@ Follow the detailed guide in **PLAY_STORE_SETUP.md**, section "Get Google Play S
 **Recommended flow for each release:**
 
 1. Update release notes: `play-console/listing/en-US/release-notes/en-US/default.txt`
-2. Increment `versionCode` in `app/build.gradle.kts` (or let auto-increment)
+2. Update and commit `versionCode` in `app/build.gradle.kts` to a value higher than every build already uploaded to Play Console
 3. Build and test: `./gradlew bundleRelease`
 4. Upload to internal: `./gradlew publishReleaseBundle`
 5. Test for 1-2 days
