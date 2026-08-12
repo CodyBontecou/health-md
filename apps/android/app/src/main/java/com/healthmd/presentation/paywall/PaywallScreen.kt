@@ -46,12 +46,12 @@ fun PaywallScreen(
     onPurchase: () -> Unit,
     onRestore: () -> Unit,
     onDismiss: (() -> Unit)?,
+    subtitle: String,
     isPurchasing: Boolean = false,
     isRestoring: Boolean = false,
     priceText: String? = null,
     purchaseError: BillingError? = null,
     onClearError: () -> Unit = {},
-    subtitle: String? = null,
     // Debug props
     isDebugBuild: Boolean = false,
     debugUnlockOverride: Boolean? = null,
@@ -127,7 +127,7 @@ fun PaywallScreen(
         Spacer(modifier = Modifier.height(Spacing.xs))
 
         Text(
-            text = subtitle ?: stringResource(R.string.paywall_subtitle),
+            text = subtitle,
             style = MaterialTheme.typography.bodyLarge,
             color = AppColors.textSecondary,
             textAlign = TextAlign.Center,
