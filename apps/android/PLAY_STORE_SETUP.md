@@ -127,7 +127,7 @@ git log --oneline app/build.gradle.kts | grep -i version
 
 ## CI/CD Integration
 
-The canonical upload workflow is [`.github/workflows/android-release.yml`](../../.github/workflows/android-release.yml). An `android/v<version>` tag builds a signed AAB and uploads it directly to Google Play's `internal` track. The AAB is never committed or attached to a GitHub Release; production promotion remains manual in Play Console.
+The canonical upload workflow is [`.github/workflows/android-release.yml`](../../.github/workflows/android-release.yml). An `android/v<version>` tag builds a signed AAB and uploads it directly to Google Play's `internal` track. The AAB is never committed or attached to a GitHub Release. Production promotion uses [`.github/workflows/android-promote-production.yml`](../../.github/workflows/android-promote-production.yml) to promote an exact tagged `versionCode` from `internal` without rebuilding or re-uploading the binary. The promotion workflow verifies the source and resulting production track state through Google Play before reporting success.
 
 After production publication, [`.github/workflows/android-announce.yml`](../../.github/workflows/android-announce.yml) detects the `PUBLISHED` release through Google Play's read-only release-summary endpoint and posts the tagged release notes to the Health.md Discord updates channel. Google Play has no equivalent of the App Store Connect approval webhook, so the workflow checks hourly and can also accept a `google-play-published` repository dispatch from a future external hook. Manual runs default to a no-post dry run.
 
