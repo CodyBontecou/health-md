@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## Requisiti
 
 - Health.md per Mac installata e aperta.
-- Health.md aperta sull'iPhone abbinato quando uno strumento avvia una nuova lettura o esportazione.
+- Health.md aperta sull'iPhone connesso quando lo strumento di aggiornamento o un'esportazione avvia un nuovo lavoro HealthKit.
 - Un host MCP locale che supporti stdio.
 - Il percorso dell'helper firmato indicato in **Health.md per Mac → CLI**.
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Riavvia Codex, chiama `healthmd_doctor`, elenca le metriche con `healthmd_metrics`, quindi richiedi un piccolo `healthmd_metric_chart`. Gli host che non supportano app MCP interattive ricevono comunque il JSON esatto e un grafico PNG standard.
+Riavvia Codex, chiama `healthmd_doctor`, risolvi gli ID con `healthmd_metrics`, acquisisci esplicitamente un ambito piccolo ed esatto con lo strumento di aggiornamento, quindi interroga quell'ambito con `healthmd_metric_chart`. Gli host che non supportano app MCP interattive ricevono comunque il JSON esatto e un grafico PNG standard.
 
 ## Configurazione di Claude
 
@@ -108,7 +108,7 @@ Gli strumenti funzionano anche se l'host non supporta MCP Apps. `healthmd_metric
 
 ## Strumenti disponibili
 
-Il server incluso per Mac espone 21 strumenti fissi. L'anteprima multipiattaforma espone gli stessi strumenti di verifica, analisi ed esportazione dei file generati, ma omette i quattro strumenti per acquisire il contesto crittografato.
+Il server incluso per Mac espone 21 strumenti fissi: 13 per verifica e query, quattro per le attività dei file generati e quattro per le attività di aggiornamento del contesto crittografato. L'anteprima multipiattaforma con 19 strumenti mantiene i 13 strumenti di verifica/query e i quattro di esportazione, sostituisce le attività di aggiornamento Mac con due strumenti di abbinamento diretto ed esegue le query tipizzate direttamente sull'iPhone in primo piano.
 
 ### Verifica e rilevamento
 
@@ -157,7 +157,7 @@ Gli strumenti di esportazione, ripresa e annullamento sono contrassegnati come s
 
 MCP `tools/list` include lo schema JSON annidato completo per date, metriche, fonti, paginazione, intervalli temporali, aggregazioni e la richiesta avanzata `healthmd.query_request`. Gli strumenti tipizzati includono anche esempi concreti. Un agente dovrebbe chiamare direttamente lo strumento tipizzato adatto, anziché consultare la guida generica della shell. In particolare, per le domande sul sonno va usato `healthmd_sleep_sessions`; `healthmd extract` produce una proiezione diversa dei dati di origine canonici.
 
-Puoi esaminare lo stesso schema in locale senza aprire una porta di rete né contattare l'iPhone:
+L'anteprima multipiattaforma consente di esaminare lo stesso schema in locale senza aprire una porta di rete né contattare l'iPhone. Per l'helper Mac pubblicato, usa tools/list di MCP.
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -184,7 +184,7 @@ Le metriche canoniche del sonno e i dettagli senza perdita delle sessioni vengon
 
 ## Analizzare e rappresentare i dati
 
-Chiama prima `healthmd_doctor`. Ricava gli ID metrica con `healthmd_metrics`, quindi genera il grafico di una serie con ambito definito direttamente. Ogni query richiede esplicitamente una nuova lettura limitata dall'iPhone:
+Chiama prima `healthmd_doctor` e ricava gli ID metrica con `healthmd_metrics`. Nella topologia Mac pubblicata, gli strumenti di query tipizzati leggono il contesto Mac crittografato e non contattano implicitamente l'iPhone. Per dati aggiornati, chiama lo strumento di aggiornamento con date, metriche e fonti esplicite, attendi il completamento dell'attività persistente, quindi genera il grafico dello stesso ambito:
 
 ```json
 {
@@ -209,11 +209,11 @@ Chiama prima `healthmd_doctor`. Ricava gli ID metrica con `healthmd_metrics`, qu
 
 Passa questo oggetto a `healthmd_metric_chart`. La vista interattiva usa piccoli multipli che rispettano le unità. Un punto mancante o parziale interrompe la linea anziché essere trasformato in zero.
 
-Gli strumenti di query tipizzati contattano soltanto l'iPhone abbinato e in primo piano. L'iPhone acquisisce i giorni richiesti, crea una proiezione compatta e tipizzata del contesto, valuta la richiesta in locale e restituisce una pagina di risposta limitata con copertura, dati mancanti, evidenze e limitazioni.
+Gli strumenti tipizzati Mac pubblicati valutano il contesto locale crittografato e restituiscono pagine limitate con copertura, dati mancanti, evidenze e limitazioni. Solo un aggiornamento esplicito contatta l'iPhone connesso in primo piano e sostituisce l'ambito di contesto richiesto. L'anteprima multipiattaforma valuta invece ogni richiesta tipizzata direttamente sul proprio iPhone abbinato in primo piano.
 
 ## Eseguire un'esportazione di file generati
 
-Crea prima sul computer una cartella di destinazione esistente. Dopo che l'host ha mostrato tutti gli argomenti e l'utente li ha approvati, chiama `healthmd_export_files`:
+Prima seleziona e conserva una cartella di destinazione scrivibile in Health.md per Mac. Dopo che l'host ha mostrato tutti gli argomenti e l'utente li ha approvati, chiama `healthmd_export_files`:
 
 ```json
 {
@@ -223,7 +223,6 @@ Crea prima sul computer una cartella di destinazione esistente. Dopo che l'host 
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -270,7 +269,7 @@ L'app MCP mostra questi campi anziché nasconderli. Se la consultazione automati
 
 ## Perimetro di sicurezza e privacy
 
-L'helper non offre prompt, radici, campionamento, shell, SQL, letture di file arbitrari, recupero di URL arbitrari, scritture HealthKit, servizi HTTP di loopback o endpoint MCP remoti. La sua unica risorsa MCP è il documento dell'app incluso. La scrittura di file generati è una singola operazione fissa soggetta ad approvazione e richiede una destinazione esistente esplicita, convalidata e associata in modo persistente prima del trasferimento.
+L'helper non offre prompt, radici, campionamento, shell, SQL, letture di file arbitrari, recupero di URL arbitrari, scritture HealthKit, servizi HTTP di loopback o endpoint MCP remoti. La sua unica risorsa MCP è il documento dell'app incluso. La scrittura di file generati è una singola operazione fissa soggetta ad approvazione. L'helper Mac pubblicato usa la cartella selezionata in Health.md per Mac; l'anteprima multipiattaforma richiede una destinazione esistente esplicita, che convalida e associa in modo persistente prima del trasferimento.
 
 La relazione di fiducia diretta viene archiviata in Portachiavi, Secret Service o Windows Credential Manager. L'abbinamento usa il protocollo autenticato e crittografato esistente; l'iPhone deve essere in primo piano e connesso esplicitamente all'indirizzo LAN o Tailscale del computer. Le pagine delle query rispettano i limiti negoziati di byte ed elementi, mentre l'aggregazione automatica di tutte le pagine applica ulteriori limiti complessivi di byte e pagine. I contenuti grezzi senza limiti restano nel percorso CLI di streaming convalidato.
 
@@ -286,7 +285,7 @@ Health.md segnala osservazioni fattuali con unità, provenienza, copertura e dat
 | `healthmd_unavailable` | Sblocca e porta Health.md in primo piano sull'iPhone, abilita Accesso CLI diretto e connettiti al computer |
 | `query_scope_too_large` | Suddividi le date o gli ID metrica tra più chiamate; il corpus logico resta disponibile tra le richieste |
 | Nessun grafico interattivo | Aggiorna l'host; il server restituisce comunque il JSON esatto e un grafico PNG alternativo |
-| Destinazione di esportazione non disponibile | Crea e indica una cartella assoluta esistente sul computer che non sia un collegamento simbolico |
+| Destinazione di esportazione non disponibile | Mac: seleziona di nuovo la cartella salvata in Health.md. Anteprima multipiattaforma: crea e indica una cartella assoluta esistente sul computer che non sia un collegamento simbolico. |
 | L'attesa dell'esportazione scade | Controlla l'attività persistente di esportazione tramite ID prima di riprenderla |
 | Il risultato contiene `next_cursor` | Imposta `all_pages: true` oppure continua manualmente dal cursore |
 

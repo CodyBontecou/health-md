@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Restart Codex, call `healthmd_doctor`, then call `healthmd_metrics` and one small typed tool such as `healthmd_metric_chart`. The bundled server exposes 21 tools, including Mac readiness, encrypted-context refresh jobs, evidence, and visualizations.
+Restart Codex, call `healthmd_doctor`, resolve IDs with `healthmd_metrics`, explicitly acquire a small scope with the refresh tool, then query that scope with a typed tool such as `healthmd_metric_chart`. The bundled server exposes 21 tools, including Mac readiness, encrypted-context refresh jobs, evidence, and visualizations.
 
 ## Claude Desktop or Claude Code on Mac
 
@@ -124,7 +124,7 @@ For a complete result, inspect requested scope, coverage, traversal, limitations
 ## Continue
 
 <div class="related">
-  <a href="/docs/mcp/"><span>Tool interface</span>Review the 21 available Mac tools, portable 17-tool preview, MCP Apps, schemas, paging, exports, and sandbox boundaries.</a>
+  <a href="/docs/mcp/"><span>Tool interface</span>Review the 21 available Mac tools, portable 19-tool preview, MCP Apps, schemas, paging, exports, and sandbox boundaries.</a>
   <a href="/docs/agent-queries/"><span>First questions</span>Run typed metric, sleep, workout, comparison, coverage, and evidence workflows.</a>
   <a href="/docs/cli-extract/"><span>Canonical data</span>Extract selected schema-v7 documents and source records without placing large bodies in chat.</a>
   <a href="/docs/reference/"><span>Contracts</span>Browse versioned data structures, field inventories, generated fixtures, and integration recipes.</a>

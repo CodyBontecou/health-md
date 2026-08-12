@@ -223,7 +223,7 @@ Health.md 绝不会将缺失值转换为数值零。真实的零会编码为可�
 
 <div class="related">
   <a href="/zh-hans/docs/agent-queries/"><span>CLI 手册</span>类型化智能体查询：指标、睡眠时段、训练对齐、锻炼、覆盖范围、比较和证据。</a>
-  <a href="/zh-hans/docs/mcp/"><span>工具协议</span>Codex 和 Claude 设置、17 个可移植工具、MCP App 图表、导出、分页和沙盒边界。</a>
+  <a href="/zh-hans/docs/mcp/"><span>工具协议</span>Codex 和 Claude 设置、21 个已发布 Mac 工具、19 个可移植预览工具、MCP App 图表、导出、分页和沙盒边界。</a>
   <a href="/zh-hans/docs/agent-api/"><span>底层接口</span>环回查询 API：路由、直接请求 JSON、游标和持久获取作业。</a>
   <a href="/zh-hans/docs/cli-extract/"><span>来源对象</span>规范提取：所选 schema-v7 文档、记录、投影和回执。</a>
   <a href="/zh-hans/docs/reference/evidence-packets/"><span>契约</span>精简查询与证据包：类型化值、覆盖范围、操作和确定性 ID。</a>

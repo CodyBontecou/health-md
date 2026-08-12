@@ -17,6 +17,8 @@ enum GeneratedAutomationReferenceDocumentation {
         "api-export-v2-provider-sidecar.json",
         "agent-query-request.json",
         "agent-query-response.json",
+        "agent-query-response-partial.json",
+        "agent-query-error.json",
         "agent-evidence-response.json",
         "control-status.json",
         "control-write-files-request.json",
@@ -242,6 +244,34 @@ enum GeneratedAutomationReferenceDocumentation {
             nextCursor: "synthetic-opaque-authenticated-cursor",
             limitations: []
         )
+        let agentPartialCoverage = HealthMdCoverage(
+            requestedRange: agentRange,
+            availableRange: .init(startDate: "2026-03-15", endDate: "2026-03-15"),
+            status: .partial,
+            daysConsidered: 2,
+            daysWithValues: 1,
+            missing: [.init(
+                range: .init(startDate: "2026-03-16", endDate: "2026-03-16"),
+                status: .failed,
+                reason: "The requested source could not be read for this day."
+            )]
+        )
+        let agentPartialResponse = HealthMdQueryResponse(
+            items: [.metric(agentPoint)],
+            packet: nil,
+            coverage: agentPartialCoverage,
+            sources: [agentSource],
+            evidence: [agentEvidence],
+            nextCursor: nil,
+            limitations: [.init(
+                code: "partial_requested_scope",
+                message: "One or more requested days did not complete."
+            )]
+        )
+        let agentQueryError = HealthMdQueryError(
+            code: "invalid_timeout",
+            message: "wait_timeout_seconds must be finite and between 5 and 900 seconds."
+        )
         let agentPacket = try HealthMdQueryCanonicalSerializer.makePacket(
             kind: .doctorVisit,
             range: agentRange,
@@ -292,6 +322,8 @@ enum GeneratedAutomationReferenceDocumentation {
         ))
         generated["agent-query-request.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentQuery)
         generated["agent-query-response.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentQueryResponse)
+        generated["agent-query-response-partial.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentPartialResponse)
+        generated["agent-query-error.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentQueryError)
         generated["agent-evidence-response.json"] = try HealthMdQueryCanonicalSerializer.data(for: agentEvidenceResponse)
         generated["control-status.json"] = try encodeControl(statusResponse())
 
@@ -1246,6 +1278,9 @@ enum GeneratedAutomationReferenceDocumentation {
             contracts: [
                 "healthmd.api_export/v1",
                 "healthmd.api_export/v2",
+                "healthmd.query_error/v1",
+                "healthmd.query_request/v1",
+                "healthmd.query_response/v1",
                 "healthmd.raw_result/v1",
                 "localhost-control/v1",
                 "sync-protocol/v2",

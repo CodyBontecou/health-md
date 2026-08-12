@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Starten Sie Codex neu, rufen Sie `healthmd_doctor` und anschließend `healthmd_metrics` sowie ein kleines typisiertes Tool wie `healthmd_metric_chart` auf. Der mitgelieferte Server stellt 21 Tools bereit, darunter Mac-Bereitschaft, Aktualisierungsaufträge für verschlüsselten Kontext, Nachweise und Visualisierungen.
+Starten Sie Codex neu, rufen Sie `healthmd_doctor` auf, ermitteln Sie IDs mit `healthmd_metrics`, erfassen Sie mit dem Aktualisierungstool ausdrücklich einen kleinen Umfang und fragen Sie diesen dann mit einem typisierten Tool wie `healthmd_metric_chart` ab. Der mitgelieferte Server stellt 21 Tools bereit, darunter Mac-Bereitschaft, Aktualisierungsaufträge für verschlüsselten Kontext, Nachweise und Visualisierungen.
 
 ## Claude Desktop oder Claude Code auf dem Mac
 
@@ -124,7 +124,7 @@ Prüfen Sie für ein vollständiges Ergebnis den angeforderten Umfang, die Abdec
 ## Weiterführend
 
 <div class="related">
-  <a href="/de/docs/mcp/"><span>Toolschnittstelle</span>Prüfen Sie die 21 verfügbaren Mac-Tools, die portable Vorschau mit 17 Tools, MCP Apps, Schemas, Paging, Exporte und Sandbox-Grenzen.</a>
+  <a href="/de/docs/mcp/"><span>Toolschnittstelle</span>Prüfen Sie die 21 veröffentlichten Mac-Tools, die portable Vorschau mit 19 Tools, MCP Apps, Schemas, Paging, Exporte und Sandbox-Grenzen.</a>
   <a href="/de/docs/agent-queries/"><span>Erste Fragen</span>Führen Sie typisierte Workflows für Metriken, Schlaf, Trainingseinheiten, Vergleiche, Abdeckung und Nachweise aus.</a>
   <a href="/de/docs/cli-extract/"><span>Kanonische Daten</span>Extrahieren Sie ausgewählte Schema-v7-Dokumente und Quelldatensätze, ohne große Inhalte in einen Chat zu stellen.</a>
   <a href="/de/docs/reference/"><span>Verträge</span>Durchsuchen Sie versionierte Datenstrukturen, Feldinventare, generierte Fixtures und Integrationsrezepte.</a>

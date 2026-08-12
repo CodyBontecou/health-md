@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Reinicie o Codex, chame `healthmd_doctor` e depois chame `healthmd_metrics` e uma ferramenta tipada pequena, como `healthmd_metric_chart`. O servidor integrado disponibiliza 21 ferramentas, incluindo prontidão do Mac, tarefas persistentes de atualização de contexto criptografado, evidências e visualizações.
+Reinicie o Codex, chame `healthmd_doctor`, resolva os IDs com `healthmd_metrics`, adquira explicitamente um escopo pequeno com a ferramenta de atualização e consulte-o com uma ferramenta tipada como `healthmd_metric_chart`. O servidor integrado disponibiliza 21 ferramentas, incluindo prontidão do Mac, tarefas persistentes de atualização de contexto criptografado, evidências e visualizações.
 
 ## Claude Desktop ou Claude Code no Mac
 
@@ -124,7 +124,7 @@ Para obter um resultado completo, verifique o escopo solicitado, a cobertura, o 
 ## Continue
 
 <div class="related">
-  <a href="/pt-br/docs/mcp/"><span>Interface de ferramentas</span>Conheça as 21 ferramentas disponíveis no Mac, a prévia portátil com 17 ferramentas, MCP Apps, schemas, paginação, exportações e limites do sandbox.</a>
+  <a href="/pt-br/docs/mcp/"><span>Interface de ferramentas</span>Conheça as 21 ferramentas Mac publicadas, a prévia portátil com 19 ferramentas, MCP Apps, schemas, paginação, exportações e limites do sandbox.</a>
   <a href="/pt-br/docs/agent-queries/"><span>Primeiras perguntas</span>Execute fluxos tipados de métricas, sono, treinos, comparações, cobertura e evidências.</a>
   <a href="/pt-br/docs/cli-extract/"><span>Dados canônicos</span>Extraia documentos selecionados do schema v7 e registros de origem sem colocar grandes conteúdos no chat.</a>
   <a href="/pt-br/docs/reference/"><span>Contratos</span>Consulte estruturas de dados versionadas, inventários de campos, fixtures geradas e receitas de integração.</a>

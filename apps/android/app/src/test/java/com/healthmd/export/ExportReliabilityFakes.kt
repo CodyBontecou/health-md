@@ -178,6 +178,9 @@ class FakeSettingsRepository(
 
     override val hasCompletedOnboarding: Flow<Boolean> = hasCompletedOnboardingState
 
+    override suspend fun resolveOnboardingCompletion(): Boolean =
+        hasCompletedOnboardingState.value
+
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         hasCompletedOnboardingState.value = completed
     }

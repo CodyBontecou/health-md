@@ -1,17 +1,19 @@
 ---
 title: "Automation generated artifacts"
-description: "This group contains 30 deterministic artifacts. Checksums are SHA-256 hashes of the exact raw bytes."
+description: "This group contains 32 deterministic artifacts. Checksums are SHA-256 hashes of the exact raw bytes."
 editUrl: false
 ---
 
-This group contains 30 deterministic artifacts. Checksums are SHA-256 hashes of the exact raw bytes.
+This group contains 32 deterministic artifacts. Checksums are SHA-256 hashes of the exact raw bytes.
 
 [View all generated artifacts](/docs/reference/generated/)
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
 | `agent-evidence-response.json` | 2525 | `7f1db6f29a9e1754db199d53ddbbd8bfdf60b232a68a93ea1b3b165770e76ec2` | — | [Download](/docs/reference/generated/automation/agent-evidence-response.json) |
+| `agent-query-error.json` | 187 | `73ee1c07fe56b1d94cfce67944b40b7749a5731790684974086437ac93056d32` | — | [Download](/docs/reference/generated/automation/agent-query-error.json) |
 | `agent-query-request.json` | 308 | `2adc1ab2cfcc89df538e5143276caca5c1c385ab4b8db2f46b84411a268fe9a4` | — | [Download](/docs/reference/generated/automation/agent-query-request.json) |
+| `agent-query-response-partial.json` | 1518 | `62c1d2f5ec85a3a4218f504cb34d027ea4facf87175a84ca7b564f2836ff38d4` | — | [Download](/docs/reference/generated/automation/agent-query-response-partial.json) |
 | `agent-query-response.json` | 1487 | `0ccb44bb0fb15156c6465ceb8a0660c3d9962f549e8ad758f07bd4ce1d03dce4` | — | [Download](/docs/reference/generated/automation/agent-query-response.json) |
 | `api-export-v1.json` | 2212 | `762bf129b5e836fac61e487eefb71b15718823985af30f54bc5441719a782d88` | — | [Download](/docs/reference/generated/automation/api-export-v1.json) |
 | `api-export-v2-provider-sidecar.json` | 3085 | `fd5f5d1451c108e3bf8f936ecadeb68eae02b5a762c44394785f57c94380a865` | — | [Download](/docs/reference/generated/automation/api-export-v2-provider-sidecar.json) |
@@ -30,8 +32,8 @@ This group contains 30 deterministic artifacts. Checksums are SHA-256 hashes of 
 | `mac-export-job.json` | 27662 | `3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `mac-export-result-partial.json` | 658 | `a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `mac-export-result-success.json` | 502 | `8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `manifest.json` | 5419 | `408f1315562ee6c05ec4b6a6ef1caf45733fa95fdbecfbc0a58644ca5c05c3fb` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `message-fields.md` | 117653 | `a9e99406930b2159a9ea9358255d2d314d4c0f8580d2041f8eb42d5505ee62bb` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `manifest.json` | 5847 | `e2238d34054b08ba5ca050e148d41838cb503493d41c72974ae6f477e7b24186` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `message-fields.md` | 120666 | `962adaaef4a224f926dcc36e32711debf8173433a8b1422131e8f615b80fc557` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
 | `peer-capabilities.json` | 1496 | `0f1e4a5700077d33cc9c1eafbd09fecf72dba468e538b844c27ec63c3be3f085` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `raw-result-complete.json` | 3240 | `2250ce0e65990f451fde8133f2c3256e644d860f6c7314b3c2769b1e8cb2e9b3` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `raw-result-partial.json` | 5280 | `50c611e9689cc544d091ce5a35f37fa487ed700cb92607c01bf1941030bd492f` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |

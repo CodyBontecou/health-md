@@ -33,3 +33,12 @@ object SubRoutes {
     const val DIRECT_CLI = "direct_cli"
     const val PAYWALL = "paywall"
 }
+
+enum class PaywallEntryPoint(
+    val route: String,
+    @StringRes val subtitleResource: Int,
+) {
+    UPGRADE(SubRoutes.PAYWALL, R.string.settings_upgrade_subtitle),
+    EXPORT_LIMIT("${SubRoutes.PAYWALL}/export-limit", R.string.paywall_subtitle),
+    SCHEDULE("${SubRoutes.PAYWALL}/schedule", R.string.schedule_unlock_required_body),
+}

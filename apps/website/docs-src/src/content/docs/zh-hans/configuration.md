@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-重启 Codex，先调用 `healthmd_doctor`，然后调用 `healthmd_metrics`，再调用一个小型类型化工具，例如 `healthmd_metric_chart`。内置服务器提供 21 个工具，包括 Mac 就绪状态、加密上下文刷新作业、证据和可视化。
+重启 Codex，调用 `healthmd_doctor`，使用 `healthmd_metrics` 确定 ID，通过更新工具明确获取一个小范围，然后使用 `healthmd_metric_chart` 等类型化工具查询该范围。内置服务器提供 21 个工具，包括 Mac 就绪状态、加密上下文刷新作业、证据和可视化。
 
 ## 在 Mac 上使用 Claude Desktop 或 Claude Code
 
@@ -124,7 +124,7 @@ MCP 和 CLI 直连工作流需要先与 iPhone 上的 Health.md 完成一次受�
 ## 继续阅读
 
 <div class="related">
-  <a href="/zh-hans/docs/mcp/"><span>工具接口</span>查看 21 个可用的 Mac 工具、预览版中的 17 个可移植工具、MCP Apps、架构、分页、导出和沙盒边界。</a>
+  <a href="/zh-hans/docs/mcp/"><span>工具接口</span>查看 21 个已发布的 Mac 工具、预览版中的 19 个可移植工具、MCP Apps、架构、分页、导出和沙盒边界。</a>
   <a href="/zh-hans/docs/agent-queries/"><span>首次查询</span>运行类型化指标、睡眠、锻炼、比较、覆盖范围和证据工作流。</a>
   <a href="/zh-hans/docs/cli-extract/"><span>规范数据</span>提取选定的 schema-v7 文档和源记录，无需在聊天中传输大型数据正文。</a>
   <a href="/zh-hans/docs/reference/"><span>契约</span>浏览版本化数据结构、字段清单、生成的测试样例和集成方案。</a>
