@@ -1,5 +1,7 @@
-v1.6.1 — Better sleep summaries and localized guidance
+v1.7.0 — Private health reports for appointments
 
-• Improves sleep summaries across overnight and noon-to-noon windows.
-• Adds localized Play Store guidance and screenshots across supported languages.
-• Includes reliability and compatibility improvements for exports, widgets, and Direct CLI.
+• Create 7-, 30-, or 90-day reports from selected Health Connect data.
+• Preview, save, or share structured PDFs generated entirely on your device.
+• Adds translated report guidance across all supported languages.
+• Keeps your selected export folder during onboarding.
+• Clarifies upgrade guidance based on what you were trying to do.
