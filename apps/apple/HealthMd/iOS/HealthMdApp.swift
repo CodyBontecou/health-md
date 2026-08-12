@@ -244,9 +244,9 @@ struct HealthMdApp: App {
     /// Configure deterministic test state from launch environment variables.
     /// Skips all real HealthKit, StoreKit, and network interactions.
     private func configureTestMode() {
-        if TestMode.showsOnboarding {
-            UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-        }
+        // UI tests reuse the installed app between methods, so establish the
+        // requested launch state instead of inheriting an earlier journey.
+        UserDefaults.standard.set(TestMode.hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
         if TestMode.showsReleaseNotes {
             HealthMdReleaseNotes.resetSeenVersionForUITesting()
         }

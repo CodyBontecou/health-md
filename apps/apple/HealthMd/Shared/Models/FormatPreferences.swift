@@ -561,7 +561,7 @@ struct MarkdownTemplateConfig: Codable, Equatable {
 
 // MARK: - Unit Conversion Helpers
 
-struct UnitConverter {
+nonisolated struct UnitConverter {
     let preference: UnitPreference
     
     // Distance

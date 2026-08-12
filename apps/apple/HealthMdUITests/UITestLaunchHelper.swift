@@ -115,6 +115,7 @@ enum UITestLaunchHelper {
         app.launchArguments = ["--uitesting"]
         app.launchEnvironment = [
             "UITEST_HEALTH_AUTHORIZED": healthAuthorized ? "true" : "false",
+            "UITEST_HAS_COMPLETED_ONBOARDING": showOnboarding ? "false" : "true",
             "UITEST_SHOW_ONBOARDING": showOnboarding ? "true" : "false",
             "UITEST_SHOW_RELEASE_NOTES": showReleaseNotes ? "true" : "false",
             "UITEST_VAULT_SELECTED": vaultSelected ? "true" : "false",

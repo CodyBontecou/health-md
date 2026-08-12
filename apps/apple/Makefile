@@ -41,8 +41,11 @@ XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES -default-test-execution-t
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
 CORE_RUST_PREPARE := ../../packages/healthmd-core-rust/scripts/prepare-apple-xcframework.sh
 
-COVERAGE_DIR  := build/coverage
-XCRESULT_PATH := $(COVERAGE_DIR)/HealthMd.xcresult
+TEST_RESULTS_DIR   := build/test-results
+IOS_XCRESULT_PATH  ?= $(TEST_RESULTS_DIR)/HealthMd-iOS.xcresult
+IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
+COVERAGE_DIR       := build/coverage
+XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
 .PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
@@ -57,6 +60,8 @@ check-macos-localizations:
 
 test-ios: prepare-healthmd-core-rust
 	@echo "\n━━━  iOS Tests  ━━━"
+	@mkdir -p $(TEST_RESULTS_DIR) "$(dir $(IOS_TEST_RAW_LOG))"
+	@rm -rf "$(IOS_XCRESULT_PATH)" "$(IOS_TEST_RAW_LOG)"
 	@set -o pipefail; \
 	  ios_sim='$(IOS_SIM)'; \
 	  if [[ -z "$$ios_sim" ]]; then \
@@ -68,13 +73,14 @@ test-ios: prepare-healthmd-core-rust
 	  -scheme HealthMd-Tests-iOS \
 	  -destination "$$ios_sim" \
 	  -configuration Debug-iOS \
-	  $(XCODE_TEST_TIMEOUT_FLAGS) \
+	  -resultBundlePath "$(IOS_XCRESULT_PATH)" \
+	  -test-timeouts-enabled NO \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
-	  2>&1 | \
+	  2>&1 | tee "$(IOS_TEST_RAW_LOG)" | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
 	    xcpretty --color; \
 	  else \
-	    grep -E "Test Case|error:|PASSED|FAILED|Executed"; \
+	    grep -E "Test Case|error:|PASSED|FAILED|Executed|Testing failed|Test session results|TEST (SUCCEEDED|FAILED)"; \
 	  fi
 
 test-macos: prepare-healthmd-core-rust

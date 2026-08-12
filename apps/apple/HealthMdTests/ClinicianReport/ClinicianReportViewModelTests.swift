@@ -4,12 +4,15 @@ import XCTest
 
 @MainActor
 final class ClinicianReportViewModelTests: XCTestCase {
+    // ClinicianReportViewModel is an ObservableObject. Keep test instances alive through
+    // process exit to avoid the Xcode 26 simulator runtime deinit bug documented in
+    // docs/testing/lifecycle-audit.md.
     func testMetricSelectionShortcutsUseRecommendedDefaults() {
-        let viewModel = ClinicianReportViewModel(
+        let viewModel = LifecycleHarness.retain(ClinicianReportViewModel(
             dataSource: AppleClinicianReportDataSource(fetch: { _, _, _ in HealthData(date: Date()) }),
             unitPreference: .metric,
             defaults: FakeUserDefaults()
-        )
+        ))
         XCTAssertEqual(viewModel.configuration.selectedMetrics, ReportMetric.recommended)
         viewModel.selectAllMetrics()
         XCTAssertEqual(viewModel.configuration.selectedMetrics, Set(ReportMetric.allCases))
@@ -23,11 +26,11 @@ final class ClinicianReportViewModelTests: XCTestCase {
     func testMetricSelectionPersistsAcrossReportSessions() {
         let defaults = FakeUserDefaults()
         func makeViewModel() -> ClinicianReportViewModel {
-            ClinicianReportViewModel(
+            LifecycleHarness.retain(ClinicianReportViewModel(
                 dataSource: AppleClinicianReportDataSource(fetch: { _, _, _ in HealthData(date: Date()) }),
                 unitPreference: .metric,
                 defaults: defaults
-            )
+            ))
         }
 
         let first = makeViewModel()
@@ -63,13 +66,13 @@ final class ClinicianReportViewModelTests: XCTestCase {
             if call == 1 { try await Task.sleep(for: .milliseconds(250)) }
             return HealthData(date: date, activity: ActivityData(steps: call == 1 ? 1 : 2), healthKitRecordCaptureStatus: .complete)
         }, now: { today })
-        let viewModel = ClinicianReportViewModel(
+        let viewModel = LifecycleHarness.retain(ClinicianReportViewModel(
             dataSource: source,
             unitPreference: .metric,
             defaults: FakeUserDefaults(),
             timeZone: { zone },
             today: { today }
-        )
+        ))
         viewModel.configuration.selectedMetrics = [.steps]
         viewModel.generateReport(locale: Locale(identifier: "en_US"))
         await Task.yield()
@@ -87,13 +90,13 @@ final class ClinicianReportViewModelTests: XCTestCase {
             try await Task.sleep(for: .seconds(30))
             return HealthData(date: now)
         }, now: { now })
-        let viewModel = ClinicianReportViewModel(
+        let viewModel = LifecycleHarness.retain(ClinicianReportViewModel(
             dataSource: source,
             unitPreference: .metric,
             defaults: FakeUserDefaults(),
             timeZone: { zone },
             today: { now }
-        )
+        ))
         viewModel.generateReport(locale: Locale(identifier: "en_US"))
         await Task.yield()
         XCTAssertTrue(viewModel.isLoading)
@@ -116,13 +119,13 @@ final class ClinicianReportViewModelTests: XCTestCase {
                 healthKitRecordCaptureStatus: .complete
             )
         }, now: { today })
-        let viewModel = ClinicianReportViewModel(
+        let viewModel = LifecycleHarness.retain(ClinicianReportViewModel(
             dataSource: source,
             unitPreference: .metric,
             defaults: FakeUserDefaults(),
             timeZone: { zone },
             today: { today }
-        )
+        ))
         viewModel.configuration.dateRange = .init(startDate: today, endDate: today)
         viewModel.configuration.selectedMetrics = [.steps]
 
@@ -146,13 +149,13 @@ final class ClinicianReportViewModelTests: XCTestCase {
         let source = AppleClinicianReportDataSource(fetch: { date, _, _ in
             HealthData(date: date, healthKitRecordCaptureStatus: .complete)
         }, now: { today })
-        let viewModel = ClinicianReportViewModel(
+        let viewModel = LifecycleHarness.retain(ClinicianReportViewModel(
             dataSource: source,
             unitPreference: .metric,
             defaults: FakeUserDefaults(),
             timeZone: { zone },
             today: { today }
-        )
+        ))
         viewModel.configuration.dateRange = .init(startDate: today, endDate: today)
         viewModel.configuration.selectedMetrics = [.bloodGlucose]
 
