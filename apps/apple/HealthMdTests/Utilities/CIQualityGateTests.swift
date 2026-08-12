@@ -198,6 +198,45 @@ final class CIQualityGateTests: XCTestCase {
         )
     }
 
+    func testWorkflow_boundsAppleTestsAndRunsMacOSSuiteOnce() throws {
+        let workflowPath = appleCIWorkflowPath
+        let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
+        XCTAssertEqual(
+            content.components(separatedBy: "timeout-minutes: 75").count - 1,
+            2,
+            "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
+        )
+        XCTAssertTrue(
+            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    runs-on: macos-26\n    timeout-minutes: 60"),
+            "The split UI job must allow at least 60 minutes for clean builds"
+        )
+        XCTAssertTrue(
+            content.contains("-test-timeouts-enabled YES"),
+            "UI tests must fail diagnostically instead of hanging indefinitely"
+        )
+        let makefile = try String(
+            contentsOf: projectDir.appendingPathComponent("Makefile"),
+            encoding: .utf8
+        )
+        XCTAssertTrue(
+            makefile.contains("XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES"),
+            "Unit and coverage commands must enable per-test execution timeouts"
+        )
+        XCTAssertFalse(
+            content.contains("make test-macos"),
+            "The PR workflow must not run the macOS suite before the coverage pass"
+        )
+        XCTAssertEqual(
+            content.components(separatedBy: "make coverage").count - 1,
+            1,
+            "The PR workflow must run the coverage-enabled macOS suite exactly once"
+        )
+        XCTAssertTrue(
+            content.contains("test-ios-ui:"),
+            "UI regressions must run in a job parallel to iOS unit tests"
+        )
+    }
+
     func testWorkflow_preservesConcurrency() throws {
         let workflowPath = appleCIWorkflowPath
         let content = try String(contentsOfFile: workflowPath, encoding: .utf8)
