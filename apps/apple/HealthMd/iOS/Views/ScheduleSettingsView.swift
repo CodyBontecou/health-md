@@ -1139,6 +1139,11 @@ struct ScheduleSettingsView: View {
 
         let totalDays = datesToExport.count
         var successCount = 0
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
+        var dailyNoteUpdateCount = 0
+        var dailyNoteSkipCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         let dateFormatter = DateFormatter()
@@ -1162,13 +1167,26 @@ struct ScheduleSettingsView: View {
                     continue
                 }
 
-                let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
+                let writeResult = try vaultManager.exportHealthDataResult(
+                    healthData,
+                    for: date,
+                    settings: advancedSettings
+                )
+                partialFailures.append(contentsOf: healthData.partialFailures)
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
+                dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
-                if success {
-                    partialFailures.append(contentsOf: healthData.partialFailures)
-                    successCount += 1
+                if advancedSettings.dailyNotesOnlyModeEnabled,
+                   writeResult.dailyNoteUpdatedCount == 0 {
+                    failedDateDetails.append(FailedDateDetail(
+                        date: date,
+                        reason: .noHealthData
+                    ))
                 } else {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+                    successCount += 1
                 }
             } catch {
                 failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
@@ -1188,21 +1206,37 @@ struct ScheduleSettingsView: View {
             let startDate = datesToExport.min() ?? entry.dateRangeStart
             let endDate = datesToExport.max() ?? entry.dateRangeEnd
 
-            if failedDateDetails.isEmpty && partialFailures.isEmpty && successCount > 0 {
-                retryStatusMessage = String(localized: "Successfully exported \(successCount) files", comment: "Export success message")
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
-                )
-            } else if successCount > 0 {
-                retryStatusMessage = partialFailures.isEmpty
-                    ? "Exported \(successCount)/\(totalDays) files"
-                    : "Exported \(successCount)/\(totalDays) files with \(partialFailures.count) warning(s)"
+            let generatedFileCount = looseAggregateFileCount
+                + individualEntryFileCount
+                + dataDictionaryFileCount
+            let outputBreakdown = ExportHistoryOutputBreakdown(
+                requestedDataDayCount: totalDays,
+                successfulDataDayCount: successCount,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                isFileCategoryBreakdownComplete: true
+            )
+            let retryResult = ExportOrchestrator.ExportResult(
+                successCount: successCount,
+                totalCount: totalDays,
+                failedDateDetails: failedDateDetails,
+                partialFailures: partialFailures,
+                formatsPerDate: 0,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                authoritativeFileCount: generatedFileCount,
+                isFileCategoryBreakdownComplete: true,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                completedDates: datesToExport.filter { date in
+                    !failedDateDetails.contains { Calendar.current.isDate($0.date, inSameDayAs: date) }
+                }
+            )
+
+            if successCount > 0 || dailyNoteSkipCount > 0 {
+                retryStatusMessage = retryResult.localizedGeneratedFileAndDataDayDescription
                 exportHistory.recordSuccess(
                     source: .manual,
                     dateRangeStart: startDate,
@@ -1211,7 +1245,10 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1),
+                    fileCount: generatedFileCount,
+                    outputBreakdown: outputBreakdown,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
                     partialFailures: partialFailures
                 )
             } else {
@@ -1228,7 +1265,10 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: 0,
+                    fileCount: generatedFileCount,
+                    outputBreakdown: outputBreakdown,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
                     partialFailures: partialFailures
                 )
             }
