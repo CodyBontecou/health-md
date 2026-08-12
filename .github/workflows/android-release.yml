@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-release-${{ github.ref }}
+  group: android-google-play-mutation
   cancel-in-progress: false
 
 jobs:
