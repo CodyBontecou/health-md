@@ -95,7 +95,7 @@ nonisolated struct AppleClinicianReportSourceAdapter {
         into values: inout DayValues
     ) {
         var recordsByID: [UUID: HealthKitRecord] = [:]
-        for record in records where recordsByID[record.originalUUID] == nil {
+        for record in records where !recordsByID.keys.contains(record.originalUUID) {
             recordsByID[record.originalUUID] = record
         }
         var seen = Set<UUID>()
@@ -257,7 +257,7 @@ nonisolated struct AppleClinicianReportSourceAdapter {
     }
 }
 
-private extension HealthKitMetadataValue {
+nonisolated private extension HealthKitMetadataValue {
     var isTrue: Bool {
         switch self {
         case .bool(let value): return value
@@ -270,13 +270,13 @@ private extension HealthKitMetadataValue {
     }
 }
 
-private extension Array where Element: Hashable {
+nonisolated private extension Array where Element: Hashable {
     func uniqued() -> [Element] {
         var seen = Set<Element>()
         return filter { seen.insert($0).inserted }
     }
 }
 
-private extension String {
+nonisolated private extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }
