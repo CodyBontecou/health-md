@@ -365,14 +365,23 @@ nonisolated final class ExportPerformanceLabTelemetryStore: @unchecked Sendable 
 /// Samples this process only. It never reads payloads or other processes.
 nonisolated final class ExportPerformanceFootprintSampler: @unchecked Sendable {
     private let lock = NSLock()
-    private let group = DispatchGroup()
     private let sample: @Sendable () -> UInt64?
-    private var running = false
+    private let timerQueue = DispatchQueue(
+        label: "com.healthexporter.export-performance-footprint-sampler",
+        qos: .utility
+    )
+    private let timerQueueKey = DispatchSpecificKey<Void>()
+    private var timer: DispatchSourceTimer?
     private var start: UInt64?
     private var peak: UInt64?
 
     init(sample: @escaping @Sendable () -> UInt64? = currentPhysicalFootprintBytes) {
         self.sample = sample
+        timerQueue.setSpecific(key: timerQueueKey, value: ())
+    }
+
+    deinit {
+        cancelTimer()
     }
 
     func startSampling() {
@@ -380,31 +389,27 @@ nonisolated final class ExportPerformanceFootprintSampler: @unchecked Sendable {
         lock.lock()
         start = initial
         peak = initial
-        running = true
-        lock.unlock()
-        guard initial != nil else { return }
-
-        group.enter()
-        DispatchQueue.global(qos: .utility).async { [self] in
-            defer { group.leave() }
-            while true {
-                lock.lock()
-                let shouldContinue = running
-                if let current = sample() {
-                    peak = max(peak ?? current, current)
-                }
-                lock.unlock()
-                if !shouldContinue { return }
-                usleep(100_000)
-            }
+        guard initial != nil else {
+            lock.unlock()
+            return
         }
+        let timer = DispatchSource.makeTimerSource(queue: timerQueue)
+        self.timer = timer
+        lock.unlock()
+
+        timer.setEventHandler { [weak self] in
+            self?.recordSample()
+        }
+        timer.schedule(
+            deadline: .now() + .milliseconds(100),
+            repeating: .milliseconds(100),
+            leeway: .milliseconds(10)
+        )
+        timer.resume()
     }
 
     func stopSampling() -> ExportPerformanceFootprint? {
-        lock.lock()
-        running = false
-        lock.unlock()
-        group.wait()
+        cancelTimer()
         let ending = sample()
         lock.lock()
         defer { lock.unlock() }
@@ -414,6 +419,25 @@ nonisolated final class ExportPerformanceFootprintSampler: @unchecked Sendable {
             peakBytes: max(peak, ending),
             endBytes: ending
         )
+    }
+
+    private func recordSample() {
+        guard let current = sample() else { return }
+        lock.lock()
+        peak = max(peak ?? current, current)
+        lock.unlock()
+    }
+
+    private func cancelTimer() {
+        lock.lock()
+        let timer = timer
+        self.timer = nil
+        lock.unlock()
+        timer?.setEventHandler(handler: nil)
+        timer?.cancel()
+        if timer != nil, DispatchQueue.getSpecific(key: timerQueueKey) == nil {
+            timerQueue.sync {}
+        }
     }
 
     static func currentPhysicalFootprintBytes() -> UInt64? {
