@@ -1,17 +1,28 @@
 # Health.md Agent Instructions
 
+## Cross-platform feature policy
+
+Apple and Android should expose the same capability, terminology, settings semantics, and public data meaning whenever HealthKit and Health Connect permit it. Before changing a mobile feature or export behavior, read `../../docs/architecture/cross-platform-unification-policy.md` and inspect the Android implementation and capability inventory.
+
+- Prefer the common contract and shared semantic IDs for proven equivalence.
+- Keep HealthKit-only data in an explicit Apple capability/platform section; do not add fake Android placeholders.
+- If an otherwise shared feature lands on Apple first, record Android as `planned` with a concrete target or document the Health Connect/platform blocker.
+- Keep non-equivalent statistics distinct, including HealthKit HRV SDNN versus Health Connect/WHOOP RMSSD.
+- Update shared contracts, Android-facing docs/fixtures, and cross-product consumers whenever the boundary changes.
+
 ## Export schema contract
 
 Health.md export files are a public, long-lived contract for Obsidian, JSON, CSV, and downstream automation.
 
 When editing any exporter, metric mapping, unit mapping, data dictionary, frontmatter key, CSV row/header, or JSON shape:
 
-1. Read `docs/features/export-schema.md`.
-2. Decide whether the public export schema changed.
-3. If it changed, bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift`.
-4. Run `make update-export-schema-signature` to create/update the versioned fixture.
-5. Review the fixture diff under `HealthMdTests/Fixtures/Export/export_schema_signature_v<version>.json`.
-6. Run exporter contract tests before finishing.
+1. Read `../../docs/architecture/cross-platform-unification-policy.md` and `docs/features/export-schema.md`.
+2. Compare the Android mapping and decide whether the behavior belongs in the unified contract, an Apple platform section, or an explicitly unavailable/planned Android capability.
+3. Decide whether the public export schema changed.
+4. If it changed, bump `HealthMdExportSchema.version` in `HealthMd/Shared/Export/HealthMetricsDictionary.swift`.
+5. Run `make update-export-schema-signature` to create/update the versioned fixture.
+6. Review the fixture diff under `HealthMdTests/Fixtures/Export/export_schema_signature_v<version>.json`.
+7. Run exporter contract tests and every affected Android/shared consumer gate before finishing.
 
 Do **not** update the schema signature fixture just to silence CI. The test intentionally refuses to overwrite a changed fingerprint for the same `schema_version`; bump the schema version for intentional schema changes.
 

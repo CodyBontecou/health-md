@@ -14,7 +14,16 @@ protocol ExternalIntegrationDailyRecordProviding: AnyObject {
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord]
     func fetchDailyRecords(
         for date: Date,
+        calendar: Calendar
+    ) async -> [ExternalDailyRecord]
+    func fetchDailyRecords(
+        for date: Date,
         providerIDs: Set<String>
+    ) async -> [ExternalDailyRecord]
+    func fetchDailyRecords(
+        for date: Date,
+        providerIDs: Set<String>,
+        calendar: Calendar
     ) async -> [ExternalDailyRecord]
     func discoverEarliestAvailableDate(
         providerIDs: Set<String>
@@ -24,6 +33,21 @@ protocol ExternalIntegrationDailyRecordProviding: AnyObject {
 
 extension ExternalIntegrationDailyRecordProviding {
     func beginExportAction() {}
+
+    func fetchDailyRecords(
+        for date: Date,
+        calendar: Calendar
+    ) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date)
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        providerIDs: Set<String>,
+        calendar: Calendar
+    ) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date, providerIDs: providerIDs)
+    }
     func endExportAction(succeeded: Bool) {}
 
     func discoverEarliestAvailableDate(

@@ -25,7 +25,7 @@ class ProductCapabilityManifestTest {
         val profiles = inventory.getValue("output_profiles").jsonArray
             .map { it.jsonObject.getValue("id").jsonPrimitive.content }
             .toSet()
-        assertEquals(setOf("apple-v7", "android-frozen-v4", "android-analytical-v5"), profiles)
+        assertEquals(setOf("apple-v8", "android-frozen-v4", "android-analytical-v5"), profiles)
 
         val capabilities = inventory.getValue("capabilities").jsonArray.map { it.jsonObject }
         val states = capabilities.associate { capability ->
@@ -91,6 +91,7 @@ class ProductCapabilityManifestTest {
             "apple.state-of-mind",
             "apple.wrist-temperature",
             "apple.hearing-and-symptoms",
+            "apple.typed-whoop-provider-section",
         )
 
         val androidCapabilities = setOf(

@@ -11,17 +11,29 @@
 
 Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
 
-## Cross-platform contract changes
+## Cross-platform product and contract policy
+
+Apple and Android should remain unified whenever their operating systems expose semantically compatible capabilities. Read `docs/architecture/cross-platform-unification-policy.md` before changing a mobile feature, metric, setting, export, API behavior, automation surface, or public terminology.
+
+Default rules:
+
+- Define the platform-neutral user/consumer outcome before native implementation details.
+- Inspect both Apple and Android APIs and update both implementations when semantics permit.
+- Use shared semantic IDs, canonical units, reducers, capture states, and fixtures only for proven equivalence.
+- Record unavoidable OS/API differences explicitly in `packages/contracts/product-capabilities.json`, the metric registry, or an independently versioned platform section.
+- Never fabricate parity: unsupported data is omitted/reported unavailable, and related-but-different statistics keep distinct identities.
+- A one-platform implementation of an otherwise shared capability must mark the other platform `planned` with a concrete target or document why it is unavailable.
 
 Health.md exports and direct-device protocols are public, long-lived contracts. When changing exporter mappings, units, schemas, protocol models, wire formats, fixtures, or consumer compatibility:
 
-1. Read `apps/apple/docs/features/export-schema.md` and the relevant protocol documentation.
+1. Read `docs/architecture/cross-platform-unification-policy.md`, `apps/apple/docs/features/export-schema.md`, and the relevant Android/protocol documentation.
 2. Identify every affected producer and consumer: shared Rust core, Apple, Android, CLI, website, and the external Obsidian plugin.
-3. Decide whether the public export schema, direct protocol version, or only an internal shared-core version changed.
-4. For export schema changes, bump `HealthMdExportSchema.version` in `apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift` when required.
-5. Run `make -C apps/apple update-export-schema-signature` after an intentional schema version change.
-6. Review the versioned fixture under `apps/apple/HealthMdTests/Fixtures/Export/`.
-7. Run all affected contract and consumer tests before finishing.
+3. Use exact machine-readable classifications with evidence: capabilities use `shared`, `apple_only`, `android_only`, `unavailable`, or `planned`; registry mappings use `platform_exact_or_unavailable`, `mapped_alias`, or `platform_distinct`. A mapping-ledger review state such as `alias-review` does not replace the registry classification.
+4. Decide whether the common public export schema, a platform extension/profile, direct protocol version, or only an internal shared-core version changed.
+5. For Apple export schema changes, bump `HealthMdExportSchema.version` in `apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift` when required.
+6. Run `make -C apps/apple update-export-schema-signature` after an intentional Apple schema version change.
+7. Review every affected versioned fixture, including Apple, Android, shared-contract, and external-consumer fixtures.
+8. Run all affected Apple, Android, contract, core, CLI, website, API/automation, and external-consumer tests before finishing.
 
 Do not update a schema fixture merely to silence CI. Do not combine contract extraction with repository-structure migrations.
 

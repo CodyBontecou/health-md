@@ -52,6 +52,8 @@ actor WHOOPRateLimitGate {
 
 struct ExternalProviderAPIClient: Sendable {
     private static let whoopBaseURL = "https://api.prod.whoop.com/developer/v2"
+    private static let maximumWHOOPCollectionPages = 100
+    private static let maximumWHOOPHistoryPages = 100
 
     private let responseLoader: BoundedURLSessionDataLoader
     private let whoopRateLimitGate: WHOOPRateLimitGate
@@ -152,6 +154,7 @@ struct ExternalProviderAPIClient: Sendable {
         return ExternalDailyRecord(
             provider: provider,
             date: dateString,
+            fetchedAt: payloads.map(\.fetchedAt).max() ?? now,
             payloads: payloads
         )
     }
@@ -269,7 +272,24 @@ struct ExternalProviderAPIClient: Sendable {
                 ))
                 continue
             }
-            payloads.append(contentsOf: try await fetchWHOOPCollection(collection, day: day, token: token))
+            do {
+                payloads.append(contentsOf: try await fetchWHOOPCollection(
+                    collection,
+                    day: day,
+                    token: token
+                ))
+            } catch ExternalProviderAPIError.unauthorized {
+                throw ExternalProviderAPIError.unauthorized
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                payloads.append(Self.safeWHOOPFailurePayload(
+                    name: collection.name,
+                    endpoint: "\(Self.whoopBaseURL)\(collection.path)",
+                    error: error
+                ))
+                break
+            }
         }
 
         // WHOOP's body measurement endpoint is a current profile singleton and
@@ -278,11 +298,23 @@ struct ExternalProviderAPIClient: Sendable {
         if calendar.isDate(requestedDate, inSameDayAs: now) {
             let endpoint = "\(Self.whoopBaseURL)/user/measurement/body"
             if token.grants("read:body_measurement") {
-                payloads.append(try await fetchWHOOPSingleton(
-                    name: "body_measurements_snapshot",
-                    urlString: endpoint,
-                    token: token
-                ))
+                do {
+                    payloads.append(try await fetchWHOOPSingleton(
+                        name: "body_measurements_snapshot",
+                        urlString: endpoint,
+                        token: token
+                    ))
+                } catch ExternalProviderAPIError.unauthorized {
+                    throw ExternalProviderAPIError.unauthorized
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    payloads.append(Self.safeWHOOPFailurePayload(
+                        name: "body_measurements_snapshot",
+                        endpoint: endpoint,
+                        error: error
+                    ))
+                }
             } else {
                 payloads.append(Self.missingScopePayload(
                     name: "body_measurements_snapshot",
@@ -295,6 +327,42 @@ struct ExternalProviderAPIClient: Sendable {
         return payloads
     }
 
+    private static func safeWHOOPFailurePayload(
+        name: String,
+        endpoint: String,
+        error: Error
+    ) -> ExternalProviderPayload {
+        let message: String
+        switch error as? ExternalProviderAPIError {
+        case .rateLimited(let retryAfterSeconds):
+            if let retryAfterSeconds {
+                message = "WHOOP rate limit reached. Try again in about \(retryAfterSeconds) seconds."
+            } else {
+                message = "WHOOP rate limit reached. Try again later."
+            }
+        case .responseTooLarge:
+            message = "WHOOP response exceeded the provider safety limit."
+        case .invalidResponse:
+            message = "WHOOP returned malformed JSON for \(name)."
+        case .invalidURL, .requestFailed, .none:
+            message = "WHOOP could not be reached for \(name). Try again later."
+        case .unauthorized:
+            message = "WHOOP authorization expired or was revoked. Reconnect WHOOP."
+        }
+        let statusCode: Int
+        if case .rateLimited = error as? ExternalProviderAPIError {
+            statusCode = 429
+        } else {
+            statusCode = 0
+        }
+        return ExternalProviderPayload(
+            name: name,
+            endpoint: URL(string: endpoint).map(redactedEndpoint) ?? "[redacted]",
+            statusCode: statusCode,
+            error: message
+        )
+    }
+
     private func discoverEarliestWHOOPDate(
         collection: WHOOPCollection,
         token: ExternalIntegrationToken
@@ -302,6 +370,7 @@ struct ExternalProviderAPIClient: Sendable {
         var nextToken: String?
         var seenTokens: Set<String> = []
         var earliest: Date?
+        var page = 1
 
         while true {
             if let remaining = await whoopRateLimitGate.remainingSeconds() {
@@ -342,10 +411,14 @@ struct ExternalProviderAPIClient: Sendable {
             }
             guard case .string(let cursor)? = object["next_token"],
                   !cursor.isEmpty else { return earliest }
+            guard page < Self.maximumWHOOPHistoryPages else {
+                throw ExternalProviderAPIError.invalidResponse
+            }
             guard seenTokens.insert(cursor).inserted else {
                 throw ExternalProviderAPIError.invalidResponse
             }
             nextToken = cursor
+            page += 1
         }
     }
 
@@ -450,6 +523,15 @@ struct ExternalProviderAPIClient: Sendable {
                 ))
 
                 guard case .string(let cursor)? = object["next_token"], !cursor.isEmpty else { break }
+                guard page < Self.maximumWHOOPCollectionPages else {
+                    payloads.append(ExternalProviderPayload(
+                        name: "\(collection.name)_pagination",
+                        endpoint: Self.redactedEndpoint(url),
+                        statusCode: 0,
+                        error: "WHOOP pagination exceeded the 100-page safety limit."
+                    ))
+                    break
+                }
                 guard seenTokens.insert(cursor).inserted else {
                     payloads.append(ExternalProviderPayload(
                         name: "\(collection.name)_pagination",
@@ -465,16 +547,15 @@ struct ExternalProviderAPIClient: Sendable {
                     throw ExternalProviderAPIError.invalidResponse
                 }
                 page = increment.partialValue
-            } catch let error as ExternalProviderAPIError {
-                throw error
+            } catch ExternalProviderAPIError.unauthorized {
+                throw ExternalProviderAPIError.unauthorized
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                payloads.append(ExternalProviderPayload(
+                payloads.append(Self.safeWHOOPFailurePayload(
                     name: pageName,
                     endpoint: Self.redactedEndpoint(url),
-                    statusCode: 0,
-                    error: "WHOOP could not be reached for \(collection.name). Try again later."
+                    error: error
                 ))
                 break
             }
@@ -869,7 +950,7 @@ struct ExternalProviderAPIClient: Sendable {
         )
     }
 
-    private static func redactedEndpoint(_ url: URL) -> String {
+    private nonisolated static func redactedEndpoint(_ url: URL) -> String {
         guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return url.absoluteString
         }

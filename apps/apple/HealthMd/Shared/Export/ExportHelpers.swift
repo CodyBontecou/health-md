@@ -44,19 +44,19 @@ extension ExportDataSnapshot {
             appendFrontmatterField(key: config.customTypeKey, value: config.customTypeValue, to: &lines)
         }
 
-        let losslessReservedKeys: Set<String> = [
+        let reservedKeys: Set<String> = Set([
             "raw_capture_status", "raw_record_count", "raw_query_failure_count",
             "raw_integrity_warning_count", "raw_record_schema", "raw_record_schema_version"
-        ]
+        ]).union(WHOOPFlatMetricDefinition.all.map(\.key))
 
-        // Custom fields cannot shadow stable canonical archive diagnostics.
+        // Custom fields cannot shadow stable canonical archive/provider diagnostics.
         for (key, value) in config.customFields.sorted(by: { $0.key < $1.key })
-            where !losslessReservedKeys.contains(key) {
+            where !reservedKeys.contains(key) {
             appendFrontmatterField(key: key, value: value, to: &lines)
         }
 
         // Placeholder fields (empty values for manual entry)
-        for key in config.placeholderFields.sorted() where !losslessReservedKeys.contains(key) {
+        for key in config.placeholderFields.sorted() where !reservedKeys.contains(key) {
             appendFrontmatterField(key: key, value: "", to: &lines)
         }
 
@@ -76,6 +76,14 @@ extension ExportDataSnapshot {
             (key: "raw_query_failure_count", unit: "queries"),
             (key: "raw_integrity_warning_count", unit: "warnings")
         ]
+        if let whoop = providers?.whoop {
+            for scalar in whoop.flatScalars {
+                appendFrontmatterField(key: scalar.definition.key, value: scalar.value, to: &lines)
+                if !scalar.definition.unit.isEmpty {
+                    exportedMetricUnits.append((key: scalar.definition.key, unit: scalar.definition.unit))
+                }
+            }
+        }
         for key in frontmatterMetrics.keys.sorted() {
             guard config.isFieldEnabled(key), let value = frontmatterMetrics[key] else { continue }
             let outputKey = config.outputKey(for: key) ?? config.keyStyle.apply(to: key)

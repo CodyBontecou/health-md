@@ -38,7 +38,7 @@ final class CanonicalRawResultSpoolWriterTests: XCTestCase {
         {
           "date" : "2026-01-01",
           "schema" : "healthmd.health_data",
-          "schema_version" : 7,
+          "schema_version" : 8,
           "text" : "héalth / 🫀",
           "time_context" : {
             "calendar_timezone" : "America/New_York",

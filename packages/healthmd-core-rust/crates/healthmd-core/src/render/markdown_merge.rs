@@ -22,7 +22,7 @@ pub fn merge_profile_markdown(
 ) -> Result<String, RenderError> {
     validate(existing, generated)?;
     Ok(match profile {
-        SemanticProfile::AppleHealthDataV7 => apple_merge(existing, generated, preserve_preamble),
+        SemanticProfile::AppleHealthDataV8 => apple_merge(existing, generated, preserve_preamble),
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => {
             android_merge(existing, generated)
         }
@@ -508,7 +508,7 @@ mod tests {
         let generated =
             "---\ndate: new\n---\n# Health Data — new\n\n## Sleep\nnew\n## Activity\nsteps\n";
         let apple = merge_profile_markdown(
-            SemanticProfile::AppleHealthDataV7,
+            SemanticProfile::AppleHealthDataV8,
             existing,
             generated,
             false,

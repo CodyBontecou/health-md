@@ -26,6 +26,9 @@ The Obsidian plugin remains an external repository and integration.
 4. Make CI path-aware without hiding required checks.
 5. Separate repository migration from schema/protocol consolidation.
 6. Keep public export and direct-protocol compatibility explicit and testable.
+7. Keep Apple and Android product capabilities and public semantics unified whenever OS APIs permit; document unavoidable divergence rather than fabricating parity.
+
+The governing cross-platform workflow is [Apple and Android unification policy](cross-platform-unification-policy.md). It requires a platform-neutral outcome, both-platform API analysis, a capability/mapping classification, common contracts for proven equivalence, and explicit platform sections or unavailable/planned states for OS limitations.
 
 ## History strategy
 
@@ -39,7 +42,7 @@ The root Makefile is a command router, not a replacement build system. Each comp
 
 `apps/cli` and `packages/healthmd-core-rust` are independent Cargo workspaces. Each keeps its own `Cargo.lock` and `target` directory; aggregate commands invoke them separately rather than creating a repository-wide Cargo workspace. The CLI consumes the shared `healthmd-protocol` crate by path during development and by exact crates.io version when packaged.
 
-The separately reviewed contracts workstream centralizes language-neutral direct-protocol specifications and interoperability vectors under `packages/contracts`. Milestone 1 moves the existing Rust protocol implementation into the shared-core workspace and establishes the Rust/UniFFI build boundary without changing protocol bytes or public export schemas. The canonical metric registry now keeps profiles explicit, and the internal semantic-input v1 layer moves bounded post-capture filtering/reduction into Rust without changing native SDK access or public rendering. See [ADR-0001](adr-0001-shared-rust-uniffi-core.md), the [M4 semantic baseline](shared-core-m4-semantic-baseline.md), the [M5 rendering baseline](shared-core-m5-rendering-baseline.md), the [M6 rollout baseline](shared-core-m6-rollout-baseline.md), the [M6 rollout/rollback runbook](shared-core-m6-rollout-runbook.md), the [M7 direct-protocol baseline](shared-core-m7-protocol-baseline.md), and the [deferred unified-v8 decision](rfc-0002-unified-health-data-v8.md).
+The separately reviewed contracts workstream centralizes language-neutral direct-protocol specifications and interoperability vectors under `packages/contracts`. Milestone 1 moves the existing Rust protocol implementation into the shared-core workspace and establishes the Rust/UniFFI build boundary without changing protocol bytes or public export schemas. The canonical metric registry now keeps profiles explicit, and the internal semantic-input v1 layer moves bounded post-capture filtering/reduction into Rust without changing native SDK access or public rendering. See [ADR-0001](adr-0001-shared-rust-uniffi-core.md), the [M4 semantic baseline](shared-core-m4-semantic-baseline.md), the [M5 rendering baseline](shared-core-m5-rendering-baseline.md), the [M6 rollout baseline](shared-core-m6-rollout-baseline.md), the [M6 rollout/rollback runbook](shared-core-m6-rollout-runbook.md), the [M7 direct-protocol baseline](shared-core-m7-protocol-baseline.md), the [historical unified-v8 deferral](rfc-0002-unified-health-data-v8.md), the [unified-v9 proposal](rfc-0004-unified-health-data-v9.md), and the [cross-platform unification policy](cross-platform-unification-policy.md).
 
 ## CI
 

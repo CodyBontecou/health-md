@@ -10,7 +10,7 @@
     "artifact_plan_version": {"const": 1},
     "request_id": {"type": "string", "minLength": 1, "maxLength": 128},
     "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
-    "profile": {"enum": ["apple_health_data_v7", "android_frozen_v4", "android_analytical_v5"]},
+    "profile": {"enum": ["apple_health_data_v8", "android_frozen_v4", "android_analytical_v5"]},
     "total_byte_count": {"type": "integer", "minimum": 0, "maximum": 33554432},
     "items": {
       "type": "array", "maxItems": 4096,

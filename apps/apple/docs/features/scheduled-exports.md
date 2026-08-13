@@ -37,7 +37,7 @@ Canonical records use strict source-start day ownership. Sleep summary keeps its
 
 ## Completeness
 
-Scheduled file/upload completion and source-capture completeness are separate. Review `raw_capture_status` in each v7 daily record:
+Scheduled file/upload completion and source-capture completeness are separate. Review `raw_capture_status` in each v8 daily record:
 
 - `complete` can include successful empty queries;
 - `partial` retains successful data but records incomplete branches;

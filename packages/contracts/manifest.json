@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "30fa4e40d39704e4f6e74a555c39a4bfa34f46dae5d558065390ac9c756da3a4",
+      "sha256": "0b9d3e7bab1a9b31cee8550a862564c348eeb014c169d9527981db5a44337b39",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -17,7 +17,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b",
+      "sha256": "1cc9aaf41cb92a2e903487756cf561f0ff44b9518f3ef66d1a45a997f770248d",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
@@ -154,7 +154,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
-          "sha256": "0f5c8dfc6e52759c7b671082bfd5121253f1907d5af97ad1ec4f2c6bb9fefb7e",
+          "sha256": "6822fd5cb1bf964cf64e4da36c33142a25557edf4e10be05ea60605785f6a4d6",
           "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
@@ -189,7 +189,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "59fee27e488f76da193d8013fba4ff82d76887fe12df45439ea7de286feb4bc3",
+          "sha256": "b9eb4b4a45747aa92a533d4d1b08a3adfc25563ac36adb5a9336c75635f52227",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
@@ -209,7 +209,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "a312c8032c1b33bbcd74368193a7a111b7971405d3275c1f5a7181be8ed9b404",
+          "sha256": "d2e5e71aa840bbc743995d4302357467072a79ec8eec3808bf07058a2ab1cadd",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -217,7 +217,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "e989e50d2fc81cec95d938a19c40a6ce39428cfc83e45eb23b69703b656037bf",
+          "sha256": "ef4c02b3dcfc66f1f4291b2d16dc8f9d4998252d4047356c1878c31f835a0efd",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
@@ -227,9 +227,9 @@
     },
     {
       "id": "healthmd.health_data.apple",
-      "version": 7,
+      "version": 8,
       "status": "inventory_only",
-      "summary": "Current Apple daily export contract; not yet consolidated with Android.",
+      "summary": "Current Apple v8 daily export contract with optional typed WHOOP provider sections; intentionally distinct from Android v4/v5.",
       "authorities": [
         "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
         "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
@@ -256,7 +256,102 @@
         {
           "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v7.json",
           "sha256": "12c1d7469f54b2ffc6e4e719aea12a4d6cf89f1d59ca3330032c0aeb4b54e0c6",
-          "provenance": "Current shipped Apple v7 signature generated and guarded by the Apple export schema signature tests.",
+          "provenance": "Historical shipped Apple v7 signature generated and frozen by the Apple export schema signature tests.",
+          "mirrors": []
+        },
+        {
+          "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v8.json",
+          "sha256": "d077deb20f8bcae121b9ac2da30b1f7f6bbf0ed2c1a7c4296076d882ca98374a",
+          "provenance": "Current Apple v8 signature generated and guarded by the Apple export schema signature tests.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.provider_sections",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Typed, namespaced WHOOP provider section embedded by the Apple healthmd.health_data v8 profile while preserving provider-native sidecars.",
+      "specification": "packages/contracts/proposals/provider-sections-v1/contract.md",
+      "authorities": [
+        "packages/contracts/proposals/provider-sections-v1/contract.md",
+        "packages/contracts/proposals/provider-sections-v1/provider-sections-v1.schema.json"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/Shared/Integrations/WHOOPProviderSections.swift",
+        "apps/apple/HealthMd/Shared/Models/HealthData.swift",
+        "apps/apple/HealthMd/Shared/Export/JSONExporter.swift",
+        "apps/apple/HealthMd/Shared/Export/MarkdownExporter.swift",
+        "apps/apple/HealthMd/Shared/Export/CSVExporter.swift"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/WHOOPProviderSectionsExportTests.swift",
+        "apps/apple/HealthMdTests/Managers/APIExportClientTests.swift",
+        "apps/apple/HealthMdTests/Sync/MacExportJobBuilderTests.swift"
+      ],
+      "documentation": [
+        "apps/apple/docs/features/export-schema.md",
+        "apps/apple/docs/features/third-party-integrations.md",
+        "apps/android/docs/health-provider-support.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/proposals/provider-sections-v1/fixtures/whoop-complete.providers.json",
+          "sha256": "acd89611db846010dd8613d0afb79ccdb10995b45e12fc7a7c804d6dbc8ddd82",
+          "provenance": "Reviewed synthetic WHOOP provider-section proposal with no production health data, account identity, credentials, endpoint URLs, or pagination cursors.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.health_data.unified",
+      "version": 9,
+      "status": "deferred",
+      "summary": "Proposed unified Apple/Android daily contract with exact typed metrics, explicit provenance and capture completeness, independently versioned platform sections, and typed providers; production writers remain blocked pending RFC gates.",
+      "specification": "packages/contracts/proposals/unified-health-data-v9/contract.md",
+      "authorities": [
+        "packages/contracts/proposals/unified-health-data-v9/contract.md",
+        "packages/contracts/proposals/unified-health-data-v9/unified-health-data-v9.schema.json",
+        "packages/contracts/proposals/unified-health-data-v9/mapping-ledger.md"
+      ],
+      "consumers": [
+        "packages/contracts/validate.py",
+        "docs/architecture/rfc-0004-unified-health-data-v9.md"
+      ],
+      "documentation": [
+        "docs/architecture/rfc-0002-unified-health-data-v8.md",
+        "docs/architecture/rfc-0003-apple-health-data-v8-provider-sections.md",
+        "docs/architecture/rfc-0004-unified-health-data-v9.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-minimal.json",
+          "sha256": "b754fcbaed0568d972f4807798b9833730312f7300e52625d84095f5f06fff95",
+          "provenance": "Reviewed synthetic Apple-origin unified-v9 proposal fixture with exact typed steps and explicitly identified HealthKit HRV SDNN; contains no production health data or account identity.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/proposals/unified-health-data-v9/fixtures/android-minimal.json",
+          "sha256": "ad5c60141fc1d6ae3bb3cb3ef0c9874316b705effb6f1d47513d016286c577e8",
+          "provenance": "Reviewed synthetic Android-origin unified-v9 proposal fixture with exact typed steps and explicitly identified Health Connect HRV RMSSD; contains no production health data or account identity.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-partial.json",
+          "sha256": "d9a495d1bdbea58f33b92b780ff7f3166ffca562a09e59a617e2fa381c46c09a",
+          "provenance": "Synthetic Apple-origin partial-capture proposal fixture spanning the 25-hour America/New_York fall-back day with one successful-empty and one safely cancelled resource.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/proposals/unified-health-data-v9/fixtures/android-not-requested.json",
+          "sha256": "086c900836619a6bd621476f5083fb6f341a2e024da01c19fe0d8b2eb97b0ab1",
+          "provenance": "Synthetic Android frozen-v4-origin proposal fixture demonstrating deliberate not-requested primary capture without metrics or providers.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-whoop.json",
+          "sha256": "f1076949ab39f0bebefaecf000bf54b84c8ddf2dc4def09dde785edef6910f9e",
+          "provenance": "Synthetic Apple-origin unified-v9 proposal fixture embedding the complete canonical WHOOP v1 value while retaining provider data outside shared metrics.",
           "mirrors": []
         }
       ]
@@ -265,7 +360,7 @@
       "id": "healthmd.health_data.android",
       "version": 4,
       "status": "inventory_only",
-      "summary": "Android compatibility export contract; intentionally distinct from the Apple v7 source contract.",
+      "summary": "Android compatibility export contract; intentionally distinct from the Apple v8 source contract and the deferred unified v9 proposal.",
       "authorities": [
         "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
         "apps/android/app/src/main/java/com/healthmd/data/export/HealthMdExportSchema.kt",

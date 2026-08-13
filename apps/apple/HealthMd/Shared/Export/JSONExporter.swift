@@ -1108,6 +1108,10 @@ extension HealthData {
             json["other"] = dict
         }
 
+        if let providers = snapshot.providers, !providers.isEmpty {
+            json["providers"] = try providers.foundationJSONObject()
+        }
+
         if includeHealthKitRecordArchive,
            let archive = snapshot.healthKitRecordArchive {
             json["healthkit_record_archive"] = try HealthKitRecordArchiveSerializer.jsonObject(for: archive)

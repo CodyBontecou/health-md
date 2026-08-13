@@ -266,7 +266,7 @@ struct ExternalProviderPayload: Codable, Equatable, Sendable {
     var data: JSONValue?
     var error: String?
 
-    init(
+    nonisolated init(
         name: String,
         endpoint: String,
         statusCode: Int,
@@ -374,8 +374,12 @@ enum JSONValue: Codable, Equatable, Sendable {
         switch value {
         case is NSNull:
             self = .null
-        case let value as Bool:
-            self = .bool(value)
+        case let value as NSNumber:
+            if CFGetTypeID(value) == CFBooleanGetTypeID() {
+                self = .bool(value.boolValue)
+            } else {
+                self = .number(value.doubleValue)
+            }
         case let value as Int:
             self = .number(Double(value))
         case let value as Int64:

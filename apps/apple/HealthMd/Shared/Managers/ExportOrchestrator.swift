@@ -270,8 +270,11 @@ struct ExportOrchestrator {
     // MARK: - Date Range Helper
 
     /// Builds an array of calendar days from startDate through endDate (inclusive).
-    static func dateRange(from startDate: Date, to endDate: Date) -> [Date] {
-        let calendar = Calendar.current
+    static func dateRange(
+        from startDate: Date,
+        to endDate: Date,
+        calendar: Calendar = .current
+    ) -> [Date] {
         var dates: [Date] = []
         var current = calendar.startOfDay(for: startDate)
         let end = calendar.startOfDay(for: endDate)
@@ -469,12 +472,28 @@ struct ExportOrchestrator {
             onProgress?(index, totalDays, dateString)
 
             do {
-                let healthData = try await healthKitManager.fetchHealthData(
+                var healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
                     metricSelection: frozenOperationSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
+                let externalRecords: [ExternalDailyRecord]
+                if healthData.hasAnyData,
+                   settings.writesExternalProviderSidecars,
+                   ConnectedAppsFeature.isEnabled,
+                   let externalIntegrations,
+                   externalIntegrations.connectedProviderCount > 0 {
+                    var providerCalendar = Calendar(identifier: .gregorian)
+                    providerCalendar.timeZone = sourceTimeZone
+                    externalRecords = await externalIntegrations.fetchDailyRecords(
+                        for: date,
+                        calendar: providerCalendar
+                    )
+                    healthData.providers = HealthProviderSections.normalized(from: externalRecords)
+                } else {
+                    externalRecords = []
+                }
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 // HealthKitManager has already applied the frozen selection. Reuse
                 // one snapshot for loose-file and ZIP staging renders instead of
@@ -525,11 +544,7 @@ struct ExportOrchestrator {
                     }
                 }
 
-                if settings.writesExternalProviderSidecars,
-                   ConnectedAppsFeature.isEnabled,
-                   let externalIntegrations,
-                   externalIntegrations.connectedProviderCount > 0 {
-                    let externalRecords = await externalIntegrations.fetchDailyRecords(for: date)
+                if !externalRecords.isEmpty {
                     do {
                         externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)
                     } catch {
@@ -907,6 +922,7 @@ struct ExportOrchestrator {
         settings: AdvancedExportSettings,
         frozenSettingsSnapshot: ExportSettingsSnapshot? = nil,
         operationSurface: AppleExportOperationSurface = .legacyOnly,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportResult {
         await HealthKitQueryExecutionController.withController {
@@ -917,6 +933,7 @@ struct ExportOrchestrator {
                 settings: settings,
                 frozenSettingsSnapshot: frozenSettingsSnapshot,
                 operationSurface: operationSurface,
+                externalIntegrations: externalIntegrations,
                 onProgress: onProgress
             )
         }
@@ -929,6 +946,7 @@ struct ExportOrchestrator {
         settings: AdvancedExportSettings,
         frozenSettingsSnapshot: ExportSettingsSnapshot?,
         operationSurface: AppleExportOperationSurface,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding?,
         onProgress: ((Int, Int, String) -> Void)?
     ) async -> ExportResult {
         let awakeActivityID = UUID()
@@ -946,6 +964,8 @@ struct ExportOrchestrator {
             )
         }
         #endif
+        externalIntegrations?.beginExportAction()
+        defer { externalIntegrations?.endExportAction() }
         vaultManager.clearLastExportPresentationTarget()
         let formatsPerDate = looseFormatsPerDate(settings: settings)
         var successCount = 0
@@ -953,6 +973,7 @@ struct ExportOrchestrator {
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
+        var externalRecordFileCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var shouldWriteDataDictionary = true
@@ -1026,12 +1047,28 @@ struct ExportOrchestrator {
             onProgress?(index, dates.count, progressFormatter.string(from: date))
 
             do {
-                let healthData = try await healthKitManager.fetchHealthData(
+                var healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
                     metricSelection: frozenOperationSettings.metricSelection,
                     timeZone: frozenOperationSettings.exportTimeZoneOverride
                 )
+                let externalRecords: [ExternalDailyRecord]
+                if healthData.hasAnyData,
+                   settings.writesExternalProviderSidecars,
+                   ConnectedAppsFeature.isEnabled,
+                   let externalIntegrations,
+                   externalIntegrations.connectedProviderCount > 0 {
+                    var providerCalendar = Calendar(identifier: .gregorian)
+                    providerCalendar.timeZone = frozenOperationSettings.exportTimeZoneOverride ?? .current
+                    externalRecords = await externalIntegrations.fetchDailyRecords(
+                        for: date,
+                        calendar: providerCalendar
+                    )
+                    healthData.providers = HealthProviderSections.normalized(from: externalRecords)
+                } else {
+                    externalRecords = []
+                }
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 let preparedExport = healthData.preparedExportAssumingSelectionApplied(
                     settings: frozenOperationSettings
@@ -1078,6 +1115,19 @@ struct ExportOrchestrator {
                             errorDetails: "Daily note update was not performed."
                         ))
                         continue
+                    }
+                }
+
+                if !externalRecords.isEmpty {
+                    do {
+                        externalRecordFileCount += try await vaultManager.exportExternalDailyRecords(externalRecords)
+                    } catch {
+                        partialFailures.append(ExportPartialFailure(
+                            date: date,
+                            dataType: "External integrations",
+                            dateRangeDescription: progressFormatter.string(from: date),
+                            errorDescription: error.localizedDescription
+                        ))
                     }
                 }
 
@@ -1183,6 +1233,7 @@ struct ExportOrchestrator {
             formatsPerDate: formatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
+            externalRecordFileCount: externalRecordFileCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: archiveResult.wasCancelled,

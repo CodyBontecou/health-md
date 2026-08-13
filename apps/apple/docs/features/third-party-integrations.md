@@ -9,9 +9,9 @@
 
 ## What it does
 
-Health.md can connect a WHOOP account and export provider-native data as sidecar JSON next to the normal Apple Health export. The WHOOP rollout is independent: only WHOOP appears when `CONNECTED_APPS_WHOOP_ENABLED` is enabled. Fitbit, Oura, Withings, and Strava remain implemented prototypes and are not exposed by that flag.
+Health.md can connect a WHOOP account and export two complementary fidelity layers: reviewed typed WHOOP data inside retained Apple `healthmd.health_data` v8 daily records, plus provider-native sidecar JSON. The WHOOP rollout is independent: only WHOOP appears when `CONNECTED_APPS_WHOOP_ENABLED` is enabled. Fitbit, Oura, Withings, and Strava remain implemented prototypes and are not exposed by that flag.
 
-WHOOP sidecars preserve WHOOP's response fields instead of silently merging them into the long-lived `healthmd.health_data` schema. The app requests these read-only scopes:
+WHOOP sidecars preserve WHOOP's native response fields. The typed `providers.whoop` section exposes only reviewed fields and never overwrites Apple summaries. The app requests these read-only scopes:
 
 ```text
 offline read:recovery read:cycles read:sleep read:workout read:body_measurement
@@ -54,11 +54,13 @@ Daily collection queries use a half-open `[start, end)` window. Health.md conver
 
 Collection requests use WHOOP's maximum page size of 25. Pagination follows response `next_token` values via the request parameter `nextToken`, keeps the original day window fixed, rejects repeated cursors, and caps a single endpoint at 100 pages. Pagination cursors are redacted from exported endpoint URLs.
 
-WHOOP's body measurement resource is a current profile singleton with no measurement timestamp. Health.md includes it only in the sidecar for the current calendar day, under `body_measurements_snapshot`. Historical and range exports do not repeat today's body profile for every requested day.
+WHOOP's body measurement resource is a current profile singleton with no measurement timestamp. Health.md includes it only for the current calendar day, as native `body_measurements_snapshot` data in the sidecar and as a typed `current_profile_snapshot` under `providers.whoop.body`. Historical and range exports do not repeat today's body profile for every requested day.
 
-## Output shape
+## Output shapes
 
-Local iPhone and Connected Mac file exports write WHOOP sidecars only at:
+### Provider-native sidecar
+
+Local iPhone and Connected Mac file exports retain WHOOP's native response layer at:
 
 ```text
 Health/integrations/whoop/{yyyy-MM-dd}.json
@@ -97,19 +99,56 @@ Example:
 
 Sidecar dates are validated before file writes. Authorization values, access/refresh tokens, client secrets, OAuth codes, and pagination cursors are redacted during encoding. Empty collection pages alone do not create a sidecar.
 
+### Typed daily section
+
+A retained Apple daily v8 record may also contain:
+
+```json
+{
+  "schema": "healthmd.health_data",
+  "schema_version": 8,
+  "providers": {
+    "whoop": {
+      "schema": "healthmd.provider.whoop_daily",
+      "schema_version": 1,
+      "capture_status": "complete",
+      "fetched_at": "2026-07-13T18:00:00Z",
+      "resources": [
+        { "resource": "recovery", "status": "success", "record_count": 1 }
+      ],
+      "cycles": [],
+      "recoveries": [
+        {
+          "cycle_id": "123456",
+          "recovery_score_percent": 82,
+          "hrv_rmssd_ms": 54.3
+        }
+      ],
+      "sleep": [],
+      "workouts": [],
+      "warnings": []
+    }
+  }
+}
+```
+
+The complete nested schema preserves string IDs, event relationships, exact integer millisecond durations, the signed recent-nap adjustment, `sport_name`, explicit missingness, and deterministic ordering. `fetched_at` is capture metadata, never a measurement timestamp. Partial captures retain successful resources with bounded safe errors and no URLs, headers, cursors, credentials, account identity, or raw response bodies.
+
+JSON keeps the nested model. Markdown renders WHOOP tables. Bases/frontmatter and CSV emit `whoop_*` scalars only when exactly one relevant record supplies them; repeated records remain structured Markdown/JSON/CSV rows. WHOOP fields have no period roll-ups and do not participate in Individual Entry Tracking. See [Export schema contract](./export-schema.md) and `packages/contracts/proposals/provider-sections-v1/contract.md` in the repository.
+
 ## Export destinations
 
 When the WHOOP rollout flag is enabled and an account is connected:
 
-- Local manual and scheduled exports write daily WHOOP sidecars.
-- Connected Mac file-writing jobs transfer `externalDailyRecords`; the Mac writes the same `Health/integrations/whoop/{yyyy-MM-dd}.json` path.
+- Local manual and scheduled exports attach typed WHOOP data to retained daily files and write daily WHOOP sidecars.
+- Connected Mac file-writing, streaming, corpus, resume, and recovery paths carry the same typed daily records and `externalDailyRecords`; the Mac writes the daily files and the same `Health/integrations/whoop/{yyyy-MM-dd}.json` sidecar path.
 - Legacy Mac raw requests that omit `raw_profile` can return sidecars in `raw_data.externalDailyRecords`.
 - Strict CLI `--raw` requests use `raw_profile: canonical_source_records_v1`, return `healthmd.raw_result` v1, and currently contain canonical Apple Health daily records only; they do not fetch or embed provider sidecars.
-- API Endpoint export uses the `healthmd.api_export` v2 envelope and includes sidecars under `external_records`.
+- API Endpoint export uses the `healthmd.api_export` v2 envelope, with typed WHOOP sections inside `records` and provider-native sidecars under `external_records`.
 
 When the flag is disabled, Connected Apps is hidden, provider fetches do not run, and API Endpoint export remains at envelope v1.
 
-Provider records are intentionally supplemental. Health.md only fetches/writes a WHOOP sidecar for a day that proceeds through the canonical Apple Health daily export path. A WHOOP-only day does not make an otherwise empty Health.md export successful. This avoids creating a second definition of an exportable day during the first rollout and is covered by contract tests.
+Provider records are intentionally supplemental. Health.md only fetches and attaches WHOOP data for a day that proceeds through the canonical Apple Health daily export path. A WHOOP-only day does not make an otherwise empty Health.md export successful. Successful-empty WHOOP capture is still represented as a complete typed section on a retained Apple day, while an empty native collection alone does not create a sidecar.
 
 ## Errors and retries
 
@@ -160,13 +199,11 @@ Register `healthmd://oauth/callback` exactly in the WHOOP Developer Dashboard an
 3. Force-quit/relaunch and confirm Keychain persistence.
 4. Export one day and a multi-day range locally; confirm body measurements appear only for today.
 5. Force an expired access token, confirm one refresh/retry, and relaunch again to verify the rotated refresh token persisted.
-6. Repeat through a Connected Mac file-writing job, a legacy Mac raw request without `raw_profile`, scheduled export, and API Endpoint v2; sidecars are expected on each supported provider path.
-7. Run strict CLI `--raw` separately and confirm the result contains canonical Apple Health data but no provider sidecar.
-8. Inspect every sidecar path and payload for tokens or sensitive query values.
+6. Repeat through Connected Mac file-writing, streaming/corpus recovery, a legacy Mac raw request without `raw_profile`, scheduled export, and API Endpoint v2; typed daily data and sidecars are expected on each supported provider path.
+7. Run strict CLI `--raw` separately and confirm the result contains canonical Apple Health data but no typed or native provider data.
+8. Inspect every typed daily section and sidecar for tokens, URLs, cursors, account identity, or raw error bodies.
 9. Disconnect, verify WHOOP access revocation, reconnect, and export again.
 
 ## Schema policy
 
-This rollout does **not** bump `HealthMdExportSchema.version`: canonical Markdown, Bases, JSON, CSV, and data dictionary output are unchanged. The WHOOP sidecar stays at `healthmd.external_provider_daily` schema v1. API Endpoint's wrapper advances independently from v1 to v2 only when Connected Apps is enabled.
-
-If provider fields are later merged into canonical daily exports or the data dictionary, follow `docs/features/export-schema.md` and bump the public export schema version.
+Typed provider sections intentionally advance Apple `HealthMdExportSchema.version` from 7 to 8. The nested WHOOP contract is independently versioned as `healthmd.provider.whoop_daily` v1. The provider-native sidecar remains `healthmd.external_provider_daily` v1, and API Endpoint remains independently versioned at envelope v2 when Connected Apps is enabled. Android frozen v4 and analytical v5 are unchanged.

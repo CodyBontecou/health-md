@@ -582,8 +582,12 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         for journal: ConnectedCorpusOutboundJournal
     ) -> ConnectedCorpusDurableSender.ItemProducer {
         let settings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+        let sourceTimeZone = journal.exportManifest.sourceTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:)) ?? .current
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = sourceTimeZone
         let requestedDays = Set(journal.exportManifest.requestedDates.map {
-            Calendar.current.startOfDay(for: $0)
+            sourceCalendar.startOfDay(for: $0)
         })
         let metadata: MacExportStreamingJobBuilder.Metadata? = journal.exportManifest.mode == .writeFiles
             ? MacExportStreamingJobBuilder.metadata(
@@ -599,8 +603,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = journal.exportManifest.sourceTimeZoneIdentifier
-            .flatMap(TimeZone.init(identifier:)) ?? .current
+        formatter.timeZone = sourceTimeZone
         formatter.dateFormat = "yyyy-MM-dd"
         let healthKitManager = self.healthKitManager
         let integrations = self.externalIntegrations
@@ -609,7 +612,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             guard let healthKitManager else {
                 throw HealthKitManager.HealthKitError.dataNotAvailable
             }
-            let isRequested = requestedDays.contains(Calendar.current.startOfDay(for: date))
+            let isRequested = requestedDays.contains(sourceCalendar.startOfDay(for: date))
             switch journal.exportManifest.mode {
             case .writeFiles:
                 let includeGranular = metadata.map {
@@ -624,7 +627,12 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                    settings.writesExternalProviderSidecars,
                    let integrations,
                    integrations.connectedProviderCount > 0 {
-                    externalFetcher = { date in await integrations.fetchDailyRecords(for: date) }
+                    externalFetcher = { date in
+                        await integrations.fetchDailyRecords(
+                            for: date,
+                            calendar: sourceCalendar
+                        )
+                    }
                 } else {
                     externalFetcher = nil
                 }
@@ -640,7 +648,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                         try await healthKitManager.fetchHealthData(
                             for: date,
                             includeGranularData: includeGranularData,
-                            metricSelection: selection
+                            metricSelection: selection,
+                            timeZone: sourceTimeZone
                         )
                     },
                     fetchExternalDailyRecords: externalFetcher
@@ -670,7 +679,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     externalFetcher = { date in
                         await integrations.fetchDailyRecords(
                             for: date,
-                            providerIDs: allowedProviderIDs
+                            providerIDs: allowedProviderIDs,
+                            calendar: sourceCalendar
                         )
                     }
                 } else {
@@ -689,7 +699,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                             return try await healthKitManager.fetchHealthData(
                                 for: date,
                                 includeGranularData: includeGranularData,
-                                metricSelection: selection
+                                metricSelection: selection,
+                                timeZone: sourceTimeZone
                             )
                         }
                         return HealthData(
@@ -726,7 +737,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                         try await healthKitManager.fetchHealthData(
                             for: date,
                             includeGranularData: includeGranularData,
-                            metricSelection: selection
+                            metricSelection: selection,
+                            timeZone: sourceTimeZone
                         )
                     },
                     fetchExternalDailyRecords: nil

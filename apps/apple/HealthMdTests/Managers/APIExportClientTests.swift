@@ -26,6 +26,7 @@ final class APIExportClientTests: XCTestCase {
                 ])
             )]
         )
+        healthData.providers = HealthProviderSections.normalized(from: [external])
 
         let data = try APIExportClient.makePayload(
             records: [healthData],
@@ -44,6 +45,9 @@ final class APIExportClientTests: XCTestCase {
         XCTAssertEqual(json["external_record_schema_version"] as? Int, 1)
         XCTAssertEqual(json["external_record_count"] as? Int, 1)
         XCTAssertEqual((json["external_records"] as? [Any])?.count, 1)
+        let daily = try XCTUnwrap((json["records"] as? [[String: Any]])?.first)
+        let providers = try XCTUnwrap(daily["providers"] as? [String: Any])
+        XCTAssertNotNil(providers["whoop"] as? [String: Any])
         let text = String(decoding: data, as: UTF8.self)
         XCTAssertFalse(text.contains("secret"))
         XCTAssertFalse(text.contains("opaque"))
