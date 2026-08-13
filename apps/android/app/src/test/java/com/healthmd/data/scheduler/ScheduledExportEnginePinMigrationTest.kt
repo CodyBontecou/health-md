@@ -28,6 +28,7 @@ class ScheduledExportEnginePinMigrationTest {
             "e8ac35545896926aae439888b47a4d3a89925092c9f4557e5d190add51772fca",
         )
         assertThat(occurrence.toWorkData().getString(ScheduledExportOccurrence.KEY_ENGINE_PIN_JSON)).isNull()
+        assertThat(occurrence.toWorkData().getString(ScheduledExportOccurrence.KEY_GENERATION)).isNull()
         assertThat(ScheduledExportOccurrence.fromWorkData(occurrence.toWorkData()))
             .isEqualTo(occurrence)
 
@@ -107,6 +108,20 @@ class ScheduledExportEnginePinMigrationTest {
         val intent = intentDouble()
         queued.putInto(intent)
         assertThat(ScheduledExportOccurrence.fromIntent(intent)).isEqualTo(queued)
+    }
+
+    @Test
+    fun scheduleGenerationRoundTripsThroughWorkDataAndAlarmIntent() {
+        val occurrence = occurrence(pin = null).copy(generation = "generation-roundtrip")
+
+        val data = occurrence.toWorkData()
+        assertThat(data.getString(ScheduledExportOccurrence.KEY_GENERATION))
+            .isEqualTo("generation-roundtrip")
+        assertThat(ScheduledExportOccurrence.fromWorkData(data)).isEqualTo(occurrence)
+
+        val intent = intentDouble()
+        occurrence.putInto(intent)
+        assertThat(ScheduledExportOccurrence.fromIntent(intent)).isEqualTo(occurrence)
     }
 
     @Test
