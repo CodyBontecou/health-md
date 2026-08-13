@@ -781,7 +781,11 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertFalse(executor.isBusy)
         XCTAssertNil(executor.currentJobID)
         XCTAssertEqual(progress.last?.phase, .cancelled)
-        XCTAssertEqual(progress.last?.filesWritten, 1)
+        XCTAssertEqual(
+            progress.last?.filesWritten,
+            2,
+            "The committed daily artifact and shared data dictionary are both authoritative files"
+        )
         XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("/2026-05-12.md") })
 
         guard case .failure(let completionFailure) = await executor.completeStream(
@@ -915,7 +919,11 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertFalse(executor.isBusy)
         XCTAssertNil(executor.currentJobID)
         XCTAssertEqual(progress.last?.phase, .cancelled)
-        XCTAssertEqual(progress.last?.filesWritten, 1)
+        XCTAssertEqual(
+            progress.last?.filesWritten,
+            2,
+            "The committed Rust daily artifact and shared data dictionary are both authoritative files"
+        )
         XCTAssertEqual(
             fileSystem.files["/tmp/MacVault/Health/2026-05-12.json"],
             "rust-authority-only"
@@ -996,7 +1004,11 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .partialSuccess)
         XCTAssertEqual(payload.successCount, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertEqual(
+            payload.totalFilesWritten,
+            2,
+            "Completion reports the first daily artifact plus the shared data dictionary"
+        )
         XCTAssertNil(fileSystem.files["/tmp/MacVault/Health/2026-05-13.json"])
         XCTAssertFalse(executor.isBusy)
     }

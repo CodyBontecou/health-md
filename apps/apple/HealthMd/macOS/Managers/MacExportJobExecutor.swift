@@ -868,11 +868,6 @@ final class MacExportJobExecutor {
                     }
                     session.successCount += 1
                     session.successfulRecords.append(record)
-                    session.looseAggregateFileCount += writeResult.aggregateFileCount
-                    session.individualEntryFileCount += writeResult.individualEntryFileCount
-                    session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
-                    if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
-                    session.totalFilesWritten += writeResult.totalGeneratedFileCount
                     #if DEBUG
                     if let receiveChunkDidWriteForTesting {
                         await receiveChunkDidWriteForTesting()
