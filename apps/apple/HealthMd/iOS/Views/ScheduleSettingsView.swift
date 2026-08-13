@@ -1,5 +1,87 @@
 import SwiftUI
 
+struct ScheduleRetryExportPolicy {
+    static func shouldWriteDataDictionary(currentFileCount: Int) -> Bool {
+        currentFileCount == 0
+    }
+
+    static func failedDateDetail(for date: Date, exportError: ExportError) -> FailedDateDetail {
+        let reason: ExportFailureReason
+        let details: String?
+        switch exportError {
+        case .noVaultSelected:
+            reason = .noVaultSelected
+            details = nil
+        case .noHealthData:
+            reason = .noHealthData
+            details = nil
+        case .accessDenied:
+            reason = .accessDenied
+            details = nil
+        case .destinationChanged:
+            reason = .accessDenied
+            details = exportError.localizedDescription
+        case .noFormatsSelected:
+            reason = .unknown
+            details = exportError.localizedDescription
+        case .dailyNotePathConflict:
+            reason = .fileWriteError
+            details = exportError.localizedDescription
+        }
+        return FailedDateDetail(date: date, reason: reason, errorDetails: details)
+    }
+
+    static func failedWriteDetail(for date: Date, error: Error) -> FailedDateDetail {
+        if let exportError = error as? ExportError {
+            return failedDateDetail(for: date, exportError: exportError)
+        }
+        return FailedDateDetail(
+            date: date,
+            reason: .fileWriteError,
+            errorDetails: error.localizedDescription
+        )
+    }
+
+    static func failedDailyNoteDetail(
+        for date: Date,
+        result: DailyNoteInjector.InjectionResult?
+    ) -> FailedDateDetail? {
+        switch result {
+        case .updated:
+            return nil
+        case .skipped(let reason):
+            return FailedDateDetail(date: date, reason: .noHealthData, errorDetails: reason)
+        case .failed(let error):
+            return failedWriteDetail(for: date, error: error)
+        case .none:
+            return FailedDateDetail(
+                date: date,
+                reason: .fileWriteError,
+                errorDetails: "Daily note update was not performed."
+            )
+        }
+    }
+
+    static func failedHealthKitDetail(for date: Date, error: Error) -> FailedDateDetail {
+        if let healthKitError = error as? HealthKitManager.HealthKitError {
+            let reason: ExportFailureReason
+            switch healthKitError {
+            case .dataProtectedWhileLocked:
+                reason = .deviceLocked
+            case .dataNotAvailable, .notAuthorized, .medicationAuthorizationUnsupported,
+                 .visionAuthorizationUnsupported:
+                reason = .healthKitError
+            }
+            return FailedDateDetail(date: date, reason: reason)
+        }
+        return FailedDateDetail(
+            date: date,
+            reason: .unknown,
+            errorDetails: error.localizedDescription
+        )
+    }
+}
+
 /// Inline schedule configuration surface used by the Schedule tab.
 /// Binds directly to `SchedulingManager.schedule` so edits persist as they happen.
 struct ScheduleSettingsView: View {
@@ -1155,22 +1237,33 @@ struct ScheduleSettingsView: View {
                 retryProgress = Double(index) / Double(totalDays)
             }
 
+            let healthData: HealthData
             do {
-                let healthData = try await healthKitManager.fetchHealthData(
+                healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: advancedSettings.effectiveGranularDataEnabled,
                     metricSelection: advancedSettings.metricSelection
                 )
+            } catch {
+                failedDateDetails.append(
+                    ScheduleRetryExportPolicy.failedHealthKitDetail(for: date, error: error)
+                )
+                continue
+            }
 
-                if !healthData.filtered(by: advancedSettings.metricSelection).hasAnyData {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
-                    continue
-                }
+            if !healthData.filtered(by: advancedSettings.metricSelection).hasAnyData {
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                continue
+            }
 
+            do {
                 let writeResult = try vaultManager.exportHealthDataResult(
                     healthData,
                     for: date,
-                    settings: advancedSettings
+                    settings: advancedSettings,
+                    writeDataDictionary: ScheduleRetryExportPolicy.shouldWriteDataDictionary(
+                        currentFileCount: dataDictionaryFileCount
+                    )
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 looseAggregateFileCount += writeResult.aggregateFileCount
@@ -1180,16 +1273,18 @@ struct ScheduleSettingsView: View {
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
                 if advancedSettings.dailyNotesOnlyModeEnabled,
-                   writeResult.dailyNoteUpdatedCount == 0 {
-                    failedDateDetails.append(FailedDateDetail(
-                        date: date,
-                        reason: .noHealthData
-                    ))
+                   let failedDetail = ScheduleRetryExportPolicy.failedDailyNoteDetail(
+                    for: date,
+                    result: writeResult.dailyNoteResult
+                   ) {
+                    failedDateDetails.append(failedDetail)
                 } else {
                     successCount += 1
                 }
             } catch {
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
+                failedDateDetails.append(
+                    ScheduleRetryExportPolicy.failedWriteDetail(for: date, error: error)
+                )
             }
         }
 
