@@ -16,6 +16,7 @@ class ScheduledExportTimeCalculator @Inject constructor() {
     fun initialOccurrence(
         configuration: ScheduledExportConfiguration,
         nowMillis: Long = System.currentTimeMillis(),
+        generation: String? = null,
     ): ScheduledExportOccurrence {
         val zone = ZoneId.of(configuration.zoneId)
         val now = Instant.ofEpochMilli(nowMillis).atZone(zone)
@@ -35,7 +36,7 @@ class ScheduledExportTimeCalculator @Inject constructor() {
                 cadenceDays = configuration.cadenceValue.toLong() * DAYS_PER_WEEK,
             )
         }
-        return occurrence(configuration, trigger)
+        return occurrence(configuration, trigger, generation)
     }
 
     /**
@@ -88,15 +89,17 @@ class ScheduledExportTimeCalculator @Inject constructor() {
                 configuration = configuration,
                 triggerAtMillis = previous.triggerAtMillis,
                 intendedLocalDate = Instant.ofEpochMilli(previous.triggerAtMillis).atZone(zone).toLocalDate(),
+                generation = previous.generation,
             )
             ScheduleCadenceUnit.DAYS,
             ScheduleCadenceUnit.WEEKS -> occurrence(
-                configuration,
-                ZonedDateTime.of(
+                configuration = configuration,
+                trigger = ZonedDateTime.of(
                     previous.intendedLocalDate,
                     LocalTime.of(configuration.hour, configuration.minute),
                     zone,
                 ),
+                generation = previous.generation,
             )
         }
         return if (rebased.triggerAtMillis > nowMillis) {
@@ -143,7 +146,7 @@ class ScheduledExportTimeCalculator @Inject constructor() {
                 cadenceDays = configuration.cadenceValue.toLong() * DAYS_PER_WEEK,
             )
         }
-        return occurrence(configuration, next)
+        return occurrence(configuration, next, previous.generation)
     }
 
     private fun followingOccurrence(
@@ -169,7 +172,7 @@ class ScheduledExportTimeCalculator @Inject constructor() {
                 zone,
             )
         }
-        return occurrence(configuration, trigger)
+        return occurrence(configuration, trigger, previous.generation)
     }
 
     private fun nextCalendarOccurrence(
@@ -225,10 +228,12 @@ class ScheduledExportTimeCalculator @Inject constructor() {
     private fun occurrence(
         configuration: ScheduledExportConfiguration,
         trigger: ZonedDateTime,
+        generation: String? = null,
     ): ScheduledExportOccurrence = ScheduledExportOccurrence(
         configuration = configuration,
         triggerAtMillis = trigger.toInstant().toEpochMilli(),
         intendedLocalDate = trigger.toLocalDate(),
+        generation = generation,
     )
 
     private companion object {
