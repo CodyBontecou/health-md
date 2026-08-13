@@ -112,10 +112,14 @@ test('documentation routes have deterministic Markdown alternate paths', () => {
 test('docs metadata uses Git dates for HTML and sitemap freshness', async () => {
   const config = (await read('docs-src/astro.config.mjs')).toString('utf8');
   const head = (await read('docs-src/src/components/Head.astro')).toString('utf8');
+  const middleware = (await read('docs-src/src/route-middleware.ts')).toString('utf8');
   const stage = (await read('docs-src/scripts/stage-public-paths.mjs')).toString('utf8');
   assert.match(config, /lastUpdated: true/);
   assert.match(config, /lastmod: lastModified/);
+  assert.match(config, /routeMiddleware: '.\/src\/route-middleware\.ts'/);
+  assert.match(middleware, /starlightRoute\.lastUpdated = lastModified/);
   assert.match(head, /dateModified/);
+  assert.match(head, /entry\.data\.lastUpdated instanceof Date/);
   assert.match(head, /article:modified_time/);
   assert.match(head, /type="text\/markdown"/);
   assert.match(stage, /walkMarkdownSources/);

@@ -78,6 +78,7 @@ export default defineConfig({
       title: localizedTitles,
       description: 'Configure Health.md for agents, MCP, and CLI workflows, then explore versioned health-data contracts and private export tools.',
       lastUpdated: true,
+      routeMiddleware: './src/route-middleware.ts',
       favicon: '/docs/favicon.png',
       defaultLocale: 'root',
       locales: starlightLocales,

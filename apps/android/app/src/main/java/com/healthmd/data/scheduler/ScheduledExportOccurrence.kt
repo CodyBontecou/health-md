@@ -16,6 +16,13 @@ import java.security.MessageDigest
 import java.time.LocalDate
 import java.time.ZoneId
 
+internal class ScheduledExportWorkDataTooLargeException(
+    cause: IllegalStateException,
+) : IllegalArgumentException(
+    "Scheduled export configuration exceeds background-work limits.",
+    cause,
+)
+
 /** Immutable schedule configuration captured for one intended export occurrence. */
 data class ScheduledExportConfiguration(
     val cadenceValue: Int,
@@ -131,9 +138,20 @@ data class ScheduledExportOccurrence(
     val configuration: ScheduledExportConfiguration,
     val triggerAtMillis: Long,
     val intendedLocalDate: LocalDate,
+    /** Null only while decoding pre-generation state for the one-time migration. */
+    val generation: String? = null,
 ) {
+    init {
+        require(generation == null || ScheduledExportGeneration.isValid(generation)) {
+            "Scheduled export generation is invalid."
+        }
+    }
+
     val id: String
-        get() = "${configuration.signature.take(16)}-$triggerAtMillis"
+        get() = buildString {
+            generation?.let { append(it.take(16)).append('-') }
+            append(configuration.signature.take(16)).append('-').append(triggerAtMillis)
+        }
 
     val enginePin: ExportEnginePin?
         get() = configuration.enginePin
@@ -141,7 +159,10 @@ data class ScheduledExportOccurrence(
     val settingsSnapshot: AndroidExportSettingsSnapshot?
         get() = configuration.settingsSnapshot
 
-    fun toWorkData(catchUpThroughMillis: Long = triggerAtMillis): Data {
+    fun toWorkData(
+        catchUpThroughMillis: Long = triggerAtMillis,
+        admissionOperationId: String? = null,
+    ): Data {
         val builder = Data.Builder()
             .putString(KEY_SIGNATURE, configuration.signature)
             .putLong(KEY_TRIGGER_AT_MILLIS, triggerAtMillis)
@@ -156,11 +177,19 @@ data class ScheduledExportOccurrence(
             .putString(KEY_TARGET, configuration.target.name)
             .putString(KEY_DESTINATION_FINGERPRINT, configuration.destinationFingerprint.orEmpty())
             .putString(KEY_ZONE_ID, configuration.zoneId)
+        generation?.let { builder.putString(KEY_GENERATION, it) }
+        admissionOperationId?.let {
+            builder.putString(ScheduledExportAdmission.KEY_OPERATION_ID, it)
+        }
         configuration.canonicalEnginePinJson?.let { builder.putString(KEY_ENGINE_PIN_JSON, it) }
         configuration.canonicalSettingsSnapshotJson?.let {
             builder.putString(KEY_SETTINGS_SNAPSHOT_JSON, it)
         }
-        return builder.build()
+        return try {
+            builder.build()
+        } catch (error: IllegalStateException) {
+            throw ScheduledExportWorkDataTooLargeException(error)
+        }
     }
 
     fun putInto(intent: Intent): Intent = intent.apply {
@@ -176,6 +205,9 @@ data class ScheduledExportOccurrence(
         putExtra(KEY_TARGET, configuration.target.name)
         putExtra(KEY_DESTINATION_FINGERPRINT, configuration.destinationFingerprint.orEmpty())
         putExtra(KEY_ZONE_ID, configuration.zoneId)
+        generation?.let {
+            putExtra(KEY_GENERATION, it)
+        } ?: removeExtra(KEY_GENERATION)
         configuration.canonicalEnginePinJson?.let {
             putExtra(KEY_ENGINE_PIN_JSON, it)
         } ?: removeExtra(KEY_ENGINE_PIN_JSON)
@@ -198,6 +230,7 @@ data class ScheduledExportOccurrence(
         const val KEY_TARGET = "export_target"
         const val KEY_DESTINATION_FINGERPRINT = "destination_fingerprint"
         const val KEY_ZONE_ID = "schedule_zone_id"
+        const val KEY_GENERATION = "schedule_generation"
         const val KEY_ENGINE_PIN_JSON = "export_engine_pin_json"
         const val KEY_SETTINGS_SNAPSHOT_JSON = "android_export_settings_snapshot_json"
 
@@ -214,6 +247,7 @@ data class ScheduledExportOccurrence(
             target = data.getString(KEY_TARGET),
             destinationFingerprint = data.getString(KEY_DESTINATION_FINGERPRINT),
             zoneId = data.getString(KEY_ZONE_ID),
+            generation = data.getString(KEY_GENERATION),
             enginePinJson = data.getString(KEY_ENGINE_PIN_JSON),
             settingsSnapshotJson = data.getString(KEY_SETTINGS_SNAPSHOT_JSON),
         )
@@ -231,6 +265,7 @@ data class ScheduledExportOccurrence(
             target = intent.getStringExtra(KEY_TARGET),
             destinationFingerprint = intent.getStringExtra(KEY_DESTINATION_FINGERPRINT),
             zoneId = intent.getStringExtra(KEY_ZONE_ID),
+            generation = intent.getStringExtra(KEY_GENERATION),
             enginePinJson = intent.getStringExtra(KEY_ENGINE_PIN_JSON),
             settingsSnapshotJson = intent.getStringExtra(KEY_SETTINGS_SNAPSHOT_JSON),
         )
@@ -253,11 +288,13 @@ data class ScheduledExportOccurrence(
             target: String?,
             destinationFingerprint: String?,
             zoneId: String?,
+            generation: String?,
             enginePinJson: String?,
             settingsSnapshotJson: String?,
         ): ScheduledExportOccurrence? {
             if (signature.isNullOrBlank() || triggerAtMillis < 0L || cadenceValue < 1 ||
-                hour !in 0..23 || minute !in 0..59 || lookbackDays < 1 || zoneId.isNullOrBlank()
+                hour !in 0..23 || minute !in 0..59 || lookbackDays < 1 || zoneId.isNullOrBlank() ||
+                (generation != null && !ScheduledExportGeneration.isValid(generation))
             ) return null
 
             return runCatching {
@@ -292,6 +329,7 @@ data class ScheduledExportOccurrence(
                     configuration = configuration,
                     triggerAtMillis = triggerAtMillis,
                     intendedLocalDate = LocalDate.parse(intendedLocalDate),
+                    generation = generation,
                 )
             }.getOrNull()
         }
