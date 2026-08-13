@@ -25,6 +25,8 @@ struct APIEndpointExportRunner {
         let records: [HealthData]
         let failedDateDetails: [FailedDateDetail]
         let externalRecords: [ExternalDailyRecord]
+        /// Exact number of provider records encoded in bodyArtifact.
+        let externalRecordPayloadCount: Int
         let dateRangeStart: Date
         let dateRangeEnd: Date
         let exportedAt: Date
@@ -200,6 +202,7 @@ struct APIEndpointExportRunner {
                 records: records,
                 failedDateDetails: failedDateDetails,
                 externalRecords: externalRecords,
+                externalRecordPayloadCount: externalRecordData.count,
                 dateRangeStart: start,
                 dateRangeEnd: end,
                 exportedAt: exportedAt,
@@ -308,6 +311,8 @@ struct APIEndpointExportRunner {
                 totalCount: 0,
                 failedDateDetails: [],
                 formatsPerDate: 0,
+                looseAggregateFileCount: 0,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: []
             )
         }
@@ -501,6 +506,8 @@ struct APIEndpointExportRunner {
                 totalCount: 0,
                 failedDateDetails: [],
                 formatsPerDate: 0,
+                looseAggregateFileCount: 0,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: []
             )
         }
@@ -581,6 +588,8 @@ struct APIEndpointExportRunner {
                 totalCount: normalizedDates.count,
                 failedDateDetails: [],
                 formatsPerDate: 0,
+                looseAggregateFileCount: 0,
+                isFileCategoryBreakdownComplete: true,
                 wasCancelled: true,
                 completedDates: []
             )
@@ -1116,6 +1125,7 @@ struct APIEndpointExportRunner {
                 records: records,
                 failedDateDetails: failureDetails,
                 externalRecords: slice.flatMap(\.externalRecords),
+                externalRecordPayloadCount: slice.reduce(0) { $0 + $1.externalRecordData.count },
                 dateRangeStart: normalizedDates[cursor],
                 dateRangeEnd: normalizedDates[endIndex],
                 exportedAt: exportedAt,
@@ -1147,6 +1157,8 @@ struct APIEndpointExportRunner {
                 failedDateDetails: operation.failedDateDetails,
                 partialFailures: operation.partialFailures,
                 formatsPerDate: 0,
+                looseAggregateFileCount: 0,
+                isFileCategoryBreakdownComplete: true,
                 completedDates: []
             )
         }
@@ -1160,7 +1172,9 @@ struct APIEndpointExportRunner {
                     failedDateDetails: operation.failedDateDetails,
                     partialFailures: operation.partialFailures,
                     formatsPerDate: 0,
-                    externalRecordFileCount: totalExternalRecordCount,
+                    looseAggregateFileCount: 0,
+                    externalRecordPayloadCount: totalExternalRecordCount,
+                    isFileCategoryBreakdownComplete: true,
                     wasCancelled: true,
                     completedDates: Array(completedDates)
                 )
@@ -1181,7 +1195,7 @@ struct APIEndpointExportRunner {
                     in: batch.failedDateDetails,
                     calendar: operation.calendar
                 ))
-                totalExternalRecordCount += batch.externalRecords.count
+                totalExternalRecordCount += batch.externalRecordPayloadCount
             } catch {
                 try? await barrier.transition(to: .failed)
                 let futureDates = operation.batches
@@ -1215,7 +1229,9 @@ struct APIEndpointExportRunner {
             failedDateDetails: operation.failedDateDetails,
             partialFailures: operation.partialFailures,
             formatsPerDate: 0,
-            externalRecordFileCount: totalExternalRecordCount,
+            looseAggregateFileCount: 0,
+            externalRecordPayloadCount: totalExternalRecordCount,
+            isFileCategoryBreakdownComplete: true,
             completedDates: Array(completedDates)
         )
     }
@@ -1282,7 +1298,9 @@ struct APIEndpointExportRunner {
                 successCount: 0,
                 totalCount: 0,
                 failedDateDetails: [],
-                formatsPerDate: 0
+                formatsPerDate: 0,
+                looseAggregateFileCount: 0,
+                isFileCategoryBreakdownComplete: true
             )
         }
 
@@ -1321,7 +1339,9 @@ struct APIEndpointExportRunner {
                 failedDateDetails: allFailedDateDetails,
                 partialFailures: allPartialFailures,
                 formatsPerDate: 0,
-                externalRecordFileCount: totalExternalRecordCount,
+                looseAggregateFileCount: 0,
+                externalRecordPayloadCount: totalExternalRecordCount,
+                isFileCategoryBreakdownComplete: true,
                 wasCancelled: true,
                 completedDates: Array(completedDates)
             )
@@ -1399,7 +1419,7 @@ struct APIEndpointExportRunner {
                     Calendar.current.startOfDay(for: $0.date)
                 })
                 completedDates.formUnion(terminalCompletedDates(in: batch.failedDateDetails))
-                totalExternalRecordCount += batch.externalRecords.count
+                totalExternalRecordCount += batch.externalRecordPayloadCount
                 return nil
             } catch {
                 return uploadFailureResult(
@@ -1610,7 +1630,9 @@ struct APIEndpointExportRunner {
             failedDateDetails: allFailedDateDetails,
             partialFailures: allPartialFailures,
             formatsPerDate: 0,
-            externalRecordFileCount: totalExternalRecordCount,
+            looseAggregateFileCount: 0,
+            externalRecordPayloadCount: totalExternalRecordCount,
+            isFileCategoryBreakdownComplete: true,
             completedDates: Array(completedDates)
         )
     }
@@ -1659,7 +1681,9 @@ struct APIEndpointExportRunner {
             failedDateDetails: orderedFailures,
             partialFailures: partialFailures,
             formatsPerDate: 0,
-            externalRecordFileCount: externalRecordCount,
+            looseAggregateFileCount: 0,
+            externalRecordPayloadCount: externalRecordCount,
+            isFileCategoryBreakdownComplete: true,
             wasCancelled: Task.isCancelled || error is CancellationError,
             completedDates: Array(completedDates)
         )
@@ -1700,7 +1724,9 @@ struct APIEndpointExportRunner {
             failedDateDetails: failedDates.map {
                 FailedDateDetail(date: $0, reason: reason, errorDetails: message)
             },
-            formatsPerDate: 0
+            formatsPerDate: 0,
+            looseAggregateFileCount: 0,
+            isFileCategoryBreakdownComplete: true
         )
     }
 

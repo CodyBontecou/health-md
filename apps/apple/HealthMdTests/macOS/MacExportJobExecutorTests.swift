@@ -406,7 +406,11 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.successCount, 1)
         XCTAssertEqual(payload.totalCount, 1)
         XCTAssertEqual(payload.formatsPerDate, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.totalFilesWritten, 5)
+        XCTAssertTrue(payload.isTotalFilesWrittenAuthoritative)
+        XCTAssertEqual(payload.outputBreakdown?.looseAggregateFileCount, 1)
+        XCTAssertEqual(payload.outputBreakdown?.dataDictionaryFileCount, 1)
+        XCTAssertEqual(payload.outputBreakdown?.rollupFileCount, 3)
         XCTAssertEqual(payload.completedDates, [Calendar.current.startOfDay(for: date)])
         XCTAssertEqual(fileSystem.files.count, 5, "Export writes the requested file, three roll-up summaries, and the schema data dictionary")
         XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2026-05-12.md"])
@@ -716,7 +720,9 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.totalFilesWritten, 5)
+        XCTAssertTrue(payload.isTotalFilesWrittenAuthoritative)
+        XCTAssertEqual(payload.outputBreakdown?.dataDictionaryFileCount, 1)
         XCTAssertNil(executor.currentJobID)
     }
 
@@ -1465,8 +1471,10 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 1)
-        XCTAssertEqual(payload.totalFilesWritten, 2)
+        XCTAssertEqual(payload.totalFilesWritten, 3)
         XCTAssertEqual(payload.externalRecordFileCount, 1)
+        XCTAssertEqual(payload.outputBreakdown?.dataDictionaryFileCount, 1)
+        XCTAssertEqual(payload.outputBreakdown?.providerSidecarFileCount, 1)
 
         let sidecarPath = "/tmp/MacVault/integrations/whoop/2026-05-12.json"
         let sidecar = try XCTUnwrap(fileSystem.files[sidecarPath])
@@ -1507,7 +1515,9 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertEqual(payload.status, .success)
         XCTAssertEqual(payload.successCount, 2)
         XCTAssertEqual(payload.totalCount, 2)
-        XCTAssertEqual(payload.totalFilesWritten, 3)
+        XCTAssertEqual(payload.totalFilesWritten, 4)
+        XCTAssertEqual(payload.outputBreakdown?.dataDictionaryFileCount, 1)
+        XCTAssertEqual(payload.outputBreakdown?.rollupFileCount, 1)
         let weeklyRollup = try XCTUnwrap(
             fileSystem.files["/tmp/MacVault/Rollups/Weekly/2026-W20.md"]
         )
@@ -1651,6 +1661,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .failure)
         XCTAssertEqual(payload.failedDateDetails.first?.reason, .fileWriteError)
+        XCTAssertFalse(payload.isTotalFilesWrittenAuthoritative)
         XCTAssertEqual(payload.completedDates, [])
         XCTAssertTrue(failingFileSystem.files.isEmpty)
     }
@@ -1684,6 +1695,8 @@ final class MacExportJobExecutorTests: XCTestCase {
         }
         XCTAssertEqual(payload.status, .partialSuccess)
         XCTAssertEqual(payload.completedDates, [])
+        XCTAssertTrue(payload.hadTerminalRangeFailure)
+        XCTAssertFalse(payload.isTotalFilesWrittenAuthoritative)
         XCTAssertTrue(payload.failedDateDetails.contains { $0.reason == .fileWriteError })
     }
 

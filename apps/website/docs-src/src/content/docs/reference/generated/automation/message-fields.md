@@ -316,6 +316,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.platform` | string |
 | `$.hello._0.protocolVersion` | integer |
 | `$.hello._0.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.hello._0.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.hello._0.supportsCanonicalHealthDataSelection` | boolean |
 | `$.hello._0.supportsChunkedMacExportJobs` | boolean |
 | `$.hello._0.supportsDailyNoteOnlyExports` | boolean |
@@ -817,6 +818,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult._0.failedDateDetails[].errorDetails` | string |
 | `$.macExportResult._0.failedDateDetails[].reason` | string |
 | `$.macExportResult._0.formatsPerDate` | integer |
+| `$.macExportResult._0.hadTerminalRangeFailure` | boolean |
+| `$.macExportResult._0.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.macExportResult._0.jobID` | string |
 | `$.macExportResult._0.status` | string |
 | `$.macExportResult._0.successCount` | integer |
@@ -1076,6 +1079,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.platform` | string |
 | `$.macStatus._0.capabilities.protocolVersion` | integer |
 | `$.macStatus._0.capabilities.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.macStatus._0.capabilities.supportsCanonicalHealthDataSelection` | boolean |
 | `$.macStatus._0.capabilities.supportsChunkedMacExportJobs` | boolean |
 | `$.macStatus._0.capabilities.supportsDailyNoteOnlyExports` | boolean |
@@ -1967,6 +1971,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.failedDateDetails[].errorDetails` | string |
 | `$.failedDateDetails[].reason` | string |
 | `$.formatsPerDate` | integer |
+| `$.hadTerminalRangeFailure` | boolean |
+| `$.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.jobID` | string |
 | `$.status` | string |
 | `$.successCount` | integer |
@@ -1988,6 +1994,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.externalRecordFileCount` | integer |
 | `$.failedDateDetails` | array |
 | `$.formatsPerDate` | integer |
+| `$.hadTerminalRangeFailure` | boolean |
+| `$.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.jobID` | string |
 | `$.status` | string |
 | `$.successCount` | integer |
@@ -2020,6 +2028,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.platform` | string |
 | `$.protocolVersion` | integer |
 | `$.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.supportsCanonicalHealthDataSelection` | boolean |
 | `$.supportsChunkedMacExportJobs` | boolean |
 | `$.supportsDailyNoteOnlyExports` | boolean |
