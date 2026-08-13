@@ -14,6 +14,10 @@ const testPrefixes = ["apps/practice/test/", "apps/practice/e2e/"];
 const approvedRuntimeHosts = new Set(["practice.invalid", "example.invalid", "localhost", "127.0.0.1"]);
 const approvedTestHosts = new Set([...approvedRuntimeHosts, "practice.synthetic.invalid", "remote.invalid", "invalid.example", "other.invalid"]);
 const approvedDiscoveryReferenceHosts = new Set(["hl7.org", "fhir.epic.com", "www.mychart.org", "docs.athenahealth.com", "www.athenahealth.com", "fhir.eclinicalworks.com", "healow.com", "docs.oracle.com", "www.oracle.com"]);
+const approvedMobileBuildWiringHosts = new Map([
+  ["apps/android/app/build.gradle.kts", new Set(["health-md-pricing-analytics.costream.workers.dev"])],
+  ["apps/apple/HealthMd.xcodeproj/project.pbxproj", new Set(["github.com"])],
+]);
 const analyticsDefinitionFiles = new Set(["apps/practice/scripts/check-synthetic-only.mjs", "apps/practice/scripts/test-declarations.mjs", "apps/practice/test/clinical-boundary.test.ts"]);
 
 function report(category, display, message) { categories.add(category); findings.push(`${display}: ${message}`); }
@@ -26,6 +30,7 @@ function approvedUrl(display, url) {
   const builtNamespace = display.startsWith("apps/practice/dist/") && ["react.dev", "www.w3.org"].includes(url.hostname);
   if (builtNamespace || approvedRuntimeHosts.has(url.hostname)) return true;
   if (display === "docs/product/practice/pilot-ehr-vendor-discovery-aid.md" && approvedDiscoveryReferenceHosts.has(url.hostname)) return true;
+  if (approvedMobileBuildWiringHosts.get(display)?.has(url.hostname)) return true;
   return isTest(display) && approvedTestHosts.has(url.hostname);
 }
 function scan(display, contents) {

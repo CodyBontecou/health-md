@@ -17,6 +17,7 @@ export const repositoryRecursiveRoots = Object.freeze([
 ]);
 export const repositoryFiles = Object.freeze([
   "AGENTS.md", "docs/architecture/adr-0003-practice-clinical-boundary.md", "docs/features/clinician-report-v1.md", ".github/workflows/practice-ci.yml",
+  "apps/android/app/build.gradle.kts", "apps/apple/HealthMd.xcodeproj/project.pbxproj",
 ]);
 export const ignoredDirectoryNames = Object.freeze(new Set([
   "node_modules", ".wrangler", "coverage", "playwright-report", "test-results", "generated",
