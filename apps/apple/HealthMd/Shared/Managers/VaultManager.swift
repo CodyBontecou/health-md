@@ -941,7 +941,24 @@ nonisolated private enum SecureExactArtifactIO {
 struct DailyExportWriteResult {
     let aggregateFileCount: Int
     let individualEntryFileCount: Int
+    let dataDictionaryFileCount: Int
     let dailyNoteResult: DailyNoteInjector.InjectionResult?
+
+    init(
+        aggregateFileCount: Int,
+        individualEntryFileCount: Int,
+        dataDictionaryFileCount: Int = 0,
+        dailyNoteResult: DailyNoteInjector.InjectionResult?
+    ) {
+        self.aggregateFileCount = max(aggregateFileCount, 0)
+        self.individualEntryFileCount = max(individualEntryFileCount, 0)
+        self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+        self.dailyNoteResult = dailyNoteResult
+    }
+
+    var totalGeneratedFileCount: Int {
+        aggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
+    }
 
     var dailyNoteUpdatedCount: Int {
         if case .updated = dailyNoteResult { return 1 }
@@ -961,6 +978,7 @@ struct DailyExportWriteResult {
     static let noOutput = DailyExportWriteResult(
         aggregateFileCount: 0,
         individualEntryFileCount: 0,
+        dataDictionaryFileCount: 0,
         dailyNoteResult: nil
     )
 }
@@ -1929,6 +1947,7 @@ final class VaultManager: ObservableObject {
         healthSubfolder: String,
         settings: AdvancedExportSettings,
         writtenFiles: [WrittenAggregateFile],
+        dataDictionaryFileCount: Int = 0,
         leadingAction: String
     ) throws -> DailyExportWriteResult {
         var individualEntriesCount = 0
@@ -2012,6 +2031,7 @@ final class VaultManager: ObservableObject {
         return DailyExportWriteResult(
             aggregateFileCount: writtenFiles.count,
             individualEntryFileCount: individualEntriesCount,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             dailyNoteResult: dailyNoteResult
         )
     }
@@ -2034,6 +2054,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings
         )
+        var dataDictionaryFileCount = 0
         if !settings.dailyNotesOnlyModeEnabled,
            !settings.archiveModeEnabled,
            shouldWriteDataDictionary,
@@ -2043,6 +2064,7 @@ final class VaultManager: ObservableObject {
                settings: settings
            ) {
             _ = try aggregateFileWriter.writeSynchronously(dictionaryRequest)
+            dataDictionaryFileCount = 1
         }
 
         var writtenFiles: [WrittenAggregateFile] = []
@@ -2083,6 +2105,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings,
             writtenFiles: writtenFiles,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             leadingAction: leadingAction
         )
         #if DEBUG
@@ -2114,6 +2137,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings
         )
+        var dataDictionaryFileCount = 0
         if !settings.dailyNotesOnlyModeEnabled,
            !settings.archiveModeEnabled,
            shouldWriteDataDictionary,
@@ -2123,6 +2147,7 @@ final class VaultManager: ObservableObject {
                settings: settings
            ) {
             _ = try await aggregateFileWriter.write(dictionaryRequest)
+            dataDictionaryFileCount = 1
         }
 
         var writtenFiles: [WrittenAggregateFile] = []
@@ -2163,6 +2188,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings,
             writtenFiles: writtenFiles,
+            dataDictionaryFileCount: dataDictionaryFileCount,
             leadingAction: leadingAction
         )
         #if DEBUG
@@ -2229,8 +2255,10 @@ final class VaultManager: ObservableObject {
             // The authority and every output byte are locked before the first directory creation or
             // atomic write, including the native data dictionary sidecar.
             try await barrier.transition(to: .committing)
+            var dataDictionaryFileCount = 0
             if let dictionaryRequest {
                 _ = try await aggregateFileWriter.write(dictionaryRequest)
+                dataDictionaryFileCount = 1
             }
 
             var writtenFiles: [WrittenAggregateFile] = []
@@ -2253,6 +2281,7 @@ final class VaultManager: ObservableObject {
                 healthSubfolder: healthSubfolder,
                 settings: settings,
                 writtenFiles: writtenFiles,
+                dataDictionaryFileCount: dataDictionaryFileCount,
                 leadingAction: leadingAction
             )
             try await barrier.transition(to: .completed)

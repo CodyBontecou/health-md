@@ -245,18 +245,26 @@ struct MacMenuBarView: View {
         if let result = syncService.lastMacExportResult {
             switch result.status {
             case .success:
-                if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
+                if result.dailyNoteUpdateCount > 0,
+                   result.isTotalFilesWrittenAuthoritative,
+                   result.totalFilesWritten == 0 {
                     return String(localized: "\(result.dailyNoteUpdateCount) daily notes updated")
                 }
-                return String(localized: "\(result.totalFilesWritten) files")
+                return result.generatedFileCountDescription
+                    ?? String(localized: "Export Complete")
             case .partialSuccess:
-                if result.dailyNoteSkipCount > 0 && result.totalFilesWritten == 0 {
+                if result.dailyNoteSkipCount > 0,
+                   result.isTotalFilesWrittenAuthoritative,
+                   result.totalFilesWritten == 0 {
                     return String(localized: "\(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) daily notes skipped")
                 }
-                if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
+                if result.dailyNoteUpdateCount > 0,
+                   result.isTotalFilesWrittenAuthoritative,
+                   result.totalFilesWritten == 0 {
                     return String(localized: "Partial: \(result.dailyNoteUpdateCount) daily notes updated")
                 }
-                return String(localized: "Partial: \(result.totalFilesWritten) files")
+                return result.generatedFileCountDescription.map { "Partial: \($0)" }
+                    ?? String(localized: "Export Partial")
             case .failure:
                 return String(localized: "Failed")
             case .cancelled:

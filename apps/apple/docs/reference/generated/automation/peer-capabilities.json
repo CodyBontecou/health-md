@@ -29,6 +29,7 @@
   "platform" : "iOS",
   "protocolVersion" : 2,
   "supportsAllAvailableHistoryExportRequests" : true,
+  "supportsAuthoritativeMacExportFileAccounting" : true,
   "supportsCanonicalHealthDataSelection" : true,
   "supportsChunkedMacExportJobs" : true,
   "supportsDailyNoteOnlyExports" : true,
