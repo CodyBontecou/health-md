@@ -122,6 +122,14 @@ final class MacExportJobExecutor {
         var successfulRecords: [HealthData] = []
         var retainedExternalDailyRecords: [ExternalDailyRecord] = []
         var totalFilesWritten: Int = 0
+        var looseAggregateFileCount: Int = 0
+        var individualEntryFileCount: Int = 0
+        var dataDictionaryFileCount: Int = 0
+        var rollupFileCount: Int = 0
+        var archiveFileCount: Int = 0
+        var dataDictionaryWritten = false
+        var isFileAccountingComplete = true
+        var hadTerminalRangeFailure = false
         var externalRecordFileCount: Int = 0
         var dailyNoteUpdateCount: Int = 0
         var dailyNoteSkipCount: Int = 0
@@ -254,6 +262,13 @@ final class MacExportJobExecutor {
         var failedDateDetails: [FailedDateDetail] = []
         var successfulRecords: [HealthData] = []
         var totalFilesWritten = 0
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
+        var rollupFileCount = 0
+        var dataDictionaryWritten = false
+        var isFileAccountingComplete = true
+        var hadTerminalRangeFailure = false
         var externalRecordFileCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
@@ -348,11 +363,17 @@ final class MacExportJobExecutor {
                     record,
                     settings: settings,
                     healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
+                    writeDataDictionary: !dataDictionaryWritten,
                     operationSurface: dailyExportOperation.surface,
                     frozenSettingsSnapshot: dailyExportOperation.settingsSnapshot
                 )
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
+                if writeResult.dataDictionaryFileCount > 0 { dataDictionaryWritten = true }
+                totalFilesWritten += writeResult.totalGeneratedFileCount
                 if settings.dailyNotesOnlyModeEnabled {
                     switch writeResult.dailyNoteResult {
                     case .updated:
@@ -382,8 +403,6 @@ final class MacExportJobExecutor {
                 }
                 successCount += 1
                 successfulRecords.append(record)
-                totalFilesWritten += formatsPerDate
-
                 let dateKey = Self.displayDate(record.date)
                 var writtenSidecarsForDate = 0
                 if settings.writesExternalProviderSidecars,
@@ -397,6 +416,7 @@ final class MacExportJobExecutor {
                         externalRecordFileCount += writtenSidecarsForDate
                         totalFilesWritten += writtenSidecarsForDate
                     } catch {
+                        isFileAccountingComplete = false
                         failedDateDetails.append(FailedDateDetail(
                             date: record.date,
                             reason: .fileWriteError,
@@ -420,6 +440,7 @@ final class MacExportJobExecutor {
                     progress: progress
                 )
             } catch {
+                isFileAccountingComplete = false
                 failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
                 sendProgress(
                     jobID: job.jobID,
@@ -459,8 +480,11 @@ final class MacExportJobExecutor {
                     settings: settings,
                     healthSubfolder: job.settingsSnapshot.healthSubfolder
                 )
+                rollupFileCount += rollupResults.count
                 totalFilesWritten += rollupResults.count
             } catch {
+                isFileAccountingComplete = false
+                hadTerminalRangeFailure = true
                 let sortedDates = rollupRecords.map(\.date).sorted()
                 failedDateDetails.append(FailedDateDetail(
                     date: sortedDates.first ?? Date(),
@@ -482,7 +506,7 @@ final class MacExportJobExecutor {
                 message: "Writing ZIP archive…",
                 progress: progress
             )
-            archiveFileCount = await Self.writeArchive(
+            let archiveOutcome = await Self.writeArchive(
                 from: successfulRecords,
                 rollupHealthData: rollupRecords,
                 selectedDates: requestedDates,
@@ -491,6 +515,9 @@ final class MacExportJobExecutor {
                 healthSubfolder: job.settingsSnapshot.healthSubfolder,
                 failedDateDetails: &failedDateDetails
             )
+            archiveFileCount = archiveOutcome.fileCount
+            hadTerminalRangeFailure = hadTerminalRangeFailure || archiveOutcome.hadTerminalFailure
+            if archiveOutcome.hadTerminalFailure { isFileAccountingComplete = false }
             totalFilesWritten += archiveFileCount
         }
 
@@ -519,7 +546,22 @@ final class MacExportJobExecutor {
             totalCount: totalDays,
             formatsPerDate: formatsPerDate,
             totalFilesWritten: totalFilesWritten,
+            isTotalFilesWrittenAuthoritative: isFileAccountingComplete,
             externalRecordFileCount: externalRecordFileCount,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: totalDays,
+                successfulDataDayCount: successCount,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                zipArchiveFileCount: archiveFileCount,
+                rollupFileCount: rollupFileCount,
+                providerSidecarFileCount: externalRecordFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                isFileCategoryBreakdownComplete: isFileAccountingComplete
+            ),
+            hadTerminalRangeFailure: hadTerminalRangeFailure,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             failedDateDetails: failedDateDetails,
@@ -730,11 +772,17 @@ final class MacExportJobExecutor {
                         record,
                         settings: settings,
                         healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
+                        writeDataDictionary: !session.dataDictionaryWritten,
                         operationSurface: session.dailyExportOperation.surface,
                         frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )
                     session.dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                    session.looseAggregateFileCount += writeResult.aggregateFileCount
+                    session.individualEntryFileCount += writeResult.individualEntryFileCount
+                    session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
+                    if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
+                    session.totalFilesWritten += writeResult.totalGeneratedFileCount
                     if settings.dailyNotesOnlyModeEnabled {
                         switch writeResult.dailyNoteResult {
                         case .updated:
@@ -764,8 +812,6 @@ final class MacExportJobExecutor {
                     }
                     session.successCount += 1
                     session.successfulRecords.append(record)
-                    session.totalFilesWritten += session.formatsPerDate
-
                     let stringDateKey = Self.displayDate(record.date)
                     if settings.writesExternalProviderSidecars,
                        let externalRecords = externalRecordsByDate[stringDateKey],
@@ -778,6 +824,7 @@ final class MacExportJobExecutor {
                             session.externalRecordFileCount += sidecarCount
                             session.totalFilesWritten += sidecarCount
                         } catch {
+                            session.isFileAccountingComplete = false
                             session.failedDateDetails.append(FailedDateDetail(
                                 date: record.date,
                                 reason: .fileWriteError,
@@ -786,6 +833,7 @@ final class MacExportJobExecutor {
                         }
                     }
                 } catch {
+                    session.isFileAccountingComplete = false
                     session.failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
                 }
             } else if !shouldWriteDailyAsChunksArrive && isRequestedDay {
@@ -888,6 +936,7 @@ final class MacExportJobExecutor {
                         record,
                         settings: settings,
                         healthSubfolder: session.dailyExportOperation.settingsSnapshot.healthSubfolder,
+                        writeDataDictionary: !session.dataDictionaryWritten,
                         operationSurface: session.dailyExportOperation.surface,
                         frozenSettingsSnapshot: session.dailyExportOperation.settingsSnapshot
                     )
@@ -895,7 +944,11 @@ final class MacExportJobExecutor {
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     session.successCount += 1
                     session.successfulRecords.append(record)
-                    session.totalFilesWritten += session.formatsPerDate
+                    session.looseAggregateFileCount += writeResult.aggregateFileCount
+                    session.individualEntryFileCount += writeResult.individualEntryFileCount
+                    session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
+                    if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
+                    session.totalFilesWritten += writeResult.totalGeneratedFileCount
                     let dateKey = Self.displayDate(record.date)
                     if settings.writesExternalProviderSidecars,
                        let externalRecords = externalRecordsByDate[dateKey],
@@ -908,6 +961,7 @@ final class MacExportJobExecutor {
                         session.totalFilesWritten += sidecarCount
                     }
                 } catch {
+                    session.isFileAccountingComplete = false
                     session.failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
                 }
             }
@@ -927,8 +981,11 @@ final class MacExportJobExecutor {
                     settings: settings,
                     healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                 )
+                session.rollupFileCount += rollupResults.count
                 session.totalFilesWritten += rollupResults.count
             } catch {
+                session.isFileAccountingComplete = false
+                session.hadTerminalRangeFailure = true
                 let sortedDates = rollupRecords.map(\.date).sorted()
                 session.failedDateDetails.append(FailedDateDetail(
                     date: sortedDates.first ?? session.start.dateRangeStart,
@@ -940,7 +997,7 @@ final class MacExportJobExecutor {
 
         var archiveFileCount = 0
         if settings.archiveModeEnabled && !session.successfulRecords.isEmpty {
-            archiveFileCount = await Self.writeArchive(
+            let archiveOutcome = await Self.writeArchive(
                 from: session.successfulRecords,
                 rollupHealthData: rollupRecords,
                 selectedDates: session.requestedDates,
@@ -949,6 +1006,11 @@ final class MacExportJobExecutor {
                 healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
                 failedDateDetails: &session.failedDateDetails
             )
+            archiveFileCount = archiveOutcome.fileCount
+            session.hadTerminalRangeFailure = session.hadTerminalRangeFailure
+                || archiveOutcome.hadTerminalFailure
+            if archiveOutcome.hadTerminalFailure { session.isFileAccountingComplete = false }
+            session.archiveFileCount += archiveFileCount
             session.totalFilesWritten += archiveFileCount
             session.successCount = session.requestedDates.filter {
                 session.receivedRecordsByDate[Calendar.current.startOfDay(for: $0)] != nil
@@ -981,7 +1043,22 @@ final class MacExportJobExecutor {
             totalCount: totalDays,
             formatsPerDate: session.formatsPerDate,
             totalFilesWritten: session.totalFilesWritten,
+            isTotalFilesWrittenAuthoritative: session.isFileAccountingComplete,
             externalRecordFileCount: session.externalRecordFileCount,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: session.requestedDates.count,
+                successfulDataDayCount: session.successCount,
+                looseAggregateFileCount: session.looseAggregateFileCount,
+                individualEntryFileCount: session.individualEntryFileCount,
+                dataDictionaryFileCount: session.dataDictionaryFileCount,
+                zipArchiveFileCount: session.archiveFileCount,
+                rollupFileCount: session.rollupFileCount,
+                providerSidecarFileCount: session.externalRecordFileCount,
+                dailyNoteUpdateCount: session.dailyNoteUpdateCount,
+                dailyNoteSkipCount: session.dailyNoteSkipCount,
+                isFileCategoryBreakdownComplete: session.isFileAccountingComplete
+            ),
+            hadTerminalRangeFailure: session.hadTerminalRangeFailure,
             dailyNoteUpdateCount: session.dailyNoteUpdateCount,
             dailyNoteSkipCount: session.dailyNoteSkipCount,
             failedDateDetails: session.failedDateDetails,
@@ -1225,6 +1302,11 @@ final class MacExportJobExecutor {
         }
     }
 
+    private struct ArchiveWriteOutcome {
+        let fileCount: Int
+        let hadTerminalFailure: Bool
+    }
+
     private static func writeArchive(
         from successfulRecords: [HealthData],
         rollupHealthData: [HealthData],
@@ -1233,16 +1315,20 @@ final class MacExportJobExecutor {
         settings: AdvancedExportSettings,
         healthSubfolder: String?,
         failedDateDetails: inout [FailedDateDetail]
-    ) async -> Int {
-        guard settings.archiveModeEnabled else { return 0 }
-        guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else { return 0 }
+    ) async -> ArchiveWriteOutcome {
+        guard settings.archiveModeEnabled else {
+            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false)
+        }
+        guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else {
+            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false)
+        }
 
         let sortedDates = selectedDates.sorted()
         let startDate = sortedDates.first ?? successfulRecords.map(\.date).min() ?? Date()
         let endDate = sortedDates.last ?? successfulRecords.map(\.date).max() ?? startDate
 
         do {
-            return try await vaultManager.exportArchive(
+            let fileCount = try await vaultManager.exportArchive(
                 from: successfulRecords,
                 rollupHealthData: rollupHealthData,
                 settings: settings,
@@ -1250,13 +1336,17 @@ final class MacExportJobExecutor {
                 endDate: endDate,
                 healthSubfolder: healthSubfolder
             ) == nil ? 0 : 1
+            return ArchiveWriteOutcome(
+                fileCount: fileCount,
+                hadTerminalFailure: fileCount == 0
+            )
         } catch {
             failedDateDetails.append(FailedDateDetail(
                 date: startDate,
                 reason: .fileWriteError,
                 errorDetails: "ZIP archive export failed: \(error.localizedDescription)"
             ))
-            return 0
+            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: true)
         }
     }
 
