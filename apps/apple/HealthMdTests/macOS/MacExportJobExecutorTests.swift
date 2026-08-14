@@ -1579,6 +1579,7 @@ final class MacExportJobExecutorTests: XCTestCase {
     func testExecute_archiveModeWritesZipArchiveContainingRollups() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("MacExportArchiveTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: vaultURL) }
 
         let manager = makeManagerWithVault(

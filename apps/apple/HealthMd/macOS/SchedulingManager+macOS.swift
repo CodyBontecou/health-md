@@ -316,10 +316,28 @@ class SchedulingManager: ObservableObject {
         var wasCancelled = false
         let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
         let usesPinnedRange = frozenSettingsSnapshot?.appleExportEnginePin != nil
+        let preflightSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
+        var preflightFailed = false
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: preflightSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            preflightFailed = true
+            failedDateDetails = dates.map {
+                FailedDateDetail(
+                    date: $0,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                )
+            }
+        }
 
         if Task.isCancelled {
             wasCancelled = true
-        } else if usesPinnedRange,
+        } else if !preflightFailed, usesPinnedRange,
            let frozenSettingsSnapshot,
            let timeZoneIdentifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
            let timeZone = TimeZone(identifier: timeZoneIdentifier) {
@@ -368,7 +386,7 @@ class SchedulingManager: ObservableObject {
                     })
                 }
             }
-        } else if usesPinnedRange {
+        } else if !preflightFailed && usesPinnedRange {
             failedDateDetails = dates.map {
                 FailedDateDetail(
                     date: $0,
@@ -378,7 +396,7 @@ class SchedulingManager: ObservableObject {
             }
         }
 
-        if !usesPinnedRange {
+        if !preflightFailed && !usesPinnedRange {
         for date in dates {
             if Task.isCancelled {
                 wasCancelled = true
