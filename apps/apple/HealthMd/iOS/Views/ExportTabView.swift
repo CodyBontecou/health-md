@@ -30,6 +30,7 @@ struct ExportTabView: View {
     @ObservedObject var syncService: SyncService
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     let externalIntegrations: ExternalIntegrationDailyRecordProviding?
     @Binding var exportTargetSelection: ExportTargetSelection
     @Binding var startDate: Date
@@ -83,8 +84,10 @@ struct ExportTabView: View {
                 VStack(spacing: Spacing.md) {
                     heroHeader
                     statusBadges
+                        .configurationChangesProtected()
                     clinicianReportSection
                     exportTargetSection
+                        .configurationChangesProtected()
                     dateRangeSection
                     healthDataSection
                         .id("marketing-export-health-data")
@@ -94,6 +97,7 @@ struct ExportTabView: View {
                     outputSection
                     pathPreviewSection
                     resetButton
+                        .configurationChangesProtected()
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.md)
@@ -411,7 +415,7 @@ struct ExportTabView: View {
                     VStack(spacing: Spacing.md) {
                         DatePicker(
                             "Start Date",
-                            selection: $startDate,
+                            selection: configurationProtection.protecting($startDate),
                             in: ...endDate,
                             displayedComponents: .date
                         )
@@ -424,7 +428,7 @@ struct ExportTabView: View {
 
                         DatePicker(
                             "End Date",
-                            selection: $endDate,
+                            selection: configurationProtection.protecting($endDate),
                             in: startDate...Date(),
                             displayedComponents: .date
                         )
@@ -445,7 +449,9 @@ struct ExportTabView: View {
     private func dateRangePresetButton(_ preset: ExportDateRangePreset) -> some View {
         let isSelected = dateRangePreset == preset
         return Button {
-            selectDateRangePreset(preset)
+            configurationProtection.performConfigurationChange {
+                selectDateRangePreset(preset)
+            }
         } label: {
             HStack(spacing: Spacing.xs) {
                 if isSelected {
@@ -487,11 +493,14 @@ struct ExportTabView: View {
                 let earliestDate = await healthKitManager.findEarliestHealthDataDate()
                 await MainActor.run {
                     guard dateRangePreset == .allTime else { return }
-                    applyResolvedDateRange(
-                        for: .allTime,
-                        allTimeStartDate: earliestDate,
-                        allTimeEndDate: Date()
-                    )
+                    configurationProtection.performConfigurationChange {
+                        guard dateRangePreset == .allTime else { return }
+                        applyResolvedDateRange(
+                            for: .allTime,
+                            allTimeStartDate: earliestDate,
+                            allTimeEndDate: Date()
+                        )
+                    }
                 }
             }
         case .today, .yesterday:
@@ -552,6 +561,7 @@ struct ExportTabView: View {
                 rowDivider()
 
                 losslessHealthRecordsInlineRow
+                    .configurationChangesProtected()
             }
         }
     }
@@ -631,6 +641,7 @@ struct ExportTabView: View {
                 }
                 .padding(.bottom, Spacing.s1)
 
+                VStack(spacing: 0) {
                 ForEach(ExportFormat.allCases, id: \.self) { format in
                     Toggle(format.rawValue, isOn: Binding(
                         get: { advancedSettings.exportFormats.contains(format) },
@@ -712,6 +723,8 @@ struct ExportTabView: View {
                     .foregroundStyle(Color.error)
                     .padding(.top, Spacing.s2)
                 }
+                }
+                .configurationChangesProtected()
             }
         }
     }
@@ -824,6 +837,7 @@ struct ExportTabView: View {
                     .padding(.top, Spacing.s1)
             }
             .padding(.leading, 40)
+            .configurationChangesProtected()
         }
         .padding(.vertical, Spacing.s3)
     }
@@ -843,6 +857,7 @@ struct ExportTabView: View {
                 rowDivider()
 
                 writeModeInlineRow
+                    .configurationChangesProtected()
             }
         }
     }
@@ -924,6 +939,7 @@ struct ExportTabView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier(AccessibilityID.Export.filenameEditorButton)
                 .accessibilityLabel("Filename format: \(advancedSettings.filenameFormat)")
                 .accessibilityHint("Double tap to customize filename format")
             }
@@ -1430,6 +1446,10 @@ struct ExportTabView: View {
 
     private func handlePreviewTapped() {
         if previewNeedsHealthPermission {
+            guard !configurationProtection.isEnabled else {
+                configurationProtection.presentBlockedChangeToast()
+                return
+            }
             showPreviewRequirementsPrompt = true
         } else {
             showPreview = true
@@ -2025,18 +2045,25 @@ private struct ExportTargetOptionRow: View {
 struct APIExportSettingsSheet: View {
     @ObservedObject var settings: APIExportSettings
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("https://api.example.com/healthmd", text: $settings.endpointURLString)
+                    TextField(
+                        "https://api.example.com/healthmd",
+                        text: configurationProtection.protecting($settings.endpointURLString)
+                    )
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityLabel("API endpoint URL")
 
-                    SecureField("Optional bearer token", text: $settings.bearerToken)
+                    SecureField(
+                        "Optional bearer token",
+                        text: configurationProtection.protecting($settings.bearerToken)
+                    )
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .accessibilityLabel("API bearer token")
@@ -2062,6 +2089,16 @@ struct APIExportSettingsSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }

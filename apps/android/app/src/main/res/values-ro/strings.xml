@@ -75,6 +75,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Gestionați Premium și asistența</string>
+    <string name="configuration_protection_title">Preveniți modificările accidentale</string>
+    <string name="configuration_protection_toggle">Blocați modificările configurației</string>
+    <string name="configuration_protection_description">Previne modificarea accidentală a setărilor de export, sincronizare, programare, dosar, conexiune și altele. Exporturile manuale rămân disponibile.</string>
+    <string name="configuration_protection_blocked_title">Setările sunt blocate</string>
+    <string name="configuration_protection_blocked_body">Dezactivați Preveniți modificările accidentale în Setări pentru a edita configurația.</string>
+    <string name="configuration_protection_blocked_action">Afișați motivul blocării modificărilor configurației</string>
+    <string name="configuration_protection_open_setting">Deschideți setarea</string>
     <string name="section_write_mode">Mod de scriere</string>
     <string name="section_filename_template">Șablon pentru numele fișierului</string>
     <string name="filename_template_hint">{date}</string>

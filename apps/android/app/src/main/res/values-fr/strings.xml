@@ -158,6 +158,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Gérez Premium et l’assistance</string>
+    <string name="configuration_protection_title">Empêcher les modifications accidentelles</string>
+    <string name="configuration_protection_toggle">Verrouiller les modifications de configuration</string>
+    <string name="configuration_protection_description">Empêche toute modification accidentelle des réglages d’exportation, de synchronisation, de planification, de dossier, de connexion et autres. Les exportations manuelles restent disponibles.</string>
+    <string name="configuration_protection_blocked_title">Les réglages sont verrouillés</string>
+    <string name="configuration_protection_blocked_body">Désactivez Empêcher les modifications accidentelles dans Réglages pour modifier votre configuration.</string>
+    <string name="configuration_protection_blocked_action">Afficher pourquoi les modifications de configuration sont bloquées</string>
+    <string name="configuration_protection_open_setting">Ouvrir le réglage</string>
     <string name="section_write_mode">Mode d\'écriture</string>
     <string name="section_filename_template">Modèle de nom de fichier</string>
     <string name="filename_template_hint">{date}</string>

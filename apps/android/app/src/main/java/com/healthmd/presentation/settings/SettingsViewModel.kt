@@ -36,7 +36,22 @@ class SettingsViewModel @Inject constructor(
     val isPurchased: StateFlow<Boolean> = settingsRepository.isPurchased
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    private val _preventAccidentalChanges = MutableStateFlow<Boolean?>(null)
+    val preventAccidentalChanges: StateFlow<Boolean?> = _preventAccidentalChanges.asStateFlow()
+
+    private val _blockedChangeToastId = MutableStateFlow<Long?>(null)
+    val blockedChangeToastId: StateFlow<Long?> = _blockedChangeToastId.asStateFlow()
+
+    private val _protectionSettingsRequestId = MutableStateFlow<Long?>(null)
+    val protectionSettingsRequestId: StateFlow<Long?> = _protectionSettingsRequestId.asStateFlow()
+
     private val providerRefreshSignal = MutableStateFlow(0)
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.preventAccidentalChanges.collect(_preventAccidentalChanges)
+        }
+    }
 
     val healthProviderStates: StateFlow<List<HealthProviderUiState>> = combine(
         providerRefreshSignal,
@@ -56,6 +71,42 @@ class SettingsViewModel @Inject constructor(
 
     fun refreshHealthProviders() {
         providerRefreshSignal.value += 1
+    }
+
+    fun setPreventAccidentalChanges(enabled: Boolean) {
+        // Enabling fails closed immediately. Disabling remains protected until DataStore confirms
+        // the write, so a slow or failed persistence operation cannot expose configuration edits.
+        if (enabled) _preventAccidentalChanges.value = true
+        viewModelScope.launch {
+            runCatching { settingsRepository.setPreventAccidentalChanges(enabled) }
+                .onSuccess {
+                    _preventAccidentalChanges.value = enabled
+                    if (!enabled) dismissBlockedChangeToast()
+                }
+                .onFailure {
+                    _preventAccidentalChanges.value = settingsRepository.preventAccidentalChanges.first()
+                }
+        }
+    }
+
+    fun showBlockedChangeToast() {
+        _blockedChangeToastId.value = System.nanoTime()
+    }
+
+    fun dismissBlockedChangeToast() {
+        _blockedChangeToastId.value = null
+    }
+
+    fun openProtectionSetting() {
+        _protectionSettingsRequestId.value = System.nanoTime()
+        dismissBlockedChangeToast()
+    }
+
+    /** Guards callbacks owned by this shared settings ViewModel. Feature screens also use the
+     * shared UI overlay so their user-initiated mutations cannot reach their ViewModels. */
+    fun performConfigurationChange(action: () -> Unit) {
+        // Treat the brief DataStore-loading state as protected rather than exposing saved settings.
+        if (preventAccidentalChanges.value != false) showBlockedChangeToast() else action()
     }
 
     fun getHealthProviderSetupIntent(providerId: HealthProviderId) =

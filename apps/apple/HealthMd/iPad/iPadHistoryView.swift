@@ -14,6 +14,7 @@ extension ExportHistoryEntry: Hashable {
 // MARK: - iPad History View (matching macOS MacHistoryView)
 
 struct iPadHistoryView: View {
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @ObservedObject private var historyManager = ExportHistoryManager.shared
     @State private var selectedEntry: ExportHistoryEntry?
 
@@ -93,8 +94,10 @@ struct iPadHistoryView: View {
             if !historyManager.history.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear History", role: .destructive) {
-                        selectedEntry = nil
-                        historyManager.clearHistory()
+                        configurationProtection.performConfigurationChange {
+                            selectedEntry = nil
+                            historyManager.clearHistory()
+                        }
                     }
                     .tint(Color.error)
                 }

@@ -6,6 +6,7 @@ struct ScheduleSettingsView: View {
     @EnvironmentObject var schedulingManager: SchedulingManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
@@ -34,10 +35,12 @@ struct ScheduleSettingsView: View {
                     // Request notification permissions when turning the schedule on
                     Task { @MainActor in
                         _ = await schedulingManager.requestNotificationPermissions()
-                        var updated = schedulingManager.schedule
-                        updated.isEnabled = true
-                        schedulingManager.schedule = updated
-                        UIAccessibility.post(notification: .announcement, argument: "Schedule enabled")
+                        configurationProtection.performConfigurationChange {
+                            var updated = schedulingManager.schedule
+                            updated.isEnabled = true
+                            schedulingManager.schedule = updated
+                            UIAccessibility.post(notification: .announcement, argument: "Schedule enabled")
+                        }
                     }
                 } else {
                     var updated = schedulingManager.schedule
@@ -210,6 +213,7 @@ struct ScheduleSettingsView: View {
                 scheduleAutomationCard
                 if schedulingManager.schedule.isEnabled {
                     scheduledDestinationSection
+                        .configurationChangesProtected()
                     scheduleConfigurationCard
                 }
                 exportHistoryCard
@@ -274,6 +278,7 @@ struct ScheduleSettingsView: View {
         sectionCard(title: "Automation") {
             VStack(spacing: 0) {
                 automaticExportRow
+                    .configurationChangesProtected()
 
                 if !schedulingManager.schedule.isEnabled {
                     rowDivider()
@@ -287,10 +292,13 @@ struct ScheduleSettingsView: View {
         sectionCard(title: "Schedule") {
             VStack(spacing: 0) {
                 frequencyRow
+                    .configurationChangesProtected()
                 rowDivider(leading: 40)
                 timeRow
+                    .configurationChangesProtected()
                 rowDivider(leading: 40)
                 lookbackRow
+                    .configurationChangesProtected()
                 rowDivider(leading: 40)
                 todayRefreshRow
                 rowDivider(leading: 40)
@@ -653,6 +661,7 @@ struct ScheduleSettingsView: View {
 
                 Toggle("Refresh today's export", isOn: todayRefreshEnabledBinding)
                     .labelsHidden()
+                    .configurationChangesProtected()
                     .tint(Color.accent)
                     .accessibilityIdentifier("schedule.todayRefresh.toggle")
                     .accessibilityLabel("Today Refresh")
@@ -671,6 +680,7 @@ struct ScheduleSettingsView: View {
                 .tint(Color.accent)
                 .padding(.leading, 40)
                 .accessibilityIdentifier("schedule.todayRefresh.interval")
+                .configurationChangesProtected()
 
                 if schedulingManager.schedule.target == .apiEndpoint {
                     VStack(alignment: .leading, spacing: 3) {
@@ -706,6 +716,7 @@ struct ScheduleSettingsView: View {
                         .tint(Color.accent)
                         .accessibilityLabel("File handling mode")
                         .accessibilityValue(advancedSettings.writeMode.rawValue)
+                        .configurationChangesProtected()
                     }
                     .padding(.leading, 40)
                 }
@@ -851,7 +862,9 @@ struct ScheduleSettingsView: View {
 
                 if !exportHistory.history.isEmpty {
                     Button("Clear History") {
-                        exportHistory.clearHistory()
+                        configurationProtection.performConfigurationChange {
+                            exportHistory.clearHistory()
+                        }
                     }
                     .font(Typography.label())
                     .foregroundStyle(Color.textSecondary)
@@ -1896,6 +1909,7 @@ private struct ScheduleSettingsPreviewContainer: View {
             .environmentObject(SchedulingManager.shared)
             .environmentObject(HealthKitManager.shared)
             .environmentObject(SyncService())
+            .environmentObject(ConfigurationProtectionManager())
         }
     }
 }

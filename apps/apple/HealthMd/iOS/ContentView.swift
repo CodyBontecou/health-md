@@ -13,6 +13,7 @@ struct ContentView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject var corpusRecoveryManager: IPhoneCorpusExportRecoveryManager
+    @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
@@ -153,10 +154,8 @@ struct ContentView: View {
                     )
                     .tabItem {
                         Label("Export", systemImage: "arrow.up.doc.fill")
-                            .accessibilityIdentifier(AccessibilityID.Tab.export)
                     }
                     .tag(NavTab.export)
-                    .accessibilityIdentifier(AccessibilityID.Tab.export)
 
                     ScheduleTabView(
                         vaultManager: vaultManager,
@@ -168,20 +167,16 @@ struct ContentView: View {
                     .environmentObject(healthKitManager)
                         .tabItem {
                             Label("Schedule", systemImage: "clock.fill")
-                                .accessibilityIdentifier(AccessibilityID.Tab.schedule)
                         }
                         .tag(NavTab.schedule)
-                        .accessibilityIdentifier(AccessibilityID.Tab.schedule)
 
                     NavigationStack {
                         SyncSettingsView()
                     }
                     .tabItem {
                         Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                            .accessibilityIdentifier(AccessibilityID.Tab.sync)
                     }
                     .tag(NavTab.sync)
-                    .accessibilityIdentifier(AccessibilityID.Tab.sync)
 
                     SettingsTabView(
                         vaultManager: vaultManager,
@@ -191,10 +186,8 @@ struct ContentView: View {
                     )
                     .tabItem {
                         Label("Settings", systemImage: "gearshape.fill")
-                            .accessibilityIdentifier(AccessibilityID.Tab.settings)
                     }
                     .tag(NavTab.settings)
-                    .accessibilityIdentifier(AccessibilityID.Tab.settings)
                 }
                 .tint(Color.accent)
                 .onAppear {
@@ -202,6 +195,9 @@ struct ContentView: View {
                 }
                 .onChange(of: directCLIService.pendingPairingLink) { _, pairingLink in
                     if pairingLink != nil { selectedTab = .sync }
+                }
+                .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                    if requestID != nil { selectedTab = .settings }
                 }
             }
 
@@ -259,7 +255,9 @@ struct ContentView: View {
         .animation(reduceMotion ? nil : AnimationTimings.standard, value: isExporting)
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
-                vaultManager.setVaultFolder(url)
+                configurationProtection.performConfigurationChange {
+                    vaultManager.setVaultFolder(url)
+                }
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -867,7 +865,9 @@ struct ContentView: View {
         // The primary export action stays available so an incomplete setup can
         // lead the user directly to its missing step instead of appearing broken.
         guard healthKitManager.isAuthorized else {
-            requestHealthAuthorizationForExport()
+            configurationProtection.performConfigurationChange {
+                requestHealthAuthorizationForExport()
+            }
             return
         }
 
@@ -884,7 +884,9 @@ struct ContentView: View {
         if exportTargetSelection == .localIPhoneFolder {
             vaultManager.refreshVaultAccess()
             if vaultManager.requiresVaultReselection {
-                showDestinationChangedAlert = true
+                configurationProtection.performConfigurationChange {
+                    showDestinationChangedAlert = true
+                }
                 return
             }
         }
@@ -902,7 +904,9 @@ struct ContentView: View {
                 exportStatusMessage = vaultManager.hasSavedVaultFolder
                     ? "Reconnect or re-select the export folder."
                     : "Choose a folder before exporting."
-                showFolderPicker = true
+                configurationProtection.performConfigurationChange {
+                    showFolderPicker = true
+                }
                 return
             }
         case .connectedMac:
@@ -2329,6 +2333,7 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @State private var showMailCompose = false
@@ -2389,10 +2394,12 @@ struct SettingsTabView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                settingsHeader
-                accountAndStorageSection
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    settingsHeader
+                    configurationProtectionSection
+                    accountAndStorageSection
                 privacyAndAnalyticsSection
                 if ConnectedAppsFeature.isEnabled {
                     connectedAppsSection
@@ -2400,12 +2407,33 @@ struct SettingsTabView: View {
                 supportSection
                 debugToolsSection
             }
-            .padding(.horizontal, Spacing.s4)
-            .padding(.top, Spacing.s4)
-            .padding(.bottom, 120)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s4)
+                .padding(.bottom, 120)
+            }
+            .background(Color.bgPrimary.ignoresSafeArea())
+            .scrollIndicators(.hidden)
+            .onAppear {
+                guard let requestID = configurationProtection.settingsNavigationRequestID else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(AnimationTimings.smooth) {
+                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                    }
+                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+            }
+            .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                guard let requestID else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(AnimationTimings.smooth) {
+                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                    }
+                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+            }
         }
-        .background(Color.bgPrimary.ignoresSafeArea())
-        .scrollIndicators(.hidden)
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
         }
@@ -2440,6 +2468,38 @@ struct SettingsTabView: View {
         }
     }
 
+    private var configurationProtectionSection: some View {
+        SettingsSectionCard(
+            title: "Prevent Accidental Changes",
+            subtitle: "Keep your saved configuration from being changed by mistake. Manual exports and syncs remain available."
+        ) {
+            Toggle(isOn: Binding(
+                get: { configurationProtection.isEnabled },
+                set: { configurationProtection.setEnabled($0) }
+            )) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Lock Configuration Changes")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Color.textPrimary)
+                    Text(configurationProtection.isEnabled
+                         ? "Configuration changes are blocked on this device."
+                         : "Configuration can be edited normally.")
+                        .font(.footnote)
+                        .foregroundStyle(Color.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Color.accent)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 14)
+            .accessibilityLabel("Prevent Accidental Changes")
+            .accessibilityValue(configurationProtection.isEnabled ? "On" : "Off")
+            .accessibilityHint("Double tap to \(configurationProtection.isEnabled ? "allow" : "prevent") configuration changes")
+            .accessibilityIdentifier(AccessibilityID.ConfigurationProtection.toggle)
+        }
+        .id(AccessibilityID.ConfigurationProtection.section)
+    }
+
     private var accountAndStorageSection: some View {
         SettingsSectionCard(
             title: "Account & Storage",
@@ -2468,6 +2528,7 @@ struct SettingsTabView: View {
                 accessibilityHint: "Double tap to choose an Obsidian vault folder",
                 action: { showFolderPicker = true }
             )
+            .configurationChangesProtected()
         }
     }
 
@@ -2817,4 +2878,5 @@ private struct SettingsRow: View {
         .environmentObject(SyncService())
         .environmentObject(SchedulingManager.shared)
         .environmentObject(ExternalIntegrationManager())
+        .environmentObject(ConfigurationProtectionManager())
 }

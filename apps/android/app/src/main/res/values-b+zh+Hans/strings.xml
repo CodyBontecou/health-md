@@ -203,6 +203,13 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <string name="settings_subtitle">管理高级版和支持</string>
+    <string name="configuration_protection_title">防止意外更改</string>
+    <string name="configuration_protection_toggle">锁定配置更改</string>
+    <string name="configuration_protection_description">防止意外更改导出、同步、计划、文件夹、连接及其他设置。手动导出仍可使用。</string>
+    <string name="configuration_protection_blocked_title">设置已锁定</string>
+    <string name="configuration_protection_blocked_body">若要编辑配置，请在“设置”中关闭“防止意外更改”。</string>
+    <string name="configuration_protection_blocked_action">查看配置更改被阻止的原因</string>
+    <string name="configuration_protection_open_setting">打开设置</string>
     <string name="section_health_sources">健康来源</string>
     <string name="health_sources_description">Health Connect 保留默认导出路径。这些受支持的生态系统现在可以通过 Health Connect 为 Health.md 提供支持，或者在配置凭证或合作伙伴访问权限后通过直接 SDK/OAuth 适配器提供支持。</string>
     <string name="health_provider_status_installed">已安装</string>

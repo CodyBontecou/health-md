@@ -209,6 +209,13 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED (%1$d)</string>
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <string name="settings_subtitle">Premium және қолдау қызметін басқару</string>
+    <string name="configuration_protection_title">Кездейсоқ өзгерістерге жол бермеу</string>
+    <string name="configuration_protection_toggle">Конфигурация өзгерістерін құлыптау</string>
+    <string name="configuration_protection_description">Экспорт, синхрондау, кесте, қалта, байланыс және басқа параметрлердің кездейсоқ өзгертілуіне жол бермейді. Қолмен экспорттау қолжетімді болып қалады.</string>
+    <string name="configuration_protection_blocked_title">Параметрлер құлыпталған</string>
+    <string name="configuration_protection_blocked_body">Конфигурацияны өңдеу үшін Параметрлерде «Кездейсоқ өзгерістерге жол бермеу» опциясын өшіріңіз.</string>
+    <string name="configuration_protection_blocked_action">Конфигурация өзгерістерінің неге бұғатталғанын көрсету</string>
+    <string name="configuration_protection_open_setting">Параметрді ашу</string>
     <string name="section_health_sources">Денсаулық деректерінің көздері</string>
     <string name="health_sources_description">Health Connect әдепкі экспорт жолы болып қалады. Қолдау көрсетілетін бұл экожүйелер қазір Health Connect арқылы Health.md қолданбасына дерек бере алады; тіркелгі деректері немесе серіктестік қатынас реттелгеннен кейін тікелей SDK/OAuth адаптерлерін де пайдалануға болады.</string>
     <string name="health_provider_status_installed">Орнатылған</string>

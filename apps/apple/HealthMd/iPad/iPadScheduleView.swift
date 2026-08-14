@@ -132,9 +132,11 @@ struct iPadScheduleView: View {
                 }
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 if schedulingManager.schedule.isEnabled {
                     scheduledDestinationSection
+                        .configurationChangesProtected()
 
                     VStack(alignment: .leading, spacing: Spacing.s3) {
                         iPadBrandLabel("Configuration")
@@ -236,6 +238,7 @@ struct iPadScheduleView: View {
                     }
                     .padding(Spacing.s4)
                     .iPadLiquidGlass()
+                    .configurationChangesProtected()
 
                     VStack(alignment: .leading, spacing: Spacing.s3) {
                         HStack(spacing: Spacing.s2) {
@@ -264,6 +267,7 @@ struct iPadScheduleView: View {
                             }
                         ))
                         .tint(Color.accent)
+                        .configurationChangesProtected()
 
                         if schedulingManager.schedule.todayRefreshEnabled {
                             Picker("Refresh interval", selection: Binding(
@@ -279,6 +283,7 @@ struct iPadScheduleView: View {
                                 }
                             }
                             .pickerStyle(.segmented)
+                            .configurationChangesProtected()
 
                             VStack(alignment: .leading, spacing: Spacing.s2) {
                                 VStack(alignment: .leading, spacing: Spacing.s1) {
@@ -297,6 +302,7 @@ struct iPadScheduleView: View {
                                     }
                                 }
                                 .pickerStyle(.segmented)
+                                .configurationChangesProtected()
                             }
                         }
                     }

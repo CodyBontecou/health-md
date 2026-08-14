@@ -65,6 +65,11 @@ enum TestMode {
         env("UITEST_SCHEDULE_ENABLED") == "true"
     }
 
+    /// Whether Prevent Accidental Changes starts enabled for this UI-test launch.
+    static var configurationProtectionEnabled: Bool {
+        env("UITEST_CONFIGURATION_PROTECTION_ENABLED") == "true"
+    }
+
     /// Simulated export result ("success", "intermediate-success", "partial", "fail", or nil for default).
     static var exportResult: String? {
         env("UITEST_EXPORT_RESULT")

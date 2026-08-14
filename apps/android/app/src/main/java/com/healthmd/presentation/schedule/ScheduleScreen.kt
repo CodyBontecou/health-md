@@ -84,9 +84,11 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.presentation.common.APIExportSettingsDialog
+import com.healthmd.presentation.common.ConfigurationProtectedRegion
 import com.healthmd.presentation.common.ExportTargetSelector
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.presentation.common.HealthConnectErrorNotice
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.history.HistoryViewModel
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Radii
@@ -110,6 +112,10 @@ fun ScheduleScreen(
     val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val protection = LocalConfigurationProtection.current
+    val attemptConfigurationChange: (() -> Unit) -> Unit = { action ->
+        if (protection.enabled) protection.onBlockedChange() else action()
+    }
     val coroutineScope = rememberCoroutineScope()
     val healthConnectManager = remember { HealthConnectManager(context) }
     val configurationErrorText = uiState.configurationError?.localizedText()
@@ -319,7 +325,14 @@ fun ScheduleScreen(
             title = { Text(stringResource(R.string.history_clear_title)) },
             text = { Text(stringResource(R.string.history_clear_body)) },
             confirmButton = {
-                TextButton(onClick = { historyViewModel.clearHistory() }) {
+                TextButton(onClick = {
+                    if (protection.enabled) {
+                        historyViewModel.dismissClearHistory()
+                        protection.onBlockedChange()
+                    } else {
+                        historyViewModel.clearHistory()
+                    }
+                }) {
                     Text(stringResource(R.string.action_clear_history))
                 }
             },
@@ -352,25 +365,29 @@ fun ScheduleScreen(
 
         ScheduleSectionLabel(stringResource(R.string.automatic_export_title))
 
+        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         ScheduleToggleCard(
             checked = uiState.isEnabled,
             onCheckedChange = { enabled ->
-                if (
-                    enabled &&
-                    uiState.requiresHealthConnectBackgroundAccess &&
-                    backgroundReadStateLoaded &&
-                    (backgroundReadUnsupported || backgroundReadCheckFailed)
-                ) {
-                    healthConnectActionError = if (backgroundReadCheckFailed) {
-                        HealthConnectActionError.ACCESS_CHECK_FAILED
+                attemptConfigurationChange {
+                    if (
+                        enabled &&
+                        uiState.requiresHealthConnectBackgroundAccess &&
+                        backgroundReadStateLoaded &&
+                        (backgroundReadUnsupported || backgroundReadCheckFailed)
+                    ) {
+                        healthConnectActionError = if (backgroundReadCheckFailed) {
+                            HealthConnectActionError.ACCESS_CHECK_FAILED
+                        } else {
+                            HealthConnectActionError.BACKGROUND_ACCESS_UNAVAILABLE
+                        }
                     } else {
-                        HealthConnectActionError.BACKGROUND_ACCESS_UNAVAILABLE
+                        viewModel.toggleSchedule(enabled)
                     }
-                } else {
-                    viewModel.toggleSchedule(enabled)
                 }
             },
         )
+        }
 
         uiState.nextExportAtMillis?.let { nextExportAtMillis ->
             val nextExport = Date(nextExportAtMillis)
@@ -405,6 +422,7 @@ fun ScheduleScreen(
             )
         }
 
+        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         ExportTargetSelector(
             selectedTarget = uiState.selectedTarget,
             folderSubtitle = if (uiState.hasExportFolder) {
@@ -421,15 +439,19 @@ fun ScheduleScreen(
                 stringResource(R.string.schedule_target_api_unconfigured)
             },
             onTargetSelected = { target ->
-                viewModel.setScheduledExportTarget(target)
-                if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
-                    showAPISettings = true
+                attemptConfigurationChange {
+                    viewModel.setScheduledExportTarget(target)
+                    if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
+                        showAPISettings = true
+                    }
                 }
             },
         )
 
         if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
-            TextButton(onClick = { showAPISettings = true }) {
+            TextButton(onClick = {
+                attemptConfigurationChange { showAPISettings = true }
+            }) {
                 Text(
                     stringResource(
                         if (uiState.apiEndpointConfigured) {
@@ -440,6 +462,7 @@ fun ScheduleScreen(
                     ),
                 )
             }
+        }
         }
 
         configurationErrorText?.let { message ->
@@ -452,8 +475,11 @@ fun ScheduleScreen(
                     stringResource(R.string.action_dismiss_error)
                 },
                 onAction = {
-                    if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) showAPISettings = true
-                    else viewModel.clearConfigurationError()
+                    if (uiState.selectedTarget == ExportTarget.API_ENDPOINT) {
+                        attemptConfigurationChange { showAPISettings = true }
+                    } else {
+                        viewModel.clearConfigurationError()
+                    }
                 },
             )
         }
@@ -472,19 +498,23 @@ fun ScheduleScreen(
 
             ScheduleSectionLabel(stringResource(R.string.section_schedule))
 
+            ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
             ScheduleSettingsCard(
                 uiState = uiState,
-                onFrequencyValueChange = { value -> viewModel.setCadenceValue(value) },
-                onFrequencyUnitSelected = { unit -> viewModel.setCadenceUnit(unit) },
-                onHourDelta = { delta -> viewModel.setHour((uiState.hour + delta + 24) % 24) },
-                onMinuteDelta = { delta -> viewModel.setMinute((uiState.minute + delta + 60) % 60) },
+                onFrequencyValueChange = { value -> attemptConfigurationChange { viewModel.setCadenceValue(value) } },
+                onFrequencyUnitSelected = { unit -> attemptConfigurationChange { viewModel.setCadenceUnit(unit) } },
+                onHourDelta = { delta -> attemptConfigurationChange { viewModel.setHour((uiState.hour + delta + 24) % 24) } },
+                onMinuteDelta = { delta -> attemptConfigurationChange { viewModel.setMinute((uiState.minute + delta + 60) % 60) } },
                 onTogglePeriod = {
-                    val nextHour = if (uiState.hour < 12) uiState.hour + 12 else uiState.hour - 12
-                    viewModel.setHour(nextHour)
+                    attemptConfigurationChange {
+                        val nextHour = if (uiState.hour < 12) uiState.hour + 12 else uiState.hour - 12
+                        viewModel.setHour(nextHour)
+                    }
                 },
-                onDateWindowSelected = { dateWindow -> viewModel.setDateWindow(dateWindow) },
-                onLookbackDelta = { delta -> viewModel.setLookbackDays(uiState.lookbackDays + delta) },
+                onDateWindowSelected = { dateWindow -> attemptConfigurationChange { viewModel.setDateWindow(dateWindow) } },
+                onLookbackDelta = { delta -> attemptConfigurationChange { viewModel.setLookbackDays(uiState.lookbackDays + delta) } },
             )
+            }
 
             BodyText(
                 text = when (uiState.dateWindow) {
@@ -499,49 +529,55 @@ fun ScheduleScreen(
             )
 
             if (!uiState.exactTimingAvailable) {
-                WarningCard(
-                    title = stringResource(R.string.exact_timing_needed_title),
-                    body = stringResource(R.string.exact_timing_needed_body),
-                    action = stringResource(R.string.exact_timing_enable_button),
-                    onAction = { openExactAlarmSettings(context) },
-                )
+                ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
+                    WarningCard(
+                        title = stringResource(R.string.exact_timing_needed_title),
+                        body = stringResource(R.string.exact_timing_needed_body),
+                        action = stringResource(R.string.exact_timing_enable_button),
+                        onAction = { openExactAlarmSettings(context) },
+                    )
+                }
             }
 
             if (backgroundReadFeatureAvailable && !backgroundReadReady) {
-                WarningCard(
-                    title = stringResource(R.string.background_health_permission_needed_title),
-                    body = stringResource(R.string.background_health_permission_needed_body),
-                    action = stringResource(R.string.background_health_permission_enable_button),
-                    onAction = {
-                        launchBackgroundReadPermission()
-                    },
-                )
+                ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
+                    WarningCard(
+                        title = stringResource(R.string.background_health_permission_needed_title),
+                        body = stringResource(R.string.background_health_permission_needed_body),
+                        action = stringResource(R.string.background_health_permission_enable_button),
+                        onAction = {
+                            launchBackgroundReadPermission()
+                        },
+                    )
+                }
             }
 
             if (!notificationsReady) {
-                WarningCard(
-                    title = stringResource(R.string.notifications_needed_title),
-                    body = stringResource(R.string.notifications_needed_body),
-                    action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
-                        stringResource(R.string.notifications_enable_button)
-                    } else {
-                        stringResource(R.string.notifications_open_settings_button)
-                    },
-                    secondaryAction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
-                        stringResource(R.string.notifications_open_settings_button)
-                    } else {
-                        null
-                    },
-                    onAction = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
-                            hasPromptedForNotifications = true
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
+                    WarningCard(
+                        title = stringResource(R.string.notifications_needed_title),
+                        body = stringResource(R.string.notifications_needed_body),
+                        action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
+                            stringResource(R.string.notifications_enable_button)
                         } else {
-                            openNotificationSettings(context)
-                        }
-                    },
-                    onSecondaryAction = { openNotificationSettings(context) },
-                )
+                            stringResource(R.string.notifications_open_settings_button)
+                        },
+                        secondaryAction = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
+                            stringResource(R.string.notifications_open_settings_button)
+                        } else {
+                            null
+                        },
+                        onAction = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !notificationsGranted) {
+                                hasPromptedForNotifications = true
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                openNotificationSettings(context)
+                            }
+                        },
+                        onSecondaryAction = { openNotificationSettings(context) },
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(Spacing.sm))
@@ -557,15 +593,19 @@ fun ScheduleScreen(
                     color = AppColors.textSecondary,
                     fontWeight = FontWeight.Medium,
                 )
-                Text(
-                    text = stringResource(R.string.action_clear_history),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = AppColors.textMuted,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(Radii.card))
-                        .clickable { historyViewModel.requestClearHistory() }
-                        .padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
-                )
+                ConfigurationProtectedRegion {
+                    Text(
+                        text = stringResource(R.string.action_clear_history),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = AppColors.textMuted,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(Radii.card))
+                            .clickable {
+                                attemptConfigurationChange { historyViewModel.requestClearHistory() }
+                            }
+                            .padding(horizontal = Spacing.xs, vertical = Spacing.xxs),
+                    )
+                }
             }
         }
 
@@ -582,9 +622,17 @@ fun ScheduleScreen(
                 showAPISettings = false
                 viewModel.clearConfigurationError()
             },
-            onSave = viewModel::saveAPIExportConfiguration,
-            onClearAuthorization = viewModel::clearAPIAuthorization,
-            onClearRequestHeaders = viewModel::clearAPIRequestHeaders,
+            onSave = { endpoint, authorization, headers ->
+                attemptConfigurationChange {
+                    viewModel.saveAPIExportConfiguration(endpoint, authorization, headers)
+                }
+            },
+            onClearAuthorization = {
+                attemptConfigurationChange(viewModel::clearAPIAuthorization)
+            },
+            onClearRequestHeaders = {
+                attemptConfigurationChange(viewModel::clearAPIRequestHeaders)
+            },
         )
     }
 }

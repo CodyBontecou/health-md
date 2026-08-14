@@ -158,6 +158,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Gestiona Premium y soporte</string>
+    <string name="configuration_protection_title">Evitar cambios accidentales</string>
+    <string name="configuration_protection_toggle">Bloquear cambios de configuración</string>
+    <string name="configuration_protection_description">Evita cambios accidentales en los ajustes de exportación, sincronización, programación, carpetas, conexiones y otros. Las exportaciones manuales siguen disponibles.</string>
+    <string name="configuration_protection_blocked_title">Los ajustes están bloqueados</string>
+    <string name="configuration_protection_blocked_body">Desactiva Evitar cambios accidentales en Ajustes para editar tu configuración.</string>
+    <string name="configuration_protection_blocked_action">Mostrar por qué se bloquean los cambios de configuración</string>
+    <string name="configuration_protection_open_setting">Abrir ajuste</string>
     <string name="section_write_mode">Modo de Escritura</string>
     <string name="section_filename_template">Plantilla de Nombre de Archivo</string>
     <string name="filename_template_hint">{date}</string>

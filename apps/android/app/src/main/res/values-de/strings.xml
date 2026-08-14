@@ -154,6 +154,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Premium und Support verwalten</string>
+    <string name="configuration_protection_title">Versehentliche Änderungen verhindern</string>
+    <string name="configuration_protection_toggle">Konfigurationsänderungen sperren</string>
+    <string name="configuration_protection_description">Verhindert versehentliche Änderungen an Export-, Synchronisierungs-, Zeitplan-, Ordner-, Verbindungs- und anderen Einstellungen. Manuelle Exporte bleiben verfügbar.</string>
+    <string name="configuration_protection_blocked_title">Einstellungen sind gesperrt</string>
+    <string name="configuration_protection_blocked_body">Deaktiviere „Versehentliche Änderungen verhindern“ in den Einstellungen, um deine Konfiguration zu bearbeiten.</string>
+    <string name="configuration_protection_blocked_action">Anzeigen, warum Konfigurationsänderungen gesperrt sind</string>
+    <string name="configuration_protection_open_setting">Einstellung öffnen</string>
     <string name="section_write_mode">Schreibmodus</string>
     <string name="section_filename_template">Dateinamenvorlage</string>
     <string name="filename_template_hint">{date}</string>

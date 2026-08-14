@@ -78,6 +78,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">إدارة الميزات المميزة والدعم</string>
+    <string name="configuration_protection_title">منع التغييرات غير المقصودة</string>
+    <string name="configuration_protection_toggle">قفل تغييرات الإعدادات</string>
+    <string name="configuration_protection_description">يمنع تغيير إعدادات التصدير والمزامنة والجدولة والمجلد والاتصال وغيرها عن طريق الخطأ. تظل عمليات التصدير اليدوية متاحة.</string>
+    <string name="configuration_protection_blocked_title">الإعدادات مقفلة</string>
+    <string name="configuration_protection_blocked_body">أوقف «منع التغييرات غير المقصودة» في الإعدادات لتعديل إعداداتك.</string>
+    <string name="configuration_protection_blocked_action">عرض سبب حظر تغييرات الإعدادات</string>
+    <string name="configuration_protection_open_setting">فتح الإعداد</string>
     <string name="section_write_mode">وضع الكتابة</string>
     <string name="section_filename_template">قالب اسم الملف</string>
     <string name="filename_template_hint">{date}</string>

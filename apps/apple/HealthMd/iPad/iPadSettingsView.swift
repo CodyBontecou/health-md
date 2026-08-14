@@ -9,6 +9,7 @@ struct iPadSettingsView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var healthKitManager: HealthKitManager
     @Binding var showFolderPicker: Bool
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
     @State private var showMailCompose = false
@@ -56,14 +57,17 @@ struct iPadSettingsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.s4) {
-                HealthMdPageHeader(
-                    title: "Settings",
-                    subtitle: "Configure formats, naming, metrics, and support"
-                )
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.s4) {
+                    HealthMdPageHeader(
+                        title: "Settings",
+                        subtitle: "Configure formats, naming, metrics, and support"
+                    )
 
-                // MARK: Export Folder
+                    configurationProtectionSection
+
+                    // MARK: Export Folder
                 VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Export Folder")
 
@@ -108,6 +112,7 @@ struct iPadSettingsView: View {
                 }
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 // MARK: Purchases
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -255,13 +260,34 @@ struct iPadSettingsView: View {
 
                 debugToolsSection
             }
-            .padding(.horizontal, Spacing.s6)
-            .padding(.top, Spacing.s6)
-            .padding(.bottom, Spacing.s8)
-            .iPadContentColumn()
+                .padding(.horizontal, Spacing.s6)
+                .padding(.top, Spacing.s6)
+                .padding(.bottom, Spacing.s8)
+                .iPadContentColumn()
+            }
+            .scrollIndicators(.hidden)
+            .iPadPageBackground()
+            .onAppear {
+                guard let requestID = configurationProtection.settingsNavigationRequestID else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(AnimationTimings.smooth) {
+                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                    }
+                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+            }
+            .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                guard let requestID else { return }
+                Task { @MainActor in
+                    await Task.yield()
+                    withAnimation(AnimationTimings.smooth) {
+                        proxy.scrollTo(AccessibilityID.ConfigurationProtection.section, anchor: .center)
+                    }
+                    configurationProtection.consumeSettingsNavigationRequest(requestID)
+                }
+            }
         }
-        .scrollIndicators(.hidden)
-        .iPadPageBackground()
         .navigationTitle("Settings")
         .iPadHiddenSystemNavigationTitle()
         .sheet(isPresented: $showMailCompose) {
@@ -277,6 +303,34 @@ struct iPadSettingsView: View {
         } message: {
             Text(debugResult)
         }
+    }
+
+    private var configurationProtectionSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.s3) {
+            iPadBrandLabel("Prevent Accidental Changes")
+
+            Toggle(isOn: Binding(
+                get: { configurationProtection.isEnabled },
+                set: { configurationProtection.setEnabled($0) }
+            )) {
+                VStack(alignment: .leading, spacing: Spacing.s1) {
+                    Text("Lock Configuration Changes")
+                        .font(Typography.bodyEmphasis())
+                        .foregroundStyle(Color.textPrimary)
+                    Text("Keeps export, sync, schedule, folder, and connection settings from being changed by mistake. Manual exports and syncs remain available.")
+                        .font(Typography.caption())
+                        .foregroundStyle(Color.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(Color.accent)
+            .accessibilityLabel("Prevent Accidental Changes")
+            .accessibilityValue(configurationProtection.isEnabled ? "On" : "Off")
+            .accessibilityIdentifier(AccessibilityID.ConfigurationProtection.toggle)
+        }
+        .padding(Spacing.s4)
+        .iPadLiquidGlass()
+        .id(AccessibilityID.ConfigurationProtection.section)
     }
 
     @ViewBuilder
