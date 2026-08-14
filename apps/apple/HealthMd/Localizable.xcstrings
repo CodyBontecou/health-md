@@ -118431,6 +118431,786 @@
           }
         }
       }
+    },
+    "Data Days Exported": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data Days Exported"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportierte Datentage"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Días de datos exportados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jours de données exportés"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giorni di dati esportati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エクスポートしたデータ日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내보낸 데이터 일수"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geëxporteerde datadagen"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dias de dados exportados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导出的数据天数"
+          }
+        }
+      }
+    },
+    "Generated Files": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generated Files"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erzeugte Dateien"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivos generados"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers générés"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File generati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成ファイル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "생성된 파일"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gegenereerde bestanden"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivos gerados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成的文件"
+          }
+        }
+      }
+    },
+    "%lld of %lld data day(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld data day(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld von %2$lld Datentag(en)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld de %2$lld día(s) de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld jour(s) de données sur %2$lld"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld di %2$lld giorno/i di dati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "データ日：%1$lld/%2$lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "데이터 일수 %1$lld/%2$lld"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld van %2$lld datadag(en)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld de %2$lld dia(s) de dados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld 个数据日中的 %1$lld 个"
+          }
+        }
+      }
+    },
+    "%lld generated file(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld generated file(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld erzeugte Datei(en)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld archivo(s) generado(s)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fichier(s) généré(s)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld file generati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成ファイル：%lld個"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "생성된 파일 %lld개"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld gegenereerd(e) bestand(en)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld arquivo(s) gerado(s)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个生成的文件"
+          }
+        }
+      }
+    },
+    "%lld generated file(s) · %lld of %lld data day(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld generated file(s) · %2$lld of %3$lld data day(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld erzeugte Datei(en) · %2$lld von %3$lld Datentag(en)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld archivo(s) generado(s) · %2$lld de %3$lld día(s) de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld fichier(s) généré(s) · %2$lld jour(s) de données sur %3$lld"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld file generati · %2$lld di %3$lld giorno/i di dati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成ファイル：%1$lld個 · データ日：%2$lld/%3$lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "생성된 파일 %1$lld개 · 데이터 일수 %2$lld/%3$lld"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld gegenereerd(e) bestand(en) · %2$lld van %3$lld datadag(en)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld arquivo(s) gerado(s) · %2$lld de %3$lld dia(s) de dados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 个生成的文件 · %3$lld 个数据日中的 %2$lld 个"
+          }
+        }
+      }
+    },
+    "%lld generated file(s), %lld of %lld data day(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld generated file(s), %2$lld of %3$lld data day(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld erzeugte Datei(en), %2$lld von %3$lld Datentag(en)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld archivo(s) generado(s), %2$lld de %3$lld día(s) de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld fichier(s) généré(s), %2$lld jour(s) de données sur %3$lld"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld file generati, %2$lld di %3$lld giorno/i di dati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成ファイル：%1$lld個、データ日：%2$lld/%3$lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "생성된 파일 %1$lld개, 데이터 일수 %2$lld/%3$lld"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld gegenereerd(e) bestand(en), %2$lld van %3$lld datadag(en)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld arquivo(s) gerado(s), %2$lld de %3$lld dia(s) de dados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 个生成的文件，%3$lld 个数据日中的 %2$lld 个"
+          }
+        }
+      }
+    },
+    "Exported %lld of %lld data day(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported %1$lld of %2$lld data day(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld von %2$lld Datentag(en) exportiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se exportaron %1$lld de %2$lld día(s) de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld jour(s) de données sur %2$lld exporté(s)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esportati %1$lld di %2$lld giorno/i di dati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "データ日をエクスポート：%1$lld/%2$lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "데이터 일수 %1$lld/%2$lld 내보냄"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld van %2$lld datadag(en) geëxporteerd"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld de %2$lld dia(s) de dados exportado(s)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导出 %2$lld 个数据日中的 %1$lld 个"
+          }
+        }
+      }
+    },
+    "Exported %lld generated file(s) from %lld data day(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exported %1$lld generated file(s) from %2$lld data day(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld erzeugte Datei(en) aus %2$lld Datentag(en) exportiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se exportaron %1$lld archivo(s) generado(s) de %2$lld día(s) de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld fichier(s) généré(s) exporté(s) à partir de %2$lld jour(s) de données"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esportati %1$lld file generati da %2$lld giorno/i di dati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld データ日から %1$lld個のファイルを生成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "데이터 %2$lld일에서 파일 %1$lld개 생성"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld gegenereerd(e) bestand(en) uit %2$lld datadag(en) geëxporteerd"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld arquivo(s) gerado(s) exportado(s) de %2$lld dia(s) de dados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 %2$lld 个数据日生成并导出了 %1$lld 个文件"
+          }
+        }
+      }
+    },
+    "Partial: %lld generated file(s) from %lld of %lld data day(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partial: %1$lld generated file(s) from %2$lld of %3$lld data day(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teilweise: %1$lld erzeugte Datei(en) aus %2$lld von %3$lld Datentag(en)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: %1$lld archivo(s) generado(s) de %2$lld de %3$lld día(s) de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partiel : %1$lld fichier(s) généré(s) à partir de %2$lld jour(s) de données sur %3$lld"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parziale: %1$lld file generati da %2$lld di %3$lld giorno/i di dati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完了：%3$lld データ日のうち %2$lld 日から %1$lld個のファイルを生成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "부분 완료: 데이터 %3$lld일 중 %2$lld일에서 파일 %1$lld개 생성"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gedeeltelijk: %1$lld gegenereerd(e) bestand(en) uit %2$lld van %3$lld datadag(en)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: %1$lld arquivo(s) gerado(s) de %2$lld de %3$lld dia(s) de dados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完成：从 %3$lld 个数据日中的 %2$lld 个生成了 %1$lld 个文件"
+          }
+        }
+      }
+    },
+    "Partial: %lld generated file(s) from %lld of %lld data day(s), with %lld metric warning(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partial: %1$lld generated file(s) from %2$lld of %3$lld data day(s), with %4$lld metric warning(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teilweise: %1$lld erzeugte Datei(en) aus %2$lld von %3$lld Datentag(en), mit %4$lld Metrikwarnung(en)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: %1$lld archivo(s) generado(s) de %2$lld de %3$lld día(s) de datos, con %4$lld advertencia(s) de métricas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partiel : %1$lld fichier(s) généré(s) à partir de %2$lld jour(s) de données sur %3$lld, avec %4$lld avertissement(s) de mesure"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parziale: %1$lld file generati da %2$lld di %3$lld giorno/i di dati, con %4$lld avviso/i sulle metriche"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完了：%3$lld データ日のうち %2$lld 日から %1$lld個のファイルを生成（指標の警告：%4$lld件）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "부분 완료: 데이터 %3$lld일 중 %2$lld일에서 파일 %1$lld개 생성, 지표 경고 %4$lld개"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gedeeltelijk: %1$lld gegenereerd(e) bestand(en) uit %2$lld van %3$lld datadag(en), met %4$lld metriekwaarschuwing(en)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: %1$lld arquivo(s) gerado(s) de %2$lld de %3$lld dia(s) de dados, com %4$lld aviso(s) de métrica"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完成：从 %3$lld 个数据日中的 %2$lld 个生成了 %1$lld 个文件，并有 %4$lld 个指标警告"
+          }
+        }
+      }
+    },
+    "Partial: exported %lld of %lld data day(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partial: exported %1$lld of %2$lld data day(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teilweise: %1$lld von %2$lld Datentag(en) exportiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: se exportaron %1$lld de %2$lld día(s) de datos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partiel : %1$lld jour(s) de données sur %2$lld exporté(s)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parziale: esportati %1$lld di %2$lld giorno/i di dati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完了：データ日をエクスポート %1$lld/%2$lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "부분 완료: 데이터 일수 %1$lld/%2$lld 내보냄"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gedeeltelijk: %1$lld van %2$lld datadag(en) geëxporteerd"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: %1$lld de %2$lld dia(s) de dados exportado(s)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完成：已导出 %2$lld 个数据日中的 %1$lld 个"
+          }
+        }
+      }
+    },
+    "Partial: exported %lld of %lld data day(s), with %lld metric warning(s)": {
+      "comment": "Export history UI distinguishes generated files from source data days",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partial: exported %1$lld of %2$lld data day(s), with %3$lld metric warning(s)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teilweise: %1$lld von %2$lld Datentag(en) exportiert, mit %3$lld Metrikwarnung(en)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: se exportaron %1$lld de %2$lld día(s) de datos, con %3$lld advertencia(s) de métricas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partiel : %1$lld jour(s) de données sur %2$lld exporté(s), avec %3$lld avertissement(s) de mesure"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parziale: esportati %1$lld di %2$lld giorno/i di dati, con %3$lld avviso/i sulle metriche"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完了：データ日をエクスポート %1$lld/%2$lld（指標の警告：%3$lld件）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "부분 완료: 데이터 일수 %1$lld/%2$lld 내보냄, 지표 경고 %3$lld개"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gedeeltelijk: %1$lld van %2$lld datadag(en) geëxporteerd, met %3$lld metriekwaarschuwing(en)"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parcial: %1$lld de %2$lld dia(s) de dados exportado(s), com %3$lld aviso(s) de métrica"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分完成：已导出 %2$lld 个数据日中的 %1$lld 个，并有 %3$lld 个指标警告"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
