@@ -378,6 +378,7 @@
     "Export in Progress",
     "Export last 7 days",
     "Export now",
+    "Export path is unsafe or conflicts with another output: %@. Change the output folder or filename before exporting.",
     "Export progress",
     "Export roll-up summaries only",
     "Export selected Sleep summaries",

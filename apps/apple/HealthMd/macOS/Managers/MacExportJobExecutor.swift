@@ -256,6 +256,19 @@ final class MacExportJobExecutor {
         }
 
         let settings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: settings,
+                healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
+                dates: requestedDates
+            )
+        } catch {
+            return .failure(MacExportFailure(
+                jobID: job.jobID,
+                reason: .exportWriteFailure,
+                message: error.localizedDescription
+            ))
+        }
         let recordsByDate = Self.recordsByStartOfDay(job.records)
         let externalRecordsByDate = Self.externalRecordsByDate(job.externalDailyRecords)
         var successCount = 0
@@ -652,6 +665,20 @@ final class MacExportJobExecutor {
         } catch {
             activeJobID = nil
             return .failure(Self.engineResolutionFailure(jobID: start.jobID, error: error))
+        }
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings(),
+                healthSubfolder: dailyExportOperation.settingsSnapshot.healthSubfolder,
+                dates: requestedDates
+            )
+        } catch {
+            activeJobID = nil
+            return .failure(MacExportFailure(
+                jobID: start.jobID,
+                reason: .exportWriteFailure,
+                message: error.localizedDescription
+            ))
         }
         streamSession = StreamSession(
             start: start,
@@ -1382,7 +1409,7 @@ final class MacExportJobExecutor {
                     reason: .accessDenied,
                     errorDetails: exportError.localizedDescription
                 )
-            case .noFormatsSelected, .dailyNotePathConflict:
+            case .noFormatsSelected, .dailyNotePathConflict, .invalidExportPath:
                 return FailedDateDetail(date: date, reason: .fileWriteError, errorDetails: exportError.localizedDescription)
             }
         }

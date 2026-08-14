@@ -120,6 +120,17 @@ nonisolated private final class SlowRecordingFileSystem: FileSystemAccessing, @u
     }
 }
 
+nonisolated private final class SecureCommitHookProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var executionCountStorage = 0
+
+    var executionCount: Int { lock.withLock { executionCountStorage } }
+
+    func record() {
+        lock.withLock { executionCountStorage += 1 }
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -188,7 +199,10 @@ final class VaultManagerTests: XCTestCase {
         return dir
     }
 
-    private func makeRealFileSystemManager(vaultURL: URL) -> VaultManager {
+    private func makeRealFileSystemManager(
+        vaultURL: URL,
+        fileCoordinator: FileCoordinating? = nil
+    ) -> VaultManager {
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
         defaults.storage.removeValue(forKey: "obsidianVaultSelectionV1")
         defaults.storage["obsidianVaultPath"] = vaultURL.path
@@ -197,10 +211,379 @@ final class VaultManagerTests: XCTestCase {
         let manager = VaultManager(
             defaults: defaults,
             fileSystem: SystemFileSystem(),
+            fileCoordinator: fileCoordinator,
             bookmarkResolver: bookmarkResolver
         )
         Self.retainedManagers.append(manager)
         return manager
+    }
+
+    private func installParentSwap(
+        on manager: VaultManager,
+        parent: URL,
+        movedParent: URL,
+        outside: URL,
+        probe: SecureCommitHookProbe,
+        afterFinalValidation: Bool = false
+    ) {
+        let hook: @Sendable () throws -> Void = {
+            probe.record()
+            try FileManager.default.moveItem(at: parent, to: movedParent)
+            try FileManager.default.createSymbolicLink(at: parent, withDestinationURL: outside)
+        }
+        if afterFinalValidation {
+            manager.productionDestinationDidValidateForTesting = hook
+        } else {
+            manager.productionDestinationWillCommitForTesting = hook
+        }
+    }
+
+    private func assertRaceWroteNothing(
+        filename: String,
+        movedParent: URL,
+        outside: URL,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: movedParent.appendingPathComponent(filename).path),
+            file: file,
+            line: line
+        )
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: outside.appendingPathComponent(filename).path),
+            file: file,
+            line: line
+        )
+    }
+
+    func testProductionAggregateWriteFailsClosedOnParentSymlinkSwap() throws {
+        try assertAggregateRaceFailsClosed(afterFinalValidation: false)
+    }
+
+    func testProductionAggregateCommitWindowFailsClosedAfterFinalValidation() throws {
+        try assertAggregateRaceFailsClosed(afterFinalValidation: true)
+    }
+
+    private func assertAggregateRaceFailsClosed(afterFinalValidation: Bool) throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let parent = root.appendingPathComponent("Health", isDirectory: true)
+        let moved = root.appendingPathComponent("Health-original", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let coordinator = RecordingFileCoordinator()
+        let manager = makeRealFileSystemManager(vaultURL: root, fileCoordinator: coordinator)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        let probe = SecureCommitHookProbe()
+        installParentSwap(
+            on: manager,
+            parent: parent,
+            movedParent: moved,
+            outside: outside,
+            probe: probe,
+            afterFinalValidation: afterFinalValidation
+        )
+
+        XCTAssertThrowsError(try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )) { error in
+            XCTAssertEqual(error as? ExportError, .destinationChanged)
+        }
+        XCTAssertEqual(probe.executionCount, 1)
+        let filename = settings.filename(for: ExportFixtures.referenceDate, format: .markdown)
+        XCTAssertEqual(
+            coordinator.calls,
+            [.init(url: parent.appendingPathComponent(filename), intent: .replace)],
+            "The secure aggregate route must use the coordinated destination accessor"
+        )
+        assertRaceWroteNothing(filename: filename, movedParent: moved, outside: outside)
+    }
+
+    func testProductionDailyNoteWriteFailsClosedOnParentSymlinkSwap() throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let parent = root.appendingPathComponent("Daily", isDirectory: true)
+        let moved = root.appendingPathComponent("Daily-original", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let coordinator = RecordingFileCoordinator()
+        let manager = makeRealFileSystemManager(vaultURL: root, fileCoordinator: coordinator)
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = []
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+        let probe = SecureCommitHookProbe()
+        installParentSwap(
+            on: manager,
+            parent: parent,
+            movedParent: moved,
+            outside: outside,
+            probe: probe
+        )
+
+        let result = try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+        guard case .failed(let error) = result.dailyNoteResult else {
+            return XCTFail("Expected bound daily-note publication to fail closed")
+        }
+        XCTAssertEqual(error as? ExportError, .destinationChanged)
+        XCTAssertEqual(probe.executionCount, 1)
+        let filename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        XCTAssertEqual(
+            coordinator.calls,
+            [.init(url: parent.appendingPathComponent(filename), intent: .replace)],
+            "The secure daily-note route must use the coordinated destination accessor"
+        )
+        assertRaceWroteNothing(filename: filename, movedParent: moved, outside: outside)
+    }
+
+    func testProductionArchiveWriteFailsClosedOnParentSymlinkSwap() async throws {
+        try await assertArchiveRaceFailsClosed(summaryOnly: false)
+    }
+
+    func testProductionSummaryOnlyArchiveWriteFailsClosedOnParentSymlinkSwap() async throws {
+        try await assertArchiveRaceFailsClosed(summaryOnly: true)
+    }
+
+    private func assertArchiveRaceFailsClosed(summaryOnly: Bool) async throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let parent = root.appendingPathComponent("Health", isDirectory: true)
+        let moved = root.appendingPathComponent("Health-original", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let coordinator = RecordingFileCoordinator()
+        let manager = makeRealFileSystemManager(vaultURL: root, fileCoordinator: coordinator)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.summaryOnlyExport = summaryOnly
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = true
+        let probe = SecureCommitHookProbe()
+        installParentSwap(
+            on: manager,
+            parent: parent,
+            movedParent: moved,
+            outside: outside,
+            probe: probe
+        )
+
+        let start = ExportFixtures.referenceDate
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let archiveName = "Health.md Export \(formatter.string(from: start)).zip"
+        do {
+            _ = try await manager.exportArchive(
+                from: summaryOnly ? [] : [ExportFixtures.fullDay],
+                rollupHealthData: [ExportFixtures.fullDay],
+                settings: settings,
+                startDate: start,
+                endDate: start
+            )
+            XCTFail("Expected bound ZIP publication to fail closed")
+        } catch {
+            XCTAssertEqual(error as? ExportError, .destinationChanged)
+        }
+        XCTAssertEqual(probe.executionCount, 1)
+        XCTAssertEqual(
+            coordinator.calls,
+            [.init(url: parent.appendingPathComponent(archiveName), intent: .replace)],
+            "The secure ZIP route must use the coordinated destination accessor"
+        )
+        assertRaceWroteNothing(filename: archiveName, movedParent: moved, outside: outside)
+    }
+
+    // MARK: - Export path admission
+
+    func testArchiveRejectsParentTraversalBeforeCreatingDestination() async throws {
+        let root = makeTempDir()
+        let outside = root.deletingLastPathComponent()
+            .appendingPathComponent("healthmd_archive_escape_\(UUID().uuidString)")
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "../\(outside.lastPathComponent)"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.archiveExportFiles = true
+
+        do {
+            _ = try await manager.exportArchive(
+                from: [ExportFixtures.fullDay],
+                settings: settings,
+                startDate: ExportFixtures.referenceDate,
+                endDate: ExportFixtures.referenceDate
+            )
+            XCTFail("Archive traversal must be rejected")
+        } catch let error as ExportError {
+            guard case .invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: outside.path))
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testRangePreflightRejectsFixedFilenameAcrossDatesWithZeroWrites() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.filenameFormat = "health"
+        let secondDate = try XCTUnwrap(
+            Calendar.current.date(byAdding: .day, value: 1, to: ExportFixtures.referenceDate)
+        )
+
+        XCTAssertThrowsError(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: [ExportFixtures.referenceDate, secondDate]
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testPreflightRejectsCaseWidthUnicodeAndAncestorAliases() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+
+        let unsafePlans = [
+            ["Health/A.json", "health/a.JSON"],
+            ["Health/Ａ.json", "Health/A.json"],
+            ["Health/café.json", "Health/cafe\u{301}.json"],
+            ["Health/output", "Health/output/day.json"],
+            ["Health/output", "Health/output-a", "Health/output/day.json"],
+            ["Health/CON.json"],
+            ["Health/COM¹.json"],
+            ["Health/LPT³.txt"],
+            ["Health/day.json."],
+            ["Health/file:stream.json"]
+        ]
+        for paths in unsafePlans {
+            XCTAssertThrowsError(try manager.preflightExportArtifactPaths(paths)) { error in
+                guard case ExportError.invalidExportPath = error else {
+                    return XCTFail("Expected invalidExportPath for \(paths), got \(error)")
+                }
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testPreflightRejectsSymlinkEscapeAndHardLinkAlias() throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: outside)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent("Escaped"),
+            withDestinationURL: outside
+        )
+        XCTAssertThrowsError(try manager.preflightExportArtifactPaths([
+            "Escaped/day.json"
+        ]))
+
+        let health = root.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: health, withIntermediateDirectories: true)
+        let first = health.appendingPathComponent("first.json")
+        let second = health.appendingPathComponent("second.json")
+        try Data("{}".utf8).write(to: first)
+        try FileManager.default.linkItem(at: first, to: second)
+        XCTAssertThrowsError(try manager.preflightExportArtifactPaths([
+            "Health/first.json",
+            "Health/second.json"
+        ]))
+    }
+
+    func testSummaryOnlyArchivePreflightOmitsUnusedDailyEntryPaths() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.archiveExportFiles = true
+        settings.summaryOnlyExport = true
+        settings.filenameFormat = "health"
+        settings.generateWeeklyRollups = true
+        let secondDate = try XCTUnwrap(
+            Calendar.current.date(byAdding: .day, value: 1, to: ExportFixtures.referenceDate)
+        )
+
+        XCTAssertNoThrow(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: [ExportFixtures.referenceDate, secondDate],
+            rollupDates: [ExportFixtures.referenceDate, secondDate]
+        ))
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testArchivePreflightRejectsCrossDateDailyNoteCollision() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.archiveExportFiles = true
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.filenamePattern = "health"
+        let secondDate = try XCTUnwrap(
+            Calendar.current.date(byAdding: .day, value: 1, to: ExportFixtures.referenceDate)
+        )
+
+        XCTAssertThrowsError(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: [ExportFixtures.referenceDate, secondDate]
+        )) { error in
+            guard case ExportError.invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testPreflightAcceptsNormalNestedPortablePaths() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+
+        bookmarkResolver.startAccessCalls = []
+        bookmarkResolver.stopAccessCalls = []
+        XCTAssertNoThrow(try manager.preflightExportArtifactPaths([
+            "Health/JSON/2026/08/10.json",
+            "Health/Markdown/2026/08/10.md",
+            "Daily/2026-08-10.md"
+        ]))
+        XCTAssertEqual(bookmarkResolver.startAccessCalls, [root])
+        XCTAssertEqual(bookmarkResolver.stopAccessCalls, [root])
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
     }
 
     // MARK: - Durable exact artifact I/O

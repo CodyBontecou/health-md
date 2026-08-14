@@ -429,6 +429,18 @@ final class MacCorpusExportSessionManager {
             ) else {
                 return rejected("Export paths must remain inside the selected Mac destination.")
             }
+            let settings = exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+            settings.exportTimeZoneOverride = exportManifest.sourceTimeZoneIdentifier
+                .flatMap(TimeZone.init(identifier:))
+            do {
+                try vaultManager.preflightExportDestinations(
+                    settings: settings,
+                    healthSubfolder: exportManifest.settingsSnapshot.healthSubfolder,
+                    dates: exportManifest.requestedDates
+                )
+            } catch {
+                return rejected(error.localizedDescription)
+            }
         }
 
         do {
@@ -2041,6 +2053,10 @@ final class MacCorpusExportSessionManager {
                 initialPlan,
                 journal: session.journal,
                 sessionDirectoryURL: session.directoryURL
+            )
+            try vaultManager.preflightExportArtifactPaths(
+                initialPlan.artifacts.map(\.relativePath)
+                    + (initialPlan.dataDictionary.map { [$0.relativePath] } ?? [])
             )
         } catch {
             throw ReceivedRangeCommitError.invalid

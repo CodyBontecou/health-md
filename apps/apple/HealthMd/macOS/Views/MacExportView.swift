@@ -628,6 +628,38 @@ struct MacExportView: View {
             var dailyNoteSkipCount = 0
             var completedDates: [Date] = []
 
+            do {
+                try vaultManager.preflightExportDestinations(
+                    settings: advancedSettings,
+                    dates: dates
+                )
+            } catch {
+                let details = dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                }
+                let result = ExportOrchestrator.ExportResult(
+                    successCount: 0,
+                    totalCount: totalCount,
+                    failedDateDetails: details,
+                    formatsPerDate: advancedSettings.looseFormatsPerDate,
+                    completedDates: []
+                )
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .manual,
+                    dateRangeStart: dates.first ?? startDate,
+                    dateRangeEnd: dates.last ?? endDate
+                )
+                resultIsError = true
+                resultMessage = error.localizedDescription
+                showResult = true
+                return
+            }
+
             for (index, date) in dates.enumerated() {
                 // Check for cancellation before each date
                 if Task.isCancelled {

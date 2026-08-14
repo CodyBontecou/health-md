@@ -434,6 +434,27 @@ struct ExportOrchestrator {
         )
         let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()
         frozenOperationSettings.exportTimeZoneOverride = sourceTimeZone
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: frozenOperationSettings,
+                healthSubfolder: operationSettingsSnapshot.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalDays,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                completedDates: []
+            )
+        }
         let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
         defer { archiveSpool?.cleanup() }
         let dateFormatter = DateFormatter()
@@ -606,7 +627,7 @@ struct ExportOrchestrator {
                 case .noFormatsSelected:
                     reason = .unknown
                     errorDetails = error.localizedDescription
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                     errorDetails = error.localizedDescription
                 }
@@ -973,6 +994,27 @@ struct ExportOrchestrator {
         var shouldWriteDataDictionary = true
         let frozenOperationSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings()
             ?? settings
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: frozenOperationSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                completedDates: []
+            )
+        }
         let archiveSpool = frozenOperationSettings.archiveModeEnabled
             ? LocalArchiveSpool()
             : nil
@@ -1139,7 +1181,7 @@ struct ExportOrchestrator {
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                 }
                 failedDateDetails.append(FailedDateDetail(

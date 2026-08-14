@@ -41,6 +41,13 @@ final class ScheduleRetryExportPolicyTests: XCTestCase {
             .fileWriteError
         )
         XCTAssertEqual(
+            ScheduleRetryExportPolicy.failedWriteDetail(
+                for: date,
+                error: ExportError.invalidExportPath(path: "../outside.md")
+            ).reason,
+            .fileWriteError
+        )
+        XCTAssertEqual(
             ScheduleRetryExportPolicy.failedWriteDetail(for: date, error: ExportError.noHealthData).reason,
             .noHealthData
         )
