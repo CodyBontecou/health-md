@@ -386,16 +386,58 @@ struct ExportHistoryEntry: Codable, Identifiable {
         )
     }
 
-    /// Returns true if all exports succeeded
+    enum PresentationStatus: Equatable {
+        case success
+        case partialSuccess
+        case failed
+    }
+
+    /// Returns true if all requested data days completed without retained warnings.
     var isFullSuccess: Bool {
         success && successCount == totalCount && totalCount > 0 &&
             partialFailures.isEmpty && operationDetails?.hasWarnings != true
     }
 
-    /// Returns true if some but not all exports succeeded
+    /// Confirmed output remains a partial success even when the operation's terminal flag is
+    /// failure. This matters when a later write fails or cancellation arrives after a prior file,
+    /// daily note, or data day was already committed.
     var isPartialSuccess: Bool {
-        success && (successCount > 0 || dailyNoteSkipCount > 0)
-            && (successCount < totalCount || !partialFailures.isEmpty || operationDetails?.hasWarnings == true)
+        guard !isFullSuccess else { return false }
+        let hasConfirmedOutput = successCount > 0
+            || dailyNoteUpdateCount > 0
+            || (fileCount ?? 0) > 0
+        let hasTerminalSkip = success && dailyNoteSkipCount > 0
+        return hasConfirmedOutput || hasTerminalSkip
+    }
+
+    var presentationStatus: PresentationStatus {
+        if isFullSuccess { return .success }
+        if isPartialSuccess { return .partialSuccess }
+        return .failed
+    }
+
+    var localizedStatusDescription: String {
+        switch presentationStatus {
+        case .success: return String(localized: "Success")
+        case .partialSuccess: return String(localized: "Partial success")
+        case .failed: return String(localized: "Failed")
+        }
+    }
+
+    var localizedShortStatusDescription: String {
+        switch presentationStatus {
+        case .success: return String(localized: "Success")
+        case .partialSuccess: return String(localized: "Partial")
+        case .failed: return String(localized: "Failed")
+        }
+    }
+
+    var statusSystemImage: String {
+        switch presentationStatus {
+        case .success: return "checkmark.circle.fill"
+        case .partialSuccess: return "exclamationmark.circle.fill"
+        case .failed: return "xmark.circle.fill"
+        }
     }
 
     var partialFailureSummary: String? {
@@ -500,7 +542,18 @@ struct ExportHistoryEntry: Codable, Identifiable {
         if isAPIEndpointDelivery {
             return String(localized: "Days Uploaded")
         }
-        return String(localized: "Files Exported")
+        return fileCount == nil
+            ? String(localized: "Data Days Exported")
+            : String(localized: "Generated Files")
+    }
+
+    var dataDayCountDescription: String {
+        String(localized: "\(successCount) of \(totalCount) data day(s)")
+    }
+
+    var generatedFileCountCompactDescription: String {
+        guard let fileCount else { return dataDayCountDescription }
+        return String(localized: "\(fileCount) generated file(s)")
     }
 
     var resultCountDescription: String {
@@ -510,10 +563,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         if isCLIRawDelivery || isAPIEndpointDelivery {
             return String(localized: "\(successCount) of \(totalCount)")
         }
-        if let fileCount {
-            return String(localized: "\(fileCount) file(s) (\(successCount)/\(totalCount) days)")
-        }
-        return String(localized: "\(successCount) of \(totalCount)")
+        guard let fileCount else { return dataDayCountDescription }
+        return String(localized: "\(fileCount) generated file(s) · \(successCount) of \(totalCount) data day(s)")
     }
 
     var resultCountAccessibilityDescription: String {
@@ -526,12 +577,13 @@ struct ExportHistoryEntry: Codable, Identifiable {
         if isAPIEndpointDelivery {
             return String(localized: "\(successCount) of \(totalCount) days uploaded")
         }
-        return String(localized: "\(fileCount ?? successCount) file(s) exported across \(successCount) of \(totalCount) days")
+        guard let fileCount else { return dataDayCountDescription }
+        return String(localized: "\(fileCount) generated file(s), \(successCount) of \(totalCount) data day(s)")
     }
 
-    /// Summary description for display
+    /// Summary description for display. Generated files and source data days are deliberately
+    /// named separately; one data day can produce several configured output artifacts.
     var summaryDescription: String {
-        let displayedFileCount = fileCount ?? successCount
         if isDailyNoteOnlyResult {
             if dailyNoteSkipCount == 0 {
                 return String(localized: "Updated \(dailyNoteUpdateCount) daily note(s)", comment: "Daily note only export success summary")
@@ -552,12 +604,21 @@ struct ExportHistoryEntry: Codable, Identifiable {
             }
             return String(localized: "Partial: uploaded \(successCount)/\(totalCount) days", comment: "Partial API export summary")
         } else if isFullSuccess {
-            return String(localized: "Exported \(displayedFileCount) file(s)", comment: "Export success summary")
-        } else if isPartialSuccess {
-            if !partialFailures.isEmpty {
-                return String(localized: "Partial: \(displayedFileCount) file(s), \(partialFailures.count) metric warning(s)", comment: "Partial export metric warning summary")
+            guard let fileCount else {
+                return String(localized: "Exported \(successCount) of \(totalCount) data day(s)", comment: "Legacy export success summary when generated file count is unavailable")
             }
-            return String(localized: "Partial: \(displayedFileCount) file(s), \(successCount)/\(totalCount) days", comment: "Partial export summary")
+            return String(localized: "Exported \(fileCount) generated file(s) from \(successCount) data day(s)", comment: "Export success summary distinguishing physical files from source data days")
+        } else if isPartialSuccess {
+            if let fileCount {
+                if !partialFailures.isEmpty {
+                    return String(localized: "Partial: \(fileCount) generated file(s) from \(successCount) of \(totalCount) data day(s), with \(partialFailures.count) metric warning(s)", comment: "Partial export summary distinguishing files, source days, and metric warnings")
+                }
+                return String(localized: "Partial: \(fileCount) generated file(s) from \(successCount) of \(totalCount) data day(s)", comment: "Partial export summary distinguishing physical files from source data days")
+            }
+            if !partialFailures.isEmpty {
+                return String(localized: "Partial: exported \(successCount) of \(totalCount) data day(s), with \(partialFailures.count) metric warning(s)", comment: "Legacy partial export summary with metric warnings")
+            }
+            return String(localized: "Partial: exported \(successCount) of \(totalCount) data day(s)", comment: "Legacy partial export summary when generated file count is unavailable")
         } else {
             let reason = failureReasonForDisplay ?? .unknown
             return String(localized: "Export failed: \(reason.shortDescription)", comment: "Export failure summary with explicit reason")

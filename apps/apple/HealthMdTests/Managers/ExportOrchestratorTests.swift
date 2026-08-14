@@ -174,12 +174,31 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertEqual(result.primaryFailureReason, .accessDenied)
     }
 
+    func testExportResult_cancelledAfterConfirmedDerivedFileIsPartial() {
+        let result = ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: 2,
+            failedDateDetails: [],
+            formatsPerDate: 0,
+            rollupFileCount: 1,
+            wasCancelled: true
+        )
+
+        XCTAssertEqual(result.totalFilesWritten, 1)
+        XCTAssertFalse(result.isFullSuccess)
+        XCTAssertTrue(result.isPartialSuccess)
+        XCTAssertFalse(result.isFailure)
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.contains("1 generated file"))
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.contains("0"))
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.contains("2"))
+    }
+
     @MainActor
     func testExportDates_foregroundMapsDeviceLockedHealthKitError() async {
         let store = FakeHealthStore()
         store.errorsForCategorySamples[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = HealthKitFixtures.deviceLockedError
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
-        let vaultManager = VaultManager()
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/DeviceLockedExportVault")
         let settings = AdvancedExportSettings(userDefaults: makeIsolatedDefaults())
         Self.retainedManagers.append(vaultManager)
         Self.retainedSettings.append(settings)
@@ -447,6 +466,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testExportDates_archiveModePacksRollupsIntoZip() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: vaultURL) }
 
         let store = FakeHealthStore()
@@ -498,6 +518,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testExportDates_archiveCancellationIsTerminalAndNotAPartialFailure() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorArchiveCancellation-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: vaultURL) }
 
         let store = FakeHealthStore()
@@ -769,6 +790,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testExportDates_summaryOnlyArchivePacksRollupsWithoutDailyFiles() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ExportOrchestratorSummaryOnlyArchiveTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: vaultURL) }
 
         let store = FakeHealthStore()

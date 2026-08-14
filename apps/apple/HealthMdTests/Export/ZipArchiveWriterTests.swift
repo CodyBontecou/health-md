@@ -1,3 +1,4 @@
+import Darwin
 import XCTest
 @testable import HealthMd
 
@@ -32,6 +33,45 @@ final class ZipArchiveWriterTests: XCTestCase {
         let legacyEndOffset = archive.count - 22
         XCTAssertEqual(archive.uint16LE(at: legacyEndOffset + 8), UInt16.max)
         XCTAssertEqual(archive.uint32LE(at: legacyEndOffset + 12), UInt32.max)
+    }
+
+    func testSecurePublicationStreamsLargeFileSourceInBoundedChunks() throws {
+        let root = try temporaryDirectory()
+        let work = try temporaryDirectory()
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            try? FileManager.default.removeItem(at: work)
+        }
+        let sourceURL = work.appendingPathComponent("large-source.bin")
+        XCTAssertTrue(FileManager.default.createFile(atPath: sourceURL.path, contents: nil))
+        let sourceHandle = try FileHandle(forWritingTo: sourceURL)
+        let sourceChunk = Data(repeating: 0xa5, count: 64 * 1024)
+        for _ in 0..<256 { try sourceHandle.write(contentsOf: sourceChunk) }
+        try sourceHandle.close()
+
+        let destinationURL = root.appendingPathComponent("Health/export.zip")
+        let coordinator = RecordingFileCoordinator()
+        let writer = try ZipArchiveWriter.begin(
+            to: destinationURL,
+            checkpointURL: work.appendingPathComponent("large.checkpoint"),
+            workingDirectoryURL: work,
+            fileCoordinator: coordinator,
+            chunkSize: 32 * 1024,
+            securePublication: .init(
+                rootURL: root,
+                relativePath: "Health/export.zip",
+                binding: try destinationBinding(for: root)
+            )
+        )
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: destinationURL.deletingLastPathComponent().path),
+            "Bound ZIP setup must not create the destination parent through its pathname"
+        )
+        try writer.appendFile(at: sourceURL, path: "records/large-source.bin")
+        try writer.finish()
+
+        XCTAssertGreaterThan(fileSize(destinationURL), fileSize(sourceURL))
+        XCTAssertEqual(coordinator.calls, [.init(url: destinationURL, intent: .replace)])
     }
 
     func testZIP64EntryCountExceedsLegacyLimit() throws {
@@ -222,6 +262,24 @@ final class ZipArchiveWriterTests: XCTestCase {
             .appendingPathComponent("ZipArchiveWriterTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         return url
+    }
+
+    private func destinationBinding(for root: URL) throws -> AppleVaultDestinationBinding {
+        guard let pointer = Darwin.realpath(root.standardizedFileURL.path, nil) else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        defer { Darwin.free(pointer) }
+        let resolvedPath = String(cString: pointer)
+        var metadata = stat()
+        guard Darwin.lstat(resolvedPath, &metadata) == 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        return AppleVaultDestinationBinding(
+            standardizedPath: root.standardizedFileURL.path,
+            resolvedPath: resolvedPath,
+            deviceID: UInt64(metadata.st_dev),
+            inode: UInt64(metadata.st_ino)
+        )
     }
 
     private func appendGarbage(to url: URL) throws {
