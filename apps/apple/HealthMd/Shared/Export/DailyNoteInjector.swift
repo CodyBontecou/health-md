@@ -63,7 +63,9 @@ struct DailyNoteInjector {
         customization: FormatCustomization,
         metricSelection: MetricSelectionState,
         fileSystem: FileSystemAccessing = SystemFileSystem(),
-        fileCoordinator: FileCoordinating = PassthroughFileCoordinator()
+        fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
+        destinationBinding: AppleVaultDestinationBinding? = nil,
+        beforeCommit: (@Sendable () throws -> Void)? = nil
     ) -> InjectionResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
@@ -78,6 +80,47 @@ struct DailyNoteInjector {
         )
 
         do {
+            if fileSystem is SystemFileSystem, let destinationBinding {
+                let existingData = try SecureExactArtifactIO.read(
+                    rootURL: vaultURL,
+                    relativePath: relativePath,
+                    binding: destinationBinding
+                )
+                guard existingData != nil || settings.createIfMissing else {
+                    return .skipped(reason: "Daily note not found: \(relativePath)")
+                }
+                let existingContent: String
+                if let existingData {
+                    guard let content = String(data: existingData, encoding: .utf8) else {
+                        throw CocoaError(.fileReadInapplicableStringEncoding)
+                    }
+                    existingContent = content
+                } else {
+                    existingContent = ""
+                }
+                guard let injectionContent = buildInjectionContent(
+                    healthData: healthData,
+                    settings: settings,
+                    customization: customization,
+                    metricSelection: metricSelection
+                ) else {
+                    return .skipped(reason: "No data available for enabled metrics on this date")
+                }
+                let updatedContent = mergedContent(
+                    existing: existingContent,
+                    injectionContent: injectionContent,
+                    settings: settings
+                )
+                try SecureExactArtifactIO.overwrite(
+                    rootURL: vaultURL,
+                    relativePath: relativePath,
+                    data: Data(updatedContent.utf8),
+                    binding: destinationBinding,
+                    beforeCommit: beforeCommit
+                )
+                return .updated(path: relativePath)
+            }
+
             return try fileCoordinator.coordinateWriting(
                 at: targetURL,
                 intent: .replace,

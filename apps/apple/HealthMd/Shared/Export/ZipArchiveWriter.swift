@@ -98,15 +98,23 @@ nonisolated enum ZipArchiveWriter {
         workingDirectoryURL: URL? = nil,
         fileManager: FileManager = .default,
         fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
-        chunkSize: Int = defaultChunkSize
+        chunkSize: Int = defaultChunkSize,
+        securePublication: SecurePublication? = nil
     ) throws -> Writer {
         try validate(chunkSize: chunkSize)
 
         let parentURL = destinationURL.deletingLastPathComponent()
-        try fileManager.createDirectory(at: parentURL, withIntermediateDirectories: true)
+        if securePublication == nil {
+            try fileManager.createDirectory(at: parentURL, withIntermediateDirectories: true)
+        }
 
+        let defaultCheckpointParent = securePublication == nil
+            ? parentURL
+            : fileManager.temporaryDirectory
         let checkpointURL = requestedCheckpointURL
-            ?? parentURL.appendingPathComponent(".\(destinationURL.lastPathComponent).zip-checkpoint")
+            ?? defaultCheckpointParent.appendingPathComponent(
+                ".\(destinationURL.lastPathComponent).zip-checkpoint-\(UUID().uuidString)"
+            )
         if fileManager.fileExists(atPath: checkpointURL.path) {
             throw ArchiveError.checkpointAlreadyExists(checkpointURL)
         }
@@ -145,7 +153,8 @@ nonisolated enum ZipArchiveWriter {
                 dosTime: timestamp.time,
                 chunkSize: chunkSize,
                 fileManager: fileManager,
-                fileCoordinator: fileCoordinator
+                fileCoordinator: fileCoordinator,
+                securePublication: securePublication
             )
             _ = try writer.checkpoint()
             return writer
@@ -163,7 +172,8 @@ nonisolated enum ZipArchiveWriter {
         from checkpointURL: URL,
         fileManager: FileManager = .default,
         fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
-        chunkSize: Int? = nil
+        chunkSize: Int? = nil,
+        securePublication: SecurePublication? = nil
     ) throws -> Writer {
         let checkpoint = try loadCheckpoint(from: checkpointURL)
         let checkpointParent = checkpointURL.deletingLastPathComponent()
@@ -235,6 +245,7 @@ nonisolated enum ZipArchiveWriter {
             chunkSize: effectiveChunkSize,
             fileManager: fileManager,
             fileCoordinator: fileCoordinator,
+            securePublication: securePublication,
             truncateToCheckpoint: true
         )
     }
@@ -306,6 +317,25 @@ nonisolated enum ZipArchiveWriter {
         }
     }
 
+    struct SecurePublication: Sendable {
+        let rootURL: URL
+        let relativePath: String
+        let binding: AppleVaultDestinationBinding
+        let beforeCommit: (@Sendable () throws -> Void)?
+
+        init(
+            rootURL: URL,
+            relativePath: String,
+            binding: AppleVaultDestinationBinding,
+            beforeCommit: (@Sendable () throws -> Void)? = nil
+        ) {
+            self.rootURL = rootURL
+            self.relativePath = relativePath
+            self.binding = binding
+            self.beforeCommit = beforeCommit
+        }
+    }
+
     nonisolated final class Writer: @unchecked Sendable {
         let destinationURL: URL
         let temporaryArchiveURL: URL
@@ -315,6 +345,7 @@ nonisolated enum ZipArchiveWriter {
 
         private let fileManager: FileManager
         private let fileCoordinator: FileCoordinating
+        private let securePublication: SecurePublication?
         private var archiveHandle: FileHandle?
         private var centralDirectoryHandle: FileHandle?
         private var archiveByteCount: UInt64
@@ -338,6 +369,7 @@ nonisolated enum ZipArchiveWriter {
             chunkSize: Int,
             fileManager: FileManager,
             fileCoordinator: FileCoordinating,
+            securePublication: SecurePublication? = nil,
             truncateToCheckpoint: Bool = false
         ) throws {
             self.destinationURL = destinationURL
@@ -353,6 +385,7 @@ nonisolated enum ZipArchiveWriter {
             self.chunkSize = chunkSize
             self.fileManager = fileManager
             self.fileCoordinator = fileCoordinator
+            self.securePublication = securePublication
 
             let archiveHandle = try FileHandle(forUpdating: temporaryArchiveURL)
             do {
@@ -512,15 +545,28 @@ nonisolated enum ZipArchiveWriter {
                 try archiveHandle.synchronize()
                 closeHandles()
 
-                try fileCoordinator.coordinateWriting(
-                    at: destinationURL,
-                    intent: .replace,
-                    cancellationCheck: { try Self.throwIfCancelled(cancellationCheck) }
-                ) { coordinatedURL in
-                    try publishArchive(
-                        to: coordinatedURL,
-                        cancellationCheck: cancellationCheck
+                if let securePublication {
+                    try SecureExactArtifactIO.overwrite(
+                        rootURL: securePublication.rootURL,
+                        relativePath: securePublication.relativePath,
+                        sourceFileURL: temporaryArchiveURL,
+                        binding: securePublication.binding,
+                        expectedByteCount: archiveByteCount,
+                        chunkSize: chunkSize,
+                        beforeCommit: securePublication.beforeCommit,
+                        cancellationCheck: { try Self.throwIfCancelled(cancellationCheck) }
                     )
+                } else {
+                    try fileCoordinator.coordinateWriting(
+                        at: destinationURL,
+                        intent: .replace,
+                        cancellationCheck: { try Self.throwIfCancelled(cancellationCheck) }
+                    ) { coordinatedURL in
+                        try publishArchive(
+                            to: coordinatedURL,
+                            cancellationCheck: cancellationCheck
+                        )
+                    }
                 }
                 try? fileManager.removeItem(at: temporaryArchiveURL)
                 try? fileManager.removeItem(at: centralDirectoryURL)

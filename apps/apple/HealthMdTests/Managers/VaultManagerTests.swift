@@ -203,6 +203,135 @@ final class VaultManagerTests: XCTestCase {
         return manager
     }
 
+    private func installParentSwap(
+        on manager: VaultManager,
+        parent: URL,
+        movedParent: URL,
+        outside: URL
+    ) {
+        manager.productionDestinationWillCommitForTesting = {
+            try FileManager.default.moveItem(at: parent, to: movedParent)
+            try FileManager.default.createSymbolicLink(at: parent, withDestinationURL: outside)
+        }
+    }
+
+    private func assertRaceWroteNothing(
+        filename: String,
+        movedParent: URL,
+        outside: URL,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: movedParent.appendingPathComponent(filename).path),
+            file: file,
+            line: line
+        )
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: outside.appendingPathComponent(filename).path),
+            file: file,
+            line: line
+        )
+    }
+
+    func testProductionAggregateWriteFailsClosedOnParentSymlinkSwap() throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let parent = root.appendingPathComponent("Health", isDirectory: true)
+        let moved = root.appendingPathComponent("Health-original", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        installParentSwap(on: manager, parent: parent, movedParent: moved, outside: outside)
+
+        XCTAssertThrowsError(try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        ))
+        let filename = settings.filename(for: ExportFixtures.referenceDate, format: .markdown)
+        assertRaceWroteNothing(filename: filename, movedParent: moved, outside: outside)
+    }
+
+    func testProductionDailyNoteWriteFailsClosedOnParentSymlinkSwap() throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let parent = root.appendingPathComponent("Daily", isDirectory: true)
+        let moved = root.appendingPathComponent("Daily-original", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = []
+        settings.dailyNoteInjection.enabled = true
+        settings.dailyNoteInjection.dailyNotesOnly = true
+        settings.dailyNoteInjection.createIfMissing = true
+        settings.dailyNoteInjection.folderPath = "Daily"
+        installParentSwap(on: manager, parent: parent, movedParent: moved, outside: outside)
+
+        let result = try manager.exportHealthDataResult(
+            ExportFixtures.fullDay,
+            for: ExportFixtures.referenceDate,
+            settings: settings
+        )
+        guard case .failed = result.dailyNoteResult else {
+            return XCTFail("Expected bound daily-note publication to fail closed")
+        }
+        let filename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        assertRaceWroteNothing(filename: filename, movedParent: moved, outside: outside)
+    }
+
+    func testProductionArchiveWriteFailsClosedOnParentSymlinkSwap() async throws {
+        try await assertArchiveRaceFailsClosed(summaryOnly: false)
+    }
+
+    func testProductionSummaryOnlyArchiveWriteFailsClosedOnParentSymlinkSwap() async throws {
+        try await assertArchiveRaceFailsClosed(summaryOnly: true)
+    }
+
+    private func assertArchiveRaceFailsClosed(summaryOnly: Bool) async throws {
+        let root = makeTempDir()
+        let outside = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
+        let parent = root.appendingPathComponent("Health", isDirectory: true)
+        let moved = root.appendingPathComponent("Health-original", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.summaryOnlyExport = summaryOnly
+        settings.exportFormats = [.markdown]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = true
+        installParentSwap(on: manager, parent: parent, movedParent: moved, outside: outside)
+
+        let start = ExportFixtures.referenceDate
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let archiveName = "Health.md Export \(formatter.string(from: start)).zip"
+        do {
+            _ = try await manager.exportArchive(
+                from: summaryOnly ? [] : [ExportFixtures.fullDay],
+                rollupHealthData: [ExportFixtures.fullDay],
+                settings: settings,
+                startDate: start,
+                endDate: start
+            )
+            XCTFail("Expected bound ZIP publication to fail closed")
+        } catch {
+            // Expected: the bound parent no longer matches immediately before publication.
+        }
+        assertRaceWroteNothing(filename: archiveName, movedParent: moved, outside: outside)
+    }
+
     // MARK: - Export path admission
 
     func testArchiveRejectsParentTraversalBeforeCreatingDestination() async throws {
@@ -313,6 +442,29 @@ final class VaultManagerTests: XCTestCase {
             "Health/first.json",
             "Health/second.json"
         ]))
+    }
+
+    func testSummaryOnlyArchivePreflightOmitsUnusedDailyEntryPaths() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.archiveExportFiles = true
+        settings.summaryOnlyExport = true
+        settings.filenameFormat = "health"
+        settings.generateWeeklyRollups = true
+        let secondDate = try XCTUnwrap(
+            Calendar.current.date(byAdding: .day, value: 1, to: ExportFixtures.referenceDate)
+        )
+
+        XCTAssertNoThrow(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: [ExportFixtures.referenceDate, secondDate],
+            rollupDates: [ExportFixtures.referenceDate, secondDate]
+        ))
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
     }
 
     func testArchivePreflightRejectsCrossDateDailyNoteCollision() throws {

@@ -47,29 +47,41 @@ nonisolated private struct AggregateFileWriteRequest: Sendable {
     let filename: String
     let source: AggregateFileWriteSource
     let behavior: AggregateFileWriteBehavior
+    let secureDestination: SecureDestination?
+
+    struct SecureDestination: Sendable {
+        let rootURL: URL
+        let relativePath: String
+        let binding: AppleVaultDestinationBinding
+        let beforeCommit: (@Sendable () throws -> Void)?
+    }
 
     init(
         fileURL: URL,
         filename: String,
         newContent: String,
-        behavior: AggregateFileWriteBehavior
+        behavior: AggregateFileWriteBehavior,
+        secureDestination: SecureDestination? = nil
     ) {
         self.fileURL = fileURL
         self.filename = filename
         self.source = .text(newContent)
         self.behavior = behavior
+        self.secureDestination = secureDestination
     }
 
     init(
         fileURL: URL,
         filename: String,
         artifact: ExportArtifactFile,
-        behavior: AggregateFileWriteBehavior
+        behavior: AggregateFileWriteBehavior,
+        secureDestination: SecureDestination? = nil
     ) {
         self.fileURL = fileURL
         self.filename = filename
         self.source = .artifact(artifact)
         self.behavior = behavior
+        self.secureDestination = secureDestination
     }
 
     func replacingFileURL(_ fileURL: URL) -> AggregateFileWriteRequest {
@@ -79,14 +91,16 @@ nonisolated private struct AggregateFileWriteRequest: Sendable {
                 fileURL: fileURL,
                 filename: filename,
                 newContent: content,
-                behavior: behavior
+                behavior: behavior,
+                secureDestination: secureDestination
             )
         case .artifact(let artifact):
             return AggregateFileWriteRequest(
                 fileURL: fileURL,
                 filename: filename,
                 artifact: artifact,
-                behavior: behavior
+                behavior: behavior,
+                secureDestination: secureDestination
             )
         }
     }
@@ -235,6 +249,9 @@ nonisolated private final class AggregateFileWriter: Sendable {
         _ request: AggregateFileWriteRequest,
         cancellationCheck: () throws -> Void = { try Task.checkCancellation() }
     ) throws -> AggregateFileWriteOutcome {
+        if fileSystem is SystemFileSystem, request.secureDestination != nil {
+            return try performSecureWrite(request, cancellationCheck: cancellationCheck)
+        }
         do {
             return try fileCoordinator.coordinateWriting(
                 at: request.fileURL,
@@ -248,6 +265,152 @@ nonisolated private final class AggregateFileWriter: Sendable {
             }
         } catch FileCoordinationError.destinationChanged {
             throw ExportError.destinationChanged
+        }
+    }
+
+    private func performSecureWrite(
+        _ request: AggregateFileWriteRequest,
+        cancellationCheck: () throws -> Void
+    ) throws -> AggregateFileWriteOutcome {
+        guard let destination = request.secureDestination else {
+            throw AppleExactDestinationError.destinationUnavailable
+        }
+        try cancellationCheck()
+        let action: String
+        switch request.source {
+        case .artifact(let artifact) where request.behavior != .mergeMarkdown:
+            let existingData = request.behavior == .append
+                ? try SecureExactArtifactIO.read(
+                    rootURL: destination.rootURL,
+                    relativePath: destination.relativePath,
+                    binding: destination.binding
+                )
+                : nil
+            if request.behavior == .append, let existingData {
+                let artifactData = try Data(contentsOf: artifact.url)
+                let appendedBlock = Data("\n\n".utf8) + artifactData
+                if existingData == artifactData || existingData.suffix(appendedBlock.count) == appendedBlock {
+                    return AggregateFileWriteOutcome(
+                        fileURL: request.fileURL,
+                        filename: request.filename,
+                        action: "Already present in"
+                    )
+                }
+                try SecureExactArtifactIO.overwrite(
+                    rootURL: destination.rootURL,
+                    relativePath: destination.relativePath,
+                    binding: destination.binding,
+                    beforeCommit: destination.beforeCommit
+                ) { descriptor in
+                    try Self.writeAll(existingData, descriptor: descriptor)
+                    try Self.writeAll(Data("\n\n".utf8), descriptor: descriptor)
+                    let input = try FileHandle(forReadingFrom: artifact.url)
+                    defer { try? input.close() }
+                    while let bytes = try input.read(upToCount: 64 * 1024), !bytes.isEmpty {
+                        try cancellationCheck()
+                        try Self.writeAll(bytes, descriptor: descriptor)
+                    }
+                }
+                action = "Appended to"
+            } else {
+                try SecureExactArtifactIO.overwrite(
+                    rootURL: destination.rootURL,
+                    relativePath: destination.relativePath,
+                    sourceFileURL: artifact.url,
+                    binding: destination.binding,
+                    expectedByteCount: artifact.descriptor.byteCount,
+                    beforeCommit: destination.beforeCommit,
+                    cancellationCheck: cancellationCheck
+                )
+                action = "Exported to"
+            }
+        case .artifact(let artifact):
+            guard let newContent = String(data: try Data(contentsOf: artifact.url), encoding: .utf8) else {
+                throw CocoaError(.fileReadInapplicableStringEncoding)
+            }
+            let existingData = try SecureExactArtifactIO.read(
+                rootURL: destination.rootURL,
+                relativePath: destination.relativePath,
+                binding: destination.binding
+            )
+            let result = try secureMergedContent(
+                existingData: existingData,
+                newContent: newContent,
+                behavior: request.behavior
+            )
+            try SecureExactArtifactIO.overwrite(
+                rootURL: destination.rootURL,
+                relativePath: destination.relativePath,
+                data: Data(result.content.utf8),
+                binding: destination.binding,
+                beforeCommit: destination.beforeCommit
+            )
+            action = result.action
+        case .text(let newContent):
+            let existingData = request.behavior == .overwrite
+                ? nil
+                : try SecureExactArtifactIO.read(
+                    rootURL: destination.rootURL,
+                    relativePath: destination.relativePath,
+                    binding: destination.binding
+                )
+            let result = try secureMergedContent(
+                existingData: existingData,
+                newContent: newContent,
+                behavior: request.behavior
+            )
+            try SecureExactArtifactIO.overwrite(
+                rootURL: destination.rootURL,
+                relativePath: destination.relativePath,
+                data: Data(result.content.utf8),
+                binding: destination.binding,
+                beforeCommit: destination.beforeCommit
+            )
+            action = result.action
+        }
+        return AggregateFileWriteOutcome(
+            fileURL: request.fileURL,
+            filename: request.filename,
+            action: action
+        )
+    }
+
+    private func secureMergedContent(
+        existingData: Data?,
+        newContent: String,
+        behavior: AggregateFileWriteBehavior
+    ) throws -> (content: String, action: String) {
+        guard let existingData else { return (newContent, "Exported to") }
+        guard let existing = String(data: existingData, encoding: .utf8) else {
+            throw CocoaError(.fileReadInapplicableStringEncoding)
+        }
+        switch behavior {
+        case .overwrite:
+            return (newContent, "Exported to")
+        case .mergeMarkdown:
+            return (MarkdownMerger.merge(existing: existing, new: newContent), "Updated")
+        case .append:
+            let appendedBlock = "\n\n" + newContent
+            if existing == newContent || existing.hasSuffix(appendedBlock) {
+                return (existing, "Already present in")
+            }
+            return (existing + appendedBlock, "Appended to")
+        }
+    }
+
+    private static func writeAll(_ data: Data, descriptor: Int32) throws {
+        var offset = 0
+        try data.withUnsafeBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else { return }
+            while offset < data.count {
+                let count = Darwin.write(descriptor, baseAddress.advanced(by: offset), data.count - offset)
+                if count < 0 {
+                    if errno == EINTR { continue }
+                    throw AppleExactDestinationError.destinationUnavailable
+                }
+                guard count > 0 else { throw AppleExactDestinationError.destinationUnavailable }
+                offset += count
+            }
         }
     }
 
@@ -514,7 +677,7 @@ nonisolated enum AppleExactDestinationError: String, Error, Equatable, Sendable 
 /// Descriptor-relative exact-file I/O for production durable range commits. No path component is
 /// followed as a symlink, and the opened root must retain the device/inode captured before the
 /// first side effect. Atomic replacement therefore cannot escape through a rename or symlink race.
-nonisolated private enum SecureExactArtifactIO {
+nonisolated enum SecureExactArtifactIO {
     static func inspect(
         rootURL: URL,
         relativePath: String,
@@ -622,12 +785,129 @@ nonisolated private enum SecureExactArtifactIO {
             && liveMetadata.st_size == openedMetadata.st_size
     }
 
+    static func read(
+        rootURL: URL,
+        relativePath: String,
+        binding: AppleVaultDestinationBinding
+    ) throws -> Data? {
+        let rootDescriptor = try openBoundRoot(rootURL, binding: binding)
+        defer { Darwin.close(rootDescriptor) }
+        let (openedParent, filename) = try openParent(
+            rootDescriptor: rootDescriptor,
+            relativePath: relativePath,
+            createDirectories: false
+        )
+        guard let parentDescriptor = openedParent else { return nil }
+        defer { Darwin.close(parentDescriptor) }
+        try validateOpenedNamespace(
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: binding,
+            openedParentDescriptor: parentDescriptor,
+            filename: filename
+        )
+        let descriptor = filename.withCString {
+            Darwin.openat(parentDescriptor, $0, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        }
+        if descriptor < 0 {
+            if errno == ENOENT { return nil }
+            if errno == ELOOP || errno == ENOTDIR {
+                throw AppleExactDestinationError.unsafeRelativePath
+            }
+            throw AppleExactDestinationError.destinationUnavailable
+        }
+        defer { Darwin.close(descriptor) }
+        var metadata = stat()
+        guard Darwin.fstat(descriptor, &metadata) == 0,
+              metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_nlink == 1,
+              metadata.st_size >= 0,
+              metadata.st_size <= off_t(Int.max) else {
+            throw AppleExactDestinationError.unsafeRelativePath
+        }
+        let data = try readAll(descriptor: descriptor, count: Int(metadata.st_size))
+        var finalMetadata = stat()
+        guard Darwin.fstat(descriptor, &finalMetadata) == 0,
+              finalMetadata.st_dev == metadata.st_dev,
+              finalMetadata.st_ino == metadata.st_ino,
+              finalMetadata.st_size == metadata.st_size,
+              try liveFilenameMatches(
+                  parentDescriptor: parentDescriptor,
+                  filename: filename,
+                  openedMetadata: finalMetadata
+              ) else {
+            throw AppleExactDestinationError.destinationUnavailable
+        }
+        try validateOpenedNamespace(
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: binding,
+            openedParentDescriptor: parentDescriptor,
+            filename: filename
+        )
+        return data
+    }
+
     static func overwrite(
         rootURL: URL,
         relativePath: String,
         data: Data,
         binding: AppleVaultDestinationBinding,
         beforeCommit: (@Sendable () throws -> Void)? = nil
+    ) throws {
+        try overwrite(
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: binding,
+            beforeCommit: beforeCommit
+        ) { descriptor in
+            try writeAll(data, descriptor: descriptor)
+        }
+    }
+
+    static func overwrite(
+        rootURL: URL,
+        relativePath: String,
+        sourceFileURL: URL,
+        binding: AppleVaultDestinationBinding,
+        expectedByteCount: UInt64? = nil,
+        chunkSize: Int = 64 * 1024,
+        beforeCommit: (@Sendable () throws -> Void)? = nil,
+        cancellationCheck: () throws -> Void = {}
+    ) throws {
+        try overwrite(
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: binding,
+            beforeCommit: beforeCommit
+        ) { descriptor in
+            let input = try FileHandle(forReadingFrom: sourceFileURL)
+            defer { try? input.close() }
+            var copiedByteCount: UInt64 = 0
+            while true {
+                try cancellationCheck()
+                guard let bytes = try input.read(upToCount: chunkSize), !bytes.isEmpty else {
+                    break
+                }
+                let nextCount = copiedByteCount.addingReportingOverflow(UInt64(bytes.count))
+                guard !nextCount.overflow else {
+                    throw AppleExactDestinationError.destinationUnavailable
+                }
+                copiedByteCount = nextCount.partialValue
+                try writeAll(bytes, descriptor: descriptor)
+            }
+            if let expectedByteCount, copiedByteCount != expectedByteCount {
+                throw AppleExactDestinationError.destinationUnavailable
+            }
+        }
+    }
+
+    static func overwrite(
+        rootURL: URL,
+        relativePath: String,
+        binding: AppleVaultDestinationBinding,
+        beforeCommit: (@Sendable () throws -> Void)? = nil,
+        writeTemporaryFile: (Int32) throws -> Void
     ) throws {
         let rootDescriptor = try openBoundRoot(rootURL, binding: binding)
         defer { Darwin.close(rootDescriptor) }
@@ -684,7 +964,7 @@ nonisolated private enum SecureExactArtifactIO {
                 }
             }
         }
-        try writeAll(data, descriptor: temporaryDescriptor)
+        try writeTemporaryFile(temporaryDescriptor)
         guard Darwin.fchmod(temporaryDescriptor, mode_t(0o600)) == 0,
               Darwin.fsync(temporaryDescriptor) == 0 else {
             throw AppleExactDestinationError.destinationUnavailable
@@ -696,8 +976,17 @@ nonisolated private enum SecureExactArtifactIO {
             openedParentDescriptor: parentDescriptor,
             filename: filename
         )
-        let expectedParentPath = try descriptorPath(parentDescriptor)
         try beforeCommit?()
+        // The hook models arbitrary work and namespace changes between validation and commit.
+        // Reopen from the bound root and compare the parent again immediately before rename.
+        try validateOpenedNamespace(
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: binding,
+            openedParentDescriptor: parentDescriptor,
+            filename: filename
+        )
+        let expectedParentPath = try descriptorPath(parentDescriptor)
         let temporaryPath = URL(fileURLWithPath: expectedParentPath, isDirectory: true)
             .appendingPathComponent(temporaryName).path
         let destinationPath = URL(fileURLWithPath: expectedParentPath, isDirectory: true)
@@ -1067,6 +1356,7 @@ final class VaultManager: ObservableObject {
     #if DEBUG
     var archiveEntryWillAppendForTesting: (() -> Void)?
     var exactDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
+    var productionDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
     #endif
 
     /// Individual entry exporter for granular tracking
@@ -1139,6 +1429,60 @@ final class VaultManager: ObservableObject {
         self.bookmarkResolver = bookmarkResolver
         self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
         loadSavedSettings()
+    }
+
+    private func secureDestination(
+        rootURL: URL,
+        relativePath: String,
+        binding: AppleVaultDestinationBinding
+    ) -> AggregateFileWriteRequest.SecureDestination? {
+        guard fileSystem is SystemFileSystem else { return nil }
+        #if DEBUG
+        let beforeCommit = productionDestinationWillCommitForTesting
+        #else
+        let beforeCommit: (@Sendable () throws -> Void)? = nil
+        #endif
+        return AggregateFileWriteRequest.SecureDestination(
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: binding,
+            beforeCommit: beforeCommit
+        )
+    }
+
+    private func secureRequest(
+        _ request: AggregateFileWriteRequest,
+        rootURL: URL,
+        relativePath: String,
+        binding: AppleVaultDestinationBinding?
+    ) -> AggregateFileWriteRequest {
+        guard let binding else { return request }
+        switch request.source {
+        case .text(let content):
+            return AggregateFileWriteRequest(
+                fileURL: request.fileURL,
+                filename: request.filename,
+                newContent: content,
+                behavior: request.behavior,
+                secureDestination: secureDestination(
+                    rootURL: rootURL,
+                    relativePath: relativePath,
+                    binding: binding
+                )
+            )
+        case .artifact(let artifact):
+            return AggregateFileWriteRequest(
+                fileURL: request.fileURL,
+                filename: request.filename,
+                artifact: artifact,
+                behavior: request.behavior,
+                secureDestination: secureDestination(
+                    rootURL: rootURL,
+                    relativePath: relativePath,
+                    binding: binding
+                )
+            )
+        }
     }
 
     // MARK: - Bookmark Management
@@ -1745,16 +2089,31 @@ final class VaultManager: ObservableObject {
                 ))
             }
 
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
         let barrier = ExportCommitBarrier()
         try await barrier.transition(to: .materialized)
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
         do {
             try await barrier.transition(to: .committing)
-            if let dictionaryRequest { _ = try await aggregateFileWriter.write(dictionaryRequest) }
+            if let dictionaryRequest, let dictionary = materialized.dataDictionary {
+                _ = try await aggregateFileWriter.write(secureRequest(
+                    dictionaryRequest,
+                    rootURL: vaultURL,
+                    relativePath: dictionary.relativePath,
+                    binding: destinationBinding
+                ))
+            }
             var writtenFiles: [WrittenAggregateFile] = []
             for (planned, request) in aggregateRequests {
-                let outcome = try await aggregateFileWriter.write(request)
+                let outcome = try await aggregateFileWriter.write(secureRequest(
+                    request,
+                    rootURL: vaultURL,
+                    relativePath: planned.artifact.relativePath,
+                    binding: destinationBinding
+                ))
                 writtenFiles.append(WrittenAggregateFile(
                     fileURL: outcome.fileURL,
                     filename: outcome.filename,
@@ -1948,7 +2307,8 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         writtenFiles: [WrittenAggregateFile],
         dataDictionaryFileCount: Int = 0,
-        leadingAction: String
+        leadingAction: String,
+        destinationBinding: AppleVaultDestinationBinding?
     ) throws -> DailyExportWriteResult {
         var individualEntriesCount = 0
         if settings.writesIndividualEntryFiles {
@@ -1964,6 +2324,11 @@ final class VaultManager: ObservableObject {
             )
         }
 
+        #if DEBUG
+        let productionBeforeCommit = productionDestinationWillCommitForTesting
+        #else
+        let productionBeforeCommit: (@Sendable () throws -> Void)? = nil
+        #endif
         let dailyNoteResult: DailyNoteInjector.InjectionResult? = settings.dailyNoteInjection.enabled
             ? DailyNoteInjector.inject(
                 healthData: healthData,
@@ -1972,7 +2337,9 @@ final class VaultManager: ObservableObject {
                 customization: settings.formatCustomization,
                 metricSelection: settings.metricSelection,
                 fileSystem: fileSystem,
-                fileCoordinator: fileCoordinator
+                fileCoordinator: fileCoordinator,
+                destinationBinding: destinationBinding,
+                beforeCommit: productionBeforeCommit
             )
             : nil
 
@@ -2054,6 +2421,9 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings
         )
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
         var dataDictionaryFileCount = 0
         if !settings.dailyNotesOnlyModeEnabled,
            !settings.archiveModeEnabled,
@@ -2063,7 +2433,13 @@ final class VaultManager: ObservableObject {
                healthSubfolder: healthSubfolder,
                settings: settings
            ) {
-            _ = try aggregateFileWriter.writeSynchronously(dictionaryRequest)
+            _ = try aggregateFileWriter.writeSynchronously(secureRequest(
+                dictionaryRequest,
+                rootURL: vaultURL,
+                relativePath: [healthSubfolder, HealthMdExportSchema.dataDictionaryFilename]
+                    .filter { !$0.isEmpty }.joined(separator: "/"),
+                binding: destinationBinding
+            ))
             dataDictionaryFileCount = 1
         }
 
@@ -2077,22 +2453,26 @@ final class VaultManager: ObservableObject {
                 date: date,
                 format: format
             )
+            let relativePath = ExportPathPlanner.aggregateRelativePath(
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: date,
+                format: format
+            )
             let result = try writeOneFormat(
                 preparedExport: preparedExport,
                 date: date,
                 format: format,
                 targetFolderURL: targetFolderURL,
-                settings: settings
+                settings: settings,
+                rootURL: vaultURL,
+                relativePath: relativePath,
+                destinationBinding: destinationBinding
             )
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: result.fileURL,
                 filename: result.filename,
-                relativePath: ExportPathPlanner.aggregateRelativePath(
-                    healthSubfolder: healthSubfolder,
-                    settings: settings,
-                    date: date,
-                    format: format
-                ),
+                relativePath: relativePath,
                 format: format
             ))
             if index == 0 { leadingAction = result.action }
@@ -2106,7 +2486,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             writtenFiles: writtenFiles,
             dataDictionaryFileCount: dataDictionaryFileCount,
-            leadingAction: leadingAction
+            leadingAction: leadingAction,
+            destinationBinding: destinationBinding
         )
         #if DEBUG
         ExportPerformanceInstrumentation.completed(
@@ -2137,6 +2518,9 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings
         )
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
         var dataDictionaryFileCount = 0
         if !settings.dailyNotesOnlyModeEnabled,
            !settings.archiveModeEnabled,
@@ -2146,7 +2530,13 @@ final class VaultManager: ObservableObject {
                healthSubfolder: healthSubfolder,
                settings: settings
            ) {
-            _ = try await aggregateFileWriter.write(dictionaryRequest)
+            _ = try await aggregateFileWriter.write(secureRequest(
+                dictionaryRequest,
+                rootURL: vaultURL,
+                relativePath: [healthSubfolder, HealthMdExportSchema.dataDictionaryFilename]
+                    .filter { !$0.isEmpty }.joined(separator: "/"),
+                binding: destinationBinding
+            ))
             dataDictionaryFileCount = 1
         }
 
@@ -2160,22 +2550,26 @@ final class VaultManager: ObservableObject {
                 date: date,
                 format: format
             )
+            let relativePath = ExportPathPlanner.aggregateRelativePath(
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: date,
+                format: format
+            )
             let result = try await writeOneFormatOffMain(
                 preparedExport: preparedExport,
                 date: date,
                 format: format,
                 targetFolderURL: targetFolderURL,
-                settings: settings
+                settings: settings,
+                rootURL: vaultURL,
+                relativePath: relativePath,
+                destinationBinding: destinationBinding
             )
             writtenFiles.append(WrittenAggregateFile(
                 fileURL: result.fileURL,
                 filename: result.filename,
-                relativePath: ExportPathPlanner.aggregateRelativePath(
-                    healthSubfolder: healthSubfolder,
-                    settings: settings,
-                    date: date,
-                    format: format
-                ),
+                relativePath: relativePath,
                 format: format
             ))
             if index == 0 { leadingAction = result.action }
@@ -2189,7 +2583,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             writtenFiles: writtenFiles,
             dataDictionaryFileCount: dataDictionaryFileCount,
-            leadingAction: leadingAction
+            leadingAction: leadingAction,
+            destinationBinding: destinationBinding
         )
         #if DEBUG
         ExportPerformanceInstrumentation.completed(
@@ -2222,6 +2617,9 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings
         )
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
 
         let dictionaryRequest: AggregateFileWriteRequest? = if shouldWriteDataDictionary {
             try makeDataDictionaryWriteRequest(
@@ -2257,14 +2655,25 @@ final class VaultManager: ObservableObject {
             try await barrier.transition(to: .committing)
             var dataDictionaryFileCount = 0
             if let dictionaryRequest {
-                _ = try await aggregateFileWriter.write(dictionaryRequest)
+                _ = try await aggregateFileWriter.write(secureRequest(
+                    dictionaryRequest,
+                    rootURL: vaultURL,
+                    relativePath: [healthSubfolder, HealthMdExportSchema.dataDictionaryFilename]
+                        .filter { !$0.isEmpty }.joined(separator: "/"),
+                    binding: destinationBinding
+                ))
                 dataDictionaryFileCount = 1
             }
 
             var writtenFiles: [WrittenAggregateFile] = []
             var leadingAction = "Exported to"
             for (index, pair) in aggregateRequests.enumerated() {
-                let outcome = try await aggregateFileWriter.write(pair.1)
+                let outcome = try await aggregateFileWriter.write(secureRequest(
+                    pair.1,
+                    rootURL: vaultURL,
+                    relativePath: pair.0.artifact.relativePath,
+                    binding: destinationBinding
+                ))
                 writtenFiles.append(WrittenAggregateFile(
                     fileURL: outcome.fileURL,
                     filename: outcome.filename,
@@ -2282,7 +2691,8 @@ final class VaultManager: ObservableObject {
                 settings: settings,
                 writtenFiles: writtenFiles,
                 dataDictionaryFileCount: dataDictionaryFileCount,
-                leadingAction: leadingAction
+                leadingAction: leadingAction,
+                destinationBinding: destinationBinding
             )
             try await barrier.transition(to: .completed)
             #if DEBUG
@@ -2322,6 +2732,9 @@ final class VaultManager: ObservableObject {
         encoder.dateEncodingStrategy = .iso8601
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
             healthSubfolder: effectiveHealthSubfolder
@@ -2346,11 +2759,22 @@ final class VaultManager: ObservableObject {
             let data = try encoder.encode(record)
             guard let json = String(data: data, encoding: .utf8) else { continue }
             let fileURL = providerFolderURL.appendingPathComponent("\(record.date).json")
-            _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: fileURL.lastPathComponent,
-                newContent: json,
-                behavior: .overwrite
+            let relativePath = [
+                effectiveHealthSubfolder,
+                "integrations",
+                record.provider.exportFolderName,
+                "\(record.date).json"
+            ].filter { !$0.isEmpty }.joined(separator: "/")
+            _ = try await aggregateFileWriter.write(secureRequest(
+                AggregateFileWriteRequest(
+                    fileURL: fileURL,
+                    filename: fileURL.lastPathComponent,
+                    newContent: json,
+                    behavior: .overwrite
+                ),
+                rootURL: vaultURL,
+                relativePath: relativePath,
+                binding: destinationBinding
             ))
             writtenCount += 1
         }
@@ -2462,11 +2886,16 @@ final class VaultManager: ObservableObject {
             .joined(separator: "/")
         try validateExportArtifactPaths([archiveRelativePath], vaultURL: vaultURL)
 
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
         let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
             vaultURL: vaultURL,
             healthSubfolder: effectiveHealthSubfolder
         )
-        try ensureCoordinatedDirectoryExists(at: healthFolderURL)
+        if !(fileSystem is SystemFileSystem) {
+            try ensureCoordinatedDirectoryExists(at: healthFolderURL)
+        }
         let archiveURL = healthFolderURL.appendingPathComponent(
             archiveName,
             isDirectory: false
@@ -2485,11 +2914,24 @@ final class VaultManager: ObservableObject {
             "archive-checkpoint.json",
             isDirectory: false
         )
+        #if DEBUG
+        let archiveBeforeCommit = productionDestinationWillCommitForTesting
+        #else
+        let archiveBeforeCommit: (@Sendable () throws -> Void)? = nil
+        #endif
         let writer = try ZipArchiveWriter.begin(
             to: archiveURL,
             checkpointURL: checkpointURL,
             workingDirectoryURL: archiveWorkDirectory,
-            fileCoordinator: fileCoordinator
+            fileCoordinator: fileCoordinator,
+            securePublication: destinationBinding.map {
+                ZipArchiveWriter.SecurePublication(
+                    rootURL: vaultURL,
+                    relativePath: archiveRelativePath,
+                    binding: $0,
+                    beforeCommit: archiveBeforeCommit
+                )
+            }
         )
         do {
             if settings.writesDataDictionary {
@@ -2655,6 +3097,9 @@ final class VaultManager: ObservableObject {
         guard !summaries.isEmpty else { return [] }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
         try preflightExportDestinations(
             settings: settings,
             healthSubfolder: effectiveHealthSubfolder,
@@ -2684,11 +3129,16 @@ final class VaultManager: ObservableObject {
                 settings: settings
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
-            _ = try aggregateFileWriter.writeSynchronously(AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: target.filename,
-                newContent: target.content,
-                behavior: .overwrite
+            _ = try aggregateFileWriter.writeSynchronously(secureRequest(
+                AggregateFileWriteRequest(
+                    fileURL: fileURL,
+                    filename: target.filename,
+                    newContent: target.content,
+                    behavior: .overwrite
+                ),
+                rootURL: vaultURL,
+                relativePath: target.relativePath,
+                binding: destinationBinding
             ))
             results.append(target)
             writtenFiles.append(WrittenAggregateFile(
@@ -2813,6 +3263,9 @@ final class VaultManager: ObservableObject {
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
         }
+        let destinationBinding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
         try preflightExportDestinations(
@@ -2925,15 +3378,33 @@ final class VaultManager: ObservableObject {
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder
             )
-            try ensureCoordinatedDirectoryExists(at: healthFolderURL)
+            if destinationBinding == nil {
+                try ensureCoordinatedDirectoryExists(at: healthFolderURL)
+            }
+            let archiveName = archiveFilename(
+                startDate: startDate,
+                endDate: endDate,
+                timeZone: settings.exportTimeZoneOverride
+            )
             let archiveURL = healthFolderURL.appendingPathComponent(
-                archiveFilename(
-                    startDate: startDate,
-                    endDate: endDate,
-                    timeZone: settings.exportTimeZoneOverride
-                ),
+                archiveName,
                 isDirectory: false
             )
+            let archiveRelativePath = [effectiveHealthSubfolder, archiveName]
+                .filter { !$0.isEmpty }.joined(separator: "/")
+            #if DEBUG
+            let archiveBeforeCommit = productionDestinationWillCommitForTesting
+            #else
+            let archiveBeforeCommit: (@Sendable () throws -> Void)? = nil
+            #endif
+            let securePublication = destinationBinding.map {
+                ZipArchiveWriter.SecurePublication(
+                    rootURL: vaultURL,
+                    relativePath: archiveRelativePath,
+                    binding: $0,
+                    beforeCommit: archiveBeforeCommit
+                )
+            }
             let workDirectory = archiveWorkDirectoryURL
                 ?? FileManager.default.temporaryDirectory.appendingPathComponent(
                     ".healthmd-corpus-archive-\(UUID().uuidString)",
@@ -2960,7 +3431,8 @@ final class VaultManager: ObservableObject {
                 committedArchivePaths = Set(checkpoint.entryPaths)
                 writer = try ZipArchiveWriter.recover(
                     from: checkpointURL,
-                    fileCoordinator: fileCoordinator
+                    fileCoordinator: fileCoordinator,
+                    securePublication: securePublication
                 )
             } else {
                 committedArchivePaths = []
@@ -2968,7 +3440,8 @@ final class VaultManager: ObservableObject {
                     to: archiveURL,
                     checkpointURL: checkpointURL,
                     workingDirectoryURL: workDirectory,
-                    fileCoordinator: fileCoordinator
+                    fileCoordinator: fileCoordinator,
+                    securePublication: securePublication
                 )
             }
             do {
@@ -3087,11 +3560,16 @@ final class VaultManager: ObservableObject {
                 settings: settings
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
-            _ = try await aggregateFileWriter.write(AggregateFileWriteRequest(
-                fileURL: fileURL,
-                filename: target.filename,
-                newContent: target.content,
-                behavior: .overwrite
+            _ = try await aggregateFileWriter.write(secureRequest(
+                AggregateFileWriteRequest(
+                    fileURL: fileURL,
+                    filename: target.filename,
+                    newContent: target.content,
+                    behavior: .overwrite
+                ),
+                rootURL: vaultURL,
+                relativePath: target.relativePath,
+                binding: destinationBinding
             ))
             progress?(finalizedUnits, estimatedUnits, target.summary.window.endDate)
             await Task.yield()
@@ -3143,7 +3621,17 @@ final class VaultManager: ObservableObject {
             healthSubfolder: healthSubfolder,
             settings: settings
         ) else { return }
-        _ = try aggregateFileWriter.writeSynchronously(request)
+        let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
+        let binding = fileSystem is SystemFileSystem
+            ? try Self.destinationBinding(for: vaultURL)
+            : nil
+        _ = try aggregateFileWriter.writeSynchronously(secureRequest(
+            request,
+            rootURL: vaultURL,
+            relativePath: [effectiveHealthSubfolder, HealthMdExportSchema.dataDictionaryFilename]
+                .filter { !$0.isEmpty }.joined(separator: "/"),
+            binding: binding
+        ))
     }
 
     // MARK: - Collision Safety
@@ -3205,7 +3693,7 @@ final class VaultManager: ObservableObject {
         }
 
         if settings.archiveModeEnabled {
-            var entryPaths = dates.flatMap { date in
+            var entryPaths = settings.summaryOnlyModeEnabled ? [] : dates.flatMap { date in
                 settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map {
                     archiveEntryPath(for: date, format: $0, settings: settings)
                 }
@@ -3395,7 +3883,10 @@ final class VaultManager: ObservableObject {
         date: Date,
         format: ExportFormat,
         targetFolderURL: URL,
-        settings: AdvancedExportSettings
+        settings: AdvancedExportSettings,
+        rootURL: URL,
+        relativePath: String,
+        destinationBinding: AppleVaultDestinationBinding?
     ) throws -> AggregateFileWriteOutcome {
         let request = try makeAggregateFileWriteRequest(
             preparedExport: preparedExport,
@@ -3404,7 +3895,12 @@ final class VaultManager: ObservableObject {
             targetFolderURL: targetFolderURL,
             settings: settings
         )
-        return try aggregateFileWriter.writeSynchronously(request)
+        return try aggregateFileWriter.writeSynchronously(secureRequest(
+            request,
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: destinationBinding
+        ))
     }
 
     private func writeOneFormatOffMain(
@@ -3412,7 +3908,10 @@ final class VaultManager: ObservableObject {
         date: Date,
         format: ExportFormat,
         targetFolderURL: URL,
-        settings: AdvancedExportSettings
+        settings: AdvancedExportSettings,
+        rootURL: URL,
+        relativePath: String,
+        destinationBinding: AppleVaultDestinationBinding?
     ) async throws -> AggregateFileWriteOutcome {
         let request = try makeAggregateFileWriteRequest(
             preparedExport: preparedExport,
@@ -3421,7 +3920,12 @@ final class VaultManager: ObservableObject {
             targetFolderURL: targetFolderURL,
             settings: settings
         )
-        return try await aggregateFileWriter.write(request)
+        return try await aggregateFileWriter.write(secureRequest(
+            request,
+            rootURL: rootURL,
+            relativePath: relativePath,
+            binding: destinationBinding
+        ))
     }
 
     private func individualEntriesBaseFolderURL(
