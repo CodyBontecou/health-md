@@ -322,17 +322,20 @@ nonisolated enum ZipArchiveWriter {
         let relativePath: String
         let binding: AppleVaultDestinationBinding
         let beforeCommit: (@Sendable () throws -> Void)?
+        let afterValidationBeforeRename: (@Sendable () throws -> Void)?
 
         init(
             rootURL: URL,
             relativePath: String,
             binding: AppleVaultDestinationBinding,
-            beforeCommit: (@Sendable () throws -> Void)? = nil
+            beforeCommit: (@Sendable () throws -> Void)? = nil,
+            afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil
         ) {
             self.rootURL = rootURL
             self.relativePath = relativePath
             self.binding = binding
             self.beforeCommit = beforeCommit
+            self.afterValidationBeforeRename = afterValidationBeforeRename
         }
     }
 
@@ -546,16 +549,29 @@ nonisolated enum ZipArchiveWriter {
                 closeHandles()
 
                 if let securePublication {
-                    try SecureExactArtifactIO.overwrite(
-                        rootURL: securePublication.rootURL,
-                        relativePath: securePublication.relativePath,
-                        sourceFileURL: temporaryArchiveURL,
-                        binding: securePublication.binding,
-                        expectedByteCount: archiveByteCount,
-                        chunkSize: chunkSize,
-                        beforeCommit: securePublication.beforeCommit,
+                    try fileCoordinator.coordinateWriting(
+                        at: destinationURL,
+                        intent: .replace,
                         cancellationCheck: { try Self.throwIfCancelled(cancellationCheck) }
-                    )
+                    ) { coordinatedURL in
+                        let coordinatedRootURL = try SecureExactArtifactIO.coordinatedRootURL(
+                            for: coordinatedURL,
+                            rootURL: securePublication.rootURL,
+                            relativePath: securePublication.relativePath,
+                            binding: securePublication.binding
+                        )
+                        try SecureExactArtifactIO.overwrite(
+                            rootURL: coordinatedRootURL,
+                            relativePath: securePublication.relativePath,
+                            sourceFileURL: temporaryArchiveURL,
+                            binding: securePublication.binding,
+                            expectedByteCount: archiveByteCount,
+                            chunkSize: chunkSize,
+                            beforeCommit: securePublication.beforeCommit,
+                            afterValidationBeforeRename: securePublication.afterValidationBeforeRename,
+                            cancellationCheck: { try Self.throwIfCancelled(cancellationCheck) }
+                        )
+                    }
                 } else {
                     try fileCoordinator.coordinateWriting(
                         at: destinationURL,

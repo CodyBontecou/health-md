@@ -120,6 +120,17 @@ nonisolated private final class SlowRecordingFileSystem: FileSystemAccessing, @u
     }
 }
 
+nonisolated private final class SecureCommitHookProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var executionCountStorage = 0
+
+    var executionCount: Int { lock.withLock { executionCountStorage } }
+
+    func record() {
+        lock.withLock { executionCountStorage += 1 }
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -188,7 +199,10 @@ final class VaultManagerTests: XCTestCase {
         return dir
     }
 
-    private func makeRealFileSystemManager(vaultURL: URL) -> VaultManager {
+    private func makeRealFileSystemManager(
+        vaultURL: URL,
+        fileCoordinator: FileCoordinating? = nil
+    ) -> VaultManager {
         defaults.storage["obsidianVaultBookmark"] = Data("bm".utf8)
         defaults.storage.removeValue(forKey: "obsidianVaultSelectionV1")
         defaults.storage["obsidianVaultPath"] = vaultURL.path
@@ -197,6 +211,7 @@ final class VaultManagerTests: XCTestCase {
         let manager = VaultManager(
             defaults: defaults,
             fileSystem: SystemFileSystem(),
+            fileCoordinator: fileCoordinator,
             bookmarkResolver: bookmarkResolver
         )
         Self.retainedManagers.append(manager)
@@ -207,11 +222,19 @@ final class VaultManagerTests: XCTestCase {
         on manager: VaultManager,
         parent: URL,
         movedParent: URL,
-        outside: URL
+        outside: URL,
+        probe: SecureCommitHookProbe,
+        afterFinalValidation: Bool = false
     ) {
-        manager.productionDestinationWillCommitForTesting = {
+        let hook: @Sendable () throws -> Void = {
+            probe.record()
             try FileManager.default.moveItem(at: parent, to: movedParent)
             try FileManager.default.createSymbolicLink(at: parent, withDestinationURL: outside)
+        }
+        if afterFinalValidation {
+            manager.productionDestinationDidValidateForTesting = hook
+        } else {
+            manager.productionDestinationWillCommitForTesting = hook
         }
     }
 
@@ -235,13 +258,22 @@ final class VaultManagerTests: XCTestCase {
     }
 
     func testProductionAggregateWriteFailsClosedOnParentSymlinkSwap() throws {
+        try assertAggregateRaceFailsClosed(afterFinalValidation: false)
+    }
+
+    func testProductionAggregateCommitWindowFailsClosedAfterFinalValidation() throws {
+        try assertAggregateRaceFailsClosed(afterFinalValidation: true)
+    }
+
+    private func assertAggregateRaceFailsClosed(afterFinalValidation: Bool) throws {
         let root = makeTempDir()
         let outside = makeTempDir()
         defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: outside) }
         let parent = root.appendingPathComponent("Health", isDirectory: true)
         let moved = root.appendingPathComponent("Health-original", isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
-        let manager = makeRealFileSystemManager(vaultURL: root)
+        let coordinator = RecordingFileCoordinator()
+        let manager = makeRealFileSystemManager(vaultURL: root, fileCoordinator: coordinator)
         manager.healthSubfolder = "Health"
         let settings = makeIsolatedSettings()
         settings.exportFormats = [.markdown]
@@ -249,14 +281,30 @@ final class VaultManagerTests: XCTestCase {
         settings.generateWeeklyRollups = false
         settings.generateMonthlyRollups = false
         settings.generateYearlyRollups = false
-        installParentSwap(on: manager, parent: parent, movedParent: moved, outside: outside)
+        let probe = SecureCommitHookProbe()
+        installParentSwap(
+            on: manager,
+            parent: parent,
+            movedParent: moved,
+            outside: outside,
+            probe: probe,
+            afterFinalValidation: afterFinalValidation
+        )
 
         XCTAssertThrowsError(try manager.exportHealthDataResult(
             ExportFixtures.fullDay,
             for: ExportFixtures.referenceDate,
             settings: settings
-        ))
+        )) { error in
+            XCTAssertEqual(error as? ExportError, .destinationChanged)
+        }
+        XCTAssertEqual(probe.executionCount, 1)
         let filename = settings.filename(for: ExportFixtures.referenceDate, format: .markdown)
+        XCTAssertEqual(
+            coordinator.calls,
+            [.init(url: parent.appendingPathComponent(filename), intent: .replace)],
+            "The secure aggregate route must use the coordinated destination accessor"
+        )
         assertRaceWroteNothing(filename: filename, movedParent: moved, outside: outside)
     }
 
@@ -267,24 +315,39 @@ final class VaultManagerTests: XCTestCase {
         let parent = root.appendingPathComponent("Daily", isDirectory: true)
         let moved = root.appendingPathComponent("Daily-original", isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
-        let manager = makeRealFileSystemManager(vaultURL: root)
+        let coordinator = RecordingFileCoordinator()
+        let manager = makeRealFileSystemManager(vaultURL: root, fileCoordinator: coordinator)
         let settings = makeIsolatedSettings()
         settings.exportFormats = []
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.dailyNotesOnly = true
         settings.dailyNoteInjection.createIfMissing = true
         settings.dailyNoteInjection.folderPath = "Daily"
-        installParentSwap(on: manager, parent: parent, movedParent: moved, outside: outside)
+        let probe = SecureCommitHookProbe()
+        installParentSwap(
+            on: manager,
+            parent: parent,
+            movedParent: moved,
+            outside: outside,
+            probe: probe
+        )
 
         let result = try manager.exportHealthDataResult(
             ExportFixtures.fullDay,
             for: ExportFixtures.referenceDate,
             settings: settings
         )
-        guard case .failed = result.dailyNoteResult else {
+        guard case .failed(let error) = result.dailyNoteResult else {
             return XCTFail("Expected bound daily-note publication to fail closed")
         }
+        XCTAssertEqual(error as? ExportError, .destinationChanged)
+        XCTAssertEqual(probe.executionCount, 1)
         let filename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        XCTAssertEqual(
+            coordinator.calls,
+            [.init(url: parent.appendingPathComponent(filename), intent: .replace)],
+            "The secure daily-note route must use the coordinated destination accessor"
+        )
         assertRaceWroteNothing(filename: filename, movedParent: moved, outside: outside)
     }
 
@@ -303,7 +366,8 @@ final class VaultManagerTests: XCTestCase {
         let parent = root.appendingPathComponent("Health", isDirectory: true)
         let moved = root.appendingPathComponent("Health-original", isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
-        let manager = makeRealFileSystemManager(vaultURL: root)
+        let coordinator = RecordingFileCoordinator()
+        let manager = makeRealFileSystemManager(vaultURL: root, fileCoordinator: coordinator)
         manager.healthSubfolder = "Health"
         let settings = makeIsolatedSettings()
         settings.archiveExportFiles = true
@@ -311,7 +375,14 @@ final class VaultManagerTests: XCTestCase {
         settings.exportFormats = [.markdown]
         settings.includeDataDictionary = false
         settings.generateWeeklyRollups = true
-        installParentSwap(on: manager, parent: parent, movedParent: moved, outside: outside)
+        let probe = SecureCommitHookProbe()
+        installParentSwap(
+            on: manager,
+            parent: parent,
+            movedParent: moved,
+            outside: outside,
+            probe: probe
+        )
 
         let start = ExportFixtures.referenceDate
         let formatter = DateFormatter()
@@ -327,8 +398,14 @@ final class VaultManagerTests: XCTestCase {
             )
             XCTFail("Expected bound ZIP publication to fail closed")
         } catch {
-            // Expected: the bound parent no longer matches immediately before publication.
+            XCTAssertEqual(error as? ExportError, .destinationChanged)
         }
+        XCTAssertEqual(probe.executionCount, 1)
+        XCTAssertEqual(
+            coordinator.calls,
+            [.init(url: parent.appendingPathComponent(archiveName), intent: .replace)],
+            "The secure ZIP route must use the coordinated destination accessor"
+        )
         assertRaceWroteNothing(filename: archiveName, movedParent: moved, outside: outside)
     }
 
