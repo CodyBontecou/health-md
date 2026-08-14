@@ -7,6 +7,7 @@ import HealthMdCoreRust
 enum MacCorpusFinalizeOutcome {
     case files(result: MacExportResultPayload, acknowledgement: ConnectedCorpusTransferFinalAck)
     case strictRaw(spool: CanonicalRawResultSpool, acknowledgement: ConnectedCorpusTransferFinalAck)
+    case failed(failure: MacExportFailure, acknowledgement: ConnectedCorpusTransferFinalAck)
     case replay(
         acknowledgement: ConnectedCorpusTransferFinalAck,
         fileResult: MacExportResultPayload?
@@ -195,6 +196,9 @@ final class MacCorpusExportSessionManager {
         var receivedRangePlanPersisted: Bool? = nil
         var receivedRangePlan: StoredReceivedRangePlan? = nil
         var terminalResult: MacExportResultPayload? = nil
+        /// Optional v5 field. A terminal negative ACK is replayable only with this
+        /// persisted application failure, so peers cannot strand exact failure details.
+        var terminalFailure: MacExportFailure? = nil
         var terminalAcknowledgement: ConnectedCorpusTransferFinalAck? = nil
         /// A protected strict-raw terminal result bridges process death between journal
         /// completion and installation in the durable control-response store.
@@ -557,13 +561,15 @@ final class MacCorpusExportSessionManager {
             if open.partition.index < committedCount {
                 let prior = session.journal.committedPartitions[open.partition.index]
                 guard prior.sha256 == open.partition.sha256 else {
-                    if session.journal.state == .completed || session.journal.state == .cancelled {
+                    if session.journal.state == .completed || session.journal.state == .cancelled
+                        || session.journal.state == .failed {
                         activeSession = nil
                     }
                     return rejected("A committed partition index was replayed with different content.")
                 }
                 admittedPartitions.remove(open.partition)
-                if session.journal.state == .completed || session.journal.state == .cancelled {
+                if session.journal.state == .completed || session.journal.state == .cancelled
+                    || session.journal.state == .failed {
                     activeSession = nil
                 }
                 return ConnectedCorpusTransferDisposition(
@@ -816,11 +822,18 @@ final class MacCorpusExportSessionManager {
               session.journal.session.requestFingerprint == finalize.requestFingerprint else {
             throw ConnectedCorpusTransferModelError.mismatchedSession
         }
-        if session.journal.state == .completed,
+        if (session.journal.state == .completed || session.journal.state == .failed),
            let acknowledgement = session.journal.terminalAcknowledgement,
            acknowledgement.finalPartitionSHA256 == finalize.finalPartitionSHA256,
            finalize.partitionCount == session.journal.committedPartitions.count,
            finalize.totalByteCount == session.journal.totalPartitionBytes {
+            if session.journal.state == .failed,
+               let failure = session.journal.terminalFailure {
+                cleanupPayloadFiles(session)
+                if activeSession === session { activeSession = nil }
+                admittedPartitions.removeAll()
+                return .failed(failure: failure, acknowledgement: acknowledgement)
+            }
             if let storedSpool = session.journal.strictRawTerminalSpool {
                 let spool = try restoreStrictRawTerminalSpool(storedSpool, session: session)
                 cleanupPayloadFiles(session)
@@ -1443,6 +1456,71 @@ final class MacCorpusExportSessionManager {
             admittedPartitions.removeAll()
             return .strictRaw(spool: spool, acknowledgement: acknowledgement)
         }
+    }
+
+    /// Durably binds an application failure to its rejected final acknowledgement.
+    /// Returning nil means neither message is safe to publish; the sender must pause
+    /// and retry finalization instead of becoming terminal without failure details.
+    func recordFinalizationFailure(
+        _ finalize: ConnectedCorpusTransferFinalize,
+        failure: MacExportFailure,
+        vaultManager: VaultManager
+    ) -> ConnectedCorpusTransferFinalAck? {
+        let session: Session
+        if let activeSession {
+            session = activeSession
+        } else if let restored = try? restoreSession(sessionID: finalize.sessionID) {
+            session = restored
+        } else {
+            return nil
+        }
+        guard session.journal.session.sessionID == finalize.sessionID,
+              session.journal.session.jobID == finalize.jobID,
+              session.journal.session.requestFingerprint == finalize.requestFingerprint,
+              finalize.partitionCount == session.journal.committedPartitions.count,
+              finalize.totalByteCount == session.journal.totalPartitionBytes,
+              finalize.finalPartitionSHA256 == session.journal.committedPartitions.last?.sha256 else {
+            return nil
+        }
+        if session.journal.state == .failed,
+           session.journal.terminalFailure == failure,
+           let acknowledgement = session.journal.terminalAcknowledgement {
+            return acknowledgement
+        }
+        guard session.journal.state == .open || session.journal.state == .finalizing,
+              destinationCommitInFlightSessionID != finalize.sessionID,
+              partitionExecutionSessionID != finalize.sessionID else {
+            return nil
+        }
+
+        let acknowledgement = ConnectedCorpusTransferFinalAck(
+            sessionID: finalize.sessionID,
+            jobID: finalize.jobID,
+            accepted: false,
+            requestFingerprint: finalize.requestFingerprint,
+            finalPartitionSHA256: finalize.finalPartitionSHA256,
+            message: failure.message
+        )
+        let journalBeforeFailure = session.journal
+        session.journal.state = .failed
+        session.journal.terminalResult = nil
+        session.journal.terminalFailure = failure
+        session.journal.terminalAcknowledgement = acknowledgement
+        session.journal.receivedRangePlan = nil
+        session.journal.updatedAt = Date()
+        do {
+            try persist(session)
+        } catch {
+            session.journal = journalBeforeFailure
+            activeSession = nil
+            admittedPartitions.removeAll()
+            return nil
+        }
+        cleanupPayloadFiles(session)
+        cleanupArchiveWork(session: session, vaultManager: vaultManager)
+        activeSession = nil
+        admittedPartitions.removeAll()
+        return acknowledgement
     }
 
     func cancel(
@@ -3739,7 +3817,8 @@ final class MacCorpusExportSessionManager {
 
     private func persist(_ session: Session) throws {
         #if DEBUG
-        if session.journal.state == .completed, failNextTerminalPersistForTesting {
+        if (session.journal.state == .completed || session.journal.state == .failed),
+           failNextTerminalPersistForTesting {
             failNextTerminalPersistForTesting = false
             throw CocoaError(.fileWriteUnknown)
         }
@@ -3830,7 +3909,7 @@ final class MacCorpusExportSessionManager {
             let failRangePlan = session.journal.state == .finalizing
                 && session.journal.receivedRangePlanPersisted == true
                 && failNextPostRenameRangePlanSyncForTesting
-            let failTerminal = session.journal.state == .completed
+            let failTerminal = (session.journal.state == .completed || session.journal.state == .failed)
                 && failNextPostRenameTerminalSyncForTesting
             if failNextPostRenameJournalSyncForTesting || failRangePlan || failTerminal {
                 failNextPostRenameJournalSyncForTesting = false
@@ -4154,7 +4233,8 @@ final class MacCorpusExportSessionManager {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
         }
-        if journal.state == .completed, journal.terminalAcknowledgement == nil {
+        if (journal.state == .completed || journal.state == .failed),
+           journal.terminalAcknowledgement == nil {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         guard let planPersisted = journal.receivedRangePlanPersisted else {
@@ -4169,7 +4249,8 @@ final class MacCorpusExportSessionManager {
             }
         } else if planPersisted,
                   journal.state != .completed,
-                  journal.state != .cancelled {
+                  journal.state != .cancelled,
+                  journal.state != .failed {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         if !usesRangePlan,
@@ -4195,14 +4276,32 @@ final class MacCorpusExportSessionManager {
     }
 
     private func validateTerminalEnvelope(_ journal: Journal) throws {
+        if journal.state == .failed {
+            guard journal.partialItems.isEmpty,
+                  journal.terminalResult == nil,
+                  let failure = journal.terminalFailure,
+                  failure.jobID == journal.session.jobID,
+                  let acknowledgement = journal.terminalAcknowledgement,
+                  !acknowledgement.accepted,
+                  acknowledgement.sessionID == journal.session.sessionID,
+                  acknowledgement.jobID == journal.session.jobID,
+                  acknowledgement.requestFingerprint == journal.session.requestFingerprint,
+                  acknowledgement.finalPartitionSHA256 == journal.committedPartitions.last?.sha256,
+                  acknowledgement.message == failure.message else {
+                throw ConnectedCorpusTransferModelError.invalidJournal
+            }
+            return
+        }
         guard journal.state == .completed else {
             guard journal.terminalAcknowledgement == nil,
-                  journal.terminalResult == nil else {
+                  journal.terminalResult == nil,
+                  journal.terminalFailure == nil else {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
             return
         }
         guard journal.partialItems.isEmpty,
+              journal.terminalFailure == nil,
               let acknowledgement = journal.terminalAcknowledgement,
               acknowledgement.accepted,
               acknowledgement.sessionID == journal.session.sessionID,

@@ -106,12 +106,24 @@ final class MacExportJobExecutor {
     private var activeJobID: UUID?
     private var cancelledJobIDs: Set<UUID> = []
     private var streamSession: StreamSession?
+    private var nextStreamGeneration: UInt64 = 0
+    private var streamChunkInFlightGeneration: UInt64?
+    private var streamChunkCompletionWaiters: [CheckedContinuation<Void, Never>] = []
+    private var streamCompletionInFlightGeneration: UInt64?
+    #if DEBUG
+    var receiveChunkDidWriteForTesting: (@MainActor () async -> Void)?
+    var completeStreamDidWriteForTesting: (@MainActor () async -> Void)?
+    var completionIsWaitingForChunkForTesting: Bool {
+        !streamChunkCompletionWaiters.isEmpty
+    }
+    #endif
 
     /// Streaming chunks are accepted in strict 1-based order. The first
     /// `MacExportStreamChunk.sequence` for a stream must be `1`; out-of-order
     /// chunks are rejected with `accepted == false` and do not mutate session
     /// state, so the iPhone can retry the expected sequence.
     private struct StreamSession {
+        let generation: UInt64
         let start: MacExportStreamStart
         let requestedDates: [Date]
         let formatsPerDate: Int
@@ -152,12 +164,16 @@ final class MacExportJobExecutor {
     ) -> MacExportFailure? {
         cancelledJobIDs.insert(jobID)
 
-        // A non-streamed job is already executing on the Mac and will observe
-        // `cancelledJobIDs` at its next cancellation checkpoint. A streamed job,
-        // however, can be orphaned if iOS backgrounds/disconnects before sending
-        // the next chunk or final completion message. Clear streamed state
-        // immediately so the Mac destination does not stay busy forever.
+        // A non-streamed job observes the marker at its next checkpoint. A streamed
+        // job can be cleared synchronously only while no chunk is suspended in a
+        // destination write. Otherwise the in-flight chunk owns terminal accounting
+        // and acknowledges cancellation after it reaches the next artifact boundary.
         guard activeJobID == jobID, streamSession != nil else { return nil }
+        let generation = streamSession?.generation
+        if streamChunkInFlightGeneration == generation
+            || streamCompletionInFlightGeneration == generation {
+            return nil
+        }
 
         sendProgress(
             jobID: jobID,
@@ -680,7 +696,9 @@ final class MacExportJobExecutor {
                 message: error.localizedDescription
             ))
         }
+        nextStreamGeneration &+= 1
         streamSession = StreamSession(
+            generation: nextStreamGeneration,
             start: start,
             requestedDates: requestedDates,
             formatsPerDate: Self.looseFormatsPerDate(
@@ -722,6 +740,36 @@ final class MacExportJobExecutor {
                 message: "No active stream exists for this chunk."
             ))
         }
+        guard streamChunkInFlightGeneration == nil else {
+            return .success(MacExportStreamChunkAck(
+                jobID: chunk.jobID,
+                sequence: chunk.sequence,
+                accepted: false,
+                message: "The previous stream chunk is still committing.",
+                processedDays: session.processedDays,
+                filesWritten: session.totalFilesWritten
+            ))
+        }
+        guard streamCompletionInFlightGeneration == nil else {
+            return .success(MacExportStreamChunkAck(
+                jobID: chunk.jobID,
+                sequence: chunk.sequence,
+                accepted: false,
+                message: "Stream completion is already committing.",
+                processedDays: session.processedDays,
+                filesWritten: session.totalFilesWritten
+            ))
+        }
+        let generation = session.generation
+        streamChunkInFlightGeneration = generation
+        defer {
+            if streamChunkInFlightGeneration == generation {
+                streamChunkInFlightGeneration = nil
+            }
+            let waiters = streamChunkCompletionWaiters
+            streamChunkCompletionWaiters.removeAll()
+            for waiter in waiters { waiter.resume() }
+        }
 
         let chunkDigest = Self.streamChunkDigest(chunk)
         if chunk.sequence == session.expectedSequence - 1,
@@ -751,13 +799,13 @@ final class MacExportJobExecutor {
             ))
         }
 
-        if cancelledJobIDs.contains(chunk.jobID) || Task.isCancelled {
-            streamSession = session
-            return .failure(MacExportFailure(
+        if streamWasInterrupted(jobID: chunk.jobID, generation: generation) {
+            return finishInterruptedStream(
+                session,
                 jobID: chunk.jobID,
-                reason: .cancelled,
-                message: "Mac export cancelled."
-            ))
+                message: "Mac export cancelled.",
+                progress: progress
+            )
         }
 
         let settings = session.dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
@@ -773,6 +821,14 @@ final class MacExportJobExecutor {
 
         let requestedDays = Set(session.requestedDates.map { Calendar.current.startOfDay(for: $0) })
         for record in chunk.records {
+            if streamWasInterrupted(jobID: chunk.jobID, generation: generation) {
+                return finishInterruptedStream(
+                    session,
+                    jobID: chunk.jobID,
+                    message: "Mac export cancelled.",
+                    progress: progress
+                )
+            }
             let dateKey = Calendar.current.startOfDay(for: record.date)
             let isRequestedDay = requestedDays.contains(dateKey)
             session.receivedRecordsByDate[dateKey] = record
@@ -839,6 +895,20 @@ final class MacExportJobExecutor {
                     }
                     session.successCount += 1
                     session.successfulRecords.append(record)
+                    #if DEBUG
+                    if let receiveChunkDidWriteForTesting {
+                        await receiveChunkDidWriteForTesting()
+                    }
+                    #endif
+                    if streamWasInterrupted(jobID: chunk.jobID, generation: generation) {
+                        return finishInterruptedStream(
+                            session,
+                            jobID: chunk.jobID,
+                            message: "Mac export cancelled after the current file transaction.",
+                            progress: progress
+                        )
+                    }
+
                     let stringDateKey = Self.displayDate(record.date)
                     if settings.writesExternalProviderSidecars,
                        let externalRecords = externalRecordsByDate[stringDateKey],
@@ -850,6 +920,14 @@ final class MacExportJobExecutor {
                             )
                             session.externalRecordFileCount += sidecarCount
                             session.totalFilesWritten += sidecarCount
+                            if streamWasInterrupted(jobID: chunk.jobID, generation: generation) {
+                                return finishInterruptedStream(
+                                    session,
+                                    jobID: chunk.jobID,
+                                    message: "Mac export cancelled after the current file transaction.",
+                                    progress: progress
+                                )
+                            }
                         } catch {
                             session.isFileAccountingComplete = false
                             session.failedDateDetails.append(FailedDateDetail(
@@ -862,6 +940,14 @@ final class MacExportJobExecutor {
                 } catch {
                     session.isFileAccountingComplete = false
                     session.failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
+                    if streamWasInterrupted(jobID: chunk.jobID, generation: generation) {
+                        return finishInterruptedStream(
+                            session,
+                            jobID: chunk.jobID,
+                            message: "Mac export cancelled after the current file transaction.",
+                            progress: progress
+                        )
+                    }
                 }
             } else if !shouldWriteDailyAsChunksArrive && isRequestedDay {
                 session.successfulRecords.append(record)
@@ -890,6 +976,14 @@ final class MacExportJobExecutor {
         )
         session.lastChunkDigest = chunkDigest
         session.lastChunkAcknowledgement = acknowledgement
+        guard !streamWasInterrupted(jobID: chunk.jobID, generation: generation) else {
+            return finishInterruptedStream(
+                session,
+                jobID: chunk.jobID,
+                message: "Mac export cancelled.",
+                progress: progress
+            )
+        }
         streamSession = session
 
         return .success(acknowledgement)
@@ -900,14 +994,27 @@ final class MacExportJobExecutor {
         vaultManager: VaultManager,
         progress: ProgressHandler? = nil
     ) async -> Result<MacExportResultPayload, MacExportFailure> {
-        guard var session = streamSession, activeJobID == complete.jobID else {
+        if streamChunkInFlightGeneration != nil {
+            await withCheckedContinuation { continuation in
+                streamChunkCompletionWaiters.append(continuation)
+            }
+        }
+        guard streamChunkInFlightGeneration == nil,
+              streamCompletionInFlightGeneration == nil,
+              var session = streamSession,
+              activeJobID == complete.jobID else {
             return .failure(MacExportFailure(
                 jobID: complete.jobID,
                 reason: .payloadDecodeFailure,
                 message: "No active stream exists for completion."
             ))
         }
+        let generation = session.generation
+        streamCompletionInFlightGeneration = generation
         defer {
+            if streamCompletionInFlightGeneration == generation {
+                streamCompletionInFlightGeneration = nil
+            }
             activeJobID = nil
             streamSession = nil
             cancelledJobIDs.remove(complete.jobID)
@@ -952,6 +1059,14 @@ final class MacExportJobExecutor {
             session.successfulRecords = []
 
             for date in session.requestedDates {
+                if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
+                    return finishInterruptedCompletion(
+                        session,
+                        jobID: complete.jobID,
+                        message: "Mac export cancelled.",
+                        progress: progress
+                    )
+                }
                 guard let record = recordsByDate[Calendar.current.startOfDay(for: date)] else { continue }
                 if settings.summaryOnlyModeEnabled {
                     session.successCount += 1
@@ -976,6 +1091,19 @@ final class MacExportJobExecutor {
                     session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                     if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
+                    #if DEBUG
+                    if let completeStreamDidWriteForTesting {
+                        await completeStreamDidWriteForTesting()
+                    }
+                    #endif
+                    if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
+                        return finishInterruptedCompletion(
+                            session,
+                            jobID: complete.jobID,
+                            message: "Mac export cancelled after the current file transaction.",
+                            progress: progress
+                        )
+                    }
                     let dateKey = Self.displayDate(record.date)
                     if settings.writesExternalProviderSidecars,
                        let externalRecords = externalRecordsByDate[dateKey],
@@ -986,10 +1114,26 @@ final class MacExportJobExecutor {
                         )
                         session.externalRecordFileCount += sidecarCount
                         session.totalFilesWritten += sidecarCount
+                        if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
+                            return finishInterruptedCompletion(
+                                session,
+                                jobID: complete.jobID,
+                                message: "Mac export cancelled after the current file transaction.",
+                                progress: progress
+                            )
+                        }
                     }
                 } catch {
                     session.isFileAccountingComplete = false
                     session.failedDateDetails.append(Self.failedDateDetail(for: record.date, error: error))
+                    if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
+                        return finishInterruptedCompletion(
+                            session,
+                            jobID: complete.jobID,
+                            message: "Mac export cancelled after the current file transaction.",
+                            progress: progress
+                        )
+                    }
                 }
             }
         }
@@ -1024,6 +1168,14 @@ final class MacExportJobExecutor {
 
         var archiveFileCount = 0
         if settings.archiveModeEnabled && !session.successfulRecords.isEmpty {
+            if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
+                return finishInterruptedCompletion(
+                    session,
+                    jobID: complete.jobID,
+                    message: "Mac export cancelled.",
+                    progress: progress
+                )
+            }
             let archiveOutcome = await Self.writeArchive(
                 from: session.successfulRecords,
                 rollupHealthData: rollupRecords,
@@ -1039,6 +1191,14 @@ final class MacExportJobExecutor {
             if archiveOutcome.hadTerminalFailure { session.isFileAccountingComplete = false }
             session.archiveFileCount += archiveFileCount
             session.totalFilesWritten += archiveFileCount
+            if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
+                return finishInterruptedCompletion(
+                    session,
+                    jobID: complete.jobID,
+                    message: "Mac export cancelled after the current archive transaction.",
+                    progress: progress
+                )
+            }
             session.successCount = session.requestedDates.filter {
                 session.receivedRecordsByDate[Calendar.current.startOfDay(for: $0)] != nil
             }.count
@@ -1120,21 +1280,75 @@ final class MacExportJobExecutor {
     func abortStream(
         _ abort: MacExportStreamAbort,
         progress: ProgressHandler? = nil
-    ) {
-        guard activeJobID == abort.jobID else { return }
-        sendProgress(
+    ) -> MacExportFailure? {
+        guard activeJobID == abort.jobID else { return nil }
+        guard cancel(jobID: abort.jobID, message: abort.message, progress: progress) != nil else {
+            return nil
+        }
+        return MacExportFailure(
             jobID: abort.jobID,
+            reason: abort.reason,
+            message: abort.message
+        )
+    }
+
+    private func streamWasInterrupted(jobID: UUID, generation: UInt64) -> Bool {
+        Task.isCancelled
+            || cancelledJobIDs.contains(jobID)
+            || activeJobID != jobID
+            || streamSession?.generation != generation
+    }
+
+    private func finishInterruptedCompletion(
+        _ session: StreamSession,
+        jobID: UUID,
+        message: String,
+        progress: ProgressHandler?
+    ) -> Result<MacExportResultPayload, MacExportFailure> {
+        sendProgress(
+            jobID: jobID,
             phase: .cancelled,
-            processedDays: streamSession?.processedDays ?? 0,
-            totalDays: streamSession?.start.totalTransferDays ?? 0,
+            processedDays: session.processedDays,
+            totalDays: session.start.totalTransferDays,
             currentDate: nil,
-            filesWritten: streamSession?.totalFilesWritten ?? 0,
-            message: abort.message,
+            filesWritten: session.totalFilesWritten,
+            message: message,
             progress: progress
         )
-        cancelledJobIDs.remove(abort.jobID)
-        streamSession = nil
-        activeJobID = nil
+        return .failure(MacExportFailure(
+            jobID: jobID,
+            reason: .cancelled,
+            message: message
+        ))
+    }
+
+    private func finishInterruptedStream(
+        _ session: StreamSession,
+        jobID: UUID,
+        message: String,
+        progress: ProgressHandler?
+    ) -> Result<MacExportStreamChunkAck, MacExportFailure> {
+        if activeJobID == jobID, streamSession?.generation == session.generation {
+            streamSession = session
+            sendProgress(
+                jobID: jobID,
+                phase: .cancelled,
+                processedDays: session.processedDays,
+                totalDays: session.start.totalTransferDays,
+                currentDate: nil,
+                filesWritten: session.totalFilesWritten,
+                message: message,
+                progress: progress
+            )
+            streamSession = nil
+            activeJobID = nil
+        }
+        cancelledJobIDs.remove(jobID)
+        return .failure(MacExportFailure(
+            jobID: jobID,
+            reason: .cancelled,
+            message: message
+        ))
     }
 
     private func validate(_ job: MacExportJob, vaultManager: VaultManager) -> MacExportFailure? {
