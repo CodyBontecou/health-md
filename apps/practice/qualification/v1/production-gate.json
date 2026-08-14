@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "designation": "synthetic-qualification-only-not-production-ready",
+  "syntheticRuntimeRequired": true,
+  "productionEnabled": false,
+  "syntheticGates": [
+    { "name": "locked_install_static_unit", "requiredCommand": "npm ci && npm run check", "wiringStatus": "configured-not-attested" },
+    { "name": "isolated_real_browser_engines", "requiredCommand": "npm run test:e2e", "wiringStatus": "configured-not-attested" },
+    { "name": "strict_security_qualification_provenance", "requiredCommand": "npm run check:qualification", "wiringStatus": "configured-not-attested" },
+    { "name": "runtime_smoke_package_audit", "requiredCommand": "npm run test:smoke && npm run dry-run && npm audit --audit-level=moderate", "wiringStatus": "configured-not-attested" }
+  ],
+  "mandatoryProductionGates": [
+    { "name": "authoritative_backend_and_persistence", "approved": false, "status": "pending" },
+    { "name": "external_security_review_and_penetration_test", "approved": false, "status": "pending" },
+    { "name": "compliance_and_privacy_review", "approved": false, "status": "pending" },
+    { "name": "baa_and_subprocessor_approval", "approved": false, "status": "pending" },
+    { "name": "mobile_contract_and_physical_device_qualification", "approved": false, "status": "pending" },
+    { "name": "manual_screen_reader_and_assistive_technology", "approved": false, "status": "pending" },
+    { "name": "pilot_practice_approval", "approved": false, "status": "pending" },
+    { "name": "named_release_security_compliance_owners", "approved": false, "status": "pending" }
+  ],
+  "operationalEvidence": [
+    { "name": "migration", "status": "not_implemented" },
+    { "name": "rollback", "status": "not_implemented" },
+    { "name": "backup_restore", "status": "not_implemented" },
+    { "name": "authoritative_purge", "status": "not_implemented" }
+  ],
+  "productionReady": false
+}
