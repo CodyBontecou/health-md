@@ -17,13 +17,13 @@ struct MacVaultFolderSection: View {
     var body: some View {
         Section {
             HStack {
-                if let url = vaultManager.vaultURL {
-                    Image(systemName: "folder.fill")
-                        .foregroundStyle(Color.accent)
+                if vaultManager.hasVaultSelection {
+                    Image(systemName: vaultManager.vaultURL == nil ? "folder.badge.exclamationmark" : "folder.fill")
+                        .foregroundStyle(vaultManager.vaultURL == nil ? Color.warning : Color.accent)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(vaultManager.vaultName)
                             .font(BrandTypography.bodyMedium())
-                        Text(vaultManager.pathForDisplay ?? url.path(percentEncoded: false))
+                        Text(vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
                             .lineLimit(1)
@@ -38,7 +38,7 @@ struct MacVaultFolderSection: View {
                 }
                 Spacer()
                 Button(
-                    vaultManager.vaultURL != nil
+                    vaultManager.hasVaultSelection
                         ? String(localized: "Change…")
                         : String(localized: "Choose…")
                 ) {
@@ -61,7 +61,7 @@ struct MacVaultFolderSection: View {
                 }
             }
 
-            if showClearButton, vaultManager.vaultURL != nil {
+            if showClearButton, vaultManager.hasVaultSelection {
                 Button("Clear Folder Selection", role: .destructive) {
                     vaultManager.clearVaultFolder()
                 }

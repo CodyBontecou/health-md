@@ -356,6 +356,12 @@ struct HealthMdApp: App {
                 .onChange(of: vaultManager.vaultURL) { _, _ in
                     scheduleMacDestinationStatusPublication()
                 }
+                .onChange(of: vaultManager.destinationState) { _, _ in
+                    scheduleMacDestinationStatusPublication()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    vaultManager.refreshVaultAccess()
+                }
                 .onChange(of: syncService.lastError) { _, _ in
                     scheduleMacDestinationStatusPublication()
                 }
@@ -1322,8 +1328,8 @@ struct HealthMdApp: App {
             destination: HealthMdControlServer.StatusResponse.Destination(
                 selected: vaultManager.isVaultConfigured,
                 writable: vaultManager.vaultURL != nil && vaultManager.canAccessSelectedVaultFolder(),
-                path: vaultManager.vaultURL?.path,
-                displayName: vaultManager.vaultURL == nil ? nil : vaultManager.vaultName
+                path: vaultManager.pathForDisplay,
+                displayName: vaultManager.hasVaultSelection ? vaultManager.vaultName : nil
             ),
             activeExport: iphoneExportRequestCoordinator.activeJobID == nil
                 && macExportJobExecutor.currentJobID == nil
@@ -1369,7 +1375,7 @@ struct HealthMdApp: App {
             destinationFolderSelected: hasDestination,
             folderAccessHealthy: folderAccessHealthy,
             destinationDisplayName: hasDestination ? vaultManager.vaultName : nil,
-            destinationPathForDisplay: vaultManager.vaultURL?.path,
+            destinationPathForDisplay: vaultManager.pathForDisplay,
             lastError: destinationError,
             activeJobID: effectiveActiveJobID,
             capabilities: .current(platform: .macOS)

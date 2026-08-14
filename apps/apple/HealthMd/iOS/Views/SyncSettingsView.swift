@@ -726,7 +726,12 @@ struct SyncSettingsView: View {
         }
         if status.activeJobID != nil { return "Mac is currently writing another export." }
         if !status.destinationFolderSelected { return "Choose a destination folder in Health.md on Mac." }
-        if !status.folderAccessHealthy { return "Re-select the Mac destination folder to restore write access." }
+        if !status.folderAccessHealthy {
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it in Health.md on Mac."
+        }
         return status.lastError ?? syncService.macExportReadinessMessage
     }
 }

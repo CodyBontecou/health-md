@@ -388,8 +388,8 @@ struct MacGeneralSettingsView: View {
         if syncService.isSyncing { return String(localized: "Receiving export") }
         if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
-        if vaultManager.vaultURL == nil { return String(localized: "Choose folder") }
-        if !folderAccessHealthy { return String(localized: "Re-select folder") }
+        if !vaultManager.hasVaultSelection { return String(localized: "Choose folder") }
+        if !folderAccessHealthy { return vaultManager.vaultAvailabilityText }
         return String(localized: "Ready")
     }
 

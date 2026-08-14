@@ -380,7 +380,7 @@ struct iPadScheduleView: View {
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            shouldPromptForLocalFolder: !vaultManager.hasVaultSelection,
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
@@ -451,7 +451,10 @@ struct iPadScheduleView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }

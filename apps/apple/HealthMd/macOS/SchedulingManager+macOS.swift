@@ -295,7 +295,7 @@ class SchedulingManager: ObservableObject {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             logger.error("Could not start vault security scope")
             await sendNotification(
                 title: String(localized: "Export Failed", comment: "Notification title"),
@@ -303,6 +303,7 @@ class SchedulingManager: ObservableObject {
             )
             return
         }
+        defer { accessLease.stop() }
 
         var successCount = 0
         var completedDates: [Date] = []
@@ -491,8 +492,6 @@ class SchedulingManager: ObservableObject {
             }
         }
         }
-
-        vaultManager.stopVaultAccess()
 
         let result = ExportOrchestrator.ExportResult(
             successCount: successCount,
