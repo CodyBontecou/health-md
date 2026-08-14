@@ -60,7 +60,8 @@ class ConfigurationProtectionTest {
             }
         }
 
-        compose.onNodeWithTag("configuration_action").performTouchInput { click() }
+        compose.onNodeWithTag("configuration_action", useUnmergedTree = true)
+            .performTouchInput { click() }
         compose.onNodeWithTag(ConfigurationProtectionTestTags.TOAST)
             .assert(
                 SemanticsMatcher.expectValue(
