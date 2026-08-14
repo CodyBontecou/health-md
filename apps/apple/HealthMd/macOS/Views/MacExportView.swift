@@ -654,8 +654,8 @@ struct MacExportView: View {
                         resultMessage = dailyNoteUpdateCount > 0
                             ? "Daily note update stopped — \(dailyNoteUpdateCount) of \(totalCount) notes updated."
                             : "Daily note update cancelled."
-                    } else if successCount > 0 {
-                        resultMessage = String(localized: "Export stopped — \(successCount) of \(totalCount) files exported.", comment: "Export cancelled with partial success")
+                    } else if result.isPartialSuccess {
+                        resultMessage = "\(String(localized: "Export cancelled.")) · \(result.localizedGeneratedFileAndDataDayDescription)"
                     } else {
                         resultMessage = String(localized: "Export cancelled.", comment: "Export was cancelled")
                     }
@@ -782,9 +782,9 @@ struct MacExportView: View {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) daily notes.")
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Successfully exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)).", comment: "Multi-format export success message")
+                    resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))."
                 } else {
-                    resultMessage = String(localized: "Successfully exported \(result.successCount) files.", comment: "Export success message")
+                    resultMessage = result.localizedGeneratedFileAndDataDayDescription
                 }
             } else if result.isPartialSuccess {
                 resultIsError = false
@@ -796,9 +796,9 @@ struct MacExportView: View {
                 } else if advancedSettings.dailyNotesOnlyModeEnabled {
                     resultMessage = String(localized: "Updated \(result.dailyNoteUpdateCount) of \(result.totalCount) daily notes. \(suffix)")
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
-                    resultMessage = String(localized: "Exported \(result.totalFilesWritten) files (\(result.fileBreakdownDescription)). \(suffix)", comment: "Multi-format partial export message")
+                    resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription)). \(suffix)"
                 } else {
-                    resultMessage = String(localized: "Exported \(result.successCount) of \(result.totalCount) files. \(suffix)", comment: "Partial export message")
+                    resultMessage = "\(result.localizedGeneratedFileAndDataDayDescription). \(suffix)"
                 }
             } else {
                 resultIsError = true
