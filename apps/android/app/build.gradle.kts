@@ -41,6 +41,7 @@ val exportEngineAndroidFrozenV4 = configuredEngineMode("EXPORT_ENGINE_ANDROID_FR
 val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROID_ANALYTICAL_V5")
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
 val directProtocolEngine = configuredEngineMode("DIRECT_PROTOCOL_ENGINE")
+val practiceCompiledIn = configuredValue("PRACTICE_COMPILED_IN") == "included"
 val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTestBuildType")
     .getOrElse("debug")
     .also { require(it in setOf("debug", "e2e")) }
@@ -107,6 +108,11 @@ android {
             "String",
             "DIRECT_PROTOCOL_ENGINE",
             directProtocolEngine.asBuildConfigString(),
+        )
+        buildConfigField(
+            "boolean",
+            "PRACTICE_COMPILED_IN",
+            practiceCompiledIn.toString(),
         )
     }
 

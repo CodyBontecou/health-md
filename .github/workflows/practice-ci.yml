@@ -1,0 +1,268 @@
+name: Practice CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/practice/**'
+      - 'apps/apple/HealthMd/Shared/Practice/**'
+      - 'apps/apple/HealthMdTests/Practice/**'
+      - 'apps/apple/HealthMd.xcodeproj/**'
+      - 'apps/android/app/src/main/java/com/healthmd/domain/practice/**'
+      - 'apps/android/app/src/test/java/com/healthmd/domain/practice/**'
+      - 'apps/android/app/build.gradle.kts'
+      - 'docs/product/practice/**'
+      - 'docs/architecture/adr-0003-practice-clinical-boundary.md'
+      - 'docs/features/clinician-report-v1.md'
+      - 'AGENTS.md'
+      - 'LICENSES.md'
+      - 'Makefile'
+      - '.github/workflows/practice-ci.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: practice-focused-policy-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: apps/practice
+    steps:
+      - name: Checkout monorepo at the exact event SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/practice/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Install exact Playwright browser engines and system dependencies
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Run full synthetic gate with isolated browser services and moderate audit
+        env:
+          PRACTICE_SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: npm run check:ci
+
+      - name: Verify deterministic fictional ingest fixture
+        working-directory: ${{ github.workspace }}
+        run: python3 docs/product/practice/fixtures/generate_synthetic_ingest_pdf.py --check
+
+      - name: Upload metadata-only synthetic qualification receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: practice-synthetic-qualification-${{ github.sha }}
+          path: apps/practice/qualification/generated/*.json
+          if-no-files-found: error
+          retention-days: 14
+
+  practice-focused-apple-policy:
+    name: Practice focused Apple policy
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - name: Checkout monorepo at the exact event SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Select hosted Xcode toolchain
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Compile and run the fail-closed policy without and with inclusion
+        shell: bash
+        run: |
+          set -euo pipefail
+          harness="$RUNNER_TEMP/main.swift"
+          cat > "$harness" <<'SWIFT'
+          import Foundation
+
+          let expectedCompiledIn = CommandLine.arguments.dropFirst().first == "included"
+          let current = PracticeFeaturePolicy.current
+          precondition(current.compiledIn == expectedCompiledIn)
+          precondition(current.qualificationAttested == false)
+          precondition(current.isEnabled == false)
+
+          let exact = PracticeFeaturePolicy.resolve(
+              compiledInValue: "included",
+              qualificationValue: PracticeFeaturePolicy.qualificationVersion
+          )
+          precondition(exact.compiledIn)
+          precondition(exact.qualificationAttested)
+          precondition(exact.isEnabled)
+
+          for values in [
+              (nil, nil),
+              ("included", nil),
+              (nil, PracticeFeaturePolicy.qualificationVersion),
+              ("true", PracticeFeaturePolicy.qualificationVersion),
+              ("INCLUDED", PracticeFeaturePolicy.qualificationVersion),
+              ("included", "approved"),
+          ] as [(String?, String?)] {
+              precondition(PracticeFeaturePolicy.resolve(
+                  compiledInValue: values.0,
+                  qualificationValue: values.1
+              ).isEnabled == false)
+          }
+          SWIFT
+          # Parse the checked-in Release configurations directly so this focused
+          # policy gate does not resolve the app's unrelated Swift packages. The
+          # full Apple workflow owns package/build qualification on its Swift 6.3
+          # self-hosted toolchain.
+          project_json="$RUNNER_TEMP/HealthMd-project.json"
+          plutil -convert json -o "$project_json" apps/apple/HealthMd.xcodeproj/project.pbxproj
+          python3 - "$project_json" <<'PY'
+          import json
+          import os
+          import sys
+
+          marker = "HEALTHMD_PRACTICE_COMPILED_IN"
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              project = json.load(handle)
+          objects = project["objects"]
+          root = objects[project["rootObject"]]
+          targets = [
+              value for value in objects.values()
+              if value.get("isa") == "PBXNativeTarget" and value.get("name") == "HealthMd"
+          ]
+          if len(targets) != 1:
+              raise SystemExit("Expected exactly one HealthMd native target")
+          if marker in json.dumps(project, sort_keys=True):
+              raise SystemExit(f"Checked-in Xcode project must not define {marker}")
+
+          checked_configuration_names = {"Release", "Release-iOS"}
+
+          def release_settings(owner, label):
+              configuration_list = objects[owner["buildConfigurationList"]]
+              releases = [
+                  (objects[identifier].get("name"), objects[identifier])
+                  for identifier in configuration_list["buildConfigurations"]
+                  if objects[identifier].get("name") in checked_configuration_names
+              ]
+              if len(releases) != 2 or {name for name, _ in releases} != checked_configuration_names:
+                  raise SystemExit(f"Expected exactly one Release and one Release-iOS for {label}")
+              for name, release in releases:
+                  if release.get("baseConfigurationReference"):
+                      raise SystemExit(f"{label} {name} uses an unchecked base configuration")
+              return releases
+
+          for label, owner in (("project", root), ("HealthMd target", targets[0])):
+              for name, release in release_settings(owner, label):
+                  serialized = json.dumps(release.get("buildSettings", {}), sort_keys=True)
+                  if marker in serialized:
+                      raise SystemExit(f"{label} {name} must fail closed without {marker}")
+          if os.environ.get("XCODE_XCCONFIG_FILE"):
+              raise SystemExit("Hosted environment must not inject XCODE_XCCONFIG_FILE")
+          for variable, value in os.environ.items():
+              if marker in value:
+                  raise SystemExit(f"Hosted environment variable {variable} unexpectedly defines {marker}")
+          PY
+
+          policy="apps/apple/HealthMd/Shared/Practice/PracticeFeaturePolicy.swift"
+          swiftc "$policy" "$harness" -o "$RUNNER_TEMP/practice-policy-default"
+          "$RUNNER_TEMP/practice-policy-default" default
+          swiftc -D HEALTHMD_PRACTICE_COMPILED_IN "$policy" "$harness" -o "$RUNNER_TEMP/practice-policy-included"
+          "$RUNNER_TEMP/practice-policy-included" included
+
+  practice-focused-android-policy:
+    name: Practice focused Android policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout monorepo at the exact event SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v3
+
+      - name: Set up pinned Rust Android toolchain
+        working-directory: ${{ github.workspace }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.88.0 --profile minimal
+          rustup target add --toolchain 1.88.0 \
+            aarch64-linux-android \
+            armv7-linux-androideabi \
+            x86_64-linux-android \
+            i686-linux-android
+          rustup run 1.88.0 cargo install cargo-ndk --version 4.1.2 --locked
+
+      - name: Install pinned Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          android_sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$android_sdk"
+          sdkmanager "ndk;27.1.12297006"
+          echo "ANDROID_NDK_HOME=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$android_sdk/ndk/27.1.12297006" >> "$GITHUB_ENV"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@v4
+        with:
+          min-wrapper-count: 1
+
+      - name: Prepare source-built Rust core
+        run: ./gradlew --no-daemon :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
+
+      - name: Run focused default Practice policy test
+        env:
+          JAVA_TOOL_OPTIONS: -Dhealthmd.practice.expectedCompiledIn=false
+        run: ./gradlew --no-daemon :app:testDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
+
+      - name: Regenerate BuildConfig and run focused included Practice policy test
+        env:
+          JAVA_TOOL_OPTIONS: -Dhealthmd.practice.expectedCompiledIn=true
+          PRACTICE_COMPILED_IN: included
+        run: ./gradlew --no-daemon :app:clean :app:testDebugUnitTest --tests com.healthmd.domain.practice.PracticeFeaturePolicyTest --stacktrace
+
+  gate:
+    name: Practice CI
+    if: ${{ always() }}
+    needs: [validate, practice-focused-apple-policy, practice-focused-android-policy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Practice and focused mobile policy checks
+        env:
+          VALIDATE_RESULT: ${{ needs.validate.result }}
+          APPLE_RESULT: ${{ needs.practice-focused-apple-policy.result }}
+          ANDROID_RESULT: ${{ needs.practice-focused-android-policy.result }}
+        run: |
+          test "$VALIDATE_RESULT" = success
+          test "$APPLE_RESULT" = success
+          test "$ANDROID_RESULT" = success
