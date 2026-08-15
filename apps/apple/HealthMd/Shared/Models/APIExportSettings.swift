@@ -10,6 +10,14 @@ struct APIExportDestinationSnapshot: Equatable {
     let redactedEndpointDescription: String
 }
 
+enum APIExportSettingsPersistenceError: LocalizedError, Equatable {
+    case verificationFailed
+
+    var errorDescription: String? {
+        "Health.md could not verify the saved endpoint credential."
+    }
+}
+
 /// User-configurable destination for direct iOS API exports.
 @MainActor
 final class APIExportSettings: ObservableObject {
@@ -22,6 +30,7 @@ final class APIExportSettings: ObservableObject {
 
     @Published var bearerToken: String {
         didSet {
+            guard !isSynchronizingVerifiedCredential else { return }
             let trimmed = bearerToken.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
                 keychain.remove(key: Self.bearerTokenKeychainKey)
@@ -33,6 +42,7 @@ final class APIExportSettings: ObservableObject {
 
     private let userDefaults: UserDefaults
     private let keychain: any KeychainStoring
+    private var isSynchronizingVerifiedCredential = false
 
     init(
         userDefaults: UserDefaults = .standard,
@@ -42,6 +52,31 @@ final class APIExportSettings: ObservableObject {
         self.keychain = keychain ?? SystemKeychainStore()
         self.endpointURLString = userDefaults.string(forKey: Self.endpointURLStorageKey) ?? ""
         self.bearerToken = self.keychain.readString(key: Self.bearerTokenKeychainKey) ?? ""
+    }
+
+    func sharedSetupPersistedBearerToken() throws -> String {
+        try keychain.readStringOrThrow(key: Self.bearerTokenKeychainKey) ?? ""
+    }
+
+    func replaceBearerTokenVerifiably(_ value: String) throws {
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            try keychain.removeOrThrow(key: Self.bearerTokenKeychainKey)
+        } else {
+            try keychain.writeStringOrThrow(key: Self.bearerTokenKeychainKey, value: value)
+        }
+        guard try sharedSetupPersistedBearerToken() == (value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "" : value) else {
+            throw APIExportSettingsPersistenceError.verificationFailed
+        }
+        isSynchronizingVerifiedCredential = true
+        defer { isSynchronizingVerifiedCredential = false }
+        bearerToken = value
+    }
+
+    func replaceEndpointURLVerifiably(_ value: String) throws {
+        endpointURLString = value
+        guard (userDefaults.string(forKey: Self.endpointURLStorageKey) ?? "") == value else {
+            throw APIExportSettingsPersistenceError.verificationFailed
+        }
     }
 
     var endpointURL: URL? {

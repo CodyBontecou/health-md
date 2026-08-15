@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "0b9d3e7bab1a9b31cee8550a862564c348eeb014c169d9527981db5a44337b39",
+      "sha256": "89df46e584ae32a78a61d10093926fe38f603af421ed57ef18fd25774b930c41",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -222,6 +222,50 @@
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
           ]
+        }
+      ]
+    },
+    {
+      "id": "healthmd.shared_setup",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Implemented bounded Apple/Android portable setup profile pending required physical-device interoperability and accessibility QA before canonicalization.",
+      "specification": "packages/contracts/shared-setup/v1/contract.md",
+      "authorities": [
+        "packages/contracts/shared-setup/v1/contract.md",
+        "packages/contracts/shared-setup/v1/shared-setup.schema.json"
+      ],
+      "implementations": [
+        "packages/contracts/validate.py",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupV1.swift",
+        "apps/apple/HealthMd/Shared/SharedSetup/SharedSetupTransaction.swift",
+        "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupCodec.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupMapper.kt",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupService.kt"
+      ],
+      "consumers": [
+        "packages/contracts/validate.py",
+        "packages/contracts/test_validate_shared_setup.py",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupServiceTest.kt"
+      ],
+      "documentation": [
+        "packages/contracts/README.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
+          "sha256": "8c759e1669fc17b6dba6f5cc8d4eed5ed41173ad402bbb49744bd9c5eaa98bc9",
+          "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
+          "sha256": "ec0070b87f7be3558354685221f898264d3ac22b8498c81663ed271fff3d9bc7",
+          "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
+          "mirrors": []
         }
       ]
     },

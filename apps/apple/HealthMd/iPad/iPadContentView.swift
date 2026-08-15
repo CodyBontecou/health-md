@@ -11,8 +11,8 @@ struct iPadContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var schedulingManager: SchedulingManager
+    @EnvironmentObject var advancedSettings: AdvancedExportSettings
     @StateObject private var vaultManager = VaultManager()
-    @StateObject private var advancedSettings = AdvancedExportSettings()
 
     @State private var selectedTab: iPadNavItem? = .export
     @State private var columnVisibility: NavigationSplitViewVisibility = .all

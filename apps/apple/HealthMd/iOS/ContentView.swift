@@ -13,8 +13,10 @@ struct ContentView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject var corpusRecoveryManager: IPhoneCorpusExportRecoveryManager
+    @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
+    @EnvironmentObject var advancedSettings: AdvancedExportSettings
+    @EnvironmentObject var apiExportSettings: APIExportSettings
     @StateObject private var vaultManager = VaultManager()
-    @StateObject private var advancedSettings = AdvancedExportSettings()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @EnvironmentObject var schedulingManager: SchedulingManager
 
@@ -50,7 +52,6 @@ struct ContentView: View {
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
-    @StateObject private var apiExportSettings = APIExportSettings()
     @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
@@ -2349,6 +2350,7 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
+    @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @State private var showMailCompose = false
@@ -2413,6 +2415,7 @@ struct SettingsTabView: View {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 settingsHeader
                 accountAndStorageSection
+                sharedSetupSection
                 privacyAndAnalyticsSection
                 if ConnectedAppsFeature.isEnabled {
                     connectedAppsSection
@@ -2488,6 +2491,16 @@ struct SettingsTabView: View {
                 accessibilityHint: "Double tap to choose an Obsidian vault folder",
                 action: { showFolderPicker = true }
             )
+        }
+    }
+
+    private var sharedSetupSection: some View {
+        SettingsSectionCard(
+            title: "Configuration",
+            subtitle: "Review, apply, undo, or share portable export preferences."
+        ) {
+            SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
+                .padding(Spacing.s4)
         }
     }
 

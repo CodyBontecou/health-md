@@ -76,6 +76,17 @@ enum UITestLaunchHelper {
         static let exportStatusBadge = "status.exportBadge"
     }
 
+    enum SharedSetup {
+        static let configurationCard = "sharedSetup.configurationCard"
+        static let use = "sharedSetup.use"
+        static let share = "sharedSetup.share"
+        static let review = "sharedSetup.review"
+        static let apply = "sharedSetup.apply"
+        static let success = "sharedSetup.success"
+        static let undo = "sharedSetup.undo"
+        static let finish = "sharedSetup.finish"
+    }
+
     enum ExportedFile {
         static let viewer = "exportedFile.viewer"
         static let loading = "exportedFile.loading"

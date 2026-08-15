@@ -10,6 +10,7 @@ struct OnboardingView: View {
     @Binding var showFolderPicker: Bool
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
+    @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
     let onComplete: () -> Void
     private let analytics = PricingAnalyticsClient.shared
 
@@ -25,6 +26,7 @@ struct OnboardingView: View {
     @State private var didTrackFolderSelected = false
     @State private var didTrackUnlockStepPaywallShown = false
     @State private var isRequestingHealthAuthorization = false
+    @State private var isSharedSetupImporterPresented = false
 
     private let totalSteps = OnboardingStep.allCases.count
     private let sampleExportStepIndex = OnboardingStep.sampleExport.rawValue
@@ -99,6 +101,10 @@ struct OnboardingView: View {
                     .transition(.opacity)
             }
         }
+        .sharedSetupFileImporter(
+            isPresented: $isSharedSetupImporterPresented,
+            coordinator: sharedSetupCoordinator
+        )
         .onAppear {
             trackInitialOnboardingAnalytics()
         }
@@ -225,6 +231,11 @@ struct OnboardingView: View {
             switch step {
             case .welcome:
                 OnboardingPrimaryButton(title: "Start Setup", icon: "arrow.right", action: advance)
+                OnboardingSecondaryButton(title: "Use a Shared Setup", icon: "doc.badge.gearshape") {
+                    sharedSetupCoordinator.beginImport(source: .onboarding)
+                    isSharedSetupImporterPresented = true
+                }
+                .accessibilityIdentifier(AccessibilityID.SharedSetup.use)
             case .healthAccess:
                 if healthKitManager.isAuthorized {
                     OnboardingPrimaryButton(title: "Continue Setup", icon: "arrow.right", action: advance)

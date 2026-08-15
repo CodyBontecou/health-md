@@ -8,6 +8,7 @@ struct iPadSettingsView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
     @Binding var showFolderPicker: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
@@ -105,6 +106,14 @@ struct iPadSettingsView: View {
                         }
                         .tint(Color.error)
                     }
+                }
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
+
+                // MARK: Configuration
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Configuration")
+                    SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
                 }
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()

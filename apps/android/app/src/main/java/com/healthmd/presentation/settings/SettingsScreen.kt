@@ -38,6 +38,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToDirectCli: () -> Unit = {},
+    onNavigateToSharedSetup: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -114,6 +115,34 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         WidgetSettingsCard()
+
+        GeistCardClickable(onClick = onNavigateToSharedSetup) {
+            Icon(
+                Icons.Outlined.Share,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.shared_setup_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    stringResource(R.string.shared_setup_settings_detail),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+            )
+        }
 
         // Health source configuration is intentionally hidden until the integrations are ready.
 

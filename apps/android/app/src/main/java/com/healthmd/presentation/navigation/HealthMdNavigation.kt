@@ -48,12 +48,15 @@ import com.healthmd.presentation.schedule.ScheduleScreen
 import com.healthmd.presentation.schedule.ScheduledRecoveryUiState
 import com.healthmd.presentation.schedule.ScheduledRecoveryViewModel
 import com.healthmd.presentation.settings.*
+import com.healthmd.sharedsetup.SharedSetupCoordinator
+import com.healthmd.sharedsetup.SharedSetupScreen
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistBreakpoints
 import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -62,6 +65,7 @@ import java.util.Date
 @Composable
 fun HealthMdNavigation(
     settingsRepository: SettingsRepository,
+    sharedSetupCoordinator: SharedSetupCoordinator,
     initialRoute: String? = null,
     scheduledRecoveryPromptRequestId: Long = 0L,
 ) {
@@ -103,6 +107,11 @@ fun HealthMdNavigation(
     // Existing users with a pre-onboarding folder still skip setup, but later folder updates
     // cannot eject a new user from an active onboarding flow.
     val shouldSkipOnboarding = requireNotNull(initialShouldSkipOnboarding)
+    LaunchedEffect(sharedSetupCoordinator) {
+        sharedSetupCoordinator.imports.filterNotNull().collect {
+            navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true }
+        }
+    }
     val hasCompletedSetup = hasCompletedOnboarding == true
     val releaseNotes = remember(appContext) { AndroidReleaseNotes.current(appContext) }
     var releaseNotesDismissed by remember(releaseNotes?.versionKey) { mutableStateOf(false) }
@@ -134,6 +143,7 @@ fun HealthMdNavigation(
             SubRoutes.ADVANCED_SETTINGS,
             SubRoutes.CLINICIAN_REPORT,
             SubRoutes.DIRECT_CLI,
+            SubRoutes.SHARED_SETUP,
         )
     } else {
         emptyList()
@@ -184,6 +194,7 @@ fun HealthMdNavigation(
                             popUpTo(SubRoutes.ONBOARDING) { inclusive = true }
                         }
                     },
+                    onUseSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
                     initialPage = if (isDebugMarketingCapture) 1 else 0,
                     allowAutomaticAdvance = !isDebugMarketingCapture,
                 )
@@ -213,12 +224,23 @@ fun HealthMdNavigation(
                         navController.navigate(PaywallEntryPoint.UPGRADE.route)
                     },
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
+                    onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
                 )
             }
 
             // Sub-screens
             composable(SubRoutes.DIRECT_CLI) {
                 DirectCliScreen(onBack = { navController.popBackStack() })
+            }
+            composable(SubRoutes.SHARED_SETUP) {
+                SharedSetupScreen(
+                    onBack = { navController.popBackStack() },
+                    onFinishSetup = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(NavDestination.SETTINGS.route) { launchSingleTop = true }
+                        }
+                    },
+                )
             }
             composable(SubRoutes.CLINICIAN_REPORT) {
                 ClinicianReportScreen(onBack = { navController.popBackStack() })

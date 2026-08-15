@@ -541,6 +541,30 @@
       ]
     },
     {
+      "id": "setup.share-portable-configuration",
+      "name": "Share My Setup",
+      "classification": "planned",
+      "summary": "Export, review, and transactionally import a bounded portable setup profile without health data, credentials, device grants, purchases, or runtime state; physical-device QA remains before availability.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Complete Messages, AirDrop, Files, cold/warm document-open, VoiceOver, Dynamic Type, rollback, and Undo testing on supported Apple devices."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Complete Sharesheet, OpenDocument/CreateDocument, cold/warm intent, TalkBack, large-font, RTL, rollback, and Undo testing on supported Android devices."
+        }
+      },
+      "evidence": [
+        "packages/contracts/shared-setup/v1/contract.md",
+        "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupScreen.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt"
+      ]
+    },
+    {
       "id": "core.shared-rust-metric-registry",
       "name": "Shared Rust metric registry",
       "classification": "shared",

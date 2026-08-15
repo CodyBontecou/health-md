@@ -25,6 +25,9 @@ PRODUCT_CAPABILITIES_SCHEMA = "healthmd.product_capabilities"
 PRODUCT_CAPABILITIES_SCHEMA_VERSION = 1
 METRIC_REGISTRY_SCHEMA = "healthmd.metric_registry"
 METRIC_REGISTRY_SCHEMA_VERSION = 1
+SHARED_SETUP_SCHEMA = "healthmd.shared_setup"
+SHARED_SETUP_SCHEMA_VERSION = 1
+SHARED_SETUP_MAX_BYTES = 262_144
 REGISTRY_PROFILE_TO_PUBLIC = {
     "apple_health_data_v8": "apple-v8",
     "android_frozen_v4": "android-frozen-v4",
@@ -1288,6 +1291,250 @@ def validate_unified_health_data_fixture(root: Path, path: Path) -> None:
         fail(f"{context}: Android primary data must not be relabeled as SDNN")
 
 
+def validate_shared_setup_fixture(root: Path, path: Path) -> None:
+    context = "healthmd.shared_setup v1 fixture"
+    fixture_bytes = path.read_bytes()
+    if len(fixture_bytes) > SHARED_SETUP_MAX_BYTES:
+        fail(f"{context}: fixture exceeds {SHARED_SETUP_MAX_BYTES} encoded bytes")
+    payload = load_json(path, context)
+    if fixture_bytes != canonical_json(payload) + b"\n":
+        fail(f"{context}: fixture must be canonical sorted compact JSON with one newline")
+
+    node_count = 0
+
+    def validate_generic_bounds(value: Any, value_context: str, depth: int = 0) -> None:
+        nonlocal node_count
+        node_count += 1
+        if node_count > 16_384:
+            fail(f"{context}: JSON node count exceeds 16384")
+        if depth > 16:
+            fail(f"{value_context}: JSON nesting exceeds 16 levels")
+        if isinstance(value, dict):
+            if len(value) > 256:
+                fail(f"{value_context}: object exceeds 256 members")
+            for key, child in value.items():
+                if len(key) > 256:
+                    fail(f"{value_context}: object key exceeds 256 characters")
+                validate_generic_bounds(child, f"{value_context}.{key}", depth + 1)
+        elif isinstance(value, list):
+            if len(value) > 256:
+                fail(f"{value_context}: array exceeds 256 items")
+            for index, child in enumerate(value):
+                validate_generic_bounds(child, f"{value_context}[{index}]", depth + 1)
+        elif isinstance(value, str) and len(value) > 65_536:
+            fail(f"{value_context}: string exceeds 65536 characters")
+
+    validate_generic_bounds(payload, context)
+
+    schema_path = repository_path(
+        root,
+        "packages/contracts/shared-setup/v1/shared-setup.schema.json",
+        f"{context}.schema",
+    )
+    schema = load_json(schema_path, f"{context}.schema")
+    if (
+        not isinstance(schema, dict)
+        or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+        or schema.get("properties", {}).get("schema_version", {}).get("const")
+        != SHARED_SETUP_SCHEMA_VERSION
+    ):
+        fail(f"{context}: schema metadata is invalid")
+    validate_json_schema_subset(payload, schema, context)
+
+    # V1 readers tolerate unknown optional fields only after the same recursive
+    # security scan. The schema still requires every core profile section.
+    if payload.get("schema") != SHARED_SETUP_SCHEMA or payload.get("schema_version") != 1:
+        fail(f"{context}: exact schema/version discriminator is required")
+
+    profile = payload["profile"]
+    forbidden_exact = {
+        "authorization", "authorization_header", "authorization_header_value",
+        "credential", "credentials", "token", "access_token", "refresh_token",
+        "password", "secret", "cookie", "headers", "request_headers",
+        "bookmark", "security_scoped_bookmark", "saf_uri", "content_uri",
+        "folder_uri", "folder_grant", "device_id", "installation_id", "user_id",
+        "account_id", "permissions", "health_permissions", "purchase", "purchases",
+        "entitlement", "onboarding", "history", "export_history", "enabled_at",
+        "last_run", "last_export_date", "last_success", "last_today_refresh_date",
+        "retry", "retries", "pending_work", "pending_requests", "operation_id",
+        "destination_fingerprint", "fingerprint", "engine_pin", "worker_id",
+        "alarm_id", "schedule_enabled", "is_enabled", "health_records",
+        "health_data", "source_data", "analytics", "email", "api_key",
+        "raw_persistence_snapshot", "raw_snapshot", "session_id", "first_name",
+        "last_name", "full_name",
+    }
+    forbidden_fragments = (
+        "credential", "password", "token", "secret", "authorization", "header",
+        "bookmark", "saf_uri", "content_uri", "folder_grant", "permission",
+        "purchase", "entitlement", "history", "device_id", "installation_id",
+        "account_id", "health_record", "health_data", "source_data", "analytics",
+        "email", "api_key", "raw_persistence", "raw_snapshot", "session_id",
+        "pending_retry", "operation_id", "destination_fingerprint", "engine_pin",
+    )
+
+    def reject_sensitive(value: Any, value_context: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                normalized = re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
+                safe_disclosure_fields = {"credentials_required", "header_level"}
+                if normalized not in safe_disclosure_fields and (
+                    normalized in forbidden_exact
+                    or any(fragment in normalized for fragment in forbidden_fragments)
+                ):
+                    fail(f"{value_context}: forbidden sensitive/runtime field {key!r}")
+                reject_sensitive(child, f"{value_context}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                reject_sensitive(child, f"{value_context}[{index}]")
+        elif isinstance(value, str):
+            lowered = value.lower()
+            if lowered.startswith(("content://", "file://")):
+                fail(f"{value_context}: device-bound URI is forbidden")
+            if "authorization:" in lowered or re.search(r"\b(?:bearer|basic)\s+[a-z0-9]", lowered):
+                fail(f"{value_context}: authorization material is forbidden")
+
+    reject_sensitive(payload, context)
+
+    if "categories" in profile["metrics"] or "enabled_categories" in profile["metrics"]:
+        fail(f"{context}: metric categories must not be selection authority")
+
+    registry_path = repository_path(
+        root,
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        f"{context}.registry",
+    )
+    registry = load_json(registry_path, f"{context}.registry")
+    registry_identity = payload["metric_registry"]
+    if registry_identity["schema"] != METRIC_REGISTRY_SCHEMA:
+        fail(f"{context}: metric registry schema discriminator is invalid")
+    local_registry_sha256 = hashlib.sha256(registry_path.read_bytes()).hexdigest()
+    source_registry_matches = (
+        registry_identity["registry_version"] == registry["registry_version"]
+        and registry_identity["registry_sha256"] == local_registry_sha256
+    )
+    registry_metrics = {metric["semantic_id"]: metric for metric in registry["metrics"]}
+    enabled_ids = profile["metrics"]["enabled_ids"]
+    if enabled_ids != sorted(enabled_ids):
+        fail(f"{context}: enabled semantic metric IDs must be sorted")
+    unknown_ids = sorted(set(enabled_ids) - set(registry_metrics))
+    if unknown_ids and source_registry_matches:
+        fail(f"{context}: unknown canonical semantic metric IDs {unknown_ids}")
+
+    individual_ids = set(profile["individual_entries"]["metrics"])
+    unknown_individual_ids = sorted(individual_ids - set(registry_metrics))
+    if unknown_individual_ids and source_registry_matches:
+        fail(f"{context}: unknown individual-entry semantic IDs {unknown_individual_ids}")
+
+    aliases = payload["metric_aliases"]
+    alias_ids = [alias["semantic_id"] for alias in aliases]
+    if alias_ids != sorted(alias_ids) or len(alias_ids) != len(set(alias_ids)):
+        fail(f"{context}: metric alias ledger must be unique and semantic-ID sorted")
+    if set(alias_ids) != set(enabled_ids):
+        fail(f"{context}: metric alias ledger must cover enabled IDs exactly")
+    for index, alias in enumerate(aliases):
+        alias_context = f"{context}.metric_aliases[{index}]"
+        registry_metric = registry_metrics.get(alias["semantic_id"])
+        if registry_metric is None:
+            if source_registry_matches:
+                fail(f"{alias_context}: semantic ID is missing from the pinned registry")
+            continue
+        if source_registry_matches:
+            if alias["equivalence"] != registry_metric["equivalence"]:
+                fail(f"{alias_context}: equivalence differs from registry evidence")
+            for platform in ("apple", "android"):
+                binding = registry_metric[platform]
+                expected = binding["selection_id"] if binding["status"] == "backed" else None
+                if alias[f"{platform}_selection_id"] != expected:
+                    fail(f"{alias_context}: {platform} selection ID differs from registry evidence")
+
+    path_fields = [
+        (profile["export"]["folder_template"], "profile.export.folder_template", True),
+        (profile["export"]["filename_template"], "profile.export.filename_template", False),
+        (profile["individual_entries"]["entries_folder"], "profile.individual_entries.entries_folder", True),
+        (profile["individual_entries"]["filename_template"], "profile.individual_entries.filename_template", False),
+        (profile["daily_notes"]["folder"], "profile.daily_notes.folder", True),
+        (profile["daily_notes"]["filename_template"], "profile.daily_notes.filename_template", False),
+    ]
+    android_extension = payload["platform_extensions"]["android"]
+    if android_extension is not None:
+        path_fields.append((android_extension["export"]["subfolder"], "platform_extensions.android.export.subfolder", True))
+    for metric_id, metric_config in profile["individual_entries"]["metrics"].items():
+        custom_folder = metric_config["custom_folder"]
+        if custom_folder is not None:
+            path_fields.append((custom_folder, f"profile.individual_entries.metrics.{metric_id}.custom_folder", True))
+
+    def validate_relative(value: str, field: str, allow_segments: bool) -> None:
+        decoded = value
+        for _ in range(3):
+            next_value = unquote(decoded)
+            if next_value == decoded:
+                break
+            decoded = next_value
+        if any(ord(character) < 32 for character in decoded):
+            fail(f"{context}.{field}: control characters are forbidden")
+        if (
+            decoded.startswith(("/", "\\"))
+            or "\\" in decoded
+            or "%" in value
+            or "//" in decoded
+            or "://" in decoded
+            or re.match(r"^[A-Za-z]:", decoded)
+        ):
+            fail(f"{context}.{field}: path/template must be relative")
+        parts = decoded.split("/")
+        if any(part in {".", ".."} for part in parts) or (
+            decoded and any(not part for part in parts)
+        ):
+            fail(f"{context}.{field}: empty or traversal components are forbidden")
+        if not allow_segments and len(parts) != 1:
+            fail(f"{context}.{field}: filename template must be one segment")
+
+    for value, field, allow_segments in path_fields:
+        validate_relative(value, field, allow_segments)
+
+    schedule = profile["schedule"]
+    if "enabled" in schedule:
+        fail(f"{context}: imported schedule must never contain an operative enabled state")
+
+    endpoint = profile["api_endpoint"]
+    if endpoint is not None:
+        if endpoint["scheme"] != "https" or endpoint["credentials_required"] is not True:
+            fail(f"{context}: endpoint must be non-operative HTTPS requiring credentials")
+        combined = f"{endpoint['host']}{endpoint['path']}"
+        for _ in range(3):
+            next_value = unquote(combined)
+            if next_value == combined:
+                break
+            combined = next_value
+        if any(character in combined for character in ("@", "%", "?", "#")):
+            fail(f"{context}: endpoint userinfo/escape/query/fragment is forbidden")
+        if endpoint["path"].startswith("//"):
+            fail(f"{context}: endpoint network-path form is forbidden")
+        if endpoint["host"].lower() != "setup.invalid":
+            fail(f"{context}: canonical fixture endpoint must use synthetic reserved .invalid host")
+
+    extensions = payload["platform_extensions"]
+    origin = payload["created_by"]["platform"]
+    if extensions[origin] is None:
+        fail(f"{context}: writer must include its own platform extension")
+    for platform in ("apple", "android"):
+        extension = extensions[platform]
+        if extension is not None and extension["extension_version"] != 1:
+            fail(f"{context}: present platform extensions must be explicitly versioned")
+    if origin == "apple":
+        apple_schedule = extensions["apple"]["schedule"]
+        cadence = schedule["cadence"]
+        frequency = apple_schedule["frequency"]
+        cadence_matches = (
+            (frequency == "daily" and cadence == {"value": 1, "unit": "days"})
+            or (frequency == "weekly" and cadence == {"value": 1, "unit": "weeks"})
+            or (frequency == "custom" and cadence["unit"] == apple_schedule["custom_unit"])
+        )
+        portable_target = "api_endpoint" if apple_schedule["desired_target"] == "api_endpoint" else "device_folder"
+        if not cadence_matches or schedule["desired_target"] != portable_target:
+            fail(f"{context}: portable and Apple schedule representations contradict each other")
+
+
 def validate_provider_sections_fixture(root: Path, path: Path) -> None:
     context = "healthmd.provider_sections v1 fixture"
     payload = require_exact_keys(load_json(path, context), {"whoop"}, context)
@@ -1755,13 +2002,38 @@ def validate_metric_registry(
         profile["id"]: profile for profile in product_payload["output_profiles"]
     }
     capability_ids = [capability["id"] for capability in product_payload["capabilities"]]
+    capability_by_id = {
+        capability["id"]: capability for capability in product_payload["capabilities"]
+    }
     known_capability_ids = require_unique_string_array(
         payload.get("known_capability_ids"),
         f"{context}.known_capability_ids",
         allow_empty=False,
     )
-    if known_capability_ids != capability_ids:
-        fail(f"{context}: known capabilities must exactly match product-capabilities order")
+    unknown_registry_capabilities = sorted(set(known_capability_ids) - set(capability_ids))
+    if unknown_registry_capabilities:
+        fail(
+            f"{context}: registry references unknown product capabilities "
+            f"{unknown_registry_capabilities}"
+        )
+    expected_known_order = [
+        capability_id
+        for capability_id in capability_ids
+        if capability_id in set(known_capability_ids)
+    ]
+    if known_capability_ids != expected_known_order:
+        fail(f"{context}: known capabilities must preserve product-capabilities order")
+    metric_capability_ids = {
+        metric.get("capability_id")
+        for metric in payload.get("metrics", [])
+        if isinstance(metric, dict)
+    }
+    missing_metric_capabilities = sorted(metric_capability_ids - set(known_capability_ids))
+    if missing_metric_capabilities:
+        fail(
+            f"{context}: metric capabilities missing from registry inventory "
+            f"{missing_metric_capabilities}"
+        )
     available_by_platform = require_exact_keys(
         payload.get("available_capability_ids_by_platform"),
         {"apple", "android"},
@@ -1769,9 +2041,10 @@ def validate_metric_registry(
     )
     expected_available_by_platform = {
         platform: [
-            capability["id"]
-            for capability in product_payload["capabilities"]
-            if capability["platforms"][platform]["state"] == "available"
+            capability_id
+            for capability_id in known_capability_ids
+            if capability_by_id[capability_id]["platforms"][platform]["state"]
+            == "available"
         ]
         for platform in ("apple", "android")
     }
@@ -2015,6 +2288,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 validate_render_fixture(root, fixture_path)
             elif identifier == "healthmd.provider_sections":
                 validate_provider_sections_fixture(root, fixture_path)
+            elif identifier == SHARED_SETUP_SCHEMA:
+                validate_shared_setup_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
 

@@ -424,6 +424,7 @@ class AdvancedExportSettings: ObservableObject {
     private let generateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
     private let generateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
     private let generateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
+    private let sharedSetupPortableSettingsKey = "advancedExportSettings.sharedSetupPortableSettings.v1"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
     private let verifiableClinicalRecordsOptInMigrationKey =
         "advancedExportSettings.verifiableClinicalRecordsOptInMigration.v1"
@@ -685,7 +686,7 @@ class AdvancedExportSettings: ObservableObject {
         
         // Load format customization
         if let data = userDefaults.data(forKey: formatCustomizationKey),
-           let decoded = try? JSONDecoder().decode(FormatCustomization.self, from: data) {
+           let decoded = try? Self.internalSettingsDecoder().decode(FormatCustomization.self, from: data) {
             self.formatCustomization = decoded
         } else {
             self.formatCustomization = FormatCustomization()
@@ -838,7 +839,7 @@ class AdvancedExportSettings: ObservableObject {
     }
     
     private func saveFormatCustomization() {
-        if let encoded = try? JSONEncoder().encode(formatCustomization) {
+        if let encoded = try? Self.internalSettingsEncoder().encode(formatCustomization) {
             userDefaults.set(encoded, forKey: formatCustomizationKey)
         }
     }
@@ -924,6 +925,127 @@ class AdvancedExportSettings: ObservableObject {
         generateWeeklyRollups = false
         generateMonthlyRollups = false
         generateYearlyRollups = false
+    }
+
+    /// Applies an already-validated portable settings candidate without replaying every
+    /// `@Published` observer. The complete non-secret portable envelope and the native settings
+    /// keys are persisted and read back before one parent publication. Device-bound settings are
+    /// intentionally absent.
+    func applySharedSetupBatch(
+        _ snapshot: SharedSetupPortableSnapshot,
+        verificationOverride: (() -> Bool)? = nil
+    ) throws {
+        try SharedSetupValidation.validateRelativePath(snapshot.folderStructure)
+        try SharedSetupValidation.validateFilename(snapshot.filenameFormat)
+        try SharedSetupValidation.validateRelativePath(snapshot.individualTracking.entriesFolder)
+        try SharedSetupValidation.validateFilename(snapshot.individualTracking.filenameTemplate)
+        try SharedSetupValidation.validateRelativePath(snapshot.dailyNotes.folderPath)
+        try SharedSetupValidation.validateFilename(snapshot.dailyNotes.filenamePattern)
+        guard snapshot.metricSelectionIDs.isSubset(of: HealthMetrics.availableMetricIDsInCurrentBuild) else {
+            throw SharedSetupError.invalid("The setup contains an unsupported Apple metric selection.")
+        }
+
+        let before = SharedSetupPortableSnapshot.capture(self)
+        let priorEnvelope = userDefaults.data(forKey: sharedSetupPortableSettingsKey)
+        do {
+            replacePublishedStorage(with: snapshot)
+            try persistSharedSetupSnapshot(snapshot)
+            let reloaded = AdvancedExportSettings(userDefaults: userDefaults)
+            let verified = verificationOverride?() ?? (
+                persistedSharedSetupSnapshot() == snapshot &&
+                SharedSetupPortableSnapshot.capture(reloaded) == snapshot
+            )
+            guard verified else { throw SharedSetupError.persistenceVerificationFailed }
+            subscribeToMetricSelection()
+            subscribeToIndividualTracking()
+            subscribeToFormatCustomization()
+            subscribeToDailyNoteInjection()
+            objectWillChange.send()
+        } catch {
+            replacePublishedStorage(with: before)
+            persistAllSettings()
+            if let priorEnvelope {
+                userDefaults.set(priorEnvelope, forKey: sharedSetupPortableSettingsKey)
+            } else {
+                userDefaults.removeObject(forKey: sharedSetupPortableSettingsKey)
+            }
+            subscribeToMetricSelection()
+            subscribeToIndividualTracking()
+            subscribeToFormatCustomization()
+            subscribeToDailyNoteInjection()
+            objectWillChange.send()
+            throw error
+        }
+    }
+
+    private func replacePublishedStorage(with snapshot: SharedSetupPortableSnapshot) {
+        let selection = MetricSelectionState()
+        selection.enabledMetrics = snapshot.metricSelectionIDs
+        selection.enabledCategories = [] // Categories are derived UI state, never import authority.
+        let customization = FormatCustomization()
+        customization.dateFormat = snapshot.dateFormat
+        customization.timeFormat = snapshot.timeFormat
+        customization.unitPreference = snapshot.unitPreference
+        snapshot.frontmatter.apply(to: customization.frontmatterConfig)
+        customization.frontmatterConfig.preservesExactFieldSet = snapshot.frontmatterPreservesExactFieldSet
+        customization.markdownTemplate = snapshot.markdownTemplate
+        let individual = IndividualTrackingSettings()
+        snapshot.individualTracking.apply(to: individual)
+        let dailyNotes = DailyNoteInjectionSettings()
+        snapshot.dailyNotes.apply(to: dailyNotes)
+
+        _metricSelection = Published(initialValue: selection)
+        _exportFormats = Published(initialValue: snapshot.exportFormats)
+        _includeMetadata = Published(initialValue: snapshot.includeMetadata)
+        _groupByCategory = Published(initialValue: snapshot.groupByCategory)
+        _filenameFormat = Published(initialValue: snapshot.filenameFormat)
+        _folderStructure = Published(initialValue: snapshot.folderStructure)
+        _organizeFormatsIntoFolders = Published(initialValue: snapshot.organizeFormatsIntoFolders)
+        _archiveExportFiles = Published(initialValue: snapshot.archiveExportFiles)
+        _includeDataDictionary = Published(initialValue: snapshot.includeDataDictionary)
+        _summaryOnlyExport = Published(initialValue: snapshot.summaryOnlyExport)
+        _writeMode = Published(initialValue: snapshot.writeMode)
+        _formatCustomization = Published(initialValue: customization)
+        _individualTracking = Published(initialValue: individual)
+        _dailyNoteInjection = Published(initialValue: dailyNotes)
+        _includeGranularData = Published(initialValue: snapshot.includeGranularData)
+        _generateWeeklyRollups = Published(initialValue: snapshot.generateWeeklyRollups)
+        _generateMonthlyRollups = Published(initialValue: snapshot.generateMonthlyRollups)
+        _generateYearlyRollups = Published(initialValue: snapshot.generateYearlyRollups)
+    }
+
+    private static func internalSettingsEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.userInfo[.includeSharedSetupExactFrontmatter] = true
+        return encoder
+    }
+
+    private static func internalSettingsDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.userInfo[.includeSharedSetupExactFrontmatter] = true
+        return decoder
+    }
+
+    private func persistSharedSetupSnapshot(_ snapshot: SharedSetupPortableSnapshot) throws {
+        let data = try Self.internalSettingsEncoder().encode(snapshot)
+        guard data.count <= SharedSetupV1.maximumEncodedBytes else { throw SharedSetupError.oversized }
+        userDefaults.set(data, forKey: sharedSetupPortableSettingsKey)
+        persistAllSettings()
+    }
+
+    private func persistedSharedSetupSnapshot() -> SharedSetupPortableSnapshot? {
+        guard let data = userDefaults.data(forKey: sharedSetupPortableSettingsKey),
+              data.count <= SharedSetupV1.maximumEncodedBytes else { return nil }
+        return try? Self.internalSettingsDecoder().decode(SharedSetupPortableSnapshot.self, from: data)
+    }
+
+    private func persistAllSettings() {
+        save()
+        saveFormats()
+        saveMetricSelection()
+        saveFormatCustomization()
+        saveIndividualTracking()
+        saveDailyNoteInjection()
     }
 
     /// Daily Notes Only is effective only while Daily Note Injection itself is enabled.
