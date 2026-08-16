@@ -1566,7 +1566,8 @@ struct ExportOrchestrator {
         fileCount: Int? = nil,
         idempotencyKey: UUID? = nil,
         appleExportEnginePin: AppleExportEnginePin? = nil,
-        operationDetails: ExportHistoryOperationDetails? = nil
+        operationDetails: ExportHistoryOperationDetails? = nil,
+        profileName: String? = nil
     ) {
         let history = ExportHistoryManager.shared
         let suppliedFileCount = fileCount.map { max($0, 0) }
@@ -1591,7 +1592,8 @@ struct ExportOrchestrator {
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,
                 appleExportEnginePin: appleExportEnginePin,
-                operationDetails: operationDetails
+                operationDetails: operationDetails,
+                profileName: profileName
             )
         } else {
             history.recordFailure(
@@ -1611,7 +1613,8 @@ struct ExportOrchestrator {
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,
                 appleExportEnginePin: appleExportEnginePin,
-                operationDetails: operationDetails
+                operationDetails: operationDetails,
+                profileName: profileName
             )
         }
     }

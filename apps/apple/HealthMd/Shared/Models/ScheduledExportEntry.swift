@@ -145,23 +145,37 @@ final class ScheduledExportEntryStore: ObservableObject {
     ) {
         self.userDefaults = userDefaults
         self.now = now
+        entries = Self.decodeStoredEntries(from: userDefaults)
+    }
 
-        if let data = userDefaults.data(forKey: Self.storageKey),
-           let decoded = try? JSONDecoder().decode([ScheduledExportEntry].self, from: data) {
-            entries = decoded
-        } else {
-            entries = []
+    /// Re-reads persisted entries so instances owned by different subsystems
+    /// (UI coordinator, SchedulingManager) observe each other's mutations.
+    /// Safe on the main thread, matching every existing call site.
+    private func reloadFromDefaults() {
+        let fresh = Self.decodeStoredEntries(from: userDefaults)
+        if fresh != entries {
+            entries = fresh
         }
+    }
+
+    private static func decodeStoredEntries(from userDefaults: UserDefaults) -> [ScheduledExportEntry] {
+        guard let data = userDefaults.data(forKey: storageKey),
+              let decoded = try? JSONDecoder().decode([ScheduledExportEntry].self, from: data) else {
+            return []
+        }
+        return decoded
     }
 
     // MARK: - Lookup
 
     func entry(profileID: UUID) -> ScheduledExportEntry? {
-        entries.first { $0.profileID == profileID }
+        reloadFromDefaults()
+        return entries.first { $0.profileID == profileID }
     }
 
     func entry(id: UUID) -> ScheduledExportEntry? {
-        entries.first { $0.id == id }
+        reloadFromDefaults()
+        return entries.first { $0.id == id }
     }
 
     // MARK: - CRUD
@@ -285,7 +299,8 @@ final class ScheduledExportEntryStore: ObservableObject {
         now: Date,
         calendar: Calendar = .current
     ) -> [DueEntryOccurrence] {
-        entries
+        reloadFromDefaults()
+        return entries
             .filter(\.isEnabled)
             .flatMap { entry -> [DueEntryOccurrence] in
                 let projection = entry.dateMathProjection

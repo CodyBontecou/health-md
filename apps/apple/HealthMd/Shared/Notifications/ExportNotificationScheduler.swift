@@ -160,9 +160,14 @@ final class InspectableExportNotificationScheduler: ExportNotificationScheduling
     private(set) var scheduledRequests: [PendingExportRequest.ID: PendingExportRequest] = [:]
     private(set) var immediateRequests: [PendingExportRequest.ID: PendingExportRequest] = [:]
     private(set) var canceledRequestIDs: [PendingExportRequest.ID] = []
+    /// Historical log of every scheduled pending request, never removed by
+    /// cancellation. Assertions that must survive the pre-run fallback cancel
+    /// read this instead of `scheduledRequests`.
+    private(set) var allScheduledRequests: [PendingExportRequest] = []
 
     func schedulePendingExportNotification(for request: PendingExportRequest) async throws {
         scheduledRequests[request.id] = request
+        allScheduledRequests.append(request)
     }
 
     func sendImmediatePendingExportNotification(for request: PendingExportRequest) async throws {

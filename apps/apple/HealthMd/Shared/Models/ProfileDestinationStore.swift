@@ -53,7 +53,8 @@ struct SavedAPIEndpoint: Codable, Identifiable, Equatable {
 /// bookmarks and API endpoints, each referenced by stable UUID from an
 /// `ExportProfile`. The legacy single-vault/single-endpoint state remains
 /// untouched; this store is additive.
-@MainActor
+///
+/// Use from the main thread, matching `ExportProfileStore`.
 final class ProfileDestinationStore: ObservableObject {
     @Published private(set) var vaults: [SavedVaultDestination]
     @Published private(set) var apiEndpoints: [SavedAPIEndpoint]

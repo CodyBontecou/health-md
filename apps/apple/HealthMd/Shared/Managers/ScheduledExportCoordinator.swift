@@ -34,12 +34,14 @@ final class ScheduledExportCoordinator {
         schedule: ExportSchedule,
         fireDate: Date,
         kind: ScheduledExportKind = .completedDay,
+        profile: ScheduledProfileRequestContext? = nil,
         makeSettingsSnapshot: () async -> ExportSettingsSnapshot? = { nil }
     ) async throws -> PendingExportRequest {
         let request = try await makePendingScheduledExportRequest(
             schedule: schedule,
             fireDate: fireDate,
             kind: kind,
+            profile: profile,
             makeSettingsSnapshot: makeSettingsSnapshot
         )
         try pendingExportStore.upsert(request)
@@ -69,6 +71,8 @@ final class ScheduledExportCoordinator {
                 notificationMetadata: request.notificationMetadata,
                 exportTarget: request.exportTarget,
                 settingsSnapshot: request.settingsSnapshot,
+                profileID: request.profileID,
+                profileName: request.profileName,
                 calendar: calendar
             )
         } else if result.didCompleteAllRequestedDates {
@@ -99,19 +103,38 @@ final class ScheduledExportCoordinator {
         return result.totalCount > 0 ? .preservedFailure : .preservedWithoutAttempt
     }
 
+    /// Profile-scoped context for a scheduled request: the frozen snapshot and
+    /// target come from the profile, and dedup is per profile so two profiles'
+    /// requests at the same fire date never collapse into one.
+    struct ScheduledProfileRequestContext {
+        let profileID: UUID
+        let profileName: String
+        let target: ExportTargetSelection
+        let settings: ExportSettingsSnapshot
+    }
+
     private func makePendingScheduledExportRequest(
         schedule: ExportSchedule,
         fireDate: Date,
         kind: ScheduledExportKind = .completedDay,
+        profile: ScheduledProfileRequestContext? = nil,
         makeSettingsSnapshot: () async -> ExportSettingsSnapshot? = { nil }
     ) async throws -> PendingExportRequest {
         let existingRequest = try pendingExportStore.loadAll().first { request in
             request.source == .scheduled
                 && request.scheduledFireDate == fireDate
                 && request.scheduledKind == kind
+                && request.profileID == profile?.profileID
         }
         if let existingRequest {
             return existingRequest
+        }
+
+        let frozenSettings: ExportSettingsSnapshot?
+        if let profile {
+            frozenSettings = profile.settings
+        } else {
+            frozenSettings = await makeSettingsSnapshot()
         }
 
         return PendingExportRequest(
@@ -127,8 +150,10 @@ final class ScheduledExportCoordinator {
             scheduledKind: kind,
             createdAt: now(),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
-            exportTarget: schedule.target,
-            settingsSnapshot: await makeSettingsSnapshot(),
+            exportTarget: profile?.target ?? schedule.target,
+            settingsSnapshot: frozenSettings,
+            profileID: profile?.profileID,
+            profileName: profile?.profileName,
             calendar: calendar
         )
     }

@@ -28,6 +28,10 @@ final class ExportProfileCoordinator: ObservableObject {
 
     let profileStore: ExportProfileStore
     let destinationStore: ProfileDestinationStore
+    /// Phase 3: scheduled entries bound to profiles. Owned here so bootstrap
+    /// migration (legacy schedule → Default profile entry) and profile
+    /// deletion (entry cleanup) stay coupled.
+    let scheduledEntryStore: ScheduledExportEntryStore
 
     private let settings: AdvancedExportSettings
     private let vaultManager: VaultManager
@@ -42,6 +46,7 @@ final class ExportProfileCoordinator: ObservableObject {
     init(
         profileStore: ExportProfileStore,
         destinationStore: ProfileDestinationStore,
+        scheduledEntryStore: ScheduledExportEntryStore = ScheduledExportEntryStore(),
         settings: AdvancedExportSettings,
         vaultManager: VaultManager,
         apiExportSettings: APIExportSettings,
@@ -50,6 +55,7 @@ final class ExportProfileCoordinator: ObservableObject {
     ) {
         self.profileStore = profileStore
         self.destinationStore = destinationStore
+        self.scheduledEntryStore = scheduledEntryStore
         self.settings = settings
         self.vaultManager = vaultManager
         self.apiExportSettings = apiExportSettings
@@ -94,12 +100,22 @@ final class ExportProfileCoordinator: ObservableObject {
             apiEndpointID = endpoint.id
         }
 
-        profileStore.migrateDefaultProfileIfNeeded(
+        let didCreate = profileStore.migrateDefaultProfileIfNeeded(
             settings: ExportSettingsSnapshot.from(settings),
             target: initialTarget,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID
         )
+
+        // Phase 3: an enabled legacy schedule becomes the Default profile's
+        // scheduled entry exactly once, so the existing single schedule keeps
+        // running unchanged under per-profile evaluation.
+        if didCreate, let defaultProfileID = profileStore.activeProfileID {
+            _ = scheduledEntryStore.migrateLegacyScheduleIfNeeded(
+                legacy: ExportSchedule.load(),
+                defaultProfileID: defaultProfileID
+            )
+        }
     }
 
     // MARK: - Activation
@@ -233,11 +249,13 @@ final class ExportProfileCoordinator: ObservableObject {
     }
 
     /// Deletes a profile (forbidden for the last remaining profile by the
-    /// store) and activates the first remaining profile. Returns false when
-    /// deletion was refused.
+    /// store) and activates the first remaining profile. The profile's
+    /// scheduled entry is removed so no orphaned automation survives the
+    /// profile. Returns false when deletion was refused.
     @discardableResult
     func deleteProfile(id: UUID) -> Bool {
         guard profileStore.delete(id: id) else { return false }
+        _ = scheduledEntryStore.delete(profileID: id)
         guard let next = profileStore.profiles.first else { return true }
         activate(profileID: next.id)
         return true

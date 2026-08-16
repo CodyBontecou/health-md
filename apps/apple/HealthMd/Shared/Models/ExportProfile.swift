@@ -104,6 +104,25 @@ final class ExportProfileStore: ObservableObject {
         }
     }
 
+    /// Re-reads persisted state so instances owned by different subsystems
+    /// (UI coordinator, SchedulingManager, CLI paths) observe each other's
+    /// mutations. Safe on the main thread, matching every existing call site.
+    private func reloadFromDefaults() {
+        guard let data = userDefaults.data(forKey: Key.list),
+              let decoded = try? JSONDecoder().decode([ExportProfile].self, from: data) else {
+            return
+        }
+        if decoded != profiles {
+            profiles = decoded
+        }
+        if let idString = userDefaults.string(forKey: Key.activeProfileID),
+           let id = UUID(uuidString: idString),
+           decodedContainsProfile(withID: id, in: profiles),
+           id != activeProfileID {
+            activeProfileID = id
+        }
+    }
+
     // MARK: - Derived state
 
     /// True when at least one profile exists. Callers without profile support
@@ -113,10 +132,12 @@ final class ExportProfileStore: ObservableObject {
     /// The profile used by manual exports, or nil in legacy mode (no profiles,
     /// or the persisted active id dangles after external data loss).
     var activeProfile: ExportProfile? {
-        profile(id: activeProfileID)
+        reloadFromDefaults()
+        return profile(id: activeProfileID)
     }
 
     func profile(id: UUID?) -> ExportProfile? {
+        reloadFromDefaults()
         guard let id else { return nil }
         return profiles.first { $0.id == id }
     }
@@ -124,6 +145,7 @@ final class ExportProfileStore: ObservableObject {
     /// Case-insensitive, whitespace-trimmed name lookup used by automation
     /// surfaces that reference profiles by display name.
     func profile(named name: String) -> ExportProfile? {
+        reloadFromDefaults()
         let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalized.isEmpty else { return nil }
         return profiles.first {

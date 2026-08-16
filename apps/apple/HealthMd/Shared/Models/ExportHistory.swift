@@ -803,7 +803,8 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
-        operationDetails: ExportHistoryOperationDetails? = nil
+        operationDetails: ExportHistoryOperationDetails? = nil,
+        profileName: String? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -822,7 +823,8 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
             appleExportEnginePin: appleExportEnginePin,
-            operationDetails: operationDetails
+            operationDetails: operationDetails,
+            profileName: profileName
         )
         addEntry(entry)
     }
@@ -845,7 +847,8 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
-        operationDetails: ExportHistoryOperationDetails? = nil
+        operationDetails: ExportHistoryOperationDetails? = nil,
+        profileName: String? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -865,7 +868,8 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
             appleExportEnginePin: appleExportEnginePin,
-            operationDetails: operationDetails
+            operationDetails: operationDetails,
+            profileName: profileName
         )
         addEntry(entry)
     }
