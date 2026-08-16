@@ -281,6 +281,33 @@ nonisolated enum CanonicalRFC3339UTC {
         let prefix = whole.hasSuffix("Z") ? String(whole.dropLast()) : whole
         return String(format: "%@.%09dZ", prefix, nanoseconds)
     }
+
+    /// Parses only timestamps emitted by `string(from:)` and verifies that Foundation's
+    /// floating-point `Date` representation can reproduce the exact canonical bytes.
+    static func date(from value: String) -> Date? {
+        guard value.last == "Z", value.count >= 12 else { return nil }
+
+        let decimalIndex = value.index(value.endIndex, offsetBy: -11)
+        let fractionalStart = value.index(after: decimalIndex)
+        let utcSuffixIndex = value.index(before: value.endIndex)
+        guard value[decimalIndex] == "." else { return nil }
+
+        let fractional = value[fractionalStart..<utcSuffixIndex]
+        guard fractional.count == 9,
+              fractional.allSatisfy({ $0.isASCII && $0.isNumber }),
+              let nanoseconds = Int(fractional) else {
+            return nil
+        }
+
+        let wholeSecondsValue = String(value[..<decimalIndex]) + "Z"
+        guard let wholeSeconds = cachedFormatterForCurrentThread().date(from: wholeSecondsValue) else {
+            return nil
+        }
+
+        let parsed = wholeSeconds.addingTimeInterval(Double(nanoseconds) / 1_000_000_000)
+        guard string(from: parsed) == value else { return nil }
+        return parsed
+    }
 }
 
 /// RFC 4180 field escaping shared by all daily CSV rows that can contain arbitrary text.

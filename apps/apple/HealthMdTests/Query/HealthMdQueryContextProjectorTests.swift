@@ -263,6 +263,19 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
         XCTAssertTrue(day.evidence.contains { if case .warning(_, let code) = $0.reference.locator { return code == "sample_warning" }; return false })
         XCTAssertTrue(day.evidence.contains { if case .partialFailure = $0.reference.locator { return true }; return false })
         XCTAssertTrue(HealthMdEvidenceResolver.allResolve(day.evidence.map(\.reference), in: [day]))
+        let stepsEvidenceIDs = Set(metric("steps", in: day).evidenceIDs)
+        let stepsEvidence = day.evidence.filter {
+            stepsEvidenceIDs.contains($0.reference.evidenceID)
+        }
+        XCTAssertFalse(stepsEvidence.isEmpty)
+        XCTAssertTrue(stepsEvidence.allSatisfy {
+            $0.reference.sourceID == HealthMdEvidenceSourceIDs.healthMdSummary
+        })
+        XCTAssertTrue(day.evidence.contains {
+            $0.metricIDs.contains("steps")
+                && $0.reference.sourceID == HealthMdEvidenceSourceIDs.appleHealth
+                && !stepsEvidenceIDs.contains($0.reference.evidenceID)
+        })
         let workoutEvidence = Set(day.workouts[0].evidenceIDs)
         XCTAssertFalse(workoutEvidence.isEmpty)
         XCTAssertTrue(workoutEvidence.isSubset(of: Set(day.evidence.map { $0.reference.evidenceID })))
@@ -350,6 +363,12 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
         guard case .array(let details)? = unknown.value else { return XCTFail("Unknown archive metric detail was dropped") }
         XCTAssertFalse(details.isEmpty)
         XCTAssertFalse(unknown.evidenceIDs.isEmpty)
+        let unknownEvidenceIDs = Set(unknown.evidenceIDs)
+        XCTAssertTrue(first.evidence.filter {
+            unknownEvidenceIDs.contains($0.reference.evidenceID)
+        }.allSatisfy {
+            $0.reference.sourceID != HealthMdEvidenceSourceIDs.healthMdSummary
+        })
     }
 
     func testProjectsSleepSessionsAndDecodesLegacyContextWithoutSessionField() throws {
