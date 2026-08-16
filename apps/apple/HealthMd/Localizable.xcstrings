@@ -74297,6 +74297,70 @@
         }
       }
     },
+    "Health.md could not safely identify complete YAML properties in the existing Markdown file, so it left the file unchanged.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md konnte die vollständigen YAML-Properties in der vorhandenen Markdown-Datei nicht sicher erkennen und hat die Datei deshalb unverändert gelassen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md could not safely identify complete YAML properties in the existing Markdown file, so it left the file unchanged."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md no pudo identificar con seguridad las propiedades YAML completas en el archivo Markdown existente, por lo que dejó el archivo sin cambios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md n’a pas pu identifier sans risque les propriétés YAML complètes du fichier Markdown existant ; il a donc laissé le fichier inchangé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md non è riuscito a identificare in modo sicuro le proprietà YAML complete nel file Markdown esistente, quindi ha lasciato il file invariato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.mdは既存のMarkdownファイル内の完全なYAMLプロパティを安全に特定できなかったため、ファイルを変更せずに残しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md가 기존 Markdown 파일의 완전한 YAML 속성을 안전하게 식별할 수 없어 파일을 변경하지 않고 남겼습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md kon de volledige YAML-eigenschappen in het bestaande Markdown-bestand niet veilig identificeren en heeft het bestand daarom ongewijzigd gelaten."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Health.md não conseguiu identificar com segurança as propriedades YAML completas no arquivo Markdown existente, então deixou o arquivo inalterado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md 无法安全识别现有 Markdown 文件中的完整 YAML 属性，因此保持该文件不变。"
+          }
+        }
+      }
+    },
     "Health.md could not save the query-context encryption key in Keychain.": {
       "comment": "macOS production UI",
       "localizations": {
