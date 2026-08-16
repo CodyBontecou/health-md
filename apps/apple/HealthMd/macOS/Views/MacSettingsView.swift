@@ -926,7 +926,7 @@ struct MacDataSettingsTab: View {
 
         guard shouldTrack else { return }
         for metric in individualTrackableMetrics {
-            advancedSettings.individualTracking.setTrackIndividually(metric.id, enabled: true)
+            advancedSettings.setIndividuallyTracked(metric.id, enabled: true)
         }
     }
 

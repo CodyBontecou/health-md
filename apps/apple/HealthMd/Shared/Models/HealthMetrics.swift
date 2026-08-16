@@ -778,6 +778,22 @@ class MetricSelectionState: ObservableObject, Codable {
         updateCategoryState(for: metricId)
     }
 
+    /// Explicit variant of `toggleMetric` for callers that already know the
+    /// desired state. Applies the same availability guards and category-state
+    /// maintenance; never toggles a metric the picker itself would refuse.
+    func setMetric(_ metricId: String, enabled: Bool) {
+        guard enabled != enabledMetrics.contains(metricId) else { return }
+        if enabled {
+            guard let metric = HealthMetrics.all.first(where: { $0.id == metricId }),
+                  !metric.isPendingAppleApproval,
+                  metric.availability.isAvailableOnCurrentPlatform else { return }
+            enabledMetrics.insert(metricId)
+        } else {
+            enabledMetrics.remove(metricId)
+        }
+        updateCategoryState(for: metricId)
+    }
+
     func toggleCategory(_ category: HealthMetricCategory) {
         // Pending-approval categories can never be toggled on.
         guard !category.isPendingAppleApproval else { return }
