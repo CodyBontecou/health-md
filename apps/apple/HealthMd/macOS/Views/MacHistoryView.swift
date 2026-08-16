@@ -246,6 +246,8 @@ struct MacHistoryView: View {
                                     Text(failure.localizedSummary)
                                         .font(BrandTypography.caption())
                                         .foregroundStyle(Color.textMuted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .textSelection(.enabled)
                                 }
                             }
                         }

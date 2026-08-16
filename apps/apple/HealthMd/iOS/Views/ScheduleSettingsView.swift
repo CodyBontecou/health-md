@@ -1820,6 +1820,8 @@ struct ExportHistoryDetailView: View {
                                 Text(failure.summary)
                                     .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .textSelection(.enabled)
                             }
                         }
                     } header: {

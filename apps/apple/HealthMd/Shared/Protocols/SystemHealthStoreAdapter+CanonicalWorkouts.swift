@@ -1240,6 +1240,17 @@ extension SystemHealthStoreAdapter {
         try Self.throwIfCancellationError(error)
         let nsError = error as NSError
         let suffix = childUUID.map { " child_uuid=\($0.uuidString)" } ?? ""
+        let queryError: HealthKitQueryError
+        if let importFailureDescription = Self.workoutPlanImportFailureDescription(for: nsError) {
+            queryError = HealthKitQueryError(
+                domain: nsError.domain,
+                code: Int64(nsError.code),
+                description: importFailureDescription,
+                isRecoverable: true
+            )
+        } else {
+            queryError = HealthKitQueryError(error: nsError, isRecoverable: true)
+        }
         return HealthKitQueryResult(
             identifier: identifier,
             objectTypeIdentifier: objectTypeIdentifier,
@@ -1254,9 +1265,28 @@ extension SystemHealthStoreAdapter {
             ),
             status: .failure,
             recordCount: 0,
-            error: HealthKitQueryError(error: nsError, isRecoverable: true),
+            error: queryError,
             statusDescription: "workout_uuid=\(workout.uuid.uuidString)\(suffix)"
         )
+    }
+
+    /// `HKWorkout.workoutPlan` and `WorkoutPlan.dataRepresentation` surface
+    /// WorkoutKit's internal `ImportError` enum as an opaque
+    /// "WorkoutKit.ImportError error N" string with no localized description,
+    /// which otherwise flows straight into partial export warnings users
+    /// cannot act on. Translate that domain into an explanation that states
+    /// what was omitted, what still exported, and the likely cause (a plan
+    /// blob this device's WorkoutKit cannot decode, typically written by
+    /// another app, device, or OS version). Returns nil for every other
+    /// error domain so unrelated failures keep their raw descriptions.
+    static func workoutPlanImportFailureDescription(for error: NSError) -> String? {
+        guard error.domain == "WorkoutKit.ImportError" else { return nil }
+        return "WorkoutKit could not decode the workout plan attached to this "
+            + "workout (WorkoutKit.ImportError error \(error.code)). The workout "
+            + "itself and all of its samples exported successfully; only the "
+            + "optional structured workout plan was omitted. This usually means "
+            + "the plan was saved by another app, device, or OS version whose "
+            + "plan format this device cannot read."
     }
 
     private func canonicalIndoorValue(_ metadata: [String: Any]?) -> HealthKitMetadataValue {
