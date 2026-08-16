@@ -330,8 +330,6 @@ jobs:
             -only-testing:HealthMdUITests/PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted \
             -only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testManualExportAndPreviewRemainUsableWhileProtected \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedOutputEditorBlocksSaveAndRoutesToSetting \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
