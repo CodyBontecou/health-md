@@ -298,6 +298,12 @@ final class HealthMdAgentAPIService {
                 code: String(describing: error),
                 message: "The query could not be evaluated."
             )
+        } catch let error as EncryptedHealthContextStoreError {
+            return queryError(
+                status: 503,
+                code: Self.queryStoreErrorCode(for: error),
+                message: "The encrypted query store could not be read."
+            )
         } catch {
             return queryError(
                 status: 503,
@@ -728,6 +734,21 @@ final class HealthMdAgentAPIService {
             "maximum_page_bytes": HealthMdPageControls.maximumBytes,
             "fresh_acquisition": refreshExecutor != nil
         ]
+    }
+
+    private static func queryStoreErrorCode(
+        for error: EncryptedHealthContextStoreError
+    ) -> String {
+        switch error {
+        case .missingEncryptionKey, .invalidEncryptionKey:
+            return "query_store_key_unavailable"
+        case .unsupportedStoreContract, .unsupportedContextDay:
+            return "query_store_contract_unsupported"
+        case .ciphertextAuthenticationFailed, .corruptManifest, .corruptBlob,
+             .invalidOwnerDate, .duplicateOwnerDate, .manifestBlobMismatch,
+             .generationCollision:
+            return "query_store_integrity_failed"
+        }
     }
 
     private func queryError(
