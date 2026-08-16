@@ -219,6 +219,13 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
     <string name="settings_subtitle">प्रीमियम और सहायता प्रबंधित करें</string>
+    <string name="configuration_protection_title">अनजाने बदलाव रोकें</string>
+    <string name="configuration_protection_toggle">कॉन्फ़िगरेशन बदलाव लॉक करें</string>
+    <string name="configuration_protection_description">एक्सपोर्ट, सिंक, शेड्यूल, फ़ोल्डर, कनेक्शन और अन्य सेटिंग्स को गलती से बदलने से रोकता है। मैन्युअल एक्सपोर्ट उपलब्ध रहते हैं।</string>
+    <string name="configuration_protection_blocked_title">सेटिंग्स लॉक हैं</string>
+    <string name="configuration_protection_blocked_body">अपना कॉन्फ़िगरेशन संपादित करने के लिए सेटिंग्स में अनजाने बदलाव रोकें को बंद करें।</string>
+    <string name="configuration_protection_blocked_action">देखें कि कॉन्फ़िगरेशन बदलाव क्यों ब्लॉक हैं</string>
+    <string name="configuration_protection_open_setting">सेटिंग खोलें</string>
     <string name="section_health_sources">स्वास्थ्य सूत्र</string>
     <string name="health_sources_description">Health Connect डिफ़ॉल्ट निर्यात मार्ग बना रहता है। ये समर्थित इकोसिस्टम अभी Health Connect के ज़रिए Health.md को डेटा दे सकते हैं, या क्रेडेंशियल/पार्टनर एक्सेस कॉन्फ़िगर होने के बाद सीधे SDK/OAuth अडैप्टर के ज़रिए।</string>
     <string name="health_provider_status_installed">स्थापित</string>

@@ -11,6 +11,7 @@ struct iPadContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var schedulingManager: SchedulingManager
+    @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
     @StateObject private var advancedSettings = AdvancedExportSettings()
 
@@ -147,7 +148,9 @@ struct iPadContentView: View {
             }
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
-                    vaultManager.setVaultFolder(url)
+                    configurationProtection.performConfigurationChange {
+                        vaultManager.setVaultFolder(url)
+                    }
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -216,6 +219,9 @@ struct iPadContentView: View {
             .onChange(of: scenePhase) { _, newPhase in
                 guard newPhase == .active else { return }
                 Task { await refreshDateRangeSelectionForOpening() }
+            }
+            .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                if requestID != nil { selectedTab = .settings }
             }
             .onChange(of: dateRangePreset) { _, _ in
                 saveDateRangeSelection()
@@ -375,11 +381,15 @@ struct iPadContentView: View {
     private func exportData() {
         vaultManager.refreshVaultAccess()
         if vaultManager.requiresVaultReselection {
-            showDestinationChangedAlert = true
+            configurationProtection.performConfigurationChange {
+                showDestinationChangedAlert = true
+            }
             return
         }
         guard vaultManager.vaultURL != nil else {
-            showFolderPicker = true
+            configurationProtection.performConfigurationChange {
+                showFolderPicker = true
+            }
             return
         }
 

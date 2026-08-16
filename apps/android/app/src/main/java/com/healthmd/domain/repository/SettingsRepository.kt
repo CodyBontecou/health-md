@@ -2,12 +2,19 @@ package com.healthmd.domain.repository
 
 import com.healthmd.domain.model.ExportSettings
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDate
 
 interface SettingsRepository {
     val exportSettings: Flow<ExportSettings>
     suspend fun updateExportSettings(settings: ExportSettings)
     suspend fun getExportSettings(): ExportSettings
+
+    // Device-local, non-security guard for user-initiated in-app configuration changes.
+    // Default implementations keep existing test fakes source-compatible.
+    val preventAccidentalChanges: Flow<Boolean>
+        get() = flowOf(false)
+    suspend fun setPreventAccidentalChanges(enabled: Boolean) = Unit
 
     // Export folder URI (persisted separately for SAF)
     val exportFolderUri: Flow<String?>

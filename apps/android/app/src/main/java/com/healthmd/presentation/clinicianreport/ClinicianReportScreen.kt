@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.healthmd.R
 import com.healthmd.domain.clinicianreport.*
 import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.common.PrimaryButton
 import com.healthmd.presentation.common.SecondaryButton
 import com.healthmd.presentation.common.SectionLabel
@@ -66,6 +67,10 @@ fun ClinicianReportScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val protection = LocalConfigurationProtection.current
+    val attemptConfigurationChange: (() -> Unit) -> Unit = { action ->
+        if (protection.enabled) protection.onBlockedChange() else action()
+    }
     var pickingStart by remember { mutableStateOf(false) }
     var pickingEnd by remember { mutableStateOf(false) }
     val saveLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
@@ -82,8 +87,10 @@ fun ClinicianReportScreen(
                     pickerState.selectedDateMillis?.let { millis ->
                         val selected = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
                         val range = state.configuration.dateRange
-                        if (pickingStart) viewModel.setCustomRange(selected, range.endDate)
-                        else viewModel.setCustomRange(range.startDate, selected)
+                        attemptConfigurationChange {
+                            if (pickingStart) viewModel.setCustomRange(selected, range.endDate)
+                            else viewModel.setCustomRange(range.startDate, selected)
+                        }
                     }
                     pickingStart = false; pickingEnd = false
                 }) { Text(stringResource(R.string.clinician_report_select_date)) }
@@ -123,7 +130,9 @@ fun ClinicianReportScreen(
                     ).forEach { (preset, label) ->
                         FilterChip(
                             selected = state.selectedPreset == preset,
-                            onClick = { viewModel.selectPreset(preset) },
+                            onClick = {
+                                attemptConfigurationChange { viewModel.selectPreset(preset) }
+                            },
                             label = { Text(label) },
                             modifier = Modifier.weight(1f).testTag("clinician_report_preset_${preset.name.lowercase()}"),
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = AppColors.accentSubtle, selectedLabelColor = AppColors.accent),
@@ -132,9 +141,13 @@ fun ClinicianReportScreen(
                 }
                 if (state.selectedPreset == ReportDateRangePreset.CUSTOM) {
                     Spacer(Modifier.height(Spacing.sm))
-                    DateRangeButton(stringResource(R.string.clinician_report_start_date), state.configuration.dateRange.startDate) { pickingStart = true }
+                    DateRangeButton(stringResource(R.string.clinician_report_start_date), state.configuration.dateRange.startDate) {
+                        attemptConfigurationChange { pickingStart = true }
+                    }
                     Spacer(Modifier.height(Spacing.xs))
-                    DateRangeButton(stringResource(R.string.clinician_report_end_date), state.configuration.dateRange.endDate) { pickingEnd = true }
+                    DateRangeButton(stringResource(R.string.clinician_report_end_date), state.configuration.dateRange.endDate) {
+                        attemptConfigurationChange { pickingEnd = true }
+                    }
                 }
             }
 
@@ -145,7 +158,9 @@ fun ClinicianReportScreen(
                         modifier = Modifier.fillMaxWidth().toggleable(
                             value = metric in state.configuration.selectedMetrics,
                             role = Role.Switch,
-                            onValueChange = { viewModel.toggleMetric(metric) },
+                            onValueChange = {
+                                attemptConfigurationChange { viewModel.toggleMetric(metric) }
+                            },
                         ).padding(vertical = Spacing.xs).testTag("clinician_report_metric_${metric.name.lowercase()}"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -162,16 +177,22 @@ fun ClinicianReportScreen(
             SectionLabel(stringResource(R.string.clinician_report_detail))
             GeistCard {
                 DetailRow(stringResource(R.string.clinician_report_summary_only), state.configuration.detailLevel == ReportDetailLevel.SUMMARY) {
-                    viewModel.setDetailLevel(ReportDetailLevel.SUMMARY)
+                    attemptConfigurationChange {
+                        viewModel.setDetailLevel(ReportDetailLevel.SUMMARY)
+                    }
                 }
                 DetailRow(stringResource(R.string.clinician_report_summary_readings), state.configuration.detailLevel == ReportDetailLevel.SUMMARY_AND_READINGS) {
-                    viewModel.setDetailLevel(ReportDetailLevel.SUMMARY_AND_READINGS)
+                    attemptConfigurationChange {
+                        viewModel.setDetailLevel(ReportDetailLevel.SUMMARY_AND_READINGS)
+                    }
                 }
             }
 
             OutlinedTextField(
                 value = state.configuration.displayName,
-                onValueChange = viewModel::setDisplayName,
+                onValueChange = { value ->
+                    attemptConfigurationChange { viewModel.setDisplayName(value) }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.clinician_report_display_name)) },
                 supportingText = { Text(stringResource(R.string.clinician_report_display_name_hint)) },

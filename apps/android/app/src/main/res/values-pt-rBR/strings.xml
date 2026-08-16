@@ -158,6 +158,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Gerencie o Premium e o suporte</string>
+    <string name="configuration_protection_title">Evitar alterações acidentais</string>
+    <string name="configuration_protection_toggle">Bloquear alterações de configuração</string>
+    <string name="configuration_protection_description">Evita alterações acidentais nas configurações de exportação, sincronização, agendamento, pasta, conexão e outras. As exportações manuais continuam disponíveis.</string>
+    <string name="configuration_protection_blocked_title">As configurações estão bloqueadas</string>
+    <string name="configuration_protection_blocked_body">Desative Evitar alterações acidentais nos Ajustes para editar sua configuração.</string>
+    <string name="configuration_protection_blocked_action">Mostrar por que as alterações de configuração estão bloqueadas</string>
+    <string name="configuration_protection_open_setting">Abrir ajuste</string>
     <string name="section_write_mode">Modo de Escrita</string>
     <string name="section_filename_template">Modelo de Nome de Arquivo</string>
     <string name="filename_template_hint">{date}</string>
