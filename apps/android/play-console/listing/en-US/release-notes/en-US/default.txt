@@ -1,7 +1,7 @@
-v1.7.0 — Private health reports for appointments
+v1.7.1 — Health.md on Wear OS
 
-• Create 7-, 30-, or 90-day reports from selected Health Connect data.
-• Preview, save, or share structured PDFs generated entirely on your device.
-• Adds translated report guidance across all supported languages.
-• Keeps your selected export folder during onboarding.
-• Clarifies upgrade guidance based on what you were trying to do.
+• View minimized daily Health Connect aggregates on your watch.
+• Adds Daily Activity and Recovery Tiles plus ten complications.
+• Sync manually or in the background while keeping last-good data available offline.
+• Health Connect stays on your phone; the watch performs no health sensing.
+• Includes localized stale-data, permission, setup, and unavailable states.

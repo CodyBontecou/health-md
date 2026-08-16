@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import com.google.common.truth.Truth.assertThat
@@ -65,6 +66,22 @@ class WidgetHealthPermissionPolicyTest {
         assertThat(selection.sleepSessions).isFalse()
         assertThat(selection.heartRate).isFalse()
         assertThat(selection.restingHeartRate).isFalse()
+        assertThat(selection.oxygenSaturation).isFalse()
+    }
+
+    @Test
+    fun `phone widgets never request or select oxygen they do not display`() {
+        val oxygen = HealthPermission.getReadPermission(OxygenSaturationRecord::class)
+        val permissions = WidgetHealthPermissionPolicy.foregroundPermissions(
+            WidgetDataRequirements(activity = true, sleep = true, heart = true),
+        )
+        val selection = WidgetHealthPermissionPolicy.readSelection(
+            WidgetDataRequirements(activity = true, sleep = true, heart = true),
+            grantedPermissions = permissions + oxygen,
+        )
+
+        assertThat(permissions).doesNotContain(oxygen)
+        assertThat(selection.oxygenSaturation).isFalse()
     }
 
     @Test
