@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">Health.md</string>
+    <string name="wear_dashboard_title">Health.md</string>
+    <string name="wear_setup">Abra o Health.md no telefone para concluir a configuração.</string>
+    <string name="wear_phone_missing">App do telefone não encontrado</string>
+    <string name="wear_unreachable">O telefone está inacessível. Os últimos dados salvos continuam disponíveis.</string>
+    <string name="wear_permissions">O acesso ao Health Connect é necessário no telefone.</string>
+    <string name="wear_version_mismatch">Atualize o Health.md no telefone e no relógio.</string>
+    <string name="wear_no_data">Ainda não há dados de saúde</string>
+    <string name="wear_expired">Os dados têm mais de 24 horas. Sincronize para mostrar as medições.</string>
+    <plurals name="wear_updated_hours">
+        <item quantity="one">Atualizado há %1$d hora</item>
+        <item quantity="other">Atualizado há %1$d horas</item>
+    </plurals>
+    <string name="wear_sync">Sincronizar dados de saúde</string>
+    <string name="wear_syncing">Solicitando sincronização…</string>
+    <string name="wear_activity">Atividade diária</string>
+    <string name="wear_recovery">Recuperação</string>
+    <string name="wear_steps">Passos</string>
+    <string name="wear_move">Energia de movimento</string>
+    <string name="wear_exercise">Minutos de exercício</string>
+    <string name="wear_sleep">Sono</string>
+    <string name="wear_resting_hr">Frequência em repouso</string>
+    <string name="wear_average_hr">Frequência média</string>
+    <string name="wear_hrv">VFC RMSSD</string>
+    <string name="wear_blood_oxygen">Oxigênio no sangue</string>
+    <string name="wear_not_realtime">Última sincronização do telefone; não é em tempo real</string>
+    <string name="wear_no_data_short">--</string>
+    <string name="wear_health_connect_unavailable">O Health Connect não está disponível no seu telefone.</string>
+    <plurals name="wear_updated_minutes">
+        <item quantity="one">Atualizado há %1$d minuto</item>
+        <item quantity="other">Atualizado há %1$d minutos</item>
+    </plurals>
+    <string name="wear_value_kcal">%1$s kcal</string>
+    <string name="wear_value_minutes">%1$s min</string>
+    <string name="wear_value_hours">%1$s h</string>
+    <string name="wear_value_bpm">%1$s bpm</string>
+    <string name="wear_value_ms">%1$s ms</string>
+    <string name="wear_value_percent">%1$s%%</string>
+    <string name="wear_tile_steps">%1$s passos</string>
+    <string name="wear_tile_exercise">%1$s min</string>
+    <string name="wear_tile_sleep">%1$s h de sono</string>
+    <string name="wear_tile_hrv">%1$s ms RMSSD</string>
+    <string name="wear_metric_separator"> · </string>
+    <string name="wear_tile_activity_empty">Sem dados de atividade</string>
+    <string name="wear_tile_recovery_empty">Sem dados de sono ou VFC</string>
+    <string name="wear_preview_placeholder">Prévia; sem valor de saúde</string>
+    <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
+    <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+</resources>

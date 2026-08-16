@@ -15,6 +15,8 @@ import com.healthmd.data.scheduler.ExportWorker
 import com.healthmd.direct.DirectCliForegroundService
 import com.healthmd.direct.DirectCliJobStore
 import com.healthmd.widget.glance.HealthWidgetLocaleRefresher
+import com.healthmd.wear.WearPhoneSync
+import com.healthmd.wear.WearPhoneSyncScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +46,12 @@ class HealthMdApplication : Application(), Configuration.Provider {
     @Inject
     lateinit var directCliJobStore: DirectCliJobStore
 
+    @Inject
+    lateinit var wearPhoneSyncScheduler: WearPhoneSyncScheduler
+
+    @Inject
+    lateinit var wearPhoneSync: WearPhoneSync
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -60,6 +68,15 @@ class HealthMdApplication : Application(), Configuration.Provider {
         campaignAttributionInitializer.start()
         onboardingAnalyticsInitializer.start()
         directCliJobStore.sweepExpired()
+        configurationRefreshScope.launch {
+            // Finish an explicit privacy clear before allowing ordinary scheduling to repopulate
+            // the durable snapshot after process death. Also retain WorkManager recovery if this
+            // application coroutine is interrupted again.
+            if (wearPhoneSync.resumePendingClear() == com.healthmd.wear.WearPhoneSyncResult.RETRY) {
+                WearPhoneSyncScheduler.enqueueClearRecovery(this@HealthMdApplication)
+            }
+            wearPhoneSyncScheduler.reconcile()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: AndroidConfiguration) {
