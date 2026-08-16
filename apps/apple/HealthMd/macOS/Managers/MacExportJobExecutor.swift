@@ -136,6 +136,7 @@ final class MacExportJobExecutor {
         var totalFilesWritten: Int = 0
         var looseAggregateFileCount: Int = 0
         var individualEntryFileCount: Int = 0
+        var individualEntryCoverageGapDayCount: Int = 0
         var dataDictionaryFileCount: Int = 0
         var rollupFileCount: Int = 0
         var archiveFileCount: Int = 0
@@ -293,6 +294,7 @@ final class MacExportJobExecutor {
         var totalFilesWritten = 0
         var looseAggregateFileCount = 0
         var individualEntryFileCount = 0
+        var individualEntryCoverageGapDayCount = 0
         var dataDictionaryFileCount = 0
         var rollupFileCount = 0
         var dataDictionaryWritten = false
@@ -400,6 +402,9 @@ final class MacExportJobExecutor {
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                 looseAggregateFileCount += writeResult.aggregateFileCount
                 individualEntryFileCount += writeResult.individualEntryFileCount
+                if !writeResult.individualEntryCoverageGaps.isEmpty {
+                    individualEntryCoverageGapDayCount += 1
+                }
                 dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 if writeResult.dataDictionaryFileCount > 0 { dataDictionaryWritten = true }
                 totalFilesWritten += writeResult.totalGeneratedFileCount
@@ -615,7 +620,10 @@ final class MacExportJobExecutor {
             totalDays: totalDays,
             currentDate: nil,
             filesWritten: totalFilesWritten,
-            message: Self.completionMessage(for: result),
+            message: Self.completionMessage(
+                for: result,
+                individualEntryCoverageGapDayCount: individualEntryCoverageGapDayCount
+            ),
             progress: progress
         )
 
@@ -863,6 +871,9 @@ final class MacExportJobExecutor {
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     session.looseAggregateFileCount += writeResult.aggregateFileCount
                     session.individualEntryFileCount += writeResult.individualEntryFileCount
+                    if !writeResult.individualEntryCoverageGaps.isEmpty {
+                        session.individualEntryCoverageGapDayCount += 1
+                    }
                     session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                     if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
@@ -1088,6 +1099,9 @@ final class MacExportJobExecutor {
                     session.successfulRecords.append(record)
                     session.looseAggregateFileCount += writeResult.aggregateFileCount
                     session.individualEntryFileCount += writeResult.individualEntryFileCount
+                    if !writeResult.individualEntryCoverageGaps.isEmpty {
+                        session.individualEntryCoverageGapDayCount += 1
+                    }
                     session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                     if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
@@ -1270,7 +1284,10 @@ final class MacExportJobExecutor {
             totalDays: session.start.totalTransferDays,
             currentDate: nil,
             filesWritten: session.totalFilesWritten,
-            message: Self.completionMessage(for: result),
+            message: Self.completionMessage(
+                for: result,
+                individualEntryCoverageGapDayCount: session.individualEntryCoverageGapDayCount
+            ),
             progress: progress
         )
 
@@ -1636,26 +1653,37 @@ final class MacExportJobExecutor {
         return formatter.string(from: date)
     }
 
-    private static func completionMessage(for result: MacExportResultPayload) -> String {
+    private static func completionMessage(
+        for result: MacExportResultPayload,
+        individualEntryCoverageGapDayCount: Int = 0
+    ) -> String {
+        var base: String
         switch result.status {
         case .success:
             if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
-                return "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on Mac."
+                base = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on Mac."
+            } else {
+                base = "Export complete on Mac."
             }
-            return "Export complete on Mac."
         case .partialSuccess:
             if result.dailyNoteSkipCount > 0 && result.totalFilesWritten == 0 {
-                return "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) daily notes on Mac."
+                base = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) daily notes on Mac."
+            } else if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
+                base = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on Mac."
+            } else {
+                base = "Mac export completed with some skipped dates."
             }
-            if result.dailyNoteUpdateCount > 0 && result.totalFilesWritten == 0 {
-                return "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on Mac."
-            }
-            return "Mac export completed with some skipped dates."
         case .failure:
-            return "Mac export failed."
+            base = "Mac export failed."
         case .cancelled:
-            return "Mac export cancelled."
+            base = "Mac export cancelled."
         }
+        // Free-text completion message is the only wire-compatible warnings
+        // channel today; MacExportResultPayload carries no partial-failure list.
+        if individualEntryCoverageGapDayCount > 0 {
+            base += " Some individually tracked metrics produced no entries from lossless records on \(individualEntryCoverageGapDayCount) day\(individualEntryCoverageGapDayCount == 1 ? "" : "s")."
+        }
+        return base
     }
 }
 

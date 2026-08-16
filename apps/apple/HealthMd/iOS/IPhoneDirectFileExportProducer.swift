@@ -4,6 +4,7 @@ import Darwin
 import Foundation
 import HealthMdConnectionCore
 import UIKit
+import os
 
 enum IPhoneDirectFileProducerError: LocalizedError {
     case invalidRequest(String)
@@ -34,6 +35,11 @@ extension IPhoneDirectFileProducerError: ExportPerformanceCancellationClassifyin
 @MainActor
 final class IPhoneDirectFileExportProducer {
     static let shared = IPhoneDirectFileExportProducer()
+
+    private static let logger = Logger(
+        subsystem: "com.codybontecou.healthmd",
+        category: "IPhoneDirectFileExportProducer"
+    )
 
     private let fileManager = FileManager.default
     private var cancelledJobIDs: Set<UUID> = []
@@ -744,7 +750,7 @@ final class IPhoneDirectFileExportProducer {
                     settings: settings
                 )
                 do {
-                    _ = try await vault.exportHealthData(
+                    let writeResult = try await vault.exportHealthData(
                         record,
                         settings: settings,
                         healthSubfolder: journal.healthSubfolder,
@@ -753,6 +759,12 @@ final class IPhoneDirectFileExportProducer {
                         frozenSettingsSnapshot: journal.settingsSnapshot,
                         preparedExport: preparedExport
                     )
+                    // The durable direct-file journal has no write-side warnings
+                    // channel; coverage gaps are logged so support diagnostics can
+                    // explain missing individual-entry files on the receiving Mac.
+                    for gap in writeResult.individualEntryCoverageGaps {
+                        Self.logger.warning("\(gap.summary, privacy: .public)")
+                    }
                     wroteDictionary = true
                 } catch ExportError.noHealthData {
                     // A successfully captured empty day is not a failed HealthKit day.

@@ -723,6 +723,7 @@ struct MacExportView: View {
                     )
                     dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                    partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                     if advancedSettings.dailyNotesOnlyModeEnabled {
                         switch writeResult.dailyNoteResult {
                         case .updated:

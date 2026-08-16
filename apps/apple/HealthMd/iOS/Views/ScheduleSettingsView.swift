@@ -1279,6 +1279,7 @@ struct ScheduleSettingsView: View {
                     )
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 looseAggregateFileCount += writeResult.aggregateFileCount
                 individualEntryFileCount += writeResult.individualEntryFileCount
                 dataDictionaryFileCount += writeResult.dataDictionaryFileCount

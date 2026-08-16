@@ -216,6 +216,10 @@ final class MacCorpusExportSessionManager {
     private final class Session {
         let directoryURL: URL
         var journal: Journal
+        /// In-memory count of exported days whose lossless archive could not serve
+        /// individually tracked metrics. Surfaced through the final ack's free-text
+        /// message; the durable journal and wire payload carry no warnings list.
+        var individualEntryCoverageGapDayCount = 0
         /// Resolved once from the durable manifest each time a session is opened/restored, never
         /// from the Mac's mutable current rollout default and never independently for each day.
         let dailyExportOperation: ConnectedMacDailyExportOperation?
@@ -1218,7 +1222,9 @@ final class MacCorpusExportSessionManager {
                 completedDates: result.completedDates,
                 successCount: result.successCount,
                 totalCount: result.totalCount,
-                message: "Corpus export finalized."
+                message: session.individualEntryCoverageGapDayCount > 0
+                    ? "Corpus export finalized. Some individually tracked metrics produced no entries from lossless records on \(session.individualEntryCoverageGapDayCount) day\(session.individualEntryCoverageGapDayCount == 1 ? "" : "s")."
+                    : "Corpus export finalized."
             )
             session.journal.terminalResult = result
             session.journal.terminalAcknowledgement = acknowledgement
@@ -1799,6 +1805,9 @@ final class MacCorpusExportSessionManager {
                             (session.journal.dailyNoteUpdateCount ?? 0) + writeResult.dailyNoteUpdatedCount
                         session.journal.dailyNoteSkipCount =
                             (session.journal.dailyNoteSkipCount ?? 0) + writeResult.dailyNoteSkippedCount
+                        if !writeResult.individualEntryCoverageGaps.isEmpty {
+                            session.individualEntryCoverageGapDayCount += 1
+                        }
 
                         if settings.dailyNotesOnlyModeEnabled {
                             switch writeResult.dailyNoteResult {
