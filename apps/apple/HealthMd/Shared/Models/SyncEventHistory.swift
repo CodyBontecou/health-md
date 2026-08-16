@@ -10,6 +10,8 @@ struct SyncEvent: Codable, Identifiable, Hashable {
     let peerName: String
     let kind: SyncEventKind
     let recordCount: Int
+    /// True when `recordCount` is a confirmed lower bound rather than an exact file count.
+    let recordCountIsLowerBound: Bool?
     let payloadByteEstimate: Int
     let dateRangeStart: Date?
     let dateRangeEnd: Date?
@@ -21,6 +23,7 @@ struct SyncEvent: Codable, Identifiable, Hashable {
         peerName: String,
         kind: SyncEventKind,
         recordCount: Int = 0,
+        recordCountIsLowerBound: Bool? = nil,
         payloadByteEstimate: Int = 0,
         dateRangeStart: Date? = nil,
         dateRangeEnd: Date? = nil,
@@ -31,6 +34,7 @@ struct SyncEvent: Codable, Identifiable, Hashable {
         self.peerName = peerName
         self.kind = kind
         self.recordCount = recordCount
+        self.recordCountIsLowerBound = recordCountIsLowerBound
         self.payloadByteEstimate = payloadByteEstimate
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
@@ -59,6 +63,9 @@ struct SyncEvent: Codable, Identifiable, Hashable {
         case .failed:
             return failureMessage ?? String(localized: "Sync failed", comment: "Sync event: failed")
         case .macExportSucceeded:
+            guard recordCountIsLowerBound != true else {
+                return String(localized: "Export complete", comment: "Sync event: Mac export completed without an exact file count")
+            }
             return String(localized: "Mac export wrote \(recordCount) file(s)", comment: "Sync event: Mac export success")
         case .macExportPartialSuccess:
             return failureMessage ?? String(localized: "Mac export partially completed", comment: "Sync event: Mac export partial")

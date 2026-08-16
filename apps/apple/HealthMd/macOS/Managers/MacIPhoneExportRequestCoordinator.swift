@@ -75,6 +75,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         let successCount: Int?
         let totalCount: Int?
         let filesWritten: Int?
+        /// True when `filesWritten` is a confirmed lower bound from a legacy or interrupted producer.
+        let filesWrittenIsLowerBound: Bool?
         let externalRecordCount: Int?
         let dailyNotesUpdated: Int?
         let dailyNotesSkipped: Int?
@@ -105,6 +107,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             case successCount = "success_count"
             case totalCount = "total_count"
             case filesWritten = "files_written"
+            case filesWrittenIsLowerBound = "files_written_is_lower_bound"
             case externalRecordCount = "external_record_count"
             case dailyNotesUpdated = "daily_notes_updated"
             case dailyNotesSkipped = "daily_notes_skipped"
@@ -131,6 +134,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: Int?,
             totalCount: Int?,
             filesWritten: Int?,
+            filesWrittenIsLowerBound: Bool? = nil,
             externalRecordCount: Int?,
             dailyNotesUpdated: Int? = nil,
             dailyNotesSkipped: Int? = nil,
@@ -155,6 +159,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             self.successCount = successCount
             self.totalCount = totalCount
             self.filesWritten = filesWritten
+            self.filesWrittenIsLowerBound = filesWrittenIsLowerBound
             self.externalRecordCount = externalRecordCount
             self.dailyNotesUpdated = dailyNotesUpdated
             self.dailyNotesSkipped = dailyNotesSkipped
@@ -945,6 +950,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: payload.successCount,
             totalCount: payload.totalCount,
             filesWritten: payload.totalFilesWritten,
+            filesWrittenIsLowerBound: payload.isTotalFilesWrittenAuthoritative ? nil : true,
             externalRecordCount: payload.externalRecordFileCount,
             dailyNotesUpdated: payload.dailyNoteUpdateCount > 0 ? payload.dailyNoteUpdateCount : nil,
             dailyNotesSkipped: payload.dailyNoteSkipCount > 0 ? payload.dailyNoteSkipCount : nil,
@@ -2126,20 +2132,28 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     private func completionMessage(for payload: MacExportResultPayload) -> String {
         let suffix = payload.externalRecordFileCount > 0
             ? " including \(payload.externalRecordFileCount) provider sidecar(s)" : ""
+        let generatedFiles = payload.generatedFileCountDescription
+            ?? "generated-file count unavailable"
         switch payload.status {
         case .success:
-            if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
+            if payload.dailyNoteUpdateCount > 0,
+               payload.isTotalFilesWrittenAuthoritative,
+               payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(suffix)."
+            return "Exported \(payload.successCount) day(s); \(generatedFiles)\(suffix)."
         case .partialSuccess:
-            if payload.dailyNoteSkipCount > 0 && payload.totalFilesWritten == 0 {
+            if payload.dailyNoteSkipCount > 0,
+               payload.isTotalFilesWrittenAuthoritative,
+               payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
             }
-            if payload.dailyNoteUpdateCount > 0 && payload.totalFilesWritten == 0 {
+            if payload.dailyNoteUpdateCount > 0,
+               payload.isTotalFilesWrittenAuthoritative,
+               payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
             }
-            return "Exported \(payload.successCount)/\(payload.totalCount) day(s), wrote \(payload.totalFilesWritten) file(s)\(suffix)."
+            return "Exported \(payload.successCount)/\(payload.totalCount) day(s); \(generatedFiles)\(suffix)."
         case .failure:
             return payload.failedDateDetails.first?.detailedMessage ?? "Export failed."
         case .cancelled:

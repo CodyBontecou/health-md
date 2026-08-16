@@ -1,0 +1,15 @@
+name = "health-md-practice-synthetic"
+main = "src/worker.ts"
+compatibility_date = "2026-08-01"
+workers_dev = false
+preview_urls = false
+
+# This file intentionally declares no routes and no D1, R2, KV, queue, analytics,
+# or other persistence binding. A governed production configuration does not exist.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+PRACTICE_RUNTIME_MODE = "synthetic"

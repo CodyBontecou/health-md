@@ -102,24 +102,24 @@
       "sha256" : "3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a"
     },
     {
-      "bytes" : 658,
+      "bytes" : 741,
       "path" : "mac-export-result-partial.json",
-      "sha256" : "a387c1544c494bc440ba6eed8cbd7a504d4122a739fc6afc5302d43866a3dc49"
+      "sha256" : "d210439620674c62fc1a8d117b26fa796312d77c4dbdd90340a7b0a9ef0a72bf"
     },
     {
-      "bytes" : 502,
+      "bytes" : 585,
       "path" : "mac-export-result-success.json",
-      "sha256" : "8dc2e711755d01248845dd635c5cdec732ec2aa1c8677df87c9d6a8337e9cb87"
+      "sha256" : "b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b"
     },
     {
-      "bytes" : 120666,
+      "bytes" : 121207,
       "path" : "message-fields.md",
-      "sha256" : "962adaaef4a224f926dcc36e32711debf8173433a8b1422131e8f615b80fc557"
+      "sha256" : "7720764237c671bc7b93017f21e86dbd4d3d10835779b151d1df2e6104522204"
     },
     {
-      "bytes" : 1496,
+      "bytes" : 1553,
       "path" : "peer-capabilities.json",
-      "sha256" : "0f1e4a5700077d33cc9c1eafbd09fecf72dba468e538b844c27ec63c3be3f085"
+      "sha256" : "5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023"
     },
     {
       "bytes" : 3240,

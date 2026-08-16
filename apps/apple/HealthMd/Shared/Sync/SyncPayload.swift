@@ -258,6 +258,9 @@ struct SyncPeerCapabilities: Codable, Equatable {
     /// Whether this peer honors an explicit request to omit the data dictionary
     /// while preserving ordinary aggregate export files.
     let supportsDataDictionaryExportPreference: Bool
+    /// Whether this peer understands exact-versus-lower-bound generated-file accounting.
+    /// Missing on legacy peers decodes false and gates Connected Mac jobs.
+    let supportsAuthoritativeMacExportFileAccounting: Bool
     /// Whether this peer supports stable, resumable, partitioned connected exports.
     let supportsPartitionedConnectedExports: Bool
     /// Protocol versions and partition-target bounds advertised for corpus sessions.
@@ -299,6 +302,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case manualIPSyncRequiresPairing
         case supportsDailyNoteOnlyExports
         case supportsDataDictionaryExportPreference
+        case supportsAuthoritativeMacExportFileAccounting
         case supportsPartitionedConnectedExports
         case connectedCorpusTransferCapabilities
         case installationID
@@ -332,6 +336,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         manualIPSyncRequiresPairing: Bool = true,
         supportsDailyNoteOnlyExports: Bool = false,
         supportsDataDictionaryExportPreference: Bool = false,
+        supportsAuthoritativeMacExportFileAccounting: Bool = true,
         supportsPartitionedConnectedExports: Bool = false,
         connectedCorpusTransferCapabilities: ConnectedCorpusTransferCapabilities? = nil,
         canonicalArchiveSchemaVersions: [Int] = [],
@@ -363,6 +368,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.manualIPSyncRequiresPairing = manualIPSyncRequiresPairing
         self.supportsDailyNoteOnlyExports = supportsDailyNoteOnlyExports
         self.supportsDataDictionaryExportPreference = supportsDataDictionaryExportPreference
+        self.supportsAuthoritativeMacExportFileAccounting = supportsAuthoritativeMacExportFileAccounting
         self.supportsPartitionedConnectedExports = supportsPartitionedConnectedExports
         self.connectedCorpusTransferCapabilities = connectedCorpusTransferCapabilities
         self.installationID = installationID
@@ -423,6 +429,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
             Bool.self,
             forKey: .supportsDataDictionaryExportPreference
         ) ?? false
+        supportsAuthoritativeMacExportFileAccounting = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsAuthoritativeMacExportFileAccounting
+        ) ?? false
         supportsPartitionedConnectedExports = try container.decodeIfPresent(
             Bool.self,
             forKey: .supportsPartitionedConnectedExports
@@ -459,6 +469,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             && supportsMacExportJobs
             && supportsMacDestinationStatus
             && supportsGranularPayloads
+            && supportsAuthoritativeMacExportFileAccounting
     }
 
     var supportsScheduledConnectedMacExports: Bool {
@@ -584,6 +595,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             manualIPSyncRequiresPairing: true,
             supportsDailyNoteOnlyExports: true,
             supportsDataDictionaryExportPreference: true,
+            supportsAuthoritativeMacExportFileAccounting: true,
             supportsPartitionedConnectedExports: true,
             connectedCorpusTransferCapabilities: .current,
             canonicalArchiveSchemaVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
@@ -939,7 +951,12 @@ struct MacExportResultPayload: Codable {
     let totalCount: Int
     let formatsPerDate: Int
     let totalFilesWritten: Int
+    /// False means totalFilesWritten is only a confirmed lower bound.
+    let isTotalFilesWrittenAuthoritative: Bool
     let externalRecordFileCount: Int
+    let outputBreakdown: ExportHistoryOutputBreakdown?
+    /// Range-level finalizer failure, distinct from ordinary partial per-date status.
+    let hadTerminalRangeFailure: Bool
     let dailyNoteUpdateCount: Int
     let dailyNoteSkipCount: Int
     let failedDateDetails: [FailedDateDetail]
@@ -956,7 +973,10 @@ struct MacExportResultPayload: Codable {
         case totalCount
         case formatsPerDate
         case totalFilesWritten
+        case isTotalFilesWrittenAuthoritative
         case externalRecordFileCount
+        case outputBreakdown
+        case hadTerminalRangeFailure
         case dailyNoteUpdateCount
         case dailyNoteSkipCount
         case failedDateDetails
@@ -973,7 +993,10 @@ struct MacExportResultPayload: Codable {
         totalCount: Int,
         formatsPerDate: Int,
         totalFilesWritten: Int,
+        isTotalFilesWrittenAuthoritative: Bool = false,
         externalRecordFileCount: Int = 0,
+        outputBreakdown: ExportHistoryOutputBreakdown? = nil,
+        hadTerminalRangeFailure: Bool = false,
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         failedDateDetails: [FailedDateDetail],
@@ -988,7 +1011,10 @@ struct MacExportResultPayload: Codable {
         self.totalCount = totalCount
         self.formatsPerDate = formatsPerDate
         self.totalFilesWritten = totalFilesWritten
+        self.isTotalFilesWrittenAuthoritative = isTotalFilesWrittenAuthoritative
         self.externalRecordFileCount = externalRecordFileCount
+        self.outputBreakdown = outputBreakdown
+        self.hadTerminalRangeFailure = hadTerminalRangeFailure
         self.dailyNoteUpdateCount = dailyNoteUpdateCount
         self.dailyNoteSkipCount = dailyNoteSkipCount
         self.failedDateDetails = failedDateDetails
@@ -1006,7 +1032,19 @@ struct MacExportResultPayload: Codable {
         totalCount = try container.decode(Int.self, forKey: .totalCount)
         formatsPerDate = try container.decode(Int.self, forKey: .formatsPerDate)
         totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
+        isTotalFilesWrittenAuthoritative = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .isTotalFilesWrittenAuthoritative
+        ) ?? false
         externalRecordFileCount = try container.decodeIfPresent(Int.self, forKey: .externalRecordFileCount) ?? 0
+        outputBreakdown = try container.decodeIfPresent(
+            ExportHistoryOutputBreakdown.self,
+            forKey: .outputBreakdown
+        )
+        hadTerminalRangeFailure = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .hadTerminalRangeFailure
+        ) ?? false
         dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
         dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
         failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
@@ -1014,6 +1052,34 @@ struct MacExportResultPayload: Codable {
         destinationDisplayName = try container.decodeIfPresent(String.self, forKey: .destinationDisplayName)
         destinationPathForDisplay = try container.decodeIfPresent(String.self, forKey: .destinationPathForDisplay)
         completedAt = try container.decode(Date.self, forKey: .completedAt)
+    }
+
+    /// Human-readable count fragment for legacy UI surfaces. Nil means no useful count is known.
+    var generatedFileCountDescription: String? {
+        if isTotalFilesWrittenAuthoritative {
+            return "\(totalFilesWritten) file(s)"
+        }
+        guard totalFilesWritten > 0 else { return nil }
+        return "at least \(totalFilesWritten) file(s)"
+    }
+
+    var hasConsistentFileAccounting: Bool {
+        guard totalCount >= 0,
+              successCount >= 0,
+              successCount <= totalCount,
+              formatsPerDate >= 0,
+              totalFilesWritten >= 0,
+              externalRecordFileCount >= 0,
+              dailyNoteUpdateCount >= 0,
+              dailyNoteSkipCount >= 0 else { return false }
+        guard let outputBreakdown else { return true }
+        guard outputBreakdown.requestedDataDayCount == totalCount,
+              outputBreakdown.successfulDataDayCount == successCount,
+              outputBreakdown.providerSidecarFileCount == externalRecordFileCount,
+              outputBreakdown.generatedFileCount <= totalFilesWritten else { return false }
+        return !isTotalFilesWrittenAuthoritative
+            || !outputBreakdown.isFileCategoryBreakdownComplete
+            || outputBreakdown.generatedFileCount == totalFilesWritten
     }
 }
 
