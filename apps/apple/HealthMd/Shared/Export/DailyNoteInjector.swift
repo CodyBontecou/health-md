@@ -118,7 +118,7 @@ struct DailyNoteInjector {
                     ) else {
                         return .skipped(reason: "No data available for enabled metrics on this date")
                     }
-                    let updatedContent = mergedContent(
+                    let updatedContent = try mergedContent(
                         existing: existingContent,
                         injectionContent: injectionContent,
                         settings: settings
