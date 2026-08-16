@@ -30,6 +30,7 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.widget.setup.WidgetSettingsCard
+import com.healthmd.wear.WearSettingsCard
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -114,6 +115,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         WidgetSettingsCard()
+        WearSettingsCard()
 
         // Health source configuration is intentionally hidden until the integrations are ready.
 

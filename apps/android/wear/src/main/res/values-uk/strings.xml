@@ -1,0 +1,54 @@
+<resources>
+    <string name="app_name">Health.md</string>
+    <string name="wear_dashboard_title">Health.md</string>
+    <string name="wear_setup">Відкрийте Health.md на телефоні, щоб завершити налаштування.</string>
+    <string name="wear_phone_missing">Застосунок на телефоні не знайдено</string>
+    <string name="wear_unreachable">Телефон зараз недоступний. Останні збережені дані залишаються доступними.</string>
+    <string name="wear_permissions">На телефоні потрібен доступ до Health Connect.</string>
+    <string name="wear_version_mismatch">Оновіть Health.md на телефоні та годиннику.</string>
+    <string name="wear_no_data">Даних про здоров’я ще немає</string>
+    <string name="wear_expired">Дані старші за 24 години. Синхронізуйте, щоб показати вимірювання.</string>
+    <plurals name="wear_updated_hours">
+        <item quantity="one">Оновлено %1$d годину тому</item>
+        <item quantity="few">Оновлено %1$d години тому</item>
+        <item quantity="many">Оновлено %1$d годин тому</item>
+        <item quantity="other">Оновлено %1$d години тому</item>
+    </plurals>
+    <string name="wear_sync">Синхронізувати дані</string>
+    <string name="wear_syncing">Запит синхронізації…</string>
+    <string name="wear_activity">Щоденна активність</string>
+    <string name="wear_recovery">Відновлення</string>
+    <string name="wear_steps">Кроки</string>
+    <string name="wear_move">Активна енергія</string>
+    <string name="wear_exercise">Хвилини вправ</string>
+    <string name="wear_sleep">Сон</string>
+    <string name="wear_resting_hr">Пульс у спокої</string>
+    <string name="wear_average_hr">Середній пульс</string>
+    <string name="wear_hrv">HRV RMSSD</string>
+    <string name="wear_blood_oxygen">Кисень у крові</string>
+    <string name="wear_not_realtime">Остання синхронізація з телефоном; не в реальному часі</string>
+    <string name="wear_no_data_short">--</string>
+    <string name="wear_health_connect_unavailable">Health Connect недоступний на телефоні.</string>
+    <plurals name="wear_updated_minutes">
+        <item quantity="one">Оновлено %1$d хвилину тому</item>
+        <item quantity="few">Оновлено %1$d хвилини тому</item>
+        <item quantity="many">Оновлено %1$d хвилин тому</item>
+        <item quantity="other">Оновлено %1$d хвилини тому</item>
+    </plurals>
+    <string name="wear_value_kcal">%1$s ккал</string>
+    <string name="wear_value_minutes">%1$s хв</string>
+    <string name="wear_value_hours">%1$s год</string>
+    <string name="wear_value_bpm">%1$s уд/хв</string>
+    <string name="wear_value_ms">%1$s мс</string>
+    <string name="wear_value_percent">%1$s%%</string>
+    <string name="wear_tile_steps">%1$s кроків</string>
+    <string name="wear_tile_exercise">%1$s хв</string>
+    <string name="wear_tile_sleep">%1$s год сну</string>
+    <string name="wear_tile_hrv">%1$s мс RMSSD</string>
+    <string name="wear_metric_separator"> · </string>
+    <string name="wear_tile_activity_empty">Немає даних про активність</string>
+    <string name="wear_tile_recovery_empty">Немає даних про сон або ВСР</string>
+    <string name="wear_preview_placeholder">Попередній перегляд; без показника здоров’я</string>
+    <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
+    <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+</resources>

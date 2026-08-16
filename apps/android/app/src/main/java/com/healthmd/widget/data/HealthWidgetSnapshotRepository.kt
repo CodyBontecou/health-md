@@ -27,6 +27,7 @@ class HealthWidgetSnapshotRepository @Inject constructor(
         val healthDays = source.readRecentDays(
             today = today,
             selection = selection,
+            zoneId = zoneId,
         )
         val captured = mapper.map(
             healthDays = healthDays,

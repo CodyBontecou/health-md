@@ -8,12 +8,21 @@ on:
         required: true
         type: string
       version_code:
-        description: 'Exact Google Play versionCode to promote from Internal Testing'
+        description: 'Exact phone Google Play versionCode to promote from Internal Testing'
+        required: true
+        type: string
+      wear_version_code:
+        description: 'Exact Wear Google Play versionCode to promote from Internal Testing'
+        required: true
+        type: string
+      evidence_run_id:
+        description: 'Successful protected Wear evidence-ingest workflow run ID'
         required: true
         type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: android-google-play-mutation
@@ -27,7 +36,7 @@ jobs:
     name: Promote Android release to production
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    environment: google-play
+    environment: google-play-production
     defaults:
       run:
         working-directory: apps/android
@@ -44,17 +53,22 @@ jobs:
         env:
           VERSION: ${{ inputs.version }}
           VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
         run: |
           set -euo pipefail
           test "$GITHUB_REF_TYPE" = tag
-          [[ "$GITHUB_REF_NAME" == "ops/android-production-$VERSION-"* \
-            || "$GITHUB_REF_NAME" == "android/v$VERSION" ]]
+          test "$GITHUB_REF_NAME" = "android/v$VERSION"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git cat-file -t "$GITHUB_REF_NAME")" = tag
+          test "$(git rev-parse "$GITHUB_REF_NAME^{commit}")" = "$GITHUB_SHA"
           git rev-parse --verify refs/remotes/origin/main >/dev/null
           git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
 
           [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
           [[ "$VERSION_CODE" =~ ^[1-9][0-9]*$ ]]
+          [[ "$WEAR_VERSION_CODE" =~ ^[1-9][0-9]*$ ]]
+          (( VERSION_CODE < 1000000 ))
+          (( WEAR_VERSION_CODE >= 1000000 ))
 
           tag="android/v$VERSION"
           git show-ref --verify --quiet "refs/tags/$tag"
@@ -69,6 +83,16 @@ jobs:
             | head -1)
           test "$tagged_version" = "$VERSION"
           test "$tagged_code" = "$VERSION_CODE"
+
+          tagged_wear_gradle=$(git show "$tag:apps/android/wear/build.gradle.kts")
+          tagged_wear_version=$(printf '%s\n' "$tagged_wear_gradle" \
+            | sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' \
+            | head -1)
+          tagged_wear_code=$(printf '%s\n' "$tagged_wear_gradle" \
+            | sed -n 's/.*versionCode = \([0-9_][0-9_]*\).*/\1/p' \
+            | head -1 | tr -d '_')
+          test "$tagged_wear_version" = "$VERSION"
+          test "$tagged_wear_code" = "$WEAR_VERSION_CODE"
 
           tagged_sha=$(git rev-parse "$tag^{commit}")
           git merge-base --is-ancestor "$tagged_sha" refs/remotes/origin/main
@@ -90,11 +114,14 @@ jobs:
           EXPECTED_SHA: ${{ steps.release.outputs.sha }}
           VERSION: ${{ inputs.version }}
           VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)" = "$VERSION"
           test "$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)" = "$VERSION_CODE"
+          test "$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -1)" = "$VERSION"
+          test "$(sed -n 's/.*versionCode = \([0-9_][0-9_]*\).*/\1/p' wear/build.gradle.kts | head -1 | tr -d '_')" = "$WEAR_VERSION_CODE"
 
       - name: Set up Java
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
@@ -114,6 +141,128 @@ jobs:
         uses: gradle/actions/wrapper-validation@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
           min-wrapper-count: 1
+
+      - name: Verify evidence ingest run identity and exact attempt
+        id: evidence-run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVIDENCE_RUN_ID: ${{ inputs.evidence_run_id }}
+          EXPECTED_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EVIDENCE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${EVIDENCE_RUN_ID}"
+          run_json="$RUNNER_TEMP/wear-evidence-run.json"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' "$api" -o "$run_json"
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-wear-evidence.yml" and
+            .event == "workflow_dispatch" and .status == "completed" and .conclusion == "success" and
+            .head_sha == $sha and (.run_attempt | type == "number" and . > 0)
+          ' "$run_json" >/dev/null
+          run_attempt=$(jq -er .run_attempt "$run_json")
+          attempt_base="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${EVIDENCE_RUN_ID}/attempts/${run_attempt}"
+          for pair in \
+            "$attempt_base $RUNNER_TEMP/wear-evidence-run-attempt.json" \
+            "$attempt_base/jobs?per_page=100 $RUNNER_TEMP/wear-evidence-run-jobs.json"; do
+            url=${pair% *}; destination=${pair##* }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' "$url" -o "$destination"
+          done
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" --argjson attempt "$run_attempt" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-wear-evidence.yml" and
+            .event == "workflow_dispatch" and .head_sha == $sha and .run_attempt == $attempt and
+            .status == "completed" and .conclusion == "success"
+          ' "$RUNNER_TEMP/wear-evidence-run-attempt.json" >/dev/null
+          jq -e --argjson attempt "$run_attempt" '
+            any(.jobs[]?; .name == "Verify and retain protected Wear evidence" and
+              (.run_attempt // $attempt) == $attempt and .conclusion == "success" and
+              any(.steps[]?; .name == "Retain immutable verified evidence artifact" and .conclusion == "success"))
+          ' "$RUNNER_TEMP/wear-evidence-run-jobs.json" >/dev/null
+          echo "attempt=$run_attempt" >> "$GITHUB_OUTPUT"
+
+      - name: Download protected Wear release evidence bundle
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: wear-release-evidence-${{ inputs.version }}-${{ steps.release.outputs.sha }}-attempt-${{ steps.evidence-run.outputs.attempt }}
+          path: ${{ runner.temp }}/wear-release-evidence
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.evidence_run_id }}
+
+      - name: Verify mandatory Wear release evidence before production mutation
+        shell: bash
+        env:
+          EXPECTED_RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          EXPECTED_VERSION_NAME: ${{ inputs.version }}
+          EXPECTED_PHONE_VERSION_CODE: ${{ inputs.version_code }}
+          EXPECTED_WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
+          EXPECTED_ATTESTOR: ${{ vars.WEAR_RELEASE_EVIDENCE_ATTESTOR }}
+          EXPECTED_PLAY_APP_SIGNING_CERT_SHA256: ${{ vars.PLAY_APP_SIGNING_CERT_SHA256 }}
+          EXPECTED_BATTERY_REVIEWER: ${{ vars.WEAR_BATTERY_REVIEWER }}
+          EXPECTED_BATTERY_REVIEW_TICKET: ${{ vars.WEAR_BATTERY_REVIEW_TICKET }}
+          EXPECTED_BATTERY_CONTROL_PROFILE: ${{ vars.WEAR_BATTERY_CONTROL_PROFILE }}
+          EXPECTED_PAIRED_REVIEWER: ${{ vars.WEAR_PAIRED_REVIEWER }}
+          EXPECTED_PAIRED_REVIEW_TICKET: ${{ vars.WEAR_PAIRED_REVIEW_TICKET }}
+          EXPECTED_SCREENSHOT_REVIEWER: ${{ vars.WEAR_SCREENSHOT_REVIEWER }}
+          EXPECTED_SCREENSHOT_REVIEW_TICKET: ${{ vars.WEAR_SCREENSHOT_REVIEW_TICKET }}
+          EXPECTED_SOURCE_REVIEWER: ${{ vars.WEAR_SOURCE_REVIEWER }}
+          EXPECTED_SOURCE_REVIEW_TICKET: ${{ vars.WEAR_SOURCE_REVIEW_TICKET }}
+          WEAR_EVIDENCE_HMAC_KEY: ${{ secrets.WEAR_RELEASE_EVIDENCE_HMAC_KEY }}
+          EVIDENCE_RUN_ID: ${{ inputs.evidence_run_id }}
+          EVIDENCE_RUN_ATTEMPT: ${{ steps.evidence-run.outputs.attempt }}
+        run: |
+          set -euo pipefail
+          ./scripts/verify-wear-release-evidence-bundle.sh \
+            "$RUNNER_TEMP/wear-release-evidence" pre-promotion
+          jq -e --argjson run "$EVIDENCE_RUN_ID" --argjson attempt "$EVIDENCE_RUN_ATTEMPT" '
+            .ingestRunId == $run and .ingestRunAttempt == $attempt
+          ' "$RUNNER_TEMP/wear-release-evidence/protected-ingest.json" >/dev/null
+
+      # Persist deterministic intent before any Play credential or edit. If a later receipt upload
+      # fails after the paired edit commits, the protected recovery workflow can combine this
+      # immutable intent with the original run's successful mutation step and fresh Play queries.
+      - name: Create immutable production-promotion intent
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          EVIDENCE_RUN_ID: ${{ inputs.evidence_run_id }}
+          EVIDENCE_RUN_ATTEMPT: ${{ steps.evidence-run.outputs.attempt }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/production-promotion-intent"
+          mkdir "$root"
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow ".github/workflows/android-promote-production.yml" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --argjson evidenceRunId "$EVIDENCE_RUN_ID" --argjson evidenceRunAttempt "$EVIDENCE_RUN_ATTEMPT" \
+            --arg sha "$RELEASE_SHA" \
+            --arg version "$VERSION" --argjson phone "$VERSION_CODE" --argjson wear "$WEAR_VERSION_CODE" \
+            --arg appScreenshot "$(sha256sum "$RUNNER_TEMP/wear-release-evidence/wear-screenshots/wear-app.png" | awk '{print $1}')" \
+            --arg tileScreenshot "$(sha256sum "$RUNNER_TEMP/wear-release-evidence/wear-screenshots/wear-tile.png" | awk '{print $1}')" \
+            --arg preparedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+              schemaVersion:1, repository:$repository, workflow:$workflow,
+              runId:$runId, runAttempt:$runAttempt, evidenceRunId:$evidenceRunId,
+              evidenceRunAttempt:$evidenceRunAttempt, releaseSha:$sha, versionName:$version,
+              phoneVersionCode:$phone, wearVersionCode:$wear,
+              sourceTracks:["qa","wear:qa"], destinationTracks:["production","wear:production"],
+              wearAppScreenshotSha256:$appScreenshot, wearTileScreenshotSha256:$tileScreenshot,
+              promotionPrepared:true, preparedAtUtc:$preparedAt
+            }' >"$root/intent.json"
+
+      - name: Retain immutable production-promotion intent
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-production-promotion-intent-${{ inputs.version }}-${{ steps.release.outputs.sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-promotion-intent/intent.json
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
 
       - name: Configure ephemeral Google Play credentials
         shell: bash
@@ -163,12 +312,51 @@ jobs:
           echo "access_token=$access_token" >> "$GITHUB_OUTPUT"
           rm -f "$private_key"
 
+      - name: Verify committed Play Wear screenshots match sealed approvals
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          assets="$RUNNER_TEMP/wear-release-evidence/wear-screenshots"
+          app_sha=$(sha256sum "$assets/wear-app.png" | awk '{print $1}')
+          tile_sha=$(sha256sum "$assets/wear-tile.png" | awk '{print $1}')
+          edit_id=''
+          cleanup_edit() {
+            [[ -z "$edit_id" ]] || curl --fail-with-body --retry 2 --max-time 30 -sS \
+              -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}" \
+              >/dev/null 2>&1 || true
+          }
+          trap cleanup_edit EXIT
+          edit_id=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X POST -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits" \
+            --data '{}' | jq -er .id)
+          listing="$RUNNER_TEMP/google-play-wear-screenshots-before.json"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}/listings/en-US/wearScreenshots" \
+            -o "$listing"
+          jq -e --arg app "$app_sha" --arg tile "$tile_sha" '
+            ([.images[]?.sha256 | ascii_downcase] | sort) == ([$app, $tile] | sort) and
+            ([.images[]?] | length) == 2
+          ' "$listing" >/dev/null || {
+            echo '::error::Committed Play Wear screenshots differ from the exact sealed approved PNGs'; exit 1;
+          }
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}" >/dev/null
+          edit_id=''
+          trap - EXIT
+
       - name: Verify internal source and production precondition
         id: preflight
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
         run: |
           set -euo pipefail
           query_track() {
@@ -180,104 +368,55 @@ jobs:
               -o "$destination"
           }
           has_code() {
-            local file=$1
-            jq -e --argjson code "$VERSION_CODE" '
-              any(.releases[]?.activeArtifacts[]?; (.versionCode | tonumber) == $code)
+            local file=$1 code=$2
+            jq -e --argjson code "$code" '
+              any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
             ' "$file" >/dev/null
           }
 
-          internal="$RUNNER_TEMP/google-play-internal.json"
+          internal="$RUNNER_TEMP/google-play-qa.json"
+          wear_internal="$RUNNER_TEMP/google-play-wear-qa.json"
           production="$RUNNER_TEMP/google-play-production-before.json"
-          query_track internal "$internal"
+          wear_production="$RUNNER_TEMP/google-play-wear-production-before.json"
+          query_track qa "$internal"
+          query_track wear:qa "$wear_internal"
           query_track production "$production"
+          query_track wear:production "$wear_production"
 
-          max_production_code=$(jq '[.releases[]?.activeArtifacts[]?.versionCode | tonumber] | max // 0' "$production")
-          if (( max_production_code > VERSION_CODE )); then
-            echo "::error::Production already contains newer versionCode $max_production_code"
+          if has_code "$production" "$VERSION_CODE" || has_code "$wear_production" "$WEAR_VERSION_CODE"; then
+            echo '::error::Exact release is already partially or fully on production; refusing to bypass the required one-edit paired promotion'
             exit 1
           fi
 
-          if has_code "$production"; then
-            echo "already_production=true" >> "$GITHUB_OUTPUT"
-            echo "Version code $VERSION_CODE is already present on production; promotion will be reconciled without mutation."
-            exit 0
+          max_production_phone=$(jq '[.releases[]?.activeArtifacts[]?.versionCode | tonumber] | max // 0' "$production")
+          max_production_wear=$(jq '[.releases[]?.activeArtifacts[]?.versionCode | tonumber] | max // 0' "$wear_production")
+          if (( max_production_phone > VERSION_CODE )); then
+            echo "::error::Production already contains newer phone versionCode $max_production_phone"
+            exit 1
+          fi
+          if (( max_production_wear > WEAR_VERSION_CODE )); then
+            echo "::error::Production already contains newer Wear versionCode $max_production_wear"
+            exit 1
           fi
 
-          if ! has_code "$internal"; then
-            echo "::error::Version code $VERSION_CODE is not active on the internal track"
+          if ! has_code "$internal" "$VERSION_CODE" || ! has_code "$wear_internal" "$WEAR_VERSION_CODE"; then
+            echo "::error::Phone $VERSION_CODE and Wear $WEAR_VERSION_CODE must be active on qa and wear:qa"
             exit 1
           fi
           echo "already_production=false" >> "$GITHUB_OUTPUT"
 
-      - name: Promote exact internal artifact to production
+      - name: Promote exact paired internal release to production
         id: promote
-        if: steps.preflight.outputs.already_production != 'true'
-        continue-on-error: true
-        env:
-          VERSION_CODE: ${{ inputs.version_code }}
-        run: >-
-          ./gradlew --no-daemon
-          :app:promoteReleaseArtifact
-          --from-track internal
-          --promote-track production
-          --version-code "$VERSION_CODE"
-          --release-status completed
-          --stacktrace
-
-      - name: Verify production postcondition
-        id: verify
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           VERSION_CODE: ${{ inputs.version_code }}
-          PROMOTE_OUTCOME: ${{ steps.promote.outcome }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
         run: |
           set -euo pipefail
-          production="$RUNNER_TEMP/google-play-production-after.json"
-          candidate=''
-          for _ in $(seq 1 20); do
-            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-              -H "Authorization: Bearer $ACCESS_TOKEN" \
-              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/production/releases" \
-              -o "$production"
-            candidate=$(jq -c --argjson code "$VERSION_CODE" '
-              first(
-                .releases[]? as $release
-                | $release.activeArtifacts[]?
-                | select((.versionCode | tonumber) == $code)
-                | {
-                    version_code: (.versionCode | tonumber),
-                    release_name: $release.releaseName,
-                    lifecycle_state: $release.releaseLifecycleState
-                  }
-              ) // empty
-            ' "$production")
-            if [[ -n "$candidate" ]]; then
-              break
-            fi
-            sleep 15
-          done
-
-          if [[ -z "$candidate" ]]; then
-            echo "::error::Production postcondition is absent for versionCode $VERSION_CODE (promotion step: ${PROMOTE_OUTCOME:-skipped})"
-            exit 1
-          fi
-
-          release_name=$(printf '%s' "$candidate" | jq -er '.release_name // ""')
-          lifecycle_state=$(printf '%s' "$candidate" | jq -er '.lifecycle_state')
-          echo "release_name=$release_name" >> "$GITHUB_OUTPUT"
-          echo "lifecycle_state=$lifecycle_state" >> "$GITHUB_OUTPUT"
-          echo "Verified production versionCode $VERSION_CODE with lifecycle state $lifecycle_state."
-
-      - name: Send production changes for review
-        id: submit-review
-        if: steps.verify.outputs.lifecycle_state == 'RELEASE_LIFECYCLE_STATE_NOT_SENT_FOR_REVIEW'
-        shell: bash
-        env:
-          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
-          VERSION_CODE: ${{ inputs.version_code }}
-        run: |
-          set -euo pipefail
+          # shellcheck source=apps/android/scripts/google-play-paired-policy.sh
+          source scripts/google-play-paired-policy.sh
+          play_assert_distinct_tracks qa wear:qa
           edit_response=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
             -X POST \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
@@ -285,45 +424,126 @@ jobs:
             "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits" \
             --data '{}')
           edit_id=$(printf '%s' "$edit_response" | jq -er '.id')
-
           cleanup_edit() {
             if [[ -n "${edit_id:-}" ]]; then
               curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-                -X DELETE \
-                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                -X DELETE -H "Authorization: Bearer $ACCESS_TOKEN" \
                 "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}" \
                 >/dev/null || true
             fi
           }
           trap cleanup_edit EXIT
 
-          production_track="$RUNNER_TEMP/google-play-production-edit.json"
-          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}/tracks/production" \
-            -o "$production_track"
-          jq -e --argjson code "$VERSION_CODE" '
-            any(.releases[]?.versionCodes[]?; tonumber == $code)
-          ' "$production_track" >/dev/null
-
-          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-            -X PUT \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H 'Content-Type: application/json' \
-            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}/tracks/production" \
-            --data-binary "@$production_track" \
-            >/dev/null
-
-          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+          promote_track() {
+            local source=$1 destination=$2 code=$3 source_file payload_file
+            source_file="$RUNNER_TEMP/google-play-${source//:/-}-edit.json"
+            payload_file="$RUNNER_TEMP/google-play-${destination//:/-}-payload.json"
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}/tracks/${source}" \
+              -o "$source_file"
+            play_promotion_payload "$source_file" "$destination" "$code" "$payload_file" \
+              || { echo "::error::$source release $code disappeared or was invalid"; exit 1; }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -X PUT -H "Authorization: Bearer $ACCESS_TOKEN" -H 'Content-Type: application/json' \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}/tracks/${destination}" \
+              --data-binary "@$payload_file" >/dev/null
+          }
+          promote_track qa production "$VERSION_CODE"
+          promote_track wear:qa wear:production "$WEAR_VERSION_CODE"
+          # Commit is non-idempotent. Issue it once, then reconcile exact track state if the HTTP
+          # response is lost after Play accepts the edit; never retry the commit POST itself.
+          commit_response_received=true
+          set +e
+          curl --fail-with-body --max-time 30 -sS \
             -X POST \
             -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H 'Content-Type: application/json' \
             "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits/${edit_id}:commit?changesNotSentForReview=false&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
-            --data '' \
-            >/dev/null
+            --data '' >/dev/null
+          commit_exit_code=$?
+          set -e
+          if [[ $commit_exit_code -eq 22 ]]; then
+            echo '::error::Paired production commit received a definite HTTP rejection; reconciliation is forbidden'
+            exit 1
+          elif [[ $commit_exit_code -ne 0 ]]; then
+            commit_response_received=false
+          fi
+          track_contains_code() {
+            local path=$1 code=$2
+            jq -e --argjson code "$code" '
+              any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
+            ' "$path" >/dev/null
+          }
+          paired_commit_visible=false
+          for _ in $(seq 1 40); do
+            if curl --fail-with-body --retry 2 --retry-all-errors --max-time 30 -sS \
+                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/production/releases" \
+                -o "$RUNNER_TEMP/google-play-production-commit-check.json" \
+              && curl --fail-with-body --retry 2 --retry-all-errors --max-time 30 -sS \
+                -H "Authorization: Bearer $ACCESS_TOKEN" \
+                "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/wear:production/releases" \
+                -o "$RUNNER_TEMP/google-play-wear-production-commit-check.json" \
+              && track_contains_code "$RUNNER_TEMP/google-play-production-commit-check.json" "$VERSION_CODE" \
+              && track_contains_code "$RUNNER_TEMP/google-play-wear-production-commit-check.json" "$WEAR_VERSION_CODE"; then
+              paired_commit_visible=true
+              break
+            fi
+            sleep 5
+          done
+          $paired_commit_visible || {
+            echo '::error::Paired production commit response/postcondition is absent'; exit 1;
+          }
+          echo "edit_id=$edit_id" >> "$GITHUB_OUTPUT"
+          echo "commit_response_received=$commit_response_received" >> "$GITHUB_OUTPUT"
           edit_id=''
           trap - EXIT
-          echo "Submitted production versionCode $VERSION_CODE for Google Play review."
+
+      - name: Verify production postcondition
+        id: verify
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
+          PROMOTE_OUTCOME: ${{ steps.promote.outcome }}
+        run: |
+          set -euo pipefail
+          [[ "$PROMOTE_OUTCOME" == success ]] || {
+            echo '::error::The exact paired promotion edit did not complete successfully'; exit 1;
+          }
+          production="$RUNNER_TEMP/google-play-production-after.json"
+          wear_production="$RUNNER_TEMP/google-play-wear-production-after.json"
+          phone_candidate=''; wear_candidate=''
+          for _ in $(seq 1 20); do
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/production/releases" -o "$production"
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/wear:production/releases" -o "$wear_production"
+            phone_candidate=$(jq -c --argjson code "$VERSION_CODE" '
+              first(.releases[]? | select(any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))) // empty
+            ' "$production")
+            wear_candidate=$(jq -c --argjson code "$WEAR_VERSION_CODE" '
+              first(.releases[]? | select(any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))) // empty
+            ' "$wear_production")
+            [[ -n "$phone_candidate" && -n "$wear_candidate" ]] && break
+            sleep 15
+          done
+          [[ -n "$phone_candidate" && -n "$wear_candidate" ]] || {
+            echo "::error::Separate production/wear:production postcondition is absent (promotion: ${PROMOTE_OUTCOME:-skipped})"; exit 1;
+          }
+          phone_state=$(jq -er .releaseLifecycleState <<<"$phone_candidate")
+          wear_state=$(jq -er .releaseLifecycleState <<<"$wear_candidate")
+          {
+            echo "phone_release_name=$(jq -r '.releaseName // ""' <<<"$phone_candidate")"
+            echo "wear_release_name=$(jq -r '.releaseName // ""' <<<"$wear_candidate")"
+            echo "phone_lifecycle_state=$phone_state"
+            echo "wear_lifecycle_state=$wear_state"
+          } >> "$GITHUB_OUTPUT"
+          echo "Verified production and wear:production for the exact pair."
 
       - name: Verify review submission lifecycle
         id: verify-review
@@ -331,76 +551,147 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
           VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
         run: |
           set -euo pipefail
           production="$RUNNER_TEMP/google-play-production-review.json"
-          candidate=''
-          for _ in $(seq 1 40); do
-            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
-              -H "Authorization: Bearer $ACCESS_TOKEN" \
-              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/production/releases" \
-              -o "$production"
-            candidate=$(jq -c --argjson code "$VERSION_CODE" '
-              first(
-                .releases[]? as $release
-                | $release.activeArtifacts[]?
-                | select((.versionCode | tonumber) == $code)
-                | {
-                    release_name: $release.releaseName,
-                    lifecycle_state: $release.releaseLifecycleState
-                  }
-              ) // empty
-            ' "$production")
-            lifecycle_state=$(printf '%s' "$candidate" | jq -r '.lifecycle_state // empty')
-            case "$lifecycle_state" in
-              RELEASE_LIFECYCLE_STATE_IN_REVIEW|\
-              RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED|\
-              RELEASE_LIFECYCLE_STATE_PUBLISHED)
-                echo "release_name=$(printf '%s' "$candidate" | jq -r '.release_name // ""')" >> "$GITHUB_OUTPUT"
-                echo "lifecycle_state=$lifecycle_state" >> "$GITHUB_OUTPUT"
-                echo "Verified review-submission lifecycle: $lifecycle_state"
-                exit 0
-                ;;
+          wear_production="$RUNNER_TEMP/google-play-wear-production-review.json"
+          accepted_state() {
+            case "$1" in
+              RELEASE_LIFECYCLE_STATE_IN_REVIEW|RELEASE_LIFECYCLE_STATE_APPROVED_NOT_PUBLISHED|RELEASE_LIFECYCLE_STATE_PUBLISHED) return 0 ;;
+              *) return 1 ;;
             esac
+          }
+          for _ in $(seq 1 40); do
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/production/releases" -o "$production"
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks/wear:production/releases" -o "$wear_production"
+            phone_state=$(jq -r --argjson code "$VERSION_CODE" 'first(.releases[]? | select(any(.activeArtifacts[]?; (.versionCode|tonumber)==$code)) | .releaseLifecycleState) // empty' "$production")
+            wear_state=$(jq -r --argjson code "$WEAR_VERSION_CODE" 'first(.releases[]? | select(any(.activeArtifacts[]?; (.versionCode|tonumber)==$code)) | .releaseLifecycleState) // empty' "$wear_production")
+            if accepted_state "$phone_state" && accepted_state "$wear_state"; then
+              echo "phone_lifecycle_state=$phone_state" >> "$GITHUB_OUTPUT"
+              echo "wear_lifecycle_state=$wear_state" >> "$GITHUB_OUTPUT"
+              echo "Verified both form-factor review lifecycles."
+              exit 0
+            fi
             sleep 15
           done
-          echo "::error::Production versionCode $VERSION_CODE remains not sent for review"
+          echo "::error::Production/wear:production pair remains not sent for review"
           exit 1
+
+      - name: Remove ephemeral credentials after production verification
+        if: ${{ success() }}
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/play-console-private-key.pem"
+
+      - name: Retain exact paired production-promotion receipt
+        if: ${{ success() }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          PROMOTION_EDIT_ID: ${{ steps.promote.outputs.edit_id }}
+          COMMIT_RESPONSE_RECEIVED: ${{ steps.promote.outputs.commit_response_received }}
+        run: |
+          set -euo pipefail
+          [[ -n "$PROMOTION_EDIT_ID" ]]
+          root="$RUNNER_TEMP/production-promotion-evidence"
+          mkdir "$root"
+          for file in \
+            google-play-qa.json google-play-wear-qa.json \
+            google-play-production-before.json google-play-wear-production-before.json \
+            google-play-qa-edit.json google-play-wear-qa-edit.json \
+            google-play-production-payload.json google-play-wear-production-payload.json \
+            google-play-production-after.json google-play-wear-production-after.json \
+            google-play-production-review.json google-play-wear-production-review.json \
+            google-play-wear-screenshots-before.json; do
+            test -f "$RUNNER_TEMP/$file"
+            cp "$RUNNER_TEMP/$file" "$root/$file"
+          done
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow ".github/workflows/android-promote-production.yml" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --arg sha "$RELEASE_SHA" --arg version "$VERSION" \
+            --argjson phone "$VERSION_CODE" --argjson wear "$WEAR_VERSION_CODE" \
+            --arg appScreenshot "$(sha256sum "$RUNNER_TEMP/wear-release-evidence/wear-screenshots/wear-app.png" | awk '{print $1}')" \
+            --arg tileScreenshot "$(sha256sum "$RUNNER_TEMP/wear-release-evidence/wear-screenshots/wear-tile.png" | awk '{print $1}')" \
+            --arg edit "$PROMOTION_EDIT_ID" --arg commitResponse "$COMMIT_RESPONSE_RECEIVED" \
+            --arg completedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+              schemaVersion:1, repository:$repository, workflow:$workflow,
+              runId:$runId, runAttempt:$runAttempt, releaseSha:$sha, versionName:$version,
+              phoneVersionCode:$phone, wearVersionCode:$wear,
+              sourceTracks:["qa","wear:qa"], destinationTracks:["production","wear:production"],
+              promotionEditId:$edit, commitResponseReceived:($commitResponse == "true"),
+              pairedEditCommitted:true, productionPairVerified:true, reviewLifecycleVerified:true,
+              wearAppScreenshotSha256:$appScreenshot, wearTileScreenshotSha256:$tileScreenshot,
+              completedAtUtc:$completedAt
+            }' >"$root/receipt.json"
+          sums="$RUNNER_TEMP/production-promotion-SHA256SUMS"
+          (
+            cd "$root"
+            find . -type f -print | sed 's#^./##' | LC_ALL=C sort \
+              | while IFS= read -r file; do sha256sum "$file"; done
+          ) >"$sums"
+          mv "$sums" "$root/SHA256SUMS"
+          EXPECTED_RELEASE_SHA="$RELEASE_SHA" EXPECTED_VERSION_NAME="$VERSION" \
+          EXPECTED_PHONE_VERSION_CODE="$VERSION_CODE" EXPECTED_WEAR_VERSION_CODE="$WEAR_VERSION_CODE" \
+          EXPECTED_WEAR_APP_SCREENSHOT_SHA256="$(sha256sum "$RUNNER_TEMP/wear-release-evidence/wear-screenshots/wear-app.png" | awk '{print $1}')" \
+          EXPECTED_WEAR_TILE_SCREENSHOT_SHA256="$(sha256sum "$RUNNER_TEMP/wear-release-evidence/wear-screenshots/wear-tile.png" | awk '{print $1}')" \
+            ./scripts/verify-android-production-promotion-evidence.sh "$root" >/dev/null
+
+      - name: Upload exact paired production-promotion receipt
+        if: ${{ success() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-production-promotion-${{ inputs.version }}-${{ steps.release.outputs.sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/production-promotion-evidence
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
 
       - name: Remove ephemeral credentials
         if: ${{ always() }}
         shell: bash
-        run: rm -f "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/play-console-private-key.pem"
+        run: |
+          rm -f "$RUNNER_TEMP/play-console-key.json" "$RUNNER_TEMP/play-console-private-key.pem"
+          rm -rf "$RUNNER_TEMP/production-promotion-evidence" "$RUNNER_TEMP/production-promotion-intent"
 
       - name: Promotion summary
         if: ${{ always() }}
         env:
           VERSION: ${{ inputs.version }}
           VERSION_CODE: ${{ inputs.version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
           TAG: ${{ steps.release.outputs.tag }}
           SHA: ${{ steps.release.outputs.sha }}
           ALREADY_PRODUCTION: ${{ steps.preflight.outputs.already_production }}
           PROMOTE_OUTCOME: ${{ steps.promote.outcome }}
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
-          REVIEW_SUBMISSION_OUTCOME: ${{ steps.submit-review.outcome }}
           REVIEW_VERIFICATION_OUTCOME: ${{ steps.verify-review.outcome }}
-          RELEASE_NAME: ${{ steps.verify-review.outputs.release_name || steps.verify.outputs.release_name }}
-          LIFECYCLE_STATE: ${{ steps.verify-review.outputs.lifecycle_state || steps.verify.outputs.lifecycle_state }}
+          PHONE_RELEASE_NAME: ${{ steps.verify.outputs.phone_release_name }}
+          WEAR_RELEASE_NAME: ${{ steps.verify.outputs.wear_release_name }}
+          PHONE_LIFECYCLE_STATE: ${{ steps.verify-review.outputs.phone_lifecycle_state || steps.verify.outputs.phone_lifecycle_state }}
+          WEAR_LIFECYCLE_STATE: ${{ steps.verify-review.outputs.wear_lifecycle_state || steps.verify.outputs.wear_lifecycle_state }}
         run: |
           {
             echo "## Android production promotion"
             echo
             echo "- Version: $VERSION"
-            echo "- Version code: $VERSION_CODE"
-            echo "- Source track: internal"
-            echo "- Destination track: production"
+            echo "- Phone version code: $VERSION_CODE"
+            echo "- Wear version code: $WEAR_VERSION_CODE"
+            echo "- Source tracks: qa + wear:qa"
+            echo "- Destination tracks: production + wear:production"
             echo "- Already on production: ${ALREADY_PRODUCTION:-unknown}"
             echo "- Promotion step: ${PROMOTE_OUTCOME:-skipped}"
             echo "- Production verification: ${VERIFY_OUTCOME:-not-run}"
-            echo "- Review submission: ${REVIEW_SUBMISSION_OUTCOME:-skipped}"
             echo "- Review lifecycle verification: ${REVIEW_VERIFICATION_OUTCOME:-not-run}"
-            echo "- Google Play lifecycle: ${LIFECYCLE_STATE:-unknown}"
-            echo "- Google Play release name: ${RELEASE_NAME:-unknown}"
+            echo "- Phone lifecycle: ${PHONE_LIFECYCLE_STATE:-unknown}"
+            echo "- Wear lifecycle: ${WEAR_LIFECYCLE_STATE:-unknown}"
+            echo "- Phone release name: ${PHONE_RELEASE_NAME:-unknown}"
+            echo "- Wear release name: ${WEAR_RELEASE_NAME:-unknown}"
             echo "- Tag: ${TAG:-unknown}"
             echo "- Commit: ${SHA:-unknown}"
           } >> "$GITHUB_STEP_SUMMARY"

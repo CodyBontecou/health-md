@@ -512,6 +512,10 @@ Copy is part of the design; keep it precise and free of filler.
 - Don’t mix rounded and sharp corners, or more than two font weights, in one view.
 - Don’t swap `gray-*` for `background-*`; they are separate scales.
 
+## Wear OS surfaces
+
+Wear OS is a scoped platform adaptation of Geist. The watch app uses Wear Compose components, rotary scrolling, edge-safe round layouts, and a black primary surface to respect OLED and ambient constraints. Named watch tokens are `WearSpacing` (4/8/12/16/24dp), `WearType` (12/14/16/20sp), `WearShape` (6/12/full), and `WearColors` (the Geist dark surface/text plus Health.md purple, green, amber, and red semantics). Bundled Geist Sans remains the app font; Tiles and complications may use host/platform typography because those remote renderers do not support bundled fonts. Tile and complication content is glanceable, local-cache-only, never described as real-time, and always pairs color with text. Health values are hidden after 24 hours; values 4–24 hours old include a localized age marker.
+
 ## Android App Widgets
 
 Home-screen widgets use Jetpack Glance and remain part of this design system even though they are rendered through Android `RemoteViews` rather than the app’s Compose tree.

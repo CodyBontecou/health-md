@@ -190,6 +190,7 @@ class HealthWidgetSnapshotRepositoryTest {
             today: LocalDate,
             selection: HealthConnectWidgetReadSelection,
             dayCount: Int,
+            zoneId: ZoneId,
         ): List<HealthData> {
             lastSelection = selection
             return records
