@@ -2008,6 +2008,7 @@ mod tests {
                 end: "2026-07-23".into(),
             }),
             settings_policy: SettingsPolicy::RequestedDatesOnly,
+            profile_reference: None,
             response_mode: ResponseMode::RawJson,
             raw_profile: Some(RawProfile::HealthDataProjection),
             canonical_selection: Some(selection.clone()),

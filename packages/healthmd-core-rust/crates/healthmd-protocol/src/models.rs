@@ -29,6 +29,23 @@ pub enum SettingsPolicy {
     RequestedDatesOnly,
     #[serde(rename = "current_iphone_settings")]
     CurrentIphoneSettings,
+    /// Resolve settings from a named export profile on the iPhone by stable
+    /// ID (see `ProfileReference`). Additive in the wire contract: older
+    /// peers that do not know this variant fail closed with a decode error
+    /// instead of misinterpreting the request.
+    #[serde(rename = "profile")]
+    Profile,
+}
+
+/// Reference to an export profile resolved on the iPhone. The UUID is
+/// authoritative; `name` is a display convenience captured for errors and
+/// logs and is never used for resolution when the ID is present.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct ProfileReference {
+    #[serde(rename = "profileID")]
+    pub profile_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -81,6 +98,8 @@ pub struct ExportRequest {
     pub date_selection: DateSelection,
     #[serde(rename = "settingsPolicy")]
     pub settings_policy: SettingsPolicy,
+    #[serde(rename = "profileReference", skip_serializing_if = "Option::is_none")]
+    pub profile_reference: Option<ProfileReference>,
     #[serde(rename = "responseMode")]
     pub response_mode: ResponseMode,
     #[serde(rename = "rawProfile", skip_serializing_if = "Option::is_none")]

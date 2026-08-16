@@ -26,7 +26,7 @@ use healthmd_operations::{
 };
 use healthmd_protocol::{
     encoding::SwiftUuid,
-    models::{DateSelection, ExportRequest, ResponseMode, SettingsPolicy},
+    models::{DateSelection, ExportRequest, ProfileReference, ResponseMode, SettingsPolicy},
     v2,
     wire::RawProfile,
 };
@@ -234,6 +234,11 @@ struct ExportArgs {
     /// Use the paired mobile source's saved export settings.
     #[arg(long, visible_alias = "use-iphone-settings")]
     use_device_settings: bool,
+
+    /// Export profile UUID to resolve on the iPhone for this request.
+    /// Cannot combine with --use-iphone-settings or selectors.
+    #[arg(long = "profile", value_name = "PROFILE_ID")]
+    profile_id: Option<String>,
 
     /// Provider-native Android raw source. Defaults to Health Connect.
     #[arg(long, default_value = "health_connect")]
@@ -1188,6 +1193,7 @@ async fn direct_export(
         created_at: whole_second_now(),
         date_selection: resolve_date_selection(&options.dates)?,
         settings_policy: SettingsPolicy::RequestedDatesOnly,
+        profile_reference: None,
         response_mode: ResponseMode::RawJson,
         raw_profile: Some(RawProfile::CanonicalSourceRecordsV1),
         canonical_selection: None,
@@ -1371,10 +1377,18 @@ async fn direct_file_export(
         .to_str()
         .ok_or_else(|| usage_error("--destination must be valid UTF-8"))?
         .to_owned();
+    let profile = options
+        .profile_id
+        .as_deref()
+        .map(|profile_id| ProfileReference {
+            profile_id: profile_id.trim().to_owned(),
+            name: None,
+        });
     let invocation = GeneratedFileExportInput {
         dates: operation_date_options(&options.dates),
         selection: operation_selection_options(&options.selection),
         use_device_settings: options.use_device_settings,
+        profile,
         destination,
         timeout: Duration::from_secs(options.timeout),
     }
@@ -1430,6 +1444,7 @@ async fn direct_extract(
         created_at: whole_second_now(),
         date_selection: resolve_date_selection(&options.dates)?,
         settings_policy: SettingsPolicy::RequestedDatesOnly,
+        profile_reference: None,
         response_mode: ResponseMode::RawJson,
         raw_profile: Some(RawProfile::HealthDataProjection),
         canonical_selection: Some(normalized.selection),

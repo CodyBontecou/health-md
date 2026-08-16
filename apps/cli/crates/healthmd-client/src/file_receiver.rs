@@ -2214,6 +2214,7 @@ mod tests {
                 end: "2026-07-23".into(),
             }),
             settings_policy: SettingsPolicy::RequestedDatesOnly,
+            profile_reference: None,
             response_mode: ResponseMode::WriteFiles,
             raw_profile: None,
             canonical_selection: None,

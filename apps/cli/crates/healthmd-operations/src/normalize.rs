@@ -5,7 +5,7 @@ use healthmd_protocol::{
     encoding::SwiftUuid,
     models::{
         CanonicalSelection, DateSelection, DetailLevel, ExactDateSelection, ExportDestination,
-        ExportRequest, ResponseMode, SettingsPolicy,
+        ExportRequest, ProfileReference, ResponseMode, SettingsPolicy,
     },
 };
 use serde_json::{Map, Value};
@@ -159,6 +159,14 @@ pub struct ExtractSelection {
 }
 
 impl SelectionOptions {
+    /// True when any request-scoped selector is present.
+    pub fn is_requested(&self) -> bool {
+        self.all_metrics
+            || !self.metric_ids.is_empty()
+            || !self.categories.is_empty()
+            || !self.source_ids.is_empty()
+    }
+
     /// Normalize generated-file selection and saved-settings policy.
     ///
     /// # Errors
@@ -274,6 +282,10 @@ pub struct GeneratedFileExportInput {
     pub dates: DateOptions,
     pub selection: SelectionOptions,
     pub use_device_settings: bool,
+    /// Export profile resolved on the iPhone by stable UUID (phase 5). When
+    /// present, the request uses `SettingsPolicy::Profile`; selectors must be
+    /// empty because the profile owns the settings scope.
+    pub profile: Option<ProfileReference>,
     pub destination: String,
     pub timeout: Duration,
 }
@@ -309,20 +321,43 @@ impl GeneratedFileExportInput {
                 "destination must be an existing absolute directory",
             ));
         }
+        if let Some(profile) = &self.profile {
+            if self.use_device_settings {
+                return Err(OperationInputError::invalid(
+                    "profile policy cannot combine with device settings; the profile owns settings",
+                ));
+            }
+            if self.selection.is_requested() {
+                return Err(OperationInputError::invalid(
+                    "profile policy cannot combine with metric/category selectors; the profile owns scope",
+                ));
+            }
+            if profile.profile_id.trim().is_empty() {
+                return Err(OperationInputError::invalid(
+                    "profile reference requires a profile ID",
+                ));
+            }
+        }
+        let (settings_policy, profile_reference) = if let Some(profile) = self.profile.clone() {
+            (SettingsPolicy::Profile, Some(profile))
+        } else if self.use_device_settings {
+            (SettingsPolicy::CurrentIphoneSettings, None)
+        } else {
+            (SettingsPolicy::RequestedDatesOnly, None)
+        };
         Ok(GeneratedFileExportInvocation {
             request: ExportRequest {
                 protocol_version: 1,
                 job_id: SwiftUuid(job_id),
                 created_at,
                 date_selection: self.dates.resolve(today)?,
-                settings_policy: if self.use_device_settings {
-                    SettingsPolicy::CurrentIphoneSettings
-                } else {
-                    SettingsPolicy::RequestedDatesOnly
-                },
+                settings_policy,
+                profile_reference,
                 response_mode: ResponseMode::WriteFiles,
                 raw_profile: None,
-                canonical_selection: self.selection.generated_files(self.use_device_settings)?,
+                canonical_selection: self
+                    .selection
+                    .generated_files(self.use_device_settings)?,
                 destination: Some(ExportDestination {
                     root_path: self.destination.clone(),
                 }),
@@ -353,6 +388,7 @@ pub fn generated_file_export_from_value(
             "date_selection",
             "date_range",
             "settings_policy",
+            "profile_reference",
             "metric_ids",
             "categories",
             "all_metrics",
@@ -386,15 +422,40 @@ pub fn generated_file_export_from_value(
             return Err(OperationInputError::invalid("invalid date_selection"));
         }
     };
-    let use_device_settings = match arguments
+    let mut use_device_settings = false;
+    let mut profile: Option<ProfileReference> = None;
+    match arguments
         .get("settings_policy")
         .and_then(Value::as_str)
         .unwrap_or("requested_dates_only")
     {
-        "requested_dates_only" => false,
-        "current_iphone_settings" => true,
+        "requested_dates_only" => {}
+        "current_iphone_settings" => use_device_settings = true,
+        "profile" => {
+            let reference = arguments
+                .get("profile_reference")
+                .and_then(Value::as_object)
+                .ok_or_else(|| {
+                    OperationInputError::invalid("profile_reference is required with settings_policy profile")
+                })?;
+            ensure_keys(reference, &["profileID", "name"])?;
+            let profile_id = reference
+                .get("profileID")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .ok_or_else(|| {
+                    OperationInputError::invalid("profile_reference requires a non-empty profileID")
+                })?;
+            profile = Some(ProfileReference {
+                profile_id: profile_id.to_owned(),
+                name: reference
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+            });
+        }
         _ => return Err(OperationInputError::invalid("invalid settings_policy")),
-    };
+    }
     let timeout_seconds = arguments
         .get("wait_timeout_seconds")
         .map(number)
@@ -444,6 +505,7 @@ pub fn generated_file_export_from_value(
         dates,
         selection,
         use_device_settings,
+        profile,
         destination,
         timeout,
     }
@@ -715,6 +777,48 @@ mod tests {
     }
 
     #[test]
+    fn profile_policy_builds_reference_and_rejects_conflicting_scopes() {
+        let destination = tempfile::tempdir().unwrap();
+        let destination_text = destination.path().canonicalize().unwrap().to_string_lossy().into_owned();
+        let base_input = GeneratedFileExportInput {
+            dates: DateOptions::exact("2026-07-01".to_owned(), "2026-07-07".to_owned()),
+            selection: SelectionOptions::default(),
+            use_device_settings: false,
+            profile: Some(ProfileReference {
+                profile_id: "11111111-2222-4333-8444-555555555555".to_owned(),
+                name: Some("Weekly Sleep".to_owned()),
+            }),
+            destination: destination_text,
+            timeout: Duration::from_secs(300),
+        };
+
+        let invocation = base_input
+            .build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap())
+            .unwrap();
+        assert_eq!(invocation.request.settings_policy, SettingsPolicy::Profile);
+        assert_eq!(
+            invocation.request.profile_reference.as_ref().unwrap().profile_id,
+            "11111111-2222-4333-8444-555555555555"
+        );
+        assert!(invocation.request.canonical_selection.is_none());
+
+        // Device-settings policy conflict.
+        let mut conflict = base_input.clone();
+        conflict.use_device_settings = true;
+        assert!(conflict.build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()).is_err());
+
+        // Selector conflict.
+        let mut selectors = base_input.clone();
+        selectors.selection.categories = vec!["Sleep".to_owned()];
+        assert!(selectors.build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()).is_err());
+
+        // Empty ID is rejected.
+        let mut empty_id = base_input;
+        empty_id.profile = Some(ProfileReference { profile_id: "  ".to_owned(), name: None });
+        assert!(empty_id.build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()).is_err());
+    }
+
+    #[test]
     fn typed_cli_and_structured_mcp_export_inputs_normalize_identically() {
         let destination = tempfile::tempdir().unwrap();
         let destination = destination.path().canonicalize().unwrap();
@@ -730,6 +834,7 @@ mod tests {
                 ..SelectionOptions::default()
             },
             use_device_settings: false,
+            profile: None,
             destination: destination_text.clone(),
             timeout: Duration::from_secs(300),
         }
