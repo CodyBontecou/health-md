@@ -12,6 +12,7 @@ Health.md is a local-first health data platform. This repository is the canonica
 | [`apps/website`](apps/website) | Product website and documentation | Node.js / Astro |
 | [`packages/contracts`](packages/contracts) | Cross-platform schemas and compatibility fixtures | Language-neutral |
 | [`packages/healthmd-core-rust`](packages/healthmd-core-rust) | Shared export core, UniFFI binding tooling, and direct protocol | Cargo / Rust |
+| [`packages/pi-healthmd-dashboard`](packages/pi-healthmd-dashboard) | Experimental multi-contract Pi dashboard with approved-file and read-only CLI/MCP query sources | Node.js / TypeScript |
 
 The [Health.md Obsidian plugin](https://github.com/CodyBontecou/health-md-visualizations) remains in its own repository and is treated as an external integration.
 

@@ -10,5 +10,6 @@ Health.md is a monorepo containing independently built products.
 | `apps/website/` | MIT License |
 | `packages/contracts/` | Not yet established; preserve source-component notices until a contract license is selected |
 | `packages/healthmd-core-rust/` | GNU Affero General Public License v3.0 only |
+| `packages/pi-healthmd-dashboard/` | GNU Affero General Public License v3.0 only |
 
-The root [`LICENSE`](LICENSE) contains the AGPL-3.0 text used by the Apple application, CLI, shared Rust core, and AGPL-scoped root tooling. The website's MIT terms are in [`apps/website/LICENSE`](apps/website/LICENSE). Component-level license files remain authoritative for their directories. Third-party dependencies and bundled assets retain their own license and attribution terms.
+The root [`LICENSE`](LICENSE) contains the AGPL-3.0 text used by the Apple application, CLI, shared Rust core, Pi dashboard package, and AGPL-scoped root tooling. The website's MIT terms are in [`apps/website/LICENSE`](apps/website/LICENSE). Component-level license files remain authoritative for their directories. Third-party dependencies and bundled assets retain their own license and attribution terms.

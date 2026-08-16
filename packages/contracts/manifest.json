@@ -81,7 +81,8 @@
       ],
       "consumers": [
         "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdConnectionCoreTests/HealthMdConnectionCoreTests.swift",
-        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v3_query_vectors.rs"
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v3_query_vectors.rs",
+        "packages/pi-healthmd-dashboard/src/source.ts"
       ],
       "fixtures": [
         {
@@ -316,7 +317,8 @@
       ],
       "consumers": [
         "packages/contracts/validate.py",
-        "docs/architecture/rfc-0004-unified-health-data-v9.md"
+        "docs/architecture/rfc-0004-unified-health-data-v9.md",
+        "packages/pi-healthmd-dashboard/src/contracts.ts"
       ],
       "documentation": [
         "docs/architecture/rfc-0002-unified-health-data-v8.md",

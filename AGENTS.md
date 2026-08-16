@@ -8,6 +8,7 @@
 - `apps/website`: website and generated product documentation.
 - `packages/contracts`: language-neutral schemas and interoperability fixtures.
 - `packages/healthmd-core-rust`: shared Rust core, UniFFI tooling, and direct-protocol crate.
+- `packages/pi-healthmd-dashboard`: experimental TypeScript multi-contract reader and Pi TUI dashboard extension with approved-file and read-only CLI/MCP query sources.
 
 Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
 

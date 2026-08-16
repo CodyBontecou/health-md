@@ -5,10 +5,10 @@ CORE_RUST_DIR := packages/healthmd-core-rust
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 
 .PHONY: test test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
-        test-apple test-android test-cli test-website apple-ios apple-macos cli-build \
+        test-apple test-android test-cli test-website test-pi-health-dashboard apple-ios apple-macos cli-build \
         android-build website-build
 
-test: test-contracts test-core test-apple test-android test-cli test-website
+test: test-contracts test-core test-apple test-android test-cli test-website test-pi-health-dashboard
 
 test-contracts:
 	python3 packages/contracts/validate.py
@@ -51,6 +51,9 @@ test-cli:
 
 test-website:
 	cd apps/website && npm test
+
+test-pi-health-dashboard:
+	cd packages/pi-healthmd-dashboard && npm test && npm run typecheck
 
 apple-ios:
 	$(MAKE) -C apps/apple test-ios

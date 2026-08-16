@@ -1,0 +1,76 @@
+{
+  "name": "@healthmd/pi-health-dashboard",
+  "version": "0.1.0",
+  "description": "Experimental read-only Health.md JSON dashboard extension for Pi",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodyBontecou/health-md.git",
+    "directory": "packages/pi-healthmd-dashboard"
+  },
+  "homepage": "https://github.com/CodyBontecou/health-md/tree/main/packages/pi-healthmd-dashboard#readme",
+  "bugs": {
+    "url": "https://github.com/CodyBontecou/health-md/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "pi-package",
+    "healthmd",
+    "health-data",
+    "dashboard"
+  ],
+  "files": [
+    "src",
+    "schemas",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./src/extension.ts",
+    "./cache": "./src/cache.ts",
+    "./contracts": "./src/contracts.ts",
+    "./dashboard": "./src/dashboard.ts",
+    "./exact": "./src/exact.ts",
+    "./loader": "./src/loader.ts",
+    "./query": "./src/query.ts",
+    "./query-contract": "./src/query-contract.ts",
+    "./render": "./src/render.ts",
+    "./source": "./src/source.ts",
+    "./view": "./src/view.ts"
+  },
+  "pi": {
+    "extensions": [
+      "./src/extension.ts"
+    ]
+  },
+  "scripts": {
+    "test": "node --import=tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "lossless-json": "^4.3.1",
+    "string-width": "^7.2.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.84.1",
+    "@earendil-works/pi-coding-agent": "0.84.1",
+    "@earendil-works/pi-tui": "0.84.1",
+    "@types/node": "^22.20.1",
+    "tsx": "^4.21.0",
+    "typebox": "^1.3.7",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

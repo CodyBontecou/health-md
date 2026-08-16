@@ -1,0 +1,151 @@
+name: Pi Health Dashboard CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/pi-healthmd-dashboard/**'
+      - 'packages/contracts/**'
+      - 'packages/healthmd-core-rust/crates/healthmd-protocol/**'
+      - 'apps/cli/**'
+      - 'apps/apple/docs/reference/generated/**'
+      - 'apps/android/app/src/test/resources/**'
+      - 'apps/android/docs/export-contract/**'
+      - 'Makefile'
+      - 'README.md'
+      - 'LICENSES.md'
+      - '.github/workflows/pi-health-dashboard-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pi-health-dashboard-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: packages/pi-healthmd-dashboard/package-lock.json
+
+      - name: Install package dependencies
+        working-directory: packages/pi-healthmd-dashboard
+        run: npm ci
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@1.85.0
+
+      - name: Cache CLI build
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: pi-health-dashboard
+          workspaces: apps/cli -> target
+
+      - name: Verify CLI/MCP canonical query parity
+        working-directory: apps/cli
+        run: cargo test -p healthmd-cli mcp::tests::every_query_operation_has_cli_and_mcp_canonical_parity --locked
+
+      - name: Verify fetched-operation registry against built CLI
+        run: |
+          cargo run --quiet --manifest-path apps/cli/Cargo.toml -p healthmd-cli --bin healthmd -- mcp schema > "$RUNNER_TEMP/healthmd-mcp-catalog.json"
+          cd packages/pi-healthmd-dashboard
+          CATALOG="$RUNNER_TEMP/healthmd-mcp-catalog.json" node --import=tsx --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          import { HEALTHMD_READ_OPERATIONS } from "./src/source.ts";
+          const catalog = JSON.parse(readFileSync(process.env.CATALOG, "utf8"));
+          const fixedReadOnly = catalog.tools.slice(0, HEALTHMD_READ_OPERATIONS.length);
+          const actual = fixedReadOnly.map(tool => tool.name);
+          if (JSON.stringify(actual) !== JSON.stringify(HEALTHMD_READ_OPERATIONS)) throw new Error(JSON.stringify({ actual, expected: HEALTHMD_READ_OPERATIONS }));
+          if (fixedReadOnly.some(tool => tool.annotations?.readOnlyHint !== true)) throw new Error("Configured fetched operation is not read-only in the built CLI registry");
+          NODE
+
+      - name: Test and typecheck package
+        run: make test-pi-health-dashboard
+
+      - name: Audit production dependencies
+        working-directory: packages/pi-healthmd-dashboard
+        run: npm audit --omit=dev
+
+      - name: Validate shared contracts
+        run: make test-contracts
+
+      - name: Pack and verify published contents
+        id: pack
+        working-directory: packages/pi-healthmd-dashboard
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-health-pack"
+          npm pack --json --pack-destination "$RUNNER_TEMP/pi-health-pack" > "$RUNNER_TEMP/pi-health-pack.json"
+          jq -e '.[0].files | map(.path) | index("src/extension.ts") != null' "$RUNNER_TEMP/pi-health-pack.json"
+          jq -e '.[0].files | map(.path) | index("src/source.ts") != null' "$RUNNER_TEMP/pi-health-pack.json"
+          jq -e '.[0].files | map(.path) | index("src/query-contract.ts") != null' "$RUNNER_TEMP/pi-health-pack.json"
+          jq -e '.[0].files | map(.path) | index("schemas/unified-health-data-v9.schema.json") != null' "$RUNNER_TEMP/pi-health-pack.json"
+          jq -e '.[0].files | map(.path) | all(startswith("test/") | not)' "$RUNNER_TEMP/pi-health-pack.json"
+          echo "tarball=$RUNNER_TEMP/pi-health-pack/$(jq -r '.[0].filename' "$RUNNER_TEMP/pi-health-pack.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Install the production tarball with pinned Pi
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/pi-health-install"
+          cd "$RUNNER_TEMP/pi-health-install"
+          npm init -y >/dev/null
+          npm install --omit=dev "$TARBALL" \
+            @earendil-works/pi-ai@0.84.1 \
+            @earendil-works/pi-coding-agent@0.84.1 \
+            typebox@1.3.7
+
+      - name: Load installed extension with the pinned Pi runtime
+        run: |
+          cd "$RUNNER_TEMP/pi-health-install"
+          node --input-type=module <<'NODE'
+          import { resolve } from "node:path";
+          import { discoverAndLoadExtensions } from "@earendil-works/pi-coding-agent";
+          const target = resolve("node_modules/@healthmd/pi-health-dashboard/src/extension.ts");
+          const result = await discoverAndLoadExtensions([target], process.cwd());
+          if (result.errors.length) {
+            console.error(result.errors);
+            process.exit(1);
+          }
+          const extension = result.extensions.find(item => item.resolvedPath === target);
+          if (!extension) {
+            console.error(`Installed extension not loaded: ${target}`);
+            process.exit(1);
+          }
+          const actual = {
+            tools: [...extension.tools.keys()].sort(),
+            commands: [...extension.commands.keys()].sort(),
+            flags: [...extension.flags.keys()].sort(),
+          };
+          const expected = {
+            tools: ["healthmd_fetch", "healthmd_load", "healthmd_query", "healthmd_view"],
+            commands: ["healthmd"],
+            flags: ["healthmd-cache-dir", "healthmd-cli-path", "healthmd-data", "healthmd-device", "healthmd-fetch-transport", "healthmd-mcp-path", "healthmd-port"],
+          };
+          if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+            console.error({ actual, expected });
+            process.exit(1);
+          }
+          NODE
+
+  gate:
+    name: Pi Health Dashboard CI
+    if: ${{ always() }}
+    needs: [validate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require dashboard checks
+        env:
+          VALIDATE_RESULT: ${{ needs.validate.result }}
+        run: test "$VALIDATE_RESULT" = success
