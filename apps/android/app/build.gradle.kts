@@ -7,7 +7,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.play.publisher)
 }
 
 // Load signing properties from local.properties
@@ -55,8 +54,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 28
-        versionName = "1.7.0"
+        versionCode = 29
+        versionName = "1.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -181,6 +180,7 @@ android {
 dependencies {
     implementation(project(":direct-protocol"))
     implementation(project(":healthmd-core"))
+    implementation(project(":wearable-contract"))
 
     // Compose
     implementation(platform(libs.compose.bom))
@@ -201,6 +201,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.glance)
     implementation(libs.glance.appwidget)
+    implementation(libs.play.services.wearable)
 
     // Health Connect
     implementation(libs.health.connect)
@@ -273,20 +274,4 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
-}
-
-// Google Play Publisher Configuration
-play {
-    val configuredPath =
-        System.getenv("PLAY_CONSOLE_KEY_PATH")
-            ?: providers.gradleProperty("PLAY_CONSOLE_KEY_PATH").orNull
-            ?: "${System.getProperty("user.home")}/.config/play-console/play-publisher-crested-drive-492000-u7.json"
-
-    val serviceKeyFile = file(configuredPath)
-    if (serviceKeyFile.exists()) {
-        serviceAccountCredentials.set(serviceKeyFile)
-    }
-
-    track.set("internal")
-    defaultToAppBundles.set(true)
 }

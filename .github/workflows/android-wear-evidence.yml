@@ -1,0 +1,550 @@
+name: Android Wear release evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact Android semantic version
+        required: true
+        type: string
+      release_sha:
+        description: Exact immutable release commit SHA
+        required: true
+        type: string
+      submission_run_id:
+        description: Successful Android Wear evidence submission workflow run ID
+        required: true
+        type: string
+      submission_run_attempt:
+        description: Exact successful evidence submission run attempt
+        required: true
+        type: string
+      qa_upload_run_id:
+        description: Successful exact-SHA Android QA paired-upload workflow run ID
+        required: true
+        type: string
+      screenshot_upload_run_id:
+        description: Successful protected Wear screenshot-publication workflow run ID
+        required: true
+        type: string
+      screenshot_upload_run_attempt:
+        description: Exact protected Wear screenshot-publication run attempt
+        required: true
+        type: string
+      source_pull_request_number:
+        description: Merged canonical-main pull request whose head is the exact release SHA
+        required: true
+        type: string
+      source_review_id:
+        description: GitHub pull request review ID that approved the exact release SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+env:
+  PACKAGE_NAME: com.healthmd.android
+
+jobs:
+  ingest:
+    name: Verify and retain protected Wear evidence
+    runs-on: ubuntu-24.04
+    environment: google-play-production
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable release identity
+        id: release
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          release_tag="android/v$VERSION"
+          test "$(git cat-file -t "$release_tag")" = tag
+          test "$(git rev-parse "$release_tag^{commit}")" = "$EXPECTED_SHA"
+          git rev-parse --verify refs/remotes/origin/main >/dev/null
+          git merge-base --is-ancestor "$EXPECTED_SHA" refs/remotes/origin/main
+          phone_version=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
+          phone_code=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)
+          wear_version=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -1)
+          wear_code=$(sed -n 's/.*versionCode = \([0-9_][0-9_]*\).*/\1/p' wear/build.gradle.kts | head -1 | tr -d '_')
+          test "$phone_version" = "$VERSION"
+          test "$wear_version" = "$VERSION"
+          [[ "$phone_code" =~ ^[1-9][0-9]*$ && "$wear_code" =~ ^[1-9][0-9]*$ ]]
+          echo "phone_code=$phone_code" >> "$GITHUB_OUTPUT"
+          echo "wear_code=$wear_code" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Java and Android SDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - name: Verify exact-SHA QA upload run identity
+        id: qa-run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QA_UPLOAD_RUN_ID: ${{ inputs.qa_upload_run_id }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$QA_UPLOAD_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${QA_UPLOAD_RUN_ID}"
+          run_json="$RUNNER_TEMP/qa-upload-run.json"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' "$api" -o "$run_json"
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-release.yml" and
+            .event == "push" and .head_sha == $sha and .status == "completed" and
+            .conclusion == "success" and (.run_attempt | type == "number" and . > 0)
+          ' "$run_json" >/dev/null
+          echo "attempt=$(jq -er .run_attempt "$run_json")" >> "$GITHUB_OUTPUT"
+
+      - name: Download exact signed QA bundles
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: healthmd-android-${{ inputs.version }}-attempt-${{ steps.qa-run.outputs.attempt }}
+          path: ${{ runner.temp }}/qa-upload-bundles
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.qa_upload_run_id }}
+
+      - name: Download immutable QA upload receipt
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: healthmd-android-qa-upload-${{ inputs.version }}-${{ inputs.release_sha }}-attempt-${{ steps.qa-run.outputs.attempt }}
+          path: ${{ runner.temp }}/qa-upload-receipt
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.qa_upload_run_id }}
+
+      - name: Verify QA upload receipt and retained AAB digests
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QA_UPLOAD_RUN_ID: ${{ inputs.qa_upload_run_id }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+          EXPECTED_PHONE_CODE: ${{ steps.release.outputs.phone_code }}
+          EXPECTED_WEAR_CODE: ${{ steps.release.outputs.wear_code }}
+        run: |
+          set -euo pipefail
+          receipt="$RUNNER_TEMP/qa-upload-receipt/qa-upload-receipt.json"
+          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-release.aab -print)
+          mapfile -t wear_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name wear-release.aab -print)
+          [[ -f "$receipt" && ${#phone_aabs[@]} -eq 1 && ${#wear_aabs[@]} -eq 1 ]]
+          phone_sha=$(sha256sum "${phone_aabs[0]}" | awk '{print $1}')
+          wear_sha=$(sha256sum "${wear_aabs[0]}" | awk '{print $1}')
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" \
+            --arg version "$EXPECTED_VERSION" --arg tag "android/v$EXPECTED_VERSION" \
+            --arg phoneSha "$phone_sha" --arg wearSha "$wear_sha" \
+            --argjson run "$QA_UPLOAD_RUN_ID" --argjson phone "$EXPECTED_PHONE_CODE" \
+            --argjson wear "$EXPECTED_WEAR_CODE" '
+            .schemaVersion == 1 and .repository == $repo and
+            .workflow == ".github/workflows/android-release.yml" and .event == "push" and
+            .runId == $run and .tag == $tag and .headSha == $sha and .tagPeeledSha == $sha and
+            .versionName == $version and .phoneVersionCode == $phone and .wearVersionCode == $wear and
+            .phoneTrack == "qa" and .wearTrack == "wear:qa" and .releaseStatus == "completed" and
+            .phoneAabSha256 == $phoneSha and .wearAabSha256 == $wearSha and .uploadPrepared == true
+          ' "$receipt" >/dev/null
+          run_attempt=$(jq -er .runAttempt "$receipt")
+          [[ "$run_attempt" =~ ^[1-9][0-9]*$ && "$run_attempt" == "${{ steps.qa-run.outputs.attempt }}" ]]
+          attempt_base="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${QA_UPLOAD_RUN_ID}/attempts/${run_attempt}"
+          for pair in \
+            "$attempt_base $RUNNER_TEMP/qa-upload-run.json" \
+            "$attempt_base/jobs?per_page=100 $RUNNER_TEMP/qa-upload-jobs.json"; do
+            url=${pair% *}; destination=${pair##* }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' "$url" -o "$destination"
+          done
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" --argjson attempt "$run_attempt" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-release.yml" and
+            .event == "push" and .head_sha == $sha and .run_attempt == $attempt and
+            .status == "completed" and .conclusion == "success"
+          ' "$RUNNER_TEMP/qa-upload-run.json" >/dev/null
+          jq -e --argjson attempt "$run_attempt" '
+            any(.jobs[]?; .name == "Publish Android internal release" and
+              (.run_attempt // $attempt) == $attempt and .conclusion == "success" and
+              any(.steps[]?; .name == "Retain immutable QA upload intent receipt" and .conclusion == "success") and
+              any(.steps[]?; .name == "Upload phone/Wear bundles to their form-factor tracks in one Play edit" and .conclusion == "success") and
+              any(.steps[]?; .name == "Remove ephemeral credentials after QA upload" and .conclusion == "success"))
+          ' "$RUNNER_TEMP/qa-upload-jobs.json" >/dev/null
+
+      - name: Verify screenshot publication run and exact attempt
+        id: screenshot-run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SCREENSHOT_RUN_ID: ${{ inputs.screenshot_upload_run_id }}
+          SCREENSHOT_RUN_ATTEMPT: ${{ inputs.screenshot_upload_run_attempt }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SCREENSHOT_RUN_ID" =~ ^[1-9][0-9]*$ && "$SCREENSHOT_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          attempt_base="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${SCREENSHOT_RUN_ID}/attempts/${SCREENSHOT_RUN_ATTEMPT}"
+          for pair in \
+            "$attempt_base $RUNNER_TEMP/screenshot-upload-run.json" \
+            "$attempt_base/jobs?per_page=100 $RUNNER_TEMP/screenshot-upload-jobs.json"; do
+            url=${pair% *}; destination=${pair##* }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' "$url" -o "$destination"
+          done
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" --argjson attempt "$SCREENSHOT_RUN_ATTEMPT" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-wear-screenshots.yml" and
+            .event == "workflow_dispatch" and .head_sha == $sha and .run_attempt == $attempt and
+            .status == "completed" and .conclusion == "success"
+          ' "$RUNNER_TEMP/screenshot-upload-run.json" >/dev/null
+          jq -e --argjson attempt "$SCREENSHOT_RUN_ATTEMPT" '
+            any(.jobs[]?; .name == "Publish exact Wear screenshots" and
+              (.run_attempt // $attempt) == $attempt and .conclusion == "success" and
+              any(.steps[]?; .name == "Verify submitted exact-release screenshot evidence" and .conclusion == "success") and
+              any(.steps[]?; .name == "Replace and verify exact Wear screenshots" and .conclusion == "success") and
+              any(.steps[]?; .name == "Remove ephemeral screenshot credentials" and .conclusion == "success") and
+              any(.steps[]?; .name == "Upload protected screenshot mutation evidence" and .conclusion == "success"))
+          ' "$RUNNER_TEMP/screenshot-upload-jobs.json" >/dev/null
+          echo "attempt=$SCREENSHOT_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
+      - name: Download protected screenshot publication evidence
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: wear-screenshot-upload-${{ inputs.version }}-${{ inputs.release_sha }}-attempt-${{ steps.screenshot-run.outputs.attempt }}
+          path: ${{ runner.temp }}/screenshot-upload-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.screenshot_upload_run_id }}
+
+      - name: Verify protected screenshot publication artifact
+        id: screenshot-artifact
+        shell: bash
+        env:
+          SCREENSHOT_RUN_ID: ${{ inputs.screenshot_upload_run_id }}
+          SCREENSHOT_RUN_ATTEMPT: ${{ steps.screenshot-run.outputs.attempt }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+          EXPECTED_PHONE_CODE: ${{ steps.release.outputs.phone_code }}
+          EXPECTED_WEAR_CODE: ${{ steps.release.outputs.wear_code }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/screenshot-upload-artifact"
+          test -d "$root/wear-play-screenshot-upload"
+          test -f "$root/workflow-provenance.json"
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" --arg version "$EXPECTED_VERSION" \
+            --argjson run "$SCREENSHOT_RUN_ID" --argjson attempt "$SCREENSHOT_RUN_ATTEMPT" \
+            --argjson phone "$EXPECTED_PHONE_CODE" --argjson wear "$EXPECTED_WEAR_CODE" '
+            .schemaVersion == 1 and .repository == $repo and
+            .workflow == ".github/workflows/android-wear-screenshots.yml" and
+            .runId == $run and .runAttempt == $attempt and .releaseSha == $sha and
+            .versionName == $version and .phoneVersionCode == $phone and .wearVersionCode == $wear and
+            (.submissionRunId | type == "number" and . > 0) and
+            (.submissionRunAttempt | type == "number" and . > 0) and
+            .screenshotMutationCommitted == true and (.publishedAtUtc | type == "string" and endswith("Z"))
+          ' "$root/workflow-provenance.json" >/dev/null
+          echo "submission_run=$(jq -er .submissionRunId "$root/workflow-provenance.json")" >> "$GITHUB_OUTPUT"
+          echo "submission_attempt=$(jq -er .submissionRunAttempt "$root/workflow-provenance.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify submission run identity and exact attempt
+        id: submission-run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUBMISSION_RUN_ID: ${{ inputs.submission_run_id }}
+          SUBMISSION_RUN_ATTEMPT: ${{ inputs.submission_run_attempt }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$SUBMISSION_RUN_ID" =~ ^[1-9][0-9]*$ && "$SUBMISSION_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          run_attempt=$SUBMISSION_RUN_ATTEMPT
+          attempt_base="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${SUBMISSION_RUN_ID}/attempts/${run_attempt}"
+          for pair in \
+            "$attempt_base $RUNNER_TEMP/wear-evidence-submission-attempt.json" \
+            "$attempt_base/jobs?per_page=100 $RUNNER_TEMP/wear-evidence-submission-jobs.json"; do
+            url=${pair% *}; destination=${pair##* }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' "$url" -o "$destination"
+          done
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" --argjson attempt "$run_attempt" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-wear-evidence-submit.yml" and
+            .event == "workflow_dispatch" and .head_sha == $sha and .run_attempt == $attempt and
+            .status == "completed" and .conclusion == "success"
+          ' "$RUNNER_TEMP/wear-evidence-submission-attempt.json" >/dev/null
+          jq -e --argjson attempt "$run_attempt" '
+            any(.jobs[]?; .name == "Retain digest-bound Wear evidence submission" and
+              (.run_attempt // $attempt) == $attempt and .conclusion == "success" and
+              any(.steps[]?; .name == "Upload immutable submission artifact" and .conclusion == "success"))
+          ' "$RUNNER_TEMP/wear-evidence-submission-jobs.json" >/dev/null
+          echo "attempt=$run_attempt" >> "$GITHUB_OUTPUT"
+
+      - name: Download submitted evidence archive
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: wear-release-evidence-submission-${{ inputs.version }}-${{ inputs.release_sha }}-attempt-${{ steps.submission-run.outputs.attempt }}
+          path: ${{ runner.temp }}/wear-evidence-submission
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.submission_run_id }}
+
+      - name: Safely extract bounded evidence archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          submission="$RUNNER_TEMP/wear-evidence-submission"
+          mapfile -t archives < <(find "$submission" -maxdepth 1 -type f -name 'wear-release-evidence.tar.gz' -print)
+          [[ ${#archives[@]} -eq 1 && -f "$submission/submission.json" ]]
+          jq -e --arg version "${{ inputs.version }}" --arg sha "${{ inputs.release_sha }}" \
+            --argjson run "${{ inputs.submission_run_id }}" \
+            --argjson attempt "${{ steps.submission-run.outputs.attempt }}" '
+            .schemaVersion == 1 and .versionName == $version and .releaseSha == $sha and
+            .submissionRunId == $run and .submissionRunAttempt == $attempt and
+            (.archiveSha256 | test("^[0-9a-f]{64}$")) and
+            (.archiveSize | type == "number" and . > 0 and . <= 2147483648)
+          ' "$submission/submission.json" >/dev/null
+          test "$(shasum -a 256 "${archives[0]}" | awk '{print $1}')" = \
+            "$(jq -er .archiveSha256 "$submission/submission.json")"
+          test "$(stat -c %s "${archives[0]}")" = \
+            "$(jq -er .archiveSize "$submission/submission.json")"
+          python3 ./scripts/extract-wear-release-evidence-archive.py \
+            "${archives[0]}" "$RUNNER_TEMP/wear-release-evidence"
+          root="$RUNNER_TEMP/wear-release-evidence"
+          [[ ! -e "$root/qa-upload" && ! -e "$root/source-review" && ! -e "$root/wear-play-screenshot-upload" ]]
+          cp -R "$RUNNER_TEMP/screenshot-upload-artifact/wear-play-screenshot-upload" \
+            "$root/wear-play-screenshot-upload"
+          mkdir "$root/qa-upload"
+          mapfile -t phone_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name app-release.aab -print)
+          mapfile -t wear_aabs < <(find "$RUNNER_TEMP/qa-upload-bundles" -type f -name wear-release.aab -print)
+          [[ ${#phone_aabs[@]} -eq 1 && ${#wear_aabs[@]} -eq 1 ]]
+          cp "${phone_aabs[0]}" "$root/qa-upload/phone-release.aab"
+          cp "${wear_aabs[0]}" "$root/qa-upload/wear-release.aab"
+          cp "$RUNNER_TEMP/qa-upload-receipt/qa-upload-receipt.json" "$root/qa-upload/receipt.json"
+          cp "$RUNNER_TEMP/qa-upload-run.json" "$root/qa-upload/run.json"
+          cp "$RUNNER_TEMP/qa-upload-jobs.json" "$root/qa-upload/jobs.json"
+
+      - name: Authenticate independent GitHub source review
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_PULL_REQUEST_NUMBER: ${{ inputs.source_pull_request_number }}
+          SOURCE_REVIEW_ID: ${{ inputs.source_review_id }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+          EXPECTED_SOURCE_REVIEWER: ${{ vars.WEAR_SOURCE_REVIEWER }}
+          EXPECTED_SOURCE_REVIEW_TICKET: ${{ vars.WEAR_SOURCE_REVIEW_TICKET }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_PULL_REQUEST_NUMBER" =~ ^[1-9][0-9]*$ && "$SOURCE_REVIEW_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ -n "$EXPECTED_SOURCE_REVIEWER" && -n "$EXPECTED_SOURCE_REVIEW_TICKET" ]]
+          root="$RUNNER_TEMP/wear-release-evidence"
+          mkdir "$root/source-review"
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${SOURCE_PULL_REQUEST_NUMBER}"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' "$api" -o "$root/source-review/pull-request.json"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' "${api}/reviews?per_page=100" \
+            -o "$RUNNER_TEMP/source-reviews.json"
+          jq -e --argjson id "$SOURCE_REVIEW_ID" '
+            ([.[]? | select(.id == $id)] | length) == 1
+          ' "$RUNNER_TEMP/source-reviews.json" >/dev/null \
+            || { echo '::error::source review ID is absent or ambiguous for the exact pull request'; exit 1; }
+          jq --argjson id "$SOURCE_REVIEW_ID" '[.[]? | select(.id == $id)][0]' \
+            "$RUNNER_TEMP/source-reviews.json" > "$root/source-review/review.json"
+          rm -f "$RUNNER_TEMP/source-reviews.json"
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg sha "$EXPECTED_SHA" --arg version "$EXPECTED_VERSION" \
+            --argjson pr "$SOURCE_PULL_REQUEST_NUMBER" --argjson review "$SOURCE_REVIEW_ID" \
+            --arg reviewer "$EXPECTED_SOURCE_REVIEWER" --arg ticket "$EXPECTED_SOURCE_REVIEW_TICKET" \
+            --arg reviewedAt "$(jq -er .submitted_at "$root/source-review/review.json")" \
+            --arg mergedAt "$(jq -er .merged_at "$root/source-review/pull-request.json")" \
+            --arg verifiedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson run "$GITHUB_RUN_ID" --argjson attempt "$GITHUB_RUN_ATTEMPT" '{
+              schemaVersion:1, repository:$repository, releaseSha:$sha, versionName:$version,
+              pullRequestNumber:$pr,
+              pullRequestUrl:("https://github.com/" + $repository + "/pull/" + ($pr | tostring)),
+              reviewId:$review, reviewer:$reviewer, reviewTicket:$ticket,
+              reviewedAtUtc:$reviewedAt, mergedAtUtc:$mergedAt, verifiedAtUtc:$verifiedAt,
+              ingestRunId:$run, ingestRunAttempt:$attempt, authenticatedByGitHubApi:true
+            }' > "$root/source-review/proof.json"
+          python3 ./scripts/verify-github-source-review-evidence.py "$root/source-review" \
+            --repository "$GITHUB_REPOSITORY" \
+            --release-sha "$EXPECTED_SHA" --version-name "$EXPECTED_VERSION" \
+            --expected-reviewer "$EXPECTED_SOURCE_REVIEWER" \
+            --expected-review-ticket "$EXPECTED_SOURCE_REVIEW_TICKET" \
+            --expected-pull-request "$SOURCE_PULL_REQUEST_NUMBER" \
+            --expected-review-id "$SOURCE_REVIEW_ID" >/dev/null
+
+      - name: Requery and retain exact QA track postconditions
+        shell: bash
+        env:
+          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
+          PHONE_VERSION_CODE: ${{ steps.release.outputs.phone_code }}
+          WEAR_VERSION_CODE: ${{ steps.release.outputs.wear_code }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/evidence-play-key.json"
+          private="$RUNNER_TEMP/evidence-play-private.pem"
+          cleanup_play() { rm -f "$key" "$private"; }
+          trap cleanup_play EXIT
+          test -n "${PLAY_CONSOLE_KEY_JSON:-}"
+          printf '%s' "$PLAY_CONSOLE_KEY_JSON" >"$key"; chmod 600 "$key"
+          jq -er .private_key "$key" >"$private"; chmod 600 "$private"
+          now=$(date +%s)
+          base64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          header=$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | base64url)
+          claims=$(jq -nc --arg iss "$(jq -er .client_email "$key")" --arg aud "$(jq -er .token_uri "$key")" \
+            --argjson iat "$now" '{iss:$iss,scope:"https://www.googleapis.com/auth/androidpublisher",aud:$aud,iat:$iat,exp:($iat+1200)}' | base64url)
+          signature=$(printf '%s' "$header.$claims" | openssl dgst -sha256 -sign "$private" | base64url)
+          token=$(curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            --data-urlencode "assertion=$header.$claims.$signature" \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer' \
+            "$(jq -er .token_uri "$key")" | jq -er .access_token)
+          echo "::add-mask::$token"
+          root="$RUNNER_TEMP/wear-release-evidence/qa-upload"
+          api="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/tracks"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $token" "$api/qa/releases" -o "$root/google-play-qa-current.json"
+          curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+            -H "Authorization: Bearer $token" "$api/wear:qa/releases" -o "$root/google-play-wear-qa-current.json"
+          jq -e --argjson code "$PHONE_VERSION_CODE" '
+            any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
+          ' "$root/google-play-qa-current.json" >/dev/null
+          jq -e --argjson code "$WEAR_VERSION_CODE" '
+            any(.releases[]?; any(.activeArtifacts[]?; (.versionCode | tonumber) == $code))
+          ' "$root/google-play-wear-qa-current.json" >/dev/null
+          cleanup_play; trap - EXIT
+
+      - name: Reverify remote push CI and retain protected provenance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          SUBMISSION_RUN_ID: ${{ inputs.submission_run_id }}
+          QA_UPLOAD_RUN_ID: ${{ inputs.qa_upload_run_id }}
+          SCREENSHOT_RUN_ID: ${{ inputs.screenshot_upload_run_id }}
+          SCREENSHOT_RUN_ATTEMPT: ${{ steps.screenshot-run.outputs.attempt }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/wear-release-evidence"
+          ci="$root/wear-ci/verified-run.json"
+          ci_run_id=$(jq -er '.runId' "$ci")
+          ci_run_attempt=$(jq -er '.runAttempt' "$ci")
+          [[ "$ci_run_id" =~ ^[1-9][0-9]*$ && "$ci_run_attempt" =~ ^[1-9][0-9]*$ ]]
+          run_json="$RUNNER_TEMP/wear-ci-run.json"
+          jobs_json="$RUNNER_TEMP/wear-ci-jobs.json"
+          base="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${ci_run_id}/attempts/${ci_run_attempt}"
+          for pair in "$base $run_json" "$base/jobs?per_page=100 $jobs_json"; do
+            url=${pair% *}; destination=${pair##* }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' "$url" -o "$destination"
+          done
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" --argjson attempt "$ci_run_attempt" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-ci.yml" and
+            .event == "push" and .head_sha == $sha and .run_attempt == $attempt and
+            .status == "completed" and .conclusion == "success"
+          ' "$run_json" >/dev/null
+          jq -e --argjson attempt "$ci_run_attempt" '
+            any(.jobs[]?; .name == "Wear emulator smoke" and
+              (.run_attempt // $attempt) == $attempt and .conclusion == "success") and
+            any(.jobs[]?; .name == "Android CI" and
+              (.run_attempt // $attempt) == $attempt and .conclusion == "success")
+          ' "$jobs_json" >/dev/null
+          jq -e --argjson run "$ci_run_id" --argjson attempt "$ci_run_attempt" \
+            --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" '
+            .runId == $run and .runAttempt == $attempt and .repository == $repo and
+            .workflowPath == ".github/workflows/android-ci.yml" and .headSha == $sha and .event == "push" and
+            .status == "completed" and .conclusion == "success" and
+            .wearJob.name == "Wear emulator smoke" and .wearJob.conclusion == "success" and
+            .gateJob.name == "Android CI" and .gateJob.conclusion == "success"
+          ' "$ci" >/dev/null
+          jq -n --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" \
+            --argjson submission "$SUBMISSION_RUN_ID" \
+            --argjson submissionAttempt "${{ steps.submission-run.outputs.attempt }}" \
+            --argjson ci "$ci_run_id" --argjson ciAttempt "$ci_run_attempt" \
+            --argjson qaUpload "$QA_UPLOAD_RUN_ID" \
+            --argjson qaAttempt "$(jq -er .runAttempt "$root/qa-upload/receipt.json")" \
+            --argjson screenshotUpload "$SCREENSHOT_RUN_ID" \
+            --argjson screenshotAttempt "$SCREENSHOT_RUN_ATTEMPT" \
+            --argjson screenshotSubmission "${{ steps.screenshot-artifact.outputs.submission_run }}" \
+            --argjson screenshotSubmissionAttempt "${{ steps.screenshot-artifact.outputs.submission_attempt }}" \
+            --argjson ingest "$GITHUB_RUN_ID" --argjson ingestAttempt "$GITHUB_RUN_ATTEMPT" \
+            --argjson sourcePr "${{ inputs.source_pull_request_number }}" \
+            --argjson sourceReview "${{ inputs.source_review_id }}" \
+            --arg phoneAab "$(sha256sum "$root/qa-upload/phone-release.aab" | awk '{print $1}')" \
+            --arg wearAab "$(sha256sum "$root/qa-upload/wear-release.aab" | awk '{print $1}')" '{
+              schemaVersion:1, repository:$repo, releaseSha:$sha,
+              submissionRunId:$submission, submissionRunAttempt:$submissionAttempt,
+              qaUploadRunId:$qaUpload, qaUploadRunAttempt:$qaAttempt,
+              screenshotUploadRunId:$screenshotUpload, screenshotUploadRunAttempt:$screenshotAttempt,
+              screenshotSubmissionRunId:$screenshotSubmission,
+              screenshotSubmissionRunAttempt:$screenshotSubmissionAttempt,
+              qaPhoneAabSha256:$phoneAab, qaWearAabSha256:$wearAab,
+              qaPairRequeried:true,
+              remoteCiRunId:$ci, remoteCiRunAttempt:$ciAttempt,
+              ingestRunId:$ingest, ingestRunAttempt:$ingestAttempt,
+              sourcePullRequestNumber:$sourcePr, sourceReviewId:$sourceReview
+            }' >"$root/protected-ingest.json"
+
+      - name: Seal and verify protected evidence bundle
+        shell: bash
+        env:
+          EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+          EXPECTED_VERSION_NAME: ${{ inputs.version }}
+          EXPECTED_PHONE_VERSION_CODE: ${{ steps.release.outputs.phone_code }}
+          EXPECTED_WEAR_VERSION_CODE: ${{ steps.release.outputs.wear_code }}
+          EXPECTED_ATTESTOR: ${{ vars.WEAR_RELEASE_EVIDENCE_ATTESTOR }}
+          EXPECTED_PLAY_APP_SIGNING_CERT_SHA256: ${{ vars.PLAY_APP_SIGNING_CERT_SHA256 }}
+          EXPECTED_BATTERY_REVIEWER: ${{ vars.WEAR_BATTERY_REVIEWER }}
+          EXPECTED_BATTERY_REVIEW_TICKET: ${{ vars.WEAR_BATTERY_REVIEW_TICKET }}
+          EXPECTED_BATTERY_CONTROL_PROFILE: ${{ vars.WEAR_BATTERY_CONTROL_PROFILE }}
+          EXPECTED_PAIRED_REVIEWER: ${{ vars.WEAR_PAIRED_REVIEWER }}
+          EXPECTED_PAIRED_REVIEW_TICKET: ${{ vars.WEAR_PAIRED_REVIEW_TICKET }}
+          EXPECTED_SCREENSHOT_REVIEWER: ${{ vars.WEAR_SCREENSHOT_REVIEWER }}
+          EXPECTED_SCREENSHOT_REVIEW_TICKET: ${{ vars.WEAR_SCREENSHOT_REVIEW_TICKET }}
+          EXPECTED_SOURCE_REVIEWER: ${{ vars.WEAR_SOURCE_REVIEWER }}
+          EXPECTED_SOURCE_REVIEW_TICKET: ${{ vars.WEAR_SOURCE_REVIEW_TICKET }}
+          WEAR_EVIDENCE_HMAC_KEY: ${{ secrets.WEAR_RELEASE_EVIDENCE_HMAC_KEY }}
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/wear-release-evidence"
+          ./scripts/seal-wear-release-evidence.sh "$root"
+          ./scripts/verify-wear-release-evidence-bundle.sh "$root" pre-promotion
+
+      - name: Retain immutable verified evidence artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wear-release-evidence-${{ inputs.version }}-${{ inputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wear-release-evidence
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Cleanup submitted and verified evidence
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/wear-evidence-submission" "$RUNNER_TEMP/wear-release-evidence"
+          rm -rf "$RUNNER_TEMP/qa-upload-bundles" "$RUNNER_TEMP/qa-upload-receipt"
+          rm -rf "$RUNNER_TEMP/screenshot-upload-artifact"
+          rm -f "$RUNNER_TEMP/qa-upload-run.json" "$RUNNER_TEMP/qa-upload-jobs.json"
+          rm -f "$RUNNER_TEMP/screenshot-upload-run.json" "$RUNNER_TEMP/screenshot-upload-jobs.json"
+          rm -f "$RUNNER_TEMP/source-reviews.json"

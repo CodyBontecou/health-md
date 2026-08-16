@@ -31,9 +31,11 @@ class HealthConnectDataProvider(
     suspend fun fetchWidgetHealthDataRange(
         dates: List<LocalDate>,
         selection: HealthConnectWidgetReadSelection,
+        zoneId: ZoneId = ZoneId.systemDefault(),
     ): List<HealthData> = healthConnectManager.fetchWidgetHealthDataRange(
         dates = dates,
         selection = selection,
+        zoneId = zoneId,
     )
 
     override suspend fun isAvailable(): Boolean =

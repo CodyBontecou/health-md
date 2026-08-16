@@ -361,28 +361,25 @@ class HealthConnectManager(
     suspend fun fetchWidgetHealthDataRange(
         dates: List<LocalDate>,
         selection: HealthConnectWidgetReadSelection,
+        zoneId: ZoneId = ZoneId.systemDefault(),
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
         require(selection.hasAny) { "At least one widget health record family is required." }
 
         val requestedDates = dates.toSet()
         val dataByDate = dates.associateWith { HealthData(it) }.toMutableMap()
-        val zone = ZoneId.systemDefault()
+        val zone = zoneId
         for (chunk in requestedDates.sorted().chunked(RANGE_READ_CHUNK_DAYS)) {
             val startDate = chunk.first()
             val endExclusive = chunk.last().plusDays(1)
             val chunkDates = chunk.toSet()
-            val localRange = TimeRangeFilter.between(
-                startDate.atStartOfDay(),
-                endExclusive.atStartOfDay(),
-            )
             val instantRange = TimeRangeFilter.between(
                 startDate.atStartOfDay(zone).toInstant(),
                 endExclusive.atStartOfDay(zone).toInstant(),
             )
 
             if (selection.steps || selection.activeCalories) {
-                applyWidgetActivityAggregates(dataByDate, chunkDates, localRange, selection)
+                applyWidgetActivityAggregates(dataByDate, chunkDates, selection, zone)
             }
             if (selection.exerciseSessions) {
                 applyWidgetExerciseMinutes(dataByDate, chunkDates, instantRange, zone)
@@ -397,10 +394,13 @@ class HealthConnectManager(
                 )
             }
             if (selection.heartRate) {
-                applyWidgetHeartAggregates(dataByDate, chunkDates, localRange)
+                applyWidgetHeartAggregates(dataByDate, chunkDates, zone)
             }
             if (selection.restingHeartRate || selection.hrvRmssd) {
                 applyWidgetHeartRecords(dataByDate, chunkDates, instantRange, selection, zone)
+            }
+            if (selection.oxygenSaturation) {
+                applyWidgetOxygenRecords(dataByDate, chunkDates, instantRange, zone)
             }
         }
         return dates.map { date -> dataByDate[date] ?: HealthData(date) }
@@ -411,14 +411,14 @@ class HealthConnectManager(
     private suspend fun applyWidgetActivityAggregates(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
-        timeRange: TimeRangeFilter,
         selection: HealthConnectWidgetReadSelection,
+        zone: ZoneId,
     ) {
         if (selection.steps) {
             for ((date, result) in aggregateWidgetByDay(
                 setOf(StepsRecord.COUNT_TOTAL),
-                timeRange,
                 requestedDates,
+                zone,
             )) {
                 dataByDate.update(date) { current ->
                     current.copy(
@@ -432,8 +432,8 @@ class HealthConnectManager(
         if (selection.activeCalories) {
             for ((date, result) in aggregateWidgetByDay(
                 setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL),
-                timeRange,
                 requestedDates,
+                zone,
             )) {
                 dataByDate.update(date) { current ->
                     current.copy(
@@ -469,14 +469,14 @@ class HealthConnectManager(
     private suspend fun applyWidgetHeartAggregates(
         dataByDate: MutableMap<LocalDate, HealthData>,
         requestedDates: Set<LocalDate>,
-        timeRange: TimeRangeFilter,
+        zone: ZoneId,
     ) {
         val metrics = setOf<AggregateMetric<*>>(
             HeartRateRecord.BPM_AVG,
             HeartRateRecord.BPM_MIN,
             HeartRateRecord.BPM_MAX,
         )
-        for ((date, result) in aggregateWidgetByDay(metrics, timeRange, requestedDates)) {
+        for ((date, result) in aggregateWidgetByDay(metrics, requestedDates, zone)) {
             dataByDate.update(date) { current ->
                 current.copy(
                     heart = current.heart.copy(
@@ -523,6 +523,27 @@ class HealthConnectManager(
                         )
                     )
                 }
+            }
+        }
+    }
+
+    private suspend fun applyWidgetOxygenRecords(
+        dataByDate: MutableMap<LocalDate, HealthData>,
+        requestedDates: Set<LocalDate>,
+        timeRange: TimeRangeFilter,
+        zone: ZoneId,
+    ) {
+        val recordsByDate = readRecordsPaged(OxygenSaturationRecord::class, timeRange)
+            .groupBy { it.time.atZone(zone).toLocalDate() }
+        for ((date, records) in recordsByDate) {
+            if (date !in requestedDates || records.isEmpty()) continue
+            val values = records.map { CompatibilityHealthMapper.percentageFraction(it.percentage) }
+            dataByDate.update(date) { current ->
+                current.copy(vitals = current.vitals.copy(
+                    bloodOxygenAvg = values.average(),
+                    bloodOxygenMin = values.minOrNull(),
+                    bloodOxygenMax = values.maxOrNull(),
+                ))
             }
         }
     }
@@ -1680,24 +1701,28 @@ class HealthConnectManager(
     /** Strict aggregate path used by widgets so a failed category preserves the last-good cache. */
     private suspend fun aggregateWidgetByDay(
         metrics: Set<AggregateMetric<*>>,
-        timeRange: TimeRangeFilter,
         requestedDates: Set<LocalDate>,
+        zone: ZoneId,
     ): List<Pair<LocalDate, AggregateValues>> {
         if (metrics.isEmpty()) return emptyList()
-        return healthConnectClient.aggregateGroupByPeriod(
-            AggregateGroupByPeriodRequest(
-                metrics = metrics,
-                timeRangeFilter = timeRange,
-                timeRangeSlicer = Period.ofDays(1),
+        // Period aggregation accepts LocalDateTime boundaries only and therefore cannot honor an
+        // explicitly captured non-system zone. Issue one strict instant-bounded aggregate per
+        // requested journal day (the wearable contract is bounded to 14 days).
+        return requestedDates.sorted().mapNotNull { date ->
+            val result = healthConnectClient.aggregate(
+                AggregateRequest(
+                    metrics = metrics,
+                    timeRangeFilter = TimeRangeFilter.between(
+                        date.atStartOfDay(zone).toInstant(),
+                        date.plusDays(1).atStartOfDay(zone).toInstant(),
+                    ),
+                )
             )
-        ).mapNotNull { group ->
-            val date = group.startTime.toLocalDate()
-            if (date !in requestedDates) return@mapNotNull null
             val values = metrics.mapNotNull { metric ->
-                group.result.aggregateValue(metric)?.let { metric to it }
+                result.aggregateValue(metric)?.let { metric to it }
             }.toMap()
             if (values.isEmpty()) null else date to AggregateValues(values)
-        }.sortedBy { it.first }
+        }
     }
 
     private suspend fun aggregateByDay(

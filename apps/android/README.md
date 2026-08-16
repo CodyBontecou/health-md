@@ -1,5 +1,9 @@
 # Health.md for Android
 
+## Wear OS companion
+
+The separately buildable `:wear` module ships under the same `com.healthmd.android` Play listing and signing identity as the phone artifact, with a non-colliding 1,000,000+ version-code range. `:wearable-contract` is the pure private aggregate transport contract. The phone remains Health Connect authoritative; the watch has no direct Health Connect or Health Services sensing. Build with `./gradlew :wear:assembleDebug` and see `docs/features/wear-os-implementation.md` for privacy, validation, release, emulator, and physical battery/OEM gates.
+
 > **Health Connect to Markdown, JSON, NDJSON, CSV, and Obsidian Bases — private files you control.**
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
@@ -208,7 +212,7 @@ app/
   src/test/java/com/healthmd/          # Unit, export-contract, billing, scheduler, and view-model tests
 
 docs/                                 # Export-contract docs, parity notes, automation, accessibility
-fastlane/                             # Optional Google Play upload lanes
+fastlane/                             # Non-publishing paired release validation lane
 play-console/                         # Play Console listing assets and screenshots
 play-store-screenshots/               # Marketing screenshot generator and rendered screenshots
 gradle/                               # Gradle wrapper and version catalog
@@ -264,15 +268,16 @@ First-party campaign attribution is disabled for central reporting unless the de
 
 The same names may be supplied as environment variables. Release builds require HTTPS; debug builds allow HTTP only on localhost. See [First-party campaign attribution](docs/campaign-attribution.md).
 
-### Google Play Publisher
+### Google Play release
 
-Gradle Play Publisher and Fastlane are both configured for Play Console uploads. Keep the service-account JSON outside the repo and pass its path through an environment variable or Gradle property:
+Phone, Wear, and listing-image publication is owned by protected workflows, not local Gradle, Fastlane, or script mutation commands. `.github/workflows/android-release.yml` uploads the exact annotated-tag pair atomically to `qa`/`wear:qa`; `.github/workflows/android-wear-screenshots.yml` later verifies an exact-attempt protected physical-capture submission before replacing the two Wear images with the QA-only account; `.github/workflows/android-promote-production.yml` promotes both codes in one evidence-gated edit to `production`/`wear:production` with a separate account. Local tools may build and validate both AABs without publication:
 
 ```bash
-PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/health-md-android.json" ./gradlew :app:publishBundle
+./gradlew :app:bundleRelease :wear:bundleRelease
+bundle exec fastlane android validate_wear_release
 ```
 
-See `GRADLE_PLAY_PUBLISHER_SETUP.md`, `PLAY_STORE_SETUP.md`, and `GOOGLE_PLAY_BILLING_SETUP.md` for release setup notes.
+See `PLAY_STORE_COMMANDS.md`, `PLAY_STORE_SETUP.md`, `GRADLE_PLAY_PUBLISHER_SETUP.md`, and `GOOGLE_PLAY_BILLING_SETUP.md` for the release and account-separation contract.
 
 ## Testing
 

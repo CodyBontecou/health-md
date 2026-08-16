@@ -26,7 +26,6 @@ androidxTestCore = "1.7.0"
 androidxTestRunner = "1.7.0"
 espresso = "3.7.0"
 robolectric = "4.16.1"
-playPublisher = "3.10.1"
 playReview = "2.0.2"
 installReferrer = "2.2"
 securityCrypto = "1.1.0-alpha06"
@@ -35,6 +34,12 @@ okhttp = "4.12.0"
 pdfboxAndroid = "2.0.27.0"
 bouncyCastle = "1.80"
 jna = "5.17.0"
+guava = "33.3.1-android"
+wearCompose = "1.6.2"
+wearTiles = "1.6.2"
+protoLayoutMaterial3 = "1.4.2"
+wearComplications = "1.3.0"
+playServicesWearable = "20.0.1"
 
 [libraries]
 # Compose
@@ -58,6 +63,15 @@ glance = { group = "androidx.glance", name = "glance", version.ref = "glance" }
 glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 glance-testing = { group = "androidx.glance", name = "glance-testing", version.ref = "glance" }
 glance-appwidget-testing = { group = "androidx.glance", name = "glance-appwidget-testing", version.ref = "glance" }
+guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
+wear-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "wearCompose" }
+wear-compose-foundation = { group = "androidx.wear.compose", name = "compose-foundation", version.ref = "wearCompose" }
+wear-compose-navigation = { group = "androidx.wear.compose", name = "compose-navigation", version.ref = "wearCompose" }
+wear-tiles = { group = "androidx.wear.tiles", name = "tiles", version.ref = "wearTiles" }
+wear-tiles-material = { group = "androidx.wear.tiles", name = "tiles-material", version.ref = "wearTiles" }
+protolayout-material3 = { group = "androidx.wear.protolayout", name = "protolayout-material3", version.ref = "protoLayoutMaterial3" }
+wear-complications-data-source = { group = "androidx.wear.watchface", name = "watchface-complications-data-source-ktx", version.ref = "wearComplications" }
+play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
 
 # Health Connect
 health-connect = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
@@ -126,4 +140,3 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-play-publisher = { id = "com.github.triplet.play", version.ref = "playPublisher" }
