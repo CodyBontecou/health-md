@@ -572,7 +572,7 @@ class SchedulingManager: ObservableObject {
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
             )
-        case .noVault, .destinationChanged, .paywall, .failure:
+        case .noVault, .destinationChanged, .paywall, .failure, .profileNotFound:
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
