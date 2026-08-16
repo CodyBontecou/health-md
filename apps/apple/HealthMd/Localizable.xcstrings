@@ -40457,6 +40457,70 @@
         }
       }
     },
+    "Reconnect or re-select %@ to restore export access.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinde den Ordner „%@“ erneut oder wähle ihn neu, um den Exportzugriff wiederherzustellen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnect or re-select %@ to restore export access."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconecta o vuelve a seleccionar %@ para restaurar el acceso de exportación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnectez ou resélectionnez %@ pour rétablir l’accès à l’exportation."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riconnetti o riseleziona %@ per ripristinare l'accesso all'esportazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エクスポートアクセスを復元するには、%@に再接続するか再選択してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내보내기 액세스를 복원하려면 %@에 다시 연결하거나 다시 선택하세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak opnieuw verbinding met %@ of selecteer het opnieuw om exporttoegang te herstellen."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconecte ou selecione novamente %@ para restaurar o acesso de exportação."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新连接或重新选择 %@ 以恢复导出访问。"
+          }
+        }
+      }
+    },
     "Unavailable": {
       "localizations": {
         "es": {

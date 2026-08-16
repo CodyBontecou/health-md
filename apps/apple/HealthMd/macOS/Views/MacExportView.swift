@@ -493,7 +493,7 @@ struct MacExportView: View {
         } else if healthDataStore.recordCount == 0 {
             return String(localized: "Sync health data from your iPhone to export.")
         } else if vaultManager.hasVaultSelection {
-            return "Reconnect or re-select \(vaultManager.vaultName) to restore export access."
+            return String(localized: "Reconnect or re-select \(vaultManager.vaultName) to restore export access.")
         } else {
             return String(localized: "Choose an export folder to get started.")
         }
