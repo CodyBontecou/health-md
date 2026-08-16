@@ -1,0 +1,82 @@
+name: Android Wear evidence submission
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact Android semantic version
+        required: true
+        type: string
+      release_sha:
+        description: Exact immutable release commit SHA
+        required: true
+        type: string
+      evidence_archive_sha256:
+        description: Lowercase SHA-256 of wear-release-evidence.tar.gz
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    name: Retain digest-bound Wear evidence submission
+    runs-on: ubuntu-24.04
+    environment: wear-evidence-submission
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate source and fetch digest-bound archive
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          ARCHIVE_URL: ${{ secrets.WEAR_RELEASE_EVIDENCE_URL }}
+          ARCHIVE_SHA256: ${{ inputs.evidence_archive_sha256 }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$ARCHIVE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          case "$ARCHIVE_URL" in
+            https://*) ;;
+            *) echo 'Evidence archive URL must use HTTPS' >&2; exit 64 ;;
+          esac
+          archive="$RUNNER_TEMP/wear-release-evidence.tar.gz"
+          curl --fail-with-body --location --proto '=https' --proto-redir '=https' \
+            --retry 3 --retry-all-errors --connect-timeout 15 --max-time 1200 \
+            --max-filesize 2147483648 -sS "$ARCHIVE_URL" -o "$archive"
+          test "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$ARCHIVE_SHA256"
+          archive_size=$(stat -c %s "$archive")
+          test "$archive_size" -gt 0
+          jq -n --arg version "$VERSION" --arg sha "$EXPECTED_SHA" \
+            --arg archive_sha "$ARCHIVE_SHA256" --argjson archive_size "$archive_size" \
+            --argjson run_id "$GITHUB_RUN_ID" --argjson run_attempt "$GITHUB_RUN_ATTEMPT" '{
+              schemaVersion:1, versionName:$version, releaseSha:$sha,
+              archiveSha256:$archive_sha, archiveSize:$archive_size,
+              submissionRunId:$run_id, submissionRunAttempt:$run_attempt
+            }' >"$RUNNER_TEMP/submission.json"
+
+      - name: Upload immutable submission artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wear-release-evidence-submission-${{ inputs.version }}-${{ inputs.release_sha }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/wear-release-evidence.tar.gz
+            ${{ runner.temp }}/submission.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Cleanup archive
+        if: ${{ always() }}
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/wear-release-evidence.tar.gz" "$RUNNER_TEMP/submission.json"

@@ -22,7 +22,7 @@ The widgets mirror the Health Summary, Activity Rings, Heart Range, and Sleep wi
 - **HRV:** displayed as RMSSD in milliseconds. Android Health Connect RMSSD is not interchangeable with Apple HealthKit SDNN.
 - **Stand Hours:** Health Connect has no equivalent. The Android activity widget uses Steps as its third ring and never fabricates a stand value.
 
-The Apple CLI export Live Activity maps to Android’s existing ongoing Direct CLI transfer notification. Apple Watch widgets are not part of this phone feature and would require a separate Wear OS application and synchronization contract.
+The Apple CLI export Live Activity maps to Android’s existing ongoing Direct CLI transfer notification. Wear OS is implemented separately in `:wear` using the private `:wearable-contract`; it receives minimized phone-authoritative Health Connect aggregates and does not depend on Glance/AppWidget UI. See `wear-os-implementation.md`.
 
 ## Data and privacy
 

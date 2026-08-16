@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">Health.md</string>
+    <string name="wear_dashboard_title">Health.md</string>
+    <string name="wear_setup">सेटअप पूरा करने के लिए फ़ोन पर Health.md खोलें।</string>
+    <string name="wear_phone_missing">फ़ोन ऐप नहीं मिला</string>
+    <string name="wear_unreachable">फ़ोन अभी उपलब्ध नहीं है। पिछला सहेजा गया डेटा उपलब्ध रहेगा।</string>
+    <string name="wear_permissions">फ़ोन पर Health Connect की अनुमति चाहिए।</string>
+    <string name="wear_version_mismatch">फ़ोन और घड़ी पर Health.md अपडेट करें।</string>
+    <string name="wear_no_data">अभी कोई स्वास्थ्य डेटा नहीं</string>
+    <string name="wear_expired">डेटा 24 घंटे से अधिक पुराना है। माप दिखाने के लिए सिंक करें।</string>
+    <plurals name="wear_updated_hours">
+        <item quantity="one">%1$d घंटे पहले अपडेट किया</item>
+        <item quantity="other">%1$d घंटे पहले अपडेट किया</item>
+    </plurals>
+    <string name="wear_sync">स्वास्थ्य डेटा सिंक करें</string>
+    <string name="wear_syncing">सिंक का अनुरोध किया जा रहा है…</string>
+    <string name="wear_activity">दैनिक गतिविधि</string>
+    <string name="wear_recovery">रिकवरी</string>
+    <string name="wear_steps">कदम</string>
+    <string name="wear_move">सक्रिय ऊर्जा</string>
+    <string name="wear_exercise">व्यायाम मिनट</string>
+    <string name="wear_sleep">नींद</string>
+    <string name="wear_resting_hr">आराम की हृदय गति</string>
+    <string name="wear_average_hr">औसत हृदय गति</string>
+    <string name="wear_hrv">HRV RMSSD</string>
+    <string name="wear_blood_oxygen">रक्त ऑक्सीजन</string>
+    <string name="wear_not_realtime">अंतिम फ़ोन सिंक; रीयल-टाइम नहीं</string>
+    <string name="wear_no_data_short">--</string>
+    <string name="wear_health_connect_unavailable">आपके फ़ोन पर Health Connect उपलब्ध नहीं है।</string>
+    <plurals name="wear_updated_minutes">
+        <item quantity="one">%1$d मिनट पहले अपडेट किया गया</item>
+        <item quantity="other">%1$d मिनट पहले अपडेट किया गया</item>
+    </plurals>
+    <string name="wear_value_kcal">%1$s किलो कैलोरी</string>
+    <string name="wear_value_minutes">%1$s मिनट</string>
+    <string name="wear_value_hours">%1$s घंटे</string>
+    <string name="wear_value_bpm">%1$s bpm</string>
+    <string name="wear_value_ms">%1$s ms</string>
+    <string name="wear_value_percent">%1$s%%</string>
+    <string name="wear_tile_steps">%1$s कदम</string>
+    <string name="wear_tile_exercise">%1$s मिनट</string>
+    <string name="wear_tile_sleep">%1$s घंटे की नींद</string>
+    <string name="wear_tile_hrv">%1$s ms RMSSD</string>
+    <string name="wear_metric_separator"> · </string>
+    <string name="wear_tile_activity_empty">गतिविधि डेटा नहीं है</string>
+    <string name="wear_tile_recovery_empty">नींद या HRV डेटा नहीं है</string>
+    <string name="wear_preview_placeholder">झलक; कोई स्वास्थ्य मान नहीं</string>
+    <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
+    <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+</resources>

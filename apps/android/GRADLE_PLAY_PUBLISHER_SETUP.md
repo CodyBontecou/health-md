@@ -1,148 +1,63 @@
-# gradle-play-publisher Setup Complete ✅
+# Gradle Play Publisher removal
 
-Your Android project is now configured for automated Google Play Store deployment using **gradle-play-publisher**.
+Gradle Play Publisher has been removed from both Android application modules. Module-level publisher tasks could not enforce atomic phone/Wear track assignment, immutable source provenance, protected evidence, or separate QA and production credentials, so retaining them created an avoidable release-policy bypass.
 
-## What Was Set Up
+Do not reintroduce `com.github.triplet.play`, a module `play {}` block, or Gradle Play mutation tasks. Use the protected workflows described in `PLAY_STORE_COMMANDS.md` and `PLAY_STORE_SETUP.md`.
 
-### 1. **Plugin Configuration**
-- ✅ Added `gradle-play-publisher` v3.10.1 to `gradle/libs.versions.toml`
-- ✅ Applied plugin to `app/build.gradle.kts`
-- ✅ Configured Play Store credentials in `app/build.gradle.kts`
+## Supported local use
 
-### 2. **Directory Structure**
-Created `play-console/` with these subdirectories:
-```
-play-console/
-├── listing/
-│   └── en-US/
-│       ├── title.txt                    ✅ (populated)
-│       ├── short-description.txt        ✅ (populated)
-│       ├── full-description.txt         ✅ (populated)
-│       └── release-notes/en-US/
-│           └── default.txt              ✅ (populated)
-├── graphics/
-│   └── en-US/
-│       └── (place PNG files here)
-└── screenshots/
-    └── en-US/
-        └── phone/
-            └── (place 1.png, 2.png, etc.)
-```
-
-### 3. **Security**
-- ✅ Updated `.gitignore` to exclude `play-console-key.json`
-- ✅ Never commit credentials to Git
-
-### 4. **Documentation**
-Created reference guides:
-- **PLAY_STORE_SETUP.md** - Full setup and credential guide
-- **PLAY_STORE_COMMANDS.md** - Command reference and workflows
-- **GRADLE_PLAY_PUBLISHER_SETUP.md** - This file
-
-## Next Steps
-
-### 1. Create Google Play Service Account (Required)
-
-Follow the detailed guide in **PLAY_STORE_SETUP.md**, section "Get Google Play Service Account Credentials":
-
-1. Create service account in Google Cloud Console
-2. Generate JSON key
-3. Save as `play-console-key.json` in project root
-4. Invite service account to Play Console
-
-### 2. Organize App Store Assets
-
-- **Metadata** (already partially filled in `play-console/listing/`)
-  - Update `title.txt`, `short-description.txt`, `full-description.txt`
-  - Update release notes in `release-notes/en-US/default.txt`
-
-- **Graphics** (add to `play-console/graphics/en-US/`)
-  - `featureGraphic.png` (1024x500px) — main store listing image
-  - `icon.png` (512x512px) — app icon
-
-- **Screenshots** (add to `play-console/screenshots/en-US/phone/`)
-  - Minimum 2, recommended 5-8
-  - Dimensions: 1080x1920px
-  - Name as: `1.png`, `2.png`, `3.png`, etc.
-
-### 3. Test the Setup
+From `apps/android`, Gradle may be used to build and test both artifacts without Play credentials:
 
 ```bash
-# Build release bundle
-./gradlew bundleRelease
-
-# Verify credentials work (requires play-console-key.json)
-./gradlew validatePlayConsoleCredentials
-
-# Upload to Internal Testing (safe first upload)
-./gradlew publishReleaseBundle
+./gradlew :app:testDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test
+./gradlew :app:lintDebug :wear:lintDebug
+./gradlew :app:bundleRelease :wear:bundleRelease
 ```
 
-## Common Commands
+Release bundles require signing configuration from `local.properties` or protected workflow inputs. Never commit a keystore or `local.properties`. Substitute signing is acceptable only for local package/runtime validation and is never production-signing evidence.
+
+Validate both outputs together:
 
 ```bash
-# Build only
-./gradlew bundleRelease
-
-# Build + upload to Internal Testing
-./gradlew publishReleaseBundle
-
-# Upload to Beta track
-./gradlew publishReleaseBundle --play-track=beta
-
-# Upload to Production (5% staged rollout)
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.05
-
-# Update metadata/screenshots without rebuild
-./gradlew publishListingBundle
+WEAR_REQUIRE_SIGNING_ATTESTATION=true \
+  ./scripts/validate-wear-artifact.sh \
+  wear/build/outputs/bundle/release/wear-release.aab \
+  app/build/outputs/bundle/release/app-release.aab
 ```
 
-## Release Workflow
+## Play credentials
 
-**Recommended flow for each release:**
+Use three separate trust domains:
 
-1. Update release notes: `play-console/listing/en-US/release-notes/en-US/default.txt`
-2. Update and commit `versionCode` in `app/build.gradle.kts` to a value higher than every build already uploaded to Play Console
-3. Build and test: `./gradlew bundleRelease`
-4. Upload to internal: `./gradlew publishReleaseBundle`
-5. Test for 1-2 days
-6. Move to beta: `./gradlew publishReleaseBundle --play-track=beta`
-7. Beta test for 3-7 days
-8. Release to production (5% first): `./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.05`
-9. Monitor for 2-3 days, then increase to 100%
+- `google-play-qa`: existing upload key and a service account restricted to `qa` and `wear:qa`.
+- `google-play-production`: production-capable service account, protected release/evidence identities, Play App Signing certificate, and evidence HMAC key.
+- `google-play-announce`: app-level read-only service account only.
 
-## Key Files to Know
+The release workflows materialize credentials only under `$RUNNER_TEMP`, remove signing material before Play credentials exist, and unconditionally clean up. Do not cache an interactive OAuth token for release work; it bypasses environment review and least-privilege separation.
 
-| File | Purpose |
-|------|---------|
-| `app/build.gradle.kts` | Gradle config + Play Publisher settings |
-| `gradle/libs.versions.toml` | Dependency/plugin versions |
-| `.gitignore` | Prevents credentials from committing |
-| `play-console/` | All app store metadata & assets |
-| `play-console-key.json` | Service account credentials (⚠️ Secret!) |
+A local read-only readiness query may use a fourth read-only service account:
 
-## Troubleshooting
+```bash
+PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/health-md-read-only.json" \
+  EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
+  ./scripts/inspect-google-play-wear-readiness.sh \
+  .pi/evidence/google-play/readiness.json
+```
 
-**"Service account not found"**
-- Ensure `play-console-key.json` exists in project root
-- Check file permissions: `chmod 600 play-console-key.json`
+## Canonical publication flow
 
-**"Invalid version code"**
-- `versionCode` must be higher than previous release
-- Check `app/build.gradle.kts` for current code
+1. An annotated `android/v<version>` tag must peel to the exact requested SHA and be reachable from `origin/main`.
+2. `.github/workflows/android-release.yml` builds/signs both AABs, retains an immutable pre-mutation intent, and uploads phone to `qa` plus Wear to `wear:qa` in one Play edit.
+3. Play-generated base-master APKs, signer identity, closed-track behavior, physical QA, screenshots, and battery evidence are captured and independently reviewed.
+4. `.github/workflows/android-wear-screenshots.yml` verifies an exact-attempt protected submission and commits only the two approved Wear images with the QA-only account.
+5. Protected ingest verifies the exact QA and screenshot workflow attempts, safe evidence archive, exact-SHA push CI, and protected reviewer identities before sealing the bundle.
+6. `.github/workflows/android-promote-production.yml` verifies the seal before credentials and moves the exact pair to `production`/`wear:production` in one edit.
 
-**"Service account not invited"**
-- Go to Play Console → Settings → Users and permissions
-- Invite the service account email
-- Grant "Release Manager" role
+The initial AAB upload intentionally does not require Wear screenshots because exact Play-generated APKs do not exist until after that upload. Screenshot replacement is a later protected, evidence-bound workflow; never run its mutation implementation with local credentials.
 
-**Screenshots upload fails**
-- Verify PNG format and exact dimensions (1080x1920px)
-- Check naming: `1.png`, `2.png`, etc.
+## References
 
-## More Information
-
-- See **PLAY_STORE_SETUP.md** for detailed credential setup
-- See **PLAY_STORE_COMMANDS.md** for all available commands
-- [gradle-play-publisher docs](https://github.com/Triple-T/gradle-play-publisher)
-- [Android build documentation](https://developer.android.com/build)
+- `PLAY_STORE_COMMANDS.md` — safe commands and release sequence
+- `PLAY_STORE_SETUP.md` — accounts, evidence ingest, and production promotion
+- `fastlane/README.md` — non-publishing validation lane
+- `docs/features/wear-os-completion-audit.md` — authoritative completion status

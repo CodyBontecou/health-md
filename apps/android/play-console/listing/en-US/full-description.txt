@@ -12,6 +12,9 @@ Choose units, formats, write modes, folder organization and granular samples. Pr
 HEALTH AT A GLANCE
 Four optional home-screen widgets show authorized activity, sleep and heart summaries from a small on-device cache. Widget access and background refresh remain under your control.
 
+WEAR OS COMPANION
+The optional Health.md watch app shows minimized daily aggregates delivered from your phone, including activity, sleep, heart, HRV RMSSD and blood oxygen when those Health Connect permissions are granted. Browse the dashboard, add Daily Activity or Recovery Tiles, or choose from ten complications. The watch performs no health sensing and never reads Health Connect directly. Cached watch data remains useful offline, clearly marks stale values and hides measurements after 24 hours.
+
 PERSONAL MEDICAL RECORDS (FHIR)
 When Personal Health Record support is available on the device, the “Medical records (FHIR)” option lets you preserve authorized medical resources in the same user-controlled archive. Supported categories are:
 
