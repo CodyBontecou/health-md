@@ -24,6 +24,7 @@ struct ClinicianReportView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.locale) private var locale
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var showShare = false
     @State private var showExportSuccess = false
     @State private var exportSuccessPresentationID = UUID()
@@ -51,6 +52,7 @@ struct ClinicianReportView: View {
                             reportPreview(report)
                         } else {
                             configurationContent
+                                .configurationChangesProtected()
                         }
                     }
                     .padding(.horizontal, Spacing.s4)
@@ -99,6 +101,16 @@ struct ClinicianReportView: View {
                         presentExportSuccess()
                     }
                 }
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }

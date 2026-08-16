@@ -76,6 +76,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Управляйте Premium и поддержкой</string>
+    <string name="configuration_protection_title">Защита от случайных изменений</string>
+    <string name="configuration_protection_toggle">Заблокировать изменения конфигурации</string>
+    <string name="configuration_protection_description">Предотвращает случайное изменение настроек экспорта, синхронизации, расписания, папок, подключений и других параметров. Ручной экспорт остаётся доступен.</string>
+    <string name="configuration_protection_blocked_title">Настройки заблокированы</string>
+    <string name="configuration_protection_blocked_body">Чтобы изменить конфигурацию, отключите «Защиту от случайных изменений» в настройках.</string>
+    <string name="configuration_protection_blocked_action">Показать, почему изменения конфигурации заблокированы</string>
+    <string name="configuration_protection_open_setting">Открыть настройку</string>
     <string name="section_write_mode">Режим записи</string>
     <string name="section_filename_template">Шаблон имени файла</string>
     <string name="filename_template_hint">{date}</string>

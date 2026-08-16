@@ -203,6 +203,13 @@
     <string name="debug_sdk_status_update_required">PROVIDER_UPDATE_REQUIRED（%1$d）</string>
     <string name="debug_sdk_status_unknown">UNKNOWN（%1$d）</string>
     <string name="settings_subtitle">プレミアムとサポートを管理</string>
+    <string name="configuration_protection_title">誤操作による変更を防ぐ</string>
+    <string name="configuration_protection_toggle">設定の変更をロック</string>
+    <string name="configuration_protection_description">書き出し、同期、スケジュール、フォルダ、接続などの設定が誤って変更されるのを防ぎます。手動書き出しは引き続き利用できます。</string>
+    <string name="configuration_protection_blocked_title">設定はロックされています</string>
+    <string name="configuration_protection_blocked_body">設定を編集するには、設定画面で「誤操作による変更を防ぐ」をオフにしてください。</string>
+    <string name="configuration_protection_blocked_action">設定の変更がブロックされている理由を表示</string>
+    <string name="configuration_protection_open_setting">設定を開く</string>
     <string name="section_health_sources">健康データソース</string>
     <string name="health_sources_description">Health Connect は引き続き標準のエクスポート元です。対応する各サービスのデータは、現在は Health Connect 経由で Health.md に取り込めます。認証情報またはパートナーアクセスを設定すれば、SDK／OAuth アダプターから直接取り込むこともできます。</string>
     <string name="health_provider_status_installed">インストール済み</string>

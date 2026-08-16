@@ -65,6 +65,7 @@ struct iPadSyncView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 // MARK: - Mac Sync Toggle
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -108,6 +109,7 @@ struct iPadSyncView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 // MARK: - macOS Promo Banner
                 if !syncEnabled {
@@ -194,6 +196,7 @@ struct iPadSyncView: View {
                                 }
                             }
                             .tint(Color.accent)
+                            .configurationChangesProtected()
                         }
 
                         if syncService.isSyncing {
