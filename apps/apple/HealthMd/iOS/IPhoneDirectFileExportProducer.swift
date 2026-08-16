@@ -13,10 +13,15 @@ enum IPhoneDirectFileProducerError: LocalizedError {
     case unexpectedResponse
     case healthKitNotAuthorized
     case exportLimitReached
+    /// A direct request referenced an export profile that no longer exists.
+    /// Fails closed: no fallback to live settings ever runs.
+    case profileNotFound(profileID: String, name: String?)
 
     var errorDescription: String? {
         switch self {
         case .invalidRequest(let message): return message
+        case .profileNotFound(let profileID, let name):
+            return "No export profile matches \(name ?? profileID). Open Health.md to review profiles."
         case .requestChanged: return "A durable direct file job with this ID changed."
         case .cancelled: return "The direct file export was cancelled."
         case .invalidSpool: return "The protected direct file spool failed validation."
@@ -279,9 +284,10 @@ final class IPhoneDirectFileExportProducer {
             selection: resolvedSelection,
             sourceTimeZone: sourceTimeZone
         )
+        let baseSettings = try resolveSettingsBase(for: request)
         let settings = IPhoneExportRequestSettingsResolver.settings(
             for: internalRequest,
-            savedSettings: AdvancedExportSettings()
+            savedSettings: baseSettings
         )
         settings.exportTimeZoneOverride = sourceTimeZone
         guard healthKitManager.isAuthorized else {
@@ -1107,6 +1113,36 @@ final class IPhoneDirectFileExportProducer {
             objectPaths: selection.objectPaths,
             fieldPointers: selection.fieldPointers
         )
+    }
+
+    /// Settings basis for a direct file request. Profile-scoped requests use
+    /// the profile's frozen snapshot (the profile owns formats, metrics,
+    /// roll-ups, and write behavior); everything else reads live settings.
+    /// Profile references fail closed — an unknown profile never falls back.
+    private func resolveSettingsBase(for request: DirectExportRequest) throws -> AdvancedExportSettings {
+        guard request.settingsPolicy == .profile else {
+            return AdvancedExportSettings()
+        }
+        guard let reference = request.profileReference else {
+            throw IPhoneDirectFileProducerError.invalidRequest(
+                "Profile settings policy requires a profile reference."
+            )
+        }
+        let store = ExportProfileStore()
+        var profile: ExportProfile?
+        if let id = UUID(uuidString: reference.profileID) {
+            profile = store.profile(id: id)
+        }
+        if profile == nil, let name = reference.name {
+            profile = store.profile(named: name)
+        }
+        guard let profile else {
+            throw IPhoneDirectFileProducerError.profileNotFound(
+                profileID: reference.profileID,
+                name: reference.name
+            )
+        }
+        return profile.settings.makeAdvancedExportSettings()
     }
 
     private func makeInternalRequest(
