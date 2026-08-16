@@ -40,7 +40,7 @@ tool_timeout_sec = 1200
 default_tools_approval_mode = "prompt"
 ```
 
-Codexを再起動し、`healthmd_doctor`、`healthmd_metrics`の順に呼び出してから、`healthmd_metric_chart`などの小規模な型付きツールを1つ呼び出します。同梱サーバーは、Macの準備状況、暗号化コンテキストの更新ジョブ、エビデンス、可視化を含む21個のツールを公開します。
+Codexを再起動し、`healthmd_doctor`を呼び出して、`healthmd_metrics`でIDを解決します。更新ツールで小さなスコープを明示的に取得してから、`healthmd_metric_chart`などの型付きツールでそのスコープを照会します。同梱サーバーは、Macの準備状況、暗号化コンテキストの更新ジョブ、エビデンス、可視化を含む21個のツールを公開します。
 
 ## MacでClaude DesktopまたはClaude Codeを使用
 
@@ -124,7 +124,7 @@ Manual IP、Tailscale、ポート、信頼済みデバイス、前面表示、�
 ## 続き
 
 <div class="related">
-  <a href="/ja/docs/mcp/"><span>ツールインターフェース</span>利用可能な21個のMacツール、ポータブル版の17ツールのプレビュー、MCP Apps、スキーマ、ページング、エクスポート、サンドボックスの境界を確認します。</a>
+  <a href="/ja/docs/mcp/"><span>ツールインターフェース</span>公開済みの21個のMacツール、ポータブル版の19ツールのプレビュー、MCP Apps、スキーマ、ページング、エクスポート、サンドボックスの境界を確認します。</a>
   <a href="/ja/docs/agent-queries/"><span>最初の質問</span>型付きの指標、睡眠、ワークアウト、比較、カバレッジ、エビデンスのワークフローを実行します。</a>
   <a href="/ja/docs/cli-extract/"><span>正規データ</span>大きな本文をチャットに含めず、選択したschema-v7ドキュメントとソースレコードを抽出します。</a>
   <a href="/ja/docs/reference/"><span>コントラクト</span>バージョン管理されたデータ構造、フィールド一覧、生成済みフィクスチャ、統合レシピを参照します。</a>

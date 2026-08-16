@@ -162,6 +162,21 @@ class SettingsRepositoryImpl(
         prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false
     }
 
+    override suspend fun resolveOnboardingCompletion(): Boolean {
+        var resolved = false
+        dataStore.edit { prefs ->
+            val storedCompletion = prefs[Keys.HAS_COMPLETED_ONBOARDING]
+            resolved = resolveOnboardingCompletionMigration(
+                storedCompletion = storedCompletion,
+                existingFolderUri = prefs[Keys.EXPORT_FOLDER_URI],
+            )
+            if (storedCompletion == null) {
+                prefs[Keys.HAS_COMPLETED_ONBOARDING] = resolved
+            }
+        }
+        return resolved
+    }
+
     override suspend fun setOnboardingCompleted(completed: Boolean) {
         dataStore.edit { prefs ->
             prefs[Keys.HAS_COMPLETED_ONBOARDING] = completed
@@ -269,6 +284,11 @@ class SettingsRepositoryImpl(
         const val DEFAULT_HEALTH_PROVIDER_ID = "health_connect"
     }
 }
+
+internal fun resolveOnboardingCompletionMigration(
+    storedCompletion: Boolean?,
+    existingFolderUri: String?,
+): Boolean = storedCompletion ?: !existingFolderUri.isNullOrEmpty()
 
 internal fun resolveFreeExportsUsed(currentUsed: Int?, legacyRemaining: Int?): Int = when {
     currentUsed != null -> FreemiumPolicy.sanitizedUsedCount(currentUsed)

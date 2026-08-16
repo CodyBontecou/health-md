@@ -23,7 +23,7 @@ jobs:
     # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
     # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: apps/apple
@@ -129,27 +129,217 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
+          make test-ios IOS_SIM="${{ steps.simulator.outputs.ios_destination }}" 2>&1 | tee build/logs/build-ios.log
 
-      - name: Run UI smoke tests (iOS, non-blocking)
-        if: ${{ success() }}
-        continue-on-error: true
-        timeout-minutes: 15
+      - name: Report iOS test result
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
+          result=build/test-results/HealthMd-iOS.xcresult
+          if [[ ! -d "$result" ]]; then
+            echo "::error::xcodebuild did not create the iOS xcresult bundle"
+            exit 1
+          fi
+          summary=$(xcrun xcresulttool get test-results summary --path "$result")
+          printf '%s\n' "$summary" | tee build/logs/ios-test-summary.json
+          printf "## iOS test result\n\n\`\`\`json\n%s\n\`\`\`\n" "$summary" >> "$GITHUB_STEP_SUMMARY"
+          RESULT_SUMMARY="$summary" python3 - <<'PY'
+          import json
+          import os
+
+          summary = json.loads(os.environ["RESULT_SUMMARY"])
+          result = summary.get("result", "Unknown")
+          failures = summary.get("failedTests", 0)
+          details = "; ".join(
+              failure.get("failureText", failure.get("testName", "unknown test failure"))
+              for failure in summary.get("testFailures", [])[:5]
+          )
+          if result != "Passed" or failures:
+              print(f"::error::xcresult reports {result} with {failures} failed tests: {details}")
+              raise SystemExit(1)
+          else:
+              print(f"xcresult reports Passed: {summary.get('passedTests', 0)} passed, "
+                    f"{summary.get('skippedTests', 0)} skipped")
+          PY
+
+      - name: Check warnings (iOS)
+        if: ${{ !cancelled() }}
+        run: scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log
+
+      - name: Check TDD evidence
+        if: ${{ !cancelled() }}
+        run: scripts/check-tdd-evidence.sh
+
+      - name: Upload iOS artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-diagnostics
+          path: |
+            apps/apple/build/logs/build-ios.log
+            apps/apple/build/logs/xcodebuild-ios-raw.log
+            apps/apple/build/logs/ios-test-summary.json
+            apps/apple/build/test-results/HealthMd-iOS.xcresult
+          retention-days: 14
+
+  test-macos:
+    # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
+    runs-on: macos-26
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Prepare and validate shared Rust core for Apple
+        run: make prepare-healthmd-core-rust
+
+      - name: Validate macOS localizations
+        run: make check-macos-localizations
+
+      - name: Run macOS unit tests with coverage
+        timeout-minutes: 45
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          make coverage 2>&1 | tee build/logs/build-macos.log
+
+      - name: Verify generated export documentation
+        if: ${{ success() }}
+        run: make check-export-docs
+
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -d build/coverage/HealthMd.xcresult ]; then
+            echo "## Code Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            xcrun xccov view --report --only-targets build/coverage/HealthMd.xcresult >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Coverage data unavailable" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check coverage threshold
+        if: ${{ !cancelled() }}
+        run: scripts/check-coverage.sh build/coverage/HealthMd.xcresult
+
+      - name: Check warnings (macOS)
+        if: ${{ !cancelled() }}
+        run: scripts/check-warnings.sh build/logs/build-macos.log
+
+      - name: Upload macOS artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifacts
+          path: |
+            apps/apple/build/coverage/HealthMd.xcresult
+            apps/apple/build/logs/build-macos.log
+          retention-days: 14
+
+  test-ios-ui:
+    name: iOS UI regressions
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Prepare and validate shared Rust core for Apple
+        run: make prepare-healthmd-core-rust
+
+      - name: Select iOS Simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IOS_DEVICE_LINE=$(
+            xcrun simctl list devices available iOS \
+              | grep -E "iPhone (17 Pro|17|16 Pro|16|15 Pro|15)" \
+              | head -n 1 \
+              || true
+          )
+          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
+            IOS_DEVICE_LINE=$(
+              xcrun simctl list devices available iOS \
+                | grep -E "iPhone" \
+                | head -n 1 \
+                || true
+            )
+          fi
+          if [[ -z "${IOS_DEVICE_LINE}" ]]; then
+            echo "::error::No available iOS Simulator device found"
+            exit 1
+          fi
+
+          IOS_DEVICE=$(echo "${IOS_DEVICE_LINE}" | sed -E 's/^[[:space:]]*([^()]*) .*/\1/' | xargs)
+          IOS_UDID=$(echo "${IOS_DEVICE_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
+          SIM_ARCH=$(uname -m)
+          [[ "${SIM_ARCH}" == "aarch64" ]] && SIM_ARCH="arm64"
+
+          IOS_DESTINATION="platform=iOS Simulator,name=${IOS_DEVICE},arch=${SIM_ARCH}"
+          if [[ -n "${IOS_UDID}" ]]; then
+            IOS_DESTINATION="platform=iOS Simulator,id=${IOS_UDID},arch=${SIM_ARCH}"
+          fi
+
+          echo "Using simulator: ${IOS_DEVICE} (${IOS_UDID:-no-udid}), arch=${SIM_ARCH}"
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+
+      - name: Run UI smoke tests (iOS)
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
+            -only-testing:HealthMdUITests/HealthMdUILaunchTests/testAppLaunches \
+            -only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport \
+            -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault \
+            -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers \
+            -only-testing:HealthMdUITests/OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers \
+            -only-testing:HealthMdUITests/PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted \
+            -only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 180 \
+            -maximum-test-execution-time-allowance 300 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee -a build/logs/build-ios.log \
+            2>&1 | tee build/logs/build-ios-ui.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
       - name: Run App Review export regression (iPad)
-        if: ${{ success() }}
-        timeout-minutes: 10
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
         shell: bash
         run: |
           set -euo pipefail
@@ -195,95 +385,24 @@ jobs:
             -destination "platform=iOS Simulator,id=${IPAD_UDID}" \
             -configuration Debug-iOS \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 180 \
+            -maximum-test-execution-time-allowance 300 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee -a build/logs/build-ios.log \
+            2>&1 | tee -a build/logs/build-ios-ui.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
-      - name: Check warnings (iOS)
+      - name: Check warnings (iOS UI)
         if: ${{ !cancelled() }}
-        run: scripts/check-warnings.sh build/logs/build-ios.log
+        run: scripts/check-warnings.sh build/logs/build-ios-ui.log
 
-      - name: Check TDD evidence
-        if: ${{ !cancelled() }}
-        run: scripts/check-tdd-evidence.sh
-
-      - name: Upload iOS artifacts
+      - name: Upload iOS UI artifacts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-logs
-          path: apps/apple/build/logs/build-ios.log
-          retention-days: 14
-
-  test-macos:
-    # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
-    runs-on: macos-26
-    timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: apps/apple
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.release_sha || github.sha }}
-
-      - name: Configure Git defaults
-        run: git config --global init.defaultBranch main
-
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - name: Prepare and validate shared Rust core for Apple
-        run: make prepare-healthmd-core-rust
-
-      - name: Validate macOS localizations
-        run: make check-macos-localizations
-
-      - name: Run macOS unit tests
-        run: |
-          set -euo pipefail
-          mkdir -p build/logs
-          make test-macos 2>&1 | tee build/logs/build-macos.log
-
-      - name: Verify generated export documentation
-        run: make check-export-docs
-
-      - name: Collect code coverage (macOS)
-        if: ${{ success() }}
-        timeout-minutes: 20
-        run: make coverage
-
-      - name: Coverage summary
-        if: ${{ !cancelled() }}
-        run: |
-          if [ -d build/coverage/HealthMd.xcresult ]; then
-            echo "## Code Coverage" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-            xcrun xccov view --report --only-targets build/coverage/HealthMd.xcresult >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "Coverage data unavailable" >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Check coverage threshold
-        if: ${{ !cancelled() }}
-        run: scripts/check-coverage.sh build/coverage/HealthMd.xcresult
-
-      - name: Check warnings (macOS)
-        if: ${{ !cancelled() }}
-        run: scripts/check-warnings.sh build/logs/build-macos.log
-
-      - name: Upload macOS artifacts
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-artifacts
-          path: |
-            apps/apple/build/coverage/HealthMd.xcresult
-            apps/apple/build/logs/build-macos.log
+          name: ios-ui-build-logs
+          path: apps/apple/build/logs/build-ios-ui.log
           retention-days: 14
 
   connectivity-package:
@@ -302,15 +421,17 @@ jobs:
   gate:
     name: Apple CI
     if: ${{ always() }}
-    needs: [test-ios, test-macos, connectivity-package]
+    needs: [test-ios, test-ios-ui, test-macos, connectivity-package]
     runs-on: ubuntu-24.04
     steps:
       - name: Require Apple checks
         env:
           IOS_RESULT: ${{ needs.test-ios.result }}
+          IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
           CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
         run: |
           test "$IOS_RESULT" = success
+          test "$IOS_UI_RESULT" = success
           test "$MACOS_RESULT" = success
           test "$CONNECTIVITY_RESULT" = success

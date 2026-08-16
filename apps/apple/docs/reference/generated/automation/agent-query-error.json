@@ -1,0 +1,1 @@
+{"code":"invalid_timeout","details":{},"message":"wait_timeout_seconds must be finite and between 5 and 900 seconds.","retryable":false,"schema":"healthmd.query_error","schema_version":1}

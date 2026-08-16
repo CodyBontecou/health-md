@@ -1,0 +1,736 @@
+{
+  "version": 1,
+  "roleCapabilities": {
+    "practice_admin": [
+      "template:manage",
+      "member:manage",
+      "retention:manage",
+      "audit:read"
+    ],
+    "clinician": [
+      "relationship:search",
+      "request:write",
+      "packet:read",
+      "packet:download",
+      "packet:acknowledge",
+      "packet:review"
+    ]
+  },
+  "routes": [
+    {
+      "route": "/",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/sign-in",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/verify",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/recovery",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/signed-out",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/access-denied",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/relationships",
+      "requiredCapability": "relationship:search",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/relationship",
+      "requiredCapability": "relationship:search",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/templates",
+      "requiredCapability": "template:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/template",
+      "requiredCapability": "template:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/template/edit",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/requests",
+      "requiredCapability": "request:write",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/request",
+      "requiredCapability": "request:write",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/request/build",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/request/preview",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/invitation",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/inbox",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/report",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/report/history",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/report/print",
+      "requiredCapability": "packet:read",
+      "classification": "print",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/admin/members",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/admin/retention",
+      "requiredCapability": "retention:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/portal/admin/audit",
+      "requiredCapability": "audit:read",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/session-expired",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "route": "/unavailable",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none"
+    }
+  ],
+  "operations": [
+    {
+      "operation": "sign_in",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "verify_mfa",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "session_bootstrap",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "reauthenticate",
+      "requiredCapability": "authenticated",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "recovery",
+      "requiredCapability": "public",
+      "classification": "query",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "session",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "logout",
+      "requiredCapability": "authenticated",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "relationship_search",
+      "requiredCapability": "relationship:search",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results"
+    },
+    {
+      "operation": "relationship_select",
+      "requiredCapability": "relationship:search",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "template_list",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results"
+    },
+    {
+      "operation": "template_create",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "template_revise",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "template_archive",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "request_list",
+      "requiredCapability": "request:write",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results"
+    },
+    {
+      "operation": "request_preview",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "request_issue",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "invitation_claim",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "invitation_accept",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none"
+    },
+    {
+      "operation": "invitation_revoke",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "invitation_expire",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "request_cancel",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "request_renew",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "inbox",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results"
+    },
+    {
+      "operation": "packet_load",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "packet_download",
+      "requiredCapability": "packet:download",
+      "classification": "download",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "packet_acknowledge",
+      "requiredCapability": "packet:acknowledge",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "packet_review",
+      "requiredCapability": "packet:review",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "packet_passive_event",
+      "requiredCapability": "packet:read",
+      "classification": "print",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "members",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results"
+    },
+    {
+      "operation": "member_role_change",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "member_offboard",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "member_revoke_sessions",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource"
+    },
+    {
+      "operation": "retention",
+      "requiredCapability": "retention:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results"
+    },
+    {
+      "operation": "audit",
+      "requiredCapability": "audit:read",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results"
+    }
+  ],
+  "scope": "client-visible fixed portal page routes; API, metadata, catalog, and asset HTTP surfaces are inventoried separately in fixedHttpSurfaces",
+  "clientRouteCount": 26,
+  "fixedHttpSurfaces": [
+    {
+      "path": "/api/v1/operation",
+      "methods": [
+        "POST"
+      ],
+      "classification": "clinical-api"
+    },
+    {
+      "path": "/api/v1/meta",
+      "methods": [
+        "GET"
+      ],
+      "classification": "synthetic-meta"
+    },
+    {
+      "path": "/api/v1/catalog",
+      "methods": [
+        "GET"
+      ],
+      "classification": "synthetic-catalog"
+    },
+    {
+      "path": "/styles.css",
+      "methods": [
+        "GET"
+      ],
+      "classification": "asset"
+    },
+    {
+      "path": "/assets/app.js",
+      "methods": [
+        "GET"
+      ],
+      "classification": "asset"
+    }
+  ]
+}

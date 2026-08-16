@@ -59,11 +59,30 @@ class ScheduledExportTimeCalculatorTest {
             configuration = configuration,
             triggerAtMillis = epoch("2026-07-13T10:00:00Z"),
             intendedLocalDate = LocalDate.parse("2026-07-13"),
+            generation = "generation-minute-chain",
         )
 
         val next = calculator.nextFutureOccurrence(previous, epoch("2026-07-13T10:47:00Z"))
 
         assertThat(next.triggerAtMillis).isEqualTo(epoch("2026-07-13T11:00:00Z"))
+        assertThat(next.generation).isEqualTo(previous.generation)
+    }
+
+    @Test
+    fun initialFifteenMinuteOccurrence_crossesMidnightAtNowPlusFifteen() {
+        val configuration = configuration(value = 15, unit = ScheduleCadenceUnit.MINUTES)
+        val now = epoch("2026-07-13T23:55:00Z")
+
+        val occurrence = calculator.initialOccurrence(
+            configuration = configuration,
+            nowMillis = now,
+            generation = "generation-midnight",
+        )
+
+        assertThat(occurrence.triggerAtMillis).isEqualTo(now + 15 * 60_000L)
+        assertThat(occurrence.triggerAtMillis).isEqualTo(epoch("2026-07-14T00:10:00Z"))
+        assertThat(occurrence.intendedLocalDate).isEqualTo(LocalDate.parse("2026-07-14"))
+        assertThat(occurrence.generation).isEqualTo("generation-midnight")
     }
 
     @Test
@@ -131,6 +150,7 @@ class ScheduledExportTimeCalculatorTest {
             configuration = oldConfiguration,
             triggerAtMillis = epoch("2026-07-15T06:00:00Z"),
             intendedLocalDate = LocalDate.parse("2026-07-15"),
+            generation = "generation-timezone-chain",
         )
         val newConfiguration = oldConfiguration.copy(zoneId = "America/Los_Angeles")
 
@@ -144,6 +164,7 @@ class ScheduledExportTimeCalculatorTest {
 
         assertThat(local.toLocalDate()).isEqualTo(LocalDate.parse("2026-07-15"))
         assertThat(local.hour).isEqualTo(6)
+        assertThat(rebased.generation).isEqualTo(previous.generation)
     }
 
     @Test

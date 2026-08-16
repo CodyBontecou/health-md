@@ -6,7 +6,7 @@ editUrl: false
 
 This inventory is generated from production API/control serialization and every current `SyncMessage` Codable case. Paths ending in `[]` describe array elements.
 
-- Generated JSON artifacts inventoried: 28
+- Generated JSON artifacts inventoried: 30
 - Sync messages inventoried: 38
 
 ## SyncMessage wire inventory
@@ -316,6 +316,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.platform` | string |
 | `$.hello._0.protocolVersion` | integer |
 | `$.hello._0.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.hello._0.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.hello._0.supportsCanonicalHealthDataSelection` | boolean |
 | `$.hello._0.supportsChunkedMacExportJobs` | boolean |
 | `$.hello._0.supportsDailyNoteOnlyExports` | boolean |
@@ -817,6 +818,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult._0.failedDateDetails[].errorDetails` | string |
 | `$.macExportResult._0.failedDateDetails[].reason` | string |
 | `$.macExportResult._0.formatsPerDate` | integer |
+| `$.macExportResult._0.hadTerminalRangeFailure` | boolean |
+| `$.macExportResult._0.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.macExportResult._0.jobID` | string |
 | `$.macExportResult._0.status` | string |
 | `$.macExportResult._0.successCount` | integer |
@@ -1076,6 +1079,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.platform` | string |
 | `$.macStatus._0.capabilities.protocolVersion` | integer |
 | `$.macStatus._0.capabilities.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.macStatus._0.capabilities.supportsCanonicalHealthDataSelection` | boolean |
 | `$.macStatus._0.capabilities.supportsChunkedMacExportJobs` | boolean |
 | `$.macStatus._0.capabilities.supportsDailyNoteOnlyExports` | boolean |
@@ -1251,6 +1255,18 @@ This inventory is generated from production API/control serialization and every 
 | `$.sources[].schema` | string |
 | `$.sources[].schema_version` | integer |
 
+### `agent-query-error.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.code` | string |
+| `$.details` | object |
+| `$.message` | string |
+| `$.retryable` | boolean |
+| `$.schema` | string |
+| `$.schema_version` | integer |
+
 ### `agent-query-request.json`
 
 | JSON path | Observed type or types |
@@ -1274,6 +1290,76 @@ This inventory is generated from production API/control serialization and every 
 | `$.schema_version` | integer |
 | `$.sources` | object |
 | `$.sources.type` | string |
+
+### `agent-query-response-partial.json`
+
+| JSON path | Observed type or types |
+|---|---|
+| `$` | object |
+| `$.coverage` | object |
+| `$.coverage.available_range` | object |
+| `$.coverage.available_range.end_date` | string |
+| `$.coverage.available_range.start_date` | string |
+| `$.coverage.days_considered` | integer |
+| `$.coverage.days_with_values` | integer |
+| `$.coverage.missing` | array |
+| `$.coverage.missing[]` | object |
+| `$.coverage.missing[].range` | object |
+| `$.coverage.missing[].range.end_date` | string |
+| `$.coverage.missing[].range.start_date` | string |
+| `$.coverage.missing[].reason` | string |
+| `$.coverage.missing[].status` | string |
+| `$.coverage.requested_range` | object |
+| `$.coverage.requested_range.end_date` | string |
+| `$.coverage.requested_range.start_date` | string |
+| `$.coverage.status` | string |
+| `$.evidence` | array |
+| `$.evidence[]` | object |
+| `$.evidence[].evidence_id` | string |
+| `$.evidence[].locator` | object |
+| `$.evidence[].locator.owner_date` | string |
+| `$.evidence[].locator.type` | string |
+| `$.evidence[].locator.uuid` | string |
+| `$.evidence[].source` | object |
+| `$.evidence[].source.digest` | string |
+| `$.evidence[].source.schema` | string |
+| `$.evidence[].source.schema_version` | integer |
+| `$.evidence[].source_id` | string |
+| `$.items` | array |
+| `$.items[]` | object |
+| `$.items[].metric` | object |
+| `$.items[].metric.display_name` | string |
+| `$.items[].metric.evidence` | array |
+| `$.items[].metric.evidence[]` | object |
+| `$.items[].metric.evidence[].evidence_id` | string |
+| `$.items[].metric.evidence[].locator` | object |
+| `$.items[].metric.evidence[].locator.owner_date` | string |
+| `$.items[].metric.evidence[].locator.type` | string |
+| `$.items[].metric.evidence[].locator.uuid` | string |
+| `$.items[].metric.evidence[].source` | object |
+| `$.items[].metric.evidence[].source.digest` | string |
+| `$.items[].metric.evidence[].source.schema` | string |
+| `$.items[].metric.evidence[].source.schema_version` | integer |
+| `$.items[].metric.evidence[].source_id` | string |
+| `$.items[].metric.limitations` | array |
+| `$.items[].metric.metric_id` | string |
+| `$.items[].metric.owner_date` | string |
+| `$.items[].metric.status` | string |
+| `$.items[].metric.value` | object |
+| `$.items[].metric.value.type` | string |
+| `$.items[].metric.value.value` | integer |
+| `$.items[].type` | string |
+| `$.limitations` | array |
+| `$.limitations[]` | object |
+| `$.limitations[].code` | string |
+| `$.limitations[].message` | string |
+| `$.schema` | string |
+| `$.schema_version` | integer |
+| `$.sources` | array |
+| `$.sources[]` | object |
+| `$.sources[].digest` | string |
+| `$.sources[].schema` | string |
+| `$.sources[].schema_version` | integer |
 
 ### `agent-query-response.json`
 
@@ -1885,6 +1971,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.failedDateDetails[].errorDetails` | string |
 | `$.failedDateDetails[].reason` | string |
 | `$.formatsPerDate` | integer |
+| `$.hadTerminalRangeFailure` | boolean |
+| `$.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.jobID` | string |
 | `$.status` | string |
 | `$.successCount` | integer |
@@ -1906,6 +1994,8 @@ This inventory is generated from production API/control serialization and every 
 | `$.externalRecordFileCount` | integer |
 | `$.failedDateDetails` | array |
 | `$.formatsPerDate` | integer |
+| `$.hadTerminalRangeFailure` | boolean |
+| `$.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.jobID` | string |
 | `$.status` | string |
 | `$.successCount` | integer |
@@ -1938,6 +2028,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.platform` | string |
 | `$.protocolVersion` | integer |
 | `$.supportsAllAvailableHistoryExportRequests` | boolean |
+| `$.supportsAuthoritativeMacExportFileAccounting` | boolean |
 | `$.supportsCanonicalHealthDataSelection` | boolean |
 | `$.supportsChunkedMacExportJobs` | boolean |
 | `$.supportsDailyNoteOnlyExports` | boolean |

@@ -1498,7 +1498,8 @@ class SchedulingManager: ObservableObject {
         _ payload: MacExportResultPayload,
         requestedDates: [Date]
     ) -> Bool {
-        guard payload.totalCount == requestedDates.count,
+        guard payload.hasConsistentFileAccounting,
+              payload.totalCount == requestedDates.count,
               payload.successCount >= 0,
               payload.successCount <= payload.totalCount,
               payload.formatsPerDate >= 0,
@@ -1526,28 +1527,9 @@ class SchedulingManager: ObservableObject {
 
     private func scheduledMacExportResult(
         from payload: MacExportResultPayload,
-        settings: AdvancedExportSettings
+        settings _: AdvancedExportSettings
     ) -> ExportOrchestrator.ExportResult {
-        let externalRecordFileCount = payload.externalRecordFileCount
-        let derivedFileCount = max(payload.totalFilesWritten - (payload.successCount * payload.formatsPerDate) - externalRecordFileCount, 0)
-        let archiveCount = settings.archiveModeEnabled && payload.successCount > 0
-            ? min(derivedFileCount, 1)
-            : 0
-        let rollupFileCount = max(derivedFileCount - archiveCount, 0)
-
-        return ExportOrchestrator.ExportResult(
-            successCount: payload.successCount,
-            totalCount: payload.totalCount,
-            failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: payload.formatsPerDate,
-            rollupFileCount: rollupFileCount,
-            archiveCount: archiveCount,
-            externalRecordFileCount: externalRecordFileCount,
-            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
-            dailyNoteSkipCount: payload.dailyNoteSkipCount,
-            wasCancelled: payload.status == .cancelled,
-            completedDates: payload.completedDates
-        )
+        ExportOrchestrator.ExportResult(macExportPayload: payload)
     }
 
     private func scheduledMacFailureResult(

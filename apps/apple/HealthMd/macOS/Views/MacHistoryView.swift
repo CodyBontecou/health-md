@@ -115,9 +115,9 @@ struct MacHistoryView: View {
 
                 Spacer()
 
-                Text(entry.isAPIEndpointDelivery
+                Text(entry.isAPIEndpointDelivery || entry.isCLIRawDelivery
                     ? "\(entry.successCount)/\(entry.totalCount)"
-                    : entry.fileCount.map { "\($0)" } ?? "\(entry.successCount)/\(entry.totalCount)")
+                    : entry.generatedFileCountCompactDescription)
                     .font(BrandTypography.value())
                     .foregroundStyle(Color.textMuted)
             }
@@ -130,11 +130,8 @@ struct MacHistoryView: View {
     }
 
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
-        let status = entry.isFullSuccess
-            ? String(localized: "Success")
-            : entry.success ? String(localized: "Partial success") : String(localized: "Failed")
         let date = Self.dateFormatter.string(from: entry.timestamp)
-        let base = "\(status): \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(date)"
+        let base = "\(entry.localizedStatusDescription): \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(date)"
         guard let message = entry.failureListMessage else { return base }
         return "\(base). \(message)"
     }
@@ -149,11 +146,7 @@ struct MacHistoryView: View {
                     // Status header
                     HStack(spacing: 8) {
                         statusIcon(for: entry)
-                        Text(
-                            entry.isFullSuccess
-                                ? String(localized: "Success")
-                                : entry.success ? String(localized: "Partial") : String(localized: "Failed")
-                        )
+                        Text(entry.localizedShortStatusDescription)
                             .font(BrandTypography.heading())
                             .foregroundStyle(Color.textPrimary)
                     }
@@ -253,6 +246,8 @@ struct MacHistoryView: View {
                                     Text(failure.localizedSummary)
                                         .font(BrandTypography.caption())
                                         .foregroundStyle(Color.textMuted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .textSelection(.enabled)
                                 }
                             }
                         }
@@ -304,15 +299,9 @@ struct MacHistoryView: View {
 
     @ViewBuilder
     private func statusIcon(for entry: ExportHistoryEntry) -> some View {
-        Image(systemName: entry.isFullSuccess
-              ? "checkmark.circle.fill"
-              : entry.success ? "exclamationmark.circle.fill" : "xmark.circle.fill")
-            .foregroundStyle(entry.isFullSuccess ? Color.success : entry.success ? Color.warning : Color.error)
-            .accessibilityLabel(
-                entry.isFullSuccess
-                    ? String(localized: "Success")
-                    : entry.success ? String(localized: "Partial success") : String(localized: "Failed")
-            )
+        Image(systemName: entry.statusSystemImage)
+            .foregroundStyle(entry.isFullSuccess ? Color.success : entry.isPartialSuccess ? Color.warning : Color.error)
+            .accessibilityLabel(entry.localizedStatusDescription)
     }
 
     @ViewBuilder

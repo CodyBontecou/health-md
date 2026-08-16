@@ -26,7 +26,7 @@ Codex / Claude / another local MCP host
 ## Requirements
 
 - Health.md for Mac installed and open.
-- Health.md open on the paired iPhone when a tool starts a fresh read or export.
+- Health.md open on the connected iPhone when the refresh tool or an export starts fresh HealthKit work.
 - A local MCP host with stdio support.
 - The signed helper path shown under **Health.md for Mac → CLI**.
 
@@ -54,7 +54,7 @@ approval_mode = "prompt"
 approval_mode = "prompt"
 ```
 
-Restart Codex, call `healthmd_doctor`, list metrics with `healthmd_metrics`, then request a small `healthmd_metric_chart`. Hosts without interactive MCP Apps still receive exact JSON plus a standard PNG chart.
+Restart Codex, call `healthmd_doctor`, list metrics with `healthmd_metrics`, explicitly acquire a small exact scope with the refresh tool, then query that scope with `healthmd_metric_chart`. Hosts without interactive MCP Apps still receive exact JSON plus a standard PNG chart.
 
 ## Claude setup
 
@@ -108,7 +108,7 @@ If the host does not support MCP Apps, the tools still work. `healthmd_metric_ch
 
 ## Available tools
 
-The bundled Mac server exposes 21 fixed tools. The portable preview exposes the same readiness, analysis, and generated-file export tools but omits the four encrypted-context acquisition tools.
+The bundled Mac server exposes 21 fixed tools: 13 readiness/query tools, four generated-file job tools, and four encrypted-context refresh job tools. The 19-tool portable preview keeps the 13 readiness/query and four export tools, replaces Mac refresh jobs with two direct-pairing tools, and runs typed queries directly on foreground iPhone.
 
 ### Readiness and discovery
 
@@ -161,7 +161,7 @@ examples. An agent should call the matching typed tool directly rather than insp
 help. In particular, sleep questions use `healthmd_sleep_sessions`; `healthmd extract` produces a
 different canonical source-data projection.
 
-You can inspect the same schema locally without opening a network listener or contacting iPhone:
+The portable preview can inspect the same schema locally without opening a network listener or contacting iPhone. For the released Mac helper, use MCP tools/list.
 
 ```bash
 healthmd mcp schema healthmd_sleep_sessions
@@ -189,7 +189,7 @@ Canonical sleep metrics and lossless session detail are supplied automatically b
 
 ## Analyze and chart data
 
-Call `healthmd_doctor` first. Resolve metric IDs with `healthmd_metrics`, then chart a directly scoped series. Each query explicitly requests a fresh bounded iPhone read:
+Call `healthmd_doctor` first and resolve metric IDs with `healthmd_metrics`. On the released Mac topology, typed query tools read the encrypted Mac context; they do not implicitly contact iPhone. For current data, call the refresh tool with explicit dates, metrics, and sources, wait for its durable job to complete, then chart the same scope:
 
 ```json
 {
@@ -214,11 +214,11 @@ Call `healthmd_doctor` first. Resolve metric IDs with `healthmd_metrics`, then c
 
 Pass that object to `healthmd_metric_chart`. The interactive view uses unit-safe small multiples. A missing or partial point breaks the line rather than becoming zero.
 
-Typed query tools contact only the paired foreground iPhone. The iPhone captures the requested days, projects compact typed context, evaluates the request locally, and returns a bounded response page with coverage, missingness, evidence, and limitations.
+The released Mac typed tools evaluate encrypted local context and return bounded pages with coverage, missingness, evidence, and limitations. Only explicit refresh contacts the connected foreground iPhone and replaces the requested context scope. The portable preview instead evaluates each typed request directly on its paired foreground iPhone.
 
 ## Run a generated-file export
 
-Create an existing destination directory on the computer first. After the host shows the full arguments and the user approves, call `healthmd_export_files`:
+Select and retain a writable destination folder in Health.md for Mac first. After the host shows the full arguments and the user approves, call `healthmd_export_files`:
 
 ```json
 {
@@ -228,7 +228,6 @@ Create an existing destination directory on the computer first. After the host s
     "end": "2026-07-07"
   },
   "settings_policy": "requested_dates_only",
-  "destination": "/absolute/path/to/HealthVault",
   "categories": ["Sleep"],
   "detail_level": "summary",
   "wait_timeout_seconds": 300
@@ -275,7 +274,7 @@ The MCP App displays these fields instead of hiding them. If automatic traversal
 
 ## Security and privacy boundaries
 
-The helper has no prompts, roots, sampling, shell, SQL, arbitrary file reads, arbitrary URL fetches, HealthKit writes, loopback HTTP service, or remote MCP endpoint. Its only MCP resource is the bundled App document. Generated-file writes are one fixed approval-gated operation and require an explicit existing destination that is validated and durably bound before transfer.
+The helper has no prompts, roots, sampling, shell, SQL, arbitrary file reads, arbitrary URL fetches, HealthKit writes, loopback HTTP service, or remote MCP endpoint. Its only MCP resource is the bundled App document. Generated-file writes are one fixed approval-gated operation. The released Mac helper uses the folder selected in Health.md for Mac; the portable preview requires an explicit existing destination that it validates and durably binds before transfer.
 
 Direct trust is stored in Keychain, Secret Service, or Windows Credential Manager. Pairing uses the existing authenticated encrypted protocol; the iPhone must be foreground and explicitly connected to the computer's LAN or Tailscale address. Query pages are bounded to the negotiated byte/item limits, and automatic all-pages aggregation has additional byte/page ceilings. Unbounded raw bodies stay on the validated streaming CLI path.
 
@@ -291,7 +290,7 @@ Health.md reports factual observations with units, provenance, coverage, and mis
 | `healthmd_unavailable` | Unlock and foreground Health.md on iPhone, enable Direct CLI Access, and connect to the computer |
 | `query_scope_too_large` | Partition dates or metric IDs across calls; the logical corpus remains available across requests |
 | No interactive chart | Update the host; the server still returns exact JSON and a PNG metric-chart fallback |
-| Export destination unavailable | Create and pass an existing absolute non-symlink desktop directory |
+| Export destination unavailable | Mac: reselect the saved folder in Health.md. Portable preview: create and pass an existing absolute non-symlink desktop directory. |
 | Export waiter times out | Inspect the durable export job by ID before resuming |
 | Result has `next_cursor` | Set `all_pages: true` or continue the cursor manually |
 

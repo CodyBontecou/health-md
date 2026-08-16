@@ -52,12 +52,15 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     private var publishedCLIJobID: UUID?
 
     convenience init() {
-        self.init(store: ConnectedCorpusOutboundStore())
+        self.init(
+            store: ConnectedCorpusOutboundStore(),
+            cliActivityTracker: .shared
+        )
     }
 
     init(
         store: ConnectedCorpusOutboundStore,
-        cliActivityTracker: CLIExportActivityTracker = .shared,
+        cliActivityTracker: CLIExportActivityTracker,
         transportProvider: @escaping @MainActor (SyncService) -> ConnectedCorpusSender.Transport = {
             .syncService($0)
         },
@@ -73,6 +76,23 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         cleanupExpiredJournals()
         pauseInterruptedJournals()
         refreshPublishedSnapshot()
+    }
+
+    convenience init(
+        store: ConnectedCorpusOutboundStore,
+        transportProvider: @escaping @MainActor (SyncService) -> ConnectedCorpusSender.Transport = {
+            .syncService($0)
+        },
+        connectedPeerProvider: @escaping @MainActor (SyncService) -> SyncPeerCapabilities? = {
+            $0.connectionState == .connected ? $0.remoteCapabilities : nil
+        }
+    ) {
+        self.init(
+            store: store,
+            cliActivityTracker: .shared,
+            transportProvider: transportProvider,
+            connectedPeerProvider: connectedPeerProvider
+        )
     }
 
     func configure(
@@ -316,23 +336,15 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return }
-        let result = ExportOrchestrator.ExportResult(
-            successCount: payload.successCount,
-            totalCount: payload.totalCount,
-            failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: payload.formatsPerDate,
-            externalRecordFileCount: payload.externalRecordFileCount,
-            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
-            dailyNoteSkipCount: payload.dailyNoteSkipCount,
-            wasCancelled: payload.status == .cancelled
-        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
         ExportOrchestrator.recordResult(
             result,
             source: journal.origin == .scheduledIPhone ? .scheduled : .macAgent,
             dateRangeStart: journal.exportManifest.dateRangeStart,
             dateRangeEnd: journal.exportManifest.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.totalFilesWritten,
+            fileCount: payload.isTotalFilesWrittenAuthoritative
+                ? payload.totalFilesWritten : nil,
             appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
         )
         if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }

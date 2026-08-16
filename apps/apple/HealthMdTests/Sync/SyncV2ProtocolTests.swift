@@ -68,7 +68,8 @@ final class SyncV2ProtocolTests: XCTestCase {
 
         let decoded = try JSONDecoder().decode(SyncPeerCapabilities.self, from: legacyJSON)
 
-        XCTAssertTrue(decoded.isCompatibleWithMacExportJobs)
+        XCTAssertFalse(decoded.isCompatibleWithMacExportJobs)
+        XCTAssertFalse(decoded.supportsAuthoritativeMacExportFileAccounting)
         XCTAssertFalse(decoded.supportsRollupSummaries)
         XCTAssertFalse(decoded.supportsSummaryOnlyExports)
         XCTAssertFalse(decoded.supportsAllAvailableHistoryExportRequests)
@@ -85,7 +86,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsScheduledConnectedMacExports)
         XCTAssertFalse(decoded.supportsManualIPSync)
         XCTAssertTrue(decoded.manualIPSyncRequiresPairing)
-        XCTAssertTrue(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
+        XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: false))
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(rollupSummariesEnabled: true))
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: true,
@@ -1008,5 +1009,121 @@ final class SyncV2ProtocolTests: XCTestCase {
         defaults.removePersistentDomain(forName: suiteName)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         return LifecycleHarness.retain(settings)
+    }
+}
+
+final class MacExportFileAccountingCompatibilityTests: XCTestCase {
+    func testLegacyPeerWithoutAccountingCapabilityIsRejectedInBothDirections() throws {
+        let currentIOS = SyncPeerCapabilities.current(
+            platform: .iOS,
+            installationID: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!
+        )
+        let currentMac = SyncPeerCapabilities.current(
+            platform: .macOS,
+            installationID: UUID(uuidString: "20000000-0000-0000-0000-000000000002")!
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(currentMac)) as? [String: Any]
+        )
+        object.removeValue(forKey: "supportsAuthoritativeMacExportFileAccounting")
+        let legacyMac = try JSONDecoder().decode(
+            SyncPeerCapabilities.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertFalse(legacyMac.supportsAuthoritativeMacExportFileAccounting)
+        XCTAssertFalse(legacyMac.isCompatibleWithMacExportJobs)
+        XCTAssertTrue(currentIOS.supportsAuthoritativeMacExportFileAccounting)
+        XCTAssertTrue(currentMac.supportsAuthoritativeMacExportFileAccounting)
+
+        object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(currentIOS)) as? [String: Any]
+        )
+        object.removeValue(forKey: "supportsAuthoritativeMacExportFileAccounting")
+        let legacyIOS = try JSONDecoder().decode(
+            SyncPeerCapabilities.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertFalse(legacyIOS.isCompatibleWithMacExportJobs)
+    }
+
+    func testMissingAuthorityMetadataDecodesAsLowerBound() throws {
+        let payload = makePayload(status: .partialSuccess)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(payload)) as? [String: Any]
+        )
+        object.removeValue(forKey: "isTotalFilesWrittenAuthoritative")
+        object.removeValue(forKey: "outputBreakdown")
+        object.removeValue(forKey: "hadTerminalRangeFailure")
+        let decoded = try JSONDecoder().decode(
+            MacExportResultPayload.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertFalse(decoded.isTotalFilesWrittenAuthoritative)
+        XCTAssertFalse(decoded.hadTerminalRangeFailure)
+    }
+
+    func testOrdinaryPartialResultUsesExactCompletedDatesForResidualRetry() {
+        let first = Date(timeIntervalSince1970: 1_700_000_000)
+        let second = first.addingTimeInterval(86_400)
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .partialSuccess,
+            successCount: 1,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 2,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 2,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 1,
+                dataDictionaryFileCount: 1
+            ),
+            failedDateDetails: [FailedDateDetail(date: second, reason: .noHealthData)],
+            completedDates: [first, second],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertEqual(result.remainingDates(from: [first, second]), [])
+
+        let rangeFailure = MacExportResultPayload(
+            jobID: payload.jobID,
+            status: .partialSuccess,
+            successCount: 1,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 2,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: payload.outputBreakdown,
+            hadTerminalRangeFailure: true,
+            failedDateDetails: payload.failedDateDetails,
+            completedDates: [first],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        XCTAssertNil(
+            ExportOrchestrator.ExportResult(macExportPayload: rangeFailure)
+                .remainingDates(from: [first, second])
+        )
+    }
+
+    private func makePayload(status: MacExportResultStatus) -> MacExportResultPayload {
+        MacExportResultPayload(
+            jobID: UUID(),
+            status: status,
+            successCount: 1,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            failedDateDetails: [],
+            completedDates: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
     }
 }

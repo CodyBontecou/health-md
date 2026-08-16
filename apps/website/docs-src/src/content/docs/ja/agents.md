@@ -223,7 +223,7 @@ Health.mdは、存在しない値を数値のゼロへ変換しません。実�
 
 <div class="related">
   <a href="/ja/docs/agent-queries/"><span>CLIの実例</span>型付きエージェントクエリ：指標、睡眠セッション、トレーニングの対応付け、ワークアウト、カバレッジ、比較、エビデンス。</a>
-  <a href="/ja/docs/mcp/"><span>ツールプロトコル</span>CodexとClaudeの設定、17個のポータブルツール、MCP Appのチャート、エクスポート、ページング、サンドボックス境界。</a>
+  <a href="/ja/docs/mcp/"><span>ツールプロトコル</span>CodexとClaudeの設定、公開済みMacツール21個、ポータブル版プレビューツール19個、MCP Appのチャート、エクスポート、ページング、サンドボックス境界。</a>
   <a href="/ja/docs/agent-api/"><span>低レベル</span>ループバッククエリAPI：ルート、直接リクエストするJSON、カーソル、永続取得ジョブ。</a>
   <a href="/ja/docs/cli-extract/"><span>ソースオブジェクト</span>正規抽出：選択したschema-v7ドキュメント、レコード、プロジェクション、レシート。</a>
   <a href="/ja/docs/reference/evidence-packets/"><span>コントラクト</span>コンパクトクエリとエビデンスパケット：型付き値、カバレッジ、操作、決定論的なID。</a>

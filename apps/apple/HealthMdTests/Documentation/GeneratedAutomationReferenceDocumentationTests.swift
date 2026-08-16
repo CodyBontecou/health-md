@@ -104,6 +104,20 @@ final class GeneratedAutomationReferenceDocumentationTests: XCTestCase {
         )
         XCTAssertEqual(agentResponse.schema, HealthMdQuerySchemas.queryResponse)
         XCTAssertNotNil(agentResponse.nextCursor)
+        let partialResponse = try HealthMdQueryCanonicalSerializer.decode(
+            HealthMdQueryResponse.self,
+            from: try XCTUnwrap(files["agent-query-response-partial.json"])
+        )
+        XCTAssertEqual(partialResponse.coverage.status, .partial)
+        XCTAssertEqual(partialResponse.coverage.missing.first?.status, .failed)
+        XCTAssertEqual(partialResponse.items.count, 1)
+        let queryError = try HealthMdQueryCanonicalSerializer.decode(
+            HealthMdQueryError.self,
+            from: try XCTUnwrap(files["agent-query-error.json"])
+        )
+        XCTAssertEqual(queryError.schema, HealthMdQuerySchemas.queryError)
+        XCTAssertEqual(queryError.code, "invalid_timeout")
+        XCTAssertFalse(queryError.retryable)
         let evidenceResponse = try HealthMdQueryCanonicalSerializer.decode(
             HealthMdQueryResponse.self,
             from: try XCTUnwrap(files["agent-evidence-response.json"])
