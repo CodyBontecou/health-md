@@ -284,6 +284,47 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.summaryDescription.contains("5"))
     }
 
+    func testEntry_terminalFailureWithConfirmedFilesUsesPartialPresentation() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 2,
+            failureReason: .fileWriteError,
+            fileCount: 1
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertEqual(entry.presentationStatus, .partialSuccess)
+        XCTAssertEqual(entry.localizedStatusDescription, "Partial success")
+        XCTAssertEqual(entry.statusSystemImage, "exclamationmark.circle.fill")
+        XCTAssertTrue(entry.summaryDescription.contains("1 generated file"))
+        XCTAssertTrue(entry.summaryDescription.contains("0 of 2 data day"))
+    }
+
+    func testEntry_generatedFileWordingDistinguishesFilesFromDataDays() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 40
+        )
+
+        XCTAssertEqual(entry.resultCountLabel, "Generated Files")
+        XCTAssertEqual(entry.generatedFileCountCompactDescription, "40 generated file(s)")
+        XCTAssertEqual(entry.dataDayCountDescription, "1 of 1 data day(s)")
+        XCTAssertEqual(entry.resultCountDescription, "40 generated file(s) · 1 of 1 data day(s)")
+        XCTAssertEqual(entry.summaryDescription, "Exported 40 generated file(s) from 1 data day(s)")
+        XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("40 generated file"))
+        XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("1 of 1 data day"))
+    }
+
     func testEntry_partialMetricFailure_isPartialAndSummarizesWarning() {
         let entry = ExportHistoryEntry(
             source: .manual,

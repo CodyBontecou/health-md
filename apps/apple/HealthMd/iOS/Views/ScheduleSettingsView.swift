@@ -1,5 +1,87 @@
 import SwiftUI
 
+struct ScheduleRetryExportPolicy {
+    static func shouldWriteDataDictionary(currentFileCount: Int) -> Bool {
+        currentFileCount == 0
+    }
+
+    static func failedDateDetail(for date: Date, exportError: ExportError) -> FailedDateDetail {
+        let reason: ExportFailureReason
+        let details: String?
+        switch exportError {
+        case .noVaultSelected:
+            reason = .noVaultSelected
+            details = nil
+        case .noHealthData:
+            reason = .noHealthData
+            details = nil
+        case .accessDenied:
+            reason = .accessDenied
+            details = nil
+        case .destinationChanged:
+            reason = .accessDenied
+            details = exportError.localizedDescription
+        case .noFormatsSelected:
+            reason = .unknown
+            details = exportError.localizedDescription
+        case .dailyNotePathConflict, .invalidExportPath:
+            reason = .fileWriteError
+            details = exportError.localizedDescription
+        }
+        return FailedDateDetail(date: date, reason: reason, errorDetails: details)
+    }
+
+    static func failedWriteDetail(for date: Date, error: Error) -> FailedDateDetail {
+        if let exportError = error as? ExportError {
+            return failedDateDetail(for: date, exportError: exportError)
+        }
+        return FailedDateDetail(
+            date: date,
+            reason: .fileWriteError,
+            errorDetails: error.localizedDescription
+        )
+    }
+
+    static func failedDailyNoteDetail(
+        for date: Date,
+        result: DailyNoteInjector.InjectionResult?
+    ) -> FailedDateDetail? {
+        switch result {
+        case .updated:
+            return nil
+        case .skipped(let reason):
+            return FailedDateDetail(date: date, reason: .noHealthData, errorDetails: reason)
+        case .failed(let error):
+            return failedWriteDetail(for: date, error: error)
+        case .none:
+            return FailedDateDetail(
+                date: date,
+                reason: .fileWriteError,
+                errorDetails: "Daily note update was not performed."
+            )
+        }
+    }
+
+    static func failedHealthKitDetail(for date: Date, error: Error) -> FailedDateDetail {
+        if let healthKitError = error as? HealthKitManager.HealthKitError {
+            let reason: ExportFailureReason
+            switch healthKitError {
+            case .dataProtectedWhileLocked:
+                reason = .deviceLocked
+            case .dataNotAvailable, .notAuthorized, .medicationAuthorizationUnsupported,
+                 .visionAuthorizationUnsupported:
+                reason = .healthKitError
+            }
+            return FailedDateDetail(date: date, reason: reason)
+        }
+        return FailedDateDetail(
+            date: date,
+            reason: .unknown,
+            errorDetails: error.localizedDescription
+        )
+    }
+}
+
 /// Inline schedule configuration surface used by the Schedule tab.
 /// Binds directly to `SchedulingManager.schedule` so edits persist as they happen.
 struct ScheduleSettingsView: View {
@@ -1143,6 +1225,11 @@ struct ScheduleSettingsView: View {
 
         let totalDays = datesToExport.count
         var successCount = 0
+        var looseAggregateFileCount = 0
+        var individualEntryFileCount = 0
+        var dataDictionaryFileCount = 0
+        var dailyNoteUpdateCount = 0
+        var dailyNoteSkipCount = 0
         var failedDateDetails: [FailedDateDetail] = []
         var partialFailures: [ExportPartialFailure] = []
         let dateFormatter = DateFormatter()
@@ -1154,28 +1241,54 @@ struct ScheduleSettingsView: View {
                 retryProgress = Double(index) / Double(totalDays)
             }
 
+            let healthData: HealthData
             do {
-                let healthData = try await healthKitManager.fetchHealthData(
+                healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: advancedSettings.effectiveGranularDataEnabled,
                     metricSelection: advancedSettings.metricSelection
                 )
+            } catch {
+                failedDateDetails.append(
+                    ScheduleRetryExportPolicy.failedHealthKitDetail(for: date, error: error)
+                )
+                continue
+            }
 
-                if !healthData.filtered(by: advancedSettings.metricSelection).hasAnyData {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
-                    continue
-                }
+            if !healthData.filtered(by: advancedSettings.metricSelection).hasAnyData {
+                failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                continue
+            }
 
-                let success = vaultManager.exportHealthData(healthData, for: date, settings: advancedSettings)
+            do {
+                let writeResult = try vaultManager.exportHealthDataResult(
+                    healthData,
+                    for: date,
+                    settings: advancedSettings,
+                    writeDataDictionary: ScheduleRetryExportPolicy.shouldWriteDataDictionary(
+                        currentFileCount: dataDictionaryFileCount
+                    )
+                )
+                partialFailures.append(contentsOf: healthData.partialFailures)
+                looseAggregateFileCount += writeResult.aggregateFileCount
+                individualEntryFileCount += writeResult.individualEntryFileCount
+                dataDictionaryFileCount += writeResult.dataDictionaryFileCount
+                dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
+                dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
 
-                if success {
-                    partialFailures.append(contentsOf: healthData.partialFailures)
-                    successCount += 1
+                if advancedSettings.dailyNotesOnlyModeEnabled,
+                   let failedDetail = ScheduleRetryExportPolicy.failedDailyNoteDetail(
+                    for: date,
+                    result: writeResult.dailyNoteResult
+                   ) {
+                    failedDateDetails.append(failedDetail)
                 } else {
-                    failedDateDetails.append(FailedDateDetail(date: date, reason: .fileWriteError))
+                    successCount += 1
                 }
             } catch {
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .healthKitError))
+                failedDateDetails.append(
+                    ScheduleRetryExportPolicy.failedWriteDetail(for: date, error: error)
+                )
             }
         }
 
@@ -1190,21 +1303,37 @@ struct ScheduleSettingsView: View {
             let startDate = datesToExport.min() ?? entry.dateRangeStart
             let endDate = datesToExport.max() ?? entry.dateRangeEnd
 
-            if failedDateDetails.isEmpty && partialFailures.isEmpty && successCount > 0 {
-                retryStatusMessage = String(localized: "Successfully exported \(successCount) files", comment: "Export success message")
-                exportHistory.recordSuccess(
-                    source: .manual,
-                    dateRangeStart: startDate,
-                    dateRangeEnd: endDate,
-                    successCount: successCount,
-                    totalCount: totalDays,
-                    targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1)
-                )
-            } else if successCount > 0 {
-                retryStatusMessage = partialFailures.isEmpty
-                    ? "Exported \(successCount)/\(totalDays) files"
-                    : "Exported \(successCount)/\(totalDays) files with \(partialFailures.count) warning(s)"
+            let generatedFileCount = looseAggregateFileCount
+                + individualEntryFileCount
+                + dataDictionaryFileCount
+            let outputBreakdown = ExportHistoryOutputBreakdown(
+                requestedDataDayCount: totalDays,
+                successfulDataDayCount: successCount,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                isFileCategoryBreakdownComplete: true
+            )
+            let retryResult = ExportOrchestrator.ExportResult(
+                successCount: successCount,
+                totalCount: totalDays,
+                failedDateDetails: failedDateDetails,
+                partialFailures: partialFailures,
+                formatsPerDate: 0,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                authoritativeFileCount: generatedFileCount,
+                isFileCategoryBreakdownComplete: true,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                completedDates: datesToExport.filter { date in
+                    !failedDateDetails.contains { Calendar.current.isDate($0.date, inSameDayAs: date) }
+                }
+            )
+
+            if successCount > 0 || dailyNoteSkipCount > 0 {
+                retryStatusMessage = retryResult.localizedGeneratedFileAndDataDayDescription
                 exportHistory.recordSuccess(
                     source: .manual,
                     dateRangeStart: startDate,
@@ -1213,7 +1342,10 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: successCount * max(advancedSettings.exportFormats.count, 1),
+                    fileCount: generatedFileCount,
+                    outputBreakdown: outputBreakdown,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
                     partialFailures: partialFailures
                 )
             } else {
@@ -1230,7 +1362,10 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
-                    fileCount: 0,
+                    fileCount: generatedFileCount,
+                    outputBreakdown: outputBreakdown,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
                     partialFailures: partialFailures
                 )
             }
@@ -1322,25 +1457,9 @@ struct ExportHistoryRow: View {
         }
     }
 
-    private var statusIcon: String {
-        if entry.isFullSuccess {
-            return "checkmark.circle.fill"
-        } else if entry.isPartialSuccess {
-            return "exclamationmark.circle.fill"
-        } else {
-            return "xmark.circle.fill"
-        }
-    }
+    private var statusIcon: String { entry.statusSystemImage }
 
-    private var statusDescription: String {
-        if entry.isFullSuccess {
-            return "Success"
-        } else if entry.isPartialSuccess {
-            return "Partial Success"
-        } else {
-            return "Failed"
-        }
-    }
+    private var statusDescription: String { entry.localizedShortStatusDescription }
 
     var body: some View {
         HStack(spacing: Spacing.s3) {
@@ -1412,7 +1531,7 @@ struct ExportHistoryRow: View {
     }
 
     private var accessibilityDescription: String {
-        let status = "\(statusDescription): \(entry.summaryDescription)"
+        let status = "\(entry.localizedStatusDescription): \(entry.summaryDescription)"
         guard let message = entry.failureListMessage else { return status }
         return "\(status). \(message)"
     }
@@ -1460,7 +1579,7 @@ struct ExportHistoryDetailView: View {
                         Text("Status")
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text(entry.isFullSuccess ? "Success" : (entry.isPartialSuccess ? "Partial" : "Failed"))
+                        Text(entry.localizedShortStatusDescription)
                             .foregroundStyle(statusColor)
                             .fontWeight(.medium)
                     }
@@ -1703,6 +1822,8 @@ struct ExportHistoryDetailView: View {
                                 Text(failure.summary)
                                     .font(Typography.caption())
                                     .foregroundStyle(Color.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .textSelection(.enabled)
                             }
                         }
                     } header: {

@@ -6,6 +6,8 @@ Clinician Report is an interactive, patient-controlled document workflow. It rea
 
 The report is a first-class option on the existing Export screen, but it is **not** another `ExportFormat`. Existing formats are durable daily export contracts with scheduling, destination, and schema-version behavior. Treating PDF as one of those formats would incorrectly couple this one-report-per-range workflow to the public Apple v7 / Android v4-v5 daily schemas and recurring export machinery.
 
+The footer link to `healthmd.app/practice` is informational only. Clinician Report does not issue or accept a Health.md Practice request, use the Practice common-instruction or practice-variant versions, capture an acceptance-time request timezone, create a Practice packet, upload to a clinician tenant, or establish Practice `opened`/`acknowledged`/`reviewed` facts. Its internal PDF/report model must not be used as evidence that the separately governed Practice protocol or mobile contract is implemented or qualified.
+
 ## Existing seams
 
 - Apple capture stays in `HealthKitManager.fetchHealthData(for:includeGranularData:metricSelection:timeZone:)`. Report reads request only the selected report metrics, pin the current timezone for the operation, and request granular data so canonical HealthKit record provenance and trustworthy blood-pressure correlation membership remain available.

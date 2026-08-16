@@ -222,11 +222,16 @@ struct ExportOrchestrator {
             successCount == totalCount && didCompleteAllRequestedDates && failedDateDetails.isEmpty && !hasPartialFailures
         }
         var isPartialSuccess: Bool {
-            let confirmed = successCount > 0 || dailyNoteSkipCount > 0 || knownFileCount > 0
-            return confirmed && (successCount < totalCount || wasCancelled || hadTerminalRangeFailure
-                || !failedDateDetails.isEmpty || hasPartialFailures)
+            guard !isFullSuccess else { return false }
+            let hasConfirmedOutput = successCount > 0
+                || dailyNoteUpdateCount > 0
+                || dailyNoteSkipCount > 0
+                || knownFileCount > 0
+            return hasConfirmedOutput
         }
-        var isFailure: Bool { successCount == 0 && dailyNoteSkipCount == 0 && totalCount > 0 }
+        var isFailure: Bool {
+            !isFullSuccess && !isPartialSuccess && totalCount > 0
+        }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
         var categorizedFileCount: Int {
             looseAggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
@@ -253,6 +258,16 @@ struct ExportOrchestrator {
                 isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
             )
         }
+
+        var localizedGeneratedFileAndDataDayDescription: String {
+            if hasAuthoritativeFileCount {
+                return String(localized: "\(totalFilesWritten) generated file(s) · \(successCount) of \(totalCount) data day(s)")
+            }
+            let confirmedFiles = String(localized: "\(totalFilesWritten) generated file(s)")
+            let dataDays = String(localized: "\(successCount) of \(totalCount) data day(s)")
+            return "≥ \(confirmedFiles) · \(dataDays)"
+        }
+
         var fileBreakdownDescription: String {
             var parts: [String] = []
             if looseAggregateFileCount > 0 { parts.append("\(looseAggregateFileCount) loose files") }
@@ -419,6 +434,27 @@ struct ExportOrchestrator {
         )
         let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()
         frozenOperationSettings.exportTimeZoneOverride = sourceTimeZone
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: frozenOperationSettings,
+                healthSubfolder: operationSettingsSnapshot.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalDays,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                completedDates: []
+            )
+        }
         let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
         defer { archiveSpool?.cleanup() }
         let dateFormatter = DateFormatter()
@@ -591,7 +627,7 @@ struct ExportOrchestrator {
                 case .noFormatsSelected:
                     reason = .unknown
                     errorDetails = error.localizedDescription
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                     errorDetails = error.localizedDescription
                 }
@@ -958,6 +994,27 @@ struct ExportOrchestrator {
         var shouldWriteDataDictionary = true
         let frozenOperationSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings()
             ?? settings
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: frozenOperationSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                completedDates: []
+            )
+        }
         let archiveSpool = frozenOperationSettings.archiveModeEnabled
             ? LocalArchiveSpool()
             : nil
@@ -1124,7 +1181,7 @@ struct ExportOrchestrator {
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                 }
                 failedDateDetails.append(FailedDateDetail(

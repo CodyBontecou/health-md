@@ -565,22 +565,18 @@ struct HealthMdApp: App {
                     }
                     publishMacDestinationStatus()
                 case .macExportStreamAbort(let abort):
-                    macExportJobExecutor.abortStream(
+                    if let failure = macExportJobExecutor.abortStream(
                         abort,
                         progress: { progress in
                             publishMacExportProgress(progress)
                         }
-                    )
-                    syncService.isSyncing = false
-                    let failure = MacExportFailure(
-                        jobID: abort.jobID,
-                        reason: abort.reason,
-                        message: abort.message
-                    )
-                    syncService.lastMacExportFailure = failure
-                    _ = iphoneExportRequestCoordinator.complete(with: failure)
-                    syncService.send(.macExportFailed(failure))
-                    publishMacDestinationStatus()
+                    ) {
+                        syncService.isSyncing = false
+                        syncService.lastMacExportFailure = failure
+                        _ = iphoneExportRequestCoordinator.complete(with: failure)
+                        syncService.send(.macExportFailed(failure))
+                    }
+                    publishMacDestinationStatus(activeJobID: macExportJobExecutor.currentJobID)
                 case .macExportCancel(jobID: let jobID):
                     if let failure = macExportJobExecutor.cancel(
                         jobID: jobID,
@@ -954,6 +950,16 @@ struct HealthMdApp: App {
                 if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
                     syncService.isSyncing = false
                 }
+            case .failed(let failure, let acknowledgement):
+                syncService.lastMacExportFailure = failure
+                _ = iphoneExportRequestCoordinator.complete(with: failure)
+                // Publish the application failure first. The rejected ACK is terminal
+                // only because both messages were durably bound in the corpus journal.
+                syncService.send(.macExportFailed(failure))
+                syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
+                if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
+                    syncService.isSyncing = false
+                }
             case .files(let result, let acknowledgement):
                 syncService.lastMacExportResult = result
                 syncService.lastMacExportFailure = nil
@@ -1002,32 +1008,32 @@ struct HealthMdApp: App {
             }
             publishMacDestinationStatus()
         } catch {
+            let failure = MacExportFailure(
+                jobID: finalize.jobID,
+                reason: error is CancellationError ? .cancelled : .exportWriteFailure,
+                message: error is CancellationError
+                    ? "Mac corpus finalization was cancelled."
+                    : "Mac could not finalize the partitioned corpus export.",
+                underlyingError: error.localizedDescription
+            )
+            guard let acknowledgement = macCorpusExportSessionManager.recordFinalizationFailure(
+                finalize,
+                failure: failure,
+                vaultManager: vaultManager
+            ) else {
+                // No terminal ACK: the iPhone sender will pause and replay finalize.
+                // Publishing an unjournaled failure here could strand that retry.
+                syncService.lastMacExportFailure = failure
+                publishMacDestinationStatus()
+                return
+            }
             if connectedCorpusAwakeCoordinator.finishJob(jobID: finalize.jobID) {
                 syncService.isSyncing = false
             }
-            _ = macCorpusExportSessionManager.cancel(
-                sessionID: finalize.sessionID,
-                jobID: finalize.jobID,
-                vaultManager: vaultManager
-            )
-            syncService.isSyncing = false
-            let acknowledgement = ConnectedCorpusTransferFinalAck(
-                sessionID: finalize.sessionID,
-                jobID: finalize.jobID,
-                accepted: false,
-                requestFingerprint: finalize.requestFingerprint,
-                finalPartitionSHA256: finalize.finalPartitionSHA256,
-                message: "Mac could not finalize the partitioned corpus export."
-            )
-            syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
-            let failure = MacExportFailure(
-                jobID: finalize.jobID,
-                reason: .exportWriteFailure,
-                message: "Mac could not finalize the partitioned corpus export."
-            )
             syncService.lastMacExportFailure = failure
             _ = iphoneExportRequestCoordinator.complete(with: failure)
             syncService.send(.macExportFailed(failure))
+            syncService.send(.connectedCorpusTransferFinalAck(acknowledgement))
             publishMacDestinationStatus()
         }
     }

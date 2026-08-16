@@ -313,10 +313,31 @@ class SchedulingManager: ObservableObject {
         var archiveCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
+        var wasCancelled = false
         let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
         let usesPinnedRange = frozenSettingsSnapshot?.appleExportEnginePin != nil
+        let preflightSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
+        var preflightFailed = false
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: preflightSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            preflightFailed = true
+            failedDateDetails = dates.map {
+                FailedDateDetail(
+                    date: $0,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                )
+            }
+        }
 
-        if usesPinnedRange,
+        if Task.isCancelled {
+            wasCancelled = true
+        } else if !preflightFailed, usesPinnedRange,
            let frozenSettingsSnapshot,
            let timeZoneIdentifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
            let timeZone = TimeZone(identifier: timeZoneIdentifier) {
@@ -353,6 +374,8 @@ class SchedulingManager: ObservableObject {
                         successCount = captured.selectedRecordDates.count
                         completedDates = captured.selectedRecordDates
                     }
+                } catch is CancellationError {
+                    wasCancelled = true
                 } catch {
                     failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
                         FailedDateDetail(
@@ -363,7 +386,7 @@ class SchedulingManager: ObservableObject {
                     })
                 }
             }
-        } else if usesPinnedRange {
+        } else if !preflightFailed && usesPinnedRange {
             failedDateDetails = dates.map {
                 FailedDateDetail(
                     date: $0,
@@ -373,8 +396,12 @@ class SchedulingManager: ObservableObject {
             }
         }
 
-        if !usesPinnedRange {
+        if !preflightFailed && !usesPinnedRange {
         for date in dates {
+            if Task.isCancelled {
+                wasCancelled = true
+                break
+            }
             guard let healthData = healthDataStore.fetchHealthData(for: date) else {
                 // Mac cache absence is retryable: iPhone sync may populate it later.
                 failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
@@ -431,6 +458,9 @@ class SchedulingManager: ObservableObject {
                 if !requiresDerivedOutput {
                     completedDates.append(date)
                 }
+            } catch is CancellationError {
+                wasCancelled = true
+                break
             } catch {
                 failedDateDetails.append(FailedDateDetail(
                     date: date,
@@ -440,16 +470,22 @@ class SchedulingManager: ObservableObject {
             }
         }
 
+        // Cancellation can arrive after the final daily artifact commits but before derived
+        // output begins. Recheck at that exact boundary so no archive/roll-up starts afterward.
+        if Task.isCancelled { wasCancelled = true }
+
         var rollupHealthData = successfulHealthData
-        let retainedRollupDays = Set(rollupHealthData.map { calendar.startOfDay(for: $0.date) })
-        for rollupDate in ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
-            where !retainedRollupDays.contains(calendar.startOfDay(for: rollupDate)) {
-            if let data = healthDataStore.fetchHealthData(for: rollupDate), data.hasAnyData {
-                rollupHealthData.append(data)
+        if !wasCancelled {
+            let retainedRollupDays = Set(rollupHealthData.map { calendar.startOfDay(for: $0.date) })
+            for rollupDate in ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
+                where !retainedRollupDays.contains(calendar.startOfDay(for: rollupDate)) {
+                if let data = healthDataStore.fetchHealthData(for: rollupDate), data.hasAnyData {
+                    rollupHealthData.append(data)
+                }
             }
         }
 
-        if settings.archiveModeEnabled && !successfulHealthData.isEmpty {
+        if !wasCancelled && settings.archiveModeEnabled && !successfulHealthData.isEmpty {
             do {
                 if try await vaultManager.exportArchive(
                     from: successfulHealthData,
@@ -463,13 +499,15 @@ class SchedulingManager: ObservableObject {
                 } else {
                     throw ExportError.noHealthData
                 }
+            } catch is CancellationError {
+                wasCancelled = true
             } catch {
                 failedDateDetails.append(contentsOf: successfulHealthData.map {
                     FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.localizedDescription)
                 })
                 successCount = 0
             }
-        } else if settings.summaryOnlyModeEnabled && !successfulHealthData.isEmpty {
+        } else if !wasCancelled && settings.summaryOnlyModeEnabled && !successfulHealthData.isEmpty {
             do {
                 let results = try vaultManager.exportRollupSummaries(
                     from: rollupHealthData,
@@ -502,6 +540,7 @@ class SchedulingManager: ObservableObject {
             archiveCount: archiveCount,
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
+            wasCancelled: wasCancelled,
             completedDates: completedDates
         )
         let originalRequest: PendingExportRequest
@@ -609,6 +648,19 @@ class SchedulingManager: ObservableObject {
                 body: String(localized: "Some dates had no synced data and other dates remain. Open Health.md to retry.", comment: "No-data partial export notification body")
             )
             logger.info("Catch-up export retained \(remainingDates.count) unresolved date(s)")
+        } else if result.wasCancelled {
+            ExportOrchestrator.recordResult(
+                result,
+                source: .scheduled,
+                dateRangeStart: dates.first!,
+                dateRangeEnd: dates.last!,
+                appleExportEnginePin: originalRequest.settingsSnapshot?.appleExportEnginePin
+            )
+            await sendNotification(
+                title: String(localized: "Health Export Needs Attention", comment: "Partial export notification title"),
+                body: String(localized: "Exported \(result.successCount)/\(result.totalCount) days. Open Health.md to retry the remaining dates.", comment: "Partial export notification body")
+            )
+            logger.info("Catch-up export was interrupted with \(remainingDates.count) unresolved date(s)")
         } else {
             let reason = result.primaryFailureReason?.shortDescription ?? String(localized: "No synced data available", comment: "Default failure reason")
             await sendNotification(

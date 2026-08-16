@@ -4,11 +4,12 @@
 
 Implementation began on 2026-07-24. The existing `CodyBontecou/health-md` repository remains canonical. Apple, CLI, Android, and website histories have been imported on `chore/monorepo-foundation`; deployment and old-repository cutover remain pending.
 
-The monorepo contains four independently built and released products:
+The monorepo contains five independently built product components:
 
 - Apple apps under `apps/apple`
 - Android app under `apps/android`
 - Rust CLI under `apps/cli`
+- Practice clinical portal and future service boundary under `apps/practice` (synthetic-only; not released)
 - Website under `apps/website`
 
 Shared implementation and contracts are separate from those product workspaces:
@@ -35,7 +36,7 @@ Source repositories are not force-pushed or rewritten. After validation and cuto
 
 ## Build organization
 
-The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata.
+The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata. Practice is independently locked and must not share runtime, storage, analytics, or deployment configuration with the static website or existing non-PHI Workers; see [ADR-0003](adr-0003-practice-clinical-boundary.md).
 
 `apps/cli` and `packages/healthmd-core-rust` are independent Cargo workspaces. Each keeps its own `Cargo.lock` and `target` directory; aggregate commands invoke them separately rather than creating a repository-wide Cargo workspace. The CLI consumes the shared `healthmd-protocol` crate by path during development and by exact crates.io version when packaged.
 

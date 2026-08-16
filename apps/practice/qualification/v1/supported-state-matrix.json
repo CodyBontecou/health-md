@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "runtime": { "mode": "synthetic", "productionEnabled": false, "persistence": "in-memory-resettable-test-double" },
+  "browserProjects": [
+    { "name": "chromium", "realBrowserAutomation": true, "isolatedServiceProcess": true, "manualLatestTwo": false },
+    { "name": "firefox", "realBrowserAutomation": true, "isolatedServiceProcess": true, "manualLatestTwo": false },
+    { "name": "webkit", "realBrowserAutomation": true, "isolatedServiceProcess": true, "manualLatestTwo": false }
+  ],
+  "careContexts": ["pre_visit", "medication_follow_up", "recurring_collection"],
+  "qualifiedHappyRepresentation": { "period": "fixed_dates", "schedule": "all_readings", "cadence": "at_period_end" },
+  "blockedRepresentations": ["relative_acceptance_unresolved", "dst_materialization_unresolved", "cadence_anchor_unresolved", "overnight_window_unresolved", "touching_window_unresolved"],
+  "packetFixtures": ["apple_complete", "android_partial", "apple_empty", "android_manual", "apple_missing_pulse", "superseded"],
+  "accessibilityObservables": {
+    "axeRenderedStatesAutomated": true,
+    "keyboardDialogFocusAutomated": true,
+    "focusGeometryNotObscuredAutomated": true,
+    "viewport320ReflowAutomated": true,
+    "css400PercentEquivalentReflowAutomated": true,
+    "printCssDomAutomated": true,
+    "reducedMotionMatchMediaAndPropertyAutomated": true,
+    "forcedColorsMatchMediaAndPropertyWhereSupportedAutomated": true,
+    "actualBrowserZoom400Manual": false,
+    "nativePdfOutputManual": false,
+    "screenReaderManual": false
+  },
+  "mobileContract": { "qrAndDeepLink": "blocked_pending_approved_contract", "physicalDevice": false },
+  "externalResources": false
+}

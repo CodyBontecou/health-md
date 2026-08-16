@@ -75,6 +75,21 @@ final class CanonicalWorkoutCaptureTests: XCTestCase {
         XCTAssertEqual(average, 145)
     }
 
+    func testWorkoutPlanImportFailureDescriptionTranslatesWorkoutKitImportErrors() {
+        let importError = NSError(domain: "WorkoutKit.ImportError", code: 3)
+        let description = SystemHealthStoreAdapter.workoutPlanImportFailureDescription(for: importError)
+        XCTAssertNotNil(description)
+        XCTAssertTrue(description!.contains("WorkoutKit.ImportError error 3"),
+                      "description should preserve the raw error identity")
+        XCTAssertTrue(description!.contains("exported successfully"),
+                      "description should reassure that the workout data itself exported")
+        XCTAssertTrue(description!.contains("workout plan"),
+                      "description should name what was omitted")
+
+        let unrelatedError = NSError(domain: HKErrorDomain, code: HKError.Code.errorNoData.rawValue)
+        XCTAssertNil(SystemHealthStoreAdapter.workoutPlanImportFailureDescription(for: unrelatedError))
+    }
+
     @MainActor
     func testPausedWorkoutUsesStableHealthKitIdentityAndActualEndAcrossExports() async throws {
         let dayStart = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
