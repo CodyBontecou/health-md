@@ -526,6 +526,7 @@ struct ExportOrchestrator {
                     frozenSettingsSnapshot: operationSettingsSnapshot,
                     preparedExport: preparedExport
                 )
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }
@@ -1103,6 +1104,7 @@ struct ExportOrchestrator {
                     frozenSettingsSnapshot: frozenSettingsSnapshot,
                     preparedExport: preparedExport
                 )
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }

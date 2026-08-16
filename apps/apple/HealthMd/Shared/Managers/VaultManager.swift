@@ -1333,17 +1333,23 @@ struct DailyExportWriteResult {
     let aggregateFileCount: Int
     let individualEntryFileCount: Int
     let dataDictionaryFileCount: Int
+    /// Individually tracked metrics that could not produce entries because the
+    /// canonical archive (Lossless) structurally lacks their source records.
+    /// Surfaced so operation callers can append them to user-visible warnings.
+    let individualEntryCoverageGaps: [ExportPartialFailure]
     let dailyNoteResult: DailyNoteInjector.InjectionResult?
 
     init(
         aggregateFileCount: Int,
         individualEntryFileCount: Int,
         dataDictionaryFileCount: Int = 0,
+        individualEntryCoverageGaps: [ExportPartialFailure] = [],
         dailyNoteResult: DailyNoteInjector.InjectionResult?
     ) {
         self.aggregateFileCount = max(aggregateFileCount, 0)
         self.individualEntryFileCount = max(individualEntryFileCount, 0)
         self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+        self.individualEntryCoverageGaps = individualEntryCoverageGaps
         self.dailyNoteResult = dailyNoteResult
     }
 
@@ -2426,8 +2432,9 @@ final class VaultManager: ObservableObject {
         destinationBinding: AppleVaultDestinationBinding?
     ) throws -> DailyExportWriteResult {
         var individualEntriesCount = 0
+        var individualEntryCoverageGaps: [ExportPartialFailure] = []
         if settings.writesIndividualEntryFiles {
-            individualEntriesCount = try exportIndividualEntries(
+            let result = try exportIndividualEntries(
                 from: healthData,
                 to: individualEntriesBaseFolderURL(
                     vaultURL: vaultURL,
@@ -2437,6 +2444,8 @@ final class VaultManager: ObservableObject {
                 ),
                 settings: settings
             )
+            individualEntriesCount = result.fileCount
+            individualEntryCoverageGaps = result.coverageGapFailures
         }
 
         #if DEBUG
@@ -2517,6 +2526,7 @@ final class VaultManager: ObservableObject {
             aggregateFileCount: writtenFiles.count,
             individualEntryFileCount: individualEntriesCount,
             dataDictionaryFileCount: dataDictionaryFileCount,
+            individualEntryCoverageGaps: individualEntryCoverageGaps,
             dailyNoteResult: dailyNoteResult
         )
     }
@@ -4092,12 +4102,17 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Individual Entry Export
 
+    private struct IndividualEntryExportOutcome {
+        let fileCount: Int
+        let coverageGapFailures: [ExportPartialFailure]
+    }
+
     /// Export individual timestamped entries for configured metrics
     private func exportIndividualEntries(
         from healthData: HealthData,
         to baseURL: URL,
         settings: AdvancedExportSettings
-    ) throws -> Int {
+    ) throws -> IndividualEntryExportOutcome {
         let trackingSettings = settings.individualTracking
 
         // Extract samples that should be tracked individually
@@ -4106,14 +4121,56 @@ final class VaultManager: ObservableObject {
             settings: trackingSettings
         )
 
-        guard !samples.isEmpty else { return 0 }
+        // While the canonical archive is authoritative, a tracked metric with
+        // no source records is silently empty by design. Surface the structural
+        // causes as one aggregated warning instead of dropping them quietly.
+        var coverageGapFailures: [ExportPartialFailure] = []
+        if healthData.healthKitRecordArchive != nil {
+            let gaps = individualExporter.coverageGaps(
+                emittedSamples: samples,
+                from: healthData,
+                settings: trackingSettings,
+                metricSelection: settings.metricSelection
+            )
+            if !gaps.isEmpty {
+                coverageGapFailures = [coverageGapFailure(gaps: gaps, for: healthData)]
+            }
+        }
+
+        guard !samples.isEmpty else { return IndividualEntryExportOutcome(
+            fileCount: 0,
+            coverageGapFailures: coverageGapFailures
+        ) }
 
         // Export the samples
-        return try individualExporter.exportIndividualEntries(
+        let fileCount = try individualExporter.exportIndividualEntries(
             samples: samples,
             to: baseURL,
             settings: trackingSettings,
             formatSettings: settings.formatCustomization
+        )
+        return IndividualEntryExportOutcome(
+            fileCount: fileCount,
+            coverageGapFailures: coverageGapFailures
+        )
+    }
+
+    /// Formats one day's coverage gaps as a single deterministic warning.
+    private func coverageGapFailure(
+        gaps: [IndividualEntryExporter.IndividualEntryCoverageGap],
+        for healthData: HealthData
+    ) -> ExportPartialFailure {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = healthData.timeContext.calendarTimeZone
+        let entries = gaps
+            .map { "\($0.metricID) \($0.localizedDescription)" }
+            .joined(separator: "; ")
+        return ExportPartialFailure(
+            date: healthData.date,
+            dataType: "Individual entries",
+            dateRangeDescription: formatter.string(from: healthData.date),
+            errorDescription: "Lossless records produced no individual entries for tracked metrics: \(entries)."
         )
     }
 }
