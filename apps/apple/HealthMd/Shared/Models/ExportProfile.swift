@@ -19,6 +19,15 @@ struct ExportProfile: Codable, Identifiable, Equatable {
     var name: String
     var settings: ExportSettingsSnapshot
     var target: ExportTargetSelection
+    /// Bound folder destination in `ProfileDestinationStore` when
+    /// `target == .localIPhoneFolder`. Nil means the profile uses whatever
+    /// folder the legacy single-vault state has loaded (the migration default
+    /// binds the existing vault instead of leaving this nil, so behavior is
+    /// preserved).
+    var folderVaultID: UUID?
+    /// Bound API endpoint in `ProfileDestinationStore` when
+    /// `target == .apiEndpoint`. Nil keeps the current single-endpoint state.
+    var apiEndpointID: UUID?
     var createdAt: Date
     var updatedAt: Date
     /// True only for the profile synthesized from legacy live settings during
@@ -31,6 +40,8 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         name: String,
         settings: ExportSettingsSnapshot,
         target: ExportTargetSelection,
+        folderVaultID: UUID? = nil,
+        apiEndpointID: UUID? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         isMigrationDefault: Bool = false
@@ -39,6 +50,8 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         self.name = name
         self.settings = settings
         self.target = target
+        self.folderVaultID = folderVaultID
+        self.apiEndpointID = apiEndpointID
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isMigrationDefault = isMigrationDefault
@@ -121,12 +134,15 @@ final class ExportProfileStore: ObservableObject {
     // MARK: - Migration
 
     /// Creates the initial "Default" profile from current live settings on
-    /// first use. Returns true when a profile was created; subsequent calls
-    /// are no-ops so callers can invoke this on every launch.
+    /// first use, optionally binding it to existing folder/API destinations.
+    /// Returns true when a profile was created; subsequent calls are no-ops
+    /// so callers can invoke this on every launch.
     @discardableResult
     func migrateDefaultProfileIfNeeded(
         settings: ExportSettingsSnapshot,
-        target: ExportTargetSelection
+        target: ExportTargetSelection,
+        folderVaultID: UUID? = nil,
+        apiEndpointID: UUID? = nil
     ) -> Bool {
         guard profiles.isEmpty else { return false }
 
@@ -134,6 +150,8 @@ final class ExportProfileStore: ObservableObject {
             name: uniquifiedName(Self.defaultProfileName),
             settings: settings,
             target: target,
+            folderVaultID: folderVaultID,
+            apiEndpointID: apiEndpointID,
             createdAt: now(),
             updatedAt: now(),
             isMigrationDefault: true
@@ -150,12 +168,16 @@ final class ExportProfileStore: ObservableObject {
     func add(
         name: String,
         settings: ExportSettingsSnapshot,
-        target: ExportTargetSelection
+        target: ExportTargetSelection,
+        folderVaultID: UUID? = nil,
+        apiEndpointID: UUID? = nil
     ) -> ExportProfile {
         let profile = ExportProfile(
             name: uniquifiedName(name),
             settings: settings,
             target: target,
+            folderVaultID: folderVaultID,
+            apiEndpointID: apiEndpointID,
             createdAt: now(),
             updatedAt: now()
         )
@@ -173,6 +195,30 @@ final class ExportProfileStore: ObservableObject {
     func updateSettings(id: UUID, settings: ExportSettingsSnapshot) -> Bool {
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
         profiles[index].settings = settings
+        profiles[index].updatedAt = now()
+        persist()
+        return true
+    }
+
+    /// Binds a profile to a folder destination in `ProfileDestinationStore`.
+    /// Returns false when the profile id is unknown.
+    @discardableResult
+    func setFolderBinding(profileID: UUID, destinationID: UUID?) -> Bool {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
+        guard profiles[index].folderVaultID != destinationID else { return true }
+        profiles[index].folderVaultID = destinationID
+        profiles[index].updatedAt = now()
+        persist()
+        return true
+    }
+
+    /// Binds a profile to an API endpoint in `ProfileDestinationStore`.
+    /// Returns false when the profile id is unknown.
+    @discardableResult
+    func setAPIEndpointBinding(profileID: UUID, endpointID: UUID?) -> Bool {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
+        guard profiles[index].apiEndpointID != endpointID else { return true }
+        profiles[index].apiEndpointID = endpointID
         profiles[index].updatedAt = now()
         persist()
         return true
@@ -206,15 +252,18 @@ final class ExportProfileStore: ObservableObject {
         return unique
     }
 
-    /// Duplicates a profile under a fresh id with a name like "Weekly 2".
-    /// Returns nil when the source id is unknown.
+    /// Duplicates a profile under a fresh id with a name like "Weekly 2",
+    /// including destination bindings. Returns nil when the source id is
+    /// unknown.
     @discardableResult
     func duplicate(id: UUID) -> ExportProfile? {
         guard let source = profile(id: id) else { return nil }
         return add(
             name: source.name,
             settings: source.settings,
-            target: source.target
+            target: source.target,
+            folderVaultID: source.folderVaultID,
+            apiEndpointID: source.apiEndpointID
         )
     }
 

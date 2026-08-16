@@ -2,10 +2,10 @@
 
 ## Status
 
-- **Docs status:** draft (implementation in progress; not yet user-visible)
+- **Docs status:** ready for phase 3 (phases 1–2 implemented; not yet released)
 - **Video priority:** medium
-- **Primary screen:** Export (profile picker, planned), Schedule (per-profile entries, planned)
-- **Source files:** `HealthMd/Shared/Models/ExportProfile.swift`, `HealthMd/Shared/Models/ExportSettingsSnapshot.swift`, `HealthMd/Shared/Models/AdvancedExportSettings.swift`, `HealthMd/Shared/Models/ExportSchedule.swift`
+- **Primary screen:** Export (profile picker), Schedule (per-profile entries, phase 3)
+- **Source files:** `HealthMd/Shared/Models/ExportProfile.swift`, `HealthMd/Shared/Models/ExportProfileStore.swift` (in `ExportProfile.swift`), `HealthMd/Shared/Models/ProfileDestinationStore.swift`, `HealthMd/Shared/Managers/ExportProfileCoordinator.swift`, `HealthMd/Shared/Models/ExportSettingsSnapshot.swift`, `HealthMd/Shared/Models/AdvancedExportSettings.swift`, `HealthMd/Shared/Models/ExportSchedule.swift`, `HealthMd/iOS/Views/ExportProfilePickerSection.swift`
 
 ## What it does
 
@@ -29,7 +29,7 @@ This capability is recorded as `export.profiles` in `packages/contracts/product-
 
 Recorded product decisions for phases 2–5:
 
-1. **Editing authority:** once any profile exists, the Export tab edits the **active profile exclusively**. Live `AdvancedExportSettings` is the source of truth only in legacy mode; legacy keys are not dual-written and go dormant after migration.
+1. **Editing authority:** once any profile exists, the Export tab edits the **active profile exclusively**. Implementation: switching profiles applies the profile's frozen snapshot into the shared `AdvancedExportSettings` object (`apply(snapshot:)`) and edits flush back into the profile (debounced, plus explicit flush before exports and profile switches). The legacy defaults keys remain the shared object's backing store — keeping every existing consumer (manual export, preview, Mac jobs, intents) consistent without per-consumer rewrites — but they are no longer an independent source of truth once profiles exist.
 2. **Last profile:** deleting the final profile is **forbidden** (implemented in `ExportProfileStore.delete`).
 3. **Destinations:** Phase 2 ships a **multi-vault store** — each profile can bind its own security-scoped folder bookmark (and API endpoint), not just a subfolder under one root.
 4. **Free-tier quota:** unchanged — **10 total free export actions**, consumed per exporting request regardless of profile, schedule, or source. No per-schedule cap is added; the schedule UI should surface projected monthly usage so the burn rate is visible.
@@ -56,8 +56,24 @@ Recorded product decisions for phases 2–5:
 - Deleting the active profile activates the first remaining profile. **Deleting the last remaining profile is forbidden** — once profiles exist, at least one must remain so exports always resolve a concrete configuration.
 - A dangling persisted `activeProfileID` resolves to nil rather than crashing.
 
-## Phasing
+## Phase status
 
+- **Phase 1 — model, store, migration, tests: implemented.** `ExportProfile`, `ExportProfileStore` (legacy-mode fallback, one-time Default migration, CRUD, last-profile deletion guard).
+- **Phase 2 — multi-destination store, coordinator, Export-tab picker: implemented.** `ProfileDestinationStore` (multi-vault bookmarks + API endpoints with Keychain-backed tokens), `ExportProfileCoordinator` (bootstrap binding of the current vault/endpoint to the Default profile, activation applying snapshots and adopting destinations, debounced edit flush, target updates, folder/API rebind on user changes), `ExportProfilePickerSection` in the Export tab, and ContentView wiring (`ExportProfileCoordinator` is created when the main UI appears; target selection and API/folder changes flow through it). Duplicate-as-new, rename, and delete (with last-profile guard) are in the picker.
+- **Phase 3 — per-profile scheduled entries + notifications + worker sync + history labels:** next. Schedule behavior still uses the single legacy `ExportSchedule` until then.
+- **Phase 4 — Intents/Shortcuts profile parameter:** pending.
+- **Phase 5 — direct protocol profile reference + CLI + MCP + fixtures:** pending.
+- **Phase 6 — Android parity:** pending.
+
+### Phase 2 implementation notes
+
+- Profile-bound vault rows (`SavedVaultDestination`) persist the same triple the legacy single-vault flow trusts (bookmark + standardized path + display name). `VaultManager` owns resolution/staleness/expected-path verification via new accessors (`persistedVaultSnapshot()`, `adoptPersistedVault(...)`); the store never bypasses it.
+- Re-selecting a folder while a profile is active rebinds **that** profile; selecting a path another profile already bound shares the destination row (idempotent upsert by standardized path).
+- API tokens for profile endpoints live in the Keychain under `exportProfileDestinations.apiToken.<id>`; the Codable payload never includes them.
+- The picker is iOS-only in phase 2; the shared model/store/coordinator compile on macOS for the phase 3 Mac schedule work.
+- UI-journey automation for the picker is a follow-up alongside phase 3 (the export journey suite should gain a two-profile case).
+
+## Phasing (original plan)
 1. Model + store + migration + tests (this change).
 2. Manual Export profile picker; `ExportPreviewView` binds to the selected profile's snapshot; multi-bookmark destination store.
 3. Per-profile scheduled entries: `ScheduledExportEntry` list bounded to a fixed maximum, reusing `ScheduleDateMath` per entry; `PendingExportRequest` gains optional profile identity; notifications/history label the profile.
