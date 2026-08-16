@@ -54,6 +54,7 @@ dependencies {
     implementation(project(":wearable-contract"))
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
+    implementation(libs.compose.material.icons)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.activity.compose)
     implementation(libs.wear.compose.material)
