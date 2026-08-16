@@ -210,6 +210,9 @@ jobs:
       - name: Validate macOS localizations
         run: make check-macos-localizations
 
+      - name: Validate App Store metadata
+        run: make check-app-store-metadata
+
       - name: Run macOS unit tests with coverage
         timeout-minutes: 45
         run: |
