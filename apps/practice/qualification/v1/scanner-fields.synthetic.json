@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "fictional": true,
+  "url": "/portal/report",
+  "title": "Health.md Practice",
+  "networkDestination": "same-origin-loopback-only",
+  "log": "disabled-in-browser",
+  "error": "The requested operation is unavailable",
+  "audit": { "actorCode": "actor_fictional", "action": "packet_load", "outcome": "denied" },
+  "note": "No clinical values, identity, invitation capability, session secret, or production destination belongs in these fields."
+}

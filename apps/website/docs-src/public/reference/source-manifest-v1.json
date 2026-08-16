@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "6ae7f3a574e0a0bdd5899c1a664f1683889cabf7",
+  "docs_reference_git_tree": "150946c51b6d21cbb2a77a1cba8a63dd679384d9",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "ae6616ca134d086c24577761092b45bfecaf39ad9396a6bf5f87d66d140b382b",
+    "digest": "756020d81d23e7760a328202aef98d9185cae99c7303b206afee4d8de35667ea",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -114,8 +114,8 @@
     },
     {
       "path": "connected-mac-iphone-protocol.md",
-      "bytes": 22049,
-      "sha256": "84def84ab96bdb3b1ce823fbd8e2dd2a8a4e9de7452d1fe013276c60b254ab2c",
+      "bytes": 22452,
+      "sha256": "34657f0c56f9063d871a63cf0d2af65da8861cee97369aa311e94c4c31e69376",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/connected-mac-iphone-protocol/",
@@ -1804,8 +1804,8 @@
     },
     {
       "path": "src/content/docs/reference/connected-mac-iphone-protocol.md",
-      "bytes": 22421,
-      "sha256": "265b05459cbdffd2ae3a3f012fc7b67285b0667d257f73ffa39c8742354a14bc",
+      "bytes": 22824,
+      "sha256": "00fd44bf68853f5aa5a2cc3dcd270a36ef1b29529f84c6de5efab9c84afe2039",
       "classification": "rendered-page",
       "route": "/docs/reference/connected-mac-iphone-protocol/"
     },

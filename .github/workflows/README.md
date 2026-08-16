@@ -2,11 +2,12 @@
 
 ## Required pull-request gates
 
-Every pull request runs the component CI workflows and reports four stable final contexts suitable for branch protection:
+Every pull request runs the component CI workflows and reports five stable final contexts suitable for branch protection:
 
 - `Apple CI / Apple CI`
 - `Android CI / Android CI`
 - `CLI CI / CLI CI`
+- `Practice CI / Practice CI`
 - `Website CI / Website CI`
 
 The final jobs fail unless every job in their component workflow succeeds. Main-branch push triggers remain path-aware, so unaffected components are not rebuilt after merge.

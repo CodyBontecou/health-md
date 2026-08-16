@@ -173,6 +173,7 @@ Generated examples:
 - Late results after a waiter detaches are persisted and retrievable by job ID.
 - Jobs use a fixed `createdAt + 7 days` expiry; only positively validated expired sessions are automatically removed. Corrupt durable state is retained to fail closed instead of making the same session look new.
 - Cancellation is represented explicitly and must not be relabeled as successful empty capture.
+- A rejected corpus-finalization acknowledgement is published only after the Mac has durably stored the matching application failure. Replaying finalization after restart replays the failure first and then the identical rejected acknowledgement. This uses an optional field in the existing internal v5 Mac journal; connected wire message shapes and public export/direct protocol versions are unchanged.
 
 ## Transfer rejection
 
