@@ -1,0 +1,246 @@
+name: Android Wear screenshot publication
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact Android semantic version
+        required: true
+        type: string
+      release_sha:
+        description: Exact immutable annotated-tag release SHA
+        required: true
+        type: string
+      phone_version_code:
+        description: Exact phone QA versionCode
+        required: true
+        type: string
+      wear_version_code:
+        description: Exact Wear QA versionCode
+        required: true
+        type: string
+      submission_run_id:
+        description: Protected evidence-submission run containing Play APK and screenshot capture evidence
+        required: true
+        type: string
+      submission_run_attempt:
+        description: Exact protected evidence-submission run attempt
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: android-google-play-mutation
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish exact Wear screenshots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: google-play-qa
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - name: Checkout exact release tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate immutable screenshot request
+        id: release
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+          PHONE_VERSION_CODE: ${{ inputs.phone_version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PHONE_VERSION_CODE" =~ ^[1-9][0-9]*$ && "$WEAR_VERSION_CODE" =~ ^[1-9][0-9]*$ ]]
+          (( PHONE_VERSION_CODE < 1000000 && WEAR_VERSION_CODE >= 1000000 ))
+          tag="android/v$VERSION"
+          test "$GITHUB_REF_TYPE" = tag
+          test "$GITHUB_REF_NAME" = "$tag"
+          test "$(git cat-file -t "$tag")" = tag
+          sha=$(git rev-parse "$tag^{commit}")
+          test "$sha" = "$EXPECTED_SHA"
+          test "$sha" = "$GITHUB_SHA"
+          git rev-parse --verify refs/remotes/origin/main >/dev/null
+          git merge-base --is-ancestor "$sha" refs/remotes/origin/main
+          test "$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)" = "$VERSION"
+          test "$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)" = "$PHONE_VERSION_CODE"
+          test "$(sed -n 's/.*versionCode = \([0-9_][0-9_]*\).*/\1/p' wear/build.gradle.kts | head -1 | tr -d '_')" = "$WEAR_VERSION_CODE"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Verify protected submission run and exact attempt
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUBMISSION_RUN_ID: ${{ inputs.submission_run_id }}
+          SUBMISSION_RUN_ATTEMPT: ${{ inputs.submission_run_attempt }}
+          EXPECTED_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SUBMISSION_RUN_ID" =~ ^[1-9][0-9]*$ && "$SUBMISSION_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]
+          attempt_base="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${SUBMISSION_RUN_ID}/attempts/${SUBMISSION_RUN_ATTEMPT}"
+          for pair in \
+            "$attempt_base $RUNNER_TEMP/screenshot-submission-run.json" \
+            "$attempt_base/jobs?per_page=100 $RUNNER_TEMP/screenshot-submission-jobs.json"; do
+            url=${pair% *}; destination=${pair##* }
+            curl --fail-with-body --retry 3 --retry-all-errors --max-time 30 -sS \
+              -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2022-11-28' "$url" -o "$destination"
+          done
+          jq -e --arg repo "$GITHUB_REPOSITORY" --arg sha "$EXPECTED_SHA" --argjson attempt "$SUBMISSION_RUN_ATTEMPT" '
+            .repository.full_name == $repo and .path == ".github/workflows/android-wear-evidence-submit.yml" and
+            .event == "workflow_dispatch" and .head_sha == $sha and .run_attempt == $attempt and
+            .status == "completed" and .conclusion == "success"
+          ' "$RUNNER_TEMP/screenshot-submission-run.json" >/dev/null
+          jq -e --argjson attempt "$SUBMISSION_RUN_ATTEMPT" '
+            any(.jobs[]?; .name == "Retain digest-bound Wear evidence submission" and
+              (.run_attempt // $attempt) == $attempt and .conclusion == "success" and
+              any(.steps[]?; .name == "Upload immutable submission artifact" and .conclusion == "success"))
+          ' "$RUNNER_TEMP/screenshot-submission-jobs.json" >/dev/null
+
+      - name: Download submitted screenshot evidence archive
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
+        with:
+          name: wear-release-evidence-submission-${{ inputs.version }}-${{ steps.release.outputs.sha }}-attempt-${{ inputs.submission_run_attempt }}
+          path: ${{ runner.temp }}/wear-screenshot-submission
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.submission_run_id }}
+
+      - name: Set up Java and Android SDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - name: Install Android build tools
+        shell: bash
+        run: sdkmanager 'build-tools;35.0.0'
+
+      - name: Verify submitted exact-release screenshot evidence
+        shell: bash
+        env:
+          SUBMISSION_RUN_ID: ${{ inputs.submission_run_id }}
+          SUBMISSION_RUN_ATTEMPT: ${{ inputs.submission_run_attempt }}
+          VERSION: ${{ inputs.version }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          PHONE_VERSION_CODE: ${{ inputs.phone_version_code }}
+          WEAR_VERSION_CODE: ${{ inputs.wear_version_code }}
+          PLAY_SIGNER: ${{ vars.PLAY_APP_SIGNING_CERT_SHA256 }}
+          SCREENSHOT_REVIEWER: ${{ vars.WEAR_SCREENSHOT_REVIEWER }}
+          SCREENSHOT_TICKET: ${{ vars.WEAR_SCREENSHOT_REVIEW_TICKET }}
+        run: |
+          set -euo pipefail
+          submission="$RUNNER_TEMP/wear-screenshot-submission"
+          mapfile -t archives < <(find "$submission" -maxdepth 1 -type f -name 'wear-release-evidence.tar.gz' -print)
+          [[ ${#archives[@]} -eq 1 && -f "$submission/submission.json" ]]
+          jq -e --arg version "$VERSION" --arg sha "$RELEASE_SHA" \
+            --argjson run "$SUBMISSION_RUN_ID" --argjson attempt "$SUBMISSION_RUN_ATTEMPT" '
+            .schemaVersion == 1 and .versionName == $version and .releaseSha == $sha and
+            .submissionRunId == $run and .submissionRunAttempt == $attempt and
+            (.archiveSha256 | test("^[0-9a-f]{64}$")) and
+            (.archiveSize | type == "number" and . > 0 and . <= 2147483648)
+          ' "$submission/submission.json" >/dev/null
+          test "$(sha256sum "${archives[0]}" | awk '{print $1}')" = "$(jq -er .archiveSha256 "$submission/submission.json")"
+          test "$(stat -c %s "${archives[0]}")" = "$(jq -er .archiveSize "$submission/submission.json")"
+          python3 ./scripts/extract-wear-release-evidence-archive.py \
+            "${archives[0]}" "$RUNNER_TEMP/wear-screenshot-evidence"
+          root="$RUNNER_TEMP/wear-screenshot-evidence"
+          test -f "$root/wear-play/play-app-signing.json"
+          test -f "$root/wear-screenshots/wear-app.png"
+          test -f "$root/wear-screenshots/wear-tile.png"
+          test -d "$root/wear-play-screenshots"
+          [[ "$PLAY_SIGNER" =~ ^[0-9a-f]{64}$ && -n "$SCREENSHOT_REVIEWER" && -n "$SCREENSHOT_TICKET" ]]
+          EXPECTED_PHONE_VERSION_CODE="$PHONE_VERSION_CODE" EXPECTED_WEAR_VERSION_CODE="$WEAR_VERSION_CODE" \
+          EXPECTED_VERSION_NAME="$VERSION" EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$PLAY_SIGNER" \
+            ./scripts/verify-google-play-generated-apk-evidence.sh "$root/wear-play/play-app-signing.json" >/dev/null
+          wear_apk=$(jq -er .wear.apkSha256 "$root/wear-play/play-app-signing.json")
+          python3 ./scripts/validate-wear-play-assets.py --root "$root/wear-screenshots" >/dev/null
+          python3 ./scripts/verify-wear-play-screenshot-evidence.py \
+            --assets "$root/wear-screenshots" --evidence "$root/wear-play-screenshots" \
+            --wear-apk-sha256 "$wear_apk" --play-signer-sha256 "$PLAY_SIGNER" \
+            --wear-version-code "$WEAR_VERSION_CODE" --version-name "$VERSION" \
+            --expected-reviewer "$SCREENSHOT_REVIEWER" --expected-review-ticket "$SCREENSHOT_TICKET" >/dev/null
+          mkdir -p play-store/wear/screenshots
+          cp "$root/wear-screenshots/wear-app.png" play-store/wear/screenshots/wear-app.png
+          cp "$root/wear-screenshots/wear-tile.png" play-store/wear/screenshots/wear-tile.png
+          echo "WEAR_APK_SHA256=$wear_apk" >> "$GITHUB_ENV"
+
+      - name: Configure ephemeral QA Play credential
+        shell: bash
+        env:
+          PLAY_CONSOLE_KEY_JSON: ${{ secrets.PLAY_CONSOLE_KEY_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "${PLAY_CONSOLE_KEY_JSON:-}"
+          printf '%s' "$PLAY_CONSOLE_KEY_JSON" >"$RUNNER_TEMP/play-console-key.json"
+          chmod 600 "$RUNNER_TEMP/play-console-key.json"
+
+      - name: Replace and verify exact Wear screenshots
+        shell: bash
+        env:
+          PLAY_CONSOLE_KEY_PATH: ${{ runner.temp }}/play-console-key.json
+          EXPECTED_WEAR_APK_SHA256: ${{ env.WEAR_APK_SHA256 }}
+          EXPECTED_PLAY_APP_SIGNING_CERT_SHA256: ${{ vars.PLAY_APP_SIGNING_CERT_SHA256 }}
+          EXPECTED_SCREENSHOT_REVIEWER: ${{ vars.WEAR_SCREENSHOT_REVIEWER }}
+          EXPECTED_SCREENSHOT_REVIEW_TICKET: ${{ vars.WEAR_SCREENSHOT_REVIEW_TICKET }}
+          WEAR_PLAY_EVIDENCE_RECEIPT: ${{ runner.temp }}/wear-screenshot-evidence/wear-play/play-app-signing.json
+          WEAR_SCREENSHOT_EVIDENCE_ROOT: ${{ runner.temp }}/wear-screenshot-evidence/wear-play-screenshots
+          WEAR_SCREENSHOT_UPLOAD_EVIDENCE_ROOT: ${{ runner.temp }}/wear-play-screenshot-upload
+        run: |
+          set -euo pipefail
+          export CONFIRM_WEAR_SCREENSHOT_REPLACEMENT="com.healthmd.android:en-US:wearScreenshots:$EXPECTED_WEAR_APK_SHA256:$EXPECTED_PLAY_APP_SIGNING_CERT_SHA256"
+          ./scripts/sync-google-play-wear-screenshots.sh
+          root="$RUNNER_TEMP/wear-screenshot-upload-artifact"
+          mkdir "$root"
+          mv "$WEAR_SCREENSHOT_UPLOAD_EVIDENCE_ROOT" "$root/wear-play-screenshot-upload"
+          jq -n --arg repository "$GITHUB_REPOSITORY" \
+            --arg workflow ".github/workflows/android-wear-screenshots.yml" \
+            --argjson runId "$GITHUB_RUN_ID" --argjson runAttempt "$GITHUB_RUN_ATTEMPT" \
+            --argjson submissionRunId "${{ inputs.submission_run_id }}" \
+            --argjson submissionRunAttempt "${{ inputs.submission_run_attempt }}" \
+            --arg sha "${{ steps.release.outputs.sha }}" --arg version "${{ inputs.version }}" \
+            --argjson phone "${{ inputs.phone_version_code }}" --argjson wear "${{ inputs.wear_version_code }}" \
+            --arg publishedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+              schemaVersion:1,repository:$repository,workflow:$workflow,
+              runId:$runId,runAttempt:$runAttempt,
+              submissionRunId:$submissionRunId,submissionRunAttempt:$submissionRunAttempt,
+              releaseSha:$sha,versionName:$version,phoneVersionCode:$phone,wearVersionCode:$wear,
+              screenshotMutationCommitted:true,publishedAtUtc:$publishedAt
+            }' >"$root/workflow-provenance.json"
+
+      - name: Remove ephemeral screenshot credentials
+        if: ${{ always() }}
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/play-console-key.json"
+
+      - name: Upload protected screenshot mutation evidence
+        if: ${{ success() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: wear-screenshot-upload-${{ inputs.version }}-${{ steps.release.outputs.sha }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wear-screenshot-upload-artifact
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+
+      - name: Cleanup submitted evidence
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          rm -rf "$RUNNER_TEMP/wear-screenshot-submission" "$RUNNER_TEMP/wear-screenshot-evidence"
+          rm -rf "$RUNNER_TEMP/wear-screenshot-upload-artifact" "$RUNNER_TEMP/wear-play-screenshot-upload"
+          rm -f play-store/wear/screenshots/wear-app.png play-store/wear/screenshots/wear-tile.png

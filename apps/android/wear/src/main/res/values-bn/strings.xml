@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">Health.md</string>
+    <string name="wear_dashboard_title">Health.md</string>
+    <string name="wear_setup">সেটআপ শেষ করতে ফোনে Health.md খুলুন।</string>
+    <string name="wear_phone_missing">ফোনের অ্যাপ পাওয়া যায়নি</string>
+    <string name="wear_unreachable">ফোন এখন নাগালে নেই। সর্বশেষ সংরক্ষিত ডেটা ব্যবহার করা যাবে।</string>
+    <string name="wear_permissions">ফোনে Health Connect অ্যাক্সেস প্রয়োজন।</string>
+    <string name="wear_version_mismatch">ফোন ও ঘড়িতে Health.md আপডেট করুন।</string>
+    <string name="wear_no_data">এখনও কোনো স্বাস্থ্য ডেটা নেই</string>
+    <string name="wear_expired">ডেটা ২৪ ঘণ্টার বেশি পুরোনো। পরিমাপ দেখাতে সিঙ্ক করুন।</string>
+    <plurals name="wear_updated_hours">
+        <item quantity="one">%1$d ঘণ্টা আগে আপডেট হয়েছে</item>
+        <item quantity="other">%1$d ঘণ্টা আগে আপডেট হয়েছে</item>
+    </plurals>
+    <string name="wear_sync">স্বাস্থ্য ডেটা সিঙ্ক করুন</string>
+    <string name="wear_syncing">সিঙ্কের অনুরোধ করা হচ্ছে…</string>
+    <string name="wear_activity">দৈনিক কার্যকলাপ</string>
+    <string name="wear_recovery">পুনরুদ্ধার</string>
+    <string name="wear_steps">ধাপ</string>
+    <string name="wear_move">সক্রিয় শক্তি</string>
+    <string name="wear_exercise">ব্যায়ামের মিনিট</string>
+    <string name="wear_sleep">ঘুম</string>
+    <string name="wear_resting_hr">বিশ্রামের হৃদ্‌স্পন্দন</string>
+    <string name="wear_average_hr">গড় হৃদ্‌স্পন্দন</string>
+    <string name="wear_hrv">HRV RMSSD</string>
+    <string name="wear_blood_oxygen">রক্তের অক্সিজেন</string>
+    <string name="wear_not_realtime">সর্বশেষ ফোন সিঙ্ক; রিয়েল-টাইম নয়</string>
+    <string name="wear_no_data_short">--</string>
+    <string name="wear_health_connect_unavailable">আপনার ফোনে Health Connect উপলভ্য নয়।</string>
+    <plurals name="wear_updated_minutes">
+        <item quantity="one">%1$d মিনিট আগে আপডেট হয়েছে</item>
+        <item quantity="other">%1$d মিনিট আগে আপডেট হয়েছে</item>
+    </plurals>
+    <string name="wear_value_kcal">%1$s কিলোক্যালরি</string>
+    <string name="wear_value_minutes">%1$s মিনিট</string>
+    <string name="wear_value_hours">%1$s ঘণ্টা</string>
+    <string name="wear_value_bpm">%1$s bpm</string>
+    <string name="wear_value_ms">%1$s ms</string>
+    <string name="wear_value_percent">%1$s%%</string>
+    <string name="wear_tile_steps">%1$s ধাপ</string>
+    <string name="wear_tile_exercise">%1$s মিনিট</string>
+    <string name="wear_tile_sleep">%1$s ঘণ্টা ঘুম</string>
+    <string name="wear_tile_hrv">%1$s ms RMSSD</string>
+    <string name="wear_metric_separator"> · </string>
+    <string name="wear_tile_activity_empty">কোনো কার্যকলাপের ডেটা নেই</string>
+    <string name="wear_tile_recovery_empty">ঘুম বা HRV ডেটা নেই</string>
+    <string name="wear_preview_placeholder">প্রিভিউ; কোনো স্বাস্থ্য মান নেই</string>
+    <string name="wear_complication_description">%1$s, %2$s, %3$s</string>
+    <string name="wear_complication_long">%1$s %2$s · %3$s</string>
+</resources>

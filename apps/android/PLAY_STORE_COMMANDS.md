@@ -1,191 +1,88 @@
-# gradle-play-publisher Commands Reference
+# Google Play command reference
 
-## Offline listing validation
+## Release ownership
 
-The files under `play-console/` use an authored layout. Prepare the canonical Fastlane layout before passing metadata to `gplay` or another publisher:
+Phone and Wear releases are a single versioned product pair. Gradle Play Publisher has been removed from both application modules; do not reintroduce it or upload, promote, or replace Play metadata with ad hoc Gradle/Fastlane commands. Module-level publishers cannot enforce the required `qa`/`wear:qa` and `production`/`wear:production` pairing, protected reviewer inputs, exact-SHA evidence, or one-edit production promotion.
+
+The only supported mutation paths are:
+
+- `.github/workflows/android-release.yml` — builds the exact annotated `android/v<version>` source and uploads the signed phone/Wear pair in one edit to `qa` and `wear:qa` using the protected `google-play-qa` environment.
+- `.github/workflows/android-wear-screenshots.yml` — the only supported Wear screenshot mutation. From the exact annotated release tag it downloads an exact-attempt protected submission, verifies Play-generated APK and physical capture evidence, and invokes `scripts/sync-google-play-wear-screenshots.sh` with the reviewer-protected QA account. Never invoke the implementation script with a local mutation credential.
+- `.github/workflows/android-promote-production.yml` — verifies sealed evidence before credentials, then promotes both exact codes and submits both tracks for review in one edit using `google-play-production`.
+- `.github/workflows/android-promote-production-recover.yml` — non-committing recovery for a proven post-commit receipt-retention failure, bound to the exact original promotion run ID and attempt. It requires the protected production credential and temporarily creates, reads, and deletes an edit to inspect the committed screenshot set, but it never sends a track `PUT` or commits an edit.
+
+Never use one account for both QA upload and production mutation. Never place the Wear artifact on a phone/default track.
+
+## Safe local commands
+
+Run from `apps/android`.
+
+### Build and test
+
+```bash
+./gradlew :app:testDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test
+./gradlew :app:lintDebug :wear:lintDebug
+./gradlew :app:assembleDebug :wear:assembleDebug
+./gradlew :app:bundleRelease :wear:bundleRelease
+```
+
+A release build requires externally supplied signing configuration. Local substitute signing proves only build/package behavior and is not production-signing evidence.
+
+### Validate local release artifacts
+
+```bash
+WEAR_REQUIRE_SIGNING_ATTESTATION=true \
+  ./scripts/validate-wear-artifact.sh \
+  wear/build/outputs/bundle/release/wear-release.aab \
+  app/build/outputs/bundle/release/app-release.aab
+
+bundle exec fastlane android validate_wear_release
+```
+
+`validate_wear_release` builds and inspects both AABs without publication.
+
+### Validate authored Play metadata
 
 ```bash
 ./scripts/validate-play-listing.sh
+python3 ./scripts/validate-wear-play-assets.py
 ```
 
-This validates all draft locales, then prepares reviewed-only input at `build/play-metadata/reviewed/`. It does not authenticate, upload, publish or change Play Console. Do not run `gplay validate` directly against `play-console/listing/` or `play-console/screenshots/`; those custom paths can produce incomplete results.
+The Wear asset validator intentionally fails until the two exact-release physical-watch screenshots exist.
 
-## Localized phone screenshot generation
+### Read-only Play readiness
 
-Capture genuine localized Android UI, then run the paid `gpt-image-2` reference-swap workflow from the repository root:
+Use a dedicated read-only Play service account, never a QA or production mutation credential:
 
 ```bash
-cd apps/android
-./scripts/capture-localized-play-screenshots.py --serial emulator-5554 --locales de-DE
-cd ../..
-npm --prefix scripts/app-store-images run plan:android-localized-set -- --locale de-DE
-npm --prefix scripts/app-store-images run generate:android-localized-set -- --locale de-DE
-cd apps/android
-./scripts/finalize-ai-localized-play-screenshots.py --locales de-DE
-./scripts/validate-play-listing.sh
+PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/health-md-read-only.json" \
+  EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
+  ./scripts/inspect-google-play-wear-readiness.sh \
+  .pi/evidence/google-play/readiness.json
 ```
 
-Generation sends the English master, localized emulator capture and localized-copy reference to OpenAI for each slide. It makes eight paid image edits per complete locale, writes ignored working output under `app-store-output/android-ai-edits/`, and does not upload or publish to Google Play.
+This query creates no Play edit. Treat its output as time-bounded mutable-state evidence and re-run it immediately before an authorized release action.
 
-## Authentication
-Before using any commands, ensure `play-console-key.json` is in the project root.
+### Local blocker report
 
 ```bash
-# Validate credentials
-./gradlew validatePlayConsoleCredentials
+./scripts/report-wear-release-blockers.sh
+./scripts/verify-wear-audit-evidence.sh
 ```
 
-## Build Commands
+Both commands are diagnostic. They cannot turn emulator, substitute-signed, or self-authored evidence into protected release proof.
 
-```bash
-# Build release bundle (AAB)
-./gradlew bundleRelease
+## Authorized release sequence
 
-# Build and immediately upload to Internal Testing
-./gradlew publishReleaseBundle
+1. Commit and independently review the complete source on a SHA reachable from `origin/main`.
+2. Create the annotated `android/v<version>` tag at that exact SHA.
+3. Require successful exact-SHA push CI and retain its independently re-queried receipt.
+4. Authorize `android-release.yml` to upload the exact signed phone/Wear pair to `qa`/`wear:qa`.
+5. Download and verify Play-generated base-master APKs and the Play App Signing identity.
+6. Complete closed-track, Pixel/Samsung, accessibility, privacy, offline, screenshot, and battery protocols.
+7. Submit the reviewed exact-release Wear screenshot evidence through `android-wear-evidence-submit.yml`, then dispatch `android-wear-screenshots.yml` from the exact release tag with that submission run ID and attempt. Retain its protected attempt-qualified receipt.
+8. Submit the unsigned evidence archive, run protected ingest, and verify the checksum/HMAC-sealed artifact.
+9. Authorize the one-edit paired production promotion.
+10. Retain and independently verify the exact promotion receipt.
 
-# Build for debug testing
-./gradlew bundleDebug
-```
-
-## Publishing Commands
-
-### By Track
-
-```bash
-# Internal Testing (fastest feedback)
-./gradlew publishReleaseBundle
-
-# Closed Testing / Beta
-./gradlew publishReleaseBundle --play-track=beta
-
-# Production (full release)
-./gradlew publishReleaseBundle --play-track=production
-```
-
-### Staged Rollouts
-
-```bash
-# Release to 5% of users
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.05
-
-# Increase to 25%
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.25
-
-# Increase to 50%
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.50
-
-# Full rollout (100%)
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=1.0
-```
-
-## Metadata Publishing
-
-```bash
-# Update listing, screenshots, and graphics (no build)
-./gradlew publishListingBundle
-
-# Update only specific elements
-./gradlew publishListingBundle --play-no-confirm
-```
-
-## Release Notes & Version Updates
-
-```bash
-# Update release notes for current version
-# Edit: play-console/listing/en-US/release-notes/en-US/default.txt
-./gradlew publishListingBundle
-```
-
-## Version Management
-
-```bash
-# View current version
-grep versionCode app/build.gradle.kts
-
-# Before each upload, commit a versionCode higher than every build in Play Console.
-# Also update versionName when preparing a new customer-facing release.
-grep -E 'versionCode|versionName' app/build.gradle.kts
-```
-
-## Typical Release Workflow
-
-```bash
-# 1. Update and commit versionCode/versionName in app/build.gradle.kts
-# 2. Update release notes
-# nano play-console/listing/en-US/release-notes/en-US/default.txt
-
-# 3. Build release bundle
-./gradlew bundleRelease
-
-# 4. Test locally on device
-./gradlew installDebug
-
-# 5. Upload to Internal Testing
-./gradlew publishReleaseBundle
-
-# 6. Test in internal testing for 1-2 days
-
-# 7. Move to Beta
-./gradlew publishReleaseBundle --play-track=beta
-
-# 8. Beta test for 3-7 days
-
-# 9. Release to production (5% initially)
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=0.05
-
-# 10. Monitor crashes/reviews for 2-3 days
-
-# 11. Increase rollout
-./gradlew publishReleaseBundle --play-track=production --play-user-fraction=1.0
-```
-
-## Troubleshooting
-
-```bash
-# Enable verbose output
-./gradlew publishReleaseBundle --info
-
-# Validate without publishing
-./gradlew validatePlayConsoleCredentials
-
-# Check latest published version
-# (requires querying Play Console API)
-```
-
-## CI/CD Quick Start
-
-Save Play Console key to GitHub Secrets:
-```bash
-# 1. In GitHub repo: Settings → Secrets and variables → Actions
-# 2. New secret: PLAY_CONSOLE_KEY
-# 3. Paste contents of play-console-key.json
-```
-
-Create `.github/workflows/play-store.yml`:
-```yaml
-name: Publish to Play Store
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-      - name: Create key file
-        run: echo '${{ secrets.PLAY_CONSOLE_KEY }}' > play-console-key.json
-      - name: Publish to Play Store
-        run: ./gradlew publishReleaseBundle --play-track=beta
-```
-
-## Documentation
-
-- [gradle-play-publisher GitHub](https://github.com/Triple-T/gradle-play-publisher)
-- [Google Play Console Help](https://support.google.com/googleplay/android-developer/)
-- [Health Connect Guidelines](https://developer.android.com/health-and-fitness/guides/health-connect)
+See `PLAY_STORE_SETUP.md`, `docs/features/wear-os-implementation.md`, and `docs/features/wear-os-completion-audit.md` for the complete evidence contract.

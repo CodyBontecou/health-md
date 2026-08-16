@@ -7,7 +7,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.play.publisher)
 }
 
 // Load signing properties from local.properties
@@ -41,6 +40,7 @@ val exportEngineAndroidFrozenV4 = configuredEngineMode("EXPORT_ENGINE_ANDROID_FR
 val exportEngineAndroidAnalyticalV5 = configuredEngineMode("EXPORT_ENGINE_ANDROID_ANALYTICAL_V5")
 val exportEngineApiV1FrozenV4 = configuredEngineMode("EXPORT_ENGINE_API_V1_FROZEN_V4")
 val directProtocolEngine = configuredEngineMode("DIRECT_PROTOCOL_ENGINE")
+val practiceCompiledIn = configuredValue("PRACTICE_COMPILED_IN") == "included"
 val instrumentedTestBuildType = providers.gradleProperty("healthmdInstrumentedTestBuildType")
     .getOrElse("debug")
     .also { require(it in setOf("debug", "e2e")) }
@@ -54,8 +54,8 @@ android {
         applicationId = "com.healthmd.android"
         minSdk = 28
         targetSdk = 35
-        versionCode = 28
-        versionName = "1.7.0"
+        versionCode = 29
+        versionName = "1.7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -107,6 +107,11 @@ android {
             "String",
             "DIRECT_PROTOCOL_ENGINE",
             directProtocolEngine.asBuildConfigString(),
+        )
+        buildConfigField(
+            "boolean",
+            "PRACTICE_COMPILED_IN",
+            practiceCompiledIn.toString(),
         )
     }
 
@@ -175,6 +180,7 @@ android {
 dependencies {
     implementation(project(":direct-protocol"))
     implementation(project(":healthmd-core"))
+    implementation(project(":wearable-contract"))
 
     // Compose
     implementation(platform(libs.compose.bom))
@@ -195,6 +201,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.glance)
     implementation(libs.glance.appwidget)
+    implementation(libs.play.services.wearable)
 
     // Health Connect
     implementation(libs.health.connect)
@@ -267,20 +274,4 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
-}
-
-// Google Play Publisher Configuration
-play {
-    val configuredPath =
-        System.getenv("PLAY_CONSOLE_KEY_PATH")
-            ?: providers.gradleProperty("PLAY_CONSOLE_KEY_PATH").orNull
-            ?: "${System.getProperty("user.home")}/.config/play-console/play-publisher-crested-drive-492000-u7.json"
-
-    val serviceKeyFile = file(configuredPath)
-    if (serviceKeyFile.exists()) {
-        serviceAccountCredentials.set(serviceKeyFile)
-    }
-
-    track.set("internal")
-    defaultToAppBundles.set(true)
 }
