@@ -1,0 +1,3508 @@
+{
+  "version": 2,
+  "canonicalPolicy": "src/contracts/authorization-policy.json",
+  "routeCount": 26,
+  "operationCount": 34,
+  "routes": [
+    {
+      "route": "/",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/sign-in",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/verify",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/recovery",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/signed-out",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/access-denied",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/relationships",
+      "requiredCapability": "relationship:search",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/relationship",
+      "requiredCapability": "relationship:search",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/templates",
+      "requiredCapability": "template:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/template",
+      "requiredCapability": "template:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/template/edit",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/requests",
+      "requiredCapability": "request:write",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/request",
+      "requiredCapability": "request:write",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/request/build",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/request/preview",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/invitation",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/inbox",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/report",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/report/history",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/report/print",
+      "requiredCapability": "packet:read",
+      "classification": "print",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/admin/members",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/admin/retention",
+      "requiredCapability": "retention:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/portal/admin/audit",
+      "requiredCapability": "audit:read",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "protected route is exercised without session",
+        "wrongRole": "protected route is exercised with opposite role",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route positive matrix: $route renders for declared $declaredRole role",
+          "observableRef": "test-observable-a8f6dfce5b7a3561",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-a8f6dfce5b7a3561-assertion-001",
+            "test-observable-a8f6dfce5b7a3561-assertion-002"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies no session and returns to sign in",
+          "observableRef": "test-observable-9018062d9cf85799",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-9018062d9cf85799-assertion-001"
+          ]
+        },
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "protected route matrix: $route denies opposite role even with forged capabilities",
+          "observableRef": "test-observable-40838cf2fe99cc89",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-40838cf2fe99cc89-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/session-expired",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    },
+    {
+      "route": "/unavailable",
+      "requiredCapability": "public",
+      "classification": "page",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks this fixed route public",
+        "wrongRole": "not-applicable: route is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: fixed identifier-free client route selects no tenant resource"
+      },
+      "evidence": [
+        {
+          "file": "test/authorization-routes.test.tsx",
+          "test": "public route matrix: $route renders directly without a session",
+          "observableRef": "test-observable-95fc767fe60f3e52",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-95fc767fe60f3e52-assertion-001"
+          ]
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "operation": "sign_in",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks operation public",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "public operation matrix: $operation executes without a session boundary",
+          "observableRef": "test-observable-fe0c6cbc33f7af28",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-fe0c6cbc33f7af28-assertion-001",
+            "test-observable-fe0c6cbc33f7af28-assertion-002",
+            "test-observable-fe0c6cbc33f7af28-assertion-003",
+            "test-observable-fe0c6cbc33f7af28-assertion-004"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "verify_mfa",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks operation public",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "public operation matrix: $operation executes without a session boundary",
+          "observableRef": "test-observable-fe0c6cbc33f7af28",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-fe0c6cbc33f7af28-assertion-001",
+            "test-observable-fe0c6cbc33f7af28-assertion-002",
+            "test-observable-fe0c6cbc33f7af28-assertion-003",
+            "test-observable-fe0c6cbc33f7af28-assertion-004"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "session_bootstrap",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "reauthenticate",
+      "requiredCapability": "authenticated",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "recovery",
+      "requiredCapability": "public",
+      "classification": "query",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks operation public",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "public operation matrix: $operation executes without a session boundary",
+          "observableRef": "test-observable-fe0c6cbc33f7af28",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-fe0c6cbc33f7af28-assertion-001",
+            "test-observable-fe0c6cbc33f7af28-assertion-002",
+            "test-observable-fe0c6cbc33f7af28-assertion-003",
+            "test-observable-fe0c6cbc33f7af28-assertion-004"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "session",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "logout",
+      "requiredCapability": "authenticated",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "relationship_search",
+      "requiredCapability": "relationship:search",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "seeded tenant-B filtered-result matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "filter matrix excludes seeded tenant-B rows from every canonical filtered-result operation",
+          "observableRef": "test-observable-844a9c38d50a052f",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-844a9c38d50a052f-assertion-001",
+            "test-observable-844a9c38d50a052f-assertion-002",
+            "test-observable-844a9c38d50a052f-assertion-003",
+            "test-observable-844a9c38d50a052f-assertion-004",
+            "test-observable-844a9c38d50a052f-assertion-005",
+            "test-observable-844a9c38d50a052f-assertion-006",
+            "test-observable-844a9c38d50a052f-assertion-007"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "relationship_select",
+      "requiredCapability": "relationship:search",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "template_list",
+      "requiredCapability": "authenticated",
+      "classification": "query",
+      "authorizedRoles": [
+        "practice_admin",
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": false,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "seeded tenant-B filtered-result matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "filter matrix excludes seeded tenant-B rows from every canonical filtered-result operation",
+          "observableRef": "test-observable-844a9c38d50a052f",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-844a9c38d50a052f-assertion-001",
+            "test-observable-844a9c38d50a052f-assertion-002",
+            "test-observable-844a9c38d50a052f-assertion-003",
+            "test-observable-844a9c38d50a052f-assertion-004",
+            "test-observable-844a9c38d50a052f-assertion-005",
+            "test-observable-844a9c38d50a052f-assertion-006",
+            "test-observable-844a9c38d50a052f-assertion-007"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "template_create",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "template_revise",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "template_archive",
+      "requiredCapability": "template:manage",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "request_list",
+      "requiredCapability": "request:write",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "seeded tenant-B filtered-result matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "filter matrix excludes seeded tenant-B rows from every canonical filtered-result operation",
+          "observableRef": "test-observable-844a9c38d50a052f",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-844a9c38d50a052f-assertion-001",
+            "test-observable-844a9c38d50a052f-assertion-002",
+            "test-observable-844a9c38d50a052f-assertion-003",
+            "test-observable-844a9c38d50a052f-assertion-004",
+            "test-observable-844a9c38d50a052f-assertion-005",
+            "test-observable-844a9c38d50a052f-assertion-006",
+            "test-observable-844a9c38d50a052f-assertion-007"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "request_preview",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "request_issue",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "invitation_claim",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks operation public",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "public operation matrix: $operation executes without a session boundary",
+          "observableRef": "test-observable-fe0c6cbc33f7af28",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-fe0c6cbc33f7af28-assertion-001",
+            "test-observable-fe0c6cbc33f7af28-assertion-002",
+            "test-observable-fe0c6cbc33f7af28-assertion-003",
+            "test-observable-fe0c6cbc33f7af28-assertion-004"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "invitation_accept",
+      "requiredCapability": "public",
+      "classification": "mutation",
+      "authorizedRoles": [],
+      "noSessionTest": false,
+      "wrongRoleTest": false,
+      "csrfRequired": false,
+      "tenantEvidence": "none",
+      "denialEvidence": {
+        "noSession": "not-applicable: canonical policy marks operation public",
+        "wrongRole": "not-applicable: operation is public or shared by authenticated roles",
+        "tenantEvidence": "not-applicable: operation accepts no tenant resource and returns no tenant-partitioned list"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "public operation matrix: $operation executes without a session boundary",
+          "observableRef": "test-observable-fe0c6cbc33f7af28",
+          "coveredFacets": [
+            "publicAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-fe0c6cbc33f7af28-assertion-001",
+            "test-observable-fe0c6cbc33f7af28-assertion-002",
+            "test-observable-fe0c6cbc33f7af28-assertion-003",
+            "test-observable-fe0c6cbc33f7af28-assertion-004"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "invitation_revoke",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "invitation_expire",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "request_cancel",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "request_renew",
+      "requiredCapability": "request:write",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "inbox",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "seeded tenant-B filtered-result matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "filter matrix excludes seeded tenant-B rows from every canonical filtered-result operation",
+          "observableRef": "test-observable-844a9c38d50a052f",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-844a9c38d50a052f-assertion-001",
+            "test-observable-844a9c38d50a052f-assertion-002",
+            "test-observable-844a9c38d50a052f-assertion-003",
+            "test-observable-844a9c38d50a052f-assertion-004",
+            "test-observable-844a9c38d50a052f-assertion-005",
+            "test-observable-844a9c38d50a052f-assertion-006",
+            "test-observable-844a9c38d50a052f-assertion-007"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "packet_load",
+      "requiredCapability": "packet:read",
+      "classification": "query",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "packet_download",
+      "requiredCapability": "packet:download",
+      "classification": "download",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "packet_acknowledge",
+      "requiredCapability": "packet:acknowledge",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "packet_review",
+      "requiredCapability": "packet:review",
+      "classification": "mutation",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "packet_passive_event",
+      "requiredCapability": "packet:read",
+      "classification": "print",
+      "authorizedRoles": [
+        "clinician"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "members",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "seeded tenant-B filtered-result matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "filter matrix excludes seeded tenant-B rows from every canonical filtered-result operation",
+          "observableRef": "test-observable-844a9c38d50a052f",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-844a9c38d50a052f-assertion-001",
+            "test-observable-844a9c38d50a052f-assertion-002",
+            "test-observable-844a9c38d50a052f-assertion-003",
+            "test-observable-844a9c38d50a052f-assertion-004",
+            "test-observable-844a9c38d50a052f-assertion-005",
+            "test-observable-844a9c38d50a052f-assertion-006",
+            "test-observable-844a9c38d50a052f-assertion-007"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "member_role_change",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "member_offboard",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "member_revoke_sessions",
+      "requiredCapability": "member:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "deny_foreign_resource",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "existing foreign resource denial matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies an existing foreign tenant resource",
+          "observableRef": "test-observable-71862234edbd5077",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-71862234edbd5077-assertion-001",
+            "test-observable-71862234edbd5077-assertion-002",
+            "test-observable-71862234edbd5077-assertion-003",
+            "test-observable-71862234edbd5077-assertion-005"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "retention",
+      "requiredCapability": "retention:manage",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "seeded tenant-B filtered-result matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "filter matrix excludes seeded tenant-B rows from every canonical filtered-result operation",
+          "observableRef": "test-observable-844a9c38d50a052f",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-844a9c38d50a052f-assertion-001",
+            "test-observable-844a9c38d50a052f-assertion-002",
+            "test-observable-844a9c38d50a052f-assertion-003",
+            "test-observable-844a9c38d50a052f-assertion-004",
+            "test-observable-844a9c38d50a052f-assertion-005",
+            "test-observable-844a9c38d50a052f-assertion-006",
+            "test-observable-844a9c38d50a052f-assertion-007"
+          ]
+        }
+      ]
+    },
+    {
+      "operation": "audit",
+      "requiredCapability": "audit:read",
+      "classification": "admin",
+      "authorizedRoles": [
+        "practice_admin"
+      ],
+      "noSessionTest": true,
+      "wrongRoleTest": true,
+      "csrfRequired": true,
+      "tenantEvidence": "filter_foreign_results",
+      "denialEvidence": {
+        "noSession": "canonical preauthorization executable matrix denies absent session",
+        "wrongRole": "canonical preauthorization executable matrix denies opposite role",
+        "tenantEvidence": "seeded tenant-B filtered-result matrix is executable"
+      },
+      "evidence": [
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "canonical operation policy runtime: $operation preauthorizes every declared role/capability mapping",
+          "observableRef": "test-observable-45f3d48ccf0aa9b6",
+          "coveredFacets": [
+            "authorizedAccess"
+          ],
+          "assertionRefs": [
+            "test-observable-45f3d48ccf0aa9b6-assertion-001"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies no session through canonical preauthorization",
+          "observableRef": "test-observable-455f557a6049d5cd",
+          "coveredFacets": [
+            "noSession"
+          ],
+          "assertionRefs": [
+            "test-observable-455f557a6049d5cd-assertion-001",
+            "test-observable-455f557a6049d5cd-assertion-002",
+            "test-observable-455f557a6049d5cd-assertion-003"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "operation matrix: $operation denies wrong role through canonical preauthorization",
+          "observableRef": "test-observable-4822e366162c1d07",
+          "coveredFacets": [
+            "wrongRole"
+          ],
+          "assertionRefs": [
+            "test-observable-4822e366162c1d07-assertion-001",
+            "test-observable-4822e366162c1d07-assertion-002",
+            "test-observable-4822e366162c1d07-assertion-004"
+          ]
+        },
+        {
+          "file": "test/security-matrix.test.ts",
+          "test": "filter matrix excludes seeded tenant-B rows from every canonical filtered-result operation",
+          "observableRef": "test-observable-844a9c38d50a052f",
+          "coveredFacets": [
+            "tenantEvidence"
+          ],
+          "assertionRefs": [
+            "test-observable-844a9c38d50a052f-assertion-001",
+            "test-observable-844a9c38d50a052f-assertion-002",
+            "test-observable-844a9c38d50a052f-assertion-003",
+            "test-observable-844a9c38d50a052f-assertion-004",
+            "test-observable-844a9c38d50a052f-assertion-005",
+            "test-observable-844a9c38d50a052f-assertion-006",
+            "test-observable-844a9c38d50a052f-assertion-007"
+          ]
+        }
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "control": "csrf",
+      "evidence": [
+        {
+          "file": "test/clinical-handler.test.ts",
+          "test": "requires CSRF and ignores browser attempts to provide tenant/role",
+          "observableRef": "test-observable-14b568e53a727240",
+          "coveredFacets": [
+            "control:csrf"
+          ],
+          "assertionRefs": [
+            "test-observable-14b568e53a727240-assertion-001",
+            "test-observable-14b568e53a727240-assertion-005",
+            "test-observable-14b568e53a727240-assertion-002",
+            "test-observable-14b568e53a727240-assertion-003",
+            "test-observable-14b568e53a727240-assertion-004"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "origin",
+      "evidence": [
+        {
+          "file": "test/clinical-handler.test.ts",
+          "test": "rejects %s",
+          "observableRef": "test-observable-9defd2c6620b3b6f",
+          "coveredFacets": [
+            "control:origin"
+          ],
+          "assertionRefs": [
+            "test-observable-9defd2c6620b3b6f-assertion-001",
+            "test-observable-9defd2c6620b3b6f-assertion-002"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "cache",
+      "evidence": [
+        {
+          "file": "test/foundation.test.tsx",
+          "test": "applies restrictive no-store headers without CORS",
+          "observableRef": "test-observable-b717eea4908d5061",
+          "coveredFacets": [
+            "control:cache"
+          ],
+          "assertionRefs": [
+            "test-observable-b717eea4908d5061-assertion-001",
+            "test-observable-b717eea4908d5061-assertion-002",
+            "test-observable-b717eea4908d5061-assertion-003",
+            "test-observable-b717eea4908d5061-assertion-004",
+            "test-observable-b717eea4908d5061-assertion-005",
+            "test-observable-b717eea4908d5061-assertion-006",
+            "test-observable-b717eea4908d5061-assertion-007",
+            "test-observable-b717eea4908d5061-assertion-008",
+            "test-observable-b717eea4908d5061-assertion-009",
+            "test-observable-b717eea4908d5061-assertion-010",
+            "test-observable-b717eea4908d5061-assertion-011"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "headers",
+      "evidence": [
+        {
+          "file": "test/foundation.test.tsx",
+          "test": "applies restrictive no-store headers without CORS",
+          "observableRef": "test-observable-b717eea4908d5061",
+          "coveredFacets": [
+            "control:headers"
+          ],
+          "assertionRefs": [
+            "test-observable-b717eea4908d5061-assertion-001",
+            "test-observable-b717eea4908d5061-assertion-002",
+            "test-observable-b717eea4908d5061-assertion-003",
+            "test-observable-b717eea4908d5061-assertion-004",
+            "test-observable-b717eea4908d5061-assertion-005",
+            "test-observable-b717eea4908d5061-assertion-006",
+            "test-observable-b717eea4908d5061-assertion-007",
+            "test-observable-b717eea4908d5061-assertion-008",
+            "test-observable-b717eea4908d5061-assertion-009",
+            "test-observable-b717eea4908d5061-assertion-010",
+            "test-observable-b717eea4908d5061-assertion-011"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "xss",
+      "evidence": [
+        {
+          "file": "test/clinical-components.test.tsx",
+          "test": "renders hostile content only as escaped text and has no axe violations",
+          "observableRef": "test-observable-499c7dab4a0060d4",
+          "coveredFacets": [
+            "control:xss"
+          ],
+          "assertionRefs": [
+            "test-observable-499c7dab4a0060d4-assertion-001",
+            "test-observable-499c7dab4a0060d4-assertion-002",
+            "test-observable-499c7dab4a0060d4-assertion-003"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "content_sniffing",
+      "evidence": [
+        {
+          "file": "test/foundation.test.tsx",
+          "test": "applies restrictive no-store headers without CORS",
+          "observableRef": "test-observable-b717eea4908d5061",
+          "coveredFacets": [
+            "control:content_sniffing"
+          ],
+          "assertionRefs": [
+            "test-observable-b717eea4908d5061-assertion-001",
+            "test-observable-b717eea4908d5061-assertion-002",
+            "test-observable-b717eea4908d5061-assertion-003",
+            "test-observable-b717eea4908d5061-assertion-004",
+            "test-observable-b717eea4908d5061-assertion-005",
+            "test-observable-b717eea4908d5061-assertion-006",
+            "test-observable-b717eea4908d5061-assertion-007",
+            "test-observable-b717eea4908d5061-assertion-008",
+            "test-observable-b717eea4908d5061-assertion-009",
+            "test-observable-b717eea4908d5061-assertion-010",
+            "test-observable-b717eea4908d5061-assertion-011"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "clickjacking",
+      "evidence": [
+        {
+          "file": "test/foundation.test.tsx",
+          "test": "applies restrictive no-store headers without CORS",
+          "observableRef": "test-observable-b717eea4908d5061",
+          "coveredFacets": [
+            "control:clickjacking"
+          ],
+          "assertionRefs": [
+            "test-observable-b717eea4908d5061-assertion-001",
+            "test-observable-b717eea4908d5061-assertion-002",
+            "test-observable-b717eea4908d5061-assertion-003",
+            "test-observable-b717eea4908d5061-assertion-004",
+            "test-observable-b717eea4908d5061-assertion-005",
+            "test-observable-b717eea4908d5061-assertion-006",
+            "test-observable-b717eea4908d5061-assertion-007",
+            "test-observable-b717eea4908d5061-assertion-008",
+            "test-observable-b717eea4908d5061-assertion-009",
+            "test-observable-b717eea4908d5061-assertion-010",
+            "test-observable-b717eea4908d5061-assertion-011"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "open_redirect",
+      "evidence": [
+        {
+          "file": "test/worker.test.ts",
+          "test": "rejects open-redirect return URL and navigation payloads without a Location header",
+          "observableRef": "test-observable-a59f84ce44bae980",
+          "coveredFacets": [
+            "control:open_redirect"
+          ],
+          "assertionRefs": [
+            "test-observable-a59f84ce44bae980-assertion-001",
+            "test-observable-a59f84ce44bae980-assertion-002"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "session_fixation",
+      "evidence": [
+        {
+          "file": "test/clinical-handler.test.ts",
+          "test": "sets a fixation-safe HttpOnly Secure Strict cookie and memory-only CSRF",
+          "observableRef": "test-observable-ada34b339a54abf1",
+          "coveredFacets": [
+            "control:session_fixation"
+          ],
+          "assertionRefs": [
+            "test-observable-ada34b339a54abf1-assertion-001",
+            "test-observable-ada34b339a54abf1-assertion-002",
+            "test-observable-ada34b339a54abf1-assertion-003",
+            "test-observable-ada34b339a54abf1-assertion-004",
+            "test-observable-ada34b339a54abf1-assertion-005",
+            "test-observable-ada34b339a54abf1-assertion-006",
+            "test-observable-ada34b339a54abf1-assertion-007",
+            "test-observable-ada34b339a54abf1-assertion-008",
+            "test-observable-ada34b339a54abf1-assertion-009"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "rate_limit",
+      "evidence": [
+        {
+          "file": "test/clinical-service.test.ts",
+          "test": "rate limits lookup and represents all search outcomes",
+          "observableRef": "test-observable-15aabf358a727be0",
+          "coveredFacets": [
+            "control:rate_limit"
+          ],
+          "assertionRefs": [
+            "test-observable-15aabf358a727be0-assertion-001",
+            "test-observable-15aabf358a727be0-assertion-002",
+            "test-observable-15aabf358a727be0-assertion-003",
+            "test-observable-15aabf358a727be0-assertion-004",
+            "test-observable-15aabf358a727be0-assertion-005",
+            "test-observable-15aabf358a727be0-assertion-006"
+          ]
+        }
+      ]
+    },
+    {
+      "control": "redaction",
+      "evidence": [
+        {
+          "file": "test/clinical-service.test.ts",
+          "test": "strictly rejects invalid audit pagination/category and redacts values",
+          "observableRef": "test-observable-416f7ba8e3fd9394",
+          "coveredFacets": [
+            "control:redaction"
+          ],
+          "assertionRefs": [
+            "test-observable-416f7ba8e3fd9394-assertion-001",
+            "test-observable-416f7ba8e3fd9394-assertion-002",
+            "test-observable-416f7ba8e3fd9394-assertion-003",
+            "test-observable-416f7ba8e3fd9394-assertion-004"
+          ]
+        }
+      ]
+    }
+  ],
+  "routeScope": "client-visible fixed portal page routes; API, metadata, catalog, and asset HTTP surfaces are inventoried separately in fixedHttpSurfaces",
+  "fixedHttpSurfaces": [
+    {
+      "path": "/api/v1/operation",
+      "methods": [
+        "POST"
+      ],
+      "classification": "clinical-api"
+    },
+    {
+      "path": "/api/v1/meta",
+      "methods": [
+        "GET"
+      ],
+      "classification": "synthetic-meta"
+    },
+    {
+      "path": "/api/v1/catalog",
+      "methods": [
+        "GET"
+      ],
+      "classification": "synthetic-catalog"
+    },
+    {
+      "path": "/styles.css",
+      "methods": [
+        "GET"
+      ],
+      "classification": "asset"
+    },
+    {
+      "path": "/assets/app.js",
+      "methods": [
+        "GET"
+      ],
+      "classification": "asset"
+    }
+  ]
+}

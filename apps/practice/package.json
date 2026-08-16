@@ -1,0 +1,52 @@
+{
+  "name": "healthmd-practice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:provenance": "node scripts/build-provenance.mjs",
+    "check": "npm run typecheck && npm test && npm run check:synthetic && npm run build",
+    "check:ci": "npm run check && npm run test:e2e && npm run check:qualification && npm run test:smoke && npm run dry-run && npm audit --audit-level=moderate",
+    "check:qualification": "npm run build && npm run check:security && npm run check:scanner-canary && npm run check:synthetic && npm run build:provenance && node scripts/verify-qualification.mjs",
+    "check:scanner-canary": "node scripts/check-synthetic-only.mjs --seed-canary",
+    "check:security": "node scripts/verify-security-inventory.mjs",
+    "check:synthetic": "node scripts/check-synthetic-only.mjs",
+    "dev": "node scripts/start-local.mjs",
+    "start": "npm run dev",
+    "dry-run": "npm run build && node scripts/dry-run.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test --project=chromium && playwright test --project=firefox && playwright test --project=webkit",
+    "test:smoke": "npm run build && node scripts/smoke-local.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "overrides": {
+    "undici": "7.29.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@cloudflare/workers-types": "5.20260804.1",
+    "@playwright/test": "1.62.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "axe-core": "4.10.3",
+    "esbuild": "0.28.1",
+    "jsdom": "26.1.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10",
+    "vitest-axe": "0.1.0",
+    "wrangler": "4.119.0"
+  }
+}

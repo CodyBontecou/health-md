@@ -284,6 +284,47 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertTrue(entry.summaryDescription.contains("5"))
     }
 
+    func testEntry_terminalFailureWithConfirmedFilesUsesPartialPresentation() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 2,
+            failureReason: .fileWriteError,
+            fileCount: 1
+        )
+
+        XCTAssertFalse(entry.isFullSuccess)
+        XCTAssertTrue(entry.isPartialSuccess)
+        XCTAssertEqual(entry.presentationStatus, .partialSuccess)
+        XCTAssertEqual(entry.localizedStatusDescription, "Partial success")
+        XCTAssertEqual(entry.statusSystemImage, "exclamationmark.circle.fill")
+        XCTAssertTrue(entry.summaryDescription.contains("1 generated file"))
+        XCTAssertTrue(entry.summaryDescription.contains("0 of 2 data day"))
+    }
+
+    func testEntry_generatedFileWordingDistinguishesFilesFromDataDays() {
+        let entry = ExportHistoryEntry(
+            source: .manual,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 40
+        )
+
+        XCTAssertEqual(entry.resultCountLabel, "Generated Files")
+        XCTAssertEqual(entry.generatedFileCountCompactDescription, "40 generated file(s)")
+        XCTAssertEqual(entry.dataDayCountDescription, "1 of 1 data day(s)")
+        XCTAssertEqual(entry.resultCountDescription, "40 generated file(s) · 1 of 1 data day(s)")
+        XCTAssertEqual(entry.summaryDescription, "Exported 40 generated file(s) from 1 data day(s)")
+        XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("40 generated file"))
+        XCTAssertTrue(entry.resultCountAccessibilityDescription.contains("1 of 1 data day"))
+    }
+
     func testEntry_partialMetricFailure_isPartialAndSummarizesWarning() {
         let entry = ExportHistoryEntry(
             source: .manual,
@@ -659,4 +700,109 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.reason, .accessDenied)
         XCTAssertEqual(decoded.errorDetails, "some error")
     }
+}
+
+final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
+    func testBreakdownRoundTripsWithoutChangingHealthDataSchema() throws {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: 4,
+            individualEntryFileCount: 35,
+            dataDictionaryFileCount: 1
+        )
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: 40,
+            outputBreakdown: breakdown
+        )
+        let decoded = try JSONDecoder().decode(
+            ExportHistoryEntry.self,
+            from: JSONEncoder().encode(entry)
+        )
+        XCTAssertEqual(decoded.outputBreakdown, breakdown)
+        XCTAssertEqual(decoded.fileCount, 40)
+    }
+
+    func testBreakdownRejectsNegativeAndOversizedDecodedCounts() throws {
+        let valid = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: 1
+        )
+        let encoded = try JSONEncoder().encode(valid)
+        let base = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+
+        for invalidValue in [-1, ExportHistoryOutputBreakdown.maximumPersistedCount + 1] {
+            var object = base
+            object["looseAggregateFileCount"] = invalidValue
+            let malformed = try JSONSerialization.data(withJSONObject: object)
+            XCTAssertThrowsError(
+                try JSONDecoder().decode(
+                    ExportHistoryOutputBreakdown.self,
+                    from: malformed
+                )
+            )
+        }
+
+        var excessiveAggregate = base
+        excessiveAggregate["looseAggregateFileCount"] = ExportHistoryOutputBreakdown.maximumPersistedCount
+        excessiveAggregate["individualEntryFileCount"] = 1
+        XCTAssertThrowsError(
+            try JSONDecoder().decode(
+                ExportHistoryOutputBreakdown.self,
+                from: JSONSerialization.data(withJSONObject: excessiveAggregate)
+            )
+        )
+    }
+
+    func testSyncEventPreservesLowerBoundAuthorityWithoutDisplayingAnExactCount() throws {
+        let event = SyncEvent(
+            peerName: "iPhone",
+            kind: .macExportSucceeded,
+            recordCount: 4,
+            recordCountIsLowerBound: true
+        )
+
+        XCTAssertEqual(event.summaryDescription, String(localized: "Export complete"))
+        let decoded = try JSONDecoder().decode(
+            SyncEvent.self,
+            from: JSONEncoder().encode(event)
+        )
+        XCTAssertEqual(decoded.recordCount, 4)
+        XCTAssertEqual(decoded.recordCountIsLowerBound, true)
+    }
+
+    #if os(macOS)
+    func testExportResponseEncodesLowerBoundFileCountAuthority() throws {
+        let response = MacIPhoneExportRequestCoordinator.ExportResponse(
+            status: .success,
+            jobID: UUID(),
+            message: "Exported at least 4 files.",
+            successCount: 2,
+            totalCount: 2,
+            filesWritten: 4,
+            filesWrittenIsLowerBound: true,
+            externalRecordCount: nil,
+            destinationDisplayName: "Vault",
+            destinationPath: nil,
+            failureReason: nil,
+            rawData: nil,
+            rawResult: nil
+        )
+
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(response)) as? [String: Any]
+        )
+        XCTAssertEqual(object["files_written"] as? Int, 4)
+        XCTAssertEqual(object["files_written_is_lower_bound"] as? Bool, true)
+    }
+    #endif
 }

@@ -466,15 +466,15 @@ struct iPadContentView: View {
                     exportStatusMessage = result.dailyNoteUpdateCount > 0
                         ? "Daily note update stopped — \(result.dailyNoteUpdateCount) of \(result.totalCount) notes updated"
                         : "Daily note update cancelled"
-                } else if result.successCount > 0 {
-                    exportStatusMessage = String(localized: "Export stopped — \(result.successCount) of \(result.totalCount) files exported", comment: "Export cancelled with partial success")
+                } else if result.isPartialSuccess {
+                    exportStatusMessage = "\(String(localized: "Export cancelled")) · \(result.localizedGeneratedFileAndDataDayDescription)"
                 } else {
                     exportStatusMessage = String(localized: "Export cancelled", comment: "Export was cancelled")
                 }
             } else if result.isFullSuccess {
                 exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                     ? "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    : String(localized: "Successfully exported \(result.successCount) files", comment: "Export success message")
+                    : result.localizedGeneratedFileAndDataDayDescription
             } else if result.isPartialSuccess {
                 let isCompletedDailyNoteSkip = advancedSettings.dailyNotesOnlyModeEnabled
                     && result.dailyNoteSkipCount > 0
@@ -489,7 +489,7 @@ struct iPadContentView: View {
                 } else {
                     exportStatusMessage = advancedSettings.dailyNotesOnlyModeEnabled
                         ? "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes. \(suffix)"
-                        : String(localized: "Exported \(result.successCount)/\(result.totalCount) files. \(suffix)", comment: "Partial export with failures")
+                        : "\(result.localizedGeneratedFileAndDataDayDescription). \(suffix)"
                 }
             } else {
                 let primaryReason = result.primaryFailureReason ?? .unknown

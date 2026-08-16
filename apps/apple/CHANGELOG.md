@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Workouts whose attached WorkoutKit plan cannot be decoded by the device (surfacing as an opaque `WorkoutKit.ImportError error N` partial-export warning) now explain in plain language that the workout and all of its samples exported successfully and only the optional structured plan was omitted, with the likely cause. Partial-export warnings in iPhone, iPad, and Mac export history now wrap fully and can be selected and copied for bug reports.
+
 ## [3.0.5] - 2026-08-09
 
 ### Added

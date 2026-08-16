@@ -5,10 +5,10 @@ CORE_RUST_DIR := packages/healthmd-core-rust
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 
 .PHONY: test test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
-        test-apple test-android test-cli test-website apple-ios apple-macos cli-build \
-        android-build website-build
+        test-apple test-android test-cli test-practice test-website apple-ios apple-macos cli-build \
+        android-build practice-build website-build
 
-test: test-contracts test-core test-apple test-android test-cli test-website
+test: test-contracts test-core test-apple test-android test-cli test-practice test-website
 
 test-contracts:
 	python3 packages/contracts/validate.py
@@ -49,6 +49,9 @@ test-android:
 test-cli:
 	cd apps/cli && cargo test --workspace --all-features
 
+test-practice:
+	cd apps/practice && npm run check
+
 test-website:
 	cd apps/website && npm test
 
@@ -63,6 +66,9 @@ cli-build:
 
 android-build:
 	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew assembleDebug
+
+practice-build:
+	cd apps/practice && npm run build
 
 website-build:
 	cd apps/website && npm run build

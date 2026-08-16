@@ -505,6 +505,113 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(replayResult?.successCount, result.successCount)
     }
 
+    func testFinalizationFailureAndRejectedAcknowledgementReplayTogetherAfterRestart() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        let failure = MacExportFailure(
+            jobID: context.session.jobID,
+            reason: .exportWriteFailure,
+            message: "Mac could not finalize the partitioned corpus export.",
+            underlyingError: "simulated failure"
+        )
+        let acknowledgement = try XCTUnwrap(manager.recordFinalizationFailure(
+            finalize,
+            failure: failure,
+            vaultManager: vaultManager
+        ))
+        XCTAssertFalse(acknowledgement.accepted)
+
+        let replay = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+            finalize,
+            vaultManager: vaultManager
+        )
+        guard case .failed(let replayedFailure, let replayedAcknowledgement) = replay else {
+            return XCTFail("Expected durable failure and rejected ACK replay")
+        }
+        XCTAssertEqual(replayedFailure, failure)
+        XCTAssertEqual(replayedAcknowledgement, acknowledgement)
+    }
+
+    func testFinalizationFailurePersistenceFailurePublishesNoTerminalAcknowledgement() async throws {
+        let date = Self.day(2026, 1, 2)
+        let context = try makeContext(requestedDates: [date])
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try healthItem(date: date))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        XCTAssertEqual(manager.open(
+            ConnectedCorpusTransferOpen(
+                session: context.session,
+                partition: partition.descriptor,
+                exportManifest: context.manifest
+            ),
+            vaultManager: vaultManager
+        ).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+        let finalize = ConnectedCorpusTransferFinalize(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            requestFingerprint: context.session.requestFingerprint,
+            partitionCount: 1,
+            totalByteCount: partition.descriptor.byteCount,
+            finalPartitionSHA256: partition.descriptor.sha256
+        )
+        manager.failNextTerminalPersistForTesting = true
+        XCTAssertNil(manager.recordFinalizationFailure(
+            finalize,
+            failure: MacExportFailure(
+                jobID: context.session.jobID,
+                reason: .exportWriteFailure,
+                message: "simulated"
+            ),
+            vaultManager: vaultManager
+        ))
+
+        guard case .files = try await MacCorpusExportSessionManager(rootURL: sessionRoot).finalize(
+            finalize,
+            vaultManager: vaultManager
+        ) else {
+            return XCTFail("A failed terminal persist must leave finalization resumable")
+        }
+    }
+
     func testPartitionedPinnedRustDayUsesExactManifestSnapshotAndConnectedSurface() async throws {
         let date = Self.day(2026, 1, 2)
         let record = HealthData(date: date, activity: ActivityData(steps: 4_321))

@@ -136,7 +136,9 @@ struct iPadHistoryView: View {
 
                 Spacer()
 
-                Text("\(entry.successCount)/\(entry.totalCount)")
+                Text(entry.isAPIEndpointDelivery || entry.isCLIRawDelivery
+                    ? "\(entry.successCount)/\(entry.totalCount)"
+                    : entry.generatedFileCountCompactDescription)
                     .font(Typography.bodyEmphasis())
                     .foregroundStyle(Color.textMuted)
             }
@@ -158,7 +160,7 @@ struct iPadHistoryView: View {
                     // Status header
                     HStack(spacing: 8) {
                         statusIcon(for: entry)
-                        Text(entry.isFullSuccess ? "Success" : entry.success ? "Partial" : "Failed")
+                        Text(entry.localizedShortStatusDescription)
                             .font(Typography.heading20())
                             .foregroundStyle(Color.textPrimary)
                     }
@@ -242,6 +244,8 @@ struct iPadHistoryView: View {
                                     Text(failure.summary)
                                         .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .textSelection(.enabled)
                                 }
                             }
                         }
@@ -295,16 +299,14 @@ struct iPadHistoryView: View {
 
     @ViewBuilder
     private func statusIcon(for entry: ExportHistoryEntry) -> some View {
-        Image(systemName: entry.isFullSuccess
-              ? "checkmark.circle.fill"
-              : entry.success ? "exclamationmark.circle.fill" : "xmark.circle.fill")
-            .foregroundStyle(entry.isFullSuccess ? Color.success : entry.success ? Color.warning : Color.error)
+        Image(systemName: entry.statusSystemImage)
+            .foregroundStyle(entry.isFullSuccess ? Color.success : entry.isPartialSuccess ? Color.warning : Color.error)
             .accessibilityHidden(true)
     }
 
     @ViewBuilder
     private func sourceBadge(for entry: ExportHistoryEntry) -> some View {
-        Text(entry.source.rawValue)
+        Text(entry.source.localizedDisplayName)
             .font(Typography.caption())
             .foregroundStyle(Color.textMuted)
             .padding(.horizontal, 8)
@@ -326,8 +328,7 @@ struct iPadHistoryView: View {
     }
 
     private func historyEntryAccessibilityLabel(for entry: ExportHistoryEntry) -> String {
-        let status = entry.isFullSuccess ? "Success" : entry.success ? "Partial success" : "Failed"
-        let base = "\(status). \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(Self.dateFormatter.string(from: entry.timestamp)). Source: \(entry.source.rawValue)."
+        let base = "\(entry.localizedStatusDescription). \(entry.summaryDescription). \(entry.resultCountAccessibilityDescription). \(Self.dateFormatter.string(from: entry.timestamp)). \(String(localized: "Source")): \(entry.source.localizedDisplayName)."
         guard let message = entry.failureListMessage else { return base }
         return "\(base) \(message)"
     }

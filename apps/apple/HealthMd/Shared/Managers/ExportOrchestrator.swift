@@ -89,27 +89,27 @@ struct ExportOrchestrator {
     struct ExportResult {
         let successCount: Int
         let totalCount: Int
-        /// Exact requested dates whose outcome is terminal for this run. `nil`
-        /// means a legacy/aggregate-only producer could not identify them.
         let completedDates: [Date]?
-        /// Aggregate completion retained for legacy result producers and tests.
-        /// When `completedDates` is present, this is always its unique day count.
         let completedDateCount: Int
         let failedDateDetails: [FailedDateDetail]
         let partialFailures: [ExportPartialFailure]
         let wasCancelled: Bool
-        /// Number of loose files written per successful date.
+        /// True only for a range-level derived-output/finalizer failure. Ordinary per-date
+        /// partial results retain exact completed dates for residual scheduled retries.
+        let hadTerminalRangeFailure: Bool
         let formatsPerDate: Int
-        /// Number of derived roll-up summary files written after successful daily exports.
+        let looseAggregateFileCount: Int
+        let individualEntryFileCount: Int
+        let dataDictionaryFileCount: Int
         let rollupFileCount: Int
-        /// Number of ZIP archives written for packaged exports.
         let archiveCount: Int
-        /// Number of third-party provider sidecar JSON files written.
         let externalRecordFileCount: Int
-        /// Existing or newly created daily notes successfully updated.
+        /// Provider records encoded in an API request; never generated files.
+        let externalRecordPayloadCount: Int
+        let unclassifiedFileCount: Int
+        let authoritativeFileCount: Int?
+        let isFileCategoryBreakdownComplete: Bool
         let dailyNoteUpdateCount: Int
-        /// Daily-note-only targets intentionally skipped (for example, missing
-        /// notes while Create Note If Missing is off).
         let dailyNoteSkipCount: Int
 
         init(
@@ -118,108 +118,167 @@ struct ExportOrchestrator {
             failedDateDetails: [FailedDateDetail],
             partialFailures: [ExportPartialFailure] = [],
             formatsPerDate: Int = 1,
+            looseAggregateFileCount: Int? = nil,
+            individualEntryFileCount: Int = 0,
+            dataDictionaryFileCount: Int = 0,
             rollupFileCount: Int = 0,
             archiveCount: Int = 0,
             externalRecordFileCount: Int = 0,
+            externalRecordPayloadCount: Int = 0,
+            unclassifiedFileCount: Int = 0,
+            authoritativeFileCount: Int? = nil,
+            isFileCategoryBreakdownComplete: Bool = false,
             dailyNoteUpdateCount: Int = 0,
             dailyNoteSkipCount: Int = 0,
             wasCancelled: Bool = false,
+            hadTerminalRangeFailure: Bool = false,
             completedDates: [Date]? = nil,
             completedDateCount: Int? = nil
         ) {
-            self.successCount = successCount
-            self.totalCount = totalCount
+            self.successCount = max(successCount, 0)
+            self.totalCount = max(totalCount, 0)
             if let completedDates {
                 self.completedDates = Array(Set(completedDates)).sorted()
                 self.completedDateCount = self.completedDates?.count ?? 0
             } else {
                 self.completedDates = nil
-                self.completedDateCount = completedDateCount ?? successCount
+                self.completedDateCount = completedDateCount ?? self.successCount
             }
             self.failedDateDetails = failedDateDetails
             self.partialFailures = partialFailures
-            self.formatsPerDate = formatsPerDate
-            self.rollupFileCount = rollupFileCount
-            self.archiveCount = archiveCount
-            self.externalRecordFileCount = externalRecordFileCount
-            self.dailyNoteUpdateCount = dailyNoteUpdateCount
-            self.dailyNoteSkipCount = dailyNoteSkipCount
+            self.formatsPerDate = max(formatsPerDate, 0)
+            let legacyLooseCount = self.successCount.multipliedReportingOverflow(by: self.formatsPerDate)
+            let loose = looseAggregateFileCount.map { max($0, 0) } ?? 0
+            let legacyUnclassified = looseAggregateFileCount == nil && !legacyLooseCount.overflow
+                ? legacyLooseCount.partialValue : 0
+            self.looseAggregateFileCount = loose
+            self.individualEntryFileCount = max(individualEntryFileCount, 0)
+            self.dataDictionaryFileCount = max(dataDictionaryFileCount, 0)
+            self.rollupFileCount = max(rollupFileCount, 0)
+            self.archiveCount = max(archiveCount, 0)
+            self.externalRecordFileCount = max(externalRecordFileCount, 0)
+            self.externalRecordPayloadCount = max(externalRecordPayloadCount, 0)
+            self.unclassifiedFileCount = max(unclassifiedFileCount, 0) + legacyUnclassified
+            self.authoritativeFileCount = authoritativeFileCount.map { max($0, 0) }
+            self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
+                && looseAggregateFileCount != nil
+                && self.unclassifiedFileCount == 0
+            self.dailyNoteUpdateCount = max(dailyNoteUpdateCount, 0)
+            self.dailyNoteSkipCount = max(dailyNoteSkipCount, 0)
             self.wasCancelled = wasCancelled
+            self.hadTerminalRangeFailure = hadTerminalRangeFailure
+        }
+
+        init(macExportPayload payload: MacExportResultPayload) {
+            let breakdown = payload.outputBreakdown
+            let classified = breakdown?.generatedFileCount ?? 0
+            self.init(
+                successCount: payload.successCount,
+                totalCount: payload.totalCount,
+                failedDateDetails: payload.failedDateDetails,
+                formatsPerDate: payload.formatsPerDate,
+                // Supplying explicit zero avoids also applying the legacy formats-per-day
+                // estimate when the payload has no category breakdown.
+                looseAggregateFileCount: breakdown?.looseAggregateFileCount ?? 0,
+                individualEntryFileCount: breakdown?.individualEntryFileCount ?? 0,
+                dataDictionaryFileCount: breakdown?.dataDictionaryFileCount ?? 0,
+                rollupFileCount: breakdown?.rollupFileCount ?? 0,
+                archiveCount: breakdown?.zipArchiveFileCount ?? 0,
+                externalRecordFileCount: breakdown?.providerSidecarFileCount
+                    ?? payload.externalRecordFileCount,
+                unclassifiedFileCount: (breakdown?.unclassifiedFileCount ?? 0)
+                    + max(payload.totalFilesWritten - classified, 0),
+                authoritativeFileCount: payload.isTotalFilesWrittenAuthoritative
+                    ? payload.totalFilesWritten : nil,
+                isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete ?? false,
+                dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
+                dailyNoteSkipCount: payload.dailyNoteSkipCount,
+                wasCancelled: payload.status == .cancelled,
+                hadTerminalRangeFailure: payload.hadTerminalRangeFailure,
+                completedDates: payload.completedDates
+            )
         }
 
         var hasPartialFailures: Bool { !partialFailures.isEmpty }
         var partialFailureSummary: String {
             guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 {
-                return "Warning: \(first.summary)"
-            }
+            if partialFailures.count == 1 { return "Warning: \(first.summary)" }
             return "Warning: \(partialFailures.count) export warnings, including \(first.summary)"
         }
-
         var localizedPartialFailureSummary: String {
             guard let first = partialFailures.first else { return "" }
-            if partialFailures.count == 1 {
-                return String(localized: "Warning: \(first.localizedSummary)")
-            }
+            if partialFailures.count == 1 { return String(localized: "Warning: \(first.localizedSummary)") }
             return String(localized: "Warning: \(partialFailures.count) export warnings, including \(first.localizedSummary)")
         }
-        /// Whether every requested date completed, even if retained records include
-        /// non-fatal partial-capture warnings.
         var didCompleteAllRequestedDates: Bool {
-            completedDateCount == totalCount && totalCount > 0 && !wasCancelled
+            completedDateCount == totalCount && totalCount > 0 && !wasCancelled && !hadTerminalRangeFailure
         }
-
-        /// Returns the exact unresolved subset when the producer supplied
-        /// per-date completion. Legacy aggregate-only partial results return nil
-        /// so callers can conservatively preserve the original request.
-        func remainingDates(
-            from requestedDates: [Date],
-            calendar: Calendar = .current
-        ) -> [Date]? {
-            guard let completedDates else { return nil }
+        func remainingDates(from requestedDates: [Date], calendar: Calendar = .current) -> [Date]? {
+            guard !hadTerminalRangeFailure, let completedDates else { return nil }
             let completedDays = Set(completedDates.map { calendar.startOfDay(for: $0) })
-            return requestedDates
-                .map { calendar.startOfDay(for: $0) }
-                .filter { !completedDays.contains($0) }
+            return requestedDates.map { calendar.startOfDay(for: $0) }.filter { !completedDays.contains($0) }
         }
         var isFullSuccess: Bool {
-            successCount == totalCount && didCompleteAllRequestedDates && !hasPartialFailures
+            successCount == totalCount && didCompleteAllRequestedDates && failedDateDetails.isEmpty && !hasPartialFailures
         }
         var isPartialSuccess: Bool {
-            ((successCount > 0 || dailyNoteSkipCount > 0) && successCount < totalCount) ||
-            ((successCount > 0 || dailyNoteSkipCount > 0) && wasCancelled) ||
-            ((successCount > 0 || dailyNoteSkipCount > 0) && hasPartialFailures)
+            guard !isFullSuccess else { return false }
+            let hasConfirmedOutput = successCount > 0
+                || dailyNoteUpdateCount > 0
+                || dailyNoteSkipCount > 0
+                || knownFileCount > 0
+            return hasConfirmedOutput
         }
         var isFailure: Bool {
-            successCount == 0 && dailyNoteSkipCount == 0 && totalCount > 0
+            !isFullSuccess && !isPartialSuccess && totalCount > 0
         }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
-        /// Total file count = loose daily files plus ZIP archives, roll-up summaries, and provider sidecars.
-        var totalFilesWritten: Int { successCount * formatsPerDate + rollupFileCount + archiveCount + externalRecordFileCount }
+        var categorizedFileCount: Int {
+            looseAggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
+                + rollupFileCount + archiveCount + externalRecordFileCount
+        }
+        var knownFileCount: Int { categorizedFileCount + unclassifiedFileCount }
+        var totalFilesWritten: Int { authoritativeFileCount ?? knownFileCount }
+        var hasAuthoritativeFileCount: Bool {
+            authoritativeFileCount != nil || isFileCategoryBreakdownComplete
+        }
+        var outputBreakdown: ExportHistoryOutputBreakdown {
+            ExportHistoryOutputBreakdown(
+                requestedDataDayCount: totalCount,
+                successfulDataDayCount: successCount,
+                looseAggregateFileCount: looseAggregateFileCount,
+                individualEntryFileCount: individualEntryFileCount,
+                dataDictionaryFileCount: dataDictionaryFileCount,
+                zipArchiveFileCount: archiveCount,
+                rollupFileCount: rollupFileCount,
+                providerSidecarFileCount: externalRecordFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                unclassifiedFileCount: unclassifiedFileCount,
+                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
+            )
+        }
+
+        var localizedGeneratedFileAndDataDayDescription: String {
+            if hasAuthoritativeFileCount {
+                return String(localized: "\(totalFilesWritten) generated file(s) · \(successCount) of \(totalCount) data day(s)")
+            }
+            let confirmedFiles = String(localized: "\(totalFilesWritten) generated file(s)")
+            let dataDays = String(localized: "\(successCount) of \(totalCount) data day(s)")
+            return "≥ \(confirmedFiles) · \(dataDays)"
+        }
 
         var fileBreakdownDescription: String {
-            let dailyDescription: String
-            if formatsPerDate > 1 {
-                dailyDescription = "\(successCount) days × \(formatsPerDate) loose formats"
-            } else if formatsPerDate == 1 {
-                dailyDescription = "\(successCount) daily file\(successCount == 1 ? "" : "s")"
-            } else {
-                dailyDescription = "no loose daily files"
-            }
-            var parts = [dailyDescription]
-            if archiveCount > 0 {
-                parts.append("\(archiveCount) ZIP archive\(archiveCount == 1 ? "" : "s")")
-            }
-            if rollupFileCount > 0 {
-                parts.append("\(rollupFileCount) roll-up summar\(rollupFileCount == 1 ? "y" : "ies")")
-            }
-            if externalRecordFileCount > 0 {
-                parts.append("\(externalRecordFileCount) provider sidecar\(externalRecordFileCount == 1 ? "" : "s")")
-            }
-            if dailyNoteUpdateCount > 0 {
-                parts.append("\(dailyNoteUpdateCount) daily note\(dailyNoteUpdateCount == 1 ? "" : "s") updated")
-            }
-            return parts.joined(separator: " + ")
+            var parts: [String] = []
+            if looseAggregateFileCount > 0 { parts.append("\(looseAggregateFileCount) loose files") }
+            if individualEntryFileCount > 0 { parts.append("\(individualEntryFileCount) individual-entry files") }
+            if dataDictionaryFileCount > 0 { parts.append("\(dataDictionaryFileCount) data dictionary") }
+            if archiveCount > 0 { parts.append("\(archiveCount) ZIP archive") }
+            if rollupFileCount > 0 { parts.append("\(rollupFileCount) roll-up summaries") }
+            if externalRecordFileCount > 0 { parts.append("\(externalRecordFileCount) provider sidecars") }
+            if unclassifiedFileCount > 0 { parts.append("\(unclassifiedFileCount) unclassified files") }
+            if dailyNoteUpdateCount > 0 { parts.append("\(dailyNoteUpdateCount) daily notes updated") }
+            return parts.isEmpty ? "no generated files" : parts.joined(separator: " + ")
         }
     }
 
@@ -375,6 +434,27 @@ struct ExportOrchestrator {
         )
         let frozenOperationSettings = operationSettingsSnapshot.makeAdvancedExportSettings()
         frozenOperationSettings.exportTimeZoneOverride = sourceTimeZone
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: frozenOperationSettings,
+                healthSubfolder: operationSettingsSnapshot.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: totalDays,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                completedDates: []
+            )
+        }
         let archiveSpool = settings.archiveModeEnabled ? LocalArchiveSpool() : nil
         defer { archiveSpool?.cleanup() }
         let dateFormatter = DateFormatter()
@@ -547,7 +627,7 @@ struct ExportOrchestrator {
                 case .noFormatsSelected:
                     reason = .unknown
                     errorDetails = error.localizedDescription
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                     errorDetails = error.localizedDescription
                 }
@@ -914,6 +994,27 @@ struct ExportOrchestrator {
         var shouldWriteDataDictionary = true
         let frozenOperationSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings()
             ?? settings
+        do {
+            try vaultManager.preflightExportDestinations(
+                settings: frozenOperationSettings,
+                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                dates: dates
+            )
+        } catch {
+            return ExportResult(
+                successCount: 0,
+                totalCount: dates.count,
+                failedDateDetails: dates.map {
+                    FailedDateDetail(
+                        date: $0,
+                        reason: .fileWriteError,
+                        errorDetails: error.localizedDescription
+                    )
+                },
+                formatsPerDate: formatsPerDate,
+                completedDates: []
+            )
+        }
         let archiveSpool = frozenOperationSettings.archiveModeEnabled
             ? LocalArchiveSpool()
             : nil
@@ -1080,7 +1181,7 @@ struct ExportOrchestrator {
                     reason = .accessDenied
                 case .noFormatsSelected:
                     reason = .unknown
-                case .dailyNotePathConflict:
+                case .dailyNotePathConflict, .invalidExportPath:
                     reason = .fileWriteError
                 }
                 failedDateDetails.append(FailedDateDetail(
@@ -1468,7 +1569,10 @@ struct ExportOrchestrator {
         operationDetails: ExportHistoryOperationDetails? = nil
     ) {
         let history = ExportHistoryManager.shared
-        let resolvedFileCount = fileCount ?? result.totalFilesWritten
+        let suppliedFileCount = fileCount.map { max($0, 0) }
+        let resolvedFileCount = suppliedFileCount ?? result.totalFilesWritten
+        let isAuthoritative = suppliedFileCount != nil || result.hasAuthoritativeFileCount
+        let historyFileCount = isAuthoritative ? resolvedFileCount : nil
 
         if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
             history.recordSuccess(
@@ -1481,7 +1585,8 @@ struct ExportOrchestrator {
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
                 exportTarget: exportTarget,
-                fileCount: resolvedFileCount,
+                fileCount: historyFileCount,
+                outputBreakdown: result.outputBreakdown,
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,
@@ -1500,7 +1605,8 @@ struct ExportOrchestrator {
                 failedDateDetails: result.failedDateDetails,
                 targetLabel: targetLabel,
                 exportTarget: exportTarget,
-                fileCount: resolvedFileCount,
+                fileCount: historyFileCount,
+                outputBreakdown: result.outputBreakdown,
                 dailyNoteUpdateCount: result.dailyNoteUpdateCount,
                 dailyNoteSkipCount: result.dailyNoteSkipCount,
                 partialFailures: result.partialFailures,

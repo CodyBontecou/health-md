@@ -336,23 +336,15 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return }
-        let result = ExportOrchestrator.ExportResult(
-            successCount: payload.successCount,
-            totalCount: payload.totalCount,
-            failedDateDetails: payload.failedDateDetails,
-            formatsPerDate: payload.formatsPerDate,
-            externalRecordFileCount: payload.externalRecordFileCount,
-            dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
-            dailyNoteSkipCount: payload.dailyNoteSkipCount,
-            wasCancelled: payload.status == .cancelled
-        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
         ExportOrchestrator.recordResult(
             result,
             source: journal.origin == .scheduledIPhone ? .scheduled : .macAgent,
             dateRangeStart: journal.exportManifest.dateRangeStart,
             dateRangeEnd: journal.exportManifest.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.totalFilesWritten,
+            fileCount: payload.isTotalFilesWrittenAuthoritative
+                ? payload.totalFilesWritten : nil,
             appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
         )
         if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
