@@ -1,0 +1,123 @@
+{
+  "whoop": {
+    "schema": "healthmd.provider.whoop_daily",
+    "schema_version": 1,
+    "capture_status": "complete",
+    "fetched_at": "2026-07-13T18:00:00Z",
+    "resources": [
+      {
+        "resource": "cycles",
+        "status": "success",
+        "record_count": 1
+      },
+      {
+        "resource": "recovery",
+        "status": "success",
+        "record_count": 1
+      },
+      {
+        "resource": "sleep",
+        "status": "success",
+        "record_count": 1
+      },
+      {
+        "resource": "workouts",
+        "status": "success",
+        "record_count": 1
+      },
+      {
+        "resource": "body",
+        "status": "success",
+        "record_count": 1
+      }
+    ],
+    "cycles": [
+      {
+        "id": "cycle-synthetic-20260713",
+        "start_time": "2026-07-13T07:00:00Z",
+        "end_time": "2026-07-13T17:30:00Z",
+        "timezone_offset": "-07:00",
+        "score_state": "SCORED",
+        "strain_score": 12.7,
+        "energy_kilojoules": 8420,
+        "average_heart_rate_bpm": 68,
+        "max_heart_rate_bpm": 174
+      }
+    ],
+    "recoveries": [
+      {
+        "cycle_id": "cycle-synthetic-20260713",
+        "sleep_id": "sleep-synthetic-20260713",
+        "score_state": "SCORED",
+        "user_calibrating": false,
+        "recovery_score_percent": 82,
+        "resting_heart_rate_bpm": 49,
+        "hrv_rmssd_ms": 54.3,
+        "spo2_percent": 97.2,
+        "skin_temperature_celsius": 33.4
+      }
+    ],
+    "sleep": [
+      {
+        "id": "sleep-synthetic-20260713",
+        "cycle_id": "cycle-synthetic-20260713",
+        "start_time": "2026-07-13T07:30:00Z",
+        "end_time": "2026-07-13T15:00:00Z",
+        "timezone_offset": "-07:00",
+        "is_nap": false,
+        "score_state": "SCORED",
+        "total_sleep_milliseconds": 24300750,
+        "total_in_bed_milliseconds": 27000000,
+        "awake_milliseconds": 2399250,
+        "light_sleep_milliseconds": 12600125,
+        "slow_wave_sleep_milliseconds": 5400250,
+        "rem_sleep_milliseconds": 6300375,
+        "no_data_milliseconds": 300000,
+        "sleep_cycle_count": 5,
+        "disturbance_count": 7,
+        "baseline_sleep_need_milliseconds": 28800000,
+        "sleep_debt_need_milliseconds": 1800000,
+        "recent_strain_need_milliseconds": 900000,
+        "recent_nap_adjustment_milliseconds": -900000,
+        "respiratory_rate_breaths_per_minute": 14.2,
+        "sleep_performance_percent": 91,
+        "sleep_consistency_percent": 88,
+        "sleep_efficiency_percent": 90
+      }
+    ],
+    "workouts": [
+      {
+        "id": "workout-synthetic-20260713",
+        "start_time": "2026-07-13T16:00:00Z",
+        "end_time": "2026-07-13T17:00:00Z",
+        "timezone_offset": "-07:00",
+        "sport_name": "running",
+        "score_state": "SCORED",
+        "strain_score": 10.4,
+        "average_heart_rate_bpm": 146,
+        "max_heart_rate_bpm": 174,
+        "energy_kilojoules": 2500,
+        "distance_meters": 10000,
+        "altitude_gain_meters": 120,
+        "altitude_change_meters": 15,
+        "percent_recorded": 99.4,
+        "zone_durations": {
+          "zone_zero_milliseconds": 120000,
+          "zone_one_milliseconds": 480000,
+          "zone_two_milliseconds": 900000,
+          "zone_three_milliseconds": 1020000,
+          "zone_four_milliseconds": 780000,
+          "zone_five_milliseconds": 300000
+        }
+      }
+    ],
+    "body": {
+      "source_kind": "current_profile_snapshot",
+      "observed_at": "2026-07-13T18:00:00Z",
+      "height_meters": 1.82,
+      "weight_kilograms": 78.4,
+      "max_heart_rate_bpm": 190
+    },
+    "warnings": []
+  }
+}

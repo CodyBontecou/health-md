@@ -1,6 +1,6 @@
 ---
 schema: healthmd.rollup_summary
-schema_version: 7
+schema_version: 8
 type: health_rollup
 rollup_period: weekly
 period_id: "2026-W28"
@@ -11,8 +11,8 @@ days_expected: 7
 days_counted: 3
 coverage_percent: 42.86
 source_schema: healthmd.health_data
-source_schema_version: 7
-rollup_rules_version: 7
+source_schema_version: 8
+rollup_rules_version: 8
 generated_at: 2026-07-13T12:00:00Z
 source_dates:
   - 2026-07-06

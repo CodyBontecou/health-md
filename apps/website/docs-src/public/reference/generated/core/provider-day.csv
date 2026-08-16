@@ -1,0 +1,48 @@
+Date,Category,Metric,Value,Unit,Timestamp
+2026-03-15,Metadata,schema,healthmd.health_data,,
+2026-03-15,Metadata,schema_version,8,,
+2026-03-15,Metadata,unit_system,metric,,
+2026-03-15,Metadata,time_context.calendar_timezone,UTC,,
+2026-03-15,Metadata,time_context.timestamp_timezone,UTC,,
+2026-03-15,Raw HealthKit,Raw Capture Status,not_requested,status,
+2026-03-15,Activity,Steps,1,count
+2026-03-15,WHOOP Capture,Capture Status,complete,status,
+2026-03-15,WHOOP Cycle,Cycle Strain Score,12.7,score,2026-03-15T07:00:00.000000000Z
+2026-03-15,WHOOP Cycle,Cycle Energy,8420.0,kJ,2026-03-15T07:00:00.000000000Z
+2026-03-15,WHOOP Cycle,Cycle Average Heart Rate,68.0,bpm,2026-03-15T07:00:00.000000000Z
+2026-03-15,WHOOP Cycle,Cycle Maximum Heart Rate,174.0,bpm,2026-03-15T07:00:00.000000000Z
+2026-03-15,WHOOP Recovery,Recovery Score,82.0,percent,
+2026-03-15,WHOOP Recovery,Resting Heart Rate,49.0,bpm,
+2026-03-15,WHOOP Recovery,HRV (RMSSD),54.3,ms,
+2026-03-15,WHOOP Recovery,SpO₂,97.2,percent,
+2026-03-15,WHOOP Recovery,Skin Temperature,33.4,°C,
+2026-03-15,WHOOP Sleep,Total Sleep,24300750,ms,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Total In Bed,27000000,ms,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Awake Duration,2399250,ms,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Light Sleep Duration,12600125,ms,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Slow Wave Sleep Duration,5400250,ms,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,REM Sleep Duration,6300375,ms,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Recent Nap Adjustment,-900000,ms,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Respiratory Rate,14.2,breaths/min,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Sleep Performance,91.0,percent,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Sleep Consistency,88.0,percent,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Sleep,Sleep Efficiency,90.0,percent,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Workout,Workout Sport,running,,2026-03-15T16:00:00.000000000Z
+2026-03-15,WHOOP Workout,Workout Strain Score,10.4,score,2026-03-15T16:00:00.000000000Z
+2026-03-15,WHOOP Workout,Workout Average Heart Rate,146.0,bpm,2026-03-15T16:00:00.000000000Z
+2026-03-15,WHOOP Workout,Workout Maximum Heart Rate,174.0,bpm,2026-03-15T16:00:00.000000000Z
+2026-03-15,WHOOP Workout,Workout Energy,2500.0,kJ,2026-03-15T16:00:00.000000000Z
+2026-03-15,WHOOP Workout,Workout Distance,10000.0,m,2026-03-15T16:00:00.000000000Z
+2026-03-15,WHOOP Body,Body Height Snapshot,1.82,m,
+2026-03-15,WHOOP Body,Body Weight Snapshot,78.4,kg,
+2026-03-15,WHOOP Body,Maximum Heart Rate Snapshot,190.0,bpm,
+2026-03-15,WHOOP Capture,Resource Result,"{""record_count"":1,""resource"":""cycles"",""status"":""success""}",json,
+2026-03-15,WHOOP Capture,Resource Result,"{""record_count"":1,""resource"":""recovery"",""status"":""success""}",json,
+2026-03-15,WHOOP Capture,Resource Result,"{""record_count"":1,""resource"":""sleep"",""status"":""success""}",json,
+2026-03-15,WHOOP Capture,Resource Result,"{""record_count"":1,""resource"":""workouts"",""status"":""success""}",json,
+2026-03-15,WHOOP Capture,Resource Result,"{""record_count"":1,""resource"":""body"",""status"":""success""}",json,
+2026-03-15,WHOOP Cycle,Cycle Record,"{""average_heart_rate_bpm"":68,""end_time"":""2026-03-15T17:30:00.000000000Z"",""energy_kilojoules"":8420,""id"":""101"",""max_heart_rate_bpm"":174,""score_state"":""SCORED"",""start_time"":""2026-03-15T07:00:00.000000000Z"",""strain_score"":12.7,""timezone_offset"":""Z""}",json,2026-03-15T07:00:00.000000000Z
+2026-03-15,WHOOP Recovery,Recovery Record,"{""cycle_id"":""101"",""hrv_rmssd_ms"":54.3,""recovery_score_percent"":82,""resting_heart_rate_bpm"":49,""score_state"":""SCORED"",""skin_temperature_celsius"":33.4,""sleep_id"":""202"",""spo2_percent"":97.2,""user_calibrating"":false}",json,
+2026-03-15,WHOOP Sleep,Sleep Record,"{""awake_milliseconds"":2399250,""baseline_sleep_need_milliseconds"":28800000,""cycle_id"":""101"",""disturbance_count"":7,""end_time"":""2026-03-15T15:00:00.000000000Z"",""id"":""202"",""is_nap"":false,""light_sleep_milliseconds"":12600125,""no_data_milliseconds"":300000,""recent_nap_adjustment_milliseconds"":-900000,""recent_strain_need_milliseconds"":900000,""rem_sleep_milliseconds"":6300375,""respiratory_rate_breaths_per_minute"":14.2,""score_state"":""SCORED"",""sleep_consistency_percent"":88,""sleep_cycle_count"":5,""sleep_debt_need_milliseconds"":1800000,""sleep_efficiency_percent"":90,""sleep_performance_percent"":91,""slow_wave_sleep_milliseconds"":5400250,""start_time"":""2026-03-15T07:30:00.000000000Z"",""timezone_offset"":""Z"",""total_in_bed_milliseconds"":27000000,""total_sleep_milliseconds"":24300750}",json,2026-03-15T07:30:00.000000000Z
+2026-03-15,WHOOP Workout,Workout Record,"{""altitude_change_meters"":15,""altitude_gain_meters"":120,""average_heart_rate_bpm"":146,""distance_meters"":10000,""end_time"":""2026-03-15T17:00:00.000000000Z"",""energy_kilojoules"":2500,""id"":""303"",""max_heart_rate_bpm"":174,""percent_recorded"":99.4,""score_state"":""SCORED"",""sport_name"":""running"",""start_time"":""2026-03-15T16:00:00.000000000Z"",""strain_score"":10.4,""timezone_offset"":""Z"",""zone_durations"":{""zone_five_milliseconds"":300000,""zone_four_milliseconds"":780000,""zone_one_milliseconds"":480000,""zone_three_milliseconds"":1020000,""zone_two_milliseconds"":900000,""zone_zero_milliseconds"":120000}}",json,2026-03-15T16:00:00.000000000Z
+2026-03-15,WHOOP Body,Body Snapshot,"{""height_meters"":1.82,""max_heart_rate_bpm"":190,""observed_at"":""2026-03-15T06:40:00.000000000Z"",""source_kind"":""current_profile_snapshot"",""weight_kilograms"":78.4}",json,

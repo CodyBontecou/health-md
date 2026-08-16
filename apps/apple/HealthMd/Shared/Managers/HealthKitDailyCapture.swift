@@ -82,7 +82,7 @@ enum HealthKitDailyCapture {
             )
             try Task.checkCancellation()
 
-            let record = transformed(
+            var record = transformed(
                 fetched,
                 includeGranularData: includeGranularData,
                 metricSelection: metricSelection,
@@ -105,6 +105,7 @@ enum HealthKitDailyCapture {
                record.hasAnyData,
                let fetchExternalDailyRecords {
                 let fetchedExternalRecords = await fetchExternalDailyRecords(date)
+                record.providers = HealthProviderSections.normalized(from: fetchedExternalRecords)
                 externalDailyRecords = filterExternalRecords
                     ? fetchedExternalRecords.filter(\.shouldExport)
                     : fetchedExternalRecords

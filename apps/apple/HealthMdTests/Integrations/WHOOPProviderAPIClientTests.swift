@@ -241,18 +241,42 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
         )
     }
 
-    func testPaginationTraversesBeyondLegacyHundredPageBoundary() async throws {
+    func testHistoryDiscoveryStopsAtHundredPageSafetyLimit() async {
         var cycleRequests = 0
         ExternalIntegrationURLProtocolStub.setHandler { request in
             guard request.url?.path.hasSuffix("/cycle") == true else {
                 return Self.response(request, status: 200, json: ["records": []])
             }
             cycleRequests += 1
-            var response: [String: Any] = ["records": [["id": cycleRequests]]]
-            if cycleRequests < 101 {
-                response["next_token"] = "cursor-\(cycleRequests)"
+            return Self.response(request, status: 200, json: [
+                "records": [["id": cycleRequests, "start": "2026-01-01T00:00:00Z"]],
+                "next_token": "history-cursor-\(cycleRequests)"
+            ])
+        }
+
+        do {
+            _ = try await client.discoverEarliestAvailableDate(
+                provider: .whoop,
+                token: token()
+            )
+            XCTFail("Expected bounded history discovery failure")
+        } catch {
+            XCTAssertEqual(error as? ExternalProviderAPIError, .invalidResponse)
+        }
+        XCTAssertEqual(cycleRequests, 100)
+    }
+
+    func testPaginationStopsAtHundredPageSafetyLimitWithBoundedFailure() async throws {
+        var cycleRequests = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            guard request.url?.path.hasSuffix("/cycle") == true else {
+                return Self.response(request, status: 200, json: ["records": []])
             }
-            return Self.response(request, status: 200, json: response)
+            cycleRequests += 1
+            return Self.response(request, status: 200, json: [
+                "records": [["id": cycleRequests]],
+                "next_token": "cursor-\(cycleRequests)"
+            ])
         }
 
         let record = try await client.fetchDailyRecord(
@@ -263,9 +287,12 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
             now: calendar.date(byAdding: .day, value: 1, to: exportDate)!
         )
 
-        XCTAssertEqual(cycleRequests, 101)
-        XCTAssertEqual(record.payloads.filter { $0.name.hasPrefix("cycles") }.count, 101)
-        XCTAssertNil(record.payloads.first { $0.name == "cycles_pagination" })
+        XCTAssertEqual(cycleRequests, 100)
+        XCTAssertEqual(record.payloads.filter { $0.name == "cycles" || $0.name.hasPrefix("cycles_page_") }.count, 100)
+        let paginationFailure = try XCTUnwrap(record.payloads.first { $0.name == "cycles_pagination" })
+        XCTAssertEqual(paginationFailure.statusCode, 0)
+        XCTAssertEqual(paginationFailure.error, "WHOOP pagination exceeded the 100-page safety limit.")
+        XCTAssertFalse(paginationFailure.endpoint.contains("cursor-100"))
     }
 
     func testStravaPaginationContinuesUntilProviderReturnsPartialPage() async throws {
@@ -292,6 +319,45 @@ final class WHOOPProviderAPIClientTests: XCTestCase {
 
         XCTAssertEqual(pages, [1, 2])
         XCTAssertEqual(record.payloads.map(\.name), ["activities", "activities_page_2"])
+    }
+
+    func testLaterCollectionSafetyFailureKeepsEarlierSuccessfulSiblings() async throws {
+        let boundedClient = ExternalProviderAPIClient(
+            session: session,
+            maximumResponseBytes: 1_024,
+            maximumProviderDayResponseBytes: 180
+        )
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            if request.url?.path.hasSuffix("/cycle") == true {
+                return Self.response(request, status: 200, json: [
+                    "records": [["id": 1, "start": "2026-07-13T09:00:00Z"]]
+                ])
+            }
+            return Self.response(request, status: 200, json: [
+                "records": [["cycle_id": 1, "padding": String(repeating: "x", count: 200)]]
+            ])
+        }
+
+        let record = try await boundedClient.fetchDailyRecord(
+            provider: .whoop,
+            date: exportDate,
+            token: token(),
+            calendar: calendar,
+            now: calendar.date(byAdding: .day, value: 1, to: exportDate)!
+        )
+
+        XCTAssertNotNil(record.payloads.first { $0.name == "cycles" && $0.error == nil })
+        let failure = try XCTUnwrap(record.payloads.first { $0.name == "recovery" })
+        XCTAssertEqual(failure.statusCode, 0)
+        XCTAssertEqual(failure.error, "WHOOP response exceeded the provider safety limit.")
+        XCTAssertTrue(record.payloads.filter { $0.name == "sleep" || $0.name == "workouts" }.allSatisfy {
+            $0.statusCode == 0 && $0.error == "WHOOP response exceeded the provider safety limit."
+        })
+
+        let whoop = try XCTUnwrap(HealthProviderSections.normalized(from: [record])?.whoop)
+        XCTAssertEqual(whoop.cycles.map(\.id), ["1"])
+        XCTAssertEqual(whoop.captureStatus, .partial)
+        XCTAssertEqual(whoop.resources.first { $0.resource == .recovery }?.error?.code, "response_too_large")
     }
 
     func testMalformedSuccessIsCapturedAsPartialPayloadError() async throws {

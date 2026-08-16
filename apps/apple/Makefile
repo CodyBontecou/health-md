@@ -14,6 +14,9 @@
 ##   make check-warnings    check build log for targeted warnings
 ##   make check-apns-scheduling
 ##                           verify production APNs scheduled-export release config
+##   make check-app-store-metadata
+##                           validate canonical App Store metadata field limits and
+##                           duplication rules
 ##   make check-macos-localizations
 ##                           validate production macOS catalog coverage and placeholders
 ##   make update-export-schema-signature
@@ -47,7 +50,7 @@ IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
 COVERAGE_DIR       := build/coverage
 XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-app-store-metadata check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 prepare-healthmd-core-rust:
 	@$(CORE_RUST_PREPARE)
@@ -57,6 +60,10 @@ test: test-ios test-macos
 check-macos-localizations:
 	@python3 -m unittest discover -s scripts/tests -p 'test_validate_macos_localizations.py'
 	@python3 scripts/validate-macos-localizations.py
+
+check-app-store-metadata:
+	@python3 -m unittest discover -s scripts/tests -p 'test_validate_app_store_metadata.py'
+	@python3 scripts/validate-app-store-metadata.py
 
 test-ios: prepare-healthmd-core-rust
 	@echo "\n━━━  iOS Tests  ━━━"

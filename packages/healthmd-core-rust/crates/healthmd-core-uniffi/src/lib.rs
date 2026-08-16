@@ -168,8 +168,8 @@ pub struct CoreSelfTestReport {
 /// Closed shipped registry profiles.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, uniffi::Enum)]
 pub enum CoreMetricRegistryProfile {
-    /// Apple `healthmd.health_data` v7.
-    AppleHealthDataV7,
+    /// Apple `healthmd.health_data` v8.
+    AppleHealthDataV8,
     /// Android frozen v4.
     AndroidFrozenV4,
     /// Android analytical v5.
@@ -1035,8 +1035,8 @@ const fn semantic_profile(
     profile: CoreMetricRegistryProfile,
 ) -> healthmd_core::semantic::SemanticProfile {
     match profile {
-        CoreMetricRegistryProfile::AppleHealthDataV7 => {
-            healthmd_core::semantic::SemanticProfile::AppleHealthDataV7
+        CoreMetricRegistryProfile::AppleHealthDataV8 => {
+            healthmd_core::semantic::SemanticProfile::AppleHealthDataV8
         }
         CoreMetricRegistryProfile::AndroidFrozenV4 => {
             healthmd_core::semantic::SemanticProfile::AndroidFrozenV4
@@ -1051,8 +1051,8 @@ const fn core_profile(
     profile: healthmd_core::semantic::SemanticProfile,
 ) -> CoreMetricRegistryProfile {
     match profile {
-        healthmd_core::semantic::SemanticProfile::AppleHealthDataV7 => {
-            CoreMetricRegistryProfile::AppleHealthDataV7
+        healthmd_core::semantic::SemanticProfile::AppleHealthDataV8 => {
+            CoreMetricRegistryProfile::AppleHealthDataV8
         }
         healthmd_core::semantic::SemanticProfile::AndroidFrozenV4 => {
             CoreMetricRegistryProfile::AndroidFrozenV4
@@ -1066,7 +1066,7 @@ const fn core_profile(
 impl From<CoreMetricRegistryProfile> for healthmd_core::registry::MetricRegistryProfile {
     fn from(value: CoreMetricRegistryProfile) -> Self {
         match value {
-            CoreMetricRegistryProfile::AppleHealthDataV7 => Self::AppleHealthDataV7,
+            CoreMetricRegistryProfile::AppleHealthDataV8 => Self::AppleHealthDataV8,
             CoreMetricRegistryProfile::AndroidFrozenV4 => Self::AndroidFrozenV4,
             CoreMetricRegistryProfile::AndroidAnalyticalV5 => Self::AndroidAnalyticalV5,
         }
@@ -1584,7 +1584,7 @@ mod tests {
         assert_eq!(self_test.build_info, info);
         assert_eq!(self_test.fixture, fixture);
 
-        let apple = get_metric_registry(CoreMetricRegistryProfile::AppleHealthDataV7, 1)
+        let apple = get_metric_registry(CoreMetricRegistryProfile::AppleHealthDataV8, 1)
             .expect("Apple registry should project");
         let frozen = get_metric_registry(CoreMetricRegistryProfile::AndroidFrozenV4, 1)
             .expect("Android registry should project");
@@ -1603,7 +1603,7 @@ mod tests {
                 "{{\"schema\":\"healthmd.semantic_session_config\",",
                 "\"semantic_input_version\":1,\"canonical_model_version\":1,",
                 "\"registry_version\":1,\"registry_sha256\":\"{}\",\"profile_revision\":1,",
-                "\"session_id\":\"ffi-test\",\"profile\":\"apple_health_data_v7\",",
+                "\"session_id\":\"ffi-test\",\"profile\":\"apple_health_data_v8\",",
                 "\"calendar_time_zone\":\"UTC\",",
                 "\"selected_selection_ids\":[\"steps\"],\"disabled_output_keys\":[],",
                 "\"retain_platform_extensions\":false,\"rollup_periods\":[]}}"
@@ -1640,7 +1640,7 @@ mod tests {
             CoreStreamArtifactConfig {
                 request_id: "ffi-stream".to_owned(),
                 session_id: "ffi-session".to_owned(),
-                profile: CoreMetricRegistryProfile::AppleHealthDataV7,
+                profile: CoreMetricRegistryProfile::AppleHealthDataV8,
                 relative_path: "Health/Raw/archive.json".to_owned(),
                 media_type: "application/json".to_owned(),
                 write_mode: CoreArtifactWriteMode::Overwrite,

@@ -1399,6 +1399,9 @@ nonisolated struct HealthData: Codable, Sendable {
     var medications: MedicationsData? = nil
     var other: OtherHealthData = OtherHealthData()
     var workouts: [WorkoutData] = []
+    /// Typed provider supplements for this retained Apple Health day. Provider data
+    /// never changes `hasAnyData`, so a provider-only day remains non-exportable.
+    var providers: HealthProviderSections? = nil
     var partialFailures: [ExportPartialFailure] = []
     var healthKitRecordArchive: HealthKitRecordArchive? = nil
     private var healthKitRecordCaptureStatusStorage: HealthKitRecordCaptureStatus = .notRequested
@@ -1412,7 +1415,7 @@ nonisolated struct HealthData: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case date, timeContext, sleep, activity, heart, vitals, body, nutrition, mindfulness, mobility, hearing
         case reproductiveHealth, cyclingPerformance, vitamins, minerals, symptoms, medications, other, workouts
-        case partialFailures, healthKitRecordArchive, healthKitRecordCaptureStatus
+        case providers, partialFailures, healthKitRecordArchive, healthKitRecordCaptureStatus
     }
 
     init(
@@ -1435,6 +1438,7 @@ nonisolated struct HealthData: Codable, Sendable {
         medications: MedicationsData? = nil,
         other: OtherHealthData = OtherHealthData(),
         workouts: [WorkoutData] = [],
+        providers: HealthProviderSections? = nil,
         partialFailures: [ExportPartialFailure] = [],
         healthKitRecordArchive: HealthKitRecordArchive? = nil,
         healthKitRecordCaptureStatus: HealthKitRecordCaptureStatus = .notRequested
@@ -1458,6 +1462,7 @@ nonisolated struct HealthData: Codable, Sendable {
         self.medications = medications
         self.other = other
         self.workouts = workouts
+        self.providers = providers
         self.partialFailures = partialFailures
         self.healthKitRecordArchive = healthKitRecordArchive
         self.healthKitRecordCaptureStatusStorage = healthKitRecordCaptureStatus
@@ -1487,6 +1492,7 @@ nonisolated struct HealthData: Codable, Sendable {
         medications = try container.decodeIfPresent(MedicationsData.self, forKey: .medications)
         other = try container.decodeIfPresent(OtherHealthData.self, forKey: .other) ?? OtherHealthData()
         workouts = try container.decodeIfPresent([WorkoutData].self, forKey: .workouts) ?? []
+        providers = try container.decodeIfPresent(HealthProviderSections.self, forKey: .providers)
         partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []
         healthKitRecordArchive = try container.decodeIfPresent(HealthKitRecordArchive.self, forKey: .healthKitRecordArchive)
         if let archive = healthKitRecordArchive {
@@ -1520,6 +1526,7 @@ nonisolated struct HealthData: Codable, Sendable {
         try container.encodeIfPresent(medications, forKey: .medications)
         try container.encode(other, forKey: .other)
         try container.encode(workouts, forKey: .workouts)
+        try container.encodeIfPresent(providers, forKey: .providers)
         try container.encode(partialFailures, forKey: .partialFailures)
         try container.encodeIfPresent(healthKitRecordArchive, forKey: .healthKitRecordArchive)
         try container.encode(healthKitRecordCaptureStatus, forKey: .healthKitRecordCaptureStatus)

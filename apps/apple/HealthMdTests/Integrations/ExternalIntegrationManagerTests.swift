@@ -31,6 +31,32 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         super.tearDown()
     }
 
+    func testManagerUsesSuppliedExportCalendarForProviderDayOwnership() async throws {
+        try tokenStore.save(
+            token: ExternalIntegrationToken(
+                accessToken: "access",
+                scope: "read:cycles read:recovery read:sleep read:workout"
+            ),
+            provider: .whoop
+        )
+        var starts: [String] = []
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            let components = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)
+            if let start = components?.queryItems?.first(where: { $0.name == "start" })?.value {
+                starts.append(start)
+            }
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Pacific/Kiritimati")!
+        let instant = ISO8601DateFormatter().date(from: "2026-07-12T12:00:00Z")!
+
+        let records = await makeManager().fetchDailyRecords(for: instant, calendar: calendar)
+
+        XCTAssertEqual(records.first?.date, "2026-07-13")
+        XCTAssertEqual(Set(starts), ["2026-07-12T10:00:00Z"])
+    }
+
     func testIndependentProviderEndpointsPreserveStableOrdering() async throws {
         ExternalIntegrationURLProtocolStub.setHandler { request in
             Self.response(request, status: 200, json: ["ok": true])
@@ -156,28 +182,30 @@ final class ExternalIntegrationManagerTests: XCTestCase {
             )
         }
 
-        do {
-            _ = try await ExternalProviderAPIClient(
-                session: session,
-                maximumResponseBytes: max(firstPage.count, secondPage.count) + 1,
-                maximumProviderDayResponseBytes: aggregateLimit
-            ).fetchDailyRecord(
-                provider: .whoop,
-                date: Self.day(2026, 7, 12),
-                token: ExternalIntegrationToken(
-                    accessToken: "access",
-                    scope: "read:cycles"
-                ),
-                now: Self.day(2026, 7, 13)
-            )
-            XCTFail("Expected the aggregate response budget to stop pagination")
-        } catch let error as ExternalProviderAPIError {
-            XCTAssertEqual(
-                error,
-                .responseTooLarge(maximumBytes: aggregateLimit)
-            )
-        }
+        let record = try await ExternalProviderAPIClient(
+            session: session,
+            maximumResponseBytes: max(firstPage.count, secondPage.count) + 1,
+            maximumProviderDayResponseBytes: aggregateLimit
+        ).fetchDailyRecord(
+            provider: .whoop,
+            date: Self.day(2026, 7, 12),
+            token: ExternalIntegrationToken(
+                accessToken: "access",
+                scope: "read:cycles"
+            ),
+            now: Self.day(2026, 7, 13)
+        )
         XCTAssertEqual(requestCount, 2)
+        XCTAssertNotNil(record.payloads.first { $0.name == "cycles" && $0.error == nil })
+        guard case .object(let firstRoot)? = record.payloads.first?.data,
+              case .array(let retainedRecords)? = firstRoot["records"] else {
+            return XCTFail("Expected retained first WHOOP page")
+        }
+        XCTAssertEqual(retainedRecords.count, 1)
+        XCTAssertEqual(
+            record.payloads.first { $0.name.hasPrefix("cycles_page_") }?.error,
+            "WHOOP response exceeded the provider safety limit."
+        )
     }
 
     func testProviderBoundedConcurrentMapUsesConfiguredWindow() async throws {

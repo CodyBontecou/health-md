@@ -12,7 +12,7 @@ These contracts are independent from daily exports:
 | Compact context day | `healthmd.query_context_day` | 1 |
 | Evidence packet | `healthmd.evidence_packet` | 1 |
 
-The daily export remains `healthmd.health_data` schema version **7**. Adding or advancing a query or packet contract does not relabel daily export files and does not alter their bytes.
+The Apple daily export is `healthmd.health_data` schema version **8**. Adding or advancing a query or packet contract does not relabel daily export files and does not alter their bytes.
 
 ## Access is unlimited; pages are bounded
 
@@ -103,7 +103,7 @@ A `healthmd.query_context_day` v1 contains:
 - evidence entries; and
 - limitations.
 
-Metric `observation_id` and workout `workout_id` provide stable deduplication identities. Repeated views of the same identity are not summed or listed twice. Distinct identities are retained even when values and timestamps happen to match. Each projected summary metric also carries the authoritative v7 data-dictionary `daily_aggregation` (`sum`, `average`, `minimum`, `maximum`, `latest`, `count`, `duration_sum`, `first_time`, `last_time`, `list`, `category_latest`, or `weighted_average`) rather than asking a query consumer to infer semantics from its name.
+Metric `observation_id` and workout `workout_id` provide stable deduplication identities. Repeated views of the same identity are not summed or listed twice. Distinct identities are retained even when values and timestamps happen to match. Each projected summary metric also carries the authoritative v8 data-dictionary `daily_aggregation` (`sum`, `average`, `minimum`, `maximum`, `latest`, `count`, `duration_sum`, `first_time`, `last_time`, `list`, `category_latest`, or `weighted_average`) rather than asking a query consumer to infer semantics from its name.
 
 ### HealthData projection
 
@@ -111,7 +111,7 @@ Metric `observation_id` and workout `workout_id` provide stable deduplication id
 
 The projector:
 
-- preserves canonical v7 metric IDs, units, typed values, source timezone boundaries, source schema/version, and a deterministic source-projection SHA-256 digest;
+- preserves canonical v8 metric IDs, units, typed values, source timezone boundaries, source schema/version, and a deterministic source-projection SHA-256 digest;
 - treats an optional numeric zero as an available value, but never converts default-zero compatibility fields into observations without summary or archive evidence;
 - derives `complete_empty`, `failed`, `unsupported`, `skipped`, and `cancelled` from query manifests, and keeps `partial`, `not_requested`, `legacy_unavailable`, and `not_synchronized` distinct;
 - emits stable evidence for every represented summary key, canonical UUID, external identity, query result, integrity warning, and partial failure;

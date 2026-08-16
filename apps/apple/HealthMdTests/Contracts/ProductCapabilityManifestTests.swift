@@ -12,7 +12,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         XCTAssertEqual(inventory.schemaVersion, 1)
         XCTAssertEqual(
             Set(inventory.outputProfiles.map(\.id)),
-            ["apple-v7", "android-frozen-v4", "android-analytical-v5"]
+            ["apple-v8", "android-frozen-v4", "android-analytical-v5"]
         )
 
         let states = Dictionary(uniqueKeysWithValues: inventory.capabilities.map {
@@ -94,6 +94,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.state-of-mind",
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
+        "apple.typed-whoop-provider-section",
     ]
 
     private static let androidCapabilities: Set<String> = [

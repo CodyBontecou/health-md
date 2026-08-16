@@ -154,7 +154,7 @@ with open("2026-03-15.csv", newline="", encoding="utf-8") as handle:
         raise ValueError("unexpected CSV header")
 
     for row in reader:
-        # Production v7 compatibility permits five-field aggregate rows.
+        # Production v8 retains v7 compatibility permitting five-field aggregate rows.
         if len(row) == 5:
             row.append("")
         if len(row) != 6:

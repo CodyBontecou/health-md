@@ -81,8 +81,94 @@ extension HealthData {
             )
         }
 
+        markdown += whoopProviderMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
         markdown += losslessHealthRecordsMarkdown(snapshot: snapshot, headerPrefix: headerPrefix)
         return markdown
+    }
+
+    private func whoopProviderMarkdown(
+        snapshot: ExportDataSnapshot,
+        headerPrefix: String
+    ) -> String {
+        guard let whoop = snapshot.providers?.whoop else { return "" }
+
+        func value(_ number: Double?) -> String {
+            guard let number else { return "" }
+            return number == 0 ? "0" : String(describing: number)
+        }
+        func integer(_ number: Int64?) -> String {
+            number.map(String.init) ?? ""
+        }
+        func cell(_ value: String) -> String { markdownTableCell(value) }
+        func endTime(_ value: WHOOPNullableTimestamp?) -> String {
+            switch value {
+            case .timestamp(let timestamp): timestamp
+            case .null: "In progress"
+            case nil: ""
+            }
+        }
+
+        var lines: [String] = [
+            "",
+            "\(headerPrefix) WHOOP",
+            "",
+            "- **Capture:** \(whoop.captureStatus.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)"
+        ]
+
+        if whoop.recoveries.count == 1, let recovery = whoop.recoveries.first {
+            if let score = recovery.recoveryScorePercent { lines.append("- **Recovery score:** \(value(score))%") }
+            if let hrv = recovery.hrvRMSSDMS { lines.append("- **HRV (RMSSD):** \(value(hrv)) ms") }
+            if let heartRate = recovery.restingHeartRateBPM { lines.append("- **Resting heart rate:** \(value(heartRate)) bpm") }
+        }
+
+        if !whoop.cycles.isEmpty {
+            lines += ["", "| Cycle ID | Start | End | Strain | Energy (kJ) | Avg HR | Max HR |", "|---|---|---|---:|---:|---:|---:|"]
+            for cycle in whoop.cycles {
+                lines.append("| \(cell(cycle.id)) | \(cell(cycle.startTime)) | \(cell(endTime(cycle.endTime))) | \(value(cycle.strainScore)) | \(value(cycle.energyKilojoules)) | \(value(cycle.averageHeartRateBPM)) | \(value(cycle.maxHeartRateBPM)) |")
+            }
+        }
+
+        if !whoop.recoveries.isEmpty {
+            lines += ["", "| Cycle ID | Sleep ID | Recovery | HRV (RMSSD) | Resting HR | SpO₂ | Skin temp (°C) |", "|---|---|---:|---:|---:|---:|---:|"]
+            for recovery in whoop.recoveries {
+                lines.append("| \(cell(recovery.cycleID)) | \(cell(recovery.sleepID ?? "")) | \(value(recovery.recoveryScorePercent)) | \(value(recovery.hrvRMSSDMS)) | \(value(recovery.restingHeartRateBPM)) | \(value(recovery.spo2Percent)) | \(value(recovery.skinTemperatureCelsius)) |")
+            }
+        }
+
+        if !whoop.sleep.isEmpty {
+            lines += ["", "| Sleep ID | Cycle ID | Start | End | Nap | Total sleep (ms) | In bed (ms) | Nap adjustment (ms) |", "|---|---|---|---|---|---:|---:|---:|"]
+            for sleep in whoop.sleep {
+                lines.append("| \(cell(sleep.id)) | \(cell(sleep.cycleID)) | \(cell(sleep.startTime)) | \(cell(sleep.endTime)) | \(sleep.isNap ? "Yes" : "No") | \(integer(sleep.totalSleepMilliseconds)) | \(integer(sleep.totalInBedMilliseconds)) | \(integer(sleep.recentNapAdjustmentMilliseconds)) |")
+            }
+        }
+
+        if !whoop.workouts.isEmpty {
+            lines += ["", "| Workout ID | Sport | Start | End | Strain | Avg HR | Max HR | Distance (m) |", "|---|---|---|---|---:|---:|---:|---:|"]
+            for workout in whoop.workouts {
+                lines.append("| \(cell(workout.id)) | \(cell(workout.sportName)) | \(cell(workout.startTime)) | \(cell(workout.endTime)) | \(value(workout.strainScore)) | \(value(workout.averageHeartRateBPM)) | \(value(workout.maxHeartRateBPM)) | \(value(workout.distanceMeters)) |")
+            }
+        }
+
+        if let body = whoop.body {
+            lines.append("")
+            lines.append("**Current profile snapshot**")
+            if let height = body.heightMeters { lines.append("- Height: \(value(height)) m") }
+            if let weight = body.weightKilograms { lines.append("- Weight: \(value(weight)) kg") }
+            if let maxHeartRate = body.maxHeartRateBPM { lines.append("- Maximum heart rate: \(value(maxHeartRate)) bpm") }
+        }
+
+        lines += ["", "| Resource | Status | Records | Details |", "|---|---|---:|---|"]
+        for result in whoop.resources {
+            lines.append("| \(result.resource.rawValue) | \(result.status.rawValue) | \(result.recordCount) | \(cell(result.error?.message ?? "")) |")
+        }
+        if !whoop.warnings.isEmpty {
+            lines.append("")
+            for warning in whoop.warnings {
+                let resource = warning.resource.map { " (\($0.rawValue))" } ?? ""
+                lines.append("- **Warning\(resource):** \(warning.message)")
+            }
+        }
+        return "\n" + lines.joined(separator: "\n") + "\n"
     }
 
     private func losslessHealthRecordsMarkdown(

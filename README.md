@@ -32,11 +32,21 @@ make test-website
 
 See each component's README and `AGENTS.md` for platform-specific setup and release instructions.
 
+## Cross-platform product policy
+
+Health.md keeps Apple and Android unified whenever their operating systems expose semantically compatible capabilities. Shared features should align user outcomes, terminology, settings semantics, public IDs, units, reducers, missingness, provenance, completeness, and automation behavior. Native UI and implementation may follow platform conventions.
+
+When the operating systems differ, Health.md represents that difference explicitly instead of fabricating parity. Unsupported data is omitted/reported unavailable, temporary gaps are tracked as planned with a target, and related-but-different values—such as HealthKit HRV SDNN and Health Connect/WHOOP RMSSD—keep distinct identities.
+
+The governing workflow and definition of done are in [`docs/architecture/cross-platform-unification-policy.md`](docs/architecture/cross-platform-unification-policy.md).
+
 ## Public contracts
 
 Health.md exports and the direct-device protocol are long-lived compatibility contracts used across Apple, Android, the CLI, website documentation, and external integrations. Contract changes must update fixtures and run every affected consumer's compatibility tests.
 
-See [`apps/apple/docs/features/export-schema.md`](apps/apple/docs/features/export-schema.md) for the current Apple export contract. Normative direct-protocol specifications, interoperability vectors, and the cross-product contract inventory live in [`packages/contracts`](packages/contracts). Their shared Rust implementation and canonical metric/profile registry live in [`packages/healthmd-core-rust`](packages/healthmd-core-rust); moving deterministic metadata there does not change protocol bytes or public export schemas. Apple v7, Android frozen v4, and Android analytical v5 mappings remain explicit independent profiles until their version and semantic differences are reconciled separately.
+See [`apps/apple/docs/features/export-schema.md`](apps/apple/docs/features/export-schema.md) for the current Apple export contract and [`apps/android/docs/export-contract/migration-plan.md`](apps/android/docs/export-contract/migration-plan.md) for Android compatibility profiles. Normative direct-protocol specifications, interoperability vectors, and the cross-product contract inventory live in [`packages/contracts`](packages/contracts). Their shared Rust implementation and canonical metric/profile registry live in [`packages/healthmd-core-rust`](packages/healthmd-core-rust); moving deterministic metadata there does not change protocol bytes or public export schemas.
+
+Apple v8, Android frozen v4, and Android analytical v5 remain explicit historical/current profiles. The proposed common successor is [`healthmd.health_data` v9](packages/contracts/proposals/unified-health-data-v9/contract.md); it unifies truthful shared semantics while preserving independently versioned platform sections for OS-specific data.
 
 ## License
 

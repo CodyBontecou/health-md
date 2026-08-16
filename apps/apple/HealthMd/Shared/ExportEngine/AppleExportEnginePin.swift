@@ -17,7 +17,7 @@ nonisolated enum ExportEngineMode: String, CaseIterable, Codable, Sendable {
 /// Immutable provenance required to resume an Apple export with the exact renderer contract that
 /// planned it. The pin contains no health values, dates, destination paths, or credentials.
 nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
-    static let profileID = "apple_health_data_v7"
+    static let profileID = "apple_health_data_v8"
     private static let supportedCoreAPIVersion: UInt32 = 4
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
@@ -92,7 +92,7 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
         }
         guard profile == Self.profileID,
               registrySnapshot.profileId == Self.profileID,
-              registrySnapshot.publicProfileId == "apple-v7" else {
+              registrySnapshot.publicProfileId == "apple-v8" else {
             throw CompatibilityError.invalidProfile
         }
         guard publicSchema == HealthMdExportSchema.identifier,

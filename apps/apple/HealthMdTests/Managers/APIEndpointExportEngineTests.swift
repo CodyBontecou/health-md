@@ -412,19 +412,12 @@ final class APIEndpointExportEngineTests: XCTestCase {
         let records = dates.enumerated().map { index, date in
             record(date: date, steps: 1_000 + index)
         }
-        var externalFetches: [Date] = []
         let preparedPreview = try await APIEndpointExportRunner.preparePreview(
             records: Array(records.reversed()),
             settings: makeSettings(),
             destination: destination,
             calendarTimeZone: TimeZone(identifier: "UTC")!,
             connectedAppsEnabled: true,
-            fetchExternalDailyRecords: { date in
-                externalFetches.append(date)
-                return date == dates[0]
-                    ? [self.externalRecord(ownerDate: "2026-07-01")]
-                    : []
-            },
             policyResolver: AppleExportEnginePolicyResolver(
                 injectedOverride: "shadow",
                 userDefaults: nil,
@@ -436,7 +429,7 @@ final class APIEndpointExportEngineTests: XCTestCase {
 
         XCTAssertEqual(operation.authority, ExportEngineMode.shadow)
         XCTAssertEqual(operation.normalizedDates, dates)
-        XCTAssertEqual(externalFetches, dates)
+        XCTAssertTrue(operation.batches.allSatisfy(\.externalRecords.isEmpty))
         XCTAssertEqual(operation.selectedPlan, operation.nativePlan)
         XCTAssertEqual(operation.selectedPlan, try XCTUnwrap(operation.rustPlan))
         let samples = ExportPreviewView.apiPayloadSizeSamples(operation)

@@ -91,6 +91,8 @@ enum GeneratedAutomationReferenceDocumentation {
         let completeRecord = completeHealthData()
         let partialRecord = partialHealthData()
         let sidecar = providerSidecar()
+        var providerRecord = completeRecord
+        providerRecord.providers = ExportFixtures.whoopDay.providers
         let snapshot = settingsSnapshot()
         let completeRawResult = try CanonicalRawResultEnvelope(
             createdAt: createdAt,
@@ -202,7 +204,7 @@ enum GeneratedAutomationReferenceDocumentation {
         )
         let agentSource = HealthMdSourceDescriptor(
             schema: "healthmd.health_data",
-            schemaVersion: 7,
+            schemaVersion: HealthMdExportSchema.version,
             digest: String(repeating: "a", count: 64)
         )
         let agentEvidence = HealthMdEvidenceReference(
@@ -311,7 +313,7 @@ enum GeneratedAutomationReferenceDocumentation {
             connectedAppsEnabled: false
         ))
         generated["api-export-v2-provider-sidecar.json"] = try canonicalJSON(APIExportClient.makePayload(
-            records: [completeRecord],
+            records: [providerRecord],
             failedDateDetails: [failedDateDetail],
             externalRecords: [sidecar],
             settings: retainedSettings,

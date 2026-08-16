@@ -30,7 +30,7 @@ final class HealthMdCoreRegistryAdapterTests: XCTestCase {
     func testUnsupportedRegistryVersionFailsClosedWithStableError() {
         XCTAssertThrowsError(
             try HealthMdCoreService().metricRegistry(
-                profile: .appleHealthDataV7,
+                profile: .appleHealthDataV8,
                 expectedRegistryVersion: 2
             )
         ) { error in

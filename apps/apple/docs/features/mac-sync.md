@@ -38,7 +38,7 @@ Select the equivalent vault/root on Mac. Health.md appends the iPhone's Health s
 
 ## Export behavior
 
-Mac-target exports use the same schema v7 and format roles as local iPhone exports:
+Mac-target exports use the same schema v8, typed-provider behavior, and format roles as local iPhone exports:
 
 - JSON contains full canonical archive when lossless capture is on;
 - CSV contains canonical JSON rows;
