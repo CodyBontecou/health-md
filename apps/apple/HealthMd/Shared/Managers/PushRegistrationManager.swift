@@ -135,24 +135,40 @@ final class PushRegistrationManager: @unchecked Sendable {
 
     /// Phase-3 multi-profile sync (decision 8): posts one worker record
     /// representing the **coalesced wake-up** — the earliest preferred fire
-    /// time among enabled entries, enabled when any entry is enabled. The
-    /// worker stores one schedule per user and only uses it for best-effort
-    /// silent APNs nudges; per-entry wake-ups remain client-side (BGTask +
-    /// local recovery notifications), so no worker contract change is needed
-    /// and no profile names, profile ids, or health data leave the device.
-    /// A per-entry worker payload requires a worker-side contract change and
-    /// stays out of scope here.
-    func syncSchedules(_ entries: [ScheduledExportEntry]) {
-        let enabled = entries.filter(\.isEnabled)
-        guard let earliest = enabled.min(by: {
-            ($0.preferredHour, $0.preferredMinute) < ($1.preferredHour, $1.preferredMinute)
-        }) else {
-            // No enabled entries: clear the worker schedule through the
-            // existing disabled-sync path using a neutral schedule value.
+    /// time among enabled entries (and the legacy schedule while it remains
+    /// enabled). The worker stores one schedule per user and only uses it for
+    /// best-effort silent APNs nudges; per-entry wake-ups remain client-side
+    /// (BGTask + local recovery notifications), so no worker contract change
+    /// is needed and no profile names, profile ids, or health data leave the
+    /// device. A per-entry worker payload requires a worker-side contract
+    /// change and stays out of scope here.
+    func syncSchedules(_ entries: [ScheduledExportEntry], legacy: ExportSchedule? = nil) {
+        guard let coalesced = Self.coalescedWorkerSchedule(entries: entries, legacy: legacy) else {
+            // No enabled entries and no enabled legacy schedule: clear the
+            // worker record through the existing disabled-sync path.
             syncSchedule(ExportSchedule())
             return
         }
-        syncSchedule(earliest.dateMathProjection)
+        syncSchedule(coalesced)
+    }
+
+    /// Pure coalescing rule shared with tests: the enabled schedule (entry
+    /// projection or legacy) with the earliest preferred time-of-day wins,
+    /// because the worker's silent push is only a nudge and the client
+    /// evaluates every entry when it wakes.
+    static func coalescedWorkerSchedule(
+        entries: [ScheduledExportEntry],
+        legacy: ExportSchedule?
+    ) -> ExportSchedule? {
+        var candidates: [ExportSchedule] = entries
+            .filter(\.isEnabled)
+            .map(\.dateMathProjection)
+        if let legacy, legacy.isEnabled {
+            candidates.append(legacy)
+        }
+        return candidates.min {
+            ($0.preferredHour, $0.preferredMinute) < ($1.preferredHour, $1.preferredMinute)
+        }
     }
 
     private func postUpsertSchedule(_ schedule: ExportSchedule, timezone: String) async {

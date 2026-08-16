@@ -403,3 +403,75 @@ final class PendingExportRequestProfileIdentityTests: XCTestCase {
         XCTAssertNil(decodedShortcut.profileName)
     }
 }
+
+/// The coalesced worker record picks the earliest preferred time among
+/// enabled schedules so the silent-push nudge precedes every entry's run.
+final class WorkerScheduleCoalescingTests: XCTestCase {
+    private func entry(
+        profileID: UUID = UUID(),
+        enabled: Bool = true,
+        hour: Int,
+        minute: Int = 0
+    ) -> ScheduledExportEntry {
+        var e = ScheduledExportEntry(
+            profileID: profileID,
+            isEnabled: enabled,
+            frequency: .daily,
+            preferredHour: hour,
+            preferredMinute: minute
+        )
+        e.enabledAt = Date.distantPast
+        return e
+    }
+
+    func testEarliestEnabledEntryWins() {
+        let early = entry(hour: 6)
+        let late = entry(hour: 20, minute: 30)
+
+        let coalesced = PushRegistrationManager.coalescedWorkerSchedule(
+            entries: [late, early],
+            legacy: nil
+        )
+
+        XCTAssertEqual(coalesced?.preferredHour, 6)
+        XCTAssertEqual(coalesced?.preferredMinute, 0)
+    }
+
+    func testDisabledEntriesAndDisabledLegacyAreIgnored() {
+        var legacy = ExportSchedule(isEnabled: false)
+        legacy.preferredHour = 5
+
+        let coalesced = PushRegistrationManager.coalescedWorkerSchedule(
+            entries: [entry(enabled: false, hour: 6), entry(enabled: false, hour: 7)],
+            legacy: legacy
+        )
+
+        XCTAssertNil(coalesced)
+    }
+
+    func testEnabledLegacyCompetesWithEntries() {
+        var legacy = ExportSchedule(isEnabled: true)
+        legacy.preferredHour = 21
+
+        let coalesced = PushRegistrationManager.coalescedWorkerSchedule(
+            entries: [entry(hour: 9), entry(hour: 15)],
+            legacy: legacy
+        )
+
+        XCTAssertEqual(coalesced?.preferredHour, 9)
+    }
+
+    func testLegacyAloneStillSyncs() {
+        var legacy = ExportSchedule(isEnabled: true)
+        legacy.preferredHour = 7
+        legacy.preferredMinute = 45
+
+        let coalesced = PushRegistrationManager.coalescedWorkerSchedule(
+            entries: [],
+            legacy: legacy
+        )
+
+        XCTAssertEqual(coalesced?.preferredHour, 7)
+        XCTAssertEqual(coalesced?.preferredMinute, 45)
+    }
+}

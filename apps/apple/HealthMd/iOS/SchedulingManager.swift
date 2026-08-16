@@ -156,31 +156,47 @@ class SchedulingManager: ObservableObject {
         }
     }
 
+    /// True when the legacy schedule or any scheduled entry is enabled. The
+    /// UI master toggle and status pills read this instead of the legacy
+    /// schedule alone (phase 3: entries own scheduling after migration).
+    @MainActor @Published private(set) var isSchedulingActive: Bool = false
+
+    /// Re-arms background automation and worker sync for the current state:
+    /// the legacy schedule and every scheduled entry. Called from the legacy
+    /// `schedule` didSet and by the UI after entry mutations.
+    @MainActor func refreshScheduledAutomation() {
+        isSchedulingActive = schedule.isEnabled || hasEnabledProfileEntries
+        guard systemSideEffectsEnabled else { return }
+        guard !TestMode.isUITesting else { return }
+        #if DEBUG
+        guard !MarketingCapture.isActive else { return }
+        #endif
+        let active = isSchedulingActive
+        Task { @MainActor in
+            if active {
+                self.scheduleBackgroundTask()
+                await self.setupHealthKitBackgroundDelivery()
+                await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()
+            } else {
+                self.cancelBackgroundTask()
+                await self.disableHealthKitBackgroundDelivery()
+            }
+        }
+        // Mirror the coalesced state to the worker so server-side cron can
+        // deliver silent push at the earliest preferred minute. Disabling
+        // everything sends isEnabled:false so the worker drops the row.
+        PushRegistrationManager.shared.syncSchedules(
+            scheduledEntryStore.entries,
+            legacy: schedule
+        )
+    }
+
     @MainActor @Published var schedule: ExportSchedule {
         didSet {
             if persistScheduleChanges {
                 schedule.save()
             }
-            guard systemSideEffectsEnabled else { return }
-            // Skip background task and HealthKit setup in UI test / marketing capture mode
-            guard !TestMode.isUITesting else { return }
-            #if DEBUG
-            guard !MarketingCapture.isActive else { return }
-            #endif
-            Task {
-                if schedule.isEnabled {
-                    scheduleBackgroundTask()
-                    await setupHealthKitBackgroundDelivery()
-                    await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()
-                } else {
-                    cancelBackgroundTask()
-                    await disableHealthKitBackgroundDelivery()
-                }
-            }
-            // Mirror the schedule to the worker so server-side cron can
-            // deliver silent push at the precise minute. Disabling sends
-            // isEnabled:false so the worker drops the row.
-            PushRegistrationManager.shared.syncSchedule(schedule)
+            refreshScheduledAutomation()
         }
     }
 
@@ -236,6 +252,7 @@ class SchedulingManager: ObservableObject {
             exportNotificationScheduler: exportNotificationScheduler
         )
         self.schedule = initialSchedule
+        isSchedulingActive = self.schedule.isEnabled || self.hasEnabledProfileEntries
     }
 
     @MainActor func configureScheduledExportDependencies(
@@ -2803,7 +2820,7 @@ class SchedulingManager: ObservableObject {
 
     /// Returns a human-readable string describing the next scheduled export.
     @MainActor func getNextExportDescription() -> String? {
-        guard schedule.isEnabled else { return nil }
+        guard isSchedulingActive else { return nil }
 
         let nextDate = calculateNextRunDate()
         let formatter = DateFormatter()

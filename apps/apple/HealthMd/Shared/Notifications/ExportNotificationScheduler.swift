@@ -136,7 +136,14 @@ struct UserNotificationExportScheduler: ExportNotificationScheduling {
 
     private func pendingExportContent(for request: PendingExportRequest) -> UNNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "Health Export Needs Attention", comment: "Pending export recovery notification title")
+        if let profileName = request.profileName {
+            content.title = String(
+                localized: "Health Export Needs Attention — \(profileName)",
+                comment: "Pending export recovery notification title with export profile name"
+            )
+        } else {
+            content.title = String(localized: "Health Export Needs Attention", comment: "Pending export recovery notification title")
+        }
         content.body = String(localized: "Open Health.md and tap to retry the remaining health export dates.", comment: "Pending export recovery notification body")
         content.sound = .default
         content.categoryIdentifier = ExportNotificationCategories.pendingExport

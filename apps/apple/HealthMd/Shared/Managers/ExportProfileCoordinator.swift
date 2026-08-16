@@ -108,13 +108,19 @@ final class ExportProfileCoordinator: ObservableObject {
         )
 
         // Phase 3: an enabled legacy schedule becomes the Default profile's
-        // scheduled entry exactly once, so the existing single schedule keeps
-        // running unchanged under per-profile evaluation.
+        // scheduled entry exactly once, then the legacy schedule is disabled
+        // so exactly one runtime path (per-profile entries) owns scheduling
+        // and the legacy configuration card no longer shows a duplicate.
         if didCreate, let defaultProfileID = profileStore.activeProfileID {
-            _ = scheduledEntryStore.migrateLegacyScheduleIfNeeded(
-                legacy: ExportSchedule.load(),
+            let legacy = ExportSchedule.load()
+            if scheduledEntryStore.migrateLegacyScheduleIfNeeded(
+                legacy: legacy,
                 defaultProfileID: defaultProfileID
-            )
+            ) {
+                var disabled = legacy
+                disabled.isEnabled = false
+                disabled.save()
+            }
         }
     }
 
