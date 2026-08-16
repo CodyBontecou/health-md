@@ -12304,7 +12304,7 @@
       "profile_revision": 1,
       "public_profile_id": "apple-v7",
       "public_schema": "healthmd.health_data",
-      "public_schema_version": 7,
+      "public_schema_version": 8,
       "unavailable_selection_ids": []
     },
     {

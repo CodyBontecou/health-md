@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "30fa4e40d39704e4f6e74a555c39a4bfa34f46dae5d558065390ac9c756da3a4",
+      "sha256": "f221b608513f5500f1f9291ed4b5e7b7322350aa4113894cdea9a31e080cdca7",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -17,7 +17,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b",
+      "sha256": "1bb337bb6b439c848f1f1be4e8df6c899f243df96d0f5801906a52da0a39a136",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
@@ -154,7 +154,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
-          "sha256": "0f5c8dfc6e52759c7b671082bfd5121253f1907d5af97ad1ec4f2c6bb9fefb7e",
+          "sha256": "0f7d1ffb52d4d3cce627286fc0278b563dce7c2a49a00931dff290cd8a3f81b9",
           "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
@@ -189,7 +189,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "1181e644cd224c8c0e4126133890830f5af9ec8c39995db6e90a471fae608c7d",
+          "sha256": "8de7bafdbb0d4b3054ce285f0a994b7fb9cc5283ae1e3b83b7aa2f895eae3209",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
@@ -207,7 +207,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-apple-v7.json",
-          "sha256": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+          "sha256": "525581109480b1966031c9254134331d2ac082f7a6bedd290708478a21dd9837",
           "provenance": "Frozen directly from the pre-cutover production Swift v7 exporters for summary, imperial, custom, and lossless synthetic days; Rust did not generate these bytes.",
           "mirrors": []
         },
@@ -219,7 +219,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "5b98aaa0620492e2ff5fab943ae58c5d7f5a6e129f7aed7ad9e9409b7bdcdf8c",
+          "sha256": "59a0369032df7bb8bd04c49c36af623964282b3b8b605abd376340e9a31dc677",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -227,7 +227,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "0f6f8ce69bf0babddff87e4e4d1990b96633a754a10043a37475dc3d29b9bfef",
+          "sha256": "f6e278b2b0b6f5445069ede1b95a1e3fcae25525b15ee489fffa1f340a5a2dfa",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
@@ -237,7 +237,7 @@
     },
     {
       "id": "healthmd.health_data.apple",
-      "version": 7,
+      "version": 8,
       "status": "inventory_only",
       "summary": "Current Apple daily export contract; not yet consolidated with Android.",
       "authorities": [

@@ -4,7 +4,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 const FIXTURE: &[u8] = include_bytes!("fixtures/render-differential-v1.json");
-const FIXTURE_SHA256: &str = "1181e644cd224c8c0e4126133890830f5af9ec8c39995db6e90a471fae608c7d";
+const FIXTURE_SHA256: &str = "8de7bafdbb0d4b3054ce285f0a994b7fb9cc5283ae1e3b83b7aa2f895eae3209";
 
 #[test]
 fn all_profile_artifact_plans_match_exact_fixture_bytes() {

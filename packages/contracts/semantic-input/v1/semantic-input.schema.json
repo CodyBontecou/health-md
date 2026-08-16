@@ -76,7 +76,7 @@
         "selected_selection_ids":{"type":"array","maxItems":512,"uniqueItems":true,"items":{"$ref":"#/$defs/identifier"}},
         "disabled_output_keys":{"type":"array","maxItems":512,"uniqueItems":true,"items":{"$ref":"#/$defs/identifier"}},
         "retain_platform_extensions":{"type":"boolean"},
-        "rollup_periods":{"type":"array","uniqueItems":true,"items":{"enum":["iso_week","calendar_month","calendar_year"]}}
+        "rollup_periods":{"type":"array","uniqueItems":true,"items":{"enum":["range"]}}
       }
     },
     {

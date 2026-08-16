@@ -40,7 +40,7 @@ VALID_CAPABILITY_CLASSIFICATIONS = {
 }
 VALID_PROFILE_COMPATIBILITY = {"shipped", "frozen", "additive"}
 REQUIRED_OUTPUT_PROFILES = {
-    "apple-v7": ("apple", "healthmd.health_data.apple", 7),
+    "apple-v7": ("apple", "healthmd.health_data.apple", 8),
     "android-frozen-v4": ("android", "healthmd.health_data.android", 4),
     "android-analytical-v5": (
         "android",
@@ -405,7 +405,7 @@ def validate_semantic_fixture(root: Path, path: Path) -> None:
 
     required_features = {
         "missing-versus-zero", "nanoseconds", "nullable-source-offset", "non-hour-offset", "dst-offset-transition",
-        "iso-week-year-boundary", "blood-pressure-dependency", "state-of-mind-independent-views",
+        "range-span-year-boundary", "blood-pressure-dependency", "state-of-mind-independent-views",
         "sleep-stage-platform-differences", "android-percentage-fraction", "vo2-latest-lower-value", "workout-duration-weighting",
         "unknown-extension-retention", "batch-boundary-invariance", "reject-nan-and-infinity",
         "batch-order-and-bounds", "cancellation-and-terminal-state",
@@ -445,7 +445,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["schema_version"] != 1
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
-        or payload["registry_sha256"] != "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
+        or payload["registry_sha256"] != "1bb337bb6b439c848f1f1be4e8df6c899f243df96d0f5801906a52da0a39a136"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
@@ -677,7 +677,7 @@ def validate_native_renderer_golden(path: Path) -> None:
             {"schema", "schema_version", "profile", "public_schema", "public_schema_version", "cases"},
             "native Apple renderer golden",
         )
-        if payload["public_schema"] != "healthmd.health_data" or payload["public_schema_version"] != 7:
+        if payload["public_schema"] != "healthmd.health_data" or payload["public_schema_version"] != 8:
             fail("native Apple renderer golden: public schema pin is invalid")
     else:
         require_exact_keys(

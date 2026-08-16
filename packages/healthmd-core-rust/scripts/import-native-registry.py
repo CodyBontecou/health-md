@@ -515,12 +515,16 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
                 }
             )
 
+    # The native baseline pins the immutable pre-cutover evidence (v7). The live
+    # registry contract tracks the current public export schema version instead,
+    # so v8 range-summary exports stay pinned to the shipped schema.
+    apple_public_schema_version = 8
     profiles: list[dict[str, Any]] = [
         {
             "id": apple["profile_id"],
             "public_profile_id": apple["public_profile_id"],
             "public_schema": apple["public_schema"],
-            "public_schema_version": apple["public_schema_version"],
+            "public_schema_version": apple_public_schema_version,
             "profile_revision": 1,
             "platform": "apple",
             "ordered_selection_ids": [metric["selection_id"] for metric in apple["metrics"]],

@@ -40,7 +40,7 @@ pub(crate) fn render_frontmatter(
     let mut output = String::from("---\n");
     let apple = config.profile == SemanticProfile::AppleHealthDataV7;
     if apple {
-        output.push_str("schema: healthmd.health_data\nschema_version: 7\n");
+        output.push_str("schema: healthmd.health_data\nschema_version: 8\n");
         output.push_str("time_context:\n  calendar_timezone: ");
         output.push_str(&config.calendar_time_zone);
         output.push_str("\n  timestamp_timezone: UTC\n");
@@ -435,7 +435,7 @@ pub(crate) fn render_csv(
                 day.owner_date.as_str(),
                 "Metadata",
                 "schema_version",
-                "7",
+                "8",
                 "",
                 "",
             ],
@@ -590,7 +590,7 @@ pub(crate) fn public_json_entries(
                 "schema".to_owned(),
                 Value::String("healthmd.health_data".to_owned()),
             ));
-            entries.push(("schema_version".to_owned(), Value::from(7)));
+            entries.push(("schema_version".to_owned(), Value::from(8)));
             entries.push(("date".to_owned(), Value::String(day.owner_date.clone())));
             entries.push(("type".to_owned(), Value::String("health-data".to_owned())));
             entries.push(("time_context".to_owned(), serde_json::json!({"calendar_timezone":config.calendar_time_zone,"timestamp_timezone":"UTC"})));

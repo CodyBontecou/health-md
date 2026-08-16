@@ -12,7 +12,7 @@
       "platform": "apple",
       "contract_id": "healthmd.health_data.apple",
       "public_schema": "healthmd.health_data",
-      "public_schema_version": 7,
+      "public_schema_version": 8,
       "compatibility": "shipped",
       "comparison": "byte_for_byte"
     },

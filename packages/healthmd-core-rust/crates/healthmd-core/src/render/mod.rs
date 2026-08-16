@@ -2010,7 +2010,7 @@ mod tests {
             match profile {
                 SemanticProfile::AppleHealthDataV7 => {
                     assert!(text.contains("\"schema\" : \"healthmd.health_data\""));
-                    assert!(text.contains("\"schema_version\" : 7"));
+                    assert!(text.contains("\"schema_version\" : 8"));
                 }
                 SemanticProfile::AndroidFrozenV4 => assert!(!text.contains("schemaProfile")),
                 SemanticProfile::AndroidAnalyticalV5 => {

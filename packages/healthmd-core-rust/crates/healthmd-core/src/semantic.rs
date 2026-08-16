@@ -6,7 +6,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use chrono::{Datelike, Duration, NaiveDate};
+use chrono::{Datelike, NaiveDate};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -64,13 +64,13 @@ impl SemanticProfile {
     }
 }
 
-/// Requested Apple period reductions. Android profiles reject period requests.
+/// Requested Apple roll-up reduction. The single `Range` variant summarizes
+/// exactly the declared export range, first day through last day. Android
+/// profiles reject roll-up requests.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RollupPeriod {
-    IsoWeek,
-    CalendarMonth,
-    CalendarYear,
+    Range,
 }
 
 /// Immutable configuration for one ephemeral semantic session.
@@ -859,72 +859,70 @@ impl SemanticSession {
         if self.config.profile != SemanticProfile::AppleHealthDataV7 {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
-        let mut results = Vec::new();
-        for period in &self.config.rollup_periods {
+        if days.is_empty() {
+            return Ok(Some(Vec::new()));
+        }
+        if is_cancelled() {
+            return Ok(None);
+        }
+        // The range summary covers exactly one window: the first through the
+        // last declared day of the session. Declared-but-empty days stay in
+        // source_dates so coverage reflects the requested range instead of a
+        // calendar expectation.
+        let mut dated_days: Vec<(NaiveDate, &SemanticDayResult)> =
+            Vec::with_capacity(days.len());
+        for day in days {
+            dated_days.push((parse_date(&day.owner_date)?, day));
+        }
+        dated_days.sort_by_key(|(date, _)| *date);
+        let start = dated_days[0].0;
+        let end = dated_days[dated_days.len() - 1].0;
+        let source_days: Vec<&SemanticDayResult> =
+            dated_days.iter().map(|(_, day)| *day).collect();
+
+        let mut by_key: BTreeMap<String, Vec<(&str, &SemanticDailyValue)>> = BTreeMap::new();
+        for day in &source_days {
+            for value in &day.values {
+                by_key
+                    .entry(value.output_key.clone())
+                    .or_default()
+                    .push((&day.owner_date, value));
+            }
+        }
+        let mut values = Vec::new();
+        for (key, daily) in by_key {
             if is_cancelled() {
                 return Ok(None);
             }
-            let mut windows: BTreeMap<(NaiveDate, NaiveDate), Vec<&SemanticDayResult>> =
-                BTreeMap::new();
-            for day in days {
-                let date = parse_date(&day.owner_date)?;
-                windows
-                    .entry(period_window(date, *period))
-                    .or_default()
-                    .push(day);
-            }
-            for ((start, end), source_days) in windows {
-                if is_cancelled() {
-                    return Ok(None);
-                }
-                let mut by_key: BTreeMap<String, Vec<(&str, &SemanticDailyValue)>> =
-                    BTreeMap::new();
-                for day in &source_days {
-                    for value in &day.values {
-                        by_key
-                            .entry(value.output_key.clone())
-                            .or_default()
-                            .push((&day.owner_date, value));
-                    }
-                }
-                let mut values = Vec::new();
-                for (key, daily) in by_key {
-                    let rule = self
-                        .profile
-                        .outputs
-                        .get(&key)
-                        .map(|output| output.rollup.as_str())
-                        .ok_or(CoreError::InvalidSemanticBatch)?;
-                    values.push(reduce_rollup_value(&key, rule, &daily, &source_days)?);
-                }
-                values.sort_by_key(|value| {
-                    self.profile
-                        .outputs
-                        .get(&value.output_key)
-                        .map_or(usize::MAX, |output| output.ordinal)
-                });
-                if values.is_empty() {
-                    continue;
-                }
-                results.push(SemanticRollupResult {
-                    period: *period,
-                    start_date: start.format("%Y-%m-%d").to_string(),
-                    end_date: end.format("%Y-%m-%d").to_string(),
-                    calendar_time_zone: self.config.calendar_time_zone.clone(),
-                    source_dates: source_days
-                        .iter()
-                        .map(|day| day.owner_date.clone())
-                        .collect(),
-                    values,
-                });
-            }
+            let rule = self
+                .profile
+                .outputs
+                .get(&key)
+                .map(|output| output.rollup.as_str())
+                .ok_or(CoreError::InvalidSemanticBatch)?;
+            values.push(reduce_rollup_value(&key, rule, &daily, &source_days)?);
         }
-        results.sort_by(|left, right| {
-            left.start_date
-                .cmp(&right.start_date)
-                .then(left.period.cmp(&right.period))
+        values.sort_by_key(|value| {
+            self.profile
+                .outputs
+                .get(&value.output_key)
+                .map_or(usize::MAX, |output| output.ordinal)
         });
-        Ok(Some(results))
+        if values.is_empty() {
+            return Ok(Some(Vec::new()));
+        }
+        let result = SemanticRollupResult {
+            period: RollupPeriod::Range,
+            start_date: start.format("%Y-%m-%d").to_string(),
+            end_date: end.format("%Y-%m-%d").to_string(),
+            calendar_time_zone: self.config.calendar_time_zone.clone(),
+            source_dates: source_days
+                .iter()
+                .map(|day| day.owner_date.clone())
+                .collect(),
+            values,
+        };
+        Ok(Some(vec![result]))
     }
 
     fn retained_extensions(&self) -> Vec<RetainedSemanticExtension> {
@@ -1964,31 +1962,6 @@ fn daily_numeric(values: &[SemanticDailyValue], key: &str) -> Result<Option<f64>
         .transpose()
 }
 
-fn period_window(date: NaiveDate, period: RollupPeriod) -> (NaiveDate, NaiveDate) {
-    match period {
-        RollupPeriod::IsoWeek => {
-            let days = i64::from(date.weekday().num_days_from_monday());
-            let start = date - Duration::days(days);
-            (start, start + Duration::days(6))
-        }
-        RollupPeriod::CalendarMonth => {
-            let start = NaiveDate::from_ymd_opt(date.year(), date.month(), 1).expect("valid month");
-            let next = if date.month() == 12 {
-                NaiveDate::from_ymd_opt(date.year() + 1, 1, 1).expect("valid next year")
-            } else {
-                NaiveDate::from_ymd_opt(date.year(), date.month() + 1, 1).expect("valid next month")
-            };
-            (start, next - Duration::days(1))
-        }
-        RollupPeriod::CalendarYear => {
-            let start = NaiveDate::from_ymd_opt(date.year(), 1, 1).expect("valid year");
-            let next = NaiveDate::from_ymd_opt(date.year() + 1, 1, 1).expect("valid next year");
-            (start, next - Duration::days(1))
-        }
-    }
-}
-
-#[allow(clippy::too_many_lines)]
 fn reduce_rollup_value(
     key: &str,
     rule: &str,
@@ -2712,9 +2685,9 @@ mod tests {
     }
 
     #[test]
-    fn apple_rollups_obey_iso_year_boundaries_and_latest_vo2() {
+    fn range_rollup_spans_declared_days_and_keeps_latest_vo2() {
         let result = run(
-            config(&["vo2_max"], vec![RollupPeriod::IsoWeek]),
+            config(&["vo2_max"], vec![RollupPeriod::Range]),
             vec![
                 record(
                     "vo2-a",
@@ -2738,8 +2711,8 @@ mod tests {
                 ),
             ],
         );
-        assert_eq!(result.rollups[0].start_date, "2025-12-29");
-        assert_eq!(result.rollups[0].end_date, "2026-01-04");
+        assert_eq!(result.rollups[0].start_date, "2025-12-31");
+        assert_eq!(result.rollups[0].end_date, "2026-01-01");
         assert_eq!(
             numeric_value(&result.rollups[0].values[0].primary_value).expect("numeric"),
             Some(40.0)
@@ -2795,7 +2768,7 @@ mod tests {
 
     #[test]
     fn rollup_coverage_includes_declared_empty_days_and_leap_month_bounds() {
-        let session_config = config(&["steps"], vec![RollupPeriod::CalendarMonth]);
+        let session_config = config(&["steps"], vec![RollupPeriod::Range]);
         let mut session =
             SemanticSession::from_json(&serde_json::to_vec(&session_config).expect("config"))
                 .expect("session");
@@ -2828,10 +2801,11 @@ mod tests {
         assert_eq!(result.days.len(), 3);
         assert_eq!(result.rollups.len(), 1);
         assert!(result.days[0].values.is_empty());
-        assert_eq!(result.rollups[0].end_date, "2024-02-29");
+        assert_eq!(result.rollups[0].start_date, "2024-02-28");
+        assert_eq!(result.rollups[0].end_date, "2024-03-01");
         assert_eq!(
             result.rollups[0].source_dates,
-            vec!["2024-02-28", "2024-02-29"]
+            vec!["2024-02-28", "2024-02-29", "2024-03-01"]
         );
         assert_eq!(result.rollups[0].values[0].days_counted, 1);
     }
@@ -3086,14 +3060,8 @@ mod tests {
     fn date_windows_cover_dst_independently_from_offsets() {
         let spring = parse_date("2026-03-08").expect("date");
         let autumn = parse_date("2026-11-01").expect("date");
-        assert_eq!(
-            period_window(spring, RollupPeriod::IsoWeek).0.weekday(),
-            Weekday::Mon
-        );
-        assert_eq!(
-            period_window(autumn, RollupPeriod::IsoWeek).0.weekday(),
-            Weekday::Mon
-        );
+        assert_eq!(spring.weekday(), Weekday::Sun);
+        assert_eq!(autumn.weekday(), Weekday::Sun);
         assert!(
             validate_timestamp(&ExactTimestamp {
                 epoch_seconds: "1773000000".to_owned(),

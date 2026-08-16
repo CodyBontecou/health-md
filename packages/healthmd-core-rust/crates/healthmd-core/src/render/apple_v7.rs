@@ -87,7 +87,7 @@ pub(crate) fn render_api_envelope(
         ),
         (
             "daily_record_schema_version".to_owned(),
-            encode(Value::from(7))?,
+            encode(Value::from(8))?,
         ),
         (
             "exported_at".to_owned(),
