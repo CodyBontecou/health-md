@@ -218,17 +218,23 @@ final class ExportProfileStore: ObservableObject {
         )
     }
 
-    /// Deletes a profile. Deleting the active profile activates the first
-    /// remaining profile, or returns the store to legacy mode when the list
-    /// becomes empty. Deleting the migration default is allowed.
-    func delete(id: UUID) {
-        guard let index = profiles.firstIndex(where: { $0.id == id }) else { return }
+    /// Deletes a profile. Deleting the last remaining profile is forbidden:
+    /// once profiles exist, the app must keep at least one so manual export
+    /// and scheduling always resolve a concrete configuration instead of
+    /// silently falling back to stale legacy settings. Deleting the active
+    /// profile activates the first remaining profile. Returns true when a
+    /// profile was deleted; false for unknown ids or the final profile.
+    @discardableResult
+    func delete(id: UUID) -> Bool {
+        guard profiles.count > 1,
+              let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
         profiles.remove(at: index)
 
         if activeProfileID == id {
             activeProfileID = profiles.first?.id
         }
         persist()
+        return true
     }
 
     /// Selects the profile manual exports use. Returns false for unknown ids

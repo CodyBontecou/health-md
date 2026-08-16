@@ -70,9 +70,8 @@ final class ExportProfileStoreTests: XCTestCase {
             target: .connectedMac
         )
         let staleID = profile.id
-        store.delete(id: profile.id)
-
-        // Simulate external stale state: a saved active id with no list entry.
+        // Only one profile exists, so deletion is forbidden; simulate external
+        // stale state directly instead.
         defaults.set(staleID.uuidString, forKey: "exportProfiles.activeProfileID")
         defaults.set(Data("garbage".utf8), forKey: "exportProfiles.list")
 
@@ -230,21 +229,25 @@ final class ExportProfileStoreTests: XCTestCase {
         let second = store.add(name: "Weekly", settings: snapshot, target: .connectedMac)
         store.activate(id: second.id)
 
-        store.delete(id: second.id)
+        XCTAssertTrue(store.delete(id: second.id))
 
         XCTAssertEqual(store.activeProfileID, first.id)
         XCTAssertEqual(store.profiles.count, 1)
     }
 
-    func testDeleteLastProfileReturnsToLegacyMode() throws {
+    func testDeletingLastRemainingProfileIsForbidden() throws {
         let store = makeStore()
         let only = store.add(name: "Daily", settings: makeSnapshot(), target: .localIPhoneFolder)
 
-        store.delete(id: only.id)
+        XCTAssertFalse(store.delete(id: only.id))
 
-        XCTAssertFalse(store.hasProfiles)
-        XCTAssertNil(store.activeProfileID)
-        XCTAssertNil(store.activeProfile)
+        XCTAssertTrue(store.hasProfiles)
+        XCTAssertEqual(store.activeProfileID, only.id)
+        XCTAssertNotNil(store.activeProfile)
+
+        // Unknown ids never delete anything.
+        XCTAssertFalse(store.delete(id: UUID()))
+        XCTAssertEqual(store.profiles.count, 1)
     }
 
     func testActivateRejectsUnknownIDs() throws {
