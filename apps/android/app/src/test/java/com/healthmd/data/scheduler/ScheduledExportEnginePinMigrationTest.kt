@@ -46,7 +46,7 @@ class ScheduledExportEnginePinMigrationTest {
         )
 
         assertThat(occurrence.configuration.signature).isEqualTo(
-            "99ce6b5a1e07c202f532fdefca3de0d22176d8134ff76bb1182b176a55d2ccee",
+            "3b2b1af3fc180f0d7cef817828af1ebb9e3d0ac3a2b9acf397ac1b94e892f440",
         )
         assertThat(
             occurrence.toWorkData().getString(

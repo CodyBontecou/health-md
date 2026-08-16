@@ -37,8 +37,8 @@ pub use stream::{
 pub const RENDER_INPUT_VERSION: u32 = 1;
 /// Version of the destination-neutral artifact plan.
 pub const ARTIFACT_PLAN_VERSION: u32 = 1;
-/// Revision of all three initial shipped profile renderers.
-pub const RENDER_PROFILE_REVISION: u32 = 1;
+/// Revision of all three profile renderers, including managed-Markdown merge behavior.
+pub const RENDER_PROFILE_REVISION: u32 = 2;
 /// Maximum render configuration bytes.
 pub const MAX_RENDER_CONFIG_BYTES: usize = 256 * 1024;
 /// Maximum completed semantic-result bytes.
@@ -2299,7 +2299,7 @@ mod tests {
         let config = json!({
             "schema":"healthmd.render_session_config","render_input_version":1,"artifact_plan_version":1,
             "canonical_model_version":1,"registry_version":1,"registry_sha256":REGISTRY_SHA256,
-            "profile_revision":1,"render_profile_revision":1,"request_id":"render-test","session_id":"render-session",
+            "profile_revision":1,"render_profile_revision":2,"request_id":"render-test","session_id":"render-session",
             "profile":profile_name,"calendar_time_zone":"UTC","locale":"en-US",
             "formats":["csv","markdown","json","obsidian_bases"],"unit_system":"metric",
             "include_metadata":true,"group_by_category":true,"include_platform_extensions":false,
