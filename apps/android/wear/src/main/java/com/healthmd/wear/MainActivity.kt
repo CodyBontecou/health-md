@@ -3,19 +3,32 @@ package com.healthmd.wear
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Air
+import androidx.compose.material.icons.rounded.DirectionsWalk
+import androidx.compose.material.icons.rounded.SsidChart
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.MonitorHeart
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.rotary.onPreRotaryScrollEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
@@ -58,7 +71,7 @@ class MainActivity : ComponentActivity() {
     )
 }
 
-private data class MetricRow(val label: String, val value: String)
+private data class MetricRow(val label: String, val value: String, val icon: ImageVector, val tint: Color)
 
 @Composable private fun Dashboard() {
     val context = LocalContext.current
@@ -112,14 +125,14 @@ private data class MetricRow(val label: String, val value: String)
         if (snapshot != null && !syncing) refreshFailed = false
     }
     val metrics = listOfNotNull(
-        today?.steps?.let { MetricRow(stringResource(R.string.wear_steps), nf.format(it)) },
-        today?.moveKilocalories?.let { MetricRow(stringResource(R.string.wear_move), stringResource(R.string.wear_value_kcal, nf.format(it.toInt()))) },
-        today?.exerciseMinutes?.let { MetricRow(stringResource(R.string.wear_exercise), stringResource(R.string.wear_value_minutes, nf.format(it.toInt()))) },
-        recovery?.sleepMinutes?.let { MetricRow(stringResource(R.string.wear_sleep), stringResource(R.string.wear_value_hours, nf.format(it / 60))) },
-        today?.restingHeartRateBpm?.let { MetricRow(stringResource(R.string.wear_resting_hr), stringResource(R.string.wear_value_bpm, nf.format(it.toInt()))) },
-        today?.averageHeartRateBpm?.let { MetricRow(stringResource(R.string.wear_average_hr), stringResource(R.string.wear_value_bpm, nf.format(it.toInt()))) },
-        recovery?.hrvRmssdMillis?.let { MetricRow(stringResource(R.string.wear_hrv), stringResource(R.string.wear_value_ms, nf.format(it.toInt()))) },
-        today?.bloodOxygenPercent?.let { MetricRow(stringResource(R.string.wear_blood_oxygen), stringResource(R.string.wear_value_percent, nf.format(it.toInt()))) },
+        today?.steps?.let { MetricRow(stringResource(R.string.wear_steps), nf.format(it), Icons.Rounded.DirectionsWalk, WearColors.metricSteps) },
+        today?.moveKilocalories?.let { MetricRow(stringResource(R.string.wear_move), stringResource(R.string.wear_value_kcal, nf.format(it.toInt())), Icons.Rounded.LocalFireDepartment, WearColors.metricMove) },
+        today?.exerciseMinutes?.let { MetricRow(stringResource(R.string.wear_exercise), stringResource(R.string.wear_value_minutes, nf.format(it.toInt())), Icons.Rounded.Timer, WearColors.metricExercise) },
+        recovery?.sleepMinutes?.let { MetricRow(stringResource(R.string.wear_sleep), stringResource(R.string.wear_value_hours, nf.format(it / 60)), Icons.Rounded.Bedtime, WearColors.metricSleep) },
+        today?.restingHeartRateBpm?.let { MetricRow(stringResource(R.string.wear_resting_hr), stringResource(R.string.wear_value_bpm, nf.format(it.toInt())), Icons.Rounded.Favorite, WearColors.metricRestingHeart) },
+        today?.averageHeartRateBpm?.let { MetricRow(stringResource(R.string.wear_average_hr), stringResource(R.string.wear_value_bpm, nf.format(it.toInt())), Icons.Rounded.MonitorHeart, WearColors.metricAverageHeart) },
+        recovery?.hrvRmssdMillis?.let { MetricRow(stringResource(R.string.wear_hrv), stringResource(R.string.wear_value_ms, nf.format(it.toInt())), Icons.Rounded.SsidChart, WearColors.metricHrv) },
+        today?.bloodOxygenPercent?.let { MetricRow(stringResource(R.string.wear_blood_oxygen), stringResource(R.string.wear_value_percent, nf.format(it.toInt())), Icons.Rounded.Air, WearColors.metricOxygen) },
     )
     ScalingLazyColumn(
         state = listState,
@@ -151,9 +164,7 @@ private data class MetricRow(val label: String, val value: String)
             metrics.isEmpty() -> item { StatusText(R.string.wear_no_data) }
             else -> {
                 if (freshness == WearFreshness.STALE) item { Text(relativeAge(context, snapshot!!.capturedAtEpochMillis, now), color = WearColors.warning, fontSize = WearType.caption) }
-                items(metrics) { metric -> Row(Modifier.fillMaxWidth().padding(WearSpacing.sm), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(metric.label, fontSize = WearType.body); Text(metric.value, color = WearColors.muted, fontSize = WearType.body)
-                } }
+                items(metrics) { metric -> MetricRowCard(metric) }
                 item { Text(stringResource(R.string.wear_not_realtime), color = WearColors.muted, fontSize = WearType.caption) }
             }
         }
@@ -162,6 +173,30 @@ private data class MetricRow(val label: String, val value: String)
             syncing = true; refreshFailed = false
             scope.launch { refreshFailed = !WearRefreshClient(context).requestRefresh(); syncing = false }
         }, enabled = !syncing) { Text(if (syncing) stringResource(R.string.wear_syncing) else stringResource(R.string.wear_sync), fontSize = WearType.caption) } }
+    }
+}
+
+@Composable private fun MetricRowCard(metric: MetricRow) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(WearColors.surface, WearShape.md)
+            .padding(horizontal = WearSpacing.sm, vertical = WearSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(WearSpacing.sm),
+    ) {
+        Icon(metric.icon, contentDescription = null, tint = metric.tint, modifier = Modifier.size(WearSpacing.xl))
+        Text(metric.label, color = WearColors.muted, fontSize = WearType.body, modifier = Modifier.weight(1f), maxLines = 1)
+        // Semibold tabular figures keep values aligned and emphasized, mirroring the watchOS row.
+        Text(
+            metric.value,
+            color = WearColors.text,
+            fontSize = WearType.body,
+            fontWeight = FontWeight.SemiBold,
+            style = LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
+            textAlign = TextAlign.End,
+            maxLines = 1,
+        )
     }
 }
 
