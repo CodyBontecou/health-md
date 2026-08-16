@@ -219,6 +219,13 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
     <string name="settings_subtitle">প্রিমিয়াম ও সহায়তা পরিচালনা করুন</string>
+    <string name="configuration_protection_title">অনিচ্ছাকৃত পরিবর্তন রোধ করুন</string>
+    <string name="configuration_protection_toggle">কনফিগারেশন পরিবর্তন লক করুন</string>
+    <string name="configuration_protection_description">রপ্তানি, সিঙ্ক, সময়সূচি, ফোল্ডার, সংযোগ ও অন্যান্য সেটিংস ভুল করে পরিবর্তন হওয়া রোধ করে। ম্যানুয়াল রপ্তানি চালু থাকে।</string>
+    <string name="configuration_protection_blocked_title">সেটিংস লক করা আছে</string>
+    <string name="configuration_protection_blocked_body">কনফিগারেশন সম্পাদনা করতে সেটিংসে অনিচ্ছাকৃত পরিবর্তন রোধ করুন বন্ধ করুন।</string>
+    <string name="configuration_protection_blocked_action">কেন কনফিগারেশন পরিবর্তন ব্লক করা হয়েছে তা দেখুন</string>
+    <string name="configuration_protection_open_setting">সেটিং খুলুন</string>
     <string name="section_health_sources">স্বাস্থ্য সূত্র</string>
     <string name="health_sources_description">Health Connect-ই ডিফল্ট রপ্তানি পথ হিসেবে থাকে। সমর্থিত এসব ইকোসিস্টেম এখন Health Connect-এর মাধ্যমে Health.md-তে ডেটা পাঠাতে পারে; অথবা ক্রেডেনশিয়াল বা অংশীদার অ্যাক্সেস কনফিগার করা হলে সরাসরি SDK/OAuth অ্যাডাপ্টারের মাধ্যমে পাঠাতে পারে।</string>
     <string name="health_provider_status_installed">ইনস্টল করা হয়েছে</string>

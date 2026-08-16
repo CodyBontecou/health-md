@@ -6,6 +6,7 @@ import SwiftUI
 struct SyncSettingsView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var directCLIService: IPhoneDirectCLIService
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @AppStorage("syncEnabled") private var syncEnabled = false
     @AppStorage(IPhoneDirectCLIService.enabledKey) private var directCLIEnabled = false
     @AppStorage(IPhoneDirectCLIService.hostKey) private var directCLIHost = ""
@@ -39,6 +40,7 @@ struct SyncSettingsView: View {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 syncHeader
                 syncToggleSection
+                    .configurationChangesProtected()
                 downloadMacSection
                 connectionSection
                 manualIPSection
@@ -81,7 +83,9 @@ struct SyncSettingsView: View {
         }
         .fullScreenCover(isPresented: $showDirectCLIPairingScanner) {
             DirectCLIPairingScannerView { pairingLink in
-                directCLIService.handleScannedPairingLink(pairingLink)
+                configurationProtection.performConfigurationChange {
+                    directCLIService.handleScannedPairingLink(pairingLink)
+                }
             }
         }
     }
@@ -280,31 +284,34 @@ struct SyncSettingsView: View {
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        HStack(spacing: Spacing.sm) {
-                            TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .keyboardType(.URL)
-                                .textFieldStyle(.roundedBorder)
-                                .focused($focusedManualIPField, equals: .host)
-                                .accessibilityLabel("Mac IP address or hostname")
+                        VStack(spacing: Spacing.sm) {
+                            HStack(spacing: Spacing.sm) {
+                                TextField("Mac Tailscale IP or hostname", text: $manualMacHost)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .keyboardType(.URL)
+                                    .textFieldStyle(.roundedBorder)
+                                    .focused($focusedManualIPField, equals: .host)
+                                    .accessibilityLabel("Mac IP address or hostname")
 
-                            TextField("Port", text: $manualMacPort)
+                                TextField("Port", text: $manualMacPort)
+                                    .keyboardType(.numberPad)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(width: 82)
+                                    .focused($focusedManualIPField, equals: .port)
+                                    .accessibilityLabel("Manual IP port")
+                            }
+
+                            SecureField(
+                                syncService.hasSavedManualIPConnection ? "Pairing code (not required)" : "Pairing code",
+                                text: $manualPairingCode
+                            )
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
-                                .frame(width: 82)
-                                .focused($focusedManualIPField, equals: .port)
-                                .accessibilityLabel("Manual IP port")
+                                .focused($focusedManualIPField, equals: .pairingCode)
+                                .accessibilityLabel("Pairing code")
                         }
-
-                        SecureField(
-                            syncService.hasSavedManualIPConnection ? "Pairing code (not required)" : "Pairing code",
-                            text: $manualPairingCode
-                        )
-                            .keyboardType(.numberPad)
-                            .textFieldStyle(.roundedBorder)
-                            .focused($focusedManualIPField, equals: .pairingCode)
-                            .accessibilityLabel("Pairing code")
+                        .configurationChangesProtected()
 
                         if syncService.hasSavedManualIPConnection {
                             Label(
@@ -318,7 +325,9 @@ struct SyncSettingsView: View {
 
                         HStack(spacing: Spacing.sm) {
                             Button {
-                                connectByManualIP()
+                                configurationProtection.performConfigurationChange {
+                                    connectByManualIP()
+                                }
                             } label: {
                                 Label(manualIPButtonTitle, systemImage: manualIPButtonIcon)
                                     .frame(maxWidth: .infinity)
@@ -347,7 +356,15 @@ struct SyncSettingsView: View {
             subtitle: "Let the healthmd command connect while this iPhone app is open, without running the Mac app."
         ) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Toggle(isOn: $directCLIEnabled) {
+                Toggle(isOn: Binding(
+                    get: { directCLIEnabled },
+                    set: { enabled in
+                        configurationProtection.performConfigurationChange {
+                            directCLIEnabled = enabled
+                            directCLIService.setEnabled(enabled)
+                        }
+                    }
+                )) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Enable Direct CLI Access")
                             .font(.body.weight(.semibold))
@@ -358,9 +375,6 @@ struct SyncSettingsView: View {
                     }
                 }
                 .tint(Color.accent)
-                .onChange(of: directCLIEnabled) { _, enabled in
-                    directCLIService.setEnabled(enabled)
-                }
 
                 if directCLIService.needsPairingCode,
                    directCLIService.pendingPairingLink == nil {
@@ -368,7 +382,9 @@ struct SyncSettingsView: View {
 
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Button {
-                            showDirectCLIPairingScanner = true
+                            configurationProtection.performConfigurationChange {
+                                showDirectCLIPairingScanner = true
+                            }
                         } label: {
                             Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
                                 .frame(maxWidth: .infinity)
@@ -428,16 +444,21 @@ struct SyncSettingsView: View {
 
                     if directCLIService.pendingPairingLink == nil {
                         if directCLIService.needsPairingCode {
-                            Picker("Transport", selection: $directCLITransport) {
+                            Picker("Transport", selection: Binding(
+                                get: { directCLITransport },
+                                set: { value in
+                                    configurationProtection.performConfigurationChange {
+                                        directCLITransport = value
+                                        directCLIService.updateTransport(
+                                            DirectTransportKind(rawValue: value) ?? .manualIP
+                                        )
+                                    }
+                                }
+                            )) {
                                 Text("Manual IP").tag(DirectTransportKind.manualIP.rawValue)
                                 Text("Nearby").tag(DirectTransportKind.nearby.rawValue)
                             }
                             .pickerStyle(.segmented)
-                            .onChange(of: directCLITransport) { _, value in
-                                directCLIService.updateTransport(
-                                    DirectTransportKind(rawValue: value) ?? .manualIP
-                                )
-                            }
 
                             if directCLITransport == DirectTransportKind.manualIP.rawValue {
                                 HStack(spacing: Spacing.sm) {
@@ -452,6 +473,7 @@ struct SyncSettingsView: View {
                                         .textFieldStyle(.roundedBorder)
                                         .frame(width: 82)
                                 }
+                                .configurationChangesProtected()
                             } else {
                                 Text("Nearby discovers the pairing command on the same local network. It never falls back to Manual IP.")
                                     .font(.footnote)
@@ -461,9 +483,12 @@ struct SyncSettingsView: View {
                             SecureField("Pairing code", text: $directCLIPairingCode)
                                 .keyboardType(.numberPad)
                                 .textFieldStyle(.roundedBorder)
+                                .configurationChangesProtected()
 
                             Button {
-                                connectDirectCLI()
+                                configurationProtection.performConfigurationChange {
+                                    connectDirectCLI()
+                                }
                             } label: {
                                 Label("Pair with healthmd", systemImage: "link")
                                     .frame(maxWidth: .infinity)
@@ -480,8 +505,10 @@ struct SyncSettingsView: View {
                             .fixedSize(horizontal: false, vertical: true)
 
                             Button("Forget Pairing", role: .destructive) {
-                                directCLIService.forgetPairedCLI()
-                                directCLIPairingCode = ""
+                                configurationProtection.performConfigurationChange {
+                                    directCLIService.forgetPairedCLI()
+                                    directCLIPairingCode = ""
+                                }
                             }
                             .buttonStyle(.bordered)
                         }

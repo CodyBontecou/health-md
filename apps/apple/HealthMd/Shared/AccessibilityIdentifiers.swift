@@ -33,6 +33,8 @@ enum AccessibilityID {
         static let exportProgress = "export.progressView"
         static let statusMessage = "export.statusMessage"
         static let activityBanner = "export.activityBanner"
+        static let filenameEditorButton = "export.filenameEditorButton"
+        static let outputEditorSaveButton = "export.outputEditorSaveButton"
     }
 
     // MARK: - Mac Destination
@@ -130,6 +132,14 @@ enum AccessibilityID {
         static let vaultRow = "settings.vaultRow"
         static let exportSettingsRow = "settings.exportSettingsRow"
         static let macSyncRow = "settings.macSyncRow"
+    }
+
+    // MARK: - Configuration Protection
+    enum ConfigurationProtection {
+        static let toggle = "configurationProtection.toggle"
+        static let section = "configurationProtection.section"
+        static let protectedRegion = "configurationProtection.protectedRegion"
+        static let toast = "configurationProtection.toast"
     }
 
     // MARK: - Status Badge

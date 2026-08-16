@@ -36,6 +36,7 @@ class SettingsRepositoryImpl(
 
     private object Keys {
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
+        val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
@@ -69,6 +70,16 @@ class SettingsRepositoryImpl(
 
     override suspend fun getExportSettings(): ExportSettings =
         exportSettings.first()
+
+    override val preventAccidentalChanges: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false
+    }
+
+    override suspend fun setPreventAccidentalChanges(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] = enabled
+        }
+    }
 
     override val exportFolderUri: Flow<String?> = dataStore.data.map { prefs ->
         prefs[Keys.EXPORT_FOLDER_URI]
