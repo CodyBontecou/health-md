@@ -133,6 +133,28 @@ final class PushRegistrationManager: @unchecked Sendable {
         Task { await self.postUpsertSchedule(schedule, timezone: timezone) }
     }
 
+    /// Phase-3 multi-profile sync (decision 8): posts one worker record
+    /// representing the **coalesced wake-up** — the earliest preferred fire
+    /// time among enabled entries, enabled when any entry is enabled. The
+    /// worker stores one schedule per user and only uses it for best-effort
+    /// silent APNs nudges; per-entry wake-ups remain client-side (BGTask +
+    /// local recovery notifications), so no worker contract change is needed
+    /// and no profile names, profile ids, or health data leave the device.
+    /// A per-entry worker payload requires a worker-side contract change and
+    /// stays out of scope here.
+    func syncSchedules(_ entries: [ScheduledExportEntry]) {
+        let enabled = entries.filter(\.isEnabled)
+        guard let earliest = enabled.min(by: {
+            ($0.preferredHour, $0.preferredMinute) < ($1.preferredHour, $1.preferredMinute)
+        }) else {
+            // No enabled entries: clear the worker schedule through the
+            // existing disabled-sync path using a neutral schedule value.
+            syncSchedule(ExportSchedule())
+            return
+        }
+        syncSchedule(earliest.dateMathProjection)
+    }
+
     private func postUpsertSchedule(_ schedule: ExportSchedule, timezone: String) async {
         struct InnerSchedule: Encodable {
             let isEnabled: Bool
