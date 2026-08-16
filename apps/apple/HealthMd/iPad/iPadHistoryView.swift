@@ -241,6 +241,8 @@ struct iPadHistoryView: View {
                                     Text(failure.summary)
                                         .font(Typography.caption())
                                         .foregroundStyle(Color.textMuted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .textSelection(.enabled)
                                 }
                             }
                         }
