@@ -759,11 +759,36 @@ final class IPhoneDirectFileExportProducer {
                         frozenSettingsSnapshot: journal.settingsSnapshot,
                         preparedExport: preparedExport
                     )
-                    // The durable direct-file journal has no write-side warnings
-                    // channel; coverage gaps are logged so support diagnostics can
-                    // explain missing individual-entry files on the receiving Mac.
-                    for gap in writeResult.individualEntryCoverageGaps {
-                        Self.logger.warning("\(gap.summary, privacy: .public)")
+                    // Write-side coverage gaps (for example, a tracked metric
+                    // deselected from the daily export after capture) must reach
+                    // the durable journal and the terminal outcome: the receiving
+                    // CLI otherwise reports success while requested individual
+                    // entry files are missing. Public logs stay health-free:
+                    // per-day details remain in private diagnostics only.
+                    let writeSideGaps = writeResult.individualEntryCoverageGaps
+                    if !writeSideGaps.isEmpty {
+                        Self.logger.warning("direct export write-side individual-entry coverage gaps: \(writeSideGaps.count, privacy: .public)")
+                        for gap in writeSideGaps {
+                            Self.logger.warning("coverage gap detail: \(gap.summary, privacy: .private)")
+                        }
+                        journal.capturedDays[index] = IPhoneDirectCapturedDay(
+                            sourceDate: day.sourceDate,
+                            sourceDateIdentifier: day.sourceDateIdentifier,
+                            isRequestedDate: day.isRequestedDate,
+                            relativePath: day.relativePath,
+                            succeeded: day.succeeded,
+                            includedGranularData: day.includedGranularData,
+                            sampleCount: day.sampleCount,
+                            recordCount: day.recordCount,
+                            externalRecordCount: day.externalRecordCount,
+                            partialFailureCount: day.partialFailureCount,
+                            integrityWarningCount: day.integrityWarningCount,
+                            hadWarnings: true,
+                            failureReason: day.failureReason,
+                            historyFactsRecorded: day.historyFactsRecorded
+                        )
+                        journal.updatedAt = Date()
+                        try saveJournal(journal)
                     }
                     wroteDictionary = true
                 } catch ExportError.noHealthData {

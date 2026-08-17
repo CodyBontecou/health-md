@@ -806,6 +806,13 @@ class AdvancedExportSettings: ObservableObject {
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
                 self?.saveMetricSelection()
+                // Deselecting a metric in the Health Metrics picker must also
+                // stop its individual tracking; otherwise tracking configs keep
+                // querying a metric that daily exports no longer include until
+                // another tracking change or app reload reconciles them.
+                if self?.syncIndividualTrackingWithMetricSelection() == true {
+                    self?.saveIndividualTracking()
+                }
             }
     }
     
@@ -1031,6 +1038,25 @@ class AdvancedExportSettings: ObservableObject {
         guard !missingMetricIDs.isEmpty else { return false }
         for metricID in missingMetricIDs {
             metricSelection.setMetric(metricID, enabled: true)
+        }
+        return true
+    }
+
+    /// Reverse reconciliation: a metric deselected from the daily export must
+    /// stop being individually tracked, so persisted tracking configs never
+    /// reference metrics the export no longer queries.
+    @discardableResult
+    func syncIndividualTrackingWithMetricSelection() -> Bool {
+        guard individualTracking.globalEnabled else { return false }
+        let removedMetricIDs = Set(
+            individualTracking.metricConfigs
+                .filter { $0.value.trackIndividually }
+                .map(\.key)
+        )
+        .subtracting(metricSelection.enabledMetrics)
+        guard !removedMetricIDs.isEmpty else { return false }
+        for metricID in removedMetricIDs {
+            individualTracking.metricConfigs[metricID]?.trackIndividually = false
         }
         return true
     }
