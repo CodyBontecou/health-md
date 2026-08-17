@@ -6,7 +6,7 @@ import HealthMdCoreRust
 struct SharedSetupV1: Codable, Equatable, Sendable {
     static let schemaName = "healthmd.shared_setup"
     static let schemaVersion = 1
-    static let maximumEncodedBytes = 262_144
+    nonisolated static let maximumEncodedBytes = 262_144
 
     var schema: String
     var schemaVersion: Int
@@ -426,7 +426,7 @@ enum SharedSetupCodec {
 }
 
 enum SharedSetupValidation {
-    private static let identifier = try! NSRegularExpression(pattern: #"^[a-z][a-z0-9_]*(?:[.-][a-z0-9_]+)*$"#)
+    private nonisolated static let identifier = try! NSRegularExpression(pattern: #"^[a-z][a-z0-9_]*(?:[.-][a-z0-9_]+)*$"#)
     private static let allowedSensitiveLookingKeys: Set<String> = ["credentials_required"]
     private static let forbiddenKeyParts = [
         "authorization", "bearer", "token", "credential", "password", "secret", "api_key",
@@ -587,11 +587,11 @@ enum SharedSetupValidation {
         guard !value.isEmpty, value != ".", value != "..", value.count <= 4096, !value.contains("/"), !value.contains("\\"), !value.contains("%"), !value.contains(where: { $0.isNewline || $0.asciiValue.map { $0 < 32 } == true }), value.range(of: #"^[A-Za-z]:"#, options: .regularExpression) == nil else { throw SharedSetupError.invalid("A filename template is unsafe.") }
     }
 
-    static func isIdentifier(_ value: String) -> Bool {
+    nonisolated static func isIdentifier(_ value: String) -> Bool {
         identifier.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)) != nil && value.count <= 128
     }
 
-    static func isNonEmptyShortString(_ value: String) -> Bool {
+    nonisolated static func isNonEmptyShortString(_ value: String) -> Bool {
         !value.isEmpty && value.count <= 256 && !value.contains(where: { $0.isNewline || $0.asciiValue.map { $0 < 32 } == true })
     }
 
@@ -926,8 +926,8 @@ enum SharedSetupMapper {
         return endpoint.validatedURLString == nil ? nil : endpoint
     }
 
-    private static func nativeFormat(_ value: SharedSetupV1.Format) -> ExportFormat? { switch value { case .markdown: .markdown; case .obsidianBases: .obsidianBases; case .json: .json; case .csv: .csv } }
-    private static func sharedFormat(_ value: ExportFormat) -> SharedSetupV1.Format? { switch value { case .markdown: .markdown; case .obsidianBases: .obsidianBases; case .json: .json; case .csv: .csv } }
+    private nonisolated static func nativeFormat(_ value: SharedSetupV1.Format) -> ExportFormat? { switch value { case .markdown: .markdown; case .obsidianBases: .obsidianBases; case .json: .json; case .csv: .csv } }
+    private nonisolated static func sharedFormat(_ value: ExportFormat) -> SharedSetupV1.Format? { switch value { case .markdown: .markdown; case .obsidianBases: .obsidianBases; case .json: .json; case .csv: .csv } }
     private static func nativeWriteMode(_ value: SharedSetupV1.SharedWriteMode) -> WriteMode { switch value { case .overwrite: .overwrite; case .append: .append; case .update: .update } }
     private static func sharedWriteMode(_ value: WriteMode) -> SharedSetupV1.SharedWriteMode { switch value { case .overwrite: .overwrite; case .append: .append; case .update: .update } }
     private static func nativeDate(_ value: SharedSetupV1.DateFormat) -> DateFormatPreference { switch value { case .iso8601: .iso8601; case .usShort: .usShort; case .usLong: .usLong; case .euShort: .euShort; case .euLong: .euLong; case .compact: .compact; case .friendly: .friendly } }

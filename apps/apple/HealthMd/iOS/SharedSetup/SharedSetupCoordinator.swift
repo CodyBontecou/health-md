@@ -25,6 +25,10 @@ struct SharedSetupDocument: FileDocument {
 
 @MainActor
 final class SharedSetupCoordinator: ObservableObject {
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes when the last release happened off the main actor.
+    nonisolated deinit {}
     enum RouteSource: Equatable { case fileImporter; case coldOpen; case warmOpen; case onboarding }
 
     @Published private(set) var preview: SharedSetupPreview?
@@ -40,35 +44,40 @@ final class SharedSetupCoordinator: ObservableObject {
     private let registry: SharedSetupMetricRegistry?
     private let fileManager: FileManager
     private let externalFileReader: @Sendable (URL) async throws -> Data
-    private let accessibilityAnnouncer: (String) -> Void
+    private let accessibilityAnnouncer: @MainActor (String) -> Void
     private var importTask: Task<Void, Never>?
     private var importRequestID = 0
 
     init(
-        settings: AdvancedExportSettings = AdvancedExportSettings(),
+        settings: AdvancedExportSettings? = nil,
         apiExportSettings: APIExportSettings? = nil,
-        schedulingManager: SchedulingManager = .shared,
+        schedulingManager: SchedulingManager? = nil,
         userDefaults: UserDefaults = .standard,
-        registry: SharedSetupMetricRegistry? = try? .current(),
+        registry: SharedSetupMetricRegistry?? = nil,
         fileManager: FileManager = .default,
         externalFileReader: @escaping @Sendable (URL) async throws -> Data = {
             try await SharedSetupCoordinator.readBoundedFile($0)
         },
-        accessibilityAnnouncer: @escaping (String) -> Void = {
+        accessibilityAnnouncer: @escaping @MainActor @Sendable (String) -> Void = {
             UIAccessibility.post(notification: .announcement, argument: $0)
         }
     ) {
+        // Default argument expressions are evaluated in a nonisolated context (SE-0411),
+        // so MainActor-isolated defaults are resolved inside the initializer body instead.
+        let resolvedSettings = settings ?? AdvancedExportSettings()
         let resolvedAPIExportSettings = apiExportSettings ?? APIExportSettings()
-        self.settings = settings
+        let resolvedSchedulingManager = schedulingManager ?? .shared
+        let resolvedRegistry = registry ?? (try? SharedSetupMetricRegistry.current())
+        self.settings = resolvedSettings
         self.apiExportSettings = resolvedAPIExportSettings
-        self.schedulingManager = schedulingManager
+        self.schedulingManager = resolvedSchedulingManager
         self.transaction = SharedSetupTransaction(
-            settings: settings,
+            settings: resolvedSettings,
             apiExportSettings: resolvedAPIExportSettings,
-            schedulingManager: schedulingManager,
+            schedulingManager: resolvedSchedulingManager,
             userDefaults: userDefaults
         )
-        self.registry = registry
+        self.registry = resolvedRegistry
         self.fileManager = fileManager
         self.externalFileReader = externalFileReader
         self.accessibilityAnnouncer = accessibilityAnnouncer

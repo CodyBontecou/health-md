@@ -262,6 +262,7 @@
     "android.skin-temperature",
     "apple.typed-whoop-provider-section",
     "source.private-platform-database",
+    "setup.share-portable-configuration",
     "core.shared-rust-metric-registry",
     "core.shared-rust-profile-engine"
   ],

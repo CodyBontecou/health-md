@@ -32,6 +32,10 @@ struct SharedSetupApplyResult: Equatable, Sendable {
 
 @MainActor
 final class SharedSetupTransaction {
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes when the last release happened off the main actor.
+    nonisolated deinit {}
     static let undoKey = "sharedSetup.apple.undo.v1"
     static let pendingEndpointKey = "sharedSetup.apple.pendingEndpoint.v1"
     static let preservedAndroidExtensionKey = "sharedSetup.apple.preservedAndroidExtension.v1"
