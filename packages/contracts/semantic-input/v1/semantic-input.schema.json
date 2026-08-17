@@ -71,7 +71,7 @@
       "properties":{
         "schema":{"const":"healthmd.semantic_session_config"},"semantic_input_version":{"const":1},"canonical_model_version":{"const":1},"registry_version":{"const":1},
         "registry_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"profile_revision":{"const":1},"session_id":{"$ref":"#/$defs/identifier"},
-        "profile":{"enum":["apple_health_data_v7","android_frozen_v4","android_analytical_v5"]},
+        "profile":{"enum":["apple_health_data_v8","android_frozen_v4","android_analytical_v5"]},
         "calendar_time_zone":{"type":"string","minLength":1,"maxLength":64},
         "selected_selection_ids":{"type":"array","maxItems":512,"uniqueItems":true,"items":{"$ref":"#/$defs/identifier"}},
         "disabled_output_keys":{"type":"array","maxItems":512,"uniqueItems":true,"items":{"$ref":"#/$defs/identifier"}},

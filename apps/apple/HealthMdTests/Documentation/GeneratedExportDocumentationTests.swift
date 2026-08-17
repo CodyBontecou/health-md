@@ -91,12 +91,13 @@ final class GeneratedExportDocumentationTests: XCTestCase {
         let expectedNames: Set<String> = [
             "summary-day.json", "summary-day.csv", "summary-day.md", "summary-day-bases.md",
             "lossless-day.json", "lossless-day.csv", "lossless-day.md", "lossless-day-bases.md",
+            "provider-day.json", "provider-day.csv", "provider-day.md", "provider-day-bases.md",
             "canonical-archive.json", "daily-json-fields.md", "canonical-json-fields.md",
             "metric-catalog.md", "metric-examples.md", "specialized-records.md",
             "data-dictionary.json", "csv-row-contracts.md", "manifest.json",
         ]
         XCTAssertEqual(Set(files.keys), expectedNames)
-        for name in files.keys where name.hasPrefix("summary-day") || name.hasPrefix("lossless-day") || name == "canonical-archive.json" {
+        for name in files.keys where name.hasPrefix("summary-day") || name.hasPrefix("lossless-day") || name.hasPrefix("provider-day") || name == "canonical-archive.json" {
             let value = String(decoding: try XCTUnwrap(files[name]), as: UTF8.self)
             XCTAssertFalse(value.contains("..."), name)
             XCTAssertFalse(value.contains("…"), name)
@@ -111,6 +112,10 @@ final class GeneratedExportDocumentationTests: XCTestCase {
         XCTAssertEqual(
             files["lossless-day.csv"],
             normalized(try lossless.toCSVThrowing(customization: metricCustomization))
+        )
+        XCTAssertEqual(
+            files["provider-day.json"],
+            normalized(try ExportFixtures.whoopDay.toJSONThrowing(customization: metricCustomization))
         )
         XCTAssertEqual(
             files["canonical-archive.json"],

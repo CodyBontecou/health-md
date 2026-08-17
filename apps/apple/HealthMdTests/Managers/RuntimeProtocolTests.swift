@@ -15,6 +15,9 @@ import XCTest
 final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
     var storage: [String: Int] = [:]
     var stringStorage: [String: String] = [:]
+    var nextReadStringError: Error?
+    var nextWriteStringError: Error?
+    var nextRemoveError: Error?
 
     func readInt(key: String) -> Int {
         storage[key] ?? 0
@@ -28,17 +31,37 @@ final class FakeKeychainStore: KeychainStoring, @unchecked Sendable {
         stringStorage[key]
     }
 
+    func readStringOrThrow(key: String) throws -> String? {
+        if let error = nextReadStringError {
+            nextReadStringError = nil
+            throw error
+        }
+        return stringStorage[key]
+    }
+
     func writeString(key: String, value: String) {
         stringStorage[key] = value
     }
 
     func writeStringOrThrow(key: String, value: String) throws {
+        if let error = nextWriteStringError {
+            nextWriteStringError = nil
+            throw error
+        }
         stringStorage[key] = value
     }
 
     func remove(key: String) {
         storage.removeValue(forKey: key)
         stringStorage.removeValue(forKey: key)
+    }
+
+    func removeOrThrow(key: String) throws {
+        if let error = nextRemoveError {
+            nextRemoveError = nil
+            throw error
+        }
+        remove(key: key)
     }
 }
 

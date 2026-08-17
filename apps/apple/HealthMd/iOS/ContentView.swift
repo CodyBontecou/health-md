@@ -13,9 +13,11 @@ struct ContentView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var directCLIService: IPhoneDirectCLIService
     @EnvironmentObject var corpusRecoveryManager: IPhoneCorpusExportRecoveryManager
-    @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
+    @EnvironmentObject var advancedSettings: AdvancedExportSettings
+    @EnvironmentObject var apiExportSettings: APIExportSettings
+        @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
-    @StateObject private var advancedSettings = AdvancedExportSettings()
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @EnvironmentObject var schedulingManager: SchedulingManager
 
@@ -52,7 +54,6 @@ struct ContentView: View {
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
-    @StateObject private var apiExportSettings = APIExportSettings()
     @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
@@ -1317,10 +1318,16 @@ struct ContentView: View {
                     ?? "Mac"
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
+                let providerTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+                var providerCalendar = Calendar(identifier: .gregorian)
+                providerCalendar.timeZone = providerTimeZone
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
                 if ConnectedAppsFeature.isEnabled, externalIntegrationManager.connectedProviderCount > 0 {
                     externalRecordFetcher = { date in
-                        await externalIntegrationManager.fetchDailyRecords(for: date)
+                        await externalIntegrationManager.fetchDailyRecords(
+                            for: date,
+                            calendar: providerCalendar
+                        )
                     }
                 } else {
                     externalRecordFetcher = nil
@@ -1384,7 +1391,8 @@ struct ContentView: View {
                         try await healthKitManager.fetchHealthData(
                             for: date,
                             includeGranularData: includeGranularData,
-                            metricSelection: advancedSettings.metricSelection
+                            metricSelection: advancedSettings.metricSelection,
+                            timeZone: providerTimeZone
                         )
                     },
                     fetchExternalDailyRecords: externalRecordFetcher,
@@ -1590,6 +1598,12 @@ struct ContentView: View {
 
         var failedDateDetails: [FailedDateDetail] = []
         var processedTransferDays = 0
+        let sourceTimeZone = metadata.settingsSnapshot.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? advancedSettings.exportTimeZoneOverride
+            ?? .current
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = sourceTimeZone
 
         for chunk in chunks {
             try Task.checkCancellation()
@@ -1600,7 +1614,7 @@ struct ContentView: View {
 
             for date in chunk.dates {
                 try Task.checkCancellation()
-                let day = Calendar.current.startOfDay(for: date)
+                let day = sourceCalendar.startOfDay(for: date)
                 let shouldIncludeGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
                     for: date,
                     metadata: metadata,
@@ -1614,21 +1628,23 @@ struct ContentView: View {
                     let fetchedRecord = try await healthKitManager.fetchHealthData(
                         for: date,
                         includeGranularData: shouldIncludeGranularData,
-                        metricSelection: advancedSettings.metricSelection
+                        metricSelection: advancedSettings.metricSelection,
+                        timeZone: sourceTimeZone
                     )
-                    let record = ConnectedExportGranularMode.sanitized(
+                    var record = ConnectedExportGranularMode.sanitized(
                         fetchedRecord,
                         includesGranularData: shouldIncludeGranularData
                     )
-                    records.append(record)
 
                     if record.hasAnyData,
                        metadata.requestedDays.contains(day),
                        advancedSettings.writesExternalProviderSidecars,
                        let externalRecordFetcher {
                         let providerRecords = await externalRecordFetcher(date)
+                        record.providers = HealthProviderSections.normalized(from: providerRecords)
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
                     }
+                    records.append(record)
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch let error as HealthKitManager.HealthKitError {
@@ -2408,7 +2424,8 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
-    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
+        @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
     @State private var showMailCompose = false
@@ -2475,6 +2492,7 @@ struct SettingsTabView: View {
                     settingsHeader
                     configurationProtectionSection
                     accountAndStorageSection
+                    sharedSetupSection
                 privacyAndAnalyticsSection
                 if ConnectedAppsFeature.isEnabled {
                     connectedAppsSection
@@ -2605,6 +2623,16 @@ struct SettingsTabView: View {
                 action: { showFolderPicker = true }
             )
             .configurationChangesProtected()
+        }
+    }
+
+    private var sharedSetupSection: some View {
+        SettingsSectionCard(
+            title: "Configuration",
+            subtitle: "Review, apply, undo, or share portable export preferences."
+        ) {
+            SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
+                .padding(Spacing.s4)
         }
     }
 

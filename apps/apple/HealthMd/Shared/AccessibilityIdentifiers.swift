@@ -144,6 +144,18 @@ enum AccessibilityID {
         static let macSyncRow = "settings.macSyncRow"
     }
 
+    // MARK: - Shared Setup
+    enum SharedSetup {
+        static let configurationCard = "sharedSetup.configurationCard"
+        static let use = "sharedSetup.use"
+        static let share = "sharedSetup.share"
+        static let review = "sharedSetup.review"
+        static let apply = "sharedSetup.apply"
+        static let success = "sharedSetup.success"
+        static let undo = "sharedSetup.undo"
+        static let finish = "sharedSetup.finish"
+    }
+
     // MARK: - Configuration Protection
     enum ConfigurationProtection {
         static let toggle = "configurationProtection.toggle"

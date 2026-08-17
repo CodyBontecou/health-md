@@ -15,7 +15,7 @@ El registro compartido de Rust contiene metadatos de contrato deterministas, mie
 
 | Perfil interno | Perfil público | Esquema | Selecciones ordenadas | Descriptores de salida |
 |---|---|---:|---:|---:|
-| `apple_health_data_v7` | `apple-v7` | 7 | 230 | 226 |
+| `apple_health_data_v8` | `apple-v8` | 7 | 230 | 226 |
 | `android_frozen_v4` | `android-frozen-v4` | 4 | 106 | 161 |
 | `android_analytical_v5` | `android-analytical-v5` | 5 | 106 | 161 |
 

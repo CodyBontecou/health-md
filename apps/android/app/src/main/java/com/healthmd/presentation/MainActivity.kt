@@ -17,6 +17,9 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.theme.HealthMdTheme
 import com.healthmd.presentation.navigation.HealthMdNavigation
+import com.healthmd.sharedsetup.SharedSetupCoordinator
+import com.healthmd.sharedsetup.SharedSetupIntentExtractor
+import com.healthmd.sharedsetup.SharedSetupIntentRestoreAction
 import com.healthmd.widget.refresh.HealthWidgetLifecycleCoordinator
 import com.healthmd.wear.WearPhoneSyncScheduler
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,10 +33,15 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_START_ROUTE = "com.healthmd.START_ROUTE"
         const val EXTRA_PROMPT_SCHEDULED_RECOVERY = "com.healthmd.PROMPT_SCHEDULED_RECOVERY"
+        private const val STATE_HANDLED_EXTERNAL_INTENT = "sharedSetup.handledExternalIntent"
+        private const val STATE_SHARED_SETUP_PROCESS_ID = "sharedSetup.processInstanceID"
+        private const val STATE_EXTERNAL_DOCUMENT_BYTES = "sharedSetup.externalDocumentBytes"
+        private const val STATE_EXTERNAL_IMPORT_FINISHED = "sharedSetup.externalImportFinished"
     }
 
     private var startRoute by mutableStateOf<String?>(null)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
+    private var handledExternalIntent = false
 
     @Inject
     lateinit var settingsRepository: SettingsRepository
@@ -45,22 +53,65 @@ class MainActivity : ComponentActivity() {
     lateinit var widgetLifecycle: HealthWidgetLifecycleCoordinator
 
     @Inject
+    lateinit var sharedSetupCoordinator: SharedSetupCoordinator
     lateinit var wearPhoneSyncScheduler: WearPhoneSyncScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        handleLaunchIntent(intent)
+        val alreadyHandledExternalIntent =
+            savedInstanceState?.getBoolean(STATE_HANDLED_EXTERNAL_INTENT) == true
+        val restoredExternalBytes = savedInstanceState?.getByteArray(STATE_EXTERNAL_DOCUMENT_BYTES)
+        val restoredImportFinished =
+            savedInstanceState?.getBoolean(STATE_EXTERNAL_IMPORT_FINISHED) == true
+        val sameProcess =
+            savedInstanceState?.getString(STATE_SHARED_SETUP_PROCESS_ID) == sharedSetupCoordinator.processInstanceID
+        handledExternalIntent = alreadyHandledExternalIntent
+        when (
+            SharedSetupIntentExtractor.restorationAction(
+                wasHandled = alreadyHandledExternalIntent,
+                wasFinished = restoredImportFinished,
+                hasRestorableBytes = restoredExternalBytes != null,
+                sameProcess = sameProcess,
+            )
+        ) {
+            SharedSetupIntentRestoreAction.ACCEPT_SYSTEM_URI ->
+                handleLaunchIntent(intent, acceptExternalDocument = true)
+            SharedSetupIntentRestoreAction.RESTORE_BYTES -> {
+                sharedSetupCoordinator.restoreExternalBytes(requireNotNull(restoredExternalBytes))
+                handleLaunchIntent(intent, acceptExternalDocument = false)
+            }
+            SharedSetupIntentRestoreAction.SKIP -> {
+                if (restoredImportFinished) sharedSetupCoordinator.finishExternalImport()
+                handleLaunchIntent(intent, acceptExternalDocument = false)
+            }
+        }
         enableEdgeToEdge()
         observeActiveExports()
         setContent {
             HealthMdTheme {
                 HealthMdNavigation(
                     settingsRepository = settingsRepository,
+                    sharedSetupCoordinator = sharedSetupCoordinator,
                     initialRoute = startRoute,
                     scheduledRecoveryPromptRequestId = scheduledRecoveryPromptRequestId,
                 )
             }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_HANDLED_EXTERNAL_INTENT, handledExternalIntent)
+        if (handledExternalIntent) {
+            outState.putString(STATE_SHARED_SETUP_PROCESS_ID, sharedSetupCoordinator.processInstanceID)
+            outState.putBoolean(
+                STATE_EXTERNAL_IMPORT_FINISHED,
+                sharedSetupCoordinator.isExternalImportFinished(),
+            )
+            sharedSetupCoordinator.restorableExternalBytes()?.let {
+                outState.putByteArray(STATE_EXTERNAL_DOCUMENT_BYTES, it)
+            }
+        }
+        super.onSaveInstanceState(outState)
     }
 
     override fun onResume() {
@@ -89,10 +140,19 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleLaunchIntent(intent)
+        handleLaunchIntent(intent, acceptExternalDocument = true)
     }
 
-    private fun handleLaunchIntent(intent: Intent?) {
+    private fun handleLaunchIntent(intent: Intent?, acceptExternalDocument: Boolean) {
+        if (acceptExternalDocument) {
+            SharedSetupIntentExtractor.uri(intent)?.let { uri ->
+                // Record ownership synchronously. The singleton coordinator keeps provider IO alive
+                // across Activity recreation and SavedStateHandle restores Review or Success after
+                // process death, so the retained system intent must not be applied twice.
+                handledExternalIntent = true
+                sharedSetupCoordinator.acceptExternalUriAsync(uri)
+            }
+        }
         startRoute = intent?.getStringExtra(EXTRA_START_ROUTE)
         if (intent?.getBooleanExtra(EXTRA_PROMPT_SCHEDULED_RECOVERY, false) == true) {
             scheduledRecoveryPromptRequestId = System.currentTimeMillis()

@@ -660,14 +660,24 @@ final class NewMetricsExportTests: XCTestCase {
             "raw_capture_status", "raw_record_count", "raw_query_failure_count",
             "raw_integrity_warning_count", "raw_record_schema", "raw_record_schema_version"
         ]
-        XCTAssertEqual(canonicalKeys, HealthMetricExportMapping.allKnownFrontmatterKeys.union(diagnosticKeys))
+        let providerKeys = Set(WHOOPFlatMetricDefinition.all.map(\.key))
+        XCTAssertEqual(
+            canonicalKeys,
+            HealthMetricExportMapping.allKnownFrontmatterKeys.union(diagnosticKeys).union(providerKeys)
+        )
 
         for entry in entries {
             XCTAssertFalse(entry.dailyAggregation.isEmpty, "\(entry.canonicalKey) missing daily aggregation")
             XCTAssertFalse(entry.healthKitAggregation.isEmpty, "\(entry.canonicalKey) missing source aggregation")
             XCTAssertFalse(entry.rollup.primary.isEmpty, "\(entry.canonicalKey) missing roll-up primary rule")
-            XCTAssertFalse(entry.rollup.statistics.isEmpty, "\(entry.canonicalKey) missing roll-up statistics")
-            XCTAssertEqual(entry.rollup.periods, ["weekly", "monthly", "yearly"], "\(entry.canonicalKey) has unexpected roll-up periods")
+            if entry.metricId == "provider.whoop" {
+                XCTAssertEqual(entry.rollup.primary, "none")
+                XCTAssertTrue(entry.rollup.statistics.isEmpty)
+                XCTAssertTrue(entry.rollup.periods.isEmpty)
+            } else {
+                XCTAssertFalse(entry.rollup.statistics.isEmpty, "\(entry.canonicalKey) missing roll-up statistics")
+                XCTAssertEqual(entry.rollup.periods, ["weekly", "monthly", "yearly"], "\(entry.canonicalKey) has unexpected roll-up periods")
+            }
         }
     }
 

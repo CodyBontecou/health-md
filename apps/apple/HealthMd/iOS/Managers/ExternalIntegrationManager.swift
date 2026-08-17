@@ -191,9 +191,17 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     }
 
     func fetchDailyRecords(for date: Date) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date, calendar: .current)
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        calendar: Calendar
+    ) async -> [ExternalDailyRecord] {
         await fetchDailyRecords(
             for: date,
-            providerIDs: Set(accounts.keys.map(\.id))
+            providerIDs: Set(accounts.keys.map(\.id)),
+            calendar: calendar
         )
     }
 
@@ -201,9 +209,17 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         for date: Date,
         providerIDs: Set<String>
     ) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(for: date, providerIDs: providerIDs, calendar: .current)
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        providerIDs: Set<String>,
+        calendar: Calendar
+    ) async -> [ExternalDailyRecord] {
         guard !providerIDs.isEmpty, !enabledProviders.isEmpty else { return [] }
         var records: [ExternalDailyRecord] = []
-        let dateString = ExternalProviderAPIClient.dayString(date)
+        let dateString = ExternalProviderAPIClient.dayString(date, calendar: calendar)
         for provider in enabledProviders
             .filter({ providerIDs.contains($0.id) })
             .sorted(by: { $0.displayName < $1.displayName }) {
@@ -234,7 +250,12 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 guard shouldKeepFetchResult(for: provider) else { continue }
 
                 do {
-                    let record = try await apiClient.fetchDailyRecord(provider: provider, date: date, token: token)
+                    let record = try await apiClient.fetchDailyRecord(
+                        provider: provider,
+                        date: date,
+                        token: token,
+                        calendar: calendar
+                    )
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
                     markSuccessfulFetch(provider: provider)
@@ -243,7 +264,12 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                         try await refreshToken(for: provider, replacing: token)
                     }
                     guard shouldKeepFetchResult(for: provider) else { continue }
-                    let record = try await apiClient.fetchDailyRecord(provider: provider, date: date, token: token)
+                    let record = try await apiClient.fetchDailyRecord(
+                        provider: provider,
+                        date: date,
+                        token: token,
+                        calendar: calendar
+                    )
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
                     markSuccessfulFetch(provider: provider)

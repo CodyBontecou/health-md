@@ -68,16 +68,22 @@ enum IPhoneConnectedCorpusProducer {
             )
         }
         let createdAt = Date()
+        let sourceTimeZone = metadata.settingsSnapshot.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = sourceTimeZone
         let dateFormatter = DateFormatter()
-        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.calendar = sourceCalendar
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.timeZone = .current
+        dateFormatter.timeZone = sourceTimeZone
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let exportManifest = ConnectedCorpusExportManifest(
             mode: .writeFiles,
             createdAt: createdAt,
             sourceDeviceName: UIDevice.current.name,
-            sourceTimeZoneIdentifier: TimeZone.current.identifier,
+            sourceTimeZoneIdentifier: sourceTimeZone.identifier,
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
             requestedDates: metadata.requestedDates,
@@ -112,7 +118,7 @@ enum IPhoneConnectedCorpusProducer {
         }
         let produceItem: ConnectedCorpusDurableSender.ItemProducer = { index, date in
             try Task.checkCancellation()
-            let day = Calendar.current.startOfDay(for: date)
+            let day = sourceCalendar.startOfDay(for: date)
             let isRequested = metadata.requestedDays.contains(day)
             let includesGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
                 for: date,
@@ -138,7 +144,8 @@ enum IPhoneConnectedCorpusProducer {
                     try await healthKitManager.fetchHealthData(
                         for: date,
                         includeGranularData: includeGranularData,
-                        metricSelection: metricSelection
+                        metricSelection: metricSelection,
+                        timeZone: sourceTimeZone
                     )
                 },
                 fetchExternalDailyRecords: externalRecordFetcher

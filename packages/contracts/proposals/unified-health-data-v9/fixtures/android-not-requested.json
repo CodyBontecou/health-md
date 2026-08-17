@@ -1,0 +1,30 @@
+{
+  "calendar": {
+    "assignment_rule": "record_start_in_half_open_day_interval",
+    "identifier": "gregorian",
+    "interval_end": "2026-07-14T04:00:00Z",
+    "interval_start": "2026-07-13T04:00:00Z",
+    "time_zone": "America/New_York"
+  },
+  "capture": {
+    "resources": [],
+    "status": "not_requested"
+  },
+  "metrics": [],
+  "owner_date": "2026-07-13",
+  "platform": {
+    "android": {
+      "schema": "healthmd.platform.android_daily",
+      "schema_version": 1,
+      "source_profile": "android-frozen-v4",
+      "source_schema_version": 4
+    }
+  },
+  "profile": "unified-cross-platform-v1",
+  "schema": "healthmd.health_data",
+  "schema_version": 9,
+  "source": {
+    "platform": "android",
+    "source_profile": "android_frozen_v4"
+  }
+}

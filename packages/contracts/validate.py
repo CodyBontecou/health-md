@@ -13,7 +13,9 @@ import os
 import re
 import struct
 import sys
+from datetime import datetime
 from pathlib import Path, PurePosixPath
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Any
 from urllib.parse import unquote
 
@@ -23,8 +25,11 @@ PRODUCT_CAPABILITIES_SCHEMA = "healthmd.product_capabilities"
 PRODUCT_CAPABILITIES_SCHEMA_VERSION = 1
 METRIC_REGISTRY_SCHEMA = "healthmd.metric_registry"
 METRIC_REGISTRY_SCHEMA_VERSION = 1
+SHARED_SETUP_SCHEMA = "healthmd.shared_setup"
+SHARED_SETUP_SCHEMA_VERSION = 1
+SHARED_SETUP_MAX_BYTES = 262_144
 REGISTRY_PROFILE_TO_PUBLIC = {
-    "apple_health_data_v7": "apple-v7",
+    "apple_health_data_v8": "apple-v8",
     "android_frozen_v4": "android-frozen-v4",
     "android_analytical_v5": "android-analytical-v5",
 }
@@ -40,7 +45,7 @@ VALID_CAPABILITY_CLASSIFICATIONS = {
 }
 VALID_PROFILE_COMPATIBILITY = {"shipped", "frozen", "additive"}
 REQUIRED_OUTPUT_PROFILES = {
-    "apple-v7": ("apple", "healthmd.health_data.apple", 7),
+    "apple-v8": ("apple", "healthmd.health_data.apple", 8),
     "android-frozen-v4": ("android", "healthmd.health_data.android", 4),
     "android-analytical-v5": (
         "android",
@@ -138,6 +143,186 @@ def require_unique_string_array(
     if len(value) != len(set(value)):
         fail(f"{context}: must not contain duplicates")
     return value
+
+
+def validate_json_schema_subset(instance: Any, schema: dict[str, Any], context: str) -> None:
+    """Validate the draft-2020-12 keywords used by local typed-provider fixtures."""
+
+    root = schema
+
+    def resolve(reference: str, schema_context: str) -> dict[str, Any]:
+        if not reference.startswith("#/"):
+            fail(f"{schema_context}: only local JSON Schema references are supported")
+        value: Any = root
+        for raw_part in reference[2:].split("/"):
+            part = raw_part.replace("~1", "/").replace("~0", "~")
+            if not isinstance(value, dict) or part not in value:
+                fail(f"{schema_context}: unresolved JSON Schema reference {reference}")
+            value = value[part]
+        if not isinstance(value, dict):
+            fail(f"{schema_context}: JSON Schema reference {reference} is not an object")
+        return value
+
+    def matches(value: Any, candidate: dict[str, Any], value_context: str) -> bool:
+        try:
+            validate(value, candidate, value_context)
+            return True
+        except ContractValidationError:
+            return False
+
+    def has_type(value: Any, expected: str) -> bool:
+        if expected == "object":
+            return isinstance(value, dict)
+        if expected == "array":
+            return isinstance(value, list)
+        if expected == "string":
+            return isinstance(value, str)
+        if expected == "integer":
+            return isinstance(value, int) and not isinstance(value, bool)
+        if expected == "number":
+            return isinstance(value, (int, float)) and not isinstance(value, bool)
+        if expected == "boolean":
+            return isinstance(value, bool)
+        if expected == "null":
+            return value is None
+        fail(f"{context}: unsupported JSON Schema type {expected!r}")
+
+    def validate(value: Any, candidate: dict[str, Any], value_context: str) -> None:
+        reference = candidate.get("$ref")
+        if reference is not None:
+            if not isinstance(reference, str):
+                fail(f"{value_context}: JSON Schema $ref must be a string")
+            validate(value, resolve(reference, value_context), value_context)
+
+        for index, branch in enumerate(candidate.get("allOf", [])):
+            validate(value, branch, f"{value_context}.allOf[{index}]")
+        if "oneOf" in candidate:
+            branches = candidate["oneOf"]
+            match_count = sum(
+                matches(value, branch, f"{value_context}.oneOf[{index}]")
+                for index, branch in enumerate(branches)
+            )
+            if match_count != 1:
+                fail(f"{value_context}: expected exactly one matching oneOf branch, got {match_count}")
+        if "not" in candidate and matches(value, candidate["not"], f"{value_context}.not"):
+            fail(f"{value_context}: value matches forbidden JSON Schema branch")
+        if "if" in candidate and matches(value, candidate["if"], f"{value_context}.if"):
+            if "then" in candidate:
+                validate(value, candidate["then"], f"{value_context}.then")
+        elif "else" in candidate:
+            validate(value, candidate["else"], f"{value_context}.else")
+
+        def json_equal(left: Any, right: Any) -> bool:
+            if isinstance(left, bool) or isinstance(right, bool):
+                return isinstance(left, bool) and isinstance(right, bool) and left == right
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                return not isinstance(left, bool) and not isinstance(right, bool) and left == right
+            return type(left) is type(right) and left == right
+
+        if "const" in candidate and not json_equal(value, candidate["const"]):
+            fail(f"{value_context}: value does not match JSON Schema const")
+        if "enum" in candidate and not any(json_equal(value, item) for item in candidate["enum"]):
+            fail(f"{value_context}: value is not in the JSON Schema enum")
+
+        expected_types = candidate.get("type")
+        if isinstance(expected_types, str):
+            expected_types = [expected_types]
+        if expected_types is not None:
+            if not isinstance(expected_types, list) or not all(
+                isinstance(item, str) for item in expected_types
+            ):
+                fail(f"{value_context}: JSON Schema type must be a string or string array")
+            if not any(has_type(value, expected) for expected in expected_types):
+                fail(f"{value_context}: value has the wrong JSON type")
+
+        if isinstance(value, dict):
+            minimum = candidate.get("minProperties")
+            maximum = candidate.get("maxProperties")
+            if minimum is not None and len(value) < minimum:
+                fail(f"{value_context}: object has fewer than {minimum} properties")
+            if maximum is not None and len(value) > maximum:
+                fail(f"{value_context}: object has more than {maximum} properties")
+            required = candidate.get("required", [])
+            missing = [key for key in required if key not in value]
+            if missing:
+                fail(f"{value_context}: missing required properties {missing}")
+            property_schema = candidate.get("propertyNames")
+            if property_schema is not None:
+                for key in value:
+                    validate(key, property_schema, f"{value_context}.propertyNames[{key!r}]")
+            properties = candidate.get("properties", {})
+            for key, child in value.items():
+                if key in properties:
+                    validate(child, properties[key], f"{value_context}.{key}")
+                    continue
+                additional = candidate.get("additionalProperties", True)
+                if additional is False:
+                    fail(f"{value_context}: additional property {key!r} is forbidden")
+                if isinstance(additional, dict):
+                    validate(child, additional, f"{value_context}.{key}")
+
+        if isinstance(value, list):
+            minimum = candidate.get("minItems")
+            maximum = candidate.get("maxItems")
+            if minimum is not None and len(value) < minimum:
+                fail(f"{value_context}: array has fewer than {minimum} items")
+            if maximum is not None and len(value) > maximum:
+                fail(f"{value_context}: array has more than {maximum} items")
+            if candidate.get("uniqueItems") is True:
+                encoded = [canonical_json(item) for item in value]
+                if len(encoded) != len(set(encoded)):
+                    fail(f"{value_context}: array items must be unique")
+            item_schema = candidate.get("items")
+            if isinstance(item_schema, dict):
+                for index, child in enumerate(value):
+                    validate(child, item_schema, f"{value_context}[{index}]")
+            contains = candidate.get("contains")
+            if isinstance(contains, dict):
+                count = sum(
+                    matches(child, contains, f"{value_context}.contains[{index}]")
+                    for index, child in enumerate(value)
+                )
+                if count < candidate.get("minContains", 1):
+                    fail(f"{value_context}: array does not satisfy minContains")
+                if "maxContains" in candidate and count > candidate["maxContains"]:
+                    fail(f"{value_context}: array exceeds maxContains")
+
+        if isinstance(value, str):
+            minimum = candidate.get("minLength")
+            maximum = candidate.get("maxLength")
+            if minimum is not None and len(value) < minimum:
+                fail(f"{value_context}: string is shorter than {minimum} characters")
+            if maximum is not None and len(value) > maximum:
+                fail(f"{value_context}: string is longer than {maximum} characters")
+            pattern = candidate.get("pattern")
+            if pattern is not None and re.search(pattern, value) is None:
+                fail(f"{value_context}: string does not match JSON Schema pattern")
+            if candidate.get("format") == "date":
+                try:
+                    datetime.strptime(value, "%Y-%m-%d")
+                except ValueError as error:
+                    fail(f"{value_context}: invalid calendar date: {error}")
+            if candidate.get("format") == "date-time":
+                try:
+                    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError as error:
+                    fail(f"{value_context}: invalid RFC 3339 date-time: {error}")
+                if parsed.tzinfo is None:
+                    fail(f"{value_context}: date-time must include an offset")
+
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            if not math.isfinite(value):
+                fail(f"{value_context}: JSON number must be finite")
+            if "minimum" in candidate and value < candidate["minimum"]:
+                fail(f"{value_context}: number is below minimum")
+            if "maximum" in candidate and value > candidate["maximum"]:
+                fail(f"{value_context}: number is above maximum")
+            if "exclusiveMinimum" in candidate and value <= candidate["exclusiveMinimum"]:
+                fail(f"{value_context}: number is not above exclusiveMinimum")
+            if "exclusiveMaximum" in candidate and value >= candidate["exclusiveMaximum"]:
+                fail(f"{value_context}: number is not below exclusiveMaximum")
+
+    validate(instance, schema, context)
 
 
 def validate_v1_fixture(path: Path) -> None:
@@ -445,7 +630,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["schema_version"] != 1
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
-        or payload["registry_sha256"] != "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
+        or payload["registry_sha256"] != "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
@@ -460,7 +645,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
             context,
         )
         profile = case.get("profile")
-        if profile not in {"apple_health_data_v7", "android_frozen_v4", "android_analytical_v5"} or profile in profiles:
+        if profile not in {"apple_health_data_v8", "android_frozen_v4", "android_analytical_v5"} or profile in profiles:
             fail(f"{context}: profile is invalid or duplicated")
         profiles.add(profile)
         configuration = case.get("configuration")
@@ -999,6 +1184,563 @@ def validate_v3_fixture(path: Path) -> None:
         fail(f"{context}.query_rejected.retryable: must be boolean")
 
 
+def validate_unified_health_data_fixture(root: Path, path: Path) -> None:
+    context = "healthmd.health_data unified v9 fixture"
+    payload = load_json(path, context)
+    schema_path = repository_path(
+        root,
+        "packages/contracts/proposals/unified-health-data-v9/unified-health-data-v9.schema.json",
+        f"{context}.schema",
+    )
+    schema = load_json(schema_path, f"{context}.schema")
+    if (
+        not isinstance(schema, dict)
+        or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+        or schema.get("properties", {}).get("schema_version", {}).get("const") != 9
+    ):
+        fail(f"{context}: schema metadata is invalid")
+    validate_json_schema_subset(payload, schema, context)
+
+    if (
+        payload.get("schema") != "healthmd.health_data"
+        or payload.get("schema_version") != 9
+        or payload.get("profile") != "unified-cross-platform-v1"
+    ):
+        fail(f"{context}: public discriminator mismatch")
+
+    source = payload["source"]
+    platform = source["platform"]
+    expected_source = "apple_health" if platform == "apple" else "health_connect"
+    if set(payload["platform"]) != {platform}:
+        fail(f"{context}: source and platform section disagree")
+    platform_payload = payload["platform"][platform]
+    if platform == "android":
+        source_profiles = {
+            "android_frozen_v4": ("android-frozen-v4", 4),
+            "android_analytical_v5": ("android-analytical-v5", 5),
+        }
+        expected_profile, expected_version = source_profiles[source["source_profile"]]
+        if (
+            platform_payload["source_profile"] != expected_profile
+            or platform_payload["source_schema_version"] != expected_version
+        ):
+            fail(f"{context}: Android envelope and platform source profiles disagree")
+
+    calendar = payload["calendar"]
+    try:
+        time_zone = ZoneInfo(calendar["time_zone"])
+    except ZoneInfoNotFoundError:
+        fail(f"{context}.calendar.time_zone: unknown IANA time zone")
+    start = datetime.fromisoformat(calendar["interval_start"].replace("Z", "+00:00"))
+    end = datetime.fromisoformat(calendar["interval_end"].replace("Z", "+00:00"))
+    if end <= start:
+        fail(f"{context}: owner-day interval must be non-empty and ordered")
+    owner_date = datetime.strptime(payload["owner_date"], "%Y-%m-%d").date()
+    if start.astimezone(time_zone).date() != owner_date:
+        fail(f"{context}: interval start does not match owner_date in the frozen time zone")
+    if end.astimezone(time_zone).date().toordinal() != owner_date.toordinal() + 1:
+        fail(f"{context}: interval end is not the next local owner-date boundary")
+    if any(
+        instant.astimezone(time_zone).time().replace(tzinfo=None) != datetime.min.time()
+        for instant in (start, end)
+    ):
+        fail(f"{context}: interval boundaries must be local midnights")
+
+    resources = payload["capture"]["resources"]
+    resource_keys: set[tuple[str, str]] = set()
+    for index, resource in enumerate(resources):
+        key = (resource["source"], resource["resource"])
+        if resource["source"] != expected_source:
+            fail(f"{context}.capture.resources[{index}]: wrong primary source")
+        if key in resource_keys:
+            fail(f"{context}.capture.resources[{index}]: duplicate resource")
+        resource_keys.add(key)
+
+    status = payload["capture"]["status"]
+    expected_status = (
+        "not_requested"
+        if not resources
+        else "complete"
+        if all(resource["status"] == "complete" for resource in resources)
+        else "partial"
+    )
+    if status != expected_status:
+        fail(f"{context}.capture.status: does not match resource states")
+
+    resource_statuses = {resource["resource"]: resource["status"] for resource in resources}
+    statistic_order = {
+        name: index for index, name in enumerate(
+            ("sum", "average", "minimum", "maximum", "latest", "count", "duration_sum", "first_time", "last_time")
+        )
+    }
+    metric_order = [
+        (metric["semantic_id"], statistic_order[metric["statistic"]])
+        for metric in payload["metrics"]
+    ]
+    if metric_order != sorted(metric_order):
+        fail(f"{context}.metrics: metrics are not in canonical semantic/statistic order")
+    metric_keys: set[tuple[str, str]] = set()
+    for index, metric in enumerate(payload["metrics"]):
+        key = (metric["semantic_id"], metric["statistic"])
+        if key in metric_keys:
+            fail(f"{context}.metrics[{index}]: duplicate semantic/statistic pair")
+        metric_keys.add(key)
+        if metric["semantic_id"] not in resource_statuses:
+            fail(f"{context}.metrics[{index}]: no matching capture resource")
+        if resource_statuses[metric["semantic_id"]] != "complete":
+            fail(f"{context}.metrics[{index}]: matching capture resource did not complete")
+        for provenance_index, provenance in enumerate(metric["provenance"]):
+            if provenance["source"] != expected_source:
+                fail(
+                    f"{context}.metrics[{index}].provenance[{provenance_index}]: "
+                    "provider or wrong-platform provenance is forbidden in v9 profile revision 1"
+                )
+        value = metric["value"]
+        if value["value_type"] == "number":
+            number = value["number"]
+            if number["representation"] == "binary64":
+                decoded = struct.unpack(">d", bytes.fromhex(number["bits"]))[0]
+                if not math.isfinite(decoded):
+                    fail(f"{context}.metrics[{index}]: non-finite binary64 value")
+
+    if "providers" in payload:
+        if payload["capture"]["status"] == "not_requested":
+            fail(f"{context}: provider-only days are forbidden")
+        provider_schema_path = repository_path(
+            root,
+            "packages/contracts/proposals/provider-sections-v1/provider-sections-v1.schema.json",
+            f"{context}.providers.schema",
+        )
+        provider_schema = load_json(provider_schema_path, f"{context}.providers.schema")
+        validate_json_schema_subset(payload["providers"], provider_schema, f"{context}.providers")
+
+    fixture_metric_rules = {
+        "steps": {("sum", "count")},
+        "heart_rate_variability_sdnn": {("average", "millisecond")},
+        "heart_rate_variability_rmssd": {("latest", "millisecond")},
+    }
+    for index, metric in enumerate(payload["metrics"]):
+        value = metric["value"]
+        if metric["semantic_id"] not in fixture_metric_rules:
+            fail(f"{context}.metrics[{index}]: semantic mapping is not fixture-approved")
+        if value["value_type"] != "number" or (
+            metric["statistic"], value["unit"]
+        ) not in fixture_metric_rules[metric["semantic_id"]]:
+            fail(f"{context}.metrics[{index}]: statistic or canonical unit is not fixture-approved")
+
+    semantic_ids = {metric["semantic_id"] for metric in payload["metrics"]}
+    if "hrv" in semantic_ids:
+        fail(f"{context}: ambiguous hrv semantic id is forbidden")
+    if platform == "apple" and "heart_rate_variability_rmssd" in semantic_ids:
+        fail(f"{context}: Apple primary data must not be relabeled as RMSSD")
+    if platform == "android" and "heart_rate_variability_sdnn" in semantic_ids:
+        fail(f"{context}: Android primary data must not be relabeled as SDNN")
+
+
+def validate_shared_setup_fixture(root: Path, path: Path) -> None:
+    context = "healthmd.shared_setup v1 fixture"
+    fixture_bytes = path.read_bytes()
+    if len(fixture_bytes) > SHARED_SETUP_MAX_BYTES:
+        fail(f"{context}: fixture exceeds {SHARED_SETUP_MAX_BYTES} encoded bytes")
+    payload = load_json(path, context)
+    if fixture_bytes != canonical_json(payload) + b"\n":
+        fail(f"{context}: fixture must be canonical sorted compact JSON with one newline")
+
+    node_count = 0
+
+    def validate_generic_bounds(value: Any, value_context: str, depth: int = 0) -> None:
+        nonlocal node_count
+        node_count += 1
+        if node_count > 16_384:
+            fail(f"{context}: JSON node count exceeds 16384")
+        if depth > 16:
+            fail(f"{value_context}: JSON nesting exceeds 16 levels")
+        if isinstance(value, dict):
+            if len(value) > 256:
+                fail(f"{value_context}: object exceeds 256 members")
+            for key, child in value.items():
+                if len(key) > 256:
+                    fail(f"{value_context}: object key exceeds 256 characters")
+                validate_generic_bounds(child, f"{value_context}.{key}", depth + 1)
+        elif isinstance(value, list):
+            if len(value) > 256:
+                fail(f"{value_context}: array exceeds 256 items")
+            for index, child in enumerate(value):
+                validate_generic_bounds(child, f"{value_context}[{index}]", depth + 1)
+        elif isinstance(value, str) and len(value) > 65_536:
+            fail(f"{value_context}: string exceeds 65536 characters")
+
+    validate_generic_bounds(payload, context)
+
+    schema_path = repository_path(
+        root,
+        "packages/contracts/shared-setup/v1/shared-setup.schema.json",
+        f"{context}.schema",
+    )
+    schema = load_json(schema_path, f"{context}.schema")
+    if (
+        not isinstance(schema, dict)
+        or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+        or schema.get("properties", {}).get("schema_version", {}).get("const")
+        != SHARED_SETUP_SCHEMA_VERSION
+    ):
+        fail(f"{context}: schema metadata is invalid")
+    validate_json_schema_subset(payload, schema, context)
+
+    # V1 readers tolerate unknown optional fields only after the same recursive
+    # security scan. The schema still requires every core profile section.
+    if payload.get("schema") != SHARED_SETUP_SCHEMA or payload.get("schema_version") != 1:
+        fail(f"{context}: exact schema/version discriminator is required")
+
+    profile = payload["profile"]
+    forbidden_exact = {
+        "authorization", "authorization_header", "authorization_header_value",
+        "credential", "credentials", "token", "access_token", "refresh_token",
+        "password", "secret", "cookie", "headers", "request_headers",
+        "bookmark", "security_scoped_bookmark", "saf_uri", "content_uri",
+        "folder_uri", "folder_grant", "device_id", "installation_id", "user_id",
+        "account_id", "permissions", "health_permissions", "purchase", "purchases",
+        "entitlement", "onboarding", "history", "export_history", "enabled_at",
+        "last_run", "last_export_date", "last_success", "last_today_refresh_date",
+        "retry", "retries", "pending_work", "pending_requests", "operation_id",
+        "destination_fingerprint", "fingerprint", "engine_pin", "worker_id",
+        "alarm_id", "schedule_enabled", "is_enabled", "health_records",
+        "health_data", "source_data", "analytics", "email", "api_key",
+        "raw_persistence_snapshot", "raw_snapshot", "session_id", "first_name",
+        "last_name", "full_name",
+    }
+    forbidden_fragments = (
+        "credential", "password", "token", "secret", "authorization", "header",
+        "bookmark", "saf_uri", "content_uri", "folder_grant", "permission",
+        "purchase", "entitlement", "history", "device_id", "installation_id",
+        "account_id", "health_record", "health_data", "source_data", "analytics",
+        "email", "api_key", "raw_persistence", "raw_snapshot", "session_id",
+        "pending_retry", "operation_id", "destination_fingerprint", "engine_pin",
+    )
+
+    def reject_sensitive(value: Any, value_context: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                normalized = re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
+                safe_disclosure_fields = {"credentials_required", "header_level"}
+                if normalized not in safe_disclosure_fields and (
+                    normalized in forbidden_exact
+                    or any(fragment in normalized for fragment in forbidden_fragments)
+                ):
+                    fail(f"{value_context}: forbidden sensitive/runtime field {key!r}")
+                reject_sensitive(child, f"{value_context}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                reject_sensitive(child, f"{value_context}[{index}]")
+        elif isinstance(value, str):
+            lowered = value.lower()
+            if lowered.startswith(("content://", "file://")):
+                fail(f"{value_context}: device-bound URI is forbidden")
+            if "authorization:" in lowered or re.search(r"\b(?:bearer|basic)\s+[a-z0-9]", lowered):
+                fail(f"{value_context}: authorization material is forbidden")
+
+    reject_sensitive(payload, context)
+
+    if "categories" in profile["metrics"] or "enabled_categories" in profile["metrics"]:
+        fail(f"{context}: metric categories must not be selection authority")
+
+    registry_path = repository_path(
+        root,
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        f"{context}.registry",
+    )
+    registry = load_json(registry_path, f"{context}.registry")
+    registry_identity = payload["metric_registry"]
+    if registry_identity["schema"] != METRIC_REGISTRY_SCHEMA:
+        fail(f"{context}: metric registry schema discriminator is invalid")
+    local_registry_sha256 = hashlib.sha256(registry_path.read_bytes()).hexdigest()
+    source_registry_matches = (
+        registry_identity["registry_version"] == registry["registry_version"]
+        and registry_identity["registry_sha256"] == local_registry_sha256
+    )
+    registry_metrics = {metric["semantic_id"]: metric for metric in registry["metrics"]}
+    enabled_ids = profile["metrics"]["enabled_ids"]
+    if enabled_ids != sorted(enabled_ids):
+        fail(f"{context}: enabled semantic metric IDs must be sorted")
+    unknown_ids = sorted(set(enabled_ids) - set(registry_metrics))
+    if unknown_ids and source_registry_matches:
+        fail(f"{context}: unknown canonical semantic metric IDs {unknown_ids}")
+
+    individual_ids = set(profile["individual_entries"]["metrics"])
+    unknown_individual_ids = sorted(individual_ids - set(registry_metrics))
+    if unknown_individual_ids and source_registry_matches:
+        fail(f"{context}: unknown individual-entry semantic IDs {unknown_individual_ids}")
+
+    aliases = payload["metric_aliases"]
+    alias_ids = [alias["semantic_id"] for alias in aliases]
+    if alias_ids != sorted(alias_ids) or len(alias_ids) != len(set(alias_ids)):
+        fail(f"{context}: metric alias ledger must be unique and semantic-ID sorted")
+    if set(alias_ids) != set(enabled_ids):
+        fail(f"{context}: metric alias ledger must cover enabled IDs exactly")
+    for index, alias in enumerate(aliases):
+        alias_context = f"{context}.metric_aliases[{index}]"
+        registry_metric = registry_metrics.get(alias["semantic_id"])
+        if registry_metric is None:
+            if source_registry_matches:
+                fail(f"{alias_context}: semantic ID is missing from the pinned registry")
+            continue
+        if source_registry_matches:
+            if alias["equivalence"] != registry_metric["equivalence"]:
+                fail(f"{alias_context}: equivalence differs from registry evidence")
+            for platform in ("apple", "android"):
+                binding = registry_metric[platform]
+                expected = binding["selection_id"] if binding["status"] == "backed" else None
+                if alias[f"{platform}_selection_id"] != expected:
+                    fail(f"{alias_context}: {platform} selection ID differs from registry evidence")
+
+    path_fields = [
+        (profile["export"]["folder_template"], "profile.export.folder_template", True),
+        (profile["export"]["filename_template"], "profile.export.filename_template", False),
+        (profile["individual_entries"]["entries_folder"], "profile.individual_entries.entries_folder", True),
+        (profile["individual_entries"]["filename_template"], "profile.individual_entries.filename_template", False),
+        (profile["daily_notes"]["folder"], "profile.daily_notes.folder", True),
+        (profile["daily_notes"]["filename_template"], "profile.daily_notes.filename_template", False),
+    ]
+    android_extension = payload["platform_extensions"]["android"]
+    if android_extension is not None:
+        path_fields.append((android_extension["export"]["subfolder"], "platform_extensions.android.export.subfolder", True))
+    for metric_id, metric_config in profile["individual_entries"]["metrics"].items():
+        custom_folder = metric_config["custom_folder"]
+        if custom_folder is not None:
+            path_fields.append((custom_folder, f"profile.individual_entries.metrics.{metric_id}.custom_folder", True))
+
+    def validate_relative(value: str, field: str, allow_segments: bool) -> None:
+        decoded = value
+        for _ in range(3):
+            next_value = unquote(decoded)
+            if next_value == decoded:
+                break
+            decoded = next_value
+        if any(ord(character) < 32 for character in decoded):
+            fail(f"{context}.{field}: control characters are forbidden")
+        if (
+            decoded.startswith(("/", "\\"))
+            or "\\" in decoded
+            or "%" in value
+            or "//" in decoded
+            or "://" in decoded
+            or re.match(r"^[A-Za-z]:", decoded)
+        ):
+            fail(f"{context}.{field}: path/template must be relative")
+        parts = decoded.split("/")
+        if any(part in {".", ".."} for part in parts) or (
+            decoded and any(not part for part in parts)
+        ):
+            fail(f"{context}.{field}: empty or traversal components are forbidden")
+        if not allow_segments and len(parts) != 1:
+            fail(f"{context}.{field}: filename template must be one segment")
+
+    for value, field, allow_segments in path_fields:
+        validate_relative(value, field, allow_segments)
+
+    schedule = profile["schedule"]
+    if "enabled" in schedule:
+        fail(f"{context}: imported schedule must never contain an operative enabled state")
+
+    endpoint = profile["api_endpoint"]
+    if endpoint is not None:
+        if endpoint["scheme"] != "https" or endpoint["credentials_required"] is not True:
+            fail(f"{context}: endpoint must be non-operative HTTPS requiring credentials")
+        combined = f"{endpoint['host']}{endpoint['path']}"
+        for _ in range(3):
+            next_value = unquote(combined)
+            if next_value == combined:
+                break
+            combined = next_value
+        if any(character in combined for character in ("@", "%", "?", "#")):
+            fail(f"{context}: endpoint userinfo/escape/query/fragment is forbidden")
+        if endpoint["path"].startswith("//"):
+            fail(f"{context}: endpoint network-path form is forbidden")
+        if endpoint["host"].lower() != "setup.invalid":
+            fail(f"{context}: canonical fixture endpoint must use synthetic reserved .invalid host")
+
+    extensions = payload["platform_extensions"]
+    origin = payload["created_by"]["platform"]
+    if extensions[origin] is None:
+        fail(f"{context}: writer must include its own platform extension")
+    for platform in ("apple", "android"):
+        extension = extensions[platform]
+        if extension is not None and extension["extension_version"] != 1:
+            fail(f"{context}: present platform extensions must be explicitly versioned")
+    if origin == "apple":
+        apple_schedule = extensions["apple"]["schedule"]
+        cadence = schedule["cadence"]
+        frequency = apple_schedule["frequency"]
+        cadence_matches = (
+            (frequency == "daily" and cadence == {"value": 1, "unit": "days"})
+            or (frequency == "weekly" and cadence == {"value": 1, "unit": "weeks"})
+            or (frequency == "custom" and cadence["unit"] == apple_schedule["custom_unit"])
+        )
+        portable_target = "api_endpoint" if apple_schedule["desired_target"] == "api_endpoint" else "device_folder"
+        if not cadence_matches or schedule["desired_target"] != portable_target:
+            fail(f"{context}: portable and Apple schedule representations contradict each other")
+
+
+def validate_provider_sections_fixture(root: Path, path: Path) -> None:
+    context = "healthmd.provider_sections v1 fixture"
+    payload = require_exact_keys(load_json(path, context), {"whoop"}, context)
+    whoop = require_exact_keys(
+        payload["whoop"],
+        {
+            "schema",
+            "schema_version",
+            "capture_status",
+            "fetched_at",
+            "resources",
+            "cycles",
+            "recoveries",
+            "sleep",
+            "workouts",
+            "body",
+            "warnings",
+        },
+        f"{context}.whoop",
+    )
+    if (
+        whoop["schema"] != "healthmd.provider.whoop_daily"
+        or whoop["schema_version"] != 1
+        or whoop["capture_status"] != "complete"
+    ):
+        fail(f"{context}.whoop: schema or complete-capture discriminator mismatch")
+
+    schema_path = repository_path(
+        root,
+        "packages/contracts/proposals/provider-sections-v1/provider-sections-v1.schema.json",
+        f"{context}.schema",
+    )
+    schema = load_json(schema_path, f"{context}.schema")
+    if (
+        not isinstance(schema, dict)
+        or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+        or schema.get("properties", {}).get("whoop", {}).get("$ref") != "#/$defs/whoopDaily"
+        or "whoopDaily" not in schema.get("$defs", {})
+    ):
+        fail(f"{context}: schema metadata or WHOOP definition is invalid")
+    validate_json_schema_subset(payload, schema, context)
+
+    timestamp_re = re.compile(
+        r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?Z$"
+    )
+    if not isinstance(whoop["fetched_at"], str) or not timestamp_re.fullmatch(
+        whoop["fetched_at"]
+    ):
+        fail(f"{context}.whoop.fetched_at: expected an RFC 3339 UTC timestamp")
+
+    expected_resources = {"cycles", "recovery", "sleep", "workouts", "body"}
+    resources = whoop["resources"]
+    if not isinstance(resources, list) or len(resources) != len(expected_resources):
+        fail(f"{context}.whoop.resources: expected one result for every WHOOP resource")
+    resource_names: set[str] = set()
+    for index, value in enumerate(resources):
+        result = require_exact_keys(
+            value,
+            {"resource", "status", "record_count"},
+            f"{context}.whoop.resources[{index}]",
+        )
+        resource = result["resource"]
+        if resource not in expected_resources or resource in resource_names:
+            fail(f"{context}.whoop.resources[{index}]: unknown or duplicate resource")
+        resource_names.add(resource)
+        if result["status"] != "success" or result["record_count"] != 1:
+            fail(f"{context}.whoop.resources[{index}]: complete fixture must retain one record")
+    if resource_names != expected_resources:
+        fail(f"{context}.whoop.resources: resource coverage mismatch")
+
+    for field in ("cycles", "recoveries", "sleep", "workouts"):
+        values = whoop[field]
+        if not isinstance(values, list) or len(values) != 1 or not isinstance(values[0], dict):
+            fail(f"{context}.whoop.{field}: expected one synthetic typed record")
+
+    id_paths = (
+        ("cycles", "id"),
+        ("recoveries", "cycle_id"),
+        ("recoveries", "sleep_id"),
+        ("sleep", "id"),
+        ("sleep", "cycle_id"),
+        ("workouts", "id"),
+    )
+    for collection, field in id_paths:
+        value = whoop[collection][0].get(field)
+        if not isinstance(value, str) or not value or len(value.encode("utf-8")) > 256:
+            fail(f"{context}.whoop.{collection}[0].{field}: provider IDs must be bounded strings")
+
+    sleep = whoop["sleep"][0]
+    stage_total = sum(
+        sleep.get(field, 0)
+        for field in (
+            "light_sleep_milliseconds",
+            "slow_wave_sleep_milliseconds",
+            "rem_sleep_milliseconds",
+        )
+    )
+    if sleep.get("total_sleep_milliseconds") != stage_total:
+        fail(f"{context}.whoop.sleep[0]: total sleep does not match retained stage durations")
+
+    body = whoop["body"]
+    if not isinstance(body, dict) or body.get("source_kind") != "current_profile_snapshot":
+        fail(f"{context}.whoop.body: body data must be labeled as a current profile snapshot")
+    if not isinstance(body.get("observed_at"), str) or not timestamp_re.fullmatch(
+        body["observed_at"]
+    ):
+        fail(f"{context}.whoop.body.observed_at: expected an RFC 3339 UTC timestamp")
+    if whoop["warnings"] != []:
+        fail(f"{context}.whoop.warnings: complete synthetic fixture should have no warning")
+
+    fetched_at = datetime.fromisoformat(whoop["fetched_at"].replace("Z", "+00:00"))
+    cycle_end = whoop["cycles"][0].get("end_time")
+    if cycle_end is not None and datetime.fromisoformat(
+        cycle_end.replace("Z", "+00:00")
+    ) > fetched_at:
+        fail(f"{context}.whoop.cycles[0]: cycle end cannot be after provider fetch time")
+    if datetime.fromisoformat(body["observed_at"].replace("Z", "+00:00")) > fetched_at:
+        fail(f"{context}.whoop.body: observation cannot be after provider fetch time")
+
+    sensitive_names = {
+        "accesstoken",
+        "refreshtoken",
+        "clientsecret",
+        "authorization",
+        "oauthcode",
+        "nexttoken",
+        "cursor",
+        "endpoint",
+        "url",
+        "cookie",
+        "password",
+        "email",
+        "userid",
+        "profileid",
+        "accountid",
+        "firstname",
+        "lastname",
+        "headers",
+    }
+
+    def reject_sensitive(value: Any, value_context: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                normalized = "".join(character for character in key.lower() if character.isalnum())
+                if normalized in sensitive_names:
+                    fail(f"{value_context}: sensitive or provider-native field {key!r} is forbidden")
+                reject_sensitive(child, f"{value_context}.{key}")
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                reject_sensitive(child, f"{value_context}[{index}]")
+        elif isinstance(value, str):
+            normalized = value.lower()
+            if "http://" in normalized or "https://" in normalized:
+                fail(f"{value_context}: provider URLs are forbidden in the typed fixture")
+            if re.search(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
+                fail(f"{value_context}: email addresses are forbidden in the typed fixture")
+
+    reject_sensitive(payload, context)
+
+
 def validate_markdown_links(root: Path) -> int:
     checked = 0
     contracts_root = root / "packages/contracts"
@@ -1306,13 +2048,38 @@ def validate_metric_registry(
         profile["id"]: profile for profile in product_payload["output_profiles"]
     }
     capability_ids = [capability["id"] for capability in product_payload["capabilities"]]
+    capability_by_id = {
+        capability["id"]: capability for capability in product_payload["capabilities"]
+    }
     known_capability_ids = require_unique_string_array(
         payload.get("known_capability_ids"),
         f"{context}.known_capability_ids",
         allow_empty=False,
     )
-    if known_capability_ids != capability_ids:
-        fail(f"{context}: known capabilities must exactly match product-capabilities order")
+    unknown_registry_capabilities = sorted(set(known_capability_ids) - set(capability_ids))
+    if unknown_registry_capabilities:
+        fail(
+            f"{context}: registry references unknown product capabilities "
+            f"{unknown_registry_capabilities}"
+        )
+    expected_known_order = [
+        capability_id
+        for capability_id in capability_ids
+        if capability_id in set(known_capability_ids)
+    ]
+    if known_capability_ids != expected_known_order:
+        fail(f"{context}: known capabilities must preserve product-capabilities order")
+    metric_capability_ids = {
+        metric.get("capability_id")
+        for metric in payload.get("metrics", [])
+        if isinstance(metric, dict)
+    }
+    missing_metric_capabilities = sorted(metric_capability_ids - set(known_capability_ids))
+    if missing_metric_capabilities:
+        fail(
+            f"{context}: metric capabilities missing from registry inventory "
+            f"{missing_metric_capabilities}"
+        )
     available_by_platform = require_exact_keys(
         payload.get("available_capability_ids_by_platform"),
         {"apple", "android"},
@@ -1320,9 +2087,10 @@ def validate_metric_registry(
     )
     expected_available_by_platform = {
         platform: [
-            capability["id"]
-            for capability in product_payload["capabilities"]
-            if capability["platforms"][platform]["state"] == "available"
+            capability_id
+            for capability_id in known_capability_ids
+            if capability_by_id[capability_id]["platforms"][platform]["state"]
+            == "available"
         ]
         for platform in ("apple", "android")
     }
@@ -1564,6 +2332,12 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 validate_semantic_fixture(root, fixture_path)
             elif identifier == "healthmd.render_input":
                 validate_render_fixture(root, fixture_path)
+            elif identifier == "healthmd.provider_sections":
+                validate_provider_sections_fixture(root, fixture_path)
+            elif identifier == SHARED_SETUP_SCHEMA:
+                validate_shared_setup_fixture(root, fixture_path)
+            elif identifier == "healthmd.health_data.unified":
+                validate_unified_health_data_fixture(root, fixture_path)
 
     inventories = manifest.get("inventories")
     if not isinstance(inventories, list) or not inventories:

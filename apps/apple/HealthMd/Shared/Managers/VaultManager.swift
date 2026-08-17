@@ -1395,6 +1395,9 @@ enum VaultDestinationState: Equatable {
 
 @MainActor
 final class VaultManager: ObservableObject {
+    // Keep deallocation on the releasing thread (swiftlang/swift#85663);
+    // ported from the bookmark-identity branch.
+    nonisolated deinit {}
     static let defaultHealthSubfolder = ""
 
     private struct SavedVaultSelection: Codable, Equatable {

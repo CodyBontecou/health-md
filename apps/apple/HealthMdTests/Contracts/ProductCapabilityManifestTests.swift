@@ -12,7 +12,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         XCTAssertEqual(inventory.schemaVersion, 1)
         XCTAssertEqual(
             Set(inventory.outputProfiles.map(\.id)),
-            ["apple-v7", "android-frozen-v4", "android-analytical-v5"]
+            ["apple-v8", "android-frozen-v4", "android-analytical-v5"]
         )
 
         let states = Dictionary(uniqueKeysWithValues: inventory.capabilities.map {
@@ -30,7 +30,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine"]
+            ["setup.share-portable-configuration", "core.shared-rust-profile-engine"]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
 
@@ -94,6 +94,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.state-of-mind",
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
+        "apple.typed-whoop-provider-section",
     ]
 
     private static let androidCapabilities: Set<String> = [
@@ -110,7 +111,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "core.shared-rust-profile-engine"])
+            .union(["source.private-platform-database", "setup.share-portable-configuration", "core.shared-rust-profile-engine"])
     }
 
     private enum ManifestError: Error {

@@ -1,6 +1,60 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Apply Shared Setup": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Aplicar configuración compartida" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Appliquer la configuration partagée" } }
+      }
+    },
+    "Finish Setup": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Finalizar configuración" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Terminer la configuration" } }
+      }
+    },
+    "Invalid": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "No válido" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Non valide" } }
+      }
+    },
+    "Requires action": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Requiere una acción" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Action requise" } }
+      }
+    },
+    "Review Shared Setup": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Revisar configuración compartida" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Vérifier la configuration partagée" } }
+      }
+    },
+    "Setup Applied": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Configuración aplicada" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Configuration appliquée" } }
+      }
+    },
+    "Share My Setup": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Compartir mi configuración" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Partager ma configuration" } }
+      }
+    },
+    "Unsupported": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "No compatible" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Non pris en charge" } }
+      }
+    },
+    "Use a Shared Setup": {
+      "localizations": {
+        "es": { "stringUnit": { "state": "translated", "value": "Usar una configuración compartida" } },
+        "fr": { "stringUnit": { "state": "translated", "value": "Utiliser une configuration partagée" } }
+      }
+    },
     "": {},
     "— %@": {
       "localizations": {

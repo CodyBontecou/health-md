@@ -15,7 +15,7 @@ a destination the user chooses. An experimental hosted account and synchronizati
 before deployment: no production endpoint or production OAuth client was provisioned, and it
 accepted no user health data. There is no legacy Health.md-hosted corpus to migrate or delete.
 
-Schema v7 can retain exact source UUIDs and timestamps, provenance, typed metadata, routes, ECG
+Schema v8 can retain exact source UUIDs and timestamps, provenance, typed metadata, routes, ECG
 waveforms, medications, and available binary attachments when **Lossless Health Records** is on.
 Those destination files should be protected like the original health database. The schema can decode
 historical clinical records, but current App Store builds do not request or capture them.

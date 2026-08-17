@@ -1,0 +1,88 @@
+{
+  "calendar": {
+    "assignment_rule": "record_start_in_half_open_day_interval",
+    "identifier": "gregorian",
+    "interval_end": "2026-07-14T04:00:00Z",
+    "interval_start": "2026-07-13T04:00:00Z",
+    "time_zone": "America/New_York"
+  },
+  "capture": {
+    "resources": [
+      {
+        "record_count": 1,
+        "resource": "steps",
+        "source": "health_connect",
+        "status": "complete"
+      },
+      {
+        "record_count": 1,
+        "resource": "heart_rate_variability_rmssd",
+        "source": "health_connect",
+        "status": "complete"
+      }
+    ],
+    "status": "complete"
+  },
+  "metrics": [
+    {
+      "provenance": [
+        {
+          "source": "health_connect",
+          "source_record_ids": [
+            "hc-hrv-001"
+          ],
+          "source_semantic_id": "android.hrv_rmssd",
+          "source_statistic": "latest"
+        }
+      ],
+      "semantic_id": "heart_rate_variability_rmssd",
+      "statistic": "latest",
+      "value": {
+        "number": {
+          "bits": "4048000000000000",
+          "representation": "binary64"
+        },
+        "unit": "millisecond",
+        "value_type": "number"
+      }
+    },
+    {
+      "provenance": [
+        {
+          "source": "health_connect",
+          "source_record_ids": [
+            "hc-steps-001"
+          ],
+          "source_semantic_id": "steps",
+          "source_statistic": "sum"
+        }
+      ],
+      "semantic_id": "steps",
+      "statistic": "sum",
+      "value": {
+        "number": {
+          "decimal": "1234",
+          "representation": "unsigned_integer"
+        },
+        "unit": "count",
+        "value_type": "number"
+      }
+    }
+  ],
+  "owner_date": "2026-07-13",
+  "platform": {
+    "android": {
+      "schema": "healthmd.platform.android_daily",
+      "schema_version": 1,
+      "source_profile": "android-analytical-v5",
+      "source_schema_version": 5
+    }
+  },
+  "profile": "unified-cross-platform-v1",
+  "schema": "healthmd.health_data",
+  "schema_version": 9,
+  "source": {
+    "platform": "android",
+    "source_profile": "android_analytical_v5"
+  }
+}

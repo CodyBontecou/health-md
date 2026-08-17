@@ -15,7 +15,7 @@ description: 跨平台的 Health.md 指标标识与兼容性配置。
 
 | 内部配置 | 公开配置 | 架构 | 有序选择项 | 输出描述符 |
 |---|---|---:|---:|---:|
-| `apple_health_data_v7` | `apple-v7` | 7 | 230 | 226 |
+| `apple_health_data_v8` | `apple-v8` | 7 | 230 | 226 |
 | `android_frozen_v4` | `android-frozen-v4` | 4 | 106 | 161 |
 | `android_analytical_v5` | `android-analytical-v5` | 5 | 106 | 161 |
 

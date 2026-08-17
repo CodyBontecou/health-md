@@ -5,7 +5,7 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
 - Markdown frontmatter when **Include Metadata** is on, and Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 7
+  schema_version: 8
   raw_capture_status: complete
   time_context:
     calendar_timezone: America/Los_Angeles
@@ -15,7 +15,7 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 7,
+    "schema_version": 8,
     "raw_capture_status": "complete",
     "time_context": {
       "calendar_timezone": "America/Los_Angeles",
@@ -27,15 +27,15 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-07-15,Metadata,schema,healthmd.health_data,,
-  2026-07-15,Metadata,schema_version,7,,
+  2026-07-15,Metadata,schema_version,8,,
   2026-07-15,Raw HealthKit,Raw Capture Status,complete,status,
   ```
 
-## Version 7 live schema
+## Version 8 live schema
 
-`schema_version: 7` is the current Health.md daily export contract. Versions 5 and 6 and their signature fixtures remain historical and must not be rewritten.
+`schema_version: 8` is the current Apple Health.md daily export contract. Versions 5, 6, and 7 and their signature fixtures remain historical and must not be rewritten. Android frozen v4 and Android analytical v5 are unchanged.
 
-Version 7 carries forward the complete lossless source representation introduced by v6 and corrects three public summary contracts:
+Version 8 carries forward the complete lossless source representation and v7 summary corrections, and adds the optional typed `providers.whoop` section described below. The v7 corrections remain part of v8:
 
 - `vo2_max` is a latest measurement, not a period maximum. Its period headline follows the latest daily source value even when that value is lower than an earlier measurement.
 - CSV extended summary categories, including cycling, vitamins, minerals, reproductive health, and other health, populate canonical `Unit` values from the production data dictionary instead of dropping them.
@@ -43,14 +43,15 @@ Version 7 carries forward the complete lossless source representation introduced
 
 **Lossless Health Records is off by default for new installs.** Existing explicit on or off choices are preserved. The default summary-only daily export reports `raw_capture_status: not_requested`; enabling Lossless adds the canonical source archive. The internal compatibility setting and persisted key remain `includeGranularData` and `advancedExportSettings.includeGranularData`.
 
-Clinical Health Records access is temporarily absent from current App Store builds. Those builds omit the managed entitlements, privacy prompt, metric-selection categories, direct-query catalog entries, and clinical capture. The v7 schema retains its clinical/FHIR/CDA/verifiable variants so historical files stay decodable and the capability can return in a future schema-compatible release.
+Clinical Health Records access is temporarily absent from current App Store builds. Those builds omit the managed entitlements, privacy prompt, metric-selection categories, direct-query catalog entries, and clinical capture. The v8 schema retains its clinical/FHIR/CDA/verifiable variants so historical files stay decodable and the capability can return in a future schema-compatible release.
 
-## Summary and source layers
+## Summary, provider, and source layers
 
-A v7 daily record has two complementary layers:
+A v8 daily record has three complementary layers:
 
 1. Existing `sleep`, `activity`, `heart`, `vitals`, `body`, `nutrition`, `mindfulness`, `mobility`, `hearing`, `workouts`, and medication summaries remain convenient for reading, charts, and roll-ups.
-2. JSON `healthkit_record_archive` is the authoritative source layer. It uses `schema: healthmd.healthkit_records` and `schema_version: 1`.
+2. Optional `providers.whoop` contains reviewed typed WHOOP facts under its independently versioned `healthmd.provider.whoop_daily` v1 contract. Provider values never overwrite or relabel Apple summaries.
+3. JSON `healthkit_record_archive` is the authoritative Apple source layer. It uses `schema: healthmd.healthkit_records` and `schema_version: 1`.
 
 The archive is the complete public representation Health.md captured from the selected HealthKit APIs. Downstream tools that need source identity, exact samples, or relationships should read it instead of treating summary arrays as authoritative.
 
@@ -59,7 +60,25 @@ Format roles are intentional:
 - **JSON** embeds the full archive.
 - **CSV** writes the same canonical objects as RFC 4180-safe JSON rows: `Archive Manifest`, `Raw HealthKit Record`, `Raw HealthKit External Record`, query failures, warnings, and partial failures. Canonical JSON and CSV record UUIDs must match.
 - **Markdown and Obsidian Bases** keep daily summaries readable and do not dump the archive. Their shared frontmatter exposes capture status, source-record count, failed-query count, warning count, and archive schema. Markdown additionally renders external-record, query-status, and medication-inventory counts in its compact diagnostics section.
-- **Individual Entry Tracking** derives source-event files from canonical records whenever an archive is present. Compatibility summaries are not substituted for a failed or empty canonical query.
+- **Individual Entry Tracking** derives source-event files from canonical HealthKit records whenever an archive is present. WHOOP v1 records do not participate in Individual Entry Tracking.
+
+## Typed WHOOP provider section
+
+When WHOOP capture is enabled and an Apple Health day is retained, v8 may add `providers.whoop`. Provider-only days remain non-exportable. The same WHOOP fetch also continues to supply provider-native `healthmd.external_provider_daily` v1 sidecars; the typed section does not replace or weaken that fidelity layer.
+
+The nested section preserves WHOOP cycles, recoveries, sleep/nap records, workouts, and the current-day body-profile snapshot. Provider IDs are strings; duration fields retain exact integer milliseconds; the recent-nap adjustment retains its signed value; current v2 workout `sport_name` and cycle/sleep relationships are preserved. WHOOP HRV is named `hrv_rmssd_ms` and is never projected into Apple `hrv_ms` (SDNN).
+
+`capture_status` is `complete`, `partial`, or `not_requested`. Every planned resource has one deterministic result row with a matching typed-record count. A successful empty request is complete with zero records; partial capture keeps successful siblings and exposes only bounded safe errors. Typed output never includes credentials, headers, URLs, pagination cursors, account identity, or raw provider error bodies.
+
+Format projections are deliberately loss-aware:
+
+- JSON retains the complete typed nested section.
+- Markdown renders labeled WHOOP summaries and repeated-record tables.
+- Bases/frontmatter emits stable `whoop_*` scalars only when exactly one relevant record supplies the value.
+- CSV retains the six-column contract, writes the same unambiguous scalars, and uses canonical JSON rows for repeated records. Provider fetch time is never substituted for a measurement timestamp.
+- WHOOP dictionary entries declare no weekly, monthly, or yearly roll-ups.
+
+The normative schema, mapping rules, and synthetic fixture are under `packages/contracts/proposals/provider-sections-v1` in the repository.
 
 ## Canonical archive contract
 
@@ -119,7 +138,7 @@ Repeated query views are merged only by the same original UUID. UUID-free public
 
 ## Public coverage
 
-Subject to the selected metrics, runtime API availability, and authorization, v7 source capture covers:
+Subject to the selected metrics, runtime API availability, and authorization, v8 Apple source capture covers:
 
 - all currently catalogued ordinary quantity and category types, including reproductive and pregnancy types;
 - discrete, cumulative, and series quantity samples with exact public statistics and child points;
@@ -156,9 +175,9 @@ Source URLs are preserved as strings. Health.md never fetches them, follows them
 ## Summary correctness notes
 
 - Blood-pressure summaries retain daily average/minimum/maximum values. The canonical archive contains actual correlation pairs and Health.md does not infer sessions or average nearby readings.
-- VO2 Max may use the latest historical measurement through the end of the requested day. Its UUID, source start/end, carry-forward flag, and age are exported so it cannot masquerade as an in-day reading. The v7 dictionary labels `vo2_max` as `latest`; weekly/monthly/yearly headline values select the latest daily value rather than the largest value.
+- VO2 Max may use the latest historical measurement through the end of the requested day. Its UUID, source start/end, carry-forward flag, and age are exported so it cannot masquerade as an in-day reading. The v8 dictionary retains the v7 `vo2_max` rule as `latest`; weekly/monthly/yearly headline values select the latest daily value rather than the largest value.
 - **Stand Time** is summed duration in minutes from `HKQuantityTypeIdentifierAppleStandTime`. **Stand Hours** is the count of distinct stood hours from Apple Stand Hour category records. They are not interchangeable.
-- Vitamin/mineral summaries and the v7 data dictionary label microgram values `µg`; milligram summaries use `mg`. Canonical HealthKit quantity payloads preserve the reviewed HealthKit query unit string (`mcg` for those microgram source types).
+- Vitamin/mineral summaries and the v8 data dictionary retain the v7 microgram contract: microgram values use `µg`, while milligram summaries use `mg`. Canonical HealthKit quantity payloads preserve the reviewed HealthKit query unit string (`mcg` for those microgram source types).
 
 ## Time and unit contract
 
@@ -176,7 +195,7 @@ See [Date, Time, and Units](./date-time-units.md) and [Data Dictionary and Roll-
 
 ## API Endpoint envelope
 
-API Endpoint export wraps ordinary v7 daily records in `healthmd.api_export`. The daily record version is declared by `daily_record_schema_version`; each `records` item still contains its own schema/version and archive. Provider-specific sidecars can independently advance the API envelope version without changing `healthmd.health_data`.
+API Endpoint export wraps ordinary v8 daily records in `healthmd.api_export`. The daily record version is declared by `daily_record_schema_version`; each `records` item still contains its own schema/version, optional typed provider section, and archive. API v2 retains provider-native sidecars under `external_records` in addition to the typed daily provider data.
 
 ## Practical limits
 
@@ -187,17 +206,17 @@ API Endpoint export wraps ordinary v7 daily records in `healthmd.api_export`. Th
 - API Endpoint exports use sequential batches bounded by 7 calendar days and an 8 MiB encoded-body target by default. A single daily record is indivisible and can exceed that target; the API envelope and daily schemas are unchanged.
 - HealthKit capture and final JSON/CSV serialization can still use substantial memory. Export smaller date ranges when working with dense records or attachments.
 
-## Migrating from v5 or v6
+## Migrating from v5, v6, or v7
 
-Existing v5 and v6 files remain valid historical exports. Do not relabel them as v7. Re-export v6 periods when consumers need the corrected VO2 Max `latest` rule, populated extended-category CSV units, or calendar-timezone-correct roll-up date labels; v6 dictionaries described `vo2_max` as a maximum.
+Existing v5, v6, and v7 files remain valid historical exports. Do not relabel them as v8. Re-export v6 periods when consumers need the corrected VO2 Max `latest` rule, populated extended-category CSV units, or calendar-timezone-correct roll-up date labels; v6 dictionaries described `vo2_max` as a maximum. Re-export v7 days when consumers need typed WHOOP data inside the daily record.
 
 For a consistent archive, update Health.md and its Obsidian integration, then re-export the dates you need. Re-exporting is especially important when downstream tools need canonical source records, corrected day ownership, exact quantities, VO2 provenance and roll-ups, Stand Time/Stand Hours separation, or corrected micronutrient units.
 
 Downstream parser guidance:
 
-1. Branch on top-level `schema` and `schema_version`; accept v5, v6, and v7 during migration.
+1. Branch on top-level `schema` and `schema_version`; accept v5, v6, v7, and v8 during migration.
 2. Treat summary objects as convenient projections, not source-event identity.
-3. In v6 and v7, inspect `raw_capture_status` before deciding whether an archive should exist.
+3. In v6 through v8, inspect `raw_capture_status` before deciding whether an archive should exist.
 4. Parse `healthkit_record_archive.schema` and its independent `schema_version`.
 5. Treat typed metadata as tagged values; preserve unknown tags and raw enum values.
 6. Use UUID/external identity for deduplication and `ownership.owner_date` for raw day assignment.
@@ -206,31 +225,47 @@ Downstream parser guidance:
 
 ## Internal semantic-input migration boundary
 
-Apple converts already-captured `HealthData` into bounded `healthmd.semantic_input` v1 batches for deterministic Rust filtering, typed reduction, and Apple period-rollup planning. The session explicitly carries disabled frontmatter output keys and whether platform archive extensions may be retained, so previously captured data cannot bypass current output settings. This internal envelope is not `healthmd.health_data`, is never written to a destination, and does not change schema version 7. HealthKit querying/statistics, sleep day ownership, archive payloads, source/device metadata, localization, and daily/archive rendering remain native. The audited non-archive summary-only roll-up subset can select pure Rust rendering after its operation-wide gate; broader operations remain legacy or native-authoritative shadow. SDK-produced daily values cross as explicit aggregate facts so the migration does not recompute HealthKit statistics from raw samples.
+Apple converts already-captured provider-free `HealthData` into bounded `healthmd.semantic_input` v1 batches for deterministic Rust filtering, typed reduction, and Apple period-rollup planning. The session explicitly carries disabled frontmatter output keys and whether platform archive extensions may be retained, so previously captured data cannot bypass current output settings. This internal envelope is not `healthmd.health_data`, is never written to a destination, and does not change schema version 8. HealthKit querying/statistics, sleep day ownership, archive payloads, source/device metadata, localization, and provider capture/rendering remain native. Provider-bearing days fail closed to native authority rather than dropping typed provider data. SDK-produced daily values cross as explicit aggregate facts so the migration does not recompute HealthKit statistics from raw samples.
 
 ## Internal render and artifact-plan migration boundary
 
-A completed semantic result and frozen presentation snapshot may enter `healthmd.render_input` v1. The shared core renders destination-neutral Apple-v7 artifacts and returns validated relative paths, media types, write modes, exact bytes, byte counts, and checksums. Large archive JSON/CSV items and attachments use a bounded stream that never retains a second complete output buffer. Security-scoped URLs, destination reads, atomic writes, ZIP containers, API networking, credentials, and direct transport remain native.
+A completed semantic result and frozen presentation snapshot may enter `healthmd.render_input` v1. The shared core renders destination-neutral provider-free Apple-v8 artifacts and returns validated relative paths, media types, write modes, exact bytes, byte counts, and checksums. Large archive JSON/CSV items and attachments use a bounded stream that never retains a second complete output buffer. Security-scoped URLs, destination reads, atomic writes, ZIP containers, API networking, credentials, provider sections, and direct transport remain native.
 
-Pre-cutover Swift renderer bytes are frozen independently under `packages/contracts/render-input/v1/fixtures/native-apple-v7.json`. This internal migration does not alter schema version 7. Release defaults remain legacy until the M6 rollout gates pass. Shadow keeps Swift authoritative, while the narrowly admitted summary-only roll-up path can use Rust authority without opening a native renderer; Apple daily and API Rust authority remain gated on independent exact v7 profile documents.
+Pre-cutover Swift v7 renderer bytes remain frozen independently under `packages/contracts/render-input/v1/fixtures/native-apple-v7.json`. The active Rust profile is `apple_health_data_v8`; provider-bearing operations remain native-authoritative. Release defaults remain legacy until the existing rollout gates pass.
 
 ## Schema version policy and guardrail
 
-`HealthMdExportSchema.version` is the production daily schema integer. Version 7 is current; versions 1 through 6 are historical. The committed v5 and v6 signatures remain preserved; v7 has its own versioned fixture.
+`HealthMdExportSchema.version` is the production daily schema integer. Version 8 is current; versions 1 through 7 are historical. The committed v5, v6, and v7 signatures remain preserved byte-for-byte; v8 has its own versioned fixture.
 
 Bump the daily schema when a public key, type, meaning, unit, aggregation, JSON structure, CSV contract, reserved frontmatter field, or downstream dictionary rule changes. Do not bump for byte-compatible internal refactors.
 
 `HealthMdTests/Export/ExportSchemaSignatureTests.swift` fingerprints JSON paths, CSV rows/headers, Markdown/Bases frontmatter, and the data dictionary. A shipped version's fixture must never be rewritten merely to silence CI.
 
-The deterministic metric/profile inventory now comes from the shared Rust `metric-registry-v1.json`. Generated `HealthMetrics` and `HealthMetricExportMapping` regions preserve the existing native IDs, units, order, and keys; Swift continues to own HealthKit selectors, availability, permissions, persistence, localization, queries, and native-only rendering surfaces. UniFFI shadow tests compare the packaged registry to these generated projections. This internal authority change is byte-compatible and does not create v8.
+The deterministic metric/profile inventory now comes from the shared Rust `metric-registry-v1.json`. Generated `HealthMetrics` and `HealthMetricExportMapping` regions preserve the existing native IDs, units, order, and keys; Swift continues to own HealthKit selectors, availability, permissions, persistence, localization, queries, and native-only rendering surfaces. UniFFI shadow tests compare the packaged registry to these generated projections. The registry now exposes the explicit Apple v8 profile. This internal authority change does not alter Android frozen v4 or Android analytical v5.
+
+## Cross-platform-first rule
+
+Apple export design follows the repository-wide Apple and Android unification policy at `../../docs/architecture/cross-platform-unification-policy.md` (referenced as a path, not a link, because Apple docs cannot link outside `apps/apple`). Before adding or changing an Apple metric, provider, setting, format projection, or automation behavior:
+
+1. Define the platform-neutral meaning and inspect the corresponding Health Connect/Android capability.
+2. Use the common semantic ID, canonical unit, statistic, completeness model, and unified-contract mapping only when equivalence is proven.
+3. Put HealthKit-only or non-equivalent data in an explicit Apple capability/platform contract rather than emitting an Android placeholder.
+4. Record Android as unavailable with an OS/API reason or planned with a concrete target when the feature cannot land together.
+5. Update and test Android, shared-core, CLI, website, API/automation, and external Obsidian consumers when their boundary is affected.
+
+Apple v8 remains a shipped Apple profile. New common behavior should converge through the reviewed unified successor rather than changing Android v4/v5 or Apple v8 semantics in place.
 
 ## Intentional schema change workflow
 
-1. Change the exporter or metric mapping.
-2. Decide whether the public schema changed.
-3. If it changed, bump `HealthMdExportSchema.version`.
+1. Define the shared outcome and compare Apple and Android source semantics.
+2. Choose the change lane:
+   - **Apple production profile:** change the Apple exporter or Apple platform section, decide whether Apple public v8 advances, and follow the Apple signature workflow below.
+   - **Unified proposal/common profile:** change the language-neutral common contract, ledger, schema, and synthetic fixtures. Do **not** bump `HealthMdExportSchema.version` or regenerate an Apple signature unless a separately approved Apple production writer adopts that schema.
+3. For an Apple production schema change, bump `HealthMdExportSchema.version`.
 4. Run `make update-export-schema-signature`.
 5. Review the new versioned fixture; do not overwrite a shipped fixture.
-6. Run exporter contract tests and a mixed v5/v6/v7 export smoke test.
+6. Run exporter contract tests, affected cross-platform consumer tests, and a mixed v5/v6/v7/v8 export smoke test.
+
+RFC-0004 currently blocks production unified-v9 writers, so proposal-only v9 work remains in the second lane.
 
 A release smoke test should cover local iPhone, API, and Connected Mac outputs; summary-only and lossless settings; Markdown/Bases readability; canonical JSON/CSV parity; and an updated downstream Obsidian parser.

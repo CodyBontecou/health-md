@@ -18,9 +18,9 @@ This group contains 15 deterministic artifacts. Checksums are SHA-256 hashes of 
 | `scoped-write-files-export-request.json` | 540 | `1bbc734b154fa7413e88aa0c2fb544b5ecb2f4c621f2cc8f66c58b5c9cdd5b45` | — | [Download](/docs/reference/generated/cli/scoped-write-files-export-request.json) |
 | `status-success.json` | 367 | `e3d2c7a000d1fe9c5d1a9fb4768a7fdd0dee173eccb8141351eba8124343c355` | — | [Download](/docs/reference/generated/cli/status-success.json) |
 | `status-unavailable.json` | 309 | `f9b63d13f34e4ee1c5daf55b0cbfe7e4b54f406f8392ae3831f2891c404bb477` | — | [Download](/docs/reference/generated/cli/status-unavailable.json) |
-| `strict-raw-complete-response.json` | 3730 | `47ad74e9fcfb23eb9f13ab457daec30a8958fb029e92e93c4db45b75b1c2e729` | — | [Download](/docs/reference/generated/cli/strict-raw-complete-response.json) |
+| `strict-raw-complete-response.json` | 3730 | `b0b121bf595efcb2bd40dcb23cacab4d7e163b13869466023c9e9669e5e10a48` | — | [Download](/docs/reference/generated/cli/strict-raw-complete-response.json) |
 | `strict-raw-export-request.json` | 311 | `f62e1a5ee0bdb9661feecd47cff3062a747fbe0434e1ceceb9fedff97beaddd4` | — | [Download](/docs/reference/generated/cli/strict-raw-export-request.json) |
-| `strict-raw-partial-response.json` | 5965 | `574cd912a2853df8f924488f7063bc00161a80c67d1d783dd6e31453a2348be8` | — | [Download](/docs/reference/generated/cli/strict-raw-partial-response.json) |
+| `strict-raw-partial-response.json` | 5965 | `c6702a518e5aed19f0b59a83af47f2bcbb098e81d2f194003f9d8cdee71f3970` | — | [Download](/docs/reference/generated/cli/strict-raw-partial-response.json) |
 | `write-files-export-failure-response.json` | 294 | `9a83343ff825972663bb0b3cca6b6ca66b5d4b2169cbd13b0dbc3ffcf7840458` | — | [Download](/docs/reference/generated/cli/write-files-export-failure-response.json) |
 | `write-files-export-partial-response.json` | 403 | `11cb263b9f27e485eec4714b0c550bd4be0f12f59de95469219dfaac13e7a75c` | — | [Download](/docs/reference/generated/cli/write-files-export-partial-response.json) |
 | `write-files-export-request.json` | 265 | `39b2e9eb753b21ab877fe3e82c08be1e8959b98e53db392dde3842238b90f1cb` | — | [Download](/docs/reference/generated/cli/write-files-export-request.json) |

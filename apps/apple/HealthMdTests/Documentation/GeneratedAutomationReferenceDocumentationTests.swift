@@ -91,6 +91,9 @@ final class GeneratedAutomationReferenceDocumentationTests: XCTestCase {
         XCTAssertEqual(apiV2["schema_version"] as? Int, 2)
         XCTAssertEqual(apiV2["external_record_schema"] as? String, ExternalDailyRecord.schema)
         XCTAssertEqual((apiV2["external_records"] as? [Any])?.count, 1)
+        let apiV2Record = try XCTUnwrap((apiV2["records"] as? [[String: Any]])?.first)
+        let apiV2Providers = try XCTUnwrap(apiV2Record["providers"] as? [String: Any])
+        XCTAssertNotNil(apiV2Providers["whoop"] as? [String: Any])
 
         let agentRequestData = try XCTUnwrap(files["agent-query-request.json"])
         let agentRequest = try HealthMdQueryCanonicalSerializer.decode(

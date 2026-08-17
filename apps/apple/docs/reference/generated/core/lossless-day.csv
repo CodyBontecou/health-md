@@ -1,6 +1,6 @@
 Date,Category,Metric,Value,Unit,Timestamp
 2026-03-15,Metadata,schema,healthmd.health_data,,
-2026-03-15,Metadata,schema_version,7,,
+2026-03-15,Metadata,schema_version,8,,
 2026-03-15,Metadata,unit_system,metric,,
 2026-03-15,Metadata,time_context.calendar_timezone,UTC,,
 2026-03-15,Metadata,time_context.timestamp_timezone,UTC,,

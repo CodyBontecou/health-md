@@ -20,7 +20,7 @@ python3 ../contracts/validate.py
 
 `crates/healthmd-core/registry/metric-registry-v1.json` is the canonical, canonical-JSON inventory for:
 
-- `apple_health_data_v7`
+- `apple_health_data_v8`
 - `android_frozen_v4`
 - `android_analytical_v5`
 
@@ -36,7 +36,7 @@ The UniFFI boundary exposes one ephemeral `CoreSemanticSession` object with `pro
 
 ## Rendering and artifact plans
 
-`crates/healthmd-core/src/render/` implements `healthmd.render_input` v1 and artifact-plan v1 with separate Apple-v7, Android-frozen-v4, and Android-analytical-v5 profile modules. A bounded `CoreRenderSession` consumes one completed semantic result plus explicit, output-key-attested presentation facts from the same frozen native capture. It renders frontmatter/Bases, Markdown, CSV, ordered JSON, Apple roll-ups, individual/Daily Note plans, profile-exact merge behavior, and owner-date/byte-scoped API envelopes; paths, collision keys, write modes, byte counts, and SHA-256 values are returned without touching a destination.
+`crates/healthmd-core/src/render/` implements `healthmd.render_input` v1 and artifact-plan v1 with separate Apple-v8, Android-frozen-v4, and Android-analytical-v5 profile modules. A bounded `CoreRenderSession` consumes one completed semantic result plus explicit, output-key-attested presentation facts from the same frozen native capture. It renders frontmatter/Bases, Markdown, CSV, ordered JSON, Apple roll-ups, individual/Daily Note plans, profile-exact merge behavior, and owner-date/byte-scoped API envelopes; paths, collision keys, write modes, byte counts, and SHA-256 values are returned without touching a destination.
 
 `CoreLosslessArtifactStream` incrementally frames raw bytes, JSON-array items, or RFC 4180 rows while retaining only sequence/digest state. Planned streams finalize with the same content-free identity/path/media/write/count/checksum evidence as inline artifacts. Native code writes returned chunks into existing atomic spools and still owns ZIP, SAF/security-scoped URLs, HTTP, and credentials. Independently frozen Swift/Kotlin renderer goldens, full Android request replay, and the exact Rust differential plan live under `packages/contracts/render-input/v1/`. Production authority remains legacy until M6.
 

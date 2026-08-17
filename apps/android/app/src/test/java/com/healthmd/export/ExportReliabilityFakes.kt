@@ -137,6 +137,39 @@ class FakeSettingsRepository(
 
     override suspend fun getExportSettings(): ExportSettings = exportSettingsState.value
 
+    override suspend fun applySharedSetupTransaction(
+        expectedCurrent: ExportSettings,
+        candidate: ExportSettings,
+        pendingEndpoint: String?,
+        preservedAppleExtension: String?,
+    ): Boolean {
+        updateExportSettings(candidate)
+        return true
+    }
+
+    override suspend fun getSharedSetupUndo(): ExportSettings? = null
+
+    override suspend fun undoSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings? = null
+
+    override suspend fun rollbackSharedSetupTransaction(expectedCurrent: ExportSettings): ExportSettings? = null
+
+    override suspend fun getPendingSharedSetupEndpoint(): String? = null
+
+    override suspend fun confirmSharedSetupEndpoint(
+        expectedCurrent: ExportSettings,
+        expectedPendingEndpoint: String,
+        candidate: ExportSettings,
+    ): Boolean = false
+
+    override suspend fun rollbackSharedSetupEndpointConfirmation(
+        expectedCurrent: ExportSettings,
+        restored: ExportSettings,
+        pendingEndpoint: String,
+    ): Boolean = false
+
+    override suspend fun getPreservedSharedSetupAppleExtension(): String? = null
+
+
     override val exportFolderUri: Flow<String?> = exportFolderUriState
 
     override suspend fun saveExportFolderUri(uri: String) {

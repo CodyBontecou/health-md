@@ -255,7 +255,7 @@ object CoreArtifactPlanConverter {
                 AndroidExportProfile.android_frozen_v4
             CoreMetricRegistryProfile.ANDROID_ANALYTICAL_V5 ->
                 AndroidExportProfile.android_analytical_v5
-            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V7 ->
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8 ->
                 invalid(ExportArtifactPlanValidationIssue.PROFILE)
         },
         items = plan.items.map { item ->

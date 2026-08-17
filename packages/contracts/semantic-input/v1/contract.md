@@ -15,7 +15,7 @@ An OS aggregate is represented as `kind: "sdk_aggregate"`; Rust must not reconst
 
 `healthmd.semantic_session_config` selects exactly one profile:
 
-- `apple_health_data_v7`
+- `apple_health_data_v8`
 - `android_frozen_v4`
 - `android_analytical_v5`
 

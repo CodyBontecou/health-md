@@ -243,8 +243,13 @@ struct APIEndpointExportRunner {
         if connectedAppsEnabled,
            let externalIntegrations,
            externalIntegrations.connectedProviderCount > 0 {
+            var providerCalendar = Calendar(identifier: .gregorian)
+            providerCalendar.timeZone = calendarTimeZone
             externalFetcher = { date in
-                await externalIntegrations.fetchDailyRecords(for: date)
+                await externalIntegrations.fetchDailyRecords(
+                    for: date,
+                    calendar: providerCalendar
+                )
             }
         } else {
             externalFetcher = nil
@@ -372,7 +377,7 @@ struct APIEndpointExportRunner {
         if settings.executionAppleExportEngineAuthorityIsFrozen {
             return .legacy
         }
-        return policyResolver.requestedModeForNewOperation(profile: .appleHealthDataV7)
+        return policyResolver.requestedModeForNewOperation(profile: .appleHealthDataV8)
     }
 
     /// Destination-free preparation seam used by API preview and focused engine tests. A legacy
@@ -395,10 +400,9 @@ struct APIEndpointExportRunner {
         diagnosticSink: @escaping EngineDiagnosticSink = ShadowExportEvidenceRecorder.productionSink,
         onProgress: ProgressHandler? = nil
     ) async throws -> PreparationResolution {
-        let requestedMode = requestedMode(
-            settings: settings,
-            policyResolver: policyResolver
-        )
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil
+            ? requestedMode(settings: settings, policyResolver: policyResolver)
+            : .legacy
         guard requestedMode != .legacy else { return .legacy }
         return try await prepareNonLegacy(
             dates: dates,
@@ -528,11 +532,11 @@ struct APIEndpointExportRunner {
 
         // This is the only authority read for the operation and occurs before either HealthKit or
         // a provider can be called. Persisted pins, including explicit nil/legacy authority, take
-        // precedence over current rollout defaults.
-        let requestedMode = requestedMode(
-            settings: settings,
-            policyResolver: policyResolver
-        )
+        // precedence over current rollout defaults. Provider-bearing v8 days remain
+        // native-authoritative so the typed section cannot be dropped by an older path.
+        let requestedMode: ExportEngineMode = fetchExternalDailyRecords == nil
+            ? requestedMode(settings: settings, policyResolver: policyResolver)
+            : .legacy
         guard requestedMode != .legacy else {
             return await exportLegacyPrepared(
                 dates: dates,
@@ -637,7 +641,7 @@ struct APIEndpointExportRunner {
             throw EngineError.rustPlanningFailed
         }
         if requestedMode == .rust {
-            // Apple-v7 API records still require native profile-document serialization for exact
+            // Apple-v8 API records still require native profile-document serialization for exact
             // shipped bytes. New Rust requests resolve wholly to legacy before capture/core work;
             // an already-persisted Rust promise fails closed instead of changing authority.
             if suppliedPin != nil { throw EngineError.rustPlanningFailed }
@@ -898,7 +902,7 @@ struct APIEndpointExportRunner {
                 id: NativeExportArtifactPlan.artifactID(
                     requestID: identity.requestID,
                     sessionID: identity.sessionID,
-                    profile: .appleHealthDataV7,
+                    profile: .appleHealthDataV8,
                     relativePath: path,
                     mediaType: "application/json",
                     writeMode: .apiPost,
@@ -916,7 +920,7 @@ struct APIEndpointExportRunner {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin
@@ -1054,7 +1058,7 @@ struct APIEndpointExportRunner {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin

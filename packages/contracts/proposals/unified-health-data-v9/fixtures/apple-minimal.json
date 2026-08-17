@@ -1,0 +1,87 @@
+{
+  "calendar": {
+    "assignment_rule": "record_start_in_half_open_day_interval",
+    "identifier": "gregorian",
+    "interval_end": "2026-07-14T04:00:00Z",
+    "interval_start": "2026-07-13T04:00:00Z",
+    "time_zone": "America/New_York"
+  },
+  "capture": {
+    "resources": [
+      {
+        "record_count": 1,
+        "resource": "steps",
+        "source": "apple_health",
+        "status": "complete"
+      },
+      {
+        "record_count": 1,
+        "resource": "heart_rate_variability_sdnn",
+        "source": "apple_health",
+        "status": "complete"
+      }
+    ],
+    "status": "complete"
+  },
+  "metrics": [
+    {
+      "provenance": [
+        {
+          "source": "apple_health",
+          "source_record_ids": [
+            "00000000-0000-0000-0000-000000000002"
+          ],
+          "source_semantic_id": "hrv",
+          "source_statistic": "average"
+        }
+      ],
+      "semantic_id": "heart_rate_variability_sdnn",
+      "statistic": "average",
+      "value": {
+        "number": {
+          "bits": "404b000000000000",
+          "representation": "binary64"
+        },
+        "unit": "millisecond",
+        "value_type": "number"
+      }
+    },
+    {
+      "provenance": [
+        {
+          "source": "apple_health",
+          "source_record_ids": [
+            "00000000-0000-0000-0000-000000000001"
+          ],
+          "source_semantic_id": "steps",
+          "source_statistic": "sum"
+        }
+      ],
+      "semantic_id": "steps",
+      "statistic": "sum",
+      "value": {
+        "number": {
+          "decimal": "1234",
+          "representation": "unsigned_integer"
+        },
+        "unit": "count",
+        "value_type": "number"
+      }
+    }
+  ],
+  "owner_date": "2026-07-13",
+  "platform": {
+    "apple": {
+      "schema": "healthmd.platform.apple_daily",
+      "schema_version": 1,
+      "source_schema_version": 8
+    }
+  },
+  "profile": "unified-cross-platform-v1",
+  "schema": "healthmd.health_data",
+  "schema_version": 9,
+  "source": {
+    "platform": "apple",
+    "source_profile": "apple_health_data_v8"
+  }
+}
