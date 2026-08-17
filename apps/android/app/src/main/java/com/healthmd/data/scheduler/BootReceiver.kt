@@ -14,6 +14,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class BootReceiver : BroadcastReceiver() {
     @Inject lateinit var exportScheduler: ExportScheduler
+    @Inject lateinit var profileScheduler: ScheduledProfileScheduler
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action !in SUPPORTED_ACTIONS) return
@@ -24,6 +25,13 @@ class BootReceiver : BroadcastReceiver() {
                     forceRecalculate = intent.action == Intent.ACTION_TIME_CHANGED ||
                         intent.action == Intent.ACTION_TIMEZONE_CHANGED,
                 )
+                // Phase 6: re-arm every scheduled-profile entry after the same system events.
+                runCatching {
+                    profileScheduler.reconcile(
+                        forceRecalculate = intent.action == Intent.ACTION_TIME_CHANGED ||
+                            intent.action == Intent.ACTION_TIMEZONE_CHANGED,
+                    )
+                }
             } finally {
                 pendingResult.finish()
             }

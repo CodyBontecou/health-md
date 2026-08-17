@@ -316,10 +316,21 @@ class AutomationReceiver : BroadcastReceiver() {
         )
     }
 
+    /**
+     * Sets the ordered-broadcast result when it is still pending. Non-ordered broadcasts (e.g.
+     * plain `adb shell am broadcast`) finalize their result before an async goAsync body resumes,
+     * and `setResult*` then throws — historically crashing the app from the catch path. Result
+     * delivery is best-effort: the durable side effects (export, history, pending work) never
+     * depend on it.
+     */
     private fun publishResult(code: Int, message: String, extras: Bundle) {
-        resultCode = code
-        resultData = message
-        setResultExtras(extras)
+        try {
+            resultCode = code
+            resultData = message
+            setResultExtras(extras)
+        } catch (_: IllegalStateException) {
+            Timber.d("Automation result not deliverable (broadcast finalized): %s", message)
+        }
         Timber.d("Automation result: %s (%s)", message, code)
     }
 
