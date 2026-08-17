@@ -1527,6 +1527,14 @@ final class VaultManager: ObservableObject {
         }
     }
 
+    /// True only when the retained destination can be used right now. The local
+    /// folder picker prompt is based on this (not on retained-selection metadata)
+    /// so temporarily unavailable and review/reselection states still open the
+    /// picker when their subtitle tells the user to tap to re-select.
+    var isVaultDestinationUsable: Bool {
+        destinationState == .available
+    }
+
     var vaultIssueMessage: String? {
         switch destinationState {
         case .requiresReviewIdentityUnavailable:

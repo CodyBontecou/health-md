@@ -352,7 +352,10 @@ struct ExportTabView: View {
             macSubtitle: macTargetSubtitle,
             apiSubtitle: apiTargetSubtitle,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
-            shouldPromptForLocalFolder: !vaultManager.hasVaultSelection,
+            // Prompt on any state where the retained selection cannot be used
+            // right now (including temporary unavailability and the reselection/
+            // review states), not merely when no selection metadata is retained.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             onRequestFolderPicker: { showFolderPicker = true },
             onOpenAPISettings: { showAPIEndpointSettings = true }
         )

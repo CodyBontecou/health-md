@@ -490,6 +490,12 @@ struct MacExportView: View {
             return String(localized: "Sync health data from your iPhone and choose an export folder to get started.")
         } else if healthDataStore.recordCount == 0 {
             return String(localized: "Sync health data from your iPhone to export.")
+        } else if vaultManager.isVaultDestinationUsable {
+            // Health records and an accessible folder are present, so a blocked
+            // export comes from output configuration (e.g. every file format
+            // deselected), not from folder access; do not send users to repair
+            // a healthy destination.
+            return String(localized: "Choose at least one export format to enable exporting.")
         } else if vaultManager.hasVaultSelection {
             return String(localized: "Reconnect or re-select \(vaultManager.vaultName) to restore export access.")
         } else {
