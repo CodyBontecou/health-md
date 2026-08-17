@@ -1063,6 +1063,50 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(decoded.hadTerminalRangeFailure)
     }
 
+    func testPartialFailuresRoundTripAndLegacyOmissionDecodesNil() throws {
+        let warning = ExportPartialFailure(
+            date: Date(timeIntervalSince1970: 1_700_000_000),
+            dataType: "Individual entries",
+            dateRangeDescription: "2026-08-16",
+            errorDescription: "Lossless records produced no individual entries for tracked metrics: weight not selected for the daily export."
+        )
+        let payload = makePayload(status: .partialSuccess)
+        let withWarnings = MacExportResultPayload(
+            jobID: payload.jobID,
+            status: payload.status,
+            successCount: payload.successCount,
+            totalCount: payload.totalCount,
+            formatsPerDate: payload.formatsPerDate,
+            totalFilesWritten: payload.totalFilesWritten,
+            failedDateDetails: payload.failedDateDetails,
+            partialFailures: [warning],
+            completedDates: payload.completedDates,
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: payload.completedAt
+        )
+
+        let encoded = try JSONEncoder().encode(withWarnings)
+        let decoded = try JSONDecoder().decode(MacExportResultPayload.self, from: encoded)
+        XCTAssertEqual(decoded.partialFailures, [warning])
+
+        // Legacy peers never send the field; it must decode as nil, not fail.
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "partialFailures")
+        let legacyDecoded = try JSONDecoder().decode(
+            MacExportResultPayload.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertNil(legacyDecoded.partialFailures)
+
+        // Warnings ride through the shared ExportResult mapping unchanged.
+        let exportResult = ExportOrchestrator.ExportResult(macExportPayload: decoded)
+        XCTAssertEqual(exportResult.partialFailures, [warning])
+        XCTAssertTrue(exportResult.hasPartialFailures)
+    }
+
     func testOrdinaryPartialResultUsesExactCompletedDatesForResidualRetry() {
         let first = Date(timeIntervalSince1970: 1_700_000_000)
         let second = first.addingTimeInterval(86_400)

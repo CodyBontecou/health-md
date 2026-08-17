@@ -4,6 +4,7 @@ import Darwin
 import Foundation
 import HealthMdConnectionCore
 import UIKit
+import os
 
 enum IPhoneDirectFileProducerError: LocalizedError {
     case invalidRequest(String)
@@ -34,6 +35,11 @@ extension IPhoneDirectFileProducerError: ExportPerformanceCancellationClassifyin
 @MainActor
 final class IPhoneDirectFileExportProducer {
     static let shared = IPhoneDirectFileExportProducer()
+
+    private static let logger = Logger(
+        subsystem: "com.codybontecou.healthmd",
+        category: "IPhoneDirectFileExportProducer"
+    )
 
     private let fileManager = FileManager.default
     private var cancelledJobIDs: Set<UUID> = []
@@ -747,7 +753,7 @@ final class IPhoneDirectFileExportProducer {
                     settings: settings
                 )
                 do {
-                    _ = try await vault.exportHealthData(
+                    let writeResult = try await vault.exportHealthData(
                         record,
                         settings: settings,
                         healthSubfolder: journal.healthSubfolder,
@@ -756,6 +762,37 @@ final class IPhoneDirectFileExportProducer {
                         frozenSettingsSnapshot: journal.settingsSnapshot,
                         preparedExport: preparedExport
                     )
+                    // Write-side coverage gaps (for example, a tracked metric
+                    // deselected from the daily export after capture) must reach
+                    // the durable journal and the terminal outcome: the receiving
+                    // CLI otherwise reports success while requested individual
+                    // entry files are missing. Public logs stay health-free:
+                    // per-day details remain in private diagnostics only.
+                    let writeSideGaps = writeResult.individualEntryCoverageGaps
+                    if !writeSideGaps.isEmpty {
+                        Self.logger.warning("direct export write-side individual-entry coverage gaps: \(writeSideGaps.count, privacy: .public)")
+                        for gap in writeSideGaps {
+                            Self.logger.warning("coverage gap detail: \(gap.summary, privacy: .private)")
+                        }
+                        journal.capturedDays[index] = IPhoneDirectCapturedDay(
+                            sourceDate: day.sourceDate,
+                            sourceDateIdentifier: day.sourceDateIdentifier,
+                            isRequestedDate: day.isRequestedDate,
+                            relativePath: day.relativePath,
+                            succeeded: day.succeeded,
+                            includedGranularData: day.includedGranularData,
+                            sampleCount: day.sampleCount,
+                            recordCount: day.recordCount,
+                            externalRecordCount: day.externalRecordCount,
+                            partialFailureCount: day.partialFailureCount,
+                            integrityWarningCount: day.integrityWarningCount,
+                            hadWarnings: true,
+                            failureReason: day.failureReason,
+                            historyFactsRecorded: day.historyFactsRecorded
+                        )
+                        journal.updatedAt = Date()
+                        try saveJournal(journal)
+                    }
                     wroteDictionary = true
                 } catch ExportError.noHealthData {
                     // A successfully captured empty day is not a failed HealthKit day.

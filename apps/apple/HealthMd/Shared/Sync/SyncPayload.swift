@@ -960,6 +960,9 @@ struct MacExportResultPayload: Codable {
     let dailyNoteUpdateCount: Int
     let dailyNoteSkipCount: Int
     let failedDateDetails: [FailedDateDetail]
+    /// Write-side warnings (for example individual-entry coverage gaps under
+    /// lossless records). Nil means a legacy peer that never reports warnings.
+    let partialFailures: [ExportPartialFailure]?
     /// Exact terminal requested dates. Nil is a legacy peer that only reports counts.
     let completedDates: [Date]?
     let destinationDisplayName: String?
@@ -980,6 +983,7 @@ struct MacExportResultPayload: Codable {
         case dailyNoteUpdateCount
         case dailyNoteSkipCount
         case failedDateDetails
+        case partialFailures
         case completedDates
         case destinationDisplayName
         case destinationPathForDisplay
@@ -1000,6 +1004,7 @@ struct MacExportResultPayload: Codable {
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         failedDateDetails: [FailedDateDetail],
+        partialFailures: [ExportPartialFailure]? = nil,
         completedDates: [Date]? = nil,
         destinationDisplayName: String?,
         destinationPathForDisplay: String?,
@@ -1018,6 +1023,7 @@ struct MacExportResultPayload: Codable {
         self.dailyNoteUpdateCount = dailyNoteUpdateCount
         self.dailyNoteSkipCount = dailyNoteSkipCount
         self.failedDateDetails = failedDateDetails
+        self.partialFailures = partialFailures
         self.completedDates = completedDates
         self.destinationDisplayName = destinationDisplayName
         self.destinationPathForDisplay = destinationPathForDisplay
@@ -1048,6 +1054,10 @@ struct MacExportResultPayload: Codable {
         dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
         dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
         failedDateDetails = try container.decode([FailedDateDetail].self, forKey: .failedDateDetails)
+        partialFailures = try container.decodeIfPresent(
+            [ExportPartialFailure].self,
+            forKey: .partialFailures
+        )
         completedDates = try container.decodeIfPresent([Date].self, forKey: .completedDates)
         destinationDisplayName = try container.decodeIfPresent(String.self, forKey: .destinationDisplayName)
         destinationPathForDisplay = try container.decodeIfPresent(String.self, forKey: .destinationPathForDisplay)

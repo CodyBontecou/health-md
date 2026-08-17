@@ -10,6 +10,9 @@ import SwiftUI
 struct IndividualTrackingView: View {
     @ObservedObject var settings: IndividualTrackingSettings
     @ObservedObject var metricSelection: MetricSelectionState
+    /// Selection-consistent tracking mutator owned by AdvancedExportSettings.
+    /// Toggling tracking on also enables the metric for the daily export.
+    var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
@@ -225,6 +228,7 @@ struct IndividualTrackingView: View {
                             category: category,
                             settings: settings,
                             metricSelection: metricSelection,
+                            setIndividuallyTracked: setIndividuallyTracked,
                             isExpanded: expandedCategories.contains(category),
                             onToggleExpand: { toggleCategory(category) }
                         )
@@ -576,7 +580,7 @@ struct IndividualTrackingView: View {
 
         guard shouldTrack else { return }
         for metric in individualTrackableMetrics {
-            settings.setTrackIndividually(metric.id, enabled: true)
+            setIndividuallyTracked(metric.id, true)
         }
     }
 
@@ -665,6 +669,7 @@ struct CategoryTrackingRow: View {
     let category: HealthMetricCategory
     @ObservedObject var settings: IndividualTrackingSettings
     @ObservedObject var metricSelection: MetricSelectionState
+    var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
     let isExpanded: Bool
     let onToggleExpand: () -> Void
 
@@ -720,7 +725,11 @@ struct CategoryTrackingRow: View {
 
         return VStack(spacing: 0) {
             ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
-                MetricTrackingRow(metric: metric, settings: settings)
+                MetricTrackingRow(
+                    metric: metric,
+                    settings: settings,
+                    setIndividuallyTracked: setIndividuallyTracked
+                )
 
                 if index < metrics.count - 1 {
                     rowDivider
@@ -772,12 +781,13 @@ struct CategoryTrackingRow: View {
 struct MetricTrackingRow: View {
     let metric: HealthMetricDefinition
     @ObservedObject var settings: IndividualTrackingSettings
+    var setIndividuallyTracked: (String, Bool) -> Void = { _, _ in }
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         Toggle(isOn: configurationProtection.protecting(Binding(
             get: { settings.shouldTrackIndividually(metric.id) },
-            set: { settings.setTrackIndividually(metric.id, enabled: $0) }
+            set: { setIndividuallyTracked(metric.id, $0) }
         ))) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: Spacing.xs) {
@@ -841,4 +851,5 @@ private struct IndividualTrackingStatePill: View {
             metricSelection: MetricSelectionState()
         )
     }
+    .environmentObject(ConfigurationProtectionManager())
 }

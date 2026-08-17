@@ -821,6 +821,12 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportResult._0.hadTerminalRangeFailure` | boolean |
 | `$.macExportResult._0.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.macExportResult._0.jobID` | string |
+| `$.macExportResult._0.partialFailures` | array |
+| `$.macExportResult._0.partialFailures[]` | object |
+| `$.macExportResult._0.partialFailures[].dataType` | string |
+| `$.macExportResult._0.partialFailures[].date` | integer |
+| `$.macExportResult._0.partialFailures[].dateRangeDescription` | string |
+| `$.macExportResult._0.partialFailures[].errorDescription` | string |
 | `$.macExportResult._0.status` | string |
 | `$.macExportResult._0.successCount` | integer |
 | `$.macExportResult._0.totalCount` | integer |
@@ -2063,6 +2069,12 @@ This inventory is generated from production API/control serialization and every 
 | `$.hadTerminalRangeFailure` | boolean |
 | `$.isTotalFilesWrittenAuthoritative` | boolean |
 | `$.jobID` | string |
+| `$.partialFailures` | array |
+| `$.partialFailures[]` | object |
+| `$.partialFailures[].dataType` | string |
+| `$.partialFailures[].date` | integer |
+| `$.partialFailures[].dateRangeDescription` | string |
+| `$.partialFailures[].errorDescription` | string |
 | `$.status` | string |
 | `$.successCount` | integer |
 | `$.totalCount` | integer |
