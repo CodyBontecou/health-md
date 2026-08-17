@@ -58,6 +58,7 @@ struct ExportTabView: View {
     @State private var showClinicianReport = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
+    @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
@@ -139,6 +140,27 @@ struct ExportTabView: View {
                 Button("Done", role: .cancel) { }
             } message: {
                 Text("\(ExportRolloutCopy.rollupSummariesHelp)\n\n\(ExportRolloutCopy.pluginCompatibilityHelp)")
+            }
+            .alert(
+                "Confirm Large Export",
+                isPresented: isPresentingLargeExportConfirmation
+            ) {
+                Button("Export Anyway") {
+                    pendingLargeExportConfirmation = nil
+                    onExportTapped()
+                }
+                .accessibilityIdentifier(AccessibilityID.Export.largeExportConfirmationConfirmButton)
+
+                Button("Cancel", role: .cancel) {
+                    pendingLargeExportConfirmation = nil
+                }
+                .accessibilityIdentifier(AccessibilityID.Export.largeExportConfirmationCancelButton)
+            } message: {
+                // SwiftUI alert titles cannot carry accessibility identifiers;
+                // UI tests match this alert by its localized title text, as with
+                // the other alerts in this view.
+                Text(largeExportConfirmationMessage)
+                    .accessibilityIdentifier(AccessibilityID.Export.largeExportConfirmationMessage)
             }
             .onChange(of: exportStatusMessage) { oldValue, newValue in
                 if !newValue.isEmpty && newValue != oldValue {
@@ -1371,7 +1393,7 @@ struct ExportTabView: View {
     }
 
     private var pearlExportButton: some View {
-        Button(action: onExportTapped) {
+        Button(action: handleExportButtonTapped) {
             HStack(spacing: Spacing.s2) {
                 if isExporting {
                     ProgressView()
@@ -1438,6 +1460,61 @@ struct ExportTabView: View {
 
     private var previewNeedsHealthPermission: Bool {
         !healthKitManager.isAuthorized
+    }
+
+    // MARK: - Large Export Confirmation
+
+    /// Guards only the interactive Export tab button. When setup is incomplete
+    /// the tap routes to the missing setup step, so no scale confirmation is
+    /// needed. Scheduled, shortcut, CLI, preview, and programmatic export paths
+    /// never pass through this handler.
+    private func handleExportButtonTapped() {
+        guard canExport else {
+            onExportTapped()
+            return
+        }
+
+        let verdict = ExportScaleGuard.verdict(
+            startDate: startDate,
+            endDate: endDate,
+            granularDataEnabled: advancedSettings.effectiveGranularDataEnabled,
+            formatCount: advancedSettings.exportFormats.count,
+            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
+        )
+
+        switch verdict {
+        case .proceed:
+            onExportTapped()
+        case .confirm(let scale):
+            pendingLargeExportConfirmation = scale
+        }
+    }
+
+    private var isPresentingLargeExportConfirmation: Binding<Bool> {
+        Binding(
+            get: { pendingLargeExportConfirmation != nil },
+            set: { isPresented in
+                if !isPresented { pendingLargeExportConfirmation = nil }
+            }
+        )
+    }
+
+    private var largeExportConfirmationMessage: String {
+        guard let scale = pendingLargeExportConfirmation else {
+            return ""
+        }
+
+        let scaleSummary: String
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
+        } else {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
+        }
+
+        guard scale.includesGranularData else { return scaleSummary }
+
+        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.")
+        return scaleSummary + "\n\n" + granularWarning
     }
 
     private var previewRequirementsMessage: String {

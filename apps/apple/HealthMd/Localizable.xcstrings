@@ -119275,6 +119275,61 @@
           }
         }
       }
+    },
+    "Confirm Large Export": {
+      "comment": "Export tab alert title confirming a large interactive export",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm Large Export"
+          }
+        }
+      }
+    },
+    "Export Anyway": {
+      "comment": "Confirm button in the large interactive export confirmation alert",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Anyway"
+          }
+        }
+      }
+    },
+    "This export covers %lld days and writes about %lld files. Exports this large can take a long time to finish.": {
+      "comment": "Scale summary in the large interactive export confirmation alert",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This export covers %1$lld days and writes about %2$lld files. Exports this large can take a long time to finish."
+          }
+        }
+      }
+    },
+    "This export covers %lld days and updates about %lld daily notes. Exports this large can take a long time to finish.": {
+      "comment": "Scale summary in the large export confirmation alert while Daily Notes Only is enabled",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This export covers %1$lld days and updates about %2$lld daily notes. Exports this large can take a long time to finish."
+          }
+        }
+      }
+    },
+    "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.": {
+      "comment": "Stronger warning shown in the large export confirmation alert when Lossless Health Records is enabled",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
