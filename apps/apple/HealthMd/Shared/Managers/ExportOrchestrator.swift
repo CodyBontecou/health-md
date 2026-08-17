@@ -181,6 +181,7 @@ struct ExportOrchestrator {
                 successCount: payload.successCount,
                 totalCount: payload.totalCount,
                 failedDateDetails: payload.failedDateDetails,
+                partialFailures: payload.partialFailures ?? [],
                 formatsPerDate: payload.formatsPerDate,
                 // Supplying explicit zero avoids also applying the legacy formats-per-day
                 // estimate when the payload has no category breakdown.
@@ -558,6 +559,7 @@ struct ExportOrchestrator {
                     frozenSettingsSnapshot: operationSettingsSnapshot,
                     preparedExport: preparedExport
                 )
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }
@@ -1154,6 +1156,7 @@ struct ExportOrchestrator {
                     frozenSettingsSnapshot: frozenSettingsSnapshot,
                     preparedExport: preparedExport
                 )
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 if !settings.archiveModeEnabled && !settings.dailyNotesOnlyModeEnabled {
                     shouldWriteDataDictionary = false
                 }

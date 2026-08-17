@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "f5d473119e8d2a1509fcbab20146151cc7b8a4c6",
+  "docs_reference_git_tree": "282dfe9362de78e74cf1eaa969fe12b2393d6a5b",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "ab6811e63adb1db5f745dddb3c30d55d698051af76432e2fba6431c1f5e1f434",
+    "digest": "dc522837d2186d07aa07e953d6de5c45a28aa555b85b90c3cf4476d8383b5040",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -108,8 +108,8 @@
     },
     {
       "path": "connected-mac-iphone-protocol.md",
-      "bytes": 22452,
-      "sha256": "81d5276183159d102e1b37762c140b14c4dfb7b04919fa442c725a35d41a80ec",
+      "bytes": 22858,
+      "sha256": "a2f68363a3cdd42ee444e5eed62ab1f4047297a17f86e5eca30b1d20122b6f7c",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/connected-mac-iphone-protocol/",
@@ -368,8 +368,8 @@
     },
     {
       "path": "generated/automation/mac-export-result-partial.json",
-      "bytes": 741,
-      "sha256": "d210439620674c62fc1a8d117b26fa796312d77c4dbdd90340a7b0a9ef0a72bf",
+      "bytes": 1034,
+      "sha256": "f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -388,8 +388,8 @@
     },
     {
       "path": "generated/automation/manifest.json",
-      "bytes": 5847,
-      "sha256": "0a4b03f70c719e77f244a66047197f793c01cfcff8aa5d47fb96c94563c4f82d",
+      "bytes": 5848,
+      "sha256": "f8ef648e12452f2a15ca7c979ad2bd74124d837145000aa32876a4e432a4de58",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -398,8 +398,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 121207,
-      "sha256": "7720764237c671bc7b93017f21e86dbd4d3d10835779b151d1df2e6104522204",
+      "bytes": 121841,
+      "sha256": "843caefc8c50ecc26679444de921a5916bbba659cf5fc42925a831d14bf79fb5",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -1247,8 +1247,8 @@
     },
     {
       "path": "public/reference/generated/automation/mac-export-result-partial.json",
-      "bytes": 741,
-      "sha256": "d210439620674c62fc1a8d117b26fa796312d77c4dbdd90340a7b0a9ef0a72bf",
+      "bytes": 1034,
+      "sha256": "f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-result-partial.json"
     },
@@ -1261,15 +1261,15 @@
     },
     {
       "path": "public/reference/generated/automation/manifest.json",
-      "bytes": 5847,
-      "sha256": "0a4b03f70c719e77f244a66047197f793c01cfcff8aa5d47fb96c94563c4f82d",
+      "bytes": 5848,
+      "sha256": "f8ef648e12452f2a15ca7c979ad2bd74124d837145000aa32876a4e432a4de58",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 121207,
-      "sha256": "7720764237c671bc7b93017f21e86dbd4d3d10835779b151d1df2e6104522204",
+      "bytes": 121841,
+      "sha256": "843caefc8c50ecc26679444de921a5916bbba659cf5fc42925a831d14bf79fb5",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
@@ -1730,8 +1730,8 @@
     },
     {
       "path": "src/content/docs/reference/connected-mac-iphone-protocol.md",
-      "bytes": 22824,
-      "sha256": "fe1d1861d84b98fd9cf138ec16c5283ca1e807a15a746dac922081c4cafca3cf",
+      "bytes": 23230,
+      "sha256": "4d71d572c9992d8d0f96bde46d4edcc33f40a13470cd597641b6f7d91965621c",
       "classification": "rendered-page",
       "route": "/docs/reference/connected-mac-iphone-protocol/"
     },
@@ -1765,15 +1765,15 @@
     },
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
-      "bytes": 6751,
-      "sha256": "1cc1caf96847e3d10a59ada6b21a9811ab68a61ee48916132908c98ed705ed97",
+      "bytes": 6752,
+      "sha256": "b9759d93c1fa2f00214137011f864330f4dc287ecda683338d4f66a6d337e93a",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 121410,
-      "sha256": "eead8ab92ba4a197111af823a82020971de4302a32ce1215cf3f81d1c38868a6",
+      "bytes": 122044,
+      "sha256": "fbbface9a31b8237c1146fe3aad7a0a2dc64a1e51595e49d8a4dd36a716c97ad",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1842,8 +1842,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/index.md",
-      "bytes": 19629,
-      "sha256": "b84481cf48be5a71048044ce9f76275f25a9391f26b1335ef15c55bef4d4715a",
+      "bytes": 19630,
+      "sha256": "8867d5ebc340d3cf9cb0c0e1bc410f22d4078324f8c60e79056dcdcc9080ebbb",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },

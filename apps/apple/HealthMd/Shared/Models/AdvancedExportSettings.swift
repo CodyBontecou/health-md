@@ -758,10 +758,19 @@ class AdvancedExportSettings: ObservableObject {
         let removedMetricsUnavailableInCurrentBuild =
             metricSelection.removeMetricsUnavailableInCurrentBuild()
 
+        // Re-select metrics that are individually tracked but were left out of
+        // the export metric selection. Unselected metrics are filtered from
+        // HealthData before individual entries are extracted, so such configs
+        // can never produce files in any mode. Authorization-protective
+        // migrations above have already run; sync itself honors their
+        // authorization boundaries and never resurrects gated selections.
+        let restoredTrackedMetricSelection = syncMetricSelectionWithIndividualTracking()
+
         // Persist migrated metricSelection immediately so future launches never
         // fall back to legacy dataTypes or reopen unavailable selectors implicitly.
         if migratedMetricSelectionFromLegacyDataTypes || removedUnauthorizedMedicationMetrics ||
-            removedLegacyVerifiableClinicalRecords || removedMetricsUnavailableInCurrentBuild {
+            removedLegacyVerifiableClinicalRecords || removedMetricsUnavailableInCurrentBuild ||
+            restoredTrackedMetricSelection {
             saveMetricSelection()
         }
         if removedIndividualTrackingMetricsUnavailableInCurrentBuild {
@@ -774,7 +783,7 @@ class AdvancedExportSettings: ObservableObject {
             saveFormats()
             userDefaults.removeObject(forKey: formatKey)
         }
-        
+
         // Subscribe to nested ObservableObject changes so internal mutations
         // (e.g. toggling a metric) are persisted to UserDefaults.
         // didSet only fires when the entire object reference is reassigned,
@@ -797,6 +806,13 @@ class AdvancedExportSettings: ObservableObject {
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
                 self?.saveMetricSelection()
+                // Deselecting a metric in the Health Metrics picker must also
+                // stop its individual tracking; otherwise tracking configs keep
+                // querying a metric that daily exports no longer include until
+                // another tracking change or app reload reconciles them.
+                if self?.syncIndividualTrackingWithMetricSelection() == true {
+                    self?.saveIndividualTracking()
+                }
             }
     }
     
@@ -805,6 +821,12 @@ class AdvancedExportSettings: ObservableObject {
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
+                // Unselected metrics are filtered out of HealthData before
+                // individual entries are extracted, so keep the selection
+                // consistent with any tracked metric while persisting.
+                if self?.syncMetricSelectionWithIndividualTracking() == true {
+                    self?.saveMetricSelection()
+                }
                 self?.saveIndividualTracking()
             }
     }
@@ -971,6 +993,72 @@ class AdvancedExportSettings: ObservableObject {
 
     var writesIndividualEntryFiles: Bool {
         effectiveFileExportMode == .standard && individualTracking.globalEnabled
+    }
+
+    // MARK: - Individual Tracking / Metric Selection Coupling
+
+    /// Sets individual tracking for one metric while keeping the export metric
+    /// selection consistent. A metric tracked individually must also be selected
+    /// for the daily export: unselected metrics are filtered out of HealthData
+    /// before individual entries are extracted, so tracking without selection
+    /// can never produce files.
+    func setIndividuallyTracked(_ metricID: String, enabled: Bool) {
+        individualTracking.setTrackIndividually(metricID, enabled: enabled)
+        if enabled {
+            metricSelection.setMetric(metricID, enabled: true)
+        }
+    }
+
+    /// Unions every individually tracked metric into the export metric
+    /// selection. Only runs while individual tracking is globally enabled;
+    /// dormant configurations while the feature is off stay untouched.
+    /// Authorization-gated metrics (medications before their per-object grant,
+    /// Verifiable Clinical Records) are never resurrected by tracking configs —
+    /// users opt into those explicitly, and export-time warnings guide them.
+    /// Returns whether any selection change was made.
+    @discardableResult
+    func syncMetricSelectionWithIndividualTracking() -> Bool {
+        guard individualTracking.globalEnabled else { return false }
+        var excludedMetricIDs = Set(["verifiable_clinical_records"])
+        for category in HealthMetricCategory.allCases where category.requiresSeparateAuthorization {
+            excludedMetricIDs.formUnion(HealthMetrics.byCategory[category]?.map(\.id) ?? [])
+        }
+        if userDefaults.bool(forKey: medicationAuthorizationRequestedKey),
+           let medicationMetricIDs = HealthMetrics.byCategory[.medications]?.map(\.id) {
+            excludedMetricIDs.subtract(medicationMetricIDs)
+        }
+        let trackedMetricIDs = Set(
+            individualTracking.metricConfigs
+                .filter { $0.value.trackIndividually }
+                .map(\.key)
+        )
+        .intersection(HealthMetrics.availableMetricIDsInCurrentBuild)
+        .subtracting(excludedMetricIDs)
+        let missingMetricIDs = trackedMetricIDs.subtracting(metricSelection.enabledMetrics)
+        guard !missingMetricIDs.isEmpty else { return false }
+        for metricID in missingMetricIDs {
+            metricSelection.setMetric(metricID, enabled: true)
+        }
+        return true
+    }
+
+    /// Reverse reconciliation: a metric deselected from the daily export must
+    /// stop being individually tracked, so persisted tracking configs never
+    /// reference metrics the export no longer queries.
+    @discardableResult
+    func syncIndividualTrackingWithMetricSelection() -> Bool {
+        guard individualTracking.globalEnabled else { return false }
+        let removedMetricIDs = Set(
+            individualTracking.metricConfigs
+                .filter { $0.value.trackIndividually }
+                .map(\.key)
+        )
+        .subtracting(metricSelection.enabledMetrics)
+        guard !removedMetricIDs.isEmpty else { return false }
+        for metricID in removedMetricIDs {
+            individualTracking.metricConfigs[metricID]?.trackIndividually = false
+        }
+        return true
     }
 
     var writesExternalProviderSidecars: Bool {

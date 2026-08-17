@@ -803,7 +803,10 @@ struct ExportTabView: View {
                 NavigationLink {
                     IndividualTrackingView(
                         settings: advancedSettings.individualTracking,
-                        metricSelection: advancedSettings.metricSelection
+                        metricSelection: advancedSettings.metricSelection,
+                        setIndividuallyTracked: { metricID, enabled in
+                            advancedSettings.setIndividuallyTracked(metricID, enabled: enabled)
+                        }
                     )
                 } label: {
                     inlineNavigationRowLabel(

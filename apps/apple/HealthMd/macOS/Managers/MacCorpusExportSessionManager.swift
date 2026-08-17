@@ -187,6 +187,10 @@ final class MacCorpusExportSessionManager {
         var externalRecordFileCount: Int
         var dailyNoteUpdateCount: Int?
         var dailyNoteSkipCount: Int?
+        /// Write-side warnings (individual-entry coverage gaps under lossless
+        /// records) collected across the session and replayed in the terminal
+        /// result payload. Optional so earlier journals decode unchanged.
+        var individualEntryCoverageGaps: [ExportPartialFailure]? = nil
         /// Canonical strict-raw retained-day result survives payload spool cleanup and restart.
         var strictRawRetainedDayCount: Int? = nil
         /// Optional so journals created before one-time dictionary tracking decode unchanged.
@@ -1799,6 +1803,9 @@ final class MacCorpusExportSessionManager {
                             (session.journal.dailyNoteUpdateCount ?? 0) + writeResult.dailyNoteUpdatedCount
                         session.journal.dailyNoteSkipCount =
                             (session.journal.dailyNoteSkipCount ?? 0) + writeResult.dailyNoteSkippedCount
+                        session.journal.individualEntryCoverageGaps =
+                            (session.journal.individualEntryCoverageGaps ?? [])
+                            + writeResult.individualEntryCoverageGaps
 
                         if settings.dailyNotesOnlyModeEnabled {
                             switch writeResult.dailyNoteResult {
@@ -3721,6 +3728,7 @@ final class MacCorpusExportSessionManager {
             dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
             dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0,
             failedDateDetails: session.journal.failedDateDetails,
+            partialFailures: session.journal.individualEntryCoverageGaps ?? [],
             completedDates: Array(Set(session.journal.completedDates)).sorted(),
             destinationDisplayName: nil,
             destinationPathForDisplay: nil,
