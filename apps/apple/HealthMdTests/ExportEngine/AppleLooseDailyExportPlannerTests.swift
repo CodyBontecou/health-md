@@ -905,6 +905,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             defaults: defaults,
             fileSystem: fileSystem,
             bookmarkResolver: resolver,
+            identityProbe: FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         Self.retainedManagers.append(manager)
