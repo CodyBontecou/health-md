@@ -21,6 +21,11 @@ enum APIExportSettingsPersistenceError: LocalizedError, Equatable {
 /// User-configurable destination for direct iOS API exports.
 @MainActor
 final class APIExportSettings: ObservableObject {
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes on older iOS runtimes when the last release happened off
+    // the main actor. Matches the AdvancedExportSettings convention.
+    nonisolated deinit {}
     static let endpointURLStorageKey = "apiExport.endpointURL"
     private static let bearerTokenKeychainKey = "apiExport.bearerToken"
 
