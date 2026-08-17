@@ -1578,7 +1578,7 @@ mod tests {
         assert_eq!(info.registry_version, 1);
         assert_eq!(info.render_input_version, 1);
         assert_eq!(info.artifact_plan_version, 1);
-        assert_eq!(info.render_profile_revision, 1);
+        assert_eq!(info.render_profile_revision, 2);
         assert_eq!(info.persisted_state_version, 1);
         assert!(self_test.passed);
         assert_eq!(self_test.build_info, info);
@@ -1661,6 +1661,24 @@ mod tests {
         assert!(merged.contains("user: keep"));
         assert!(merged.contains("## Sleep\nnew"));
         assert!(!merged.contains("## Sleep\nold"));
+
+        let nested = merge_rendered_markdown(
+            "---\ntags:\n  - personal\nkeep: unchanged\n---\n## Sleep\nold\n## Notes\nkeep\n",
+            "---\ntags:\n  - healthmd\n---\n## Sleep\nnew\n",
+        )
+        .expect("legacy Apple overload must use the profile merger");
+        assert_eq!(
+            nested,
+            "---\ntags:\n  - healthmd\nkeep: unchanged\n---\n## Sleep\nnew\n## Notes\nkeep\n"
+        );
+
+        assert_eq!(
+            merge_rendered_markdown(
+                "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\n",
+                "---\nsteps: 300\n---\n",
+            ),
+            Err(HealthmdRenderError::InvalidArtifact)
+        );
     }
 
     #[test]

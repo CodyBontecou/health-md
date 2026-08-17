@@ -3,19 +3,25 @@ package com.healthmd.presentation.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,19 +36,27 @@ import com.healthmd.presentation.common.*
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.widget.setup.WidgetSettingsCard
+import com.healthmd.wear.WearSettingsCard
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
+    protectionSettingsRequestId: Long? = null,
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToDirectCli: () -> Unit = {},
     onNavigateToSharedSetup: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
+    val protectionEnabled by viewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val protectionRequester = remember { BringIntoViewRequester() }
+
+    LaunchedEffect(protectionSettingsRequestId) {
+        if (protectionSettingsRequestId != null) protectionRequester.bringIntoView()
+    }
 
     Column(
         modifier = Modifier
@@ -81,6 +95,46 @@ fun SettingsScreen(
             }
         }
 
+        GeistCard(
+            modifier = Modifier
+                .bringIntoViewRequester(protectionRequester)
+                .testTag(ConfigurationProtectionTestTags.SECTION),
+        ) {
+            SectionLabel(stringResource(R.string.configuration_protection_title))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.configuration_protection_toggle),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppColors.textPrimary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        stringResource(R.string.configuration_protection_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textMuted,
+                    )
+                }
+                Switch(
+                    checked = protectionEnabled == true,
+                    onCheckedChange = viewModel::setPreventAccidentalChanges,
+                    enabled = protectionEnabled != null,
+                    modifier = Modifier.testTag(ConfigurationProtectionTestTags.TOGGLE),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = AppColors.onAccent,
+                        checkedTrackColor = AppColors.accent,
+                        uncheckedThumbColor = AppColors.textMuted,
+                        uncheckedTrackColor = AppColors.bgSecondary,
+                        uncheckedBorderColor = AppColors.borderDefault,
+                    ),
+                )
+            }
+        }
+
         // Premium upgrade (show at top for free users)
         if (!isPurchased) {
             GeistCardClickable(onClick = onNavigateToPaywall) {
@@ -115,6 +169,7 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         WidgetSettingsCard()
+        WearSettingsCard()
 
         GeistCardClickable(onClick = onNavigateToSharedSetup) {
             Icon(

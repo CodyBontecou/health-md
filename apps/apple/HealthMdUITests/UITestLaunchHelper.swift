@@ -33,6 +33,8 @@ enum UITestLaunchHelper {
         static let customEndDatePicker = "export.dateRange.custom.endDate"
         static let pathPreview = "export.pathPreview"
         static let activityBanner = "export.activityBanner"
+        static let filenameEditorButton = "export.filenameEditorButton"
+        static let outputEditorSaveButton = "export.outputEditorSaveButton"
     }
 
     enum ExportModal {
@@ -70,6 +72,13 @@ enum UITestLaunchHelper {
         static let syncToggle = "sync.syncToggle"
         static let connectionStatus = "sync.connectionStatus"
         static let manualSyncButton = "sync.manualSyncButton"
+    }
+
+    enum ConfigurationProtection {
+        static let toggle = "configurationProtection.toggle"
+        static let section = "configurationProtection.section"
+        static let protectedRegion = "configurationProtection.protectedRegion"
+        static let toast = "configurationProtection.toast"
     }
 
     enum Status {
@@ -115,6 +124,7 @@ enum UITestLaunchHelper {
         freeExportsUsed: Int = 0,
         syncState: String = "disconnected",
         scheduleEnabled: Bool = false,
+        configurationProtectionEnabled: Bool = false,
         useHealthKitExportPreviewFixtures: Bool = false,
         exportResult: String? = nil,
         macExportStatus: String = "none",
@@ -134,6 +144,7 @@ enum UITestLaunchHelper {
             "UITEST_FREE_EXPORTS_USED": "\(freeExportsUsed)",
             "UITEST_SYNC_STATE": syncState,
             "UITEST_SCHEDULE_ENABLED": scheduleEnabled ? "true" : "false",
+            "UITEST_CONFIGURATION_PROTECTION_ENABLED": configurationProtectionEnabled ? "true" : "false",
             "UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES": useHealthKitExportPreviewFixtures ? "true" : "false",
             "UITEST_MAC_EXPORT_STATUS": macExportStatus,
             "UITEST_MAC_DESTINATION_PATH": macDestinationPath,

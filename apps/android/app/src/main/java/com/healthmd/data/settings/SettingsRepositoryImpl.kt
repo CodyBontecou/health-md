@@ -48,6 +48,8 @@ class SettingsRepositoryImpl(
         val SHARED_SETUP_UNDO = stringPreferencesKey("shared_setup_undo_v1")
         val SHARED_SETUP_PENDING_ENDPOINT = stringPreferencesKey("shared_setup_pending_endpoint_v1")
         val SHARED_SETUP_PRESERVED_APPLE_EXTENSION = stringPreferencesKey("shared_setup_preserved_apple_extension_v1")
+
+        val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
@@ -209,6 +211,15 @@ class SettingsRepositoryImpl(
         if (value == null) prefs.remove(key) else prefs[key] = value
     }
 
+    override val preventAccidentalChanges: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] ?: false
+    }
+
+    override suspend fun setPreventAccidentalChanges(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] = enabled
+        }
+    }
     override val exportFolderUri: Flow<String?> = dataStore.data.map { prefs ->
         prefs[Keys.EXPORT_FOLDER_URI]
     }

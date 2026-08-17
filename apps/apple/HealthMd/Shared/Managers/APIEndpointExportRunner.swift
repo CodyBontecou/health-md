@@ -1247,7 +1247,7 @@ struct APIEndpointExportRunner {
         await diagnosticSink(.rustRenderFailed(ShadowExportFailureDiagnostic(
             profile: AppleExportEnginePin.profileID,
             semanticProfileRevision: pin?.semanticProfileRevision ?? 1,
-            renderProfileRevision: pin?.renderProfileRevision ?? 1,
+            renderProfileRevision: pin?.renderProfileRevision ?? 2,
             kind: .rustRenderFailed
         )))
     }

@@ -107,11 +107,19 @@ fun ExportScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val protection = LocalConfigurationProtection.current
+    val attemptConfigurationChange: (() -> Unit) -> Unit = { action ->
+        if (protection.enabled) protection.onBlockedChange() else action()
+    }
     val apiConfigurationErrorText = uiState.apiConfigurationError?.localizedText()
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
-    ) { uri -> uri?.let { viewModel.onFolderSelected(it) } }
+    ) { uri ->
+        uri?.let {
+            attemptConfigurationChange { viewModel.onFolderSelected(it) }
+        }
+    }
 
     val healthConnectManager = remember { HealthConnectManager(context) }
     val healthConnectIntentLauncher = remember { HealthConnectIntentLauncher(context) }
@@ -175,6 +183,9 @@ fun ExportScreen(
 
     val launchHealthPermissionRequest: (Set<String>, Set<String>) -> Unit =
         { permissions, requiredPermissions ->
+            if (protection.enabled) {
+                protection.onBlockedChange()
+            } else {
             viewModel.clearHealthConnectActionError()
             pendingPermissionRequest = permissions
             pendingRequiredPermissions = requiredPermissions
@@ -189,19 +200,28 @@ fun ExportScreen(
                     }
                 )
             }
+            }
         }
 
     val openHealthConnectSettings: () -> Unit = {
+        if (protection.enabled) {
+            protection.onBlockedChange()
+        } else {
         viewModel.clearHealthConnectActionError()
         if (healthConnectIntentLauncher.openSettings() == HealthConnectLaunchResult.FAILED) {
             viewModel.reportHealthConnectActionError(HealthConnectActionError.SETTINGS_LAUNCH_FAILED)
         }
+        }
     }
 
     val openHealthConnectInstall: () -> Unit = {
+        if (protection.enabled) {
+            protection.onBlockedChange()
+        } else {
         viewModel.clearHealthConnectActionError()
         if (healthConnectIntentLauncher.openInstallOrUpdate() == HealthConnectLaunchResult.FAILED) {
             viewModel.reportHealthConnectActionError(HealthConnectActionError.INSTALL_LAUNCH_FAILED)
+        }
         }
     }
 
@@ -616,34 +636,42 @@ fun ExportScreen(
             )
         }
 
+        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         DateRangeSelectionSection(
             selectedOption = selectedDateRangeOption,
             startDate = uiState.startDate,
             endDate = uiState.endDate,
             onOptionSelected = { option ->
-                selectedDateRangeOption = option
-                when (option) {
-                    DateRangeOption.Today -> {
-                        val today = LocalDate.now()
-                        viewModel.setDateRange(today, today)
+                attemptConfigurationChange {
+                    selectedDateRangeOption = option
+                    when (option) {
+                        DateRangeOption.Today -> {
+                            val today = LocalDate.now()
+                            viewModel.setDateRange(today, today)
+                        }
+                        DateRangeOption.Yesterday -> {
+                            val yesterday = LocalDate.now().minusDays(1)
+                            viewModel.setDateRange(yesterday, yesterday)
+                        }
+                        DateRangeOption.AllTime -> viewModel.selectAllTime()
+                        DateRangeOption.Custom -> viewModel.setDateRange(uiState.startDate, uiState.endDate)
                     }
-                    DateRangeOption.Yesterday -> {
-                        val yesterday = LocalDate.now().minusDays(1)
-                        viewModel.setDateRange(yesterday, yesterday)
-                    }
-                    DateRangeOption.AllTime -> viewModel.selectAllTime()
-                    DateRangeOption.Custom -> viewModel.setDateRange(uiState.startDate, uiState.endDate)
                 }
             },
             onStartDateClick = {
-                selectedDateRangeOption = DateRangeOption.Custom
-                showStartDatePicker = true
+                attemptConfigurationChange {
+                    selectedDateRangeOption = DateRangeOption.Custom
+                    showStartDatePicker = true
+                }
             },
             onEndDateClick = {
-                selectedDateRangeOption = DateRangeOption.Custom
-                showEndDatePicker = true
+                attemptConfigurationChange {
+                    selectedDateRangeOption = DateRangeOption.Custom
+                    showEndDatePicker = true
+                }
             },
         )
+        }
 
         val apiFormatLabel = if (uiState.settings.exportMode == ExportMode.RAW_SNAPSHOT) {
             stringResource(
@@ -656,6 +684,7 @@ fun ExportScreen(
         } else {
             stringResource(R.string.format_display_json)
         }
+        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         ExportTargetSelector(
             selectedTarget = uiState.selectedTarget,
             folderSubtitle = uiState.folderName?.let {
@@ -673,36 +702,42 @@ fun ExportScreen(
                 stringResource(R.string.export_target_api_json_unconfigured_subtitle)
             },
             onTargetSelected = { target ->
-                viewModel.setExportTarget(target)
-                if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
-                    showAPISettings = true
+                attemptConfigurationChange {
+                    viewModel.setExportTarget(target)
+                    if (target == ExportTarget.API_ENDPOINT && !uiState.apiEndpointConfigured) {
+                        showAPISettings = true
+                    }
                 }
             },
         )
+        }
 
         ExportConfigurationSection(
             settings = uiState.settings,
             previewDate = uiState.startDate,
-            onExportModeChanged = viewModel::setExportMode,
-            onRawExportFormatChanged = viewModel::setRawExportFormat,
-            onRawScopeChanged = viewModel::setRawSnapshotScope,
-            onRawIncludeExerciseRoutesChanged = viewModel::setRawIncludeExerciseRoutes,
-            onToggleExportFormat = viewModel::toggleExportFormat,
-            onWriteModeChanged = viewModel::updateWriteMode,
-            onFilenameFormatChanged = viewModel::updateFilenameFormat,
-            onSubfolderChanged = viewModel::updateSubfolder,
-            onFolderOrganizationChanged = viewModel::updateFolderOrganization,
-            onFolderStructureChanged = viewModel::updateFolderStructure,
-            onIncludeMetadataChanged = viewModel::updateIncludeMetadata,
-            onGroupByCategoryChanged = viewModel::updateGroupByCategory,
-            onUseEmojiChanged = viewModel::updateUseEmoji,
-            onUnitPreferenceChanged = viewModel::updateUnitPreference,
+            onExportModeChanged = { value -> attemptConfigurationChange { viewModel.setExportMode(value) } },
+            onRawExportFormatChanged = { value -> attemptConfigurationChange { viewModel.setRawExportFormat(value) } },
+            onRawScopeChanged = { value -> attemptConfigurationChange { viewModel.setRawSnapshotScope(value) } },
+            onRawIncludeExerciseRoutesChanged = { value -> attemptConfigurationChange { viewModel.setRawIncludeExerciseRoutes(value) } },
+            onToggleExportFormat = { value -> attemptConfigurationChange { viewModel.toggleExportFormat(value) } },
+            onWriteModeChanged = { value -> attemptConfigurationChange { viewModel.updateWriteMode(value) } },
+            onFilenameFormatChanged = { value -> attemptConfigurationChange { viewModel.updateFilenameFormat(value) } },
+            onSubfolderChanged = { value -> attemptConfigurationChange { viewModel.updateSubfolder(value) } },
+            onFolderOrganizationChanged = { value -> attemptConfigurationChange { viewModel.updateFolderOrganization(value) } },
+            onFolderStructureChanged = { value -> attemptConfigurationChange { viewModel.updateFolderStructure(value) } },
+            onIncludeMetadataChanged = { value -> attemptConfigurationChange { viewModel.updateIncludeMetadata(value) } },
+            onGroupByCategoryChanged = { value -> attemptConfigurationChange { viewModel.updateGroupByCategory(value) } },
+            onUseEmojiChanged = { value -> attemptConfigurationChange { viewModel.updateUseEmoji(value) } },
+            onUnitPreferenceChanged = { value -> attemptConfigurationChange { viewModel.updateUnitPreference(value) } },
             onNavigateToAdvancedSettings = onNavigateToAdvancedSettings,
-            onResetSettings = viewModel::resetSettings,
+            onResetSettings = { attemptConfigurationChange(viewModel::resetSettings) },
         )
 
+        ConfigurationProtectedRegion(modifier = Modifier.fillMaxWidth()) {
         if (uiState.selectedTarget == ExportTarget.DEVICE_FOLDER) {
-            GeistCardClickable(onClick = { folderPickerLauncher.launch(null) }) {
+            GeistCardClickable(onClick = {
+                attemptConfigurationChange { folderPickerLauncher.launch(null) }
+            }) {
                 Icon(
                     Icons.Outlined.Folder,
                     contentDescription = null,
@@ -730,7 +765,9 @@ fun ExportScreen(
                 )
             }
         } else {
-            GeistCardClickable(onClick = { showAPISettings = true }) {
+            GeistCardClickable(onClick = {
+                attemptConfigurationChange { showAPISettings = true }
+            }) {
                 Icon(
                     Icons.Outlined.UploadFile,
                     contentDescription = null,
@@ -805,6 +842,7 @@ fun ExportScreen(
                 )
             }
         }
+        }
 
         if (!uiState.rawProviderSupported || !uiState.rawSelectionReady) {
             GeistCard {
@@ -853,8 +891,10 @@ fun ExportScreen(
                         onDismiss = { viewModel.dismissResult() },
                         onOpenFolder = openExportFolder,
                         onUseFailedRange = { startDate, endDate ->
-                            selectedDateRangeOption = DateRangeOption.Custom
-                            viewModel.setDateRange(startDate, endDate)
+                            attemptConfigurationChange {
+                                selectedDateRangeOption = DateRangeOption.Custom
+                                viewModel.setDateRange(startDate, endDate)
+                            }
                         },
                     )
                 }
@@ -1017,9 +1057,17 @@ fun ExportScreen(
                 showAPISettings = false
                 viewModel.clearAPIConfigurationError()
             },
-            onSave = viewModel::saveAPIExportConfiguration,
-            onClearAuthorization = viewModel::clearAPIAuthorization,
-            onClearRequestHeaders = viewModel::clearAPIRequestHeaders,
+            onSave = { endpoint, authorization, headers ->
+                attemptConfigurationChange {
+                    viewModel.saveAPIExportConfiguration(endpoint, authorization, headers)
+                }
+            },
+            onClearAuthorization = {
+                attemptConfigurationChange(viewModel::clearAPIAuthorization)
+            },
+            onClearRequestHeaders = {
+                attemptConfigurationChange(viewModel::clearAPIRequestHeaders)
+            },
         )
     }
 
@@ -1074,11 +1122,13 @@ fun ExportScreen(
             onDismissRequest = { showStartDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { millis ->
-                        selectedDateRangeOption = DateRangeOption.Custom
-                        viewModel.setStartDate(
-                            java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
-                        )
+                    attemptConfigurationChange {
+                        state.selectedDateMillis?.let { millis ->
+                            selectedDateRangeOption = DateRangeOption.Custom
+                            viewModel.setStartDate(
+                                java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                            )
+                        }
                     }
                     showStartDatePicker = false
                 }) { Text(stringResource(R.string.action_set_start_date)) }
@@ -1092,11 +1142,13 @@ fun ExportScreen(
             onDismissRequest = { showEndDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    state.selectedDateMillis?.let { millis ->
-                        selectedDateRangeOption = DateRangeOption.Custom
-                        viewModel.setEndDate(
-                            java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
-                        )
+                    attemptConfigurationChange {
+                        state.selectedDateMillis?.let { millis ->
+                            selectedDateRangeOption = DateRangeOption.Custom
+                            viewModel.setEndDate(
+                                java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                            )
+                        }
                     }
                     showEndDatePicker = false
                 }) { Text(stringResource(R.string.action_set_end_date)) }

@@ -76,6 +76,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Керуйте Premium і підтримкою</string>
+    <string name="configuration_protection_title">Захист від випадкових змін</string>
+    <string name="configuration_protection_toggle">Заблокувати зміни конфігурації</string>
+    <string name="configuration_protection_description">Запобігає випадковій зміні параметрів експорту, синхронізації, розкладу, папок, підключень та інших налаштувань. Ручний експорт залишається доступним.</string>
+    <string name="configuration_protection_blocked_title">Налаштування заблоковано</string>
+    <string name="configuration_protection_blocked_body">Щоб змінити конфігурацію, вимкніть «Захист від випадкових змін» у налаштуваннях.</string>
+    <string name="configuration_protection_blocked_action">Показати, чому зміни конфігурації заблоковано</string>
+    <string name="configuration_protection_open_setting">Відкрити налаштування</string>
     <string name="section_write_mode">Режим запису</string>
     <string name="section_filename_template">Шаблон імені файлу</string>
     <string name="filename_template_hint">{date}</string>
@@ -1486,4 +1493,36 @@
     <string name="shared_setup_confirm_endpoint">Confirm Endpoint and Save Credential</string>
     <string name="shared_setup_open_error">Shared Setup Couldn’t Be Opened</string>
     <string name="shared_setup_done">Done</string>
+    <string name="wear_settings_title">Синхронізація годинника</string>
+    <string name="wear_settings_body">Синхронізуйте мінімальні щоденні підсумки активності, сну, серця, HRV RMSSD і кисню в крові зі спареним годинником. Health.md не вимірює дані здоров’я на годиннику.</string>
+    <string name="wear_settings_sync">Синхронізувати годинник</string>
+    <string name="wear_settings_clear">Очистити дані годинника</string>
+    <string name="wear_settings_source">Джерело здоров’я: %1$s</string>
+    <string name="wear_settings_delivery">Доставка: %1$s · %2$s</string>
+    <string name="wear_settings_attempt">Остання спроба: %1$s · %2$s</string>
+    <string name="wear_settings_ack">Підтвердження годинника #%1$s: %2$s</string>
+    <string name="wear_settings_watch_progress">Підтвердження годинників: %1$d з %2$d</string>
+    <string name="wear_delivery_partial">деякі годинники офлайн; підтверджено %1$s</string>
+    <string name="wear_settings_never">ніколи</string>
+    <string name="wear_settings_unknown_sequence">невідомо</string>
+    <string name="wear_source_ready">Health Connect готовий</string>
+    <string name="wear_source_permission">Потрібен дозвіл Health Connect</string>
+    <string name="wear_source_unavailable">Health Connect недоступний</string>
+    <string name="wear_delivery_reachable">годинник доступний; постійний знімок збережено</string>
+    <string name="wear_delivery_queued">постійний знімок у черзі для офлайн-годинника</string>
+    <string name="wear_delivery_clear_requested">постійний знімок видалено; очікується підтвердження</string>
+    <string name="wear_status_sent">Надіслано на доступний годинник</string>
+    <string name="wear_status_queued">У черзі для офлайн-годинника</string>
+    <string name="wear_status_no_watch">Застосунок спареного годинника не знайдено</string>
+    <string name="wear_status_unreachable">Годинник недоступний</string>
+    <string name="wear_status_permission">Потрібен дозвіл Health Connect</string>
+    <string name="wear_status_unavailable">Health Connect недоступний</string>
+    <string name="wear_status_retry">Помилка синхронізації; повторіть спробу</string>
+    <string name="wear_status_cleared">Запит очищення надіслано</string>
+    <string name="wear_ack_applied">дані збережено</string>
+    <string name="wear_ack_duplicate">уже збережено</string>
+    <string name="wear_ack_out_of_order">старі дані відхилено</string>
+    <string name="wear_ack_invalid">недійсні дані відхилено</string>
+    <string name="wear_ack_version">потрібне оновлення застосунку</string>
+    <string name="wear_ack_deleted">дані очищено</string>
 </resources>

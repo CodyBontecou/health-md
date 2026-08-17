@@ -617,6 +617,9 @@ def validate_render_fixture(root: Path, path: Path) -> None:
     if isinstance(payload, dict) and payload.get("schema") == "healthmd.native_render_requests":
         validate_native_render_requests(path)
         return
+    if isinstance(payload, dict) and payload.get("schema") == "healthmd.markdown_merge_vectors":
+        validate_markdown_merge_vectors(payload)
+        return
     payload = require_exact_keys(
         payload,
         {"schema", "schema_version", "render_input_version", "artifact_plan_version", "registry_sha256", "cases"},
@@ -627,7 +630,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["schema_version"] != 1
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
-        or payload["registry_sha256"] != "1cc9aaf41cb92a2e903487756cf561f0ff44b9518f3ef66d1a45a997f770248d"
+        or payload["registry_sha256"] != "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
@@ -710,6 +713,49 @@ def validate_render_fixture(root: Path, path: Path) -> None:
             total += len(content)
         if plan["total_byte_count"] != total:
             fail(f"{context}.expected_plan: total_byte_count mismatch")
+
+
+def validate_markdown_merge_vectors(payload: object) -> None:
+    payload = require_exact_keys(
+        payload,
+        {"schema", "schema_version", "render_profile_revision", "vectors"},
+        "managed Markdown merge vectors",
+    )
+    if (
+        payload["schema"] != "healthmd.markdown_merge_vectors"
+        or payload["schema_version"] != 1
+        or payload["render_profile_revision"] != 2
+    ):
+        fail("managed Markdown merge vectors: version pins are invalid")
+    vectors = payload.get("vectors")
+    if not isinstance(vectors, list) or not vectors:
+        fail("managed Markdown merge vectors: non-empty vectors are required")
+    identifiers: set[str] = set()
+    for index, vector in enumerate(vectors):
+        context = f"managed Markdown merge vectors[{index}]"
+        vector = require_exact_keys(
+            vector,
+            {"id", "existing", "generated", "preserve_preamble", "outcome", "expected"},
+            context,
+        )
+        identifier = vector.get("id")
+        if not isinstance(identifier, str) or not IDENTIFIER_RE.fullmatch(identifier) or identifier in identifiers:
+            fail(f"{context}.id: invalid or duplicated")
+        identifiers.add(identifier)
+        if not isinstance(vector.get("existing"), str) or not isinstance(vector.get("generated"), str):
+            fail(f"{context}: existing/generated must be strings")
+        if type(vector.get("preserve_preamble")) is not bool:
+            fail(f"{context}.preserve_preamble: must be Boolean")
+        outcome = vector.get("outcome")
+        expected = vector.get("expected")
+        if outcome == "merged":
+            if not isinstance(expected, str):
+                fail(f"{context}.expected: merged vectors require exact bytes")
+        elif outcome == "rejected":
+            if expected is not None:
+                fail(f"{context}.expected: rejected vectors must use null")
+        else:
+            fail(f"{context}.outcome: unsupported value")
 
 
 def validate_native_render_requests(path: Path) -> None:

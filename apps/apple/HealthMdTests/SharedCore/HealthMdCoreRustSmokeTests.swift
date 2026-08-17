@@ -18,7 +18,7 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
         XCTAssertEqual(info.registryVersion, 1)
         XCTAssertEqual(info.renderInputVersion, 1)
         XCTAssertEqual(info.artifactPlanVersion, 1)
-        XCTAssertEqual(info.renderProfileRevision, 1)
+        XCTAssertEqual(info.renderProfileRevision, 2)
         XCTAssertEqual(info.persistedStateVersion, 1)
     }
 
@@ -43,6 +43,26 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
         XCTAssertEqual(snapshot.publicSchemaVersion, 8)
         XCTAssertEqual(snapshot.metrics.count, 230)
         XCTAssertEqual(snapshot.outputs.count, 226)
+    }
+
+    func testLegacyMarkdownMergeUsesAppleProfileAndRejectsAmbiguousYAML() throws {
+        let merged = try service.mergeMarkdown(
+            existing: "---\ntags:\n  - personal\nkeep: unchanged\n---\n## Sleep\nold\n## Notes\nkeep\n",
+            generated: "---\ntags:\n  - healthmd\n---\n## Sleep\nnew\n"
+        )
+        XCTAssertEqual(
+            merged,
+            "---\ntags:\n  - healthmd\nkeep: unchanged\n---\n## Sleep\nnew\n## Notes\nkeep\n"
+        )
+
+        XCTAssertThrowsError(
+            try service.mergeMarkdown(
+                existing: "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\n",
+                generated: "---\nsteps: 300\n---\n"
+            )
+        ) { error in
+            XCTAssertEqual(error as? HealthMdRenderServiceError, .invalidArtifact)
+        }
     }
 
     func testMalformedSyntheticFixtureReturnsStableHealthFreeError() {

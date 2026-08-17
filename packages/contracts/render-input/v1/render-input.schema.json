@@ -21,7 +21,7 @@
         "registry_version": {"const": 1},
         "registry_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "profile_revision": {"const": 1},
-        "render_profile_revision": {"const": 1},
+        "render_profile_revision": {"const": 2},
         "request_id": {"type": "string", "minLength": 1, "maxLength": 128},
         "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
         "profile": {"$ref": "#/$defs/profile"},

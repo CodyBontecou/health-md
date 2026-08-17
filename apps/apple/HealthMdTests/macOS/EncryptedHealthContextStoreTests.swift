@@ -35,6 +35,31 @@ final class EncryptedHealthContextStoreTests: XCTestCase {
         }
     }
 
+    func testSubmillisecondDatesRemainReadableAcrossDigestValidation() async throws {
+        let root = try makeRoot()
+        let store = EncryptedHealthContextStore(
+            rootURL: root,
+            keyProvider: InMemoryHealthContextEncryptionKeyProvider(keyData: fixedKey(0x12))
+        )
+        let preciseStart = Date(timeIntervalSince1970: 1_700_000_000.123456789)
+        let day = makeDay(
+            "2026-04-19",
+            marker: "submillisecond",
+            start: preciseStart
+        )
+
+        try await store.upsert(day)
+
+        let snapshot = try await store.snapshot()
+        XCTAssertEqual(snapshot.entries.count, 1)
+        let loaded = try await store.loadDay(from: snapshot, at: 0)
+        XCTAssertEqual(loaded, day)
+        XCTAssertEqual(
+            try HealthMdQueryCanonicalSerializer.data(for: loaded),
+            try HealthMdQueryCanonicalSerializer.data(for: day)
+        )
+    }
+
     func testCiphertextAndOpaqueFilenamesDoNotLeakPHI() async throws {
         let root = try makeRoot()
         let store = EncryptedHealthContextStore(
@@ -393,9 +418,12 @@ final class EncryptedHealthContextStoreTests: XCTestCase {
         Data(repeating: byte, count: 32)
     }
 
-    private func makeDay(_ ownerDate: String, marker: String) -> HealthMdCompactContextDay {
-        let start = Date(timeIntervalSince1970: 1_700_000_000)
-        return HealthMdCompactContextDay(
+    private func makeDay(
+        _ ownerDate: String,
+        marker: String,
+        start: Date = Date(timeIntervalSince1970: 1_700_000_000)
+    ) -> HealthMdCompactContextDay {
+        HealthMdCompactContextDay(
             ownerDate: ownerDate,
             intervalStart: start,
             intervalEnd: start.addingTimeInterval(86_400),

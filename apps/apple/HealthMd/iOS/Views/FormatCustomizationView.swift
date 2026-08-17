@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FormatCustomizationView: View {
     @ObservedObject var customization: FormatCustomization
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     private var previewDate: Date { Date() }
 
@@ -120,7 +121,9 @@ struct FormatCustomizationView: View {
 
     private var resetButton: some View {
         Button(action: {
-            customization.reset()
+            configurationProtection.performConfigurationChange {
+                customization.reset()
+            }
         }) {
             HStack(spacing: Spacing.xs) {
                 Image(systemName: "arrow.counterclockwise")
@@ -179,12 +182,32 @@ struct FormatCustomizationView: View {
 
 struct FrontmatterCustomizationView: View {
     @ObservedObject var config: FrontmatterConfiguration
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var showAddCustomField = false
     @State private var showAddPlaceholderField = false
     @State private var newFieldKey = ""
     @State private var newFieldValue = ""
     @State private var newPlaceholderKey = ""
     @State private var searchText = ""
+    @State private var renameTargetKey: String?
+    @State private var renameTempKey = ""
+
+    private func startRenaming(originalKey: String, customKey: String) {
+        renameTempKey = customKey
+        renameTargetKey = originalKey
+    }
+
+    private func applyRename(_ newKey: String?) {
+        guard let targetKey = renameTargetKey,
+              let index = config.fields.firstIndex(where: { $0.originalKey == targetKey }) else { return }
+        configurationProtection.performConfigurationChange {
+            if let newKey, !newKey.isEmpty {
+                config.fields[index].customKey = newKey
+            } else {
+                config.fields[index].customKey = config.fields[index].originalKey
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -213,20 +236,26 @@ struct FrontmatterCustomizationView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button("Enable All Fields") {
-                        for index in config.fields.indices {
-                            config.fields[index].isEnabled = true
+                        configurationProtection.performConfigurationChange {
+                            for index in config.fields.indices {
+                                config.fields[index].isEnabled = true
+                            }
                         }
                     }
                     Button("Disable All Fields") {
-                        for index in config.fields.indices {
-                            config.fields[index].isEnabled = false
+                        configurationProtection.performConfigurationChange {
+                            for index in config.fields.indices {
+                                config.fields[index].isEnabled = false
+                            }
                         }
                     }
                     Divider()
                     Menu("Key Style") {
                         ForEach(FrontmatterKeyStyle.allCases, id: \.self) { style in
                             Button {
-                                config.applyKeyStyle(style)
+                                configurationProtection.performConfigurationChange {
+                                    config.applyKeyStyle(style)
+                                }
                             } label: {
                                 HStack {
                                     Text(style.displayName)
@@ -239,7 +268,9 @@ struct FrontmatterCustomizationView: View {
                         }
                     }
                     Button("Reset Names") {
-                        config.applyKeyStyle(.snakeCase)
+                        configurationProtection.performConfigurationChange {
+                            config.applyKeyStyle(.snakeCase)
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -249,42 +280,70 @@ struct FrontmatterCustomizationView: View {
                 .accessibilityHint("Opens actions for frontmatter fields and key styles")
             }
         }
-        .alert("Add Custom Field", isPresented: $showAddCustomField) {
-            TextField("Field name (e.g., tags)", text: $newFieldKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            TextField("Value (e.g., health, daily)", text: $newFieldValue)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                newFieldKey = ""
-                newFieldValue = ""
-            }
-            Button("Add Field") {
-                if !newFieldKey.isEmpty {
-                    config.customFields[newFieldKey] = newFieldValue
+        .geistDialog(
+            isPresented: $showAddCustomField,
+            title: Text("Add Custom Field"),
+            message: Text("Add a custom field that will be included in every export."),
+            actions: [
+                .cancel {
+                    newFieldKey = ""
+                    newFieldValue = ""
+                },
+                .action("Add Field") {
+                    configurationProtection.performConfigurationChange {
+                        if !newFieldKey.isEmpty {
+                            config.customFields[newFieldKey] = newFieldValue
+                        }
+                        newFieldKey = ""
+                        newFieldValue = ""
+                    }
                 }
-                newFieldKey = ""
-                newFieldValue = ""
-            }
-        } message: {
-            Text("Add a custom field that will be included in every export.")
-        }
-        .alert("Add Placeholder Field", isPresented: $showAddPlaceholderField) {
-            TextField("Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                newPlaceholderKey = ""
-            }
-            Button("Add Placeholder") {
-                if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
-                    config.placeholderFields.append(newPlaceholderKey)
+            ],
+            fields: [
+                GeistDialogField(placeholder: "Field name (e.g., tags)", text: $newFieldKey),
+                GeistDialogField(placeholder: "Value (e.g., health, daily)", text: $newFieldValue)
+            ]
+        )
+        .geistDialog(
+            isPresented: $showAddPlaceholderField,
+            title: Text("Add Placeholder Field"),
+            message: Text("Add a field that will export with an empty value for manual entry."),
+            actions: [
+                .cancel {
+                    newPlaceholderKey = ""
+                },
+                .action("Add Placeholder") {
+                    configurationProtection.performConfigurationChange {
+                        if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
+                            config.placeholderFields.append(newPlaceholderKey)
+                        }
+                        newPlaceholderKey = ""
+                    }
                 }
-                newPlaceholderKey = ""
-            }
-        } message: {
-            Text("Add a field that will export with an empty value for manual entry.")
-        }
+            ],
+            fields: [
+                GeistDialogField(placeholder: "Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
+            ]
+        )
+        .geistDialog(
+            isPresented: Binding(
+                get: { renameTargetKey != nil },
+                set: { if !$0 { renameTargetKey = nil } }
+            ),
+            title: Text("Rename Field"),
+            message: renameTargetKey.map { Text("Enter a custom name for \($0).") },
+            actions: [
+                .cancel(),
+                .action("Save Name") { applyRename(renameTempKey) },
+                .action("Reset Name") { applyRename(nil) }
+            ],
+            fields: [
+                GeistDialogField(
+                    placeholder: LocalizedStringKey(renameTargetKey ?? ""),
+                    text: $renameTempKey
+                )
+            ]
+        )
     }
 
     private var frontmatterSummary: some View {
@@ -434,7 +493,9 @@ struct FrontmatterCustomizationView: View {
                     )
                 } else {
                     ForEach(Array(filteredFields.enumerated()), id: \.element.originalKey) { index, field in
-                        FrontmatterFieldRow(field: binding(for: field))
+                        FrontmatterFieldRow(field: binding(for: field)) { originalKey, customKey in
+                            startRenaming(originalKey: originalKey, customKey: customKey)
+                        }
                         if index < filteredFields.count - 1 {
                             FormatDivider()
                                 .padding(.leading, 54)
@@ -505,7 +566,9 @@ struct FrontmatterCustomizationView: View {
             Spacer()
 
             Button(role: .destructive) {
-                config.customFields.removeValue(forKey: key)
+                configurationProtection.performConfigurationChange {
+                    config.customFields.removeValue(forKey: key)
+                }
             } label: {
                 Image(systemName: "trash")
                     .font(.footnote.weight(.semibold))
@@ -535,7 +598,9 @@ struct FrontmatterCustomizationView: View {
             Spacer()
 
             Button(role: .destructive) {
-                config.placeholderFields.removeAll { $0 == key }
+                configurationProtection.performConfigurationChange {
+                    config.placeholderFields.removeAll { $0 == key }
+                }
             } label: {
                 Image(systemName: "trash")
                     .font(.footnote.weight(.semibold))
@@ -555,7 +620,9 @@ struct FrontmatterCustomizationView: View {
             VStack(spacing: 0) {
                 ForEach(Array(category.fields.enumerated()), id: \.element.originalKey) { index, field in
                     if let fieldIndex = config.fields.firstIndex(where: { $0.originalKey == field.originalKey }) {
-                        FrontmatterFieldRow(field: $config.fields[fieldIndex])
+                        FrontmatterFieldRow(field: $config.fields[fieldIndex]) { originalKey, customKey in
+                            startRenaming(originalKey: originalKey, customKey: customKey)
+                        }
                         if index < category.fields.count - 1 {
                             FormatDivider()
                                 .padding(.leading, 54)
@@ -638,8 +705,8 @@ struct FrontmatterCustomizationView: View {
 
 struct FrontmatterFieldRow: View {
     @Binding var field: CustomFrontmatterField
-    @State private var isEditing = false
-    @State private var tempCustomKey = ""
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    let onRename: (String, String) -> Void
 
     private var fieldDisplayName: String {
         if field.customKey != field.originalKey && !field.customKey.isEmpty {
@@ -650,7 +717,7 @@ struct FrontmatterFieldRow: View {
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
-            Toggle("", isOn: $field.isEnabled)
+            Toggle("", isOn: configurationProtection.protecting($field.isEnabled))
                 .labelsHidden()
                 .tint(Color.accent)
                 .accessibilityLabel(fieldDisplayName)
@@ -681,8 +748,7 @@ struct FrontmatterFieldRow: View {
             Spacer(minLength: Spacing.sm)
 
             Button(action: {
-                tempCustomKey = field.customKey
-                isEditing = true
+                onRename(field.originalKey, field.customKey)
             }) {
                 Image(systemName: "pencil")
                     .font(.footnote.weight(.semibold))
@@ -697,20 +763,6 @@ struct FrontmatterFieldRow: View {
             .accessibilityHint("Double tap to enter a custom name for this field")
         }
         .padding(.vertical, Spacing.sm)
-        .alert("Rename Field", isPresented: $isEditing) {
-            TextField(field.originalKey, text: $tempCustomKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {}
-            Button("Save Name") {
-                field.customKey = tempCustomKey.isEmpty ? field.originalKey : tempCustomKey
-            }
-            Button("Reset Name") {
-                field.customKey = field.originalKey
-            }
-        } message: {
-            Text("Enter a custom name for \(field.originalKey).")
-        }
     }
 }
 
@@ -718,6 +770,7 @@ struct FrontmatterFieldRow: View {
 
 struct MarkdownTemplateView: View {
     @Binding var config: MarkdownTemplateConfig
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         ScrollView {
@@ -816,7 +869,7 @@ struct MarkdownTemplateView: View {
             title: "Custom Template",
             subtitle: "Use placeholders to control the Markdown body."
         ) {
-            TextEditor(text: $config.customTemplate)
+            TextEditor(text: configurationProtection.protecting($config.customTemplate))
                 .font(.caption.monospaced())
                 .foregroundStyle(Color.textPrimary)
                 .frame(minHeight: 220)
@@ -940,6 +993,7 @@ private struct FormatSelectionRow<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [Value]
     let optionTitle: (Value) -> String
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.md) {
@@ -958,7 +1012,9 @@ private struct FormatSelectionRow<Value: Hashable>: View {
             Menu {
                 ForEach(options, id: \.self) { option in
                     Button {
-                        selection = option
+                        configurationProtection.performConfigurationChange {
+                            selection = option
+                        }
                     } label: {
                         HStack {
                             Text(optionTitle(option))
@@ -1006,9 +1062,10 @@ private struct FormatToggleRow: View {
     let subtitle: String
     @Binding var isOn: Bool
     let accessibilityLabel: String
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
-        Toggle(isOn: $isOn) {
+        Toggle(isOn: configurationProtection.protecting($isOn)) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.body.weight(.semibold))
@@ -1032,6 +1089,7 @@ private struct FormatTextFieldRow: View {
     @Binding var text: String
     let defaultValue: String
     let accessibilityLabel: String
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         HStack(spacing: Spacing.md) {
@@ -1046,7 +1104,7 @@ private struct FormatTextFieldRow: View {
 
             Spacer(minLength: Spacing.sm)
 
-            TextField(placeholder, text: $text)
+            TextField(placeholder, text: configurationProtection.protecting($text))
                 .font(Typography.monoCaption())
                 .foregroundStyle(Color.textPrimary)
                 .multilineTextAlignment(.trailing)

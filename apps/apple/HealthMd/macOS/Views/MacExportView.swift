@@ -465,14 +465,12 @@ struct MacExportView: View {
             )
             .frame(minWidth: 600, minHeight: 600)
         }
-        .alert(
-            resultIsError ? String(localized: "Export Failed") : String(localized: "Export Complete"),
-            isPresented: $showResult
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(resultMessage)
-        }
+        .geistDialog(
+            isPresented: $showResult,
+            title: Text(resultIsError ? String(localized: "Export Failed") : String(localized: "Export Complete")),
+            message: Text(resultMessage),
+            actions: [.action("OK", role: .secondary)]
+        )
     }
 
     // MARK: - Helpers

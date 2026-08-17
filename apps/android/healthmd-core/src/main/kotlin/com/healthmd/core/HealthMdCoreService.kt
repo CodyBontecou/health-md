@@ -168,7 +168,7 @@ class HealthMdCoreService internal constructor(
         const val EXPECTED_REGISTRY_VERSION: UInt = 1u
         const val EXPECTED_RENDER_INPUT_VERSION: UInt = 1u
         const val EXPECTED_ARTIFACT_PLAN_VERSION: UInt = 1u
-        const val EXPECTED_RENDER_PROFILE_REVISION: UInt = 1u
+        const val EXPECTED_RENDER_PROFILE_REVISION: UInt = 2u
         const val EXPECTED_PERSISTED_STATE_VERSION: UInt = 1u
     }
 }

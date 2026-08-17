@@ -132,6 +132,7 @@ struct HealthMdApp: App {
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
     @StateObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
+    @StateObject private var configurationProtection = ConfigurationProtectionManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
     @StateObject private var sharedSetupCoordinator: SharedSetupCoordinator
@@ -264,7 +265,14 @@ struct HealthMdApp: App {
             HealthMdReleaseNotes.resetSeenVersionForUITesting()
         }
 
-        // All managers are @MainActor — set state in Task
+        // Configuration protection is UserDefaults-backed, so establish it synchronously before
+        // the first scene renders; other deterministic manager state can be applied asynchronously.
+        UserDefaults.standard.set(
+            TestMode.configurationProtectionEnabled,
+            forKey: ConfigurationProtectionManager.storageKey
+        )
+
+        // All managers are @MainActor — set state in Task.
         Task { @MainActor in
             // HealthKit: set authorization state without showing dialogs
             healthKitManager.isAuthorized = TestMode.healthAuthorized
@@ -317,6 +325,7 @@ struct HealthMdApp: App {
             } message: {
                 Text(sharedSetupCoordinator.errorMessage ?? "")
             }
+                        .environmentObject(configurationProtection)
             .safeAreaInset(edge: .top, spacing: 0) {
                 Group {
                     if let snapshot = notificationExportActivity.snapshot {
@@ -338,6 +347,16 @@ struct HealthMdApp: App {
                 reduceMotion ? nil : AnimationTimings.standard,
                 value: cliExportActivity.snapshot?.jobID
             )
+            .overlay(alignment: .top) {
+                ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.s2)
+                    .animation(
+                        reduceMotion ? nil : AnimationTimings.standard,
+                        value: configurationProtection.blockedChangeToastID
+                    )
+            }
+            .zIndex(configurationProtection.blockedChangeToastID == nil ? 0 : 1)
             #if DEBUG
             .sheet(isPresented: $exportPerformanceLab.isConfirmationPresented) {
                 IPhoneExportPerformanceLabConfirmationView(
@@ -353,19 +372,19 @@ struct HealthMdApp: App {
                     }
                 )
             }
-            .alert(
-                "Configure Private Export Sink?",
-                isPresented: $exportPerformanceLab.isAPISetupConfirmationPresented
-            ) {
-                Button("Cancel", role: .cancel) {
-                    exportPerformanceLab.completeInitialAPISetup(approved: false)
-                }
-                Button("Configure") {
-                    exportPerformanceLab.completeInitialAPISetup(approved: true)
-                }
-            } message: {
-                Text(exportPerformanceLab.apiSetupSummary)
-            }
+            .geistDialog(
+                isPresented: $exportPerformanceLab.isAPISetupConfirmationPresented,
+                title: Text("Configure Private Export Sink?"),
+                message: Text(exportPerformanceLab.apiSetupSummary),
+                actions: [
+                    .cancel {
+                        exportPerformanceLab.completeInitialAPISetup(approved: false)
+                    },
+                    .action("Configure") {
+                        exportPerformanceLab.completeInitialAPISetup(approved: true)
+                    }
+                ]
+            )
             .fileImporter(
                 isPresented: $exportPerformanceLab.isLocalSetupPresented,
                 allowedContentTypes: [.folder],

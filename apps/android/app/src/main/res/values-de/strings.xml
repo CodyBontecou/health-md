@@ -154,6 +154,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Premium und Support verwalten</string>
+    <string name="configuration_protection_title">Versehentliche Änderungen verhindern</string>
+    <string name="configuration_protection_toggle">Konfigurationsänderungen sperren</string>
+    <string name="configuration_protection_description">Verhindert versehentliche Änderungen an Export-, Synchronisierungs-, Zeitplan-, Ordner-, Verbindungs- und anderen Einstellungen. Manuelle Exporte bleiben verfügbar.</string>
+    <string name="configuration_protection_blocked_title">Einstellungen sind gesperrt</string>
+    <string name="configuration_protection_blocked_body">Deaktiviere „Versehentliche Änderungen verhindern“ in den Einstellungen, um deine Konfiguration zu bearbeiten.</string>
+    <string name="configuration_protection_blocked_action">Anzeigen, warum Konfigurationsänderungen gesperrt sind</string>
+    <string name="configuration_protection_open_setting">Einstellung öffnen</string>
     <string name="section_write_mode">Schreibmodus</string>
     <string name="section_filename_template">Dateinamenvorlage</string>
     <string name="filename_template_hint">{date}</string>
@@ -1384,4 +1391,36 @@
     <string name="shared_setup_confirm_endpoint">Confirm Endpoint and Save Credential</string>
     <string name="shared_setup_open_error">Shared Setup Couldn’t Be Opened</string>
     <string name="shared_setup_done">Done</string>
+    <string name="wear_settings_title">Uhr synchronisieren</string>
+    <string name="wear_settings_body">Minimierte tägliche Aktivitäts-, Schlaf-, Herz-, HRV-RMSSD- und Blutsauerstoffwerte mit einer gekoppelten Uhr synchronisieren. Health.md misst auf der Uhr keine Gesundheitsdaten.</string>
+    <string name="wear_settings_sync">Uhr synchronisieren</string>
+    <string name="wear_settings_clear">Uhrdaten löschen</string>
+    <string name="wear_settings_source">Gesundheitsquelle: %1$s</string>
+    <string name="wear_settings_delivery">Übertragung: %1$s · %2$s</string>
+    <string name="wear_settings_attempt">Letzter Versuch: %1$s · %2$s</string>
+    <string name="wear_settings_ack">Uhrbestätigung #%1$s: %2$s</string>
+    <string name="wear_settings_watch_progress">Uhrbestätigungen: %1$d von %2$d</string>
+    <string name="wear_delivery_partial">einige Uhren offline; %1$s bestätigt</string>
+    <string name="wear_settings_never">nie</string>
+    <string name="wear_settings_unknown_sequence">unbekannt</string>
+    <string name="wear_source_ready">Health Connect bereit</string>
+    <string name="wear_source_permission">Health-Connect-Berechtigung erforderlich</string>
+    <string name="wear_source_unavailable">Health Connect nicht verfügbar</string>
+    <string name="wear_delivery_reachable">Uhr erreichbar; dauerhafter Snapshot gespeichert</string>
+    <string name="wear_delivery_queued">Dauerhafter Snapshot für Offline-Uhr eingereiht</string>
+    <string name="wear_delivery_clear_requested">Dauerhafter Snapshot entfernt; warte auf Uhrbestätigung</string>
+    <string name="wear_status_sent">An erreichbare Uhr gesendet</string>
+    <string name="wear_status_queued">Für Offline-Uhr eingereiht</string>
+    <string name="wear_status_no_watch">Keine gekoppelte Uhr-App gefunden</string>
+    <string name="wear_status_unreachable">Uhr nicht erreichbar</string>
+    <string name="wear_status_permission">Health-Connect-Berechtigung erforderlich</string>
+    <string name="wear_status_unavailable">Health Connect nicht verfügbar</string>
+    <string name="wear_status_retry">Synchronisierung fehlgeschlagen; erneuter Versuch</string>
+    <string name="wear_status_cleared">Löschanfrage gesendet</string>
+    <string name="wear_ack_applied">Daten gespeichert</string>
+    <string name="wear_ack_duplicate">bereits gespeichert</string>
+    <string name="wear_ack_out_of_order">ältere Daten abgelehnt</string>
+    <string name="wear_ack_invalid">ungültige Daten abgelehnt</string>
+    <string name="wear_ack_version">App-Update erforderlich</string>
+    <string name="wear_ack_deleted">Daten gelöscht</string>
 </resources>

@@ -17,7 +17,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "1cc9aaf41cb92a2e903487756cf561f0ff44b9518f3ef66d1a45a997f770248d",
+      "sha256": "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
@@ -154,7 +154,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
-          "sha256": "6822fd5cb1bf964cf64e4da36c33142a25557edf4e10be05ea60605785f6a4d6",
+          "sha256": "10b681bda22c1060dcb4f61b7e4727ec1687b4b1c6711d673645af6275f3c2bf",
           "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
@@ -189,10 +189,20 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "b9eb4b4a45747aa92a533d4d1b08a3adfc25563ac36adb5a9336c75635f52227",
+          "sha256": "04045718ab492e7e290b09696c9ec92a46fcff32ed1c966739d7989757b3ebd5",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json",
+          "sha256": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+          "provenance": "Reviewed synthetic managed-Markdown merge vectors shared by app Swift, direct-package Swift, and Rust; exact bytes contain no production health data.",
+          "mirrors": [
+            "apps/apple/HealthMdTests/Fixtures/Export/markdown-merge-v1.json",
+            "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests/Fixtures/markdown-merge-v1.json",
+            "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/markdown-merge-v1.json"
           ]
         },
         {
@@ -209,7 +219,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "d2e5e71aa840bbc743995d4302357467072a79ec8eec3808bf07058a2ab1cadd",
+          "sha256": "6ea6c6310b5af94f7f33a0c4464b8100cae9290dd01e4f99ce633b52319b2136",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -217,7 +227,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "ef4c02b3dcfc66f1f4291b2d16dc8f9d4998252d4047356c1878c31f835a0efd",
+          "sha256": "cee461cfc104e67a5a224fcf6c3f894af309097675eb5518ec35e89f2cbe7105",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
@@ -257,13 +267,13 @@
       "fixtures": [
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
-          "sha256": "8c759e1669fc17b6dba6f5cc8d4eed5ed41173ad402bbb49744bd9c5eaa98bc9",
+          "sha256": "ad1b4570facba92d6a64cab859e660d2b9b2f4641b0f894a52fc71e83e0cc380",
           "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
-          "sha256": "ec0070b87f7be3558354685221f898264d3ac22b8498c81663ed271fff3d9bc7",
+          "sha256": "bb24e26aa0fe62675564cfbd518db293a6feca70f73b57499bb4b5a8b1382206",
           "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         }

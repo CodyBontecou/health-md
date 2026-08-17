@@ -158,6 +158,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Gestiona Premium y soporte</string>
+    <string name="configuration_protection_title">Evitar cambios accidentales</string>
+    <string name="configuration_protection_toggle">Bloquear cambios de configuración</string>
+    <string name="configuration_protection_description">Evita cambios accidentales en los ajustes de exportación, sincronización, programación, carpetas, conexiones y otros. Las exportaciones manuales siguen disponibles.</string>
+    <string name="configuration_protection_blocked_title">Los ajustes están bloqueados</string>
+    <string name="configuration_protection_blocked_body">Desactiva Evitar cambios accidentales en Ajustes para editar tu configuración.</string>
+    <string name="configuration_protection_blocked_action">Mostrar por qué se bloquean los cambios de configuración</string>
+    <string name="configuration_protection_open_setting">Abrir ajuste</string>
     <string name="section_write_mode">Modo de Escritura</string>
     <string name="section_filename_template">Plantilla de Nombre de Archivo</string>
     <string name="filename_template_hint">{date}</string>
@@ -1432,4 +1439,36 @@
     <string name="shared_setup_confirm_endpoint">Confirm Endpoint and Save Credential</string>
     <string name="shared_setup_open_error">Shared Setup Couldn’t Be Opened</string>
     <string name="shared_setup_done">Done</string>
+    <string name="wear_settings_title">Sincronizar reloj</string>
+    <string name="wear_settings_body">Sincroniza resúmenes diarios mínimos de actividad, sueño, corazón, HRV RMSSD y oxígeno en sangre con un reloj vinculado. Health.md no mide datos de salud en el reloj.</string>
+    <string name="wear_settings_sync">Sincronizar reloj</string>
+    <string name="wear_settings_clear">Borrar datos del reloj</string>
+    <string name="wear_settings_source">Fuente de salud: %1$s</string>
+    <string name="wear_settings_delivery">Entrega: %1$s · %2$s</string>
+    <string name="wear_settings_attempt">Último intento: %1$s · %2$s</string>
+    <string name="wear_settings_ack">Confirmación del reloj #%1$s: %2$s</string>
+    <string name="wear_settings_watch_progress">Confirmaciones de relojes: %1$d de %2$d</string>
+    <string name="wear_delivery_partial">algunos relojes sin conexión; %1$s confirmados</string>
+    <string name="wear_settings_never">nunca</string>
+    <string name="wear_settings_unknown_sequence">desconocida</string>
+    <string name="wear_source_ready">Health Connect listo</string>
+    <string name="wear_source_permission">Se necesita permiso de Health Connect</string>
+    <string name="wear_source_unavailable">Health Connect no disponible</string>
+    <string name="wear_delivery_reachable">reloj accesible; instantánea duradera guardada</string>
+    <string name="wear_delivery_queued">instantánea duradera en cola para el reloj sin conexión</string>
+    <string name="wear_delivery_clear_requested">instantánea duradera eliminada; esperando confirmación</string>
+    <string name="wear_status_sent">Enviado al reloj accesible</string>
+    <string name="wear_status_queued">En cola para el reloj sin conexión</string>
+    <string name="wear_status_no_watch">No se encontró una app de reloj vinculada</string>
+    <string name="wear_status_unreachable">Reloj inaccesible</string>
+    <string name="wear_status_permission">Se necesita permiso de Health Connect</string>
+    <string name="wear_status_unavailable">Health Connect no disponible</string>
+    <string name="wear_status_retry">Error de sincronización; se reintentará</string>
+    <string name="wear_status_cleared">Solicitud de borrado enviada</string>
+    <string name="wear_ack_applied">datos guardados</string>
+    <string name="wear_ack_duplicate">ya guardados</string>
+    <string name="wear_ack_out_of_order">datos antiguos rechazados</string>
+    <string name="wear_ack_invalid">datos no válidos rechazados</string>
+    <string name="wear_ack_version">se requiere actualizar la app</string>
+    <string name="wear_ack_deleted">datos borrados</string>
 </resources>

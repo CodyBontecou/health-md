@@ -10,6 +10,7 @@ struct iPadExportView: View {
     @ObservedObject var healthKitManager: HealthKitManager
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
@@ -30,6 +31,7 @@ struct iPadExportView: View {
     @State private var showMetricSelection = false
     @State private var showPreview = false
     @State private var showFormatHelp = false
+    @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
 
     private var headerActions: some View {
         HStack(spacing: Spacing.s2) {
@@ -49,7 +51,7 @@ struct iPadExportView: View {
             .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
 
             Button {
-                onExportTapped?()
+                handleExportButtonTapped()
             } label: {
                 Label(
                     purchaseManager.canExport ? "Export Data" : "Unlock to Export",
@@ -152,6 +154,7 @@ struct iPadExportView: View {
                     .padding(Spacing.s4)
                     .iPadLiquidGlass()
                 }
+                .configurationChangesProtected()
 
                 // MARK: - Export Target
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -225,6 +228,7 @@ struct iPadExportView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 // MARK: - Health Data
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -271,6 +275,7 @@ struct iPadExportView: View {
                     .tint(Color.accent)
                     .accessibilityLabel("Lossless Health Records")
                     .accessibilityHint("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
+                    .configurationChangesProtected()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
@@ -301,6 +306,7 @@ struct iPadExportView: View {
                         ))
                         .tint(Color.accent)
                         .font(Typography.bodyEmphasis())
+                        .configurationChangesProtected()
                     }
 
                     if !advancedSettings.exportFormats.isEmpty {
@@ -308,12 +314,14 @@ struct iPadExportView: View {
                         Toggle("Zip Export Files", isOn: $advancedSettings.archiveExportFiles)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                            .configurationChangesProtected()
 
                         Divider().background(Color.borderSubtle)
                         Toggle("Write Data Dictionary", isOn: $advancedSettings.includeDataDictionary)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                             .accessibilityHint("Writes the machine-readable key and unit legend alongside exports or inside ZIP archives")
+                            .configurationChangesProtected()
                         Text("Turn off to keep generated output free of \(HealthMdExportSchema.dataDictionaryFilename).")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
@@ -323,8 +331,10 @@ struct iPadExportView: View {
                         Divider().background(Color.borderSubtle)
                         Toggle("Include Frontmatter Metadata", isOn: $advancedSettings.includeMetadata)
                             .tint(Color.accent)
+                            .configurationChangesProtected()
                         Toggle("Group by Category", isOn: $advancedSettings.groupByCategory)
                             .tint(Color.accent)
+                            .configurationChangesProtected()
                     }
 
                     if advancedSettings.dailyNotesOnlyModeEnabled {
@@ -433,6 +443,7 @@ struct iPadExportView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 // MARK: - Format Options
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -501,6 +512,7 @@ struct iPadExportView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 // MARK: - Output
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -546,6 +558,7 @@ struct iPadExportView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
+                .configurationChangesProtected()
 
                 // MARK: - Export Path Preview
                 VStack(alignment: .leading, spacing: Spacing.s3) {
@@ -583,6 +596,7 @@ struct iPadExportView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(Color.error)
+                .configurationChangesProtected()
 
                 // MARK: - Export Progress
                 if isExporting {
@@ -707,32 +721,58 @@ struct iPadExportView: View {
                 }
             )
         }
-        .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
-            Button("Open Health App") {
-                if let healthURL = URL(string: "x-apple-health://") {
-                    UIApplication.shared.open(healthURL)
+        .geistDialog(
+            isPresented: isPresentingLargeExportConfirmation,
+            title: Text("Confirm Large Export"),
+            message: Text(largeExportConfirmationMessage),
+            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+            actions: [
+                .cancel(
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                },
+                .action(
+                    "Export Anyway",
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                    onExportTapped?()
                 }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
-        }
-        .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
-            if previewNeedsHealthPermission {
-                Button("Connect Apple Health") {
-                    Task {
-                        _ = try? await healthKitManager.requestAuthorization()
-                        if healthKitManager.isAuthorized {
-                            await Task.yield()
-                            showPreview = true
-                        }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showHealthPermissionsGuide,
+            title: Text("Adjust Health Permissions"),
+            message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
+            actions: [
+                .cancel(),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") {
+                        UIApplication.shared.open(healthURL)
                     }
                 }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(previewRequirementsMessage)
-        }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showPreviewRequirementsPrompt,
+            title: Text("Finish Preview Setup"),
+            message: Text(previewRequirementsMessage),
+            actions: previewNeedsHealthPermission
+                ? [
+                    .cancel(),
+                    .action("Connect Apple Health") {
+                        Task {
+                            _ = try? await healthKitManager.requestAuthorization()
+                            if healthKitManager.isAuthorized {
+                                await Task.yield()
+                                showPreview = true
+                            }
+                        }
+                    }
+                ]
+                : [.cancel()]
+        )
         .onAppear {
             consumeFirstExportPreviewRequestIfNeeded()
         }
@@ -759,12 +799,66 @@ struct iPadExportView: View {
         !healthKitManager.isAuthorized
     }
 
+    // MARK: - Large Export Confirmation
+
+    /// Mirrors the iPhone Export tab guard: the interactive Export button must
+    /// confirm before starting a range large enough to saturate the main actor.
+    /// Scheduled, shortcut, CLI, preview, and programmatic paths never pass
+    /// through this handler.
+    private func handleExportButtonTapped() {
+        let verdict = ExportScaleGuard.verdict(
+            startDate: startDate,
+            endDate: endDate,
+            granularDataEnabled: advancedSettings.effectiveGranularDataEnabled,
+            formatCount: advancedSettings.exportFormats.count,
+            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
+        )
+
+        switch verdict {
+        case .proceed:
+            onExportTapped?()
+        case .confirm(let scale):
+            pendingLargeExportConfirmation = scale
+        }
+    }
+
+    private var isPresentingLargeExportConfirmation: Binding<Bool> {
+        Binding(
+            get: { pendingLargeExportConfirmation != nil },
+            set: { isPresented in
+                if !isPresented { pendingLargeExportConfirmation = nil }
+            }
+        )
+    }
+
+    private var largeExportConfirmationMessage: String {
+        guard let scale = pendingLargeExportConfirmation else {
+            return ""
+        }
+
+        let scaleSummary: String
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
+        } else {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
+        }
+
+        guard scale.includesGranularData else { return scaleSummary }
+
+        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.")
+        return scaleSummary + "\n\n" + granularWarning
+    }
+
     private var previewRequirementsMessage: String {
         "To preview your export, connect Apple Health so Health.md can read your data."
     }
 
     private func handlePreviewTapped() {
         if previewNeedsHealthPermission {
+            guard !configurationProtection.isEnabled else {
+                configurationProtection.presentBlockedChangeToast()
+                return
+            }
             showPreviewRequirementsPrompt = true
         } else {
             showPreview = true
@@ -882,6 +976,7 @@ struct iPadMetricSelectionView: View {
     @ObservedObject var selectionState: MetricSelectionState
     @ObservedObject var healthKitManager: HealthKitManager
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @State private var searchText = ""
     @State private var expandedCategories: Set<HealthMetricCategory> = []
     @State private var showPendingApprovalAlert = false
@@ -954,8 +1049,16 @@ struct iPadMetricSelectionView: View {
                 // Footer with actions
                 HStack {
                     Menu("Actions") {
-                        Button("Select All Standard Metrics") { selectionState.selectAll() }
-                        Button("Deselect All") { selectionState.deselectAll() }
+                        Button("Select All Standard Metrics") {
+                            configurationProtection.performConfigurationChange {
+                                selectionState.selectAll()
+                            }
+                        }
+                        Button("Deselect All") {
+                            configurationProtection.performConfigurationChange {
+                                selectionState.deselectAll()
+                            }
+                        }
                         if healthKitManager.isMedicationAuthorizationSupported {
                             Divider()
                             Button(healthKitManager.isMedicationAuthorizationRequested ? "Change Medication Access" : "Choose Medications…") {
@@ -982,31 +1085,47 @@ struct iPadMetricSelectionView: View {
             .iPadPageBackground()
             .navigationTitle("Health Metrics")
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Permission pending", isPresented: $showPendingApprovalAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("This metric requires additional Apple permission before Health.md can export it.")
-            }
-            .alert("Choose medications to export", isPresented: $showMedicationAuthorizationAlert) {
-                Button("Choose Medications") {
-                    let action = pendingMedicationAction
-                    Task { await requestMedicationAuthorizationAndApply(action) }
-                }
-                Button("Cancel", role: .cancel) {
-                    pendingMedicationAction = nil
-                }
-            } message: {
-                Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select.")
-            }
-            .alert("Medication access unavailable", isPresented: $showMedicationAuthorizationErrorAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(medicationAuthorizationError)
-            }
-            .alert("Vision prescription access unavailable", isPresented: $showVisionAuthorizationErrorAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(visionAuthorizationError)
+            .geistDialog(
+                isPresented: $showPendingApprovalAlert,
+                title: Text("Permission pending"),
+                message: Text("This metric requires additional Apple permission before Health.md can export it."),
+                actions: [.action("OK", role: .secondary)]
+            )
+            .geistDialog(
+                isPresented: $showMedicationAuthorizationAlert,
+                title: Text("Choose medications to export"),
+                message: Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select."),
+                actions: [
+                    .cancel {
+                        pendingMedicationAction = nil
+                    },
+                    .action("Choose Medications") {
+                        let action = pendingMedicationAction
+                        Task { await requestMedicationAuthorizationAndApply(action) }
+                    }
+                ]
+            )
+            .geistDialog(
+                isPresented: $showMedicationAuthorizationErrorAlert,
+                title: Text("Medication access unavailable"),
+                message: Text(medicationAuthorizationError),
+                actions: [.action("OK", role: .secondary)]
+            )
+            .geistDialog(
+                isPresented: $showVisionAuthorizationErrorAlert,
+                title: Text("Vision prescription access unavailable"),
+                message: Text(visionAuthorizationError),
+                actions: [.action("OK", role: .secondary)]
+            )
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }
@@ -1177,6 +1296,8 @@ struct iPadMetricSelectionView: View {
     }
 
     private func toggleCategory(_ category: HealthMetricCategory) {
+        guard configurationProtection.performConfigurationChange({}) else { return }
+
         if category == .vision {
             if selectionState.isCategoryFullyEnabled(category) {
                 selectionState.toggleCategory(category)
@@ -1210,6 +1331,8 @@ struct iPadMetricSelectionView: View {
     }
 
     private func toggleMetric(_ metric: HealthMetricDefinition) {
+        guard configurationProtection.performConfigurationChange({}) else { return }
+
         if metric.category == .vision {
             if selectionState.isMetricEnabled(metric.id) {
                 selectionState.toggleMetric(metric.id)
@@ -1244,6 +1367,7 @@ struct iPadMetricSelectionView: View {
 
     @MainActor
     private func requestVisionAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard configurationProtection.performConfigurationChange({}) else { return }
         guard healthKitManager.isVisionAuthorizationSupported else {
             visionAuthorizationError = "Vision prescription access requires a supported iOS runtime."
             showVisionAuthorizationErrorAlert = true
@@ -1252,14 +1376,16 @@ struct iPadMetricSelectionView: View {
         do {
             try await healthKitManager.requestVisionPrescriptionAuthorization(force: true)
             if let action {
-                switch action {
-                case .category:
-                    if !selectionState.isCategoryFullyEnabled(.vision) {
-                        selectionState.toggleCategory(.vision)
-                    }
-                case .metric(let metricID):
-                    if !selectionState.isMetricEnabled(metricID) {
-                        selectionState.toggleMetric(metricID)
+                configurationProtection.performConfigurationChange {
+                    switch action {
+                    case .category:
+                        if !selectionState.isCategoryFullyEnabled(.vision) {
+                            selectionState.toggleCategory(.vision)
+                        }
+                    case .metric(let metricID):
+                        if !selectionState.isMetricEnabled(metricID) {
+                            selectionState.toggleMetric(metricID)
+                        }
                     }
                 }
             }
@@ -1272,6 +1398,7 @@ struct iPadMetricSelectionView: View {
 
     @MainActor
     private func requestMedicationAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard configurationProtection.performConfigurationChange({}) else { return }
         guard healthKitManager.isMedicationAuthorizationSupported else {
             showMedicationUnsupportedError()
             return
@@ -1295,14 +1422,16 @@ struct iPadMetricSelectionView: View {
     }
 
     private func applyMedicationSelection(_ action: MedicationSelectionAction) {
-        switch action {
-        case .category:
-            if !selectionState.isCategoryFullyEnabled(.medications) {
-                selectionState.toggleCategory(.medications)
-            }
-        case .metric(let metricId):
-            if !selectionState.isMetricEnabled(metricId) {
-                selectionState.toggleMetric(metricId)
+        configurationProtection.performConfigurationChange {
+            switch action {
+            case .category:
+                if !selectionState.isCategoryFullyEnabled(.medications) {
+                    selectionState.toggleCategory(.medications)
+                }
+            case .metric(let metricId):
+                if !selectionState.isMetricEnabled(metricId) {
+                    selectionState.toggleMetric(metricId)
+                }
             }
         }
     }

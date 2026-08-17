@@ -342,7 +342,7 @@ class SharedSetupServiceTest {
 
     private object FixtureRegistry : SharedSetupMetricRegistry {
         override val version = 1
-        override val sha256 = "1cc9aaf41cb92a2e903487756cf561f0ff44b9518f3ef66d1a45a997f770248d"
+        override val sha256 = "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319"
         private val bindings = listOf(
             SharedSetupRegistryBinding("active_energy", "active_energy", "active_calories", "mapped_alias"),
             SharedSetupRegistryBinding("blood_pressure_systolic", "blood_pressure_systolic", "bp_systolic", "mapped_alias"),

@@ -158,6 +158,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Gerencie o Premium e o suporte</string>
+    <string name="configuration_protection_title">Evitar alterações acidentais</string>
+    <string name="configuration_protection_toggle">Bloquear alterações de configuração</string>
+    <string name="configuration_protection_description">Evita alterações acidentais nas configurações de exportação, sincronização, agendamento, pasta, conexão e outras. As exportações manuais continuam disponíveis.</string>
+    <string name="configuration_protection_blocked_title">As configurações estão bloqueadas</string>
+    <string name="configuration_protection_blocked_body">Desative Evitar alterações acidentais nos Ajustes para editar sua configuração.</string>
+    <string name="configuration_protection_blocked_action">Mostrar por que as alterações de configuração estão bloqueadas</string>
+    <string name="configuration_protection_open_setting">Abrir ajuste</string>
     <string name="section_write_mode">Modo de Escrita</string>
     <string name="section_filename_template">Modelo de Nome de Arquivo</string>
     <string name="filename_template_hint">{date}</string>
@@ -1432,4 +1439,36 @@
     <string name="shared_setup_confirm_endpoint">Confirm Endpoint and Save Credential</string>
     <string name="shared_setup_open_error">Shared Setup Couldn’t Be Opened</string>
     <string name="shared_setup_done">Done</string>
+    <string name="wear_settings_title">Sincronizar relógio</string>
+    <string name="wear_settings_body">Sincronize resumos diários mínimos de atividade, sono, coração, HRV RMSSD e oxigênio no sangue com um relógio pareado. O Health.md não mede dados de saúde no relógio.</string>
+    <string name="wear_settings_sync">Sincronizar relógio</string>
+    <string name="wear_settings_clear">Limpar dados do relógio</string>
+    <string name="wear_settings_source">Fonte de saúde: %1$s</string>
+    <string name="wear_settings_delivery">Entrega: %1$s · %2$s</string>
+    <string name="wear_settings_attempt">Última tentativa: %1$s · %2$s</string>
+    <string name="wear_settings_ack">Confirmação do relógio nº %1$s: %2$s</string>
+    <string name="wear_settings_watch_progress">Confirmações dos relógios: %1$d de %2$d</string>
+    <string name="wear_delivery_partial">alguns relógios offline; %1$s confirmados</string>
+    <string name="wear_settings_never">nunca</string>
+    <string name="wear_settings_unknown_sequence">desconhecida</string>
+    <string name="wear_source_ready">Health Connect pronto</string>
+    <string name="wear_source_permission">Permissão do Health Connect necessária</string>
+    <string name="wear_source_unavailable">Health Connect indisponível</string>
+    <string name="wear_delivery_reachable">relógio acessível; instantâneo durável salvo</string>
+    <string name="wear_delivery_queued">instantâneo durável na fila para relógio offline</string>
+    <string name="wear_delivery_clear_requested">instantâneo durável removido; aguardando confirmação</string>
+    <string name="wear_status_sent">Enviado ao relógio acessível</string>
+    <string name="wear_status_queued">Na fila para relógio offline</string>
+    <string name="wear_status_no_watch">Nenhum app de relógio pareado encontrado</string>
+    <string name="wear_status_unreachable">Relógio inacessível</string>
+    <string name="wear_status_permission">Permissão do Health Connect necessária</string>
+    <string name="wear_status_unavailable">Health Connect indisponível</string>
+    <string name="wear_status_retry">Falha na sincronização; nova tentativa</string>
+    <string name="wear_status_cleared">Solicitação de limpeza enviada</string>
+    <string name="wear_ack_applied">dados salvos</string>
+    <string name="wear_ack_duplicate">já salvos</string>
+    <string name="wear_ack_out_of_order">dados antigos rejeitados</string>
+    <string name="wear_ack_invalid">dados inválidos rejeitados</string>
+    <string name="wear_ack_version">atualização do app necessária</string>
+    <string name="wear_ack_deleted">dados limpos</string>
 </resources>

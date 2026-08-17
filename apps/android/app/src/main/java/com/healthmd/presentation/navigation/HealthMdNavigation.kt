@@ -39,6 +39,9 @@ import com.healthmd.presentation.clinicianreport.ClinicianReportScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
+import com.healthmd.presentation.common.ConfigurationProtectionToast
+import com.healthmd.presentation.common.ConfigurationProtectionUi
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.onboarding.OnboardingScreen
 import com.healthmd.presentation.paywall.PaywallScreen
 import com.healthmd.presentation.release.AndroidReleaseNotes
@@ -57,6 +60,7 @@ import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -155,6 +159,29 @@ fun HealthMdNavigation(
         SubRoutes.ONBOARDING
     }
 
+    // One graph-scoped owner exposes the device-local protection preference, toast, and
+    // navigation request to every in-app configuration surface.
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
+    val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
+    val protectionEnabled by settingsViewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
+    val blockedChangeToastId by settingsViewModel.blockedChangeToastId.collectAsStateWithLifecycle()
+    val protectionSettingsRequestId by settingsViewModel.protectionSettingsRequestId.collectAsStateWithLifecycle()
+
+    LaunchedEffect(blockedChangeToastId) {
+        val toastId = blockedChangeToastId ?: return@LaunchedEffect
+        delay(4_000)
+        if (settingsViewModel.blockedChangeToastId.value == toastId) {
+            settingsViewModel.dismissBlockedChangeToast()
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalConfigurationProtection provides ConfigurationProtectionUi(
+            // Fail closed during the brief DataStore-loading state.
+            enabled = protectionEnabled != false,
+            onBlockedChange = settingsViewModel::showBlockedChangeToast,
+        ),
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -170,10 +197,6 @@ fun HealthMdNavigation(
                 }
             },
         )
-
-        // Shared ViewModel for settings
-        val settingsViewModel: SettingsViewModel = hiltViewModel()
-        val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
 
         NavHost(
             navController = navController,
@@ -220,6 +243,7 @@ fun HealthMdNavigation(
             composable(NavDestination.SETTINGS.route) {
                 SettingsScreen(
                     viewModel = settingsViewModel,
+                    protectionSettingsRequestId = protectionSettingsRequestId,
                     onNavigateToPaywall = {
                         navController.navigate(PaywallEntryPoint.UPGRADE.route)
                     },
@@ -252,21 +276,33 @@ fun HealthMdNavigation(
                     onNavigateToFormatCustomization = { navController.navigate(SubRoutes.FORMAT_CUSTOMIZATION) },
                     onNavigateToDailyNoteInjection = { navController.navigate(SubRoutes.DAILY_NOTE_INJECTION) },
                     onNavigateToIndividualTracking = { navController.navigate(SubRoutes.INDIVIDUAL_TRACKING) },
-                    onIncludeGranularDataChanged = { settingsViewModel.updateIncludeGranularData(it) },
+                    onIncludeGranularDataChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateIncludeGranularData(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
             composable(SubRoutes.METRIC_SELECTION) {
                 MetricSelectionScreen(
                     metricSelection = settings.metricSelection,
-                    onSelectionChanged = { settingsViewModel.updateMetricSelection(it) },
+                    onSelectionChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateMetricSelection(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
             composable(SubRoutes.FORMAT_CUSTOMIZATION) {
                 FormatCustomizationScreen(
                     customization = settings.formatCustomization,
-                    onCustomizationChanged = { settingsViewModel.updateFormatCustomization(it) },
+                    onCustomizationChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateFormatCustomization(it)
+                        }
+                    },
                     onNavigateToFrontmatter = { navController.navigate(SubRoutes.FRONTMATTER_CUSTOMIZATION) },
                     onBack = { navController.popBackStack() },
                 )
@@ -275,9 +311,11 @@ fun HealthMdNavigation(
                 FrontmatterCustomizationScreen(
                     configuration = settings.formatCustomization.frontmatterConfig,
                     onConfigurationChanged = { config ->
-                        settingsViewModel.updateFormatCustomization(
-                            settings.formatCustomization.copy(frontmatterConfig = config)
-                        )
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateFormatCustomization(
+                                settings.formatCustomization.copy(frontmatterConfig = config)
+                            )
+                        }
                     },
                     onBack = { navController.popBackStack() },
                 )
@@ -285,14 +323,22 @@ fun HealthMdNavigation(
             composable(SubRoutes.DAILY_NOTE_INJECTION) {
                 DailyNoteInjectionScreen(
                     settings = settings.dailyNoteInjection,
-                    onSettingsChanged = { settingsViewModel.updateDailyNoteInjection(it) },
+                    onSettingsChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateDailyNoteInjection(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
             composable(SubRoutes.INDIVIDUAL_TRACKING) {
                 IndividualTrackingScreen(
                     settings = settings.individualTracking,
-                    onSettingsChanged = { settingsViewModel.updateIndividualTracking(it) },
+                    onSettingsChanged = {
+                        settingsViewModel.performConfigurationChange {
+                            settingsViewModel.updateIndividualTracking(it)
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -351,6 +397,22 @@ fun HealthMdNavigation(
             )
         }
 
+        ConfigurationProtectionToast(
+            visible = blockedChangeToastId != null,
+            onOpenSettings = {
+                settingsViewModel.openProtectionSetting()
+                navController.navigate(NavDestination.SETTINGS.route) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        )
+
         // Navigation rail (main tabs on tablets/foldables)
         if (showNavigationRail) {
             AdaptiveNavigationRail(
@@ -386,6 +448,7 @@ fun HealthMdNavigation(
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
+    }
     }
 }
 

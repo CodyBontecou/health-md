@@ -243,7 +243,7 @@ enum HealthMdRenderInputAdapter {
             "registry_version": Int(registry.registryVersion),
             "registry_sha256": registry.registrySha256,
             "profile_revision": Int(registry.profileRevision),
-            "render_profile_revision": 1,
+            "render_profile_revision": 2,
             "request_id": options.requestID,
             "session_id": sessionID,
             "profile": profile,

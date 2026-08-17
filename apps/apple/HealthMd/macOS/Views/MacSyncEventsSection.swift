@@ -69,15 +69,18 @@ struct MacSyncEventsSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
         .brandGlassCard()
-        .alert("Clear Sync History?", isPresented: $showClearConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Clear", role: .destructive) {
-                historyManager.clearHistory()
-                showAll = false
-            }
-        } message: {
-            Text("This removes recorded iPhone→Mac sync and Mac export events from this Mac. Your synced health data and exported files are not affected.")
-        }
+        .geistDialog(
+            isPresented: $showClearConfirmation,
+            title: Text("Clear Sync History?"),
+            message: Text("This removes recorded iPhone→Mac sync and Mac export events from this Mac. Your synced health data and exported files are not affected."),
+            actions: [
+                .cancel(),
+                .destructive("Clear") {
+                    historyManager.clearHistory()
+                    showAll = false
+                }
+            ]
+        )
     }
 
     // MARK: - Subviews
