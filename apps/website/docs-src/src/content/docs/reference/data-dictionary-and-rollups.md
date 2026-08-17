@@ -67,7 +67,7 @@ Missing is not zero. Every roll-up rule also states how missing days are handled
 |---|---|
 | `primary` | Headline period calculation. |
 | `statistics` | Additional statistics emitted. |
-| `periods` | Supported `weekly`, `monthly`, and `yearly` periods. |
+| `periods` | The `range` roll-up period. |
 | `preferredSource` | Preferred daily/detail source for recomputation. |
 | `nullHandling` | Explicit missing-day behavior. |
 | `weightedBy` | Optional weighting field. |
@@ -126,7 +126,7 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 
 ## Coverage
 
-- Weekly `period_id` uses ISO `YYYY-Www`; its `start_date` and `end_date` are Monday and Sunday rendered in the calendar timezone used to build the period. Monthly/yearly bounds use that same timezone.
+- The roll-up period is `range`: exactly one summary covers the requested export range, first selected day through last selected day, rendered in the calendar timezone used to build the summary. `period_id` is `<start>_to_<end>`.
 - `days_expected` is the size of the full period.
 - `days_counted` is the number of daily snapshots retained for the roll-up.
 - Per-metric days counted can be smaller when a snapshot has no value for that metric.
@@ -142,12 +142,12 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 | Markdown | Frontmatter, category tables, and detailed statistics. |
 | Obsidian Bases | Frontmatter-focused `rollup_metrics` properties. |
 
-Complete synthetic weekly examples:
+Complete synthetic range examples:
 
-- [`generated/rollups/weekly.json`](/docs/reference/generated/rollups/weekly.json)
-- [`generated/rollups/weekly.csv`](/docs/reference/generated/rollups/weekly.csv)
-- [`generated/rollups/weekly.md`](/docs/reference/generated/rollups/weekly.md)
-- [`generated/rollups/weekly-bases.md`](/docs/reference/generated/rollups/weekly-bases.md)
+- [`generated/rollups/range.json`](/docs/reference/generated/rollups/range.json)
+- [`generated/rollups/range.csv`](/docs/reference/generated/rollups/range.csv)
+- [`generated/rollups/range.md`](/docs/reference/generated/rollups/range.md)
+- [`generated/rollups/range-bases.md`](/docs/reference/generated/rollups/range-bases.md)
 
 ## Consumer guidance
 

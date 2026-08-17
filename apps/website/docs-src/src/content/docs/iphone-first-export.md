@@ -74,7 +74,7 @@ Return to the Export tab if you need to adjust dates, metrics, or formatting.
 
 <figure class="docs-screenshot docs-screenshot-single">
   <a href="/docs/assets/docs/iphone-first-export/export-preview.webp" target="_blank" rel="noopener" aria-label="Open the export-preview screenshot at full size">
-    <img src="/docs/assets/docs/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export Preview showing a one-day Markdown export estimate, roll-up periods, destination, and generated filename." />
+    <img src="/docs/assets/docs/iphone-first-export/export-preview.webp" width="1206" height="2622" loading="lazy" alt="Health.md Export Preview showing a one-day Markdown export estimate, the range summary state, destination, and generated filename." />
   </a>
   <figcaption>Preview separates output inspection from writing. This deterministic documentation capture uses sample Health data and explicitly shows that no vault is selected.</figcaption>
 </figure>
