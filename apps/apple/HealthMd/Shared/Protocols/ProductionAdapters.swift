@@ -194,6 +194,8 @@ nonisolated final class SystemUserDefaults: UserDefaultsStoring, @unchecked Send
 /// Production persistent-directory-identity probe. Unsupported and non-persistent
 /// File Provider volumes intentionally return no evidence.
 final class SystemVaultFolderIdentityProbe: VaultFolderIdentityProbing, @unchecked Sendable {
+    // Keep deallocation on the releasing thread (swiftlang/swift#85663).
+    nonisolated deinit {}
     nonisolated init() {}
 
     func persistentIdentity(for url: URL) throws -> VaultFolderIdentity? {

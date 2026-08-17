@@ -1393,6 +1393,9 @@ enum VaultDestinationState: Equatable {
 /// clearing, reselection, or overlapping operations cannot retarget the stop.
 @MainActor
 final class VaultAccessLease {
+    // Keep deallocation on the releasing thread (swiftlang/swift#85663);
+    // the captured lease is released off the main actor during teardown.
+    nonisolated deinit {}
     private let url: URL
     private let bookmarkResolver: BookmarkResolving
     private var isActive = true
