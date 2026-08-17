@@ -635,6 +635,9 @@ final class SharedSetupV1Tests: XCTestCase {
     #endif
 
     private final class FakeSharedSetupScheduler: SharedSetupScheduling {
+        // Avoid the crashing isolated-deinit executor hop on older iOS runtimes
+        // (swiftlang/swift#85663).
+        nonisolated deinit {}
         var schedule: ExportSchedule
         private(set) var cancellationCount = 0
 
