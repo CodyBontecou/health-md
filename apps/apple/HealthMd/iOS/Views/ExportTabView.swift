@@ -110,58 +110,6 @@ struct ExportTabView: View {
                     .zIndex(1)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
-                Button("Open Health App") {
-                    if let healthURL = URL(string: "x-apple-health://") {
-                        UIApplication.shared.open(healthURL)
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
-            }
-            .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
-                if previewNeedsHealthPermission {
-                    Button("Connect Apple Health") {
-                        Task {
-                            _ = try? await healthKitManager.requestAuthorization()
-                            if healthKitManager.isAuthorized {
-                                await Task.yield()
-                                showPreview = true
-                            }
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text(previewRequirementsMessage)
-            }
-            .alert("Roll-Up Summaries", isPresented: $showRollupHelp) {
-                Button("Done", role: .cancel) { }
-            } message: {
-                Text("\(ExportRolloutCopy.rollupSummariesHelp)\n\n\(ExportRolloutCopy.pluginCompatibilityHelp)")
-            }
-            .alert(
-                "Confirm Large Export",
-                isPresented: isPresentingLargeExportConfirmation
-            ) {
-                Button("Export Anyway") {
-                    pendingLargeExportConfirmation = nil
-                    onExportTapped()
-                }
-                .accessibilityIdentifier(AccessibilityID.Export.largeExportConfirmationConfirmButton)
-
-                Button("Cancel", role: .cancel) {
-                    pendingLargeExportConfirmation = nil
-                }
-                .accessibilityIdentifier(AccessibilityID.Export.largeExportConfirmationCancelButton)
-            } message: {
-                // SwiftUI alert titles cannot carry accessibility identifiers;
-                // UI tests match this alert by its localized title text, as with
-                // the other alerts in this view.
-                Text(largeExportConfirmationMessage)
-                    .accessibilityIdentifier(AccessibilityID.Export.largeExportConfirmationMessage)
-            }
             .onChange(of: exportStatusMessage) { oldValue, newValue in
                 if !newValue.isEmpty && newValue != oldValue {
                     UIAccessibility.post(notification: .announcement, argument: newValue)
@@ -183,6 +131,64 @@ struct ExportTabView: View {
             #endif
             }
         }
+        .geistDialog(
+            isPresented: $showHealthPermissionsGuide,
+            title: Text("Adjust Health Permissions"),
+            message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
+            actions: [
+                .cancel(),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") {
+                        UIApplication.shared.open(healthURL)
+                    }
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showPreviewRequirementsPrompt,
+            title: Text("Finish Preview Setup"),
+            message: Text(previewRequirementsMessage),
+            actions: previewNeedsHealthPermission
+                ? [
+                    .cancel(),
+                    .action("Connect Apple Health") {
+                        Task {
+                            _ = try? await healthKitManager.requestAuthorization()
+                            if healthKitManager.isAuthorized {
+                                await Task.yield()
+                                showPreview = true
+                            }
+                        }
+                    }
+                ]
+                : [.cancel()]
+        )
+        .geistDialog(
+            isPresented: isPresentingLargeExportConfirmation,
+            title: Text("Confirm Large Export"),
+            message: Text(largeExportConfirmationMessage),
+            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+            actions: [
+                .cancel(
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                },
+                .action(
+                    "Export Anyway",
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                    onExportTapped()
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showRollupHelp,
+            title: Text("Roll-Up Summaries"),
+            message: Text(ExportRolloutCopy.rollupSummariesHelp),
+            actions: [.action("Done", role: .secondary)]
+        )
         .sheet(isPresented: $showFilenameEditor) {
             FilenameFormatEditor(filenameFormat: $advancedSettings.filenameFormat)
         }

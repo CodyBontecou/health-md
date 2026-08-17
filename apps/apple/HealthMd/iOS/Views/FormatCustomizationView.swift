@@ -189,6 +189,25 @@ struct FrontmatterCustomizationView: View {
     @State private var newFieldValue = ""
     @State private var newPlaceholderKey = ""
     @State private var searchText = ""
+    @State private var renameTargetKey: String?
+    @State private var renameTempKey = ""
+
+    private func startRenaming(originalKey: String, customKey: String) {
+        renameTempKey = customKey
+        renameTargetKey = originalKey
+    }
+
+    private func applyRename(_ newKey: String?) {
+        guard let targetKey = renameTargetKey,
+              let index = config.fields.firstIndex(where: { $0.originalKey == targetKey }) else { return }
+        configurationProtection.performConfigurationChange {
+            if let newKey, !newKey.isEmpty {
+                config.fields[index].customKey = newKey
+            } else {
+                config.fields[index].customKey = config.fields[index].originalKey
+            }
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -261,46 +280,70 @@ struct FrontmatterCustomizationView: View {
                 .accessibilityHint("Opens actions for frontmatter fields and key styles")
             }
         }
-        .alert("Add Custom Field", isPresented: $showAddCustomField) {
-            TextField("Field name (e.g., tags)", text: $newFieldKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            TextField("Value (e.g., health, daily)", text: $newFieldValue)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                newFieldKey = ""
-                newFieldValue = ""
-            }
-            Button("Add Field") {
-                configurationProtection.performConfigurationChange {
-                    if !newFieldKey.isEmpty {
-                        config.customFields[newFieldKey] = newFieldValue
-                    }
+        .geistDialog(
+            isPresented: $showAddCustomField,
+            title: Text("Add Custom Field"),
+            message: Text("Add a custom field that will be included in every export."),
+            actions: [
+                .cancel {
                     newFieldKey = ""
                     newFieldValue = ""
-                }
-            }
-        } message: {
-            Text("Add a custom field that will be included in every export.")
-        }
-        .alert("Add Placeholder Field", isPresented: $showAddPlaceholderField) {
-            TextField("Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {
-                newPlaceholderKey = ""
-            }
-            Button("Add Placeholder") {
-                configurationProtection.performConfigurationChange {
-                    if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
-                        config.placeholderFields.append(newPlaceholderKey)
+                },
+                .action("Add Field") {
+                    configurationProtection.performConfigurationChange {
+                        if !newFieldKey.isEmpty {
+                            config.customFields[newFieldKey] = newFieldValue
+                        }
+                        newFieldKey = ""
+                        newFieldValue = ""
                     }
-                    newPlaceholderKey = ""
                 }
-            }
-        } message: {
-            Text("Add a field that will export with an empty value for manual entry.")
-        }
+            ],
+            fields: [
+                GeistDialogField(placeholder: "Field name (e.g., tags)", text: $newFieldKey),
+                GeistDialogField(placeholder: "Value (e.g., health, daily)", text: $newFieldValue)
+            ]
+        )
+        .geistDialog(
+            isPresented: $showAddPlaceholderField,
+            title: Text("Add Placeholder Field"),
+            message: Text("Add a field that will export with an empty value for manual entry."),
+            actions: [
+                .cancel {
+                    newPlaceholderKey = ""
+                },
+                .action("Add Placeholder") {
+                    configurationProtection.performConfigurationChange {
+                        if !newPlaceholderKey.isEmpty && !config.placeholderFields.contains(newPlaceholderKey) {
+                            config.placeholderFields.append(newPlaceholderKey)
+                        }
+                        newPlaceholderKey = ""
+                    }
+                }
+            ],
+            fields: [
+                GeistDialogField(placeholder: "Field name (e.g., omron_systolic)", text: $newPlaceholderKey)
+            ]
+        )
+        .geistDialog(
+            isPresented: Binding(
+                get: { renameTargetKey != nil },
+                set: { if !$0 { renameTargetKey = nil } }
+            ),
+            title: Text("Rename Field"),
+            message: renameTargetKey.map { Text("Enter a custom name for \($0).") },
+            actions: [
+                .cancel(),
+                .action("Save Name") { applyRename(renameTempKey) },
+                .action("Reset Name") { applyRename(nil) }
+            ],
+            fields: [
+                GeistDialogField(
+                    placeholder: LocalizedStringKey(renameTargetKey ?? ""),
+                    text: $renameTempKey
+                )
+            ]
+        )
     }
 
     private var frontmatterSummary: some View {
@@ -450,7 +493,9 @@ struct FrontmatterCustomizationView: View {
                     )
                 } else {
                     ForEach(Array(filteredFields.enumerated()), id: \.element.originalKey) { index, field in
-                        FrontmatterFieldRow(field: binding(for: field))
+                        FrontmatterFieldRow(field: binding(for: field)) { originalKey, customKey in
+                            startRenaming(originalKey: originalKey, customKey: customKey)
+                        }
                         if index < filteredFields.count - 1 {
                             FormatDivider()
                                 .padding(.leading, 54)
@@ -575,7 +620,9 @@ struct FrontmatterCustomizationView: View {
             VStack(spacing: 0) {
                 ForEach(Array(category.fields.enumerated()), id: \.element.originalKey) { index, field in
                     if let fieldIndex = config.fields.firstIndex(where: { $0.originalKey == field.originalKey }) {
-                        FrontmatterFieldRow(field: $config.fields[fieldIndex])
+                        FrontmatterFieldRow(field: $config.fields[fieldIndex]) { originalKey, customKey in
+                            startRenaming(originalKey: originalKey, customKey: customKey)
+                        }
                         if index < category.fields.count - 1 {
                             FormatDivider()
                                 .padding(.leading, 54)
@@ -659,8 +706,7 @@ struct FrontmatterCustomizationView: View {
 struct FrontmatterFieldRow: View {
     @Binding var field: CustomFrontmatterField
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
-    @State private var isEditing = false
-    @State private var tempCustomKey = ""
+    let onRename: (String, String) -> Void
 
     private var fieldDisplayName: String {
         if field.customKey != field.originalKey && !field.customKey.isEmpty {
@@ -702,8 +748,7 @@ struct FrontmatterFieldRow: View {
             Spacer(minLength: Spacing.sm)
 
             Button(action: {
-                tempCustomKey = field.customKey
-                isEditing = true
+                onRename(field.originalKey, field.customKey)
             }) {
                 Image(systemName: "pencil")
                     .font(.footnote.weight(.semibold))
@@ -718,24 +763,6 @@ struct FrontmatterFieldRow: View {
             .accessibilityHint("Double tap to enter a custom name for this field")
         }
         .padding(.vertical, Spacing.sm)
-        .alert("Rename Field", isPresented: $isEditing) {
-            TextField(field.originalKey, text: $tempCustomKey)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Cancel", role: .cancel) {}
-            Button("Save Name") {
-                configurationProtection.performConfigurationChange {
-                    field.customKey = tempCustomKey.isEmpty ? field.originalKey : tempCustomKey
-                }
-            }
-            Button("Reset Name") {
-                configurationProtection.performConfigurationChange {
-                    field.customKey = field.originalKey
-                }
-            }
-        } message: {
-            Text("Enter a custom name for \(field.originalKey).")
-        }
     }
 }
 

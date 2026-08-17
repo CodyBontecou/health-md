@@ -314,11 +314,12 @@ struct ScheduleSettingsView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Today Refresh", isPresented: $showTodayRefreshInfo) {
-            Button("Got it", role: .cancel) {}
-        } message: {
-            Text(todayRefreshInfoMessage)
-        }
+        .geistDialog(
+            isPresented: $showTodayRefreshInfo,
+            title: Text("Today Refresh"),
+            message: Text(todayRefreshInfoMessage),
+            actions: [.action("Got it", role: .secondary)]
+        )
         .overlay {
             if isRetrying {
                 RetryProgressOverlay(
@@ -327,11 +328,12 @@ struct ScheduleSettingsView: View {
                 )
             }
         }
-        .alert("Retry Failed", isPresented: $showRetryError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(retryErrorMessage)
-        }
+        .geistDialog(
+            isPresented: $showRetryError,
+            title: Text("Retry Failed"),
+            message: Text(retryErrorMessage),
+            actions: [.action("OK", role: .secondary)]
+        )
     }
 
     // MARK: - Sections

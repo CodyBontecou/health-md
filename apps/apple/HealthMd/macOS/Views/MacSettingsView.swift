@@ -325,31 +325,40 @@ struct MacGeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
-                healthDataStore.deleteAll()
-            }
-        } message: {
-            Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or exported files.")
-        }
-        .alert("Delete All Encrypted Query Context?", isPresented: $showEncryptedContextDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete All", role: .destructive) {
-                Task { await encryptedHealthContextManager.deleteAll() }
-            }
-        } message: {
-            Text("This removes every compact context day and its dedicated Keychain key. Exported files and Apple Health remain unchanged.")
-        }
-        .alert("Delete Context Before \(retentionOwnerDate)?", isPresented: $showRetentionConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete Older Days", role: .destructive) {
-                let boundary = retentionOwnerDate
-                Task { await encryptedHealthContextManager.delete(before: boundary) }
-            }
-        } message: {
-            Text("Every encrypted owner day earlier than this date will be permanently removed. The boundary date and newer days remain.")
-        }
+        .geistDialog(
+            isPresented: $showClearConfirmation,
+            title: Text("Delete Legacy Synced Data?"),
+            message: Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or exported files."),
+            actions: [
+                .cancel(),
+                .destructive("Delete") {
+                    healthDataStore.deleteAll()
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showEncryptedContextDeleteConfirmation,
+            title: Text("Delete All Encrypted Query Context?"),
+            message: Text("This removes every compact context day and its dedicated Keychain key. Exported files and Apple Health remain unchanged."),
+            actions: [
+                .cancel(),
+                .destructive("Delete All") {
+                    Task { await encryptedHealthContextManager.deleteAll() }
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showRetentionConfirmation,
+            title: Text("Delete Context Before \(retentionOwnerDate)?"),
+            message: Text("Every encrypted owner day earlier than this date will be permanently removed. The boundary date and newer days remain."),
+            actions: [
+                .cancel(),
+                .destructive("Delete Older Days") {
+                    let boundary = retentionOwnerDate
+                    Task { await encryptedHealthContextManager.delete(before: boundary) }
+                }
+            ]
+        )
     }
 
     private var retentionOwnerDate: String {
@@ -725,10 +734,6 @@ struct MacFormatSettingsTab: View {
                     .foregroundStyle(Color.textMuted)
 
                 Text(ExportRolloutCopy.rollupSummariesHelp)
-                    .font(BrandTypography.caption())
-                    .foregroundStyle(Color.textMuted)
-
-                Text(ExportRolloutCopy.pluginCompatibilityHelp)
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             } header: {

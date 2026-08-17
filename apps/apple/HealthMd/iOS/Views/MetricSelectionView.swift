@@ -48,32 +48,38 @@ struct MetricSelectionView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Health Metrics")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Permission pending", isPresented: $showPendingApprovalAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("This metric requires additional Apple permission before Health.md can export it.")
-        }
-        .alert("Choose medications to export", isPresented: $showMedicationAuthorizationAlert) {
-            Button("Choose Medications") {
-                let action = pendingMedicationAction
-                Task { await requestMedicationAuthorizationAndApply(action) }
-            }
-            Button("Cancel", role: .cancel) {
-                pendingMedicationAction = nil
-            }
-        } message: {
-            Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select.")
-        }
-        .alert("Medication access unavailable", isPresented: $showMedicationAuthorizationErrorAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(medicationAuthorizationError)
-        }
-        .alert("Vision prescription access unavailable", isPresented: $showVisionAuthorizationErrorAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(visionAuthorizationError)
-        }
+        .geistDialog(
+            isPresented: $showPendingApprovalAlert,
+            title: Text("Permission pending"),
+            message: Text("This metric requires additional Apple permission before Health.md can export it."),
+            actions: [.action("OK", role: .secondary)]
+        )
+        .geistDialog(
+            isPresented: $showMedicationAuthorizationAlert,
+            title: Text("Choose medications to export"),
+            message: Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select."),
+            actions: [
+                .cancel {
+                    pendingMedicationAction = nil
+                },
+                .action("Choose Medications") {
+                    let action = pendingMedicationAction
+                    Task { await requestMedicationAuthorizationAndApply(action) }
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showMedicationAuthorizationErrorAlert,
+            title: Text("Medication access unavailable"),
+            message: Text(medicationAuthorizationError),
+            actions: [.action("OK", role: .secondary)]
+        )
+        .geistDialog(
+            isPresented: $showVisionAuthorizationErrorAlert,
+            title: Text("Vision prescription access unavailable"),
+            message: Text(visionAuthorizationError),
+            actions: [.action("OK", role: .secondary)]
+        )
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {

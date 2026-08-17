@@ -350,11 +350,12 @@ struct iPadScheduleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Today Refresh", isPresented: $showTodayRefreshInfo) {
-            Button("Got it", role: .cancel) {}
-        } message: {
-            Text(todayRefreshInfoMessage)
-        }
+        .geistDialog(
+            isPresented: $showTodayRefreshInfo,
+            title: Text("Today Refresh"),
+            message: Text(todayRefreshInfoMessage),
+            actions: [.action("Got it", role: .secondary)]
+        )
     }
 
     private var preferredTimeText: String {

@@ -343,42 +343,46 @@ struct ContentView: View {
             }
         }
         #endif
-        .alert("Export Folder Changed", isPresented: $showDestinationChangedAlert) {
-            Button("Choose Folder") { showFolderPicker = true }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder.")
-        }
-        .alert(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle, isPresented: $showError) {
-            if errorReason == .noHealthData {
-                Button("Open Health App") {
-                    if let healthURL = URL(string: "x-apple-health://") {
-                        UIApplication.shared.open(healthURL)
+        .geistDialog(
+            isPresented: $showDestinationChangedAlert,
+            title: Text("Export Folder Changed"),
+            message: Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder."),
+            actions: [
+                .cancel(),
+                .action("Choose Folder") { showFolderPicker = true }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showError,
+            title: Text(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle),
+            message: Text(errorMessage),
+            actions: errorReason == .noHealthData
+                ? [
+                    .action("Done", role: .secondary),
+                    .action("Open Health App") {
+                        if let healthURL = URL(string: "x-apple-health://") {
+                            UIApplication.shared.open(healthURL)
+                        }
                     }
-                }
-            }
-            Button(errorReason == .noHealthData ? "Done" : "OK", role: .cancel) {}
-        } message: {
-            Text(errorMessage)
-        }
-        .alert(
-            schedulingManager.notificationExportResult?.title ?? "Export",
+                ]
+                : [.action("OK", role: .secondary)]
+        )
+        .geistDialog(
             isPresented: Binding(
                 get: {
                     guard let result = schedulingManager.notificationExportResult else { return false }
                     return !NotificationExportActivityTracker.shared.handles(result)
                 },
                 set: { if !$0 { schedulingManager.notificationExportResult = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                schedulingManager.notificationExportResult = nil
-            }
-        } message: {
-            if let result = schedulingManager.notificationExportResult {
-                Text(result.message)
-            }
-        }
+            ),
+            title: Text(schedulingManager.notificationExportResult?.title ?? "Export"),
+            message: schedulingManager.notificationExportResult.map { Text($0.message) },
+            actions: [
+                .action("OK", role: .secondary) {
+                    schedulingManager.notificationExportResult = nil
+                }
+            ]
+        )
         .keepsScreenAwake(while: isExporting)
         .onReceive(syncService.$latestMacExportMessage.compactMap { $0 }) { message in
             handleMacExportMessage(message)
@@ -2499,11 +2503,12 @@ struct SettingsTabView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Receipt Verification", isPresented: $showDebugAlert) {
-            Button("Done", role: .cancel) {}
-        } message: {
-            Text(debugResult)
-        }
+        .geistDialog(
+            isPresented: $showDebugAlert,
+            title: Text("Receipt Verification"),
+            message: Text(debugResult),
+            actions: [.action("Done", role: .secondary)]
+        )
     }
 
     private var settingsHeader: some View {

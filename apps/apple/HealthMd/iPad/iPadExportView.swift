@@ -720,32 +720,38 @@ struct iPadExportView: View {
                 }
             )
         }
-        .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
-            Button("Open Health App") {
-                if let healthURL = URL(string: "x-apple-health://") {
-                    UIApplication.shared.open(healthURL)
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
-        }
-        .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
-            if previewNeedsHealthPermission {
-                Button("Connect Apple Health") {
-                    Task {
-                        _ = try? await healthKitManager.requestAuthorization()
-                        if healthKitManager.isAuthorized {
-                            await Task.yield()
-                            showPreview = true
-                        }
+        .geistDialog(
+            isPresented: $showHealthPermissionsGuide,
+            title: Text("Adjust Health Permissions"),
+            message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
+            actions: [
+                .cancel(),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") {
+                        UIApplication.shared.open(healthURL)
                     }
                 }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(previewRequirementsMessage)
-        }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showPreviewRequirementsPrompt,
+            title: Text("Finish Preview Setup"),
+            message: Text(previewRequirementsMessage),
+            actions: previewNeedsHealthPermission
+                ? [
+                    .cancel(),
+                    .action("Connect Apple Health") {
+                        Task {
+                            _ = try? await healthKitManager.requestAuthorization()
+                            if healthKitManager.isAuthorized {
+                                await Task.yield()
+                                showPreview = true
+                            }
+                        }
+                    }
+                ]
+                : [.cancel()]
+        )
         .onAppear {
             consumeFirstExportPreviewRequestIfNeeded()
         }
@@ -1008,32 +1014,38 @@ struct iPadMetricSelectionView: View {
             .iPadPageBackground()
             .navigationTitle("Health Metrics")
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Permission pending", isPresented: $showPendingApprovalAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("This metric requires additional Apple permission before Health.md can export it.")
-            }
-            .alert("Choose medications to export", isPresented: $showMedicationAuthorizationAlert) {
-                Button("Choose Medications") {
-                    let action = pendingMedicationAction
-                    Task { await requestMedicationAuthorizationAndApply(action) }
-                }
-                Button("Cancel", role: .cancel) {
-                    pendingMedicationAction = nil
-                }
-            } message: {
-                Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select.")
-            }
-            .alert("Medication access unavailable", isPresented: $showMedicationAuthorizationErrorAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(medicationAuthorizationError)
-            }
-            .alert("Vision prescription access unavailable", isPresented: $showVisionAuthorizationErrorAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(visionAuthorizationError)
-            }
+            .geistDialog(
+                isPresented: $showPendingApprovalAlert,
+                title: Text("Permission pending"),
+                message: Text("This metric requires additional Apple permission before Health.md can export it."),
+                actions: [.action("OK", role: .secondary)]
+            )
+            .geistDialog(
+                isPresented: $showMedicationAuthorizationAlert,
+                title: Text("Choose medications to export"),
+                message: Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select."),
+                actions: [
+                    .cancel {
+                        pendingMedicationAction = nil
+                    },
+                    .action("Choose Medications") {
+                        let action = pendingMedicationAction
+                        Task { await requestMedicationAuthorizationAndApply(action) }
+                    }
+                ]
+            )
+            .geistDialog(
+                isPresented: $showMedicationAuthorizationErrorAlert,
+                title: Text("Medication access unavailable"),
+                message: Text(medicationAuthorizationError),
+                actions: [.action("OK", role: .secondary)]
+            )
+            .geistDialog(
+                isPresented: $showVisionAuthorizationErrorAlert,
+                title: Text("Vision prescription access unavailable"),
+                message: Text(visionAuthorizationError),
+                actions: [.action("OK", role: .secondary)]
+            )
         }
         .overlay(alignment: .top) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)

@@ -91,22 +91,28 @@ struct MacSyncView: View {
         .onChange(of: displayRemoteCapabilities) { _, _ in
             trackMacSetupMilestones()
         }
-        .alert("Delete Legacy Synced Data?", isPresented: $showClearConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete Data", role: .destructive) {
-                healthDataStore.deleteAll()
-            }
-        } message: {
-            Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or files already exported to your destination folder.")
-        }
-        .alert("Clear Activity Feed?", isPresented: $showActivityClearConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Clear Activity", role: .destructive) {
-                historyManager.clearHistory()
-            }
-        } message: {
-            Text("This removes recorded iPhone→Mac sync and export events from this Mac. Your synced health data and exported files are not affected.")
-        }
+        .geistDialog(
+            isPresented: $showClearConfirmation,
+            title: Text("Delete Legacy Synced Data?"),
+            message: Text("This removes the old iPhone→Mac cache from this Mac. It does not affect Health data on iPhone or files already exported to your destination folder."),
+            actions: [
+                .cancel(),
+                .destructive("Delete Data") {
+                    healthDataStore.deleteAll()
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showActivityClearConfirmation,
+            title: Text("Clear Activity Feed?"),
+            message: Text("This removes recorded iPhone→Mac sync and export events from this Mac. Your synced health data and exported files are not affected."),
+            actions: [
+                .cancel(),
+                .destructive("Clear Activity") {
+                    historyManager.clearHistory()
+                }
+            ]
+        )
     }
 
     // MARK: - Setup analytics
