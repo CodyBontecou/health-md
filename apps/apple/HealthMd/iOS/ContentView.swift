@@ -627,6 +627,15 @@ struct ContentView: View {
         startDate = selection.startDate
         endDate = selection.endDate
 
+        // All Time always extends through the present; a warm foreground
+        // activation across midnight must not restore a stale end date that
+        // would silently truncate the export range.
+        if let refreshed = ExportDateRangeLaunchPolicy.selectionWithAllTimeEndDateRefreshed(
+            selection
+        ) {
+            endDate = refreshed.endDate
+        }
+
         guard isInitialLaunch,
               !hasResolvedAllTimeRangeThisLaunch,
               selection.preset == .allTime,

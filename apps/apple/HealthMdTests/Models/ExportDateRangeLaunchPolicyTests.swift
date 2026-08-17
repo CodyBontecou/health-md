@@ -210,6 +210,75 @@ final class ExportDateRangeLaunchPolicyTests: XCTestCase {
         XCTAssertFalse(store.consumeInterruptedInteractiveExportMarker())
     }
 
+    // MARK: - All Time End Date Refresh
+
+    func testForegroundAllTimeWithInvertedPersistedRangeFallsBackToToday() {
+        let referenceDate = makeDate(year: 2026, month: 5, day: 14, hour: 9)
+        let persisted = allTimeSelection(
+            start: makeDate(year: 2026, month: 5, day: 13),
+            end: makeDate(year: 2019, month: 3, day: 2)
+        )
+
+        let selection = ExportDateRangeLaunchPolicy.selectionToRestore(
+            persisted: persisted,
+            hadInterruptedInteractiveExport: false,
+            resolvesAllTimeRange: false,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(selection.preset, .today)
+        XCTAssertEqual(selection.startDate, makeDate(year: 2026, month: 5, day: 14))
+        XCTAssertEqual(selection.endDate, makeDate(year: 2026, month: 5, day: 14))
+    }
+
+    func testStaleAllTimeEndDateIsRefreshedToReferenceDate() {
+        let referenceDate = makeDate(year: 2026, month: 5, day: 14, hour: 9)
+        let selection = allTimeSelection(
+            start: makeDate(year: 2019, month: 3, day: 2),
+            end: makeDate(year: 2026, month: 5, day: 13)
+        )
+
+        let refreshed = ExportDateRangeLaunchPolicy.selectionWithAllTimeEndDateRefreshed(
+            selection,
+            referenceDate: referenceDate,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(refreshed?.preset, .allTime)
+        XCTAssertEqual(refreshed?.startDate, makeDate(year: 2019, month: 3, day: 2))
+        XCTAssertEqual(refreshed?.endDate, referenceDate)
+    }
+
+    func testCurrentAllTimeEndDateIsNotRefreshed() {
+        let referenceDate = makeDate(year: 2026, month: 5, day: 14, hour: 9)
+        let selection = allTimeSelection(
+            start: makeDate(year: 2019, month: 3, day: 2),
+            end: makeDate(year: 2026, month: 5, day: 14, hour: 7)
+        )
+
+        XCTAssertNil(ExportDateRangeLaunchPolicy.selectionWithAllTimeEndDateRefreshed(
+            selection,
+            referenceDate: referenceDate,
+            calendar: calendar
+        ))
+    }
+
+    func testNonAllTimeSelectionsAreNeverEndRefreshed() {
+        let referenceDate = makeDate(year: 2026, month: 5, day: 14, hour: 9)
+        let selection = ExportDateRangeSelection(
+            preset: .custom,
+            startDate: makeDate(year: 2019, month: 3, day: 2),
+            endDate: makeDate(year: 2026, month: 5, day: 13)
+        )
+
+        XCTAssertNil(ExportDateRangeLaunchPolicy.selectionWithAllTimeEndDateRefreshed(
+            selection,
+            referenceDate: referenceDate,
+            calendar: calendar
+        ))
+    }
+
     private func allTimeSelection(start: Date, end: Date) -> ExportDateRangeSelection {
         ExportDateRangeSelection(preset: .allTime, startDate: start, endDate: end)
     }

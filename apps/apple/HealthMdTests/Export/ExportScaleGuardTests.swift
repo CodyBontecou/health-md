@@ -73,6 +73,26 @@ final class ExportScaleGuardTests: XCTestCase {
         XCTAssertEqual(verdict, .proceed)
     }
 
+    func testLeapYearFebruaryKeepsCalendarDayMath() {
+        // 2024-01-01 through 2024-03-30 is exactly 90 inclusive days with the
+        // leap-day included (31 + 29 + 30); the boundary must stay calendar-
+        // based, not 24-hour based.
+        let ninety = verdict(
+            start: date(2024, 1, 1),
+            end: date(2024, 3, 30)
+        )
+        XCTAssertEqual(ninety, .proceed)
+
+        let ninetyOne = verdict(
+            start: date(2024, 1, 1),
+            end: date(2024, 3, 31)
+        )
+        guard case .confirm(let scale) = ninetyOne else {
+            return XCTFail("Expected confirmation for 91 days, got \(ninetyOne)")
+        }
+        XCTAssertEqual(scale.dayCount, 91)
+    }
+
     // MARK: - Confirmation boundary
 
     func testOneDayPastThresholdRequiresConfirmation() throws {

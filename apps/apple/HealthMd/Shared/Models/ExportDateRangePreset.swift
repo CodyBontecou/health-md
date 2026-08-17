@@ -290,6 +290,29 @@ enum ExportDateRangeLaunchPolicy {
         return selection.startDate <= selection.endDate
             && selection.endDate <= today
     }
+
+    /// A restored All Time range always extends through the present. A warm app
+    /// kept alive across midnight would otherwise restore a stale end date and
+    /// silently truncate the export to the previous day. Returns a selection
+    /// with the end date refreshed to `referenceDate` when a refresh applies,
+    /// or nil when the restored selection needs no adjustment. This is a pure
+    /// state update; it must never trigger a HealthKit query.
+    static func selectionWithAllTimeEndDateRefreshed(
+        _ selection: ExportDateRangeSelection,
+        referenceDate: Date = Date(),
+        calendar: Calendar = .current
+    ) -> ExportDateRangeSelection? {
+        guard selection.preset == .allTime,
+              selection.startDate <= selection.endDate,
+              selection.endDate < calendar.startOfDay(for: referenceDate) else {
+            return nil
+        }
+        return ExportDateRangeSelection(
+            preset: selection.preset,
+            startDate: selection.startDate,
+            endDate: referenceDate
+        )
+    }
 }
 
 enum ExportDateRangePreset: String, CaseIterable, Codable, Equatable, Identifiable {

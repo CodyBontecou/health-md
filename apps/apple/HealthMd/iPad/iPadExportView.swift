@@ -31,6 +31,7 @@ struct iPadExportView: View {
     @State private var showMetricSelection = false
     @State private var showPreview = false
     @State private var showFormatHelp = false
+    @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
 
     private var headerActions: some View {
         HStack(spacing: Spacing.s2) {
@@ -50,7 +51,7 @@ struct iPadExportView: View {
             .accessibilityHint(healthKitManager.isAuthorized ? "Shows the files and contents that will be exported" : "Prompts to connect Apple Health before showing preview")
 
             Button {
-                onExportTapped?()
+                handleExportButtonTapped()
             } label: {
                 Label(
                     purchaseManager.canExport ? "Export Data" : "Unlock to Export",
@@ -721,6 +722,26 @@ struct iPadExportView: View {
             )
         }
         .geistDialog(
+            isPresented: isPresentingLargeExportConfirmation,
+            title: Text("Confirm Large Export"),
+            message: Text(largeExportConfirmationMessage),
+            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+            actions: [
+                .cancel(
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                },
+                .action(
+                    "Export Anyway",
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                    onExportTapped?()
+                }
+            ]
+        )
+        .geistDialog(
             isPresented: $showHealthPermissionsGuide,
             title: Text("Adjust Health Permissions"),
             message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
@@ -776,6 +797,56 @@ struct iPadExportView: View {
 
     private var previewNeedsHealthPermission: Bool {
         !healthKitManager.isAuthorized
+    }
+
+    // MARK: - Large Export Confirmation
+
+    /// Mirrors the iPhone Export tab guard: the interactive Export button must
+    /// confirm before starting a range large enough to saturate the main actor.
+    /// Scheduled, shortcut, CLI, preview, and programmatic paths never pass
+    /// through this handler.
+    private func handleExportButtonTapped() {
+        let verdict = ExportScaleGuard.verdict(
+            startDate: startDate,
+            endDate: endDate,
+            granularDataEnabled: advancedSettings.effectiveGranularDataEnabled,
+            formatCount: advancedSettings.exportFormats.count,
+            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
+        )
+
+        switch verdict {
+        case .proceed:
+            onExportTapped?()
+        case .confirm(let scale):
+            pendingLargeExportConfirmation = scale
+        }
+    }
+
+    private var isPresentingLargeExportConfirmation: Binding<Bool> {
+        Binding(
+            get: { pendingLargeExportConfirmation != nil },
+            set: { isPresented in
+                if !isPresented { pendingLargeExportConfirmation = nil }
+            }
+        )
+    }
+
+    private var largeExportConfirmationMessage: String {
+        guard let scale = pendingLargeExportConfirmation else {
+            return ""
+        }
+
+        let scaleSummary: String
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
+        } else {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
+        }
+
+        guard scale.includesGranularData else { return scaleSummary }
+
+        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.")
+        return scaleSummary + "\n\n" + granularWarning
     }
 
     private var previewRequirementsMessage: String {

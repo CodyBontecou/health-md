@@ -59,6 +59,8 @@ struct ExportTabView: View {
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
+    @State private var isResolvingAllTimeRange = false
+    @State private var resumeExportTapWhenAllTimeResolves = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
@@ -518,9 +520,19 @@ struct ExportTabView: View {
             return
         case .allTime:
             Task {
+                isResolvingAllTimeRange = true
                 let earliestDate = await healthKitManager.findEarliestHealthDataDate()
                 await MainActor.run {
-                    guard dateRangePreset == .allTime else { return }
+                    isResolvingAllTimeRange = false
+                    // A tap deferred while this resolution was in flight must be
+                    // judged against the resolved range, whether or not the user
+                    // has since switched presets.
+                    let resumeExportTap = resumeExportTapWhenAllTimeResolves
+                    resumeExportTapWhenAllTimeResolves = false
+                    guard dateRangePreset == .allTime else {
+                        if resumeExportTap { handleExportButtonTapped() }
+                        return
+                    }
                     configurationProtection.performConfigurationChange {
                         guard dateRangePreset == .allTime else { return }
                         applyResolvedDateRange(
@@ -528,6 +540,9 @@ struct ExportTabView: View {
                             allTimeStartDate: earliestDate,
                             allTimeEndDate: Date()
                         )
+                    }
+                    if resumeExportTap {
+                        handleExportButtonTapped()
                     }
                 }
             }
@@ -1470,13 +1485,18 @@ struct ExportTabView: View {
 
     // MARK: - Large Export Confirmation
 
-    /// Guards only the interactive Export tab button. When setup is incomplete
-    /// the tap routes to the missing setup step, so no scale confirmation is
-    /// needed. Scheduled, shortcut, CLI, preview, and programmatic export paths
-    /// never pass through this handler.
+    /// Guards only the interactive Export tab button. The scale verdict runs
+    /// before the `canExport` routing: a tap that first routes through the
+    /// Health-authorization flow re-enters the export after access is granted,
+    /// so a multi-thousand-day range must be confirmed up front or that path
+    /// could start it unconfirmed. Scheduled, shortcut, CLI, preview, and
+    /// programmatic export paths never pass through this handler.
     private func handleExportButtonTapped() {
-        guard canExport else {
-            onExportTapped()
+        // All Time resolution updates startDate/endDate asynchronously; a tap
+        // during that window is judged against the resolved range, never the
+        // stale one it is about to replace.
+        if isResolvingAllTimeRange {
+            resumeExportTapWhenAllTimeResolves = true
             return
         }
 
