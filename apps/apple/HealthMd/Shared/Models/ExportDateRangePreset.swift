@@ -39,6 +39,7 @@ struct ExportDateRangeSelectionStore {
         static let endDate = "exportDateRangeSelection.endDate"
         static let customStartDayOffset = "exportDateRangeSelection.customStartDayOffset"
         static let customEndDayOffset = "exportDateRangeSelection.customEndDayOffset"
+        static let interactiveExportInFlight = "exportDateRangeSelection.interactiveExportInFlight"
     }
 
     let userDefaults: UserDefaults
@@ -195,6 +196,99 @@ struct ExportDateRangeSelectionStore {
     private func optionalTimeInterval(forKey key: String) -> TimeInterval? {
         guard userDefaults.object(forKey: key) != nil else { return nil }
         return userDefaults.double(forKey: key)
+    }
+
+    // MARK: - Interactive Export Lifecycle
+
+    /// Marks an interactive export as in flight, synchronously before any
+    /// export work starts. Cleared on every terminal export path, so a value
+    /// left behind means the run was interrupted (crash, kill, force quit).
+    func markInteractiveExportBegan() {
+        userDefaults.set(true, forKey: Key.interactiveExportInFlight)
+    }
+
+    /// Clears the in-flight marker once an interactive export reaches a
+    /// terminal path (success, failure, or cancellation).
+    func markInteractiveExportEnded() {
+        userDefaults.set(false, forKey: Key.interactiveExportInFlight)
+    }
+
+    /// Reads and clears the marker left by the previous run. Returns true when
+    /// that run ended while an interactive export was still in flight.
+    @discardableResult
+    func consumeInterruptedInteractiveExportMarker() -> Bool {
+        let wasInFlight = userDefaults.bool(forKey: Key.interactiveExportInFlight)
+        if wasInFlight {
+            userDefaults.set(false, forKey: Key.interactiveExportInFlight)
+        }
+        return wasInFlight
+    }
+}
+
+/// Chooses which date-range selection to restore when the app opens.
+///
+/// All Time is the only preset whose restore can trigger a serial
+/// full-history HealthKit scan, so it is also the only preset that may be
+/// downgraded: after an interrupted interactive export, restoring it verbatim
+/// re-arms the same heavy work that froze the previous run.
+enum ExportDateRangeLaunchPolicy {
+    /// - Parameters:
+    ///   - persisted: The selection loaded from `ExportDateRangeSelectionStore`.
+    ///   - hadInterruptedInteractiveExport: True when the previous run ended
+    ///     while an interactive export was still in flight.
+    ///   - resolvesAllTimeRange: True only for the initial launch restore,
+    ///     which may still resolve All Time with a full-history HealthKit
+    ///     query. Later foreground activations must reuse the persisted
+    ///     absolute range or fall back to Today.
+    ///   - referenceDate: Date the restored selection is computed against.
+    ///   - calendar: Calendar used for day-boundary comparisons.
+    static func selectionToRestore(
+        persisted: ExportDateRangeSelection,
+        hadInterruptedInteractiveExport: Bool,
+        resolvesAllTimeRange: Bool,
+        referenceDate: Date = Date(),
+        calendar: Calendar = .current
+    ) -> ExportDateRangeSelection {
+        // Custom, Today, and Yesterday restores are cheap and never downgrade.
+        guard persisted.preset == .allTime else { return persisted }
+
+        if hadInterruptedInteractiveExport {
+            return ExportDateRangeSelection.defaultSelection(
+                referenceDate: referenceDate,
+                calendar: calendar
+            )
+        }
+
+        guard resolvesAllTimeRange || hasUsablePersistedAllTimeRange(
+            persisted,
+            referenceDate: referenceDate,
+            calendar: calendar
+        ) else {
+            return ExportDateRangeSelection.defaultSelection(
+                referenceDate: referenceDate,
+                calendar: calendar
+            )
+        }
+
+        return persisted
+    }
+
+    /// The persisted absolute range is reusable only when it actually carries
+    /// resolved All Time dates. The store substitutes the default Today range
+    /// when the absolute keys are missing, and a clock change can leave a
+    /// range dated in the future; neither should survive a foreground
+    /// activation without re-querying HealthKit.
+    private static func hasUsablePersistedAllTimeRange(
+        _ selection: ExportDateRangeSelection,
+        referenceDate: Date,
+        calendar: Calendar
+    ) -> Bool {
+        let today = calendar.startOfDay(for: referenceDate)
+        if selection.startDate == today, selection.endDate == today {
+            return false
+        }
+        return selection.startDate <= selection.endDate
+            && selection.endDate <= today
     }
 }
 
