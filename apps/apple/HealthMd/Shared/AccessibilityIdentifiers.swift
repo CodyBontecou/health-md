@@ -35,6 +35,16 @@ enum AccessibilityID {
         static let activityBanner = "export.activityBanner"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
+
+        // Large interactive export confirmation (Export tab only).
+        // SwiftUI alert titles cannot carry accessibility identifiers; the
+        // `largeExportConfirmationTitle` constant documents the alert's stable
+        // identifier while UI tests match the alert by its localized title text,
+        // matching how the other Export tab alerts are located.
+        static let largeExportConfirmationTitle = "export.confirmLargeExport.title"
+        static let largeExportConfirmationMessage = "export.confirmLargeExport.message"
+        static let largeExportConfirmationConfirmButton = "export.confirmLargeExport.confirmButton"
+        static let largeExportConfirmationCancelButton = "export.confirmLargeExport.cancelButton"
     }
 
     // MARK: - Mac Destination

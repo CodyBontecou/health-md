@@ -29,7 +29,8 @@ let package = Package(
         ),
         .testTarget(
             name: "HealthMdDirectClientCoreTests",
-            dependencies: ["HealthMdDirectClientCore"]
+            dependencies: ["HealthMdDirectClientCore"],
+            resources: [.copy("Fixtures/markdown-merge-v1.json")]
         )
     ]
 )

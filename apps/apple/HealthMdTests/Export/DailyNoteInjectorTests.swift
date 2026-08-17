@@ -471,6 +471,60 @@ final class DailyNoteInjectorTests: XCTestCase {
         }
     }
 
+    func testInject_preservesOneItemTagsListCRLFAndBodyExactly() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let filename = Self.enabledNoCreateSettings.formatFilename(for: Self.testDate) + ".md"
+        let fileURL = tmpDir.appendingPathComponent(filename)
+        let existing = "---\r\ntitle: Friday\r\ntags:\r\n  - daily-notes\r\n---\r\n\r\n# My Notes\r\nBody without a trailing newline"
+        try existing.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 10_432
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.enabledNoCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+        guard case .updated = result else {
+            return XCTFail("Expected .updated, got \(result)")
+        }
+
+        let updated = try String(contentsOf: fileURL, encoding: .utf8)
+        let expected = "---\r\ntitle: Friday\r\ntags:\r\n  - daily-notes\r\nsteps: 10432\r\n---\r\n\r\n# My Notes\r\nBody without a trailing newline"
+        XCTAssertEqual(updated, expected)
+    }
+
+    func testInject_rejectedYAMLLeavesExistingNoteUnchangedAndReportsFailure() throws {
+        let tmpDir = makeTempDir()
+        defer { cleanup(tmpDir) }
+
+        let filename = Self.enabledNoCreateSettings.formatFilename(for: Self.testDate) + ".md"
+        let fileURL = tmpDir.appendingPathComponent(filename)
+        let existing = "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\nBody without a trailing newline"
+        try existing.write(to: fileURL, atomically: true, encoding: .utf8)
+
+        var data = HealthData(date: Self.testDate)
+        data.activity.steps = 10_432
+
+        let result = DailyNoteInjector.inject(
+            healthData: data,
+            into: tmpDir,
+            settings: Self.enabledNoCreateSettings,
+            customization: Self.customization,
+            metricSelection: Self.stepsOnly
+        )
+        guard case .failed(let error) = result else {
+            return XCTFail("Expected merge rejection, got \(result)")
+        }
+        XCTAssertEqual(error as? ExportError, .markdownMergeRejected)
+        XCTAssertEqual(try String(contentsOf: fileURL, encoding: .utf8), existing)
+    }
+
     // MARK: - inject: preserves body on empty file
 
     func testInject_emptyFile_writesFrontmatterOnly() throws {

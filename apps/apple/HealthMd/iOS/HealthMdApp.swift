@@ -345,19 +345,19 @@ struct HealthMdApp: App {
                     }
                 )
             }
-            .alert(
-                "Configure Private Export Sink?",
-                isPresented: $exportPerformanceLab.isAPISetupConfirmationPresented
-            ) {
-                Button("Cancel", role: .cancel) {
-                    exportPerformanceLab.completeInitialAPISetup(approved: false)
-                }
-                Button("Configure") {
-                    exportPerformanceLab.completeInitialAPISetup(approved: true)
-                }
-            } message: {
-                Text(exportPerformanceLab.apiSetupSummary)
-            }
+            .geistDialog(
+                isPresented: $exportPerformanceLab.isAPISetupConfirmationPresented,
+                title: Text("Configure Private Export Sink?"),
+                message: Text(exportPerformanceLab.apiSetupSummary),
+                actions: [
+                    .cancel {
+                        exportPerformanceLab.completeInitialAPISetup(approved: false)
+                    },
+                    .action("Configure") {
+                        exportPerformanceLab.completeInitialAPISetup(approved: true)
+                    }
+                ]
+            )
             .fileImporter(
                 isPresented: $exportPerformanceLab.isLocalSetupPresented,
                 allowedContentTypes: [.folder],

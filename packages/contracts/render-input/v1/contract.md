@@ -32,6 +32,8 @@ Native Swift/Kotlin continues to own:
 
 A render session consumes the same frozen capture and completed semantic result. It may not query health APIs or reinterpret persisted selection IDs.
 
+Revision 2 keeps all generated public-profile bytes and schemas unchanged while hardening the profile-owned managed-Markdown merge operation. It preserves complete YAML property blocks, distinguishes quoted string keys from implicitly typed plain keys, rejects ambiguous ownership explicitly, and routes the compatibility Apple merge entry point through the profile implementation.
+
 ## Independent versions
 
 | Field | v1 value |
@@ -40,7 +42,7 @@ A render session consumes the same frozen capture and completed semantic result.
 | `artifact_plan_version` | 1 |
 | `canonical_model_version` | 1 |
 | metric registry | 1 |
-| profile implementation revision | 1 |
+| profile implementation revision | 2 |
 
 The UniFFI core API advances independently. Render input v1 does not alter semantic input v1 or the public schema/profile versions.
 

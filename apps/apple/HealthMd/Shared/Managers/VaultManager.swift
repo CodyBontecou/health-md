@@ -508,8 +508,13 @@ nonisolated private final class AggregateFileWriter: Sendable {
                 }
             case .mergeMarkdown:
                 let existing = try fileSystem.contentsOfFile(at: request.fileURL)
-                finalContent = MarkdownMerger.merge(existing: existing, new: newContent)
-                action = "Updated"
+                switch MarkdownMerger.mergeOutcome(existing: existing, new: newContent) {
+                case .merged(let content):
+                    finalContent = content
+                    action = "Updated"
+                case .rejected:
+                    throw ExportError.markdownMergeRejected
+                }
             case .overwrite:
                 finalContent = newContent
                 action = "Exported to"
@@ -4182,6 +4187,7 @@ enum ExportError: LocalizedError, Equatable {
     case noHealthData
     case accessDenied
     case destinationChanged
+    case markdownMergeRejected
     case noFormatsSelected
     case dailyNotePathConflict(path: String)
     case invalidExportPath(path: String)
@@ -4196,6 +4202,8 @@ enum ExportError: LocalizedError, Equatable {
             return String(localized: "Cannot access the vault folder. Reconnect it in Files or re-select it.")
         case .destinationChanged:
             return String(localized: "The saved export folder now resolves to a different location. Health.md stopped before writing any files. Review the location in Files, then re-select the intended folder.")
+        case .markdownMergeRejected:
+            return String(localized: "Health.md could not safely identify complete YAML properties in the existing Markdown file, so it left the file unchanged.")
         case .noFormatsSelected:
             return String(localized: "At least one export format must be selected")
         case .dailyNotePathConflict(let path):

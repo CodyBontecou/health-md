@@ -22,7 +22,7 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
     private static let supportedSemanticProfileRevision: UInt32 = 1
-    private static let supportedRenderProfileRevision: UInt32 = 1
+    private static let supportedRenderProfileRevision: UInt32 = 2
 
     let engine: ExportEngineMode
     let profile: String

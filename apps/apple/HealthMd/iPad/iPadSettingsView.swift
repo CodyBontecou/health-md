@@ -298,11 +298,12 @@ struct iPadSettingsView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Developer Tools", isPresented: $showDebugAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(debugResult)
-        }
+        .geistDialog(
+            isPresented: $showDebugAlert,
+            title: Text("Developer Tools"),
+            message: Text(debugResult),
+            actions: [.action("OK", role: .secondary)]
+        )
     }
 
     private var configurationProtectionSection: some View {
