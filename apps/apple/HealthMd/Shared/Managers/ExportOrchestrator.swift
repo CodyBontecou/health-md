@@ -29,10 +29,15 @@ final class LocalArchiveSpool {
                 .sorted(by: { $0.rawValue < $1.rawValue })
                 .enumerated() {
                 try Task.checkCancellation()
-                let artifact = try preparedExport.renderArtifact(
-                    format: format,
-                    in: directoryURL
-                )
+                // Each artifact render is a synchronous MainActor segment; the
+                // autoreleasepool drains per-format Foundation intermediates so a
+                // multi-thousand-day archive spool does not accumulate them.
+                let artifact = try autoreleasepool {
+                    try preparedExport.renderArtifact(
+                        format: format,
+                        in: directoryURL
+                    )
+                }
                 // LocalArchiveSpool owns the enclosing private directory until
                 // ZIP finalization, so transfer cleanup from the temporary lease.
                 artifact.lease.relinquishCleanupOwnership()
@@ -501,6 +506,13 @@ struct ExportOrchestrator {
                 )
             }
 
+            // Cooperative yield between days: the fetch below releases the main
+            // actor, but the prepared-export build and the vault write are
+            // synchronous MainActor segments. Yielding here lets the main actor
+            // service UI events (progress paint, touch handling) between days so
+            // multi-thousand-day exports no longer freeze the interface.
+            await Task.yield()
+
             let dateString = dateFormatter.string(from: date)
             onProgress?(index, totalDays, dateString)
 
@@ -515,9 +527,29 @@ struct ExportOrchestrator {
                 // HealthKitManager has already applied the frozen selection. Reuse
                 // one snapshot for loose-file and ZIP staging renders instead of
                 // filtering a potentially dense archive for each destination.
-                let preparedExport = healthData.preparedExportAssumingSelectionApplied(
-                    settings: frozenOperationSettings
-                )
+                // The prepared export and the retained day are the only per-day
+                // allocations that outlive this statement; the autoreleasepool
+                // drains Foundation intermediates before the next day begins.
+                //
+                // Follow-up (main-actor render): building this snapshot off the
+                // main actor is blocked end-to-end by MainActor isolation:
+                //   - HealthData.swift:1543 `struct PreparedHealthDataExport`
+                //     (no `nonisolated`; the app target compiles with
+                //     SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor, so its init and
+                //     render members are MainActor-isolated)
+                //   - HealthData.swift:1673 `preparedExportAssumingSelectionApplied`
+                //     and ExportDataSnapshot.swift:272 `exportSnapshot` (members of
+                //     `extension HealthData` also default to MainActor isolation)
+                //   - AdvancedExportSettings.swift:279 `AdvancedExportSettings`
+                //     supplies formatCustomization/includeMetadata/groupByCategory
+                //     from MainActor-isolated members
+                // Moving the render would require re-annotating those types, which
+                // are outside this file's ownership boundary.
+                let preparedExport = autoreleasepool {
+                    healthData.preparedExportAssumingSelectionApplied(
+                        settings: frozenOperationSettings
+                    )
+                }
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
                     settings: settings,
@@ -739,6 +771,10 @@ struct ExportOrchestrator {
                     completedDates: completedDates
                 )
             }
+            // Cooperative yield between capture days keeps the main actor
+            // responsive during expanded roll-up windows (weekly/monthly/yearly
+            // capture ranges are many times larger than the selected range).
+            await Task.yield()
             do {
                 let record = try await healthKitManager.fetchHealthData(
                     for: date,
@@ -747,7 +783,12 @@ struct ExportOrchestrator {
                     timeZone: sourceTimeZone
                 )
                 partialFailures.append(contentsOf: record.partialFailures)
-                if record.preparedExport(settings: frozenSettings).hasAnyData {
+                // Drain Foundation render intermediates for this day before the
+                // record is retained for the range write.
+                let hasRenderableData = autoreleasepool {
+                    record.preparedExport(settings: frozenSettings).hasAnyData
+                }
+                if hasRenderableData {
                     records.append(record)
                     if isSelected && !isSummaryOnly {
                         selectedRecordDates.append(record.date)
@@ -1080,6 +1121,11 @@ struct ExportOrchestrator {
                 )
             }
 
+            // Cooperative yield between days: scheduled exports run through this
+            // same @MainActor orchestrator, so the main actor must also be able to
+            // service UI events between the synchronous render/write segments.
+            await Task.yield()
+
             onProgress?(index, dates.count, progressFormatter.string(from: date))
 
             do {
@@ -1090,9 +1136,14 @@ struct ExportOrchestrator {
                     timeZone: frozenOperationSettings.exportTimeZoneOverride
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
-                let preparedExport = healthData.preparedExportAssumingSelectionApplied(
-                    settings: frozenOperationSettings
-                )
+                // Drain Foundation render intermediates per day; see the matching
+                // comment in exportDatesWithQueryController for why the render
+                // itself cannot leave the main actor yet.
+                let preparedExport = autoreleasepool {
+                    healthData.preparedExportAssumingSelectionApplied(
+                        settings: frozenOperationSettings
+                    )
+                }
 
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
@@ -1455,6 +1506,12 @@ struct ExportOrchestrator {
 
         for (index, date) in sourceDates.enumerated() {
             if Task.isCancelled { break }
+
+            // Cooperative yield between roll-up source days. A summary-only or
+            // All Time run can expand to thousands of capture days; each fetch
+            // releases the main actor but the dictionary/mapping work in between
+            // does not, so yield to keep the UI responsive.
+            await Task.yield()
 
             let day = calendar.startOfDay(for: date)
             guard dataByDay[day] == nil else {
