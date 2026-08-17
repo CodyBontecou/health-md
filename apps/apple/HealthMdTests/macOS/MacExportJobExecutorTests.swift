@@ -1788,6 +1788,7 @@ final class MacExportJobExecutorTests: XCTestCase {
             defaults: defaults ?? self.defaults,
             fileSystem: fileSystem ?? self.fileSystem,
             bookmarkResolver: bookmarkResolver ?? self.bookmarkResolver,
+            identityProbe: FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         return LifecycleHarness.retain(manager)
