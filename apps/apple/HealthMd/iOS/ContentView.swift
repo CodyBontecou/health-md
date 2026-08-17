@@ -1942,17 +1942,21 @@ struct ContentView: View {
 
         switch result.status {
         case .success:
+            // Write-side warnings (individual-entry coverage gaps) do not fail
+            // the export, so surface them alongside the success message.
+            let warningSuffix = exportResult.hasPartialFailures
+                ? " " + exportResult.partialFailureSummary : ""
             if completionSettings.dailyNotesOnlyModeEnabled {
-                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)"
+                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)\(warningSuffix)"
                 vaultManager.lastExportStatus = exportStatusMessage
             } else if !result.isTotalFilesWrittenAuthoritative
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {
-                exportStatusMessage = "Successfully exported \(generatedFileCountText) to \(destinationName) (\(exportResult.fileBreakdownDescription))"
+                exportStatusMessage = "Successfully exported \(generatedFileCountText) to \(destinationName) (\(exportResult.fileBreakdownDescription))\(warningSuffix)"
                 vaultManager.lastExportStatus = "Exported \(generatedFileCountText) to Mac"
             } else {
-                exportStatusMessage = "Successfully exported \(result.successCount) files to \(destinationName)"
+                exportStatusMessage = "Successfully exported \(result.successCount) files to \(destinationName)\(warningSuffix)"
                 vaultManager.lastExportStatus = "Exported \(result.successCount) files to Mac"
             }
             startStatusDismissTimer()
@@ -1969,21 +1973,24 @@ struct ContentView: View {
                 partialExportNotice = PartialExportNotice(result: exportResult)
             }
             let failedDatesStr = result.failedDateDetails.map { $0.dateString }.joined(separator: ", ")
+            let warning = exportResult.hasPartialFailures
+                ? exportResult.partialFailureSummary : nil
+            let suffix = warning ?? "Failed: \(failedDatesStr)"
             if isCompletedDailyNoteSkip {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) and skipped \(result.dailyNoteSkipCount) missing daily notes on \(destinationName). No export files were created."
                 vaultManager.lastExportStatus = "Daily notes: \(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) skipped"
                 startStatusDismissTimer()
             } else if completionSettings.dailyNotesOnlyModeEnabled {
-                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). Failed: \(failedDatesStr)"
+                exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). \(suffix)"
                 vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
             } else if !result.isTotalFilesWrittenAuthoritative
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {
-                exportStatusMessage = "Exported \(generatedFileCountText) to \(destinationName) (\(exportResult.fileBreakdownDescription)). Failed: \(failedDatesStr)"
+                exportStatusMessage = "Exported \(generatedFileCountText) to \(destinationName) (\(exportResult.fileBreakdownDescription)). \(suffix)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) days succeeded (\(generatedFileCountText))"
             } else {
-                exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files to \(destinationName). Failed: \(failedDatesStr)"
+                exportStatusMessage = "Exported \(result.successCount)/\(result.totalCount) files to \(destinationName). \(suffix)"
                 vaultManager.lastExportStatus = "Partial Mac export: \(result.successCount)/\(result.totalCount) succeeded"
             }
         case .cancelled:

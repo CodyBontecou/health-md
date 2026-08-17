@@ -187,6 +187,10 @@ final class MacCorpusExportSessionManager {
         var externalRecordFileCount: Int
         var dailyNoteUpdateCount: Int?
         var dailyNoteSkipCount: Int?
+        /// Write-side warnings (individual-entry coverage gaps under lossless
+        /// records) collected across the session and replayed in the terminal
+        /// result payload. Optional so earlier journals decode unchanged.
+        var individualEntryCoverageGaps: [ExportPartialFailure]? = nil
         /// Canonical strict-raw retained-day result survives payload spool cleanup and restart.
         var strictRawRetainedDayCount: Int? = nil
         /// Optional so journals created before one-time dictionary tracking decode unchanged.
@@ -216,10 +220,6 @@ final class MacCorpusExportSessionManager {
     private final class Session {
         let directoryURL: URL
         var journal: Journal
-        /// In-memory count of exported days whose lossless archive could not serve
-        /// individually tracked metrics. Surfaced through the final ack's free-text
-        /// message; the durable journal and wire payload carry no warnings list.
-        var individualEntryCoverageGapDayCount = 0
         /// Resolved once from the durable manifest each time a session is opened/restored, never
         /// from the Mac's mutable current rollout default and never independently for each day.
         let dailyExportOperation: ConnectedMacDailyExportOperation?
@@ -1222,9 +1222,7 @@ final class MacCorpusExportSessionManager {
                 completedDates: result.completedDates,
                 successCount: result.successCount,
                 totalCount: result.totalCount,
-                message: session.individualEntryCoverageGapDayCount > 0
-                    ? "Corpus export finalized. Some individually tracked metrics produced no entries from lossless records on \(session.individualEntryCoverageGapDayCount) day\(session.individualEntryCoverageGapDayCount == 1 ? "" : "s")."
-                    : "Corpus export finalized."
+                message: "Corpus export finalized."
             )
             session.journal.terminalResult = result
             session.journal.terminalAcknowledgement = acknowledgement
@@ -1805,9 +1803,9 @@ final class MacCorpusExportSessionManager {
                             (session.journal.dailyNoteUpdateCount ?? 0) + writeResult.dailyNoteUpdatedCount
                         session.journal.dailyNoteSkipCount =
                             (session.journal.dailyNoteSkipCount ?? 0) + writeResult.dailyNoteSkippedCount
-                        if !writeResult.individualEntryCoverageGaps.isEmpty {
-                            session.individualEntryCoverageGapDayCount += 1
-                        }
+                        session.journal.individualEntryCoverageGaps =
+                            (session.journal.individualEntryCoverageGaps ?? [])
+                            + writeResult.individualEntryCoverageGaps
 
                         if settings.dailyNotesOnlyModeEnabled {
                             switch writeResult.dailyNoteResult {
@@ -3730,6 +3728,7 @@ final class MacCorpusExportSessionManager {
             dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
             dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0,
             failedDateDetails: session.journal.failedDateDetails,
+            partialFailures: session.journal.individualEntryCoverageGaps ?? [],
             completedDates: Array(Set(session.journal.completedDates)).sorted(),
             destinationDisplayName: nil,
             destinationPathForDisplay: nil,
