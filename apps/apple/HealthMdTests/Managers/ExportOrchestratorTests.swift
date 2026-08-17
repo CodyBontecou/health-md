@@ -408,7 +408,7 @@ final class ExportOrchestratorTests: XCTestCase {
         }
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
         let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/ExportOrchestratorMultiDayProgressVault")
-        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        let settings = makeExportSettings(formats: [.json], generateRangeSummary: false)
         settings.includeGranularData = false
         var progress: [(processed: Int, total: Int, label: String)] = []
 
@@ -447,7 +447,7 @@ final class ExportOrchestratorTests: XCTestCase {
         }
         let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
         let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/ExportOrchestratorMidLoopCancelVault")
-        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        let settings = makeExportSettings(formats: [.json], generateRangeSummary: false)
         settings.includeGranularData = false
         var progressIndexes: [Int] = []
 
@@ -540,7 +540,7 @@ final class ExportOrchestratorTests: XCTestCase {
             )
         ]
 
-        let rollupSettings = makeExportSettings(formats: [.json], rollupPeriods: [.weekly])
+        let rollupSettings = makeExportSettings(formats: [.json])
         let retained = ExportOrchestrator.retainedHealthDataForDerivedOutputs(
             healthData,
             settings: rollupSettings
