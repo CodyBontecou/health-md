@@ -521,14 +521,14 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         let completed = ShadowExportComparisonCompletedDiagnostic(
             profile: AppleExportEnginePin.profileID,
             semanticProfileRevision: 1,
-            renderProfileRevision: 1,
+            renderProfileRevision: 2,
             matches: false,
             mismatchCount: 1
         )
         let mismatch = NativeExportPlanMismatchDiagnostic(
             profile: AppleExportEnginePin.profileID,
             semanticProfileRevision: 1,
-            renderProfileRevision: 1,
+            renderProfileRevision: 2,
             artifactOrdinal: 0,
             mismatchKind: .bytes,
             nativeLength: 10,
@@ -540,7 +540,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         let failure = ShadowExportFailureDiagnostic(
             profile: AppleExportEnginePin.profileID,
             semanticProfileRevision: 1,
-            renderProfileRevision: 1,
+            renderProfileRevision: 2,
             kind: .rustRenderFailed
         )
 
@@ -571,7 +571,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         await recorder.record(.comparisonCompleted(ShadowExportComparisonCompletedDiagnostic(
             profile: AppleExportEnginePin.profileID,
             semanticProfileRevision: 1,
-            renderProfileRevision: 1,
+            renderProfileRevision: 2,
             matches: true,
             mismatchCount: 0
         )))
@@ -590,7 +590,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             ShadowExportProfileEvidence(
                 profile: AppleExportEnginePin.profileID,
                 semanticProfileRevision: 1,
-                renderProfileRevision: 1,
+                renderProfileRevision: 2,
                 comparisonCount: .max,
                 exactMatchCount: .max
             )
@@ -602,7 +602,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         await recorder.record(.comparisonCompleted(ShadowExportComparisonCompletedDiagnostic(
             profile: AppleExportEnginePin.profileID,
             semanticProfileRevision: 1,
-            renderProfileRevision: 1,
+            renderProfileRevision: 2,
             matches: true,
             mismatchCount: 0
         )))

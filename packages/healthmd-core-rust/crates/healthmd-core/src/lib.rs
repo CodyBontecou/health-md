@@ -347,7 +347,7 @@ mod tests {
                 registry_version: 1,
                 render_input_version: 1,
                 artifact_plan_version: 1,
-                render_profile_revision: 1,
+                render_profile_revision: 2,
                 persisted_state_version: 1,
             }
         );

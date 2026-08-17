@@ -74361,6 +74361,70 @@
         }
       }
     },
+    "Health.md could not safely identify complete YAML properties in the existing Markdown file, so it left the file unchanged.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md konnte die vollständigen YAML-Properties in der vorhandenen Markdown-Datei nicht sicher erkennen und hat die Datei deshalb unverändert gelassen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md could not safely identify complete YAML properties in the existing Markdown file, so it left the file unchanged."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md no pudo identificar con seguridad las propiedades YAML completas en el archivo Markdown existente, por lo que dejó el archivo sin cambios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md n’a pas pu identifier sans risque les propriétés YAML complètes du fichier Markdown existant ; il a donc laissé le fichier inchangé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md non è riuscito a identificare in modo sicuro le proprietà YAML complete nel file Markdown esistente, quindi ha lasciato il file invariato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.mdは既存のMarkdownファイル内の完全なYAMLプロパティを安全に特定できなかったため、ファイルを変更せずに残しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md가 기존 Markdown 파일의 완전한 YAML 속성을 안전하게 식별할 수 없어 파일을 변경하지 않고 남겼습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md kon de volledige YAML-eigenschappen in het bestaande Markdown-bestand niet veilig identificeren en heeft het bestand daarom ongewijzigd gelaten."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Health.md não conseguiu identificar com segurança as propriedades YAML completas no arquivo Markdown existente, então deixou o arquivo inalterado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Health.md 无法安全识别现有 Markdown 文件中的完整 YAML 属性，因此保持该文件不变。"
+          }
+        }
+      }
+    },
     "Health.md could not save the query-context encryption key in Keychain.": {
       "comment": "macOS production UI",
       "localizations": {
@@ -92622,71 +92686,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "— 免费"
-          }
-        }
-      }
-    },
-    "Before enabling roll-up summaries or format folders broadly, update the Obsidian plugin and run a mixed-export compatibility smoke test.": {
-      "comment": "macOS production UI",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Before enabling roll-up summaries or format folders broadly, update the Obsidian plugin and run a mixed-export compatibility smoke test."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bevor Sie Rollup-Zusammenfassungen aktivieren oder Ordner allgemein formatieren, aktualisieren Sie das Obsidian-Plugin und führen Sie einen Rauchtest für die Kompatibilität mit gemischten Exporten durch."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Antes de habilitar resúmenes acumulativos o dar formato a carpetas de manera amplia, actualice el complemento Obsidian y ejecute una prueba de humo de compatibilidad de exportación mixta."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avant d'activer les résumés cumulatifs ou de formater les dossiers de manière générale, mettez à jour le plugin Obsidian et exécutez un test de compatibilité avec les exportations mixtes."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prima di abilitare i riepiloghi cumulativi o il formato delle cartelle in generale, aggiorna il plug-in Obsidian ed esegui un test del fumo di compatibilità per l'esportazione mista."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ロールアップ サマリーを有効にしたり、フォルダーを広範囲にフォーマットしたりする前に、Obsidian プラグインを更新し、混合エクスポート互換性スモーク テストを実行してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "롤업 요약을 활성화하거나 폴더 형식을 광범위하게 활성화하기 전에 Obsidian 플러그인을 업데이트하고 혼합 내보내기 호환성 스모크 테스트를 실행하세요."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Voordat u overzichtsoverzichten inschakelt of mappen breed opmaakt, moet u de Obsidian-plug-in bijwerken en een rooktest voor compatibiliteit met gemengde export uitvoeren."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Antes de ativar resumos cumulativos ou formatar pastas amplamente, atualize o plug-in Obsidian e execute um teste de fumaça de compatibilidade de exportação mista."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在广泛启用汇总摘要或格式化文件夹之前，请更新 Obsidian 插件并运行混合导出兼容性冒烟测试。"
           }
         }
       }
@@ -119272,6 +119271,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "部分完成：已导出 %2$lld 个数据日中的 %1$lld 个，并有 %3$lld 个指标警告"
+          }
+        }
+      }
+    },
+    "Confirm Large Export": {
+      "comment": "Export tab alert title confirming a large interactive export",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm Large Export"
+          }
+        }
+      }
+    },
+    "Export Anyway": {
+      "comment": "Confirm button in the large interactive export confirmation alert",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Anyway"
+          }
+        }
+      }
+    },
+    "This export covers %lld days and writes about %lld files. Exports this large can take a long time to finish.": {
+      "comment": "Scale summary in the large interactive export confirmation alert",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This export covers %1$lld days and writes about %2$lld files. Exports this large can take a long time to finish."
+          }
+        }
+      }
+    },
+    "This export covers %lld days and updates about %lld daily notes. Exports this large can take a long time to finish.": {
+      "comment": "Scale summary in the large export confirmation alert while Daily Notes Only is enabled",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This export covers %1$lld days and updates about %2$lld daily notes. Exports this large can take a long time to finish."
+          }
+        }
+      }
+    },
+    "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.": {
+      "comment": "Stronger warning shown in the large export confirmation alert when Lossless Health Records is enabled",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export."
           }
         }
       }

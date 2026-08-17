@@ -219,6 +219,13 @@
     <string name="debug_sdk_status_unknown">UNKNOWN (%1$d)</string>
     <!-- Settings screen -->
     <string name="settings_subtitle">ਪ੍ਰੀਮੀਅਮ ਅਤੇ ਸਹਾਇਤਾ ਦਾ ਪ੍ਰਬੰਧ ਕਰੋ</string>
+    <string name="configuration_protection_title">ਅਣਚਾਹੀਆਂ ਤਬਦੀਲੀਆਂ ਰੋਕੋ</string>
+    <string name="configuration_protection_toggle">ਕੌਂਫਿਗਰੇਸ਼ਨ ਤਬਦੀਲੀਆਂ ਲੌਕ ਕਰੋ</string>
+    <string name="configuration_protection_description">ਐਕਸਪੋਰਟ, ਸਿੰਕ, ਸਮਾਂ-ਸਾਰਣੀ, ਫੋਲਡਰ, ਕਨੈਕਸ਼ਨ ਅਤੇ ਹੋਰ ਸੈਟਿੰਗਾਂ ਨੂੰ ਗਲਤੀ ਨਾਲ ਬਦਲਣ ਤੋਂ ਰੋਕਦਾ ਹੈ। ਮੈਨੁਅਲ ਐਕਸਪੋਰਟ ਉਪਲਬਧ ਰਹਿੰਦੇ ਹਨ।</string>
+    <string name="configuration_protection_blocked_title">ਸੈਟਿੰਗਾਂ ਲੌਕ ਹਨ</string>
+    <string name="configuration_protection_blocked_body">ਆਪਣੀ ਕੌਂਫਿਗਰੇਸ਼ਨ ਨੂੰ ਸੋਧਣ ਲਈ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਅਣਚਾਹੀਆਂ ਤਬਦੀਲੀਆਂ ਰੋਕੋ ਨੂੰ ਬੰਦ ਕਰੋ।</string>
+    <string name="configuration_protection_blocked_action">ਵੇਖੋ ਕਿ ਕੌਂਫਿਗਰੇਸ਼ਨ ਤਬਦੀਲੀਆਂ ਕਿਉਂ ਬਲੌਕ ਹਨ</string>
+    <string name="configuration_protection_open_setting">ਸੈਟਿੰਗ ਖੋਲ੍ਹੋ</string>
     <string name="section_health_sources">ਸਿਹਤ ਸਰੋਤ</string>
     <string name="health_sources_description">Health Connect ਡਿਫੌਲਟ ਨਿਰਯਾਤ ਮਾਰਗ ਬਣਿਆ ਰਹਿੰਦਾ ਹੈ। ਇਹ ਸਮਰਥਿਤ ਈਕੋਸਿਸਟਮ ਅੱਜ Health Connect ਰਾਹੀਂ Health.md ਨੂੰ ਡੇਟਾ ਭੇਜ ਸਕਦੇ ਹਨ, ਜਾਂ ਕ੍ਰੈਡੈਂਸ਼ੀਅਲ/ਭਾਈਵਾਲ ਪਹੁੰਚ ਕੌਂਫਿਗਰ ਹੋਣ ਤੋਂ ਬਾਅਦ ਸਿੱਧੇ SDK/OAuth ਅਡਾਪਟਰਾਂ ਰਾਹੀਂ।</string>
     <string name="health_provider_status_installed">ਇੰਸਟਾਲ ਹੈ</string>

@@ -201,21 +201,18 @@ jobs:
           arch: x86_64
           profile: wearos_small_round
           avd-name: healthmd-wear-ci
-          pre-emulator-launch-script: |
-            config="$HOME/.android/avd/healthmd-wear-ci.avd/config.ini"
-            test -f "$config"
-            if grep -q '^hw.rotaryInput' "$config"; then
-              sed -i 's/^hw\.rotaryInput.*/hw.rotaryInput = yes/' "$config"
-            else
-              echo 'hw.rotaryInput = yes' >> "$config"
-            fi
-          script: |
+          pre-emulator-launch-script: >-
+            config="$HOME/.android/avd/healthmd-wear-ci.avd/config.ini" && test -f "$config" &&
+            { grep -q '^hw.rotaryInput' "$config" &&
+            sed -i 's/^hw\.rotaryInput.*/hw.rotaryInput = yes/' "$config" ||
+            printf 'hw.rotaryInput = yes\n' >> "$config"; }
+          script: >-
             adb shell dumpsys input | grep -q 'Sources: ROTARY_ENCODER'
-            cd apps/android
-            ./gradlew :wear:assembleDebug :wear:bundleDebug --stacktrace
-            ./scripts/run-wear-emulator-smoke.sh wear/build/outputs/apk/debug/wear-debug.apk
-            ./scripts/validate-wear-artifact.sh wear/build/outputs/apk/debug/wear-debug.apk
-            ./scripts/test-wear-bundle-manifest-verifier.sh wear/build/outputs/bundle/debug/wear-debug.aab
+            && cd apps/android
+            && ./gradlew :wear:assembleDebug :wear:bundleDebug --stacktrace
+            && ./scripts/run-wear-emulator-smoke.sh wear/build/outputs/apk/debug/wear-debug.apk
+            && ./scripts/validate-wear-artifact.sh wear/build/outputs/apk/debug/wear-debug.apk
+            && ./scripts/test-wear-bundle-manifest-verifier.sh wear/build/outputs/bundle/debug/wear-debug.aab
 
   rust-kotlin-direct-interop:
     name: Rust/Kotlin direct interop

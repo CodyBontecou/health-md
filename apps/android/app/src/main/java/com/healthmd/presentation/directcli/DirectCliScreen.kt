@@ -40,6 +40,7 @@ import com.healthmd.direct.DirectCliCompletion
 import com.healthmd.direct.DirectCliConnectionState
 import com.healthmd.direct.DirectCliFailure
 import com.healthmd.presentation.common.GeistCard
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 
@@ -64,6 +65,11 @@ fun DirectCliScreen(
 ) {
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val connection by viewModel.connection.collectAsStateWithLifecycle()
+    val protection = LocalConfigurationProtection.current
+
+    fun configurationChange(action: () -> Unit) {
+        if (protection.enabled) protection.onBlockedChange() else action()
+    }
 
     LaunchedEffect(connection) {
         if (connection is DirectCliConnectionState.Completed) viewModel.refreshTrust()
@@ -73,14 +79,14 @@ fun DirectCliScreen(
         ui = ui,
         connection = connection,
         onBack = onBack,
-        onHostChange = viewModel::updateHost,
-        onPortChange = viewModel::updatePort,
-        onPairingCodeChange = viewModel::updatePairingCode,
-        onPair = viewModel::pair,
-        onSaveEndpoint = viewModel::saveEndpoint,
+        onHostChange = { value -> configurationChange { viewModel.updateHost(value) } },
+        onPortChange = { value -> configurationChange { viewModel.updatePort(value) } },
+        onPairingCodeChange = { value -> configurationChange { viewModel.updatePairingCode(value) } },
+        onPair = { configurationChange(viewModel::pair) },
+        onSaveEndpoint = { configurationChange(viewModel::saveEndpoint) },
         onConnect = viewModel::connect,
         onDisconnect = viewModel::disconnect,
-        onForget = viewModel::forget,
+        onForget = { configurationChange(viewModel::forget) },
     )
 }
 

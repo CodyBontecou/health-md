@@ -244,6 +244,18 @@ final class WriteModesIntegrationTests: XCTestCase {
                       "Should include new frontmatter properties")
     }
 
+    func testUpdate_preservesOneItemYamlListFrontmatter() {
+        let existing = "---\ndate: 2026-08-03\ntags:\n  - daily-notes\n---\n\n## Activity\n- Steps: 100\n"
+        let incoming = "---\ndate: 2026-07-30\nsteps: 2119\n---\n\n## Activity\n- Steps: 2119\n"
+        let expectedFrontmatter = "---\ndate: 2026-07-30\ntags:\n  - daily-notes\nsteps: 2119\n---\n"
+
+        let merged = MarkdownMerger.merge(existing: existing, new: incoming)
+
+        XCTAssertTrue(merged.hasPrefix(expectedFrontmatter), merged)
+        XCTAssertTrue(merged.contains("- Steps: 2119"), merged)
+        XCTAssertFalse(merged.contains("tags:   - daily-notes"), merged)
+    }
+
     func testUpdate_nonMarkdownFallsToOverwrite() throws {
         // For non-markdown formats, update mode falls back to overwrite
         let original = "{\"date\": \"2026-03-14\", \"old_marker\": \"SHOULD_BE_GONE\"}"

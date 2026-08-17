@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MetricSelectionView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @ObservedObject var selectionState: MetricSelectionState
     @ObservedObject var healthKitManager: HealthKitManager
 
@@ -47,40 +48,50 @@ struct MetricSelectionView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Health Metrics")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Permission pending", isPresented: $showPendingApprovalAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("This metric requires additional Apple permission before Health.md can export it.")
-        }
-        .alert("Choose medications to export", isPresented: $showMedicationAuthorizationAlert) {
-            Button("Choose Medications") {
-                let action = pendingMedicationAction
-                Task { await requestMedicationAuthorizationAndApply(action) }
-            }
-            Button("Cancel", role: .cancel) {
-                pendingMedicationAction = nil
-            }
-        } message: {
-            Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select.")
-        }
-        .alert("Medication access unavailable", isPresented: $showMedicationAuthorizationErrorAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(medicationAuthorizationError)
-        }
-        .alert("Vision prescription access unavailable", isPresented: $showVisionAuthorizationErrorAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(visionAuthorizationError)
-        }
+        .geistDialog(
+            isPresented: $showPendingApprovalAlert,
+            title: Text("Permission pending"),
+            message: Text("This metric requires additional Apple permission before Health.md can export it."),
+            actions: [.action("OK", role: .secondary)]
+        )
+        .geistDialog(
+            isPresented: $showMedicationAuthorizationAlert,
+            title: Text("Choose medications to export"),
+            message: Text("Apple treats medications differently from other Health data. You'll choose the individual medications Health.md may read, and exports will include only the medications you select."),
+            actions: [
+                .cancel {
+                    pendingMedicationAction = nil
+                },
+                .action("Choose Medications") {
+                    let action = pendingMedicationAction
+                    Task { await requestMedicationAuthorizationAndApply(action) }
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showMedicationAuthorizationErrorAlert,
+            title: Text("Medication access unavailable"),
+            message: Text(medicationAuthorizationError),
+            actions: [.action("OK", role: .secondary)]
+        )
+        .geistDialog(
+            isPresented: $showVisionAuthorizationErrorAlert,
+            title: Text("Vision prescription access unavailable"),
+            message: Text(visionAuthorizationError),
+            actions: [.action("OK", role: .secondary)]
+        )
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button("Select All Standard Metrics") {
-                        selectionState.selectAll()
+                        configurationProtection.performConfigurationChange {
+                            selectionState.selectAll()
+                        }
                     }
                     Button("Deselect All") {
-                        selectionState.deselectAll()
+                        configurationProtection.performConfigurationChange {
+                            selectionState.deselectAll()
+                        }
                     }
                     if healthKitManager.isMedicationAuthorizationSupported {
                         Divider()
@@ -165,7 +176,7 @@ struct MetricSelectionView: View {
                 .tint(selectionPercent == 100 ? Color.success : Color.accent)
                 .accessibilityHidden(true)
 
-            Toggle(isOn: Binding(
+            Toggle(isOn: configurationProtection.protecting(Binding(
                 get: { allStandardMetricsEnabled },
                 set: { newValue in
                     if newValue {
@@ -174,7 +185,7 @@ struct MetricSelectionView: View {
                         selectionState.deselectAll()
                     }
                 }
-            )) {
+            ))) {
                 VStack(alignment: .leading, spacing: Spacing.s1) {
                     Text(LocalizedStringKey(allStandardMetricsEnabled ? "Standard metrics enabled" : "Enable standard metrics"))
                         .font(Typography.bodyEmphasis())
@@ -709,6 +720,8 @@ struct MetricSelectionView: View {
     }
 
     private func toggleCategory(_ category: HealthMetricCategory) {
+        guard configurationProtection.performConfigurationChange({}) else { return }
+
         if category == .vision {
             if selectionState.isCategoryFullyEnabled(category) {
                 selectionState.toggleCategory(category)
@@ -742,6 +755,8 @@ struct MetricSelectionView: View {
     }
 
     private func toggleMetric(_ metric: HealthMetricDefinition) {
+        guard configurationProtection.performConfigurationChange({}) else { return }
+
         if metric.category == .vision {
             if selectionState.isMetricEnabled(metric.id) {
                 selectionState.toggleMetric(metric.id)
@@ -776,6 +791,7 @@ struct MetricSelectionView: View {
 
     @MainActor
     private func requestVisionAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard configurationProtection.performConfigurationChange({}) else { return }
         guard healthKitManager.isVisionAuthorizationSupported else {
             visionAuthorizationError = "Vision prescription access requires a supported iOS runtime."
             showVisionAuthorizationErrorAlert = true
@@ -784,14 +800,16 @@ struct MetricSelectionView: View {
         do {
             try await healthKitManager.requestVisionPrescriptionAuthorization(force: true)
             if let action {
-                switch action {
-                case .category:
-                    if !selectionState.isCategoryFullyEnabled(.vision) {
-                        selectionState.toggleCategory(.vision)
-                    }
-                case .metric(let metricID):
-                    if !selectionState.isMetricEnabled(metricID) {
-                        selectionState.toggleMetric(metricID)
+                configurationProtection.performConfigurationChange {
+                    switch action {
+                    case .category:
+                        if !selectionState.isCategoryFullyEnabled(.vision) {
+                            selectionState.toggleCategory(.vision)
+                        }
+                    case .metric(let metricID):
+                        if !selectionState.isMetricEnabled(metricID) {
+                            selectionState.toggleMetric(metricID)
+                        }
                     }
                 }
             }
@@ -804,6 +822,7 @@ struct MetricSelectionView: View {
 
     @MainActor
     private func requestMedicationAuthorizationAndApply(_ action: MedicationSelectionAction?) async {
+        guard configurationProtection.performConfigurationChange({}) else { return }
         guard healthKitManager.isMedicationAuthorizationSupported else {
             showMedicationUnsupportedError()
             return
@@ -827,14 +846,16 @@ struct MetricSelectionView: View {
     }
 
     private func applyMedicationSelection(_ action: MedicationSelectionAction) {
-        switch action {
-        case .category:
-            if !selectionState.isCategoryFullyEnabled(.medications) {
-                selectionState.toggleCategory(.medications)
-            }
-        case .metric(let metricId):
-            if !selectionState.isMetricEnabled(metricId) {
-                selectionState.toggleMetric(metricId)
+        configurationProtection.performConfigurationChange {
+            switch action {
+            case .category:
+                if !selectionState.isCategoryFullyEnabled(.medications) {
+                    selectionState.toggleCategory(.medications)
+                }
+            case .metric(let metricId):
+                if !selectionState.isMetricEnabled(metricId) {
+                    selectionState.toggleMetric(metricId)
+                }
             }
         }
     }

@@ -58,6 +58,17 @@ object WearColors {
     const val warningArgb = 0xFFFF9300L
     const val errorArgb = 0xFFFF565FL
 
+    // Per-metric icon tints referencing the DESIGN.dark.md accent scales (dark-900/700 steps).
+    // They reuse existing named hex values and are documented in the Wear OS surfaces section.
+    const val metricStepsArgb = 0xFF00CA50L // green-900
+    const val metricMoveArgb = 0xFFFF9300L // amber-900
+    const val metricExerciseArgb = 0xFFFFAE00L // amber-700
+    const val metricSleepArgb = 0xFFC472FBL // purple-900
+    const val metricRestingHeartArgb = 0xFFFF565FL // red-900
+    const val metricAverageHeartArgb = 0xFFF13242L // red-700
+    const val metricHrvArgb = 0xFF00CFB7L // teal-900
+    const val metricOxygenArgb = 0xFF00AA95L // teal-700
+
     val background get() = Color(backgroundArgb)
     val surface get() = Color(surfaceArgb)
     val primary get() = Color(primaryArgb)
@@ -67,4 +78,13 @@ object WearColors {
     val success get() = Color(successArgb)
     val warning get() = Color(warningArgb)
     val error get() = Color(errorArgb)
+
+    val metricSteps get() = Color(metricStepsArgb)
+    val metricMove get() = Color(metricMoveArgb)
+    val metricExercise get() = Color(metricExerciseArgb)
+    val metricSleep get() = Color(metricSleepArgb)
+    val metricRestingHeart get() = Color(metricRestingHeartArgb)
+    val metricAverageHeart get() = Color(metricAverageHeartArgb)
+    val metricHrv get() = Color(metricHrvArgb)
+    val metricOxygen get() = Color(metricOxygenArgb)
 }

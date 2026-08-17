@@ -33,6 +33,18 @@ enum AccessibilityID {
         static let exportProgress = "export.progressView"
         static let statusMessage = "export.statusMessage"
         static let activityBanner = "export.activityBanner"
+        static let filenameEditorButton = "export.filenameEditorButton"
+        static let outputEditorSaveButton = "export.outputEditorSaveButton"
+
+        // Large interactive export confirmation (Export tab only).
+        // SwiftUI alert titles cannot carry accessibility identifiers; the
+        // `largeExportConfirmationTitle` constant documents the alert's stable
+        // identifier while UI tests match the alert by its localized title text,
+        // matching how the other Export tab alerts are located.
+        static let largeExportConfirmationTitle = "export.confirmLargeExport.title"
+        static let largeExportConfirmationMessage = "export.confirmLargeExport.message"
+        static let largeExportConfirmationConfirmButton = "export.confirmLargeExport.confirmButton"
+        static let largeExportConfirmationCancelButton = "export.confirmLargeExport.cancelButton"
     }
 
     // MARK: - Mac Destination
@@ -130,6 +142,14 @@ enum AccessibilityID {
         static let vaultRow = "settings.vaultRow"
         static let exportSettingsRow = "settings.exportSettingsRow"
         static let macSyncRow = "settings.macSyncRow"
+    }
+
+    // MARK: - Configuration Protection
+    enum ConfigurationProtection {
+        static let toggle = "configurationProtection.toggle"
+        static let section = "configurationProtection.section"
+        static let protectedRegion = "configurationProtection.protectedRegion"
+        static let toast = "configurationProtection.toast"
     }
 
     // MARK: - Status Badge

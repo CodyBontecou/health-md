@@ -915,6 +915,57 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         }
     }
 
+    func testDirectFileReceiverMergesMarkdownExactlyOnceAndRejectsAmbiguousYAML() async throws {
+        let preserving = try await preparedMarkdownTransfer(
+            existing: "---\ndate: old\ntags:\n  - daily-notes\n---\nUser body without final newline",
+            generated: "---\ndate: new\nsteps: 42\n---\n",
+            writeMode: .mergeMarkdownPreservingPreamble
+        )
+        defer {
+            try? FileManager.default.removeItem(at: preserving.storageRoot)
+            try? FileManager.default.removeItem(at: preserving.destinationRoot)
+        }
+        let preservingReceipt = try await preserving.receiver.finalize(preserving.finalization)
+        XCTAssertEqual(preservingReceipt.filesWritten, 1)
+        let preservingExpected = "---\ndate: new\ntags:\n  - daily-notes\nsteps: 42\n---\nUser body without final newline"
+        XCTAssertEqual(try String(contentsOf: preserving.output, encoding: .utf8), preservingExpected)
+        _ = try await preserving.receiver.finalize(preserving.finalization)
+        XCTAssertEqual(try String(contentsOf: preserving.output, encoding: .utf8), preservingExpected)
+
+        let updating = try await preparedMarkdownTransfer(
+            existing: "---\nnotes: \"first\nsteps: literal\"\nkeep: unchanged\n---\n# Old title",
+            generated: "---\nsteps: 42\n---\n# New title",
+            writeMode: .mergeMarkdown
+        )
+        defer {
+            try? FileManager.default.removeItem(at: updating.storageRoot)
+            try? FileManager.default.removeItem(at: updating.destinationRoot)
+        }
+        _ = try await updating.receiver.finalize(updating.finalization)
+        XCTAssertEqual(
+            try String(contentsOf: updating.output, encoding: .utf8),
+            "---\nnotes: \"first\nsteps: literal\"\nkeep: unchanged\nsteps: 42\n---\n# New title"
+        )
+
+        let rejectedExisting = "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\nBody"
+        let rejected = try await preparedMarkdownTransfer(
+            existing: rejectedExisting,
+            generated: "---\nsteps: 42\n---\n",
+            writeMode: .mergeMarkdownPreservingPreamble
+        )
+        defer {
+            try? FileManager.default.removeItem(at: rejected.storageRoot)
+            try? FileManager.default.removeItem(at: rejected.destinationRoot)
+        }
+        do {
+            _ = try await rejected.receiver.finalize(rejected.finalization)
+            XCTFail("Expected ambiguous YAML rejection")
+        } catch DirectFileReceiverError.destinationConflict(let path) {
+            XCTAssertEqual(path, "Health/daily.md")
+        }
+        XCTAssertEqual(try String(contentsOf: rejected.output, encoding: .utf8), rejectedExisting)
+    }
+
     func testDirectRawReceiverCommitsResumesAndAssemblesWithoutCorpusMemory() async throws {
         let root = temporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -1207,6 +1258,115 @@ final class HealthMdDirectClientCoreTests: XCTestCase {
         } catch DirectClientStorageError.jobNotFound {
             // Expected.
         }
+    }
+
+    private struct PreparedMarkdownTransfer {
+        let storageRoot: URL
+        let destinationRoot: URL
+        let output: URL
+        let receiver: DirectFileReceiver
+        let finalization: DirectTransferFinalize
+    }
+
+    private func preparedMarkdownTransfer(
+        existing: String,
+        generated: String,
+        writeMode: DirectExportFileWriteMode
+    ) async throws -> PreparedMarkdownTransfer {
+        let storageRoot = temporaryRoot()
+        let destinationRoot = temporaryRoot()
+        try FileManager.default.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
+        let healthFolder = destinationRoot.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthFolder, withIntermediateDirectories: true)
+        let output = healthFolder.appendingPathComponent("daily.md")
+        try Data(existing.utf8).write(to: output)
+
+        let layout = try DirectClientStorageLayout(rootURL: storageRoot)
+        let store = try DirectJobStore(layout: layout)
+        let request = DirectExportRequest(
+            jobID: UUID(),
+            createdAt: Date(),
+            dateSelection: .exact(start: "2026-07-01", end: "2026-07-01"),
+            responseMode: .writeFiles,
+            destination: DirectExportDestination(rootPath: destinationRoot.standardizedFileURL.path)
+        )
+        try await store.save(try DirectJobRecord(request: request, createdAt: request.createdAt))
+        let binding = DirectPeerBinding(
+            sourceInstallationID: UUID(),
+            destinationInstallationID: UUID()
+        )
+        let accepted = DirectExportAccepted(
+            jobID: request.jobID,
+            acceptedAt: request.createdAt,
+            peerBinding: binding,
+            resolvedDateIdentifiers: ["2026-07-01"]
+        )
+        let session = try DirectTransferSession(
+            sessionID: UUID(),
+            jobID: request.jobID,
+            requestFingerprint: try DirectRequestFingerprint.make(for: request),
+            peerBinding: binding,
+            partitionTargetBytes: DirectTransferLimits.minimumPartitionBytes,
+            createdAt: request.createdAt
+        )
+        let content = Data(generated.utf8)
+        let manifest = try DirectExportFileManifest(
+            jobID: request.jobID,
+            fileID: UUID(),
+            relativePath: "Health/daily.md",
+            byteCount: Int64(content.count),
+            sha256: DirectTransferFile.sha256Hex(content),
+            writeMode: writeMode
+        )
+        let itemID = manifest.fileID.uuidString.lowercased()
+        let descriptor = try DirectTransferPartition(
+            index: 0,
+            transferID: UUID(),
+            sourceDates: [itemID],
+            byteCount: Int64(content.count),
+            chunkCount: 1,
+            sha256: manifest.sha256,
+            previousSHA256: nil,
+            itemSegment: try DirectTransferItemSegment(
+                itemID: itemID,
+                offset: 0,
+                itemByteCount: Int64(content.count),
+                isFinalSegment: true
+            )
+        )
+        let receiver = DirectFileReceiver(layout: layout, jobStore: store)
+        try await receiver.prepare(request: request, accepted: accepted, session: session)
+        try await receiver.store(manifest: manifest)
+        _ = try await receiver.disposition(for: DirectTransferOpen(session: session, partition: descriptor))
+        _ = try await receiver.receive(try DirectTransferChunk(
+            transferID: descriptor.transferID,
+            sequence: 1,
+            data: content,
+            sha256: descriptor.sha256
+        ))
+        _ = try await receiver.commit(try DirectTransferPartitionComplete(
+            sessionID: session.sessionID,
+            jobID: request.jobID,
+            partitionIndex: 0,
+            transferID: descriptor.transferID,
+            partitionSHA256: descriptor.sha256
+        ))
+        let finalization = try DirectTransferFinalize(
+            sessionID: session.sessionID,
+            jobID: request.jobID,
+            requestFingerprint: session.requestFingerprint,
+            totalPartitions: 1,
+            totalBytes: Int64(content.count),
+            finalPartitionSHA256: descriptor.sha256,
+            outcome: try DirectExportOutcome(status: "success", successCount: 1, totalCount: 1)
+        )
+        return PreparedMarkdownTransfer(
+            storageRoot: storageRoot,
+            destinationRoot: destinationRoot,
+            output: output,
+            receiver: receiver,
+            finalization: finalization
+        )
     }
 
     private func unusedLoopbackPort() throws -> UInt16 {

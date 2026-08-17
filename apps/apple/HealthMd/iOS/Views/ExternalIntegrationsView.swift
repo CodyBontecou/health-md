@@ -3,6 +3,7 @@ import SwiftUI
 struct ExternalIntegrationsView: View {
     @ObservedObject var manager: ExternalIntegrationManager
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     var body: some View {
         NavigationStack {
@@ -26,6 +27,16 @@ struct ExternalIntegrationsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+        }
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }
@@ -123,10 +134,21 @@ struct ExternalIntegrationsView: View {
             Spacer(minLength: Spacing.sm)
 
             Button {
+                guard configurationProtection.performConfigurationChange({}) else { return }
                 if connected {
-                    Task { await manager.disconnect(provider: provider) }
+                    Task {
+                        await manager.disconnect(
+                            provider: provider,
+                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
+                        )
+                    }
                 } else {
-                    Task { await manager.connect(provider: provider) }
+                    Task {
+                        await manager.connect(
+                            provider: provider,
+                            commitAllowed: { configurationProtection.performConfigurationChange({}) }
+                        )
+                    }
                 }
             } label: {
                 Text(connecting ? "Connecting…" : (disconnecting ? "Disconnecting…" : (connected ? "Disconnect" : "Connect")))

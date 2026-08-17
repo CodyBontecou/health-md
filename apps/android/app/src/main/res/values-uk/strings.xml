@@ -76,6 +76,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Керуйте Premium і підтримкою</string>
+    <string name="configuration_protection_title">Захист від випадкових змін</string>
+    <string name="configuration_protection_toggle">Заблокувати зміни конфігурації</string>
+    <string name="configuration_protection_description">Запобігає випадковій зміні параметрів експорту, синхронізації, розкладу, папок, підключень та інших налаштувань. Ручний експорт залишається доступним.</string>
+    <string name="configuration_protection_blocked_title">Налаштування заблоковано</string>
+    <string name="configuration_protection_blocked_body">Щоб змінити конфігурацію, вимкніть «Захист від випадкових змін» у налаштуваннях.</string>
+    <string name="configuration_protection_blocked_action">Показати, чому зміни конфігурації заблоковано</string>
+    <string name="configuration_protection_open_setting">Відкрити налаштування</string>
     <string name="section_write_mode">Режим запису</string>
     <string name="section_filename_template">Шаблон імені файлу</string>
     <string name="filename_template_hint">{date}</string>

@@ -154,6 +154,13 @@
 
     <!-- Settings screen -->
     <string name="settings_subtitle">Beheer Premium en ondersteuning</string>
+    <string name="configuration_protection_title">Onbedoelde wijzigingen voorkomen</string>
+    <string name="configuration_protection_toggle">Configuratiewijzigingen vergrendelen</string>
+    <string name="configuration_protection_description">Voorkomt onbedoelde wijzigingen aan instellingen voor export, synchronisatie, planning, mappen, verbindingen en meer. Handmatige exports blijven beschikbaar.</string>
+    <string name="configuration_protection_blocked_title">Instellingen zijn vergrendeld</string>
+    <string name="configuration_protection_blocked_body">Schakel Onbedoelde wijzigingen voorkomen uit in Instellingen om je configuratie te bewerken.</string>
+    <string name="configuration_protection_blocked_action">Tonen waarom configuratiewijzigingen zijn geblokkeerd</string>
+    <string name="configuration_protection_open_setting">Instelling openen</string>
     <string name="section_write_mode">Schrijfmodus</string>
     <string name="section_filename_template">Bestandsnaamsjabloon</string>
     <string name="filename_template_hint">{date}</string>

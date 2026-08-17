@@ -39,6 +39,75 @@ final class EncryptedHealthContextQueryExecutorTests: XCTestCase {
         XCTAssertEqual(denseItems.count, 2_505)
     }
 
+    func testMetricSeriesPrefersSummaryEvidenceWhileRawRecordsRemainPageable() async throws {
+        let (store, executor) = try makeSystem(metrics: ["steps"], allowsEvidenceValues: true)
+        let ownerDate = "2026-01-03"
+        let summary = contextEvidence(
+            id: "steps-summary",
+            day: ownerDate,
+            sourceID: HealthMdEvidenceSourceIDs.healthMdSummary,
+            value: .count(12_345),
+            metricIDs: ["steps"]
+        )
+        let rawEvidence = (0..<2_000).map { index in
+            contextEvidence(
+                id: String(format: "steps-raw-%04d", index),
+                day: ownerDate,
+                sourceID: HealthMdEvidenceSourceIDs.appleHealth,
+                value: .count(Int64(index)),
+                metricIDs: ["steps"]
+            )
+        }
+        let allEvidence = [summary] + rawEvidence
+        let context = day(
+            ownerDate,
+            metrics: [metric(
+                "steps",
+                id: "dense-summary",
+                value: .count(12_345),
+                evidenceIDs: allEvidence.map { $0.reference.evidenceID }
+            )],
+            evidence: allEvidence
+        )
+        try await store.upsert(context)
+
+        let pageBytes = 256 * 1_024
+        let response = try await executor.execute(
+            HealthMdQueryRequest(
+                metrics: .explicit(["steps"]),
+                dates: .exact(.init(startDate: ownerDate, endDate: ownerDate)),
+                operation: .metricSeries,
+                page: .init(maxItems: 250, maxBytes: pageBytes)
+            ),
+            detailLevel: .summary
+        )
+        guard case .metric(let point) = try XCTUnwrap(response.items.first) else {
+            return XCTFail("Expected metric point")
+        }
+        XCTAssertEqual(point.evidence.map(\.evidenceID), [summary.reference.evidenceID])
+        XCTAssertEqual(response.evidence.map(\.evidenceID), [summary.reference.evidenceID])
+        XCTAssertTrue(HealthMdEvidenceResolver.allResolve(point.evidence, in: [context]))
+        XCTAssertLessThanOrEqual(
+            try HealthMdQueryCanonicalSerializer.data(for: response).count,
+            pageBytes
+        )
+
+        let sourceItems = try await collectItems(
+            executor: executor,
+            metrics: .explicit(["steps"]),
+            dates: .exact(.init(startDate: ownerDate, endDate: ownerDate)),
+            operation: .sourceRecordListing,
+            maxItems: 97,
+            detailLevel: .lossless
+        )
+        let sourceIDs = sourceItems.compactMap { item -> String? in
+            guard case .evidence(let evidence) = item else { return nil }
+            return evidence.reference.evidenceID
+        }
+        XCTAssertEqual(sourceIDs.count, allEvidence.count)
+        XCTAssertEqual(Set(sourceIDs), Set(allEvidence.map { $0.reference.evidenceID }))
+    }
+
     func testCursorTamperingAndMutationFailClosedAndSingleOversizeItemFails() async throws {
         let (store, executor) = try makeSystem(metrics: ["steps"], allowsEvidenceValues: true)
         let evidence = contextEvidence(
