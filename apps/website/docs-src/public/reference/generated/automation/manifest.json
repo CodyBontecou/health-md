@@ -4,7 +4,7 @@
     {
       "bytes" : 2525,
       "path" : "agent-evidence-response.json",
-      "sha256" : "7f1db6f29a9e1754db199d53ddbbd8bfdf60b232a68a93ea1b3b165770e76ec2"
+      "sha256" : "35a6c7114b3c42a3b388a33609459e1142ef61019dd5bf15a1ed574e6ce5af3d"
     },
     {
       "bytes" : 187,
@@ -19,12 +19,12 @@
     {
       "bytes" : 1518,
       "path" : "agent-query-response-partial.json",
-      "sha256" : "62c1d2f5ec85a3a4218f504cb34d027ea4facf87175a84ca7b564f2836ff38d4"
+      "sha256" : "6aff9cd121b035405c2c2d72a00c03507b47659dae4ce58be38d03f1d3446d00"
     },
     {
       "bytes" : 1487,
       "path" : "agent-query-response.json",
-      "sha256" : "0ccb44bb0fb15156c6465ceb8a0660c3d9962f549e8ad758f07bd4ce1d03dce4"
+      "sha256" : "77e005fc07e7d6889613c1ba04e4b1a3af6e13612fad59eef3a16ab06ba3612d"
     },
     {
       "bytes" : 2212,

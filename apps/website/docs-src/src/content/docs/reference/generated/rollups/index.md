@@ -10,9 +10,9 @@ This group contains 6 deterministic artifacts. Checksums are SHA-256 hashes of t
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `aggregation-behavior.md` | 104830 | `862b68fc9df42a318d622a911ed5da4d27265928b8e57124fc3b6eef6b6de7ce` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
-| `manifest.json` | 4348 | `ab59220b49dc981e65cfdb5052b20d7d8be8436811cb6f6a49328bc683bade67` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
-| `weekly-bases.md` | 11564 | `044217e1750d593c48621fbe782531c3278d7b490b98f58142401a047dce92fe` | — | [Download](/docs/reference/generated/rollups/weekly-bases.md) |
-| `weekly.csv` | 29797 | `447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9` | — | [Download](/docs/reference/generated/rollups/weekly.csv) |
-| `weekly.json` | 39632 | `834d7446019ffe715d739513ed3fc74888c167e222bfcd789e0ec7cbf7d78734` | — | [Download](/docs/reference/generated/rollups/weekly.json) |
-| `weekly.md` | 9203 | `ccd6eaadcc1c8a8c3879de94b84ffd5c7ff0f3a576211bf8b4a5e2ebf2cff710` | — | [Download](/docs/reference/generated/rollups/weekly.md) |
+| `aggregation-behavior.md` | 104834 | `22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
+| `manifest.json` | 4323 | `1d263270320da13918c27ddebd1b5fdea7ac2d6bfe00c193e28a1e114123a75c` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
+| `range-bases.md` | 11606 | `adca4f7553d70b5ce0721e242eaa32c73b162110785205492016f6fc46cb040c` | — | [Download](/docs/reference/generated/rollups/range-bases.md) |
+| `range.csv` | 31285 | `df3c231805ef1e2aa284aa35cfa9642e1e8d223a2b9f23053ce3782480e6c5e5` | — | [Download](/docs/reference/generated/rollups/range.csv) |
+| `range.json` | 39631 | `419e287832424b087412ccadce4441f424d8cb78535ac1ecace11cee3e801439` | — | [Download](/docs/reference/generated/rollups/range.json) |
+| `range.md` | 9226 | `8cde6add89b58b17e3a7432108e5435cef07d3e513139173f1b225d09012afbb` | — | [Download](/docs/reference/generated/rollups/range.md) |

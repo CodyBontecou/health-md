@@ -200,7 +200,7 @@ enum GeneratedAutomationReferenceDocumentation {
         )
         let agentSource = HealthMdSourceDescriptor(
             schema: "healthmd.health_data",
-            schemaVersion: 7,
+            schemaVersion: 8,
             digest: String(repeating: "a", count: 64)
         )
         let agentEvidence = HealthMdEvidenceReference(

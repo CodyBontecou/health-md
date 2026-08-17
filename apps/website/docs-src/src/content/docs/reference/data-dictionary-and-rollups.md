@@ -126,11 +126,11 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 
 ## Coverage
 
-- The roll-up period is `range`: exactly one summary covers the requested export range, first selected day through last selected day, rendered in the calendar timezone used to build the summary. `period_id` is `<start>_to_<end>`.
-- `days_expected` is the size of the full period.
+- The roll-up period is `range`: exactly one summary covers the requested export range, first selected day through last selected day, rendered in the calendar timezone used to build the summary.
+- `period_id` is `<start>_to_<end>`, for example `2026-07-01_to_2026-07-31`.
+- `days_expected` is the inclusive day span of the requested range.
 - `days_counted` is the number of daily snapshots retained for the roll-up.
 - Per-metric days counted can be smaller when a snapshot has no value for that metric.
-- Future dates in a current period remain expected but are not queried.
 - A failed daily fetch reduces coverage; an absent metric value does not become zero.
 
 ## Format-specific roll-ups
