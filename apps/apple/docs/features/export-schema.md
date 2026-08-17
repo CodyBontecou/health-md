@@ -245,7 +245,7 @@ The deterministic metric/profile inventory now comes from the shared Rust `metri
 
 ## Cross-platform-first rule
 
-Apple export design follows the repository [Apple and Android unification policy](../../../../docs/architecture/cross-platform-unification-policy.md). Before adding or changing an Apple metric, provider, setting, format projection, or automation behavior:
+Apple export design follows the repository-wide Apple and Android unification policy at `../../docs/architecture/cross-platform-unification-policy.md` (referenced as a path, not a link, because Apple docs cannot link outside `apps/apple`). Before adding or changing an Apple metric, provider, setting, format projection, or automation behavior:
 
 1. Define the platform-neutral meaning and inspect the corresponding Health Connect/Android capability.
 2. Use the common semantic ID, canonical unit, statistic, completeness model, and unified-contract mapping only when equivalence is proven.
