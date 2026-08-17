@@ -149,8 +149,12 @@ class ProfileSchedulesViewModel @Inject constructor(
     fun deleteProfile(profileId: String) {
         viewModelScope.launch {
             runCatching {
-                profileRepository.delete(profileId)
-                entryStore.delete(profileId)
+                // Atomic order matters: the last-profile guard can refuse the profile
+                // deletion, and then its scheduled entry must survive too.
+                val deleted = profileRepository.delete(profileId)
+                if (deleted || profileRepository.profileById(profileId) == null) {
+                    entryStore.delete(profileId)
+                }
                 profileScheduler.reconcile()
             }.onFailure { Timber.e(it, "Could not delete profile") }
         }

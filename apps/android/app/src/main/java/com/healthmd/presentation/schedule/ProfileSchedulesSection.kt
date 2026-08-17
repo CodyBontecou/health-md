@@ -72,12 +72,31 @@ fun ProfileSchedulesSection(
 
             Spacer(modifier = Modifier.height(Spacing.xs))
 
+            var pendingDelete by remember { mutableStateOf<ProfileScheduleRow?>(null) }
             uiState.rows.forEach { row ->
                 ProfileScheduleRow(
                     row = row,
                     onToggle = { enabled -> viewModel.setEnabled(row.profile.id, enabled) },
                     onOpenEditor = { viewModel.openEditor(row.profile.id) },
-                    onDelete = { viewModel.deleteProfile(row.profile.id) },
+                    onDelete = { pendingDelete = row },
+                )
+            }
+            pendingDelete?.let { row ->
+                AlertDialog(
+                    onDismissRequest = { pendingDelete = null },
+                    title = { Text("Delete \"${row.profile.name}\"?") },
+                    text = {
+                        Text("Its saved settings and schedule are removed. The last remaining profile cannot be deleted.")
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.deleteProfile(row.profile.id)
+                            pendingDelete = null
+                        }) { Text("Delete") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+                    },
                 )
             }
 
@@ -108,6 +127,7 @@ fun ProfileSchedulesSection(
     uiState.editingProfileId?.let { profileId ->
         val row = uiState.rows.firstOrNull { it.profile.id == profileId } ?: return
         ProfileCadenceEditorDialog(
+            profileId = row.profile.id,
             profileName = row.profile.name,
             entry = row.entry,
             onSave = viewModel::saveEntry,
@@ -165,15 +185,16 @@ private fun cadenceSummary(entry: ScheduledProfileEntry?): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileCadenceEditorDialog(
+    profileId: String,
     profileName: String,
     entry: ScheduledProfileEntry?,
     onSave: (ScheduledProfileEntry) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var draft by remember(entry) {
+    var draft by remember(entry, profileId) {
         mutableStateOf(
             entry ?: ScheduledProfileEntry(
-                profileId = "",
+                profileId = profileId,
                 isEnabled = true,
                 anchorEpochDay = java.time.LocalDate.now().toEpochDay(),
                 zoneId = java.time.ZoneId.systemDefault().id,

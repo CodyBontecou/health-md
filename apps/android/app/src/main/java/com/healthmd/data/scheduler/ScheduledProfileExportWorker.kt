@@ -189,17 +189,30 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         val operationId = operationId(profileId, due)
         val target = profile.target
         val snapshotJson = profile.settingsSnapshotJson
+        // Durable folder journals require a non-legacy engine pin (mirrors ExportWorker's
+        // gating); legacy-pin profiles use the plain non-durable export path instead.
+        val enginePin = settings.executionEnginePin
+        val useDurableFolder =
+            target == ExportTarget.DEVICE_FOLDER &&
+                enginePin != null &&
+                com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
+                    .supportsNonLegacy(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))
         val result = try {
             when (target) {
                 ExportTarget.DEVICE_FOLDER ->
-                    ExportOrchestrator(healthRepository, exportRepository)
-                        .exportDatesDurably(
-                            dates = dates,
-                            settings = settings,
-                            durableFolderOperationId = "profile-folder-$operationId",
-                            durableSettingsSnapshotJson = snapshotJson,
-                            requireExistingJournal = runAttemptCount > 0,
-                        ).copy(target = ExportTarget.DEVICE_FOLDER)
+                    if (useDurableFolder) {
+                        ExportOrchestrator(healthRepository, exportRepository)
+                            .exportDatesDurably(
+                                dates = dates,
+                                settings = settings,
+                                durableFolderOperationId = "profile-folder-$operationId",
+                                durableSettingsSnapshotJson = snapshotJson,
+                                requireExistingJournal = runAttemptCount > 0,
+                            )
+                    } else {
+                        ExportOrchestrator(healthRepository, exportRepository)
+                            .exportDates(dates, settings)
+                    }.copy(target = ExportTarget.DEVICE_FOLDER)
 
                 ExportTarget.API_ENDPOINT ->
                     apiEndpointExportRunner.exportDates(

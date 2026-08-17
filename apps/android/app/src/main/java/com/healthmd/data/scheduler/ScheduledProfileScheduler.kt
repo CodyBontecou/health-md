@@ -66,9 +66,12 @@ class ScheduledProfileScheduler @Inject constructor(
             val armed = entryStore.getEntries().filter { it.isEnabled }
             val armedProfileIds = armed.map { it.profileId }.toSet()
 
-            // Cancel alarms and fallbacks for disabled or removed entries.
+            // Cancel alarms, fallbacks, and in-flight export work for disabled or removed
+            // entries: a disabled schedule must never leave a stale retry running.
             entryStore.getEntries().filter { it.profileId !in armedProfileIds }.forEach { entry ->
                 cancelEntryAlarm(entry.profileId)
+                workManager.cancelUniqueWork(exportWorkName(entry.profileId)).await()
+                workManager.cancelUniqueWork(fallbackName(entry.profileId)).await()
             }
 
             for (entry in armed) {

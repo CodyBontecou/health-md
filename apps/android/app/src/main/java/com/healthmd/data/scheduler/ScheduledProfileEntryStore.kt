@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 /**
  * DataStore persistence for [ScheduledProfileEntry] (Android phase-6 runtime).
@@ -36,7 +37,7 @@ class ScheduledProfileEntryStore @Inject constructor(
     }
 
     val entries: Flow<List<ScheduledProfileEntry>> = dataStore.data.map { prefs ->
-        decode(prefs[Keys.ENTRIES])
+        decode(prefs[Keys.ENTRIES]).orEmpty()
     }
 
     suspend fun getEntries(): List<ScheduledProfileEntry> = entries.first()
@@ -47,7 +48,9 @@ class ScheduledProfileEntryStore @Inject constructor(
     /** Inserts or replaces the single entry bound to the profile. */
     suspend fun upsert(entry: ScheduledProfileEntry) {
         dataStore.edit { prefs ->
-            val existing = decode(prefs[Keys.ENTRIES])
+            // A corrupt persisted list must never be rewritten from a failed read;
+            // that would silently wipe every other entry. Skip the mutation instead.
+            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
             val updated = existing.filterNot { it.profileId == entry.profileId } + entry
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
         }
@@ -60,7 +63,7 @@ class ScheduledProfileEntryStore @Inject constructor(
 
     suspend fun delete(profileId: String) {
         dataStore.edit { prefs ->
-            val existing = decode(prefs[Keys.ENTRIES])
+            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
             prefs[Keys.ENTRIES] = json.encodeToString(
                 listSerializer,
                 existing.filterNot { it.profileId == profileId },
@@ -73,8 +76,18 @@ class ScheduledProfileEntryStore @Inject constructor(
         update(profileId) { it.copy(lastSuccessEpochMillis = fireAtMillis) }
     }
 
-    private fun decode(raw: String?): List<ScheduledProfileEntry> {
-        if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrDefault(emptyList())
+    /**
+     * Decodes the persisted list. Null means absent-or-corrupt: absent is a legitimate
+     * initial state, while a decode failure of a present payload is logged and also
+     * returns null so write paths skip instead of treating corruption as "no entries"
+     * and rewriting over it.
+     */
+    private fun decode(raw: String?): List<ScheduledProfileEntry>? {
+        if (raw == null) return null
+        if (raw.isBlank()) return emptyList()
+        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse { error ->
+            Timber.e(error, "Scheduled profile entries failed to decode; blocking entry writes")
+            null
+        }
     }
 }
