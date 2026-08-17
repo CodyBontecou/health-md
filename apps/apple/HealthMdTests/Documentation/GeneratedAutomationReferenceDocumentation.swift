@@ -184,6 +184,12 @@ enum GeneratedAutomationReferenceDocumentation {
             totalFilesWritten: 2,
             externalRecordFileCount: 1,
             failedDateDetails: [failedDateDetail],
+            partialFailures: [ExportPartialFailure(
+                date: dayEnd,
+                dataType: "Individual entries",
+                dateRangeDescription: "2026-03-16",
+                errorDescription: "Lossless records produced no individual entries for tracked metrics: weight not selected for the daily export."
+            )],
             completedDates: [dayStart, dayEnd],
             destinationDisplayName: "Synthetic Export Destination",
             destinationPathForDisplay: "/Synthetic/HealthExports",

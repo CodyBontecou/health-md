@@ -308,6 +308,7 @@ class SchedulingManager: ObservableObject {
         var successCount = 0
         var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
+        var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var rollupFileCount = 0
         var archiveCount = 0
@@ -425,6 +426,7 @@ class SchedulingManager: ObservableObject {
                 )
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 if settings.dailyNotesOnlyModeEnabled {
                     switch writeResult.dailyNoteResult {
                     case .updated:
@@ -535,6 +537,7 @@ class SchedulingManager: ObservableObject {
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures,
             formatsPerDate: settings.looseFormatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,
