@@ -66,6 +66,11 @@ struct NotificationExportResult: Equatable {
 
 /// Manages background task scheduling for automated health data exports
 class SchedulingManager: ObservableObject {
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes on older iOS runtimes when the last release happened off
+    // the main actor during app-host teardown. Matches AdvancedExportSettings.
+    nonisolated deinit {}
     enum PendingExportDrainTrigger {
         case notificationTap
         case appActive
