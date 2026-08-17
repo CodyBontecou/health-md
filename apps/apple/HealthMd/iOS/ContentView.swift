@@ -2608,8 +2608,6 @@ struct SettingsTabView: View {
                 icon: "hand.raised.fill",
                 title: "Privacy Policy",
                 subtitle: "Analytics never includes health values, metric names, health dates, exported files, paths, peer names, or credentials. It is not used for advertising or cross-app tracking.",
-                status: "View",
-                statusTone: .accent,
                 isActive: true,
                 accessibilityHint: "Double tap to open the Health.md privacy policy",
                 action: { UIApplication.shared.open(privacyPolicyURL) }
@@ -2644,8 +2642,6 @@ struct SettingsTabView: View {
                 icon: "bubble.left.and.bubble.right.fill",
                 title: "Join Our Discord",
                 subtitle: "Chat with the community",
-                status: "Open",
-                statusTone: .accent,
                 isActive: true,
                 accessibilityHint: "Double tap to open Discord",
                 action: { UIApplication.shared.open(discordURL) }
@@ -2657,8 +2653,6 @@ struct SettingsTabView: View {
                 icon: "envelope.fill",
                 title: "Send Feedback",
                 subtitle: "Questions, ideas, or issues",
-                status: "Email",
-                statusTone: .muted,
                 isActive: true,
                 accessibilityHint: "Double tap to send feedback by email",
                 action: {
@@ -2676,8 +2670,6 @@ struct SettingsTabView: View {
                 icon: "ladybug.fill",
                 title: "Report a Bug",
                 subtitle: "Open an issue on GitHub",
-                status: "GitHub",
-                statusTone: .muted,
                 isActive: true,
                 accessibilityHint: "Double tap to open GitHub Issues",
                 action: { FeedbackHelper.openGitHubIssue() }
@@ -2696,8 +2688,6 @@ struct SettingsTabView: View {
                     icon: "checkmark.shield.fill",
                     title: isRunningDebug ? "Running…" : "Verify Receipt",
                     subtitle: "Test worker ↔ Apple end-to-end",
-                    status: isRunningDebug ? "Running…" : "Run",
-                    statusTone: .accent,
                     isActive: true,
                     accessibilityHint: "Double tap to verify the purchase receipt",
                     action: runReceiptVerification
@@ -2709,8 +2699,6 @@ struct SettingsTabView: View {
                     icon: "arrow.counterclockwise",
                     title: "Replay Onboarding",
                     subtitle: "Show onboarding flow again",
-                    status: "Replay",
-                    statusTone: .muted,
                     isActive: true,
                     accessibilityHint: "Double tap to replay onboarding",
                     action: replayOnboarding
