@@ -342,7 +342,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         )
 
         let settings = makeSettings()
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
 
         XCTAssertTrue(service.canExportToConnectedMac)
         XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))
@@ -397,7 +397,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         )
 
         let settings = makeSettings()
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
 
         XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))

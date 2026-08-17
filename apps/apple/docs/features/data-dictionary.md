@@ -9,7 +9,7 @@
 
 ## What it does
 
-When **Write Data Dictionary** is enabled, Health.md writes a data dictionary beside exports so people, scripts, Obsidian plugins, and AI tools can interpret summary/frontmatter fields without guessing. In current `schema_version: 7`, it documents canonical keys, units, HealthKit identifiers, daily aggregation, and weekly/monthly/yearly roll-up rules. The setting defaults on; turning it off leaves ordinary Markdown and other selected exports unchanged while omitting the JSON sidecar.
+When **Write Data Dictionary** is enabled, Health.md writes a data dictionary beside exports so people, scripts, Obsidian plugins, and AI tools can interpret summary/frontmatter fields without guessing. In current `schema_version: 8`, it documents canonical keys, units, HealthKit identifiers, daily aggregation, and the range summary roll-up rules. The setting defaults on; turning it off leaves ordinary Markdown and other selected exports unchanged while omitting the JSON sidecar.
 
 The dictionary describes **summary projections**, including v7 lossless diagnostics. It is not a schema for every nested canonical source payload. Source-record consumers should also parse `healthkit_record_archive` (`healthmd.healthkit_records` v1) and its tagged metadata. See the exhaustive generated [metric catalog and roll-up reference](../reference/data-dictionary-and-rollups.md).
 
@@ -53,13 +53,13 @@ Health.md does not delete an existing dictionary when the setting is turned off;
   "rollup": {
     "primary": "sum",
     "statistics": ["sum", "daily_average", "minimum_daily_value", "maximum_daily_value", "days_counted"],
-    "periods": ["weekly", "monthly", "yearly"],
+    "periods": ["range"],
     "preferredSource": "daily_frontmatter",
     "nullHandling": "ignore_missing_days_and_report_days_counted",
     "weightedBy": null,
     "notes": "Sum daily values and report days counted."
   },
-  "schemaVersion": 6
+  "schemaVersion": 8
 }
 ```
 

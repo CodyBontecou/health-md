@@ -23,9 +23,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     var individualTracking: IndividualTrackingSnapshot
     var dailyNoteInjection: DailyNoteInjectionSnapshot
     var includeGranularData: Bool
-    var generateWeeklyRollups: Bool
-    var generateMonthlyRollups: Bool
-    var generateYearlyRollups: Bool
+    var generateRangeSummary: Bool
     var metricSelection: MetricSelectionSnapshot
     /// Immutable renderer provenance for newly planned Apple output. Missing means the snapshot
     /// predates engine pinning and must retain legacy renderer authority.
@@ -53,9 +51,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case individualTracking
         case dailyNoteInjection
         case includeGranularData
-        case generateWeeklyRollups
-        case generateMonthlyRollups
-        case generateYearlyRollups
+        case generateRangeSummary
         case metricSelection
         case appleExportEnginePin
         case appleExportEngineAuthorityIsFrozen
@@ -64,6 +60,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
 
     private enum LegacyCodingKeys: String, CodingKey {
         case archiveMarkdownExports
+        case generateWeeklyRollups
+        case generateMonthlyRollups
+        case generateYearlyRollups
     }
 
     var dailyNotesOnlyModeEnabled: Bool {
@@ -90,9 +89,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         individualTracking: IndividualTrackingSnapshot,
         dailyNoteInjection: DailyNoteInjectionSnapshot,
         includeGranularData: Bool,
-        generateWeeklyRollups: Bool,
-        generateMonthlyRollups: Bool,
-        generateYearlyRollups: Bool,
+        generateRangeSummary: Bool,
         metricSelection: MetricSelectionSnapshot,
         appleExportEnginePin: AppleExportEnginePin? = nil,
         appleExportEngineAuthorityIsFrozen: Bool = true,
@@ -113,9 +110,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         self.individualTracking = individualTracking
         self.dailyNoteInjection = dailyNoteInjection
         self.includeGranularData = includeGranularData
-        self.generateWeeklyRollups = generateWeeklyRollups
-        self.generateMonthlyRollups = generateMonthlyRollups
-        self.generateYearlyRollups = generateYearlyRollups
+        self.generateRangeSummary = generateRangeSummary
         self.metricSelection = metricSelection
         self.appleExportEnginePin = appleExportEnginePin
         self.appleExportEngineAuthorityIsFrozen = appleExportEngineAuthorityIsFrozen
@@ -147,9 +142,17 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         // Older snapshots predate source-record capture. Missing means the sender
         // supplied summary data only; current snapshots always encode this key.
         includeGranularData = try container.decodeIfPresent(Bool.self, forKey: .includeGranularData) ?? false
-        generateWeeklyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateWeeklyRollups) ?? false
-        generateMonthlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateMonthlyRollups) ?? false
-        generateYearlyRollups = try container.decodeIfPresent(Bool.self, forKey: .generateYearlyRollups) ?? false
+        // The range summary replaced weekly/monthly/yearly roll-ups. Snapshots from
+        // older builds carried three legacy toggles; enabling any of them opts in
+        // to the range summary.
+        if let rangeSummary = try container.decodeIfPresent(Bool.self, forKey: .generateRangeSummary) {
+            generateRangeSummary = rangeSummary
+        } else {
+            let legacyWeekly = try legacyContainer.decodeIfPresent(Bool.self, forKey: .generateWeeklyRollups) ?? false
+            let legacyMonthly = try legacyContainer.decodeIfPresent(Bool.self, forKey: .generateMonthlyRollups) ?? false
+            let legacyYearly = try legacyContainer.decodeIfPresent(Bool.self, forKey: .generateYearlyRollups) ?? false
+            generateRangeSummary = legacyWeekly || legacyMonthly || legacyYearly
+        }
         metricSelection = try container.decode(MetricSelectionSnapshot.self, forKey: .metricSelection)
         // Decoding is data-only. In particular, it never resolves the current engine flag or calls
         // the packaged Rust core. Missing fields are explicitly legacy.
@@ -190,9 +193,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         try container.encode(individualTracking, forKey: .individualTracking)
         try container.encode(dailyNoteInjection, forKey: .dailyNoteInjection)
         try container.encode(includeGranularData, forKey: .includeGranularData)
-        try container.encode(generateWeeklyRollups, forKey: .generateWeeklyRollups)
-        try container.encode(generateMonthlyRollups, forKey: .generateMonthlyRollups)
-        try container.encode(generateYearlyRollups, forKey: .generateYearlyRollups)
+        try container.encode(generateRangeSummary, forKey: .generateRangeSummary)
         try container.encode(metricSelection, forKey: .metricSelection)
         try container.encodeIfPresent(appleExportEnginePin, forKey: .appleExportEnginePin)
         try container.encode(
@@ -228,9 +229,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             individualTracking: .from(settings.individualTracking),
             dailyNoteInjection: .from(settings.dailyNoteInjection),
             includeGranularData: settings.includeGranularData,
-            generateWeeklyRollups: settings.generateWeeklyRollups,
-            generateMonthlyRollups: settings.generateMonthlyRollups,
-            generateYearlyRollups: settings.generateYearlyRollups,
+            generateRangeSummary: settings.generateRangeSummary,
             metricSelection: .from(settings.metricSelection),
             appleExportEnginePin: appleExportEnginePin ?? settings.executionAppleExportEnginePin,
             appleExportEngineAuthorityIsFrozen: appleExportEngineAuthorityIsFrozen
@@ -340,9 +339,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         individualTracking.apply(to: settings.individualTracking)
         dailyNoteInjection.apply(to: settings.dailyNoteInjection)
         settings.includeGranularData = includeGranularData
-        settings.generateWeeklyRollups = generateWeeklyRollups
-        settings.generateMonthlyRollups = generateMonthlyRollups
-        settings.generateYearlyRollups = generateYearlyRollups
+        settings.generateRangeSummary = generateRangeSummary
         metricSelection.apply(to: settings.metricSelection)
         settings.executionAppleExportEnginePin = appleExportEnginePin
         settings.executionAppleExportEngineAuthorityIsFrozen = appleExportEngineAuthorityIsFrozen
@@ -391,10 +388,7 @@ nonisolated enum ApplePureRustAuthorityAdmission {
         settings: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
-        guard settings.summaryOnlyExport,
-              settings.generateWeeklyRollups
-                || settings.generateMonthlyRollups
-                || settings.generateYearlyRollups else {
+        guard settings.summaryOnlyExport, settings.generateRangeSummary else {
             return false
         }
         switch surface {

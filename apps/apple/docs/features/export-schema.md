@@ -5,7 +5,7 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
 - Markdown frontmatter when **Include Metadata** is on, and Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 7
+  schema_version: 8
   raw_capture_status: complete
   time_context:
     calendar_timezone: America/Los_Angeles
@@ -15,7 +15,7 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 7,
+    "schema_version": 8,
     "raw_capture_status": "complete",
     "time_context": {
       "calendar_timezone": "America/Los_Angeles",
@@ -27,19 +27,26 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-07-15,Metadata,schema,healthmd.health_data,,
-  2026-07-15,Metadata,schema_version,7,,
+  2026-07-15,Metadata,schema_version,8,,
   2026-07-15,Raw HealthKit,Raw Capture Status,complete,status,
   ```
 
-## Version 7 live schema
+## Version 8 live schema
 
-`schema_version: 7` is the current Health.md daily export contract. Versions 5 and 6 and their signature fixtures remain historical and must not be rewritten.
+`schema_version: 8` is the current Health.md daily export contract. Versions 5, 6, and 7 and their signature fixtures remain historical and must not be rewritten.
 
-Version 7 carries forward the complete lossless source representation introduced by v6 and corrects three public summary contracts:
+Version 8 replaces weekly/monthly/yearly roll-up files with a single range summary per export:
+
+- The roll-up period is `range`. Exactly one `healthmd.rollup_summary` file per format covers the requested export range, first selected day through last selected day.
+- `period_id` is `<start>_to_<end>` (for example `2026-03-10_to_2026-03-15`), and files live under `Rollups/Range/`.
+- `days_expected` is the inclusive day span of the requested range, so `coverage_percent` reflects the selection rather than a calendar expectation.
+- Daily `healthmd.health_data` content is unchanged apart from the version label. Consumers of weekly/monthly/yearly files must regenerate summaries as ranges or pin to historical v7 files.
+
+Version 8 carries forward the complete lossless source representation and the v7 summary corrections:
 
 - `vo2_max` is a latest measurement, not a period maximum. Its period headline follows the latest daily source value even when that value is lower than an earlier measurement.
 - CSV extended summary categories, including cycling, vitamins, minerals, reproductive health, and other health, populate canonical `Unit` values from the production data dictionary instead of dropping them.
-- Roll-up date labels are rendered in the calendar timezone used to build the period, so ISO weekly output labels Monday through Sunday and agrees with its `YYYY-Www` period ID.
+- Roll-up date labels are rendered in the calendar timezone used to build the period, so range summaries label their first and last selected days in that timezone.
 
 **Lossless Health Records is off by default for new installs.** Existing explicit on or off choices are preserved. The default summary-only daily export reports `raw_capture_status: not_requested`; enabling Lossless adds the canonical source archive. The internal compatibility setting and persisted key remain `includeGranularData` and `advancedExportSettings.includeGranularData`.
 
@@ -156,7 +163,7 @@ Source URLs are preserved as strings. Health.md never fetches them, follows them
 ## Summary correctness notes
 
 - Blood-pressure summaries retain daily average/minimum/maximum values. The canonical archive contains actual correlation pairs and Health.md does not infer sessions or average nearby readings.
-- VO2 Max may use the latest historical measurement through the end of the requested day. Its UUID, source start/end, carry-forward flag, and age are exported so it cannot masquerade as an in-day reading. The v7 dictionary labels `vo2_max` as `latest`; weekly/monthly/yearly headline values select the latest daily value rather than the largest value.
+- VO2 Max may use the latest historical measurement through the end of the requested day. Its UUID, source start/end, carry-forward flag, and age are exported so it cannot masquerade as an in-day reading. The v7 dictionary labels `vo2_max` as `latest`; range headline values select the latest daily value rather than the largest value.
 - **Stand Time** is summed duration in minutes from `HKQuantityTypeIdentifierAppleStandTime`. **Stand Hours** is the count of distinct stood hours from Apple Stand Hour category records. They are not interchangeable.
 - Vitamin/mineral summaries and the v7 data dictionary label microgram values `µg`; milligram summaries use `mg`. Canonical HealthKit quantity payloads preserve the reviewed HealthKit query unit string (`mcg` for those microgram source types).
 
@@ -176,7 +183,7 @@ See [Date, Time, and Units](./date-time-units.md) and [Data Dictionary and Roll-
 
 ## API Endpoint envelope
 
-API Endpoint export wraps ordinary v7 daily records in `healthmd.api_export`. The daily record version is declared by `daily_record_schema_version`; each `records` item still contains its own schema/version and archive. Provider-specific sidecars can independently advance the API envelope version without changing `healthmd.health_data`.
+API Endpoint export wraps ordinary v8 daily records in `healthmd.api_export`. The daily record version is declared by `daily_record_schema_version`; each `records` item still contains its own schema/version and archive. Provider-specific sidecars can independently advance the API envelope version without changing `healthmd.health_data`.
 
 ## Practical limits
 
@@ -189,7 +196,7 @@ API Endpoint export wraps ordinary v7 daily records in `healthmd.api_export`. Th
 
 ## Migrating from v5 or v6
 
-Existing v5 and v6 files remain valid historical exports. Do not relabel them as v7. Re-export v6 periods when consumers need the corrected VO2 Max `latest` rule, populated extended-category CSV units, or calendar-timezone-correct roll-up date labels; v6 dictionaries described `vo2_max` as a maximum.
+Existing v5, v6, and v7 files remain valid historical exports. Do not relabel them as v8. Re-export when consumers need the corrected VO2 Max `latest` rule, populated extended-category CSV units, calendar-timezone-correct roll-up date labels, or the v8 range summary; v6 dictionaries described `vo2_max` as a maximum.
 
 For a consistent archive, update Health.md and its Obsidian integration, then re-export the dates you need. Re-exporting is especially important when downstream tools need canonical source records, corrected day ownership, exact quantities, VO2 provenance and roll-ups, Stand Time/Stand Hours separation, or corrected micronutrient units.
 
@@ -206,17 +213,17 @@ Downstream parser guidance:
 
 ## Internal semantic-input migration boundary
 
-Apple converts already-captured `HealthData` into bounded `healthmd.semantic_input` v1 batches for deterministic Rust filtering, typed reduction, and Apple period-rollup planning. The session explicitly carries disabled frontmatter output keys and whether platform archive extensions may be retained, so previously captured data cannot bypass current output settings. This internal envelope is not `healthmd.health_data`, is never written to a destination, and does not change schema version 7. HealthKit querying/statistics, sleep day ownership, archive payloads, source/device metadata, localization, and daily/archive rendering remain native. The audited non-archive summary-only roll-up subset can select pure Rust rendering after its operation-wide gate; broader operations remain legacy or native-authoritative shadow. SDK-produced daily values cross as explicit aggregate facts so the migration does not recompute HealthKit statistics from raw samples.
+Apple converts already-captured `HealthData` into bounded `healthmd.semantic_input` v1 batches for deterministic Rust filtering, typed reduction, and Apple range-summary planning. The session explicitly carries disabled frontmatter output keys and whether platform archive extensions may be retained, so previously captured data cannot bypass current output settings. This internal envelope is not `healthmd.health_data`, is never written to a destination, and does not change schema version 8. HealthKit querying/statistics, sleep day ownership, archive payloads, source/device metadata, localization, and daily/archive rendering remain native. The audited non-archive summary-only roll-up subset can select pure Rust rendering after its operation-wide gate; broader operations remain legacy or native-authoritative shadow. SDK-produced daily values cross as explicit aggregate facts so the migration does not recompute HealthKit statistics from raw samples.
 
 ## Internal render and artifact-plan migration boundary
 
 A completed semantic result and frozen presentation snapshot may enter `healthmd.render_input` v1. The shared core renders destination-neutral Apple-v7 artifacts and returns validated relative paths, media types, write modes, exact bytes, byte counts, and checksums. Large archive JSON/CSV items and attachments use a bounded stream that never retains a second complete output buffer. Security-scoped URLs, destination reads, atomic writes, ZIP containers, API networking, credentials, and direct transport remain native.
 
-Pre-cutover Swift renderer bytes are frozen independently under `packages/contracts/render-input/v1/fixtures/native-apple-v7.json`. This internal migration does not alter schema version 7. Release defaults remain legacy until the M6 rollout gates pass. Shadow keeps Swift authoritative, while the narrowly admitted summary-only roll-up path can use Rust authority without opening a native renderer; Apple daily and API Rust authority remain gated on independent exact v7 profile documents.
+Pre-cutover Swift renderer bytes are frozen independently under `packages/contracts/render-input/v1/fixtures/native-apple-v7.json`. This internal migration does not alter schema version 8. Release defaults remain legacy until the M6 rollout gates pass. Shadow keeps Swift authoritative, while the narrowly admitted summary-only roll-up path can use Rust authority without opening a native renderer; Apple daily and API Rust authority remain gated on independent exact v7 profile documents.
 
 ## Schema version policy and guardrail
 
-`HealthMdExportSchema.version` is the production daily schema integer. Version 7 is current; versions 1 through 6 are historical. The committed v5 and v6 signatures remain preserved; v7 has its own versioned fixture.
+`HealthMdExportSchema.version` is the production daily schema integer. Version 8 is current; versions 1 through 7 are historical. The committed v5, v6, and v7 signatures remain preserved; v8 has its own versioned fixture.
 
 Bump the daily schema when a public key, type, meaning, unit, aggregation, JSON structure, CSV contract, reserved frontmatter field, or downstream dictionary rule changes. Do not bump for byte-compatible internal refactors.
 

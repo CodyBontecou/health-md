@@ -278,9 +278,7 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeIsolatedSettings()
         settings.exportFormats = [.markdown]
         settings.includeDataDictionary = false
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         let probe = SecureCommitHookProbe()
         installParentSwap(
             on: manager,
@@ -374,7 +372,7 @@ final class VaultManagerTests: XCTestCase {
         settings.summaryOnlyExport = summaryOnly
         settings.exportFormats = [.markdown]
         settings.includeDataDictionary = false
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let probe = SecureCommitHookProbe()
         installParentSwap(
             on: manager,
@@ -531,7 +529,7 @@ final class VaultManagerTests: XCTestCase {
         settings.archiveExportFiles = true
         settings.summaryOnlyExport = true
         settings.filenameFormat = "health"
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let secondDate = try XCTUnwrap(
             Calendar.current.date(byAdding: .day, value: 1, to: ExportFixtures.referenceDate)
         )
@@ -1384,9 +1382,7 @@ final class VaultManagerTests: XCTestCase {
         let manager = makeManager()
         let settings = makeIsolatedSettings()
         settings.archiveExportFiles = false
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         let nonexistentPayload = URL(fileURLWithPath: "/tmp/should-not-be-decoded.json")
 
         let result = try await manager.finalizeCorpusDerivedOutputs(
@@ -1413,9 +1409,7 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeIsolatedSettings()
         settings.archiveExportFiles = false
         settings.exportFormats = [.json]
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
         let payloadURL = workURL.appendingPathComponent("dense-day.json")
         let payload = ConnectedCorpusHealthDayPayload(
             sourceDate: ExportFixtures.referenceDate,
@@ -1464,9 +1458,7 @@ final class VaultManagerTests: XCTestCase {
         settings.archiveExportFiles = true
         settings.exportFormats = [.json, .csv]
         settings.includeDataDictionary = false
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         let payload = ConnectedCorpusHealthDayPayload(
             sourceDate: ExportFixtures.referenceDate,
             isRequestedDate: true,
@@ -1559,9 +1551,7 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeIsolatedSettings()
         settings.exportFormats = [.markdown]
         settings.writeMode = .append
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
 
         XCTAssertTrue(manager.exportHealthData(
             ExportFixtures.fullDay,
@@ -1805,8 +1795,8 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeIsolatedSettings()
         settings.exportFormats = Set(ExportFormat.allCases)
         settings.archiveExportFiles = true
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         settings.individualTracking.globalEnabled = true
         settings.individualTracking.setTrackIndividually("weight", enabled: true)

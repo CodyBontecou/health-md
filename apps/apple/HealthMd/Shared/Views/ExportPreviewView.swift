@@ -362,11 +362,11 @@ struct ExportPreviewView: View {
                 }
                 if settings.rollupSummariesEnabled {
                     HStack {
-                        Text("Roll-up periods")
+                        Text("Roll-up")
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text(settings.enabledRollupPeriods.map(localizedRollupPeriodName).joined(separator: ", "))
+                        Text(localizedRollupPeriodName(.range))
                             .font(.footnote.monospaced())
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
@@ -814,9 +814,9 @@ struct ExportPreviewView: View {
         }
         let rollupProjection = ExportRollupOutputSizeEstimator.estimate(
             selectedDates: dates,
-            periods: targetType == .apiEndpoint || settings.dailyNotesOnlyModeEnabled
-                ? []
-                : settings.enabledRollupPeriods,
+            rollupsEnabled: settings.rollupSummariesEnabled
+                && targetType != .apiEndpoint
+                && !settings.dailyNotesOnlyModeEnabled,
             formats: settings.exportFormats,
             metricSelection: settings.metricSelection,
             customization: settings.formatCustomization

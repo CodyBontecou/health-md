@@ -399,7 +399,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
             "- **Missing days:** {}",
             context.days_expected.saturating_sub(context.days_counted)
         ),
-        "- **Rule source:** `_healthmd_data_dictionary.json` schema v7".to_owned(),
+        "- **Rule source:** `_healthmd_data_dictionary.json` schema v8".to_owned(),
     ]);
     if !dates.is_empty() {
         lines.push(format!("- **Source dates:** {}", dates.join(", ")));

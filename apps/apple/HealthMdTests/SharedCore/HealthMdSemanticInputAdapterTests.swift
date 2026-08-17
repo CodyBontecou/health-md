@@ -54,7 +54,7 @@ final class HealthMdSemanticInputAdapterTests: XCTestCase {
             customization: customization,
             calendarTimeZoneIdentifier: "America/New_York",
             retainPlatformExtensions: true,
-            rollupPeriods: [.weekly]
+            rollupPeriods: [.range]
         )
         var data = HealthData(
             date: Date(timeIntervalSince1970: 1_767_225_600),
@@ -214,7 +214,7 @@ final class HealthMdSemanticInputAdapterTests: XCTestCase {
             customization: disabledCustomization,
             calendarTimeZoneIdentifier: "America/New_York",
             retainPlatformExtensions: false,
-            rollupPeriods: [.weekly]
+            rollupPeriods: [.range]
         )
         let disabledSession = try service.semanticSession(configuration: disabledConfiguration)
         let disabledResult = try disabledSession.process(batch: encoded.data)

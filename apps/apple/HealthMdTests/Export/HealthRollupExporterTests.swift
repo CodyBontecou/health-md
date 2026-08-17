@@ -8,9 +8,7 @@ private enum HealthRollupTestSettings {
         defaults.removePersistentDomain(forName: suiteName)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = [.markdown]
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = true
-        settings.generateYearlyRollups = true
+        settings.generateRangeSummary = true
         settings.formatCustomization.unitPreference = .metric
         return LifecycleHarness.retain(settings)
     }
@@ -18,22 +16,21 @@ private enum HealthRollupTestSettings {
 
 final class HealthRollupExporterTests: XCTestCase {
 
-    func testWeeklyRollupAggregatesRepresentativeRules() throws {
+    func testRangeRollupAggregatesRepresentativeRules() throws {
         let settings = HealthRollupTestSettings.make()
         let summaries = HealthRollupExporter.makeSummaries(
             from: [makeDay(2026, 3, 14, steps: 1_000, activeCalories: 100, restingHR: 60, bloodOxygenMin: 0.95, workoutAverageHR: 100, workoutDuration: 3_600),
                    makeDay(2026, 3, 15, steps: 2_000, activeCalories: 150, restingHR: 70, bloodOxygenMin: 0.92, workoutAverageHR: 150, workoutDuration: 7_200)],
             settings: settings,
-            periods: [.weekly],
             generatedAt: makeDate(2026, 6, 14)
         )
 
         let summary = try XCTUnwrap(summaries.first)
-        XCTAssertEqual(summary.period, .weekly)
-        XCTAssertEqual(summary.periodID, "2026-W11")
-        XCTAssertEqual(summary.daysExpected, 7)
+        XCTAssertEqual(summary.period, .range)
+        XCTAssertEqual(summary.periodID, "2026-03-14_to_2026-03-15")
+        XCTAssertEqual(summary.daysExpected, 2)
         XCTAssertEqual(summary.daysCounted, 2)
-        XCTAssertEqual(summary.coveragePercent, 100.0 * 2.0 / 7.0, accuracy: 0.01)
+        XCTAssertEqual(summary.coveragePercent, 100.0, accuracy: 0.01)
 
         XCTAssertEqual(try metric("steps", in: summary).primaryValue, "3,000")
         XCTAssertEqual(try metric("active_calories", in: summary).primaryValue, "250")
@@ -43,7 +40,7 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(try metric("workout_avg_heart_rate", in: summary).rule, "weighted_average")
     }
 
-    func testWeeklyRollupRendersISOWeekBoundsInSuppliedCalendarTimeZone() throws {
+    func testRangeRollupRendersBoundsInSuppliedCalendarTimeZone() throws {
         let settings = HealthRollupTestSettings.make()
         var utcCalendar = Calendar(identifier: .iso8601)
         utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -61,22 +58,21 @@ final class HealthRollupExporterTests: XCTestCase {
         let summary = try XCTUnwrap(HealthRollupGenerator.generate(
             from: [data],
             settings: settings,
-            periods: [.weekly],
             generatedAt: sourceDate,
             calendar: utcCalendar
         ).first)
         let json = try XCTUnwrap(summary.toRollupJSON().data(using: .utf8))
         let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: json) as? [String: Any])
 
-        XCTAssertEqual(summary.periodID, "2026-W28")
-        XCTAssertEqual(payload["start_date"] as? String, "2026-07-06")
-        XCTAssertEqual(payload["end_date"] as? String, "2026-07-12")
-        XCTAssertTrue(summary.toRollupMarkdown().contains("start_date: 2026-07-06"))
-        XCTAssertTrue(summary.toRollupObsidianBases().contains("end_date: 2026-07-12"))
-        XCTAssertTrue(summary.toRollupCSV().contains("weekly,2026-W28,2026-07-06,2026-07-12"))
+        XCTAssertEqual(summary.periodID, "2026-07-11_to_2026-07-11")
+        XCTAssertEqual(payload["start_date"] as? String, "2026-07-11")
+        XCTAssertEqual(payload["end_date"] as? String, "2026-07-11")
+        XCTAssertTrue(summary.toRollupMarkdown().contains("start_date: 2026-07-11"))
+        XCTAssertTrue(summary.toRollupObsidianBases().contains("end_date: 2026-07-11"))
+        XCTAssertTrue(summary.toRollupCSV().contains("range,2026-07-11_to_2026-07-11,2026-07-11,2026-07-11"))
     }
 
-    func testWeeklyRollupCountsFetchedSourceDaysEvenWhenMetricsAreEmpty() throws {
+    func testRangeRollupCountsFetchedSourceDaysEvenWhenMetricsAreEmpty() throws {
         let settings = HealthRollupTestSettings.make()
         var fullWeek: [HealthData] = []
         for day in 9...15 {
@@ -90,10 +86,10 @@ final class HealthRollupExporterTests: XCTestCase {
         let summary = try XCTUnwrap(HealthRollupExporter.makeSummaries(
             from: fullWeek,
             settings: settings,
-            periods: [.weekly],
             generatedAt: makeDate(2026, 6, 14)
         ).first)
 
+        XCTAssertEqual(summary.periodID, "2026-03-09_to_2026-03-15")
         XCTAssertEqual(summary.daysExpected, 7)
         XCTAssertEqual(summary.daysCounted, 7)
         XCTAssertEqual(summary.coveragePercent, 100.0, accuracy: 0.01)
@@ -106,29 +102,28 @@ final class HealthRollupExporterTests: XCTestCase {
         let summary = try XCTUnwrap(HealthRollupExporter.makeSummaries(
             from: [makeDay(2026, 3, 15, steps: 12_500, activeCalories: 520, restingHR: 58, bloodOxygenMin: 0.95, workoutAverageHR: 142, workoutDuration: 1_800)],
             settings: settings,
-            periods: [.weekly],
             generatedAt: makeDate(2026, 6, 14)
         ).first)
 
         let markdown = summary.markdown()
         XCTAssertTrue(markdown.contains("schema: healthmd.rollup_summary"))
         XCTAssertTrue(markdown.contains("schema_version: \(HealthMdExportSchema.version)"))
-        XCTAssertTrue(markdown.contains("rollup_period: weekly"))
-        XCTAssertTrue(markdown.contains("period_id: 2026-W11"))
-        XCTAssertTrue(markdown.contains("days_expected: 7"))
+        XCTAssertTrue(markdown.contains("rollup_period: range"))
+        XCTAssertTrue(markdown.contains("period_id: 2026-03-15_to_2026-03-15"))
+        XCTAssertTrue(markdown.contains("days_expected: 1"))
         XCTAssertTrue(markdown.contains("days_counted: 1"))
         XCTAssertTrue(markdown.contains("units:"))
         XCTAssertTrue(markdown.contains("  steps: steps"))
-        XCTAssertTrue(markdown.contains("# Weekly Health Summary — 2026-W11"))
+        XCTAssertTrue(markdown.contains("# Range Health Summary — 2026-03-15_to_2026-03-15"))
         XCTAssertTrue(markdown.contains("## Activity"))
-        XCTAssertTrue(markdown.contains("| Steps | `steps` | 12,500 | steps | 1/7 | sum |"))
+        XCTAssertTrue(markdown.contains("| Steps | `steps` | 12,500 | steps | 1/1 | sum |"))
         XCTAssertTrue(markdown.contains("## Roll-up notes"))
     }
 
     func testMarkdownRollupKeepsMultilineValuesInsideTableCells() throws {
-        let window = HealthRollupPeriodWindow.window(
-            containing: makeDate(2026, 6, 28),
-            period: .weekly,
+        let window = HealthRollupPeriodWindow.rangeWindow(
+            from: makeDate(2026, 6, 28),
+            to: makeDate(2026, 6, 28),
             calendar: Calendar(identifier: .gregorian)
         )
         let summary = RollupDataSnapshot(
@@ -165,9 +160,7 @@ final class HealthRollupExporterTests: XCTestCase {
 
     func testRollupsRequireAnEnabledPeriodToggle() {
         let settings = HealthRollupTestSettings.make()
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
 
         let summaries = HealthRollupExporter.makeSummaries(
             from: [makeDay(2026, 3, 15, steps: 1_000)],
@@ -180,14 +173,11 @@ final class HealthRollupExporterTests: XCTestCase {
     func testOutputTargetsCoverEverySelectedFormat() throws {
         let settings = HealthRollupTestSettings.make()
         settings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
 
         let summary = try XCTUnwrap(HealthRollupExporter.makeSummaries(
             from: [makeDay(2026, 3, 15, steps: 1_000)],
-            settings: settings,
-            periods: [.weekly]
+            settings: settings
         ).first)
 
         let targets = HealthRollupExporter.outputTargets(
@@ -197,7 +187,12 @@ final class HealthRollupExporterTests: XCTestCase {
         )
 
         XCTAssertEqual(targets.map(\.format), [.csv, .json, .markdown, .obsidianBases])
-        XCTAssertEqual(targets.map(\.filename), ["2026-W11.csv", "2026-W11.json", "2026-W11.md", "2026-W11-bases.md"])
+        XCTAssertEqual(targets.map(\.filename), [
+            "2026-03-15_to_2026-03-15.csv",
+            "2026-03-15_to_2026-03-15.json",
+            "2026-03-15_to_2026-03-15.md",
+            "2026-03-15_to_2026-03-15-bases.md"
+        ])
         XCTAssertTrue(try XCTUnwrap(targets.first { $0.format == .json }).content.contains("\"schema\" : \"healthmd.rollup_summary\""))
         XCTAssertTrue(try XCTUnwrap(targets.first { $0.format == .csv }).content.contains("Period,Period ID,Start Date"))
         XCTAssertTrue(try XCTUnwrap(targets.first { $0.format == .obsidianBases }).content.contains("rollup_metrics:"))

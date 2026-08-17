@@ -40,8 +40,8 @@ Preview is for shape and diagnostics, not a completeness census. Lossless JSON/C
 
 1. Set the same options you plan to use for the real export.
 2. Tap **Preview**.
-3. Review the summary: date count, formats per day, enabled roll-up periods, and destination.
-4. Review the **Roll-up summaries** section when weekly/monthly/yearly roll-ups are enabled.
+3. Review the summary: date count, formats per day, range summary state, and destination.
+4. Review the **Range summary** section when the range summary is enabled.
 5. Review any side effects, such as daily-note injection or individual entry files. Summary-only mode hides those daily side-effect previews because they will be skipped.
 6. Open each file row to inspect content.
 7. Tap **Done**.
@@ -54,11 +54,9 @@ Date range: 7 days
 Formats per day: 3
 Destination: Mac: MyVault
 
-Roll-up summaries
-MyVault/Health/Rollups/Weekly/2026-W20.md          Weekly Roll-up · Markdown · 9.4 KB
-MyVault/Health/Rollups/Weekly/2026-W20.json        Weekly Roll-up · JSON · 7.1 KB
-MyVault/Health/Rollups/Monthly/2026-05.md          Monthly Roll-up · Markdown · 9.4 KB
-MyVault/Health/Rollups/Yearly/2026.md              Yearly Roll-up · Markdown · 9.4 KB
+Range summary
+MyVault/Health/Rollups/Range/2026-05-12_to_2026-05-18.md   Range Summary · Markdown · 9.4 KB
+MyVault/Health/Rollups/Range/2026-05-12_to_2026-05-18.json Range Summary · JSON · 7.1 KB
 
 Tue, May 12, 2026
 MyVault/Health/2026-05-12.md      Markdown · 4.2 KB
@@ -82,12 +80,12 @@ Export Preview currently:
 - walks newest to oldest;
 - skips dates with no health data;
 - does not write files or send Mac export jobs;
-- renders weekly/monthly/yearly roll-up summary files for the previewed days when roll-up periods are enabled; full exports refresh the complete touched roll-up windows;
+- renders one range summary file for the previewed days when the range summary is enabled; the full export regenerates it over every selected day;
 - in summary-only mode, shows the roll-up summary files without daily file rows;
 - hints at daily-note injection and individual entry tracking instead of rendering every side-effect file;
 - may truncate the middle of very large lossless content while preserving a head/tail preview and original/omitted byte counts.
 
-The full export still runs on every selected date and queries the complete touched roll-up windows when roll-up summaries are enabled. In summary-only mode, the daily records are used as source snapshots only and are not written.
+The full export still runs on every selected date when the range summary is enabled. In summary-only mode, the daily records are used as source snapshots only and are not written.
 
 ## Tips
 

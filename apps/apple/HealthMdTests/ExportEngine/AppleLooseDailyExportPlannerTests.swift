@@ -133,7 +133,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             identitySource: fixedIdentitySource
         )
         let settings = makeSimpleSettings(formats: Set(ExportFormat.allCases))
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let snapshot = ExportSettingsSnapshot.from(
             settings,
             healthSubfolder: "Health",
@@ -155,9 +155,9 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             surface: .localVaultRangeWithoutSideEffects
         ))
 
-        XCTAssertEqual(operation.artifacts.count, 12)
+        XCTAssertEqual(operation.artifacts.count, 8)
         XCTAssertEqual(operation.selectedPlan, try XCTUnwrap(operation.nativePlan))
-        XCTAssertEqual(operation.artifacts.count { $0.artifact.relativePath.contains("/Rollups/") }, 8)
+        XCTAssertEqual(operation.artifacts.count { $0.artifact.relativePath.contains("/Rollups/") }, 4)
         XCTAssertFalse(operation.artifacts.contains {
             $0.artifact.relativePath.hasPrefix("Health/2026-03-16.")
         })
@@ -175,7 +175,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             diagnosticSink: { await diagnostics.record($0) }
         )
         let settings = makeSimpleSettings(formats: [.json])
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let snapshot = ExportSettingsSnapshot.from(
             settings,
             healthSubfolder: "Health",
@@ -208,7 +208,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         XCTAssertTrue(rangeComparison.matches)
         XCTAssertEqual(rangeComparison.mismatchCount, 0)
         let rollup = try XCTUnwrap(operation.artifacts.first {
-            $0.artifact.relativePath.contains("/Rollups/Weekly/")
+            $0.artifact.relativePath.contains("/Rollups/Range/")
         })
         let content = try XCTUnwrap(String(data: rollup.artifact.inlineData, encoding: .utf8))
         XCTAssertTrue(content.contains("\"days_counted\" : 2"))
@@ -224,7 +224,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             identitySource: fixedIdentitySource
         )
         let settings = makeSimpleSettings(formats: Set(ExportFormat.allCases))
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let snapshot = ExportSettingsSnapshot.from(
             settings,
             healthSubfolder: "Health",
@@ -256,8 +256,8 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         XCTAssertEqual(operation.authority, .shadow)
         XCTAssertEqual(operation.identity, persistedIdentity)
         XCTAssertEqual(operation.selectedPlan, try XCTUnwrap(operation.nativePlan))
-        XCTAssertEqual(operation.artifacts.count, 12)
-        XCTAssertEqual(operation.artifacts.count { $0.artifact.relativePath.contains("/Rollups/") }, 8)
+        XCTAssertEqual(operation.artifacts.count, 8)
+        XCTAssertEqual(operation.artifacts.count { $0.artifact.relativePath.contains("/Rollups/") }, 4)
         XCTAssertFalse(operation.artifacts.contains {
             $0.artifact.relativePath.hasPrefix("Health/2026-03-16.")
         })
@@ -273,7 +273,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             identitySource: fixedIdentitySource
         )
         let settings = makeSimpleSettings(formats: Set(ExportFormat.allCases))
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let snapshot = ExportSettingsSnapshot.from(
             settings,
@@ -292,7 +292,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         XCTAssertEqual(operation.selectedPlan, try XCTUnwrap(operation.nativePlan))
         XCTAssertEqual(operation.artifacts.count, 4)
         XCTAssertTrue(operation.artifacts.allSatisfy {
-            $0.artifact.relativePath.contains("/Rollups/Monthly/")
+            $0.artifact.relativePath.contains("/Rollups/Range/")
         })
     }
 
@@ -309,7 +309,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             }
         )
         let settings = makeSimpleSettings(formats: Set(ExportFormat.allCases))
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let fixture = ExportFixtures.partialDay
         var record = HealthData(
@@ -359,7 +359,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         XCTAssertEqual(operation.selectedPlan.artifacts, operation.artifacts.map(\.artifact))
         XCTAssertEqual(operation.artifacts.count, 4)
         XCTAssertTrue(operation.artifacts.allSatisfy {
-            $0.artifact.relativePath.contains("/Rollups/Monthly/")
+            $0.artifact.relativePath.contains("/Rollups/Range/")
         })
 
         var calendar = Calendar(identifier: .iso8601)
@@ -367,7 +367,6 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         let summaries = HealthRollupExporter.makeSummaries(
             from: [record],
             settings: settings,
-            periods: [.monthly],
             generatedAt: Date(timeIntervalSince1970: 123),
             calendar: calendar
         )
@@ -407,7 +406,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
 
     func testConcreteRustSummaryOnlyRollupFailsClosedOnIncompleteCorePlan() async throws {
         let settings = makeSimpleSettings(formats: [.json])
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let fixture = ExportFixtures.partialDay
         var record = HealthData(
@@ -463,7 +462,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             identitySource: fixedIdentitySource
         )
         let settings = makeSimpleSettings(formats: Set(ExportFormat.allCases))
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let snapshot = ExportSettingsSnapshot.from(
             settings,
@@ -483,7 +482,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         XCTAssertEqual(operation.selectedPlan, try XCTUnwrap(operation.nativePlan))
         XCTAssertEqual(operation.artifacts.count, 4)
         XCTAssertTrue(operation.artifacts.allSatisfy {
-            $0.artifact.relativePath.contains("/Rollups/Monthly/")
+            $0.artifact.relativePath.contains("/Rollups/Range/")
         })
     }
 
@@ -497,7 +496,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             identitySource: fixedIdentitySource
         )
         let settings = makeSimpleSettings(formats: Set(ExportFormat.allCases))
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let snapshot = ExportSettingsSnapshot.from(
             settings,
             healthSubfolder: "Health",
@@ -520,17 +519,17 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             writeDataDictionary: false
         )
 
-        XCTAssertEqual(fileCount?.totalFileCount, 16)
-        XCTAssertEqual(fileCount?.rollupFileCount, 8)
-        XCTAssertEqual(harness.fileSystem.writeAttempts, 16)
-        XCTAssertEqual(harness.fileSystem.fileCount, 16)
+        XCTAssertEqual(fileCount?.totalFileCount, 12)
+        XCTAssertEqual(fileCount?.rollupFileCount, 4)
+        XCTAssertEqual(harness.fileSystem.writeAttempts, 12)
+        XCTAssertEqual(harness.fileSystem.fileCount, 12)
     }
 
     func testRustPrecommitFailureThrowsWhileShadowReturnsNativeWithHealthFreeDiagnostic() async throws {
         let sensitive = "steps=987654;2026-03-15;private/path"
         let executor = M6SemanticFailingCoreExecutor(sensitiveValue: sensitive)
         let settings = makeSimpleSettings(formats: [.json])
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let snapshot = ExportSettingsSnapshot.from(
             settings,
@@ -860,9 +859,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         settings.archiveExportFiles = false
         settings.summaryOnlyExport = false
         settings.includeGranularData = false
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         settings.dailyNoteInjection.enabled = false
         settings.individualTracking.globalEnabled = false
         Self.retainedSettings.append(settings)

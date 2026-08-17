@@ -313,9 +313,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = true
-        settings.generateYearlyRollups = true
+        settings.generateRangeSummary = true
         settings.metricSelection.enabledMetrics = Set(HealthMetrics.all.map(\.id))
         settings.formatCustomization.unitPreference = .imperial
         settings.formatCustomization.frontmatterConfig.customFields = ["reviewed": "false"]
@@ -329,11 +327,10 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         let nativeSummaries = HealthRollupExporter.makeSummaries(
             from: [data],
             settings: settings,
-            periods: [.weekly, .monthly, .yearly],
             generatedAt: generatedAt,
             calendar: calendar
         )
-        XCTAssertEqual(nativeSummaries.count, 3)
+        XCTAssertEqual(nativeSummaries.count, 1)
 
         let service = HealthMdCoreService()
         let registry = try HealthMdCoreRegistryAdapter.appleSnapshot(service: service)
@@ -347,7 +344,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
             customization: settings.formatCustomization,
             calendarTimeZoneIdentifier: "UTC",
             retainPlatformExtensions: false,
-            rollupPeriods: [.weekly, .monthly, .yearly]
+            rollupPeriods: [.range]
         )
         let semanticBatch = try HealthMdSemanticInputAdapter.batch(
             sessionID: sessionID,
@@ -380,7 +377,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         for batch in encoded.batches { _ = try renderSession.process(batch: batch) }
         let plan = try renderSession.finish()
         let rollups = plan.items.filter { $0.relativePath.contains("/Rollups/") }
-        XCTAssertEqual(rollups.count, 12)
+        XCTAssertEqual(rollups.count, 4)
         let nativeTargets = HealthRollupExporter.outputTargets(
             for: nativeSummaries,
             healthSubfolder: "Health",
@@ -402,7 +399,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.metricSelection.enabledMetrics = ["steps"]
         let calendarTimeZoneIdentifier = "America/New_York"
         let fixture = ExportFixtures.partialDay
@@ -432,7 +429,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
                 customization: settings.formatCustomization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 retainPlatformExtensions: false,
-                rollupPeriods: [.weekly]
+                rollupPeriods: [.range]
             )
             let semanticBatch = try HealthMdSemanticInputAdapter.batch(
                 sessionID: sessionID,
@@ -476,7 +473,6 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
             let nativeSummaries = HealthRollupExporter.makeSummaries(
                 from: [data],
                 settings: settings,
-                periods: [.weekly],
                 generatedAt: generatedAt,
                 calendar: calendar
             )

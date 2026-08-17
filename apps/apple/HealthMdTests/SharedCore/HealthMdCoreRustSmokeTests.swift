@@ -40,7 +40,7 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
 
         XCTAssertEqual(snapshot.registrySha256, try service.buildInfo().registrySha256)
         XCTAssertEqual(snapshot.profileId, "apple_health_data_v7")
-        XCTAssertEqual(snapshot.publicSchemaVersion, 7)
+        XCTAssertEqual(snapshot.publicSchemaVersion, 8)
         XCTAssertEqual(snapshot.metrics.count, 230)
         XCTAssertEqual(snapshot.outputs.count, 226)
     }

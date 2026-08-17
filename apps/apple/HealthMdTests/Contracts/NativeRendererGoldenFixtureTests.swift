@@ -58,7 +58,7 @@ final class NativeRendererGoldenFixtureTests: XCTestCase {
             "schema_version": 1,
             "profile": "apple-v7",
             "public_schema": "healthmd.health_data",
-            "public_schema_version": 7,
+            "public_schema_version": 8,
             "cases": try cases.map { identifier, data, customization in
                 [
                     "id": identifier,

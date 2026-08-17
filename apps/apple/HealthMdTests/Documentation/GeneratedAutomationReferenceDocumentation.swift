@@ -62,9 +62,7 @@ enum GeneratedAutomationReferenceDocumentation {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = [.json]
         settings.includeGranularData = true
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         settings.summaryOnlyExport = false
         settings.formatCustomization.unitPreference = .metric
         return settings
@@ -807,9 +805,7 @@ enum GeneratedAutomationReferenceDocumentation {
         snapshot.summaryOnlyExport = false
         snapshot.writeMode = .overwrite
         snapshot.includeGranularData = true
-        snapshot.generateWeeklyRollups = false
-        snapshot.generateMonthlyRollups = false
-        snapshot.generateYearlyRollups = false
+        snapshot.generateRangeSummary = false
         snapshot.metricSelection = MetricSelectionSnapshot(
             enabledMetricIDs: ["steps"],
             enabledCategoryIDs: ["activity"]

@@ -927,9 +927,7 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
             )
             settings.includeGranularData = false
             settings.summaryOnlyExport = true
-            settings.generateWeeklyRollups = false
-            settings.generateMonthlyRollups = false
-            settings.generateYearlyRollups = false
+            settings.generateRangeSummary = false
         case .losslessDense:
             settings.metricSelection.enabledCategories = [HealthMetricCategory.heart.rawValue]
             settings.metricSelection.enabledMetrics = Set(

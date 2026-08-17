@@ -26,7 +26,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Export | [Export preview](./export-preview.md) | Inspect generated files before writing them to disk. | Drafted | Medium | `Shared/Views/ExportPreviewView.swift` |
 | Export | [Metric selection](./metric-selection.md) | Select 225+ summary and archive-only definitions across 21 categories, with explicit special-access flows. | Drafted | High | `MetricSelectionView`, `HealthKitRecordCatalog` |
 | Export | [Multi-format export](./multi-format-export.md) | Write Markdown, Obsidian Bases, JSON, and CSV in one export run. | Drafted | High | `AdvancedExportSettings`, `VaultManager` |
-| Export | [Roll-up summaries](./rollup-summaries.md) | Generate weekly, monthly, and yearly summaries in every selected export format. | Drafted | Medium | `HealthRollupGenerator`, `Rollup*Exporter`, `ExportOrchestrator` |
+| Export | [Range summary](./range-summary.md) | Generate one range summary per export covering exactly the selected dates, in every selected export format. | Drafted | Medium | `HealthRollupGenerator`, `Rollup*Exporter`, `ExportOrchestrator` |
 | Export formats | [Markdown export](./markdown-export.md) | Human-readable daily health notes with optional frontmatter and grouped sections. | Drafted | High | `MarkdownExporter.swift` |
 | Export formats | [Obsidian Bases export](./obsidian-bases.md) | Database-friendly frontmatter-only `.md` files. | Drafted | High | `ObsidianBasesExporter.swift` |
 | Export formats | [JSON export](./json-export.md) | Schema-v7 summaries plus the authoritative `healthmd.healthkit_records` v1 source archive. | Drafted | High | `JSONExporter`, `HealthKitRecordArchiveSerializer` |

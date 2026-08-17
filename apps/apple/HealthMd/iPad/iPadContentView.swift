@@ -228,9 +228,7 @@ struct iPadContentView: View {
                         advancedSettings.exportFormats = [.markdown]
                         advancedSettings.includeGranularData = true
                         advancedSettings.metricSelection.selectAll()
-                        advancedSettings.generateWeeklyRollups = true
-                        advancedSettings.generateMonthlyRollups = true
-                        advancedSettings.generateYearlyRollups = true
+                        advancedSettings.generateRangeSummary = true
                     }
                 }
                 await refreshDateRangeSelectionForOpening(isInitialLaunch: true)

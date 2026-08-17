@@ -379,18 +379,9 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
-    /// Generate derived weekly summaries from successful daily snapshots in the export run.
-    @Published var generateWeeklyRollups: Bool {
-        didSet { save() }
-    }
-
-    /// Generate derived monthly summaries from successful daily snapshots in the export run.
-    @Published var generateMonthlyRollups: Bool {
-        didSet { save() }
-    }
-
-    /// Generate derived yearly summaries from successful daily snapshots in the export run.
-    @Published var generateYearlyRollups: Bool {
+    /// Generate one range summary from the daily snapshots in the export run,
+    /// covering exactly the requested export range, first day through last day.
+    @Published var generateRangeSummary: Bool {
         didSet { save() }
     }
 
@@ -421,9 +412,10 @@ class AdvancedExportSettings: ObservableObject {
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
     private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
     private let includeGranularDataKey = "advancedExportSettings.includeGranularData"
-    private let generateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
-    private let generateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
-    private let generateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
+    private let generateRangeSummaryKey = "advancedExportSettings.generateRangeSummary"
+    private let legacyGenerateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
+    private let legacyGenerateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
+    private let legacyGenerateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
     private let verifiableClinicalRecordsOptInMigrationKey =
         "advancedExportSettings.verifiableClinicalRecordsOptInMigration.v1"
@@ -569,9 +561,7 @@ class AdvancedExportSettings: ObservableObject {
         self.individualTracking = individualTracking
         self.dailyNoteInjection = dailyNoteInjection
         includeGranularData = snapshot.includeGranularData
-        generateWeeklyRollups = snapshot.generateWeeklyRollups
-        generateMonthlyRollups = snapshot.generateMonthlyRollups
-        generateYearlyRollups = snapshot.generateYearlyRollups
+        generateRangeSummary = snapshot.generateRangeSummary
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
         exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
@@ -719,10 +709,22 @@ class AdvancedExportSettings: ObservableObject {
             self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
         }
 
-        // Load roll-up summary settings (default off to avoid writing derived files unexpectedly)
-        self.generateWeeklyRollups = userDefaults.bool(forKey: generateWeeklyRollupsKey)
-        self.generateMonthlyRollups = userDefaults.bool(forKey: generateMonthlyRollupsKey)
-        self.generateYearlyRollups = userDefaults.bool(forKey: generateYearlyRollupsKey)
+        // Load range-summary setting (default off to avoid writing derived files
+        // unexpectedly). Migrate the legacy weekly/monthly/yearly roll-up toggles
+        // once: enabling any legacy period opts in to the range summary, and the
+        // legacy keys are removed after migration.
+        if userDefaults.object(forKey: generateRangeSummaryKey) != nil {
+            self.generateRangeSummary = userDefaults.bool(forKey: generateRangeSummaryKey)
+        } else if userDefaults.object(forKey: legacyGenerateWeeklyRollupsKey) != nil
+            || userDefaults.object(forKey: legacyGenerateMonthlyRollupsKey) != nil
+            || userDefaults.object(forKey: legacyGenerateYearlyRollupsKey) != nil
+        {
+            self.generateRangeSummary = userDefaults.bool(forKey: legacyGenerateWeeklyRollupsKey)
+                || userDefaults.bool(forKey: legacyGenerateMonthlyRollupsKey)
+                || userDefaults.bool(forKey: legacyGenerateYearlyRollupsKey)
+        } else {
+            self.generateRangeSummary = false
+        }
         // Medications use a separate per-object HealthKit authorization flow.
         // If a prior build persisted medication metrics by default before that
         // flow was completed, remove them so users opt in explicitly.
@@ -898,10 +900,11 @@ class AdvancedExportSettings: ObservableObject {
         // Save granular data setting
         userDefaults.set(includeGranularData, forKey: includeGranularDataKey)
 
-        // Save roll-up summary settings
-        userDefaults.set(generateWeeklyRollups, forKey: generateWeeklyRollupsKey)
-        userDefaults.set(generateMonthlyRollups, forKey: generateMonthlyRollupsKey)
-        userDefaults.set(generateYearlyRollups, forKey: generateYearlyRollupsKey)
+        // Save range-summary setting and drop migrated legacy keys
+        userDefaults.set(generateRangeSummary, forKey: generateRangeSummaryKey)
+        userDefaults.removeObject(forKey: legacyGenerateWeeklyRollupsKey)
+        userDefaults.removeObject(forKey: legacyGenerateMonthlyRollupsKey)
+        userDefaults.removeObject(forKey: legacyGenerateYearlyRollupsKey)
     }
 
     func reset() {
@@ -921,9 +924,7 @@ class AdvancedExportSettings: ObservableObject {
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()
         includeGranularData = false
-        generateWeeklyRollups = false
-        generateMonthlyRollups = false
-        generateYearlyRollups = false
+        generateRangeSummary = false
     }
 
     /// Daily Notes Only is effective only while Daily Note Injection itself is enabled.
@@ -938,7 +939,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     var rollupSummariesEnabled: Bool {
-        generateWeeklyRollups || generateMonthlyRollups || generateYearlyRollups
+        generateRangeSummary
     }
 
     var effectiveFileExportMode: EffectiveFileExportMode {
@@ -983,18 +984,11 @@ class AdvancedExportSettings: ObservableObject {
         includeGranularData && effectiveFileExportMode == .standard
     }
 
-    var configuredRollupPeriods: [HealthRollupPeriod] {
-        var periods: [HealthRollupPeriod] = []
-        if generateWeeklyRollups { periods.append(.weekly) }
-        if generateMonthlyRollups { periods.append(.monthly) }
-        if generateYearlyRollups { periods.append(.yearly) }
-        return periods
-    }
-
-    /// Runtime periods are empty in Daily Notes Only mode while preserving the
-    /// configured period toggles for when that mode is disabled.
+    /// The single roll-up period requested when the range summary is enabled.
+    /// The list is empty in Daily Notes Only mode while the configured toggle
+    /// stays preserved for when that mode is disabled.
     var enabledRollupPeriods: [HealthRollupPeriod] {
-        dailyNotesOnlyModeEnabled ? [] : configuredRollupPeriods
+        dailyNotesOnlyModeEnabled || !generateRangeSummary ? [] : [.range]
     }
 
     var looseFormatsPerDate: Int {

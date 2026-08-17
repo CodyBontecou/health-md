@@ -677,7 +677,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = [.json]
         settings.includeGranularData = false
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let snapshot = try await makePinnedSnapshot(
             engine: .shadow,
             settings: settings,
@@ -768,7 +768,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         settings.exportFormats = [.json]
         settings.includeGranularData = false
         settings.includeDataDictionary = false
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.folderStructure = "Rollups/{year}"
         let snapshot = try await makePinnedSnapshot(
             engine: .shadow,
@@ -832,7 +832,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
                 .appendingPathComponent("Health")
                 .appendingPathComponent(HealthMdExportSchema.dataDictionaryFilename).path
         ])
-        let rollupPaths = fileSystem.files.keys.filter { $0.contains("/Rollups/Weekly/") }
+        let rollupPaths = fileSystem.files.keys.filter { $0.contains("/Rollups/Range/") }
         XCTAssertEqual(rollupPaths.count, 1)
         let rollupContent = try XCTUnwrap(rollupPaths.first.flatMap { fileSystem.files[$0] })
         XCTAssertTrue(rollupContent.contains(
@@ -847,7 +847,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = [.json]
         settings.includeGranularData = false
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let snapshot = try await makePinnedSnapshot(
             engine: .rust,
@@ -905,7 +905,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             vaultRoot.appendingPathComponent("Health/2026-02-10.json").path
         ])
         XCTAssertEqual(
-            fileSystem.files.keys.filter { $0.contains("/Rollups/Monthly/") }.count,
+            fileSystem.files.keys.filter { $0.contains("/Rollups/Range/") }.count,
             1
         )
     }
@@ -1096,7 +1096,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = [.json]
         settings.includeGranularData = false
-        settings.generateYearlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let snapshot = try await makePinnedSnapshot(
             engine: .rust,
@@ -1419,7 +1419,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = [.json]
         settings.includeGranularData = false
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let snapshot = try await makePinnedSnapshot(
             engine: .rust,
             settings: settings,
@@ -2052,7 +2052,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             "schema_version" : 1
           },
           "schema" : "healthmd.health_data",
-          "schema_version" : 7,
+          "schema_version" : 8,
           "time_context" : {
             "calendar_timezone" : "UTC",
             "timestamp_timezone" : "UTC"
@@ -2254,7 +2254,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = []
         settings.archiveExportFiles = true
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.individualTracking.globalEnabled = true
         settings.individualTracking.setTrackIndividually("steps", enabled: true)
         settings.dailyNoteInjection.enabled = true
@@ -2322,7 +2322,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let requestedDate = Self.day(2026, 1, 15)
         let settings = makeSettings()
         settings.archiveExportFiles = true
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.createIfMissing = true
         settings.dailyNoteInjection.folderPath = "Daily"
@@ -2391,14 +2391,14 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let listing = try unzipListing(archiveURL)
         XCTAssertTrue(listing.contains("2026-01-15.md"), listing)
         XCTAssertFalse(listing.contains("2026-01-01.md"), listing)
-        XCTAssertTrue(listing.contains("2026-01.md"), listing)
+        XCTAssertTrue(listing.contains("Rollups/Range/2026-01-15_to_2026-01-15.md"), listing)
     }
 
-    func testFailedSupportingDaySuppressesRollupAndKeepsRequestedDateRetryable() async throws {
+    func testFailedSupportingDayOutsideRangeDoesNotSuppressRangeSummary() async throws {
         let supportDate = Self.day(2026, 1, 1)
         let requestedDate = Self.day(2026, 1, 15)
         let settings = makeSettings()
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         let context = try makeContext(
             requestedDates: [requestedDate],
             settings: settings,
@@ -2450,17 +2450,19 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             vaultManager: vaultManager
         )
         guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
+        // The supporting day failed, but it is outside the requested range; the
+        // range summary covers only requested days and still finalizes.
         XCTAssertEqual(result.status, .partialSuccess)
-        XCTAssertEqual(result.failedDateDetails.map(\.date), [requestedDate])
-        XCTAssertEqual(result.completedDates, [])
-        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+        XCTAssertTrue(fileSystem.files.keys.contains {
+            $0.contains("/Rollups/Range/2026-01-15_to_2026-01-15.md")
+        })
     }
 
     func testFailedRequestedDaySuppressesSharedRollupWindow() async throws {
         let failedDate = Self.day(2026, 1, 1)
         let successfulDate = Self.day(2026, 1, 15)
         let settings = makeSettings()
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         let context = try makeContext(
             requestedDates: [failedDate, successfulDate],
             settings: settings
@@ -2667,7 +2669,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let secondDate = Self.day(2026, 1, 31)
         let settings = makeSettings()
         settings.archiveExportFiles = true
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         let context = try makeContext(requestedDates: [firstDate, secondDate], settings: settings)
         let assembler = try ConnectedCorpusPartitionAssembler(
             sessionID: context.session.sessionID,
@@ -2719,7 +2721,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let listing = try unzipListing(archiveURL)
         XCTAssertTrue(listing.contains("2026-01-01.md"))
         XCTAssertTrue(listing.contains("2026-01-31.md"))
-        XCTAssertTrue(listing.contains("2026-01.md"), listing)
+        XCTAssertTrue(listing.contains("Rollups/Range/2026-01-01_to_2026-01-31.md"), listing)
     }
 
     func testCancellationDuringFinalizationCannotBeOverwrittenBySuccess() async throws {
@@ -3047,7 +3049,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = [.json]
         settings.includeGranularData = false
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let snapshot = try await makePinnedSnapshot(
             engine: .shadow,
             settings: settings,
@@ -3257,9 +3259,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         settings.filenameFormat = "{date}"
         settings.folderStructure = ""
         settings.writeMode = .overwrite
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         return settings
     }
 

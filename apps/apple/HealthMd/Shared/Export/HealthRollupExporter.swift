@@ -4,26 +4,21 @@ import Foundation
 
 enum HealthRollupExporter {
     static func isEnabled(settings: AdvancedExportSettings) -> Bool {
-        settings.rollupSummariesEnabled && !settings.enabledRollupPeriods.isEmpty && !settings.exportFormats.isEmpty
+        settings.generateRangeSummary && !settings.exportFormats.isEmpty
     }
 
     static func makeSummaries(
         from healthData: [HealthData],
         settings: AdvancedExportSettings,
-        periods: [HealthRollupPeriod]? = nil,
         generatedAt: Date = Date(),
         calendar: Calendar = .current
     ) -> [HealthRollupSummary] {
         guard !settings.exportFormats.isEmpty else { return [] }
-
-        let selectedPeriods = periods ?? settings.enabledRollupPeriods
-        guard !selectedPeriods.isEmpty else { return [] }
-        if periods == nil, !settings.rollupSummariesEnabled { return [] }
+        if !settings.generateRangeSummary { return [] }
 
         return HealthRollupGenerator.generate(
             from: healthData,
             settings: settings,
-            periods: selectedPeriods,
             generatedAt: generatedAt,
             calendar: calendar
         )
@@ -87,31 +82,28 @@ enum HealthRollupExporter {
         settings: AdvancedExportSettings,
         calendar: Calendar
     ) -> [String] {
-        guard isEnabled(settings: settings), !dates.isEmpty else { return [] }
-        return settings.enabledRollupPeriods.flatMap { period in
-            Set(dates.map {
-                HealthRollupPeriodWindow.window(
-                    containing: $0,
-                    period: period,
-                    calendar: calendar
+        guard isEnabled(settings: settings), let first = dates.min(), let last = dates.max() else {
+            return []
+        }
+        let window = HealthRollupPeriodWindow.rangeWindow(
+            from: first,
+            to: last,
+            calendar: calendar
+        )
+        return settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
+            relativePath([
+                relativeFolderPath(
+                    healthSubfolder: healthSubfolder,
+                    period: .range,
+                    format: format,
+                    settings: settings
+                ),
+                rollupFilename(
+                    periodID: window.id,
+                    format: format,
+                    settings: settings
                 )
-            }).sorted { $0.startDate < $1.startDate }.flatMap { window in
-                settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map { format in
-                    relativePath([
-                        relativeFolderPath(
-                            healthSubfolder: healthSubfolder,
-                            period: period,
-                            format: format,
-                            settings: settings
-                        ),
-                        rollupFilename(
-                            periodID: window.id,
-                            format: format,
-                            settings: settings
-                        )
-                    ])
-                }
-            }
+            ])
         }
     }
 

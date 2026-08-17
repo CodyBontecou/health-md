@@ -207,7 +207,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-apple-v7.json",
-          "sha256": "525581109480b1966031c9254134331d2ac082f7a6bedd290708478a21dd9837",
+          "sha256": "fe2ea2d217958ec5d03dcd635004bf508597c7917ba544b120efc16eadf56d7f",
           "provenance": "Frozen directly from the pre-cutover production Swift v7 exporters for summary, imperial, custom, and lossless synthetic days; Rust did not generate these bytes.",
           "mirrors": []
         },

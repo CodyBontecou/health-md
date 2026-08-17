@@ -849,23 +849,11 @@ struct ExportTabView: View {
             }
 
             VStack(spacing: 0) {
-                Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates weekly roll-up files for every selected export format")
-
-                Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates monthly roll-up files for every selected export format")
-
-                Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates yearly roll-up files for every selected export format")
+                    .accessibilityHint("Generates one roll-up file for the selected export range for every selected export format")
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
@@ -1307,7 +1295,7 @@ struct ExportTabView: View {
 
         return ExportRollupOutputSizeEstimator.estimate(
             selectedDates: exportDates,
-            periods: advancedSettings.enabledRollupPeriods,
+            rollupsEnabled: advancedSettings.rollupSummariesEnabled,
             formats: advancedSettings.exportFormats,
             metricSelection: advancedSettings.metricSelection,
             customization: advancedSettings.formatCustomization
@@ -1317,26 +1305,16 @@ struct ExportTabView: View {
     private var projectedRollupFileCount: Int {
         guard exportTargetSelection != .apiEndpoint,
               !advancedSettings.dailyNotesOnlyModeEnabled,
-              !advancedSettings.enabledRollupPeriods.isEmpty,
+              advancedSettings.rollupSummariesEnabled,
               !advancedSettings.exportFormats.isEmpty else { return 0 }
 
-        var windows = Set<HealthRollupPeriodWindow>()
-        for period in advancedSettings.enabledRollupPeriods {
-            for date in exportDates {
-                windows.insert(HealthRollupPeriodWindow.window(
-                    containing: date,
-                    period: period,
-                    calendar: .current
-                ))
-            }
-        }
-        return windows.count * advancedSettings.exportFormats.count
+        return advancedSettings.exportFormats.count
     }
 
     private var projectedRollupSourceDateCount: Int {
         guard exportTargetSelection != .apiEndpoint,
               !advancedSettings.dailyNotesOnlyModeEnabled,
-              !advancedSettings.enabledRollupPeriods.isEmpty else {
+              advancedSettings.rollupSummariesEnabled else {
             return exportDateCount
         }
 
@@ -1344,7 +1322,7 @@ struct ExportTabView: View {
             exportDateCount,
             ExportOrchestrator.rollupSourceDates(
                 for: exportDates,
-                periods: advancedSettings.enabledRollupPeriods
+                settings: advancedSettings
             ).count
         )
     }
@@ -1806,9 +1784,9 @@ struct ExportTabView: View {
             return "Paused · Daily Notes Only skips roll-up files."
         }
         guard advancedSettings.rollupSummariesEnabled else {
-            return "Off · Enable a period to write summary files."
+            return "Off · Enable the range summary to write summary files."
         }
-        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName }.joined(separator: " · ")
+        let periods = HealthRollupPeriod.range.displayName
         let formatCount = advancedSettings.exportFormats.count
         if formatCount == 0 {
             return "\(periods) · Select an export format first."

@@ -978,15 +978,11 @@ final class MacCorpusExportSessionManager {
             )
             var rollupBlockedRequestedDates: Set<Date> = []
             if !unavailableRollupDates.isEmpty && derivedSettings.rollupSummariesEnabled {
+                // The range summary spans the entire requested range, so any
+                // unavailable transfer day blocks the summary for every
+                // requested day.
                 for requestedDate in journal.exportManifest.requestedDates {
-                    let affectsRequestedDate = derivedSettings.enabledRollupPeriods.contains { period in
-                        let window = HealthRollupPeriodWindow.window(
-                            containing: requestedDate,
-                            period: period,
-                            calendar: sourceCalendar
-                        )
-                        return unavailableRollupDates.contains { $0 >= window.startDate && $0 <= window.endDate }
-                    }
+                    let affectsRequestedDate = !unavailableRollupDates.isEmpty
                     if affectsRequestedDate {
                         rollupBlockedRequestedDates.insert(requestedDate)
                         session.journal.completedDates.removeAll { $0 == requestedDate }
@@ -4753,16 +4749,14 @@ final class MacCorpusExportSessionManager {
             })
         }
         if settings.hasFileDestinationOutput {
-            for period in settings.enabledRollupPeriods {
-                for format in settings.exportFormats {
-                    candidates.append(HealthRollupExporter.folderURL(
-                        vaultURL: vaultURL,
-                        healthSubfolder: healthSubfolder,
-                        period: period,
-                        format: format,
-                        settings: settings
-                    ))
-                }
+            for format in settings.exportFormats {
+                candidates.append(HealthRollupExporter.folderURL(
+                    vaultURL: vaultURL,
+                    healthSubfolder: healthSubfolder,
+                    period: .range,
+                    format: format,
+                    settings: settings
+                ))
             }
         }
         let canonicalRoot = vaultURL.standardizedFileURL.resolvingSymlinksInPath().path

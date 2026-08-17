@@ -304,59 +304,22 @@ struct ExportOrchestrator {
         return dates
     }
 
-    /// Expands the user's selected dates to the full roll-up period windows they
-    /// intersect. For example, selecting one day with monthly roll-ups enabled
-    /// produces every day in that month, so the summary reflects the selected
-    /// roll-up window instead of only the daily export range.
+    /// Source dates required by the range summary. The summary covers exactly the
+    /// requested export range, so the selection itself is the source day set;
+    /// no calendar expansion applies. Returns an empty list when the range
+    /// summary is disabled.
     static func rollupSourceDates(
         for selectedDates: [Date],
         settings: AdvancedExportSettings,
         calendar: Calendar = .current,
         latestAllowedDate: Date = Date()
     ) -> [Date] {
-        rollupSourceDates(
-            for: selectedDates,
-            periods: settings.enabledRollupPeriods,
-            calendar: calendar,
-            latestAllowedDate: latestAllowedDate
-        )
-    }
-
-    static func rollupSourceDates(
-        for selectedDates: [Date],
-        periods: [HealthRollupPeriod],
-        calendar: Calendar = .current,
-        latestAllowedDate: Date = Date()
-    ) -> [Date] {
-        guard !selectedDates.isEmpty, !periods.isEmpty else { return [] }
+        guard settings.rollupSummariesEnabled, !selectedDates.isEmpty else { return [] }
 
         let latestAllowedDay = calendar.startOfDay(for: latestAllowedDate)
-        var expandedDates = Set<Date>()
-
-        for selectedDate in selectedDates {
-            for period in periods {
-                let window = HealthRollupPeriodWindow.window(
-                    containing: calendar.startOfDay(for: selectedDate),
-                    period: period,
-                    calendar: calendar
-                )
-                let start = calendar.startOfDay(for: window.startDate)
-                let periodEnd = calendar.startOfDay(for: window.endDate)
-                let end = min(periodEnd, latestAllowedDay)
-                guard start <= end else { continue }
-
-                var current = start
-                while current <= end {
-                    expandedDates.insert(calendar.startOfDay(for: current))
-                    guard let next = calendar.date(byAdding: .day, value: 1, to: current) else {
-                        break
-                    }
-                    current = next
-                }
-            }
-        }
-
-        return expandedDates.sorted()
+        return Set(selectedDates.map { calendar.startOfDay(for: $0) })
+            .filter { $0 <= latestAllowedDay }
+            .sorted()
     }
 
     // MARK: - Foreground Export (security-scoped)
@@ -741,7 +704,7 @@ struct ExportOrchestrator {
         let selectedDays = Set(dates.map { calendar.startOfDay(for: $0) })
         let sourceDates = rollupSourceDates(
             for: dates,
-            periods: frozenSettings.enabledRollupPeriods,
+            settings: frozenSettings,
             calendar: calendar,
             latestAllowedDate: max(Date(), dates.max() ?? Date())
         )

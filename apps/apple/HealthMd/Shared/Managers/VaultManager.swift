@@ -3448,37 +3448,37 @@ final class VaultManager: ObservableObject {
         var summaries: [HealthRollupSummary] = []
         var finalizedUnits = 0
         let estimatedUnits = max(datedFiles.count + requestedDates.count, 1)
-        if HealthRollupExporter.isEnabled(settings: settings) {
-            for period in settings.enabledRollupPeriods {
-                let windows = Set(requestedDates.map {
-                    HealthRollupPeriodWindow.window(containing: $0, period: period, calendar: sourceCalendar)
-                }).sorted { $0.startDate < $1.startDate }
-                for window in windows {
-                    try checkCancellation()
-                    if unavailableRollupDates.contains(where: {
-                        $0 >= window.startDate && $0 <= window.endDate
-                    }) {
-                        finalizedUnits += 1
-                        progress?(finalizedUnits, estimatedUnits, window.endDate)
-                        await Task.yield()
-                        continue
-                    }
-                    var records: [HealthData] = []
-                    for item in rollupProjectionFiles
-                        where item.date >= window.startDate && item.date <= window.endDate {
-                        records.append(try await Self.decodeHealthData(from: item.url))
-                    }
-                    let windowSummaries = HealthRollupExporter.makeSummaries(
-                        from: records,
-                        settings: settings,
-                        periods: [period],
-                        calendar: sourceCalendar
-                    ).filter { $0.window == window }
-                    summaries.append(contentsOf: windowSummaries)
-                    finalizedUnits += 1
-                    progress?(finalizedUnits, estimatedUnits, window.endDate)
-                    await Task.yield()
+        if HealthRollupExporter.isEnabled(settings: settings),
+           let firstRequestedDay = requestedDates.map({ sourceCalendar.startOfDay(for: $0) }).min(),
+           let lastRequestedDay = requestedDates.map({ sourceCalendar.startOfDay(for: $0) }).max() {
+            let window = HealthRollupPeriodWindow.rangeWindow(
+                from: firstRequestedDay,
+                to: lastRequestedDay,
+                calendar: sourceCalendar
+            )
+            try checkCancellation()
+            if unavailableRollupDates.contains(where: {
+                let day = sourceCalendar.startOfDay(for: $0)
+                return day >= window.startDate && day <= window.endDate
+            }) {
+                finalizedUnits += 1
+                progress?(finalizedUnits, estimatedUnits, window.endDate)
+                await Task.yield()
+            } else {
+                var records: [HealthData] = []
+                for item in rollupProjectionFiles
+                    where item.date >= window.startDate && item.date <= window.endDate {
+                    records.append(try await Self.decodeHealthData(from: item.url))
                 }
+                let windowSummaries = HealthRollupExporter.makeSummaries(
+                    from: records,
+                    settings: settings,
+                    calendar: sourceCalendar
+                ).filter { $0.window == window }
+                summaries.append(contentsOf: windowSummaries)
+                finalizedUnits += 1
+                progress?(finalizedUnits, estimatedUnits, window.endDate)
+                await Task.yield()
             }
         }
 

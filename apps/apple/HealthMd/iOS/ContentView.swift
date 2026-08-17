@@ -424,9 +424,7 @@ struct ContentView: View {
                     advancedSettings.exportFormats = [.markdown]
                     advancedSettings.includeGranularData = true
                     advancedSettings.metricSelection.selectAll()
-                    advancedSettings.generateWeeklyRollups = true
-                    advancedSettings.generateMonthlyRollups = true
-                    advancedSettings.generateYearlyRollups = true
+                    advancedSettings.generateRangeSummary = true
                 }
                 if TestMode.noExportFormats {
                     advancedSettings.exportFormats = []
@@ -472,9 +470,7 @@ struct ContentView: View {
         advancedSettings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
         advancedSettings.includeGranularData = true
         advancedSettings.metricSelection.selectAll()
-        advancedSettings.generateWeeklyRollups = true
-        advancedSettings.generateMonthlyRollups = true
-        advancedSettings.generateYearlyRollups = true
+        advancedSettings.generateRangeSummary = true
         exportTargetSelection = .localIPhoneFolder
         vaultManager.setTestVault()
 

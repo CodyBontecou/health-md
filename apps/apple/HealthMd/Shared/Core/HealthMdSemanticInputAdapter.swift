@@ -73,9 +73,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
         }.map(\.key)
         let periods = rollupPeriods.map { period in
             switch period {
-            case .weekly: "iso_week"
-            case .monthly: "calendar_month"
-            case .yearly: "calendar_year"
+            case .range: "range"
             }
         }
         return try canonicalJSON([

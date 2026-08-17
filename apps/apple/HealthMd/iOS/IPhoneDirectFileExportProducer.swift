@@ -406,9 +406,7 @@ final class IPhoneDirectFileExportProducer {
               let timeZoneIdentifier = settingsSnapshot.calendarTimeZoneIdentifier,
               AppleExportEnginePin.isIANAIdentifier(timeZoneIdentifier),
               TimeZone(identifier: timeZoneIdentifier) != nil,
-              settings.generateWeeklyRollups == settingsSnapshot.generateWeeklyRollups,
-              settings.generateMonthlyRollups == settingsSnapshot.generateMonthlyRollups,
-              settings.generateYearlyRollups == settingsSnapshot.generateYearlyRollups,
+              settings.generateRangeSummary == settingsSnapshot.generateRangeSummary,
               settings.summaryOnlyExport == settingsSnapshot.summaryOnlyExport else {
             throw IPhoneDirectFileProducerError.invalidSpool
         }

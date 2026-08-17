@@ -8,9 +8,7 @@ enum ConnectedExportGranularMode {
     }
 
     static func isEnabled(for snapshot: ExportSettingsSnapshot) -> Bool {
-        let hasRollups = snapshot.generateWeeklyRollups
-            || snapshot.generateMonthlyRollups
-            || snapshot.generateYearlyRollups
+        let hasRollups = snapshot.generateRangeSummary
         let summaryOnlyModeEnabled = snapshot.summaryOnlyExport
             && hasRollups
             && !snapshot.exportFormats.isEmpty

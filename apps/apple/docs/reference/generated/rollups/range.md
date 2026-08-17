@@ -1,17 +1,17 @@
 ---
 schema: healthmd.rollup_summary
-schema_version: 7
+schema_version: 8
 type: health_rollup
-rollup_period: weekly
-period_id: 2026-W28
+rollup_period: range
+period_id: 2026-07-06_to_2026-07-11
 start_date: 2026-07-06
-end_date: 2026-07-12
-days_expected: 7
+end_date: 2026-07-11
+days_expected: 6
 days_counted: 3
-coverage_percent: 42.86
+coverage_percent: 50
 source_schema: healthmd.health_data
-source_schema_version: 7
-rollup_rules_version: 7
+source_schema_version: 8
+rollup_rules_version: 8
 generated_at: 2026-07-13T12:00:00Z
 source_dates:
   - 2026-07-06
@@ -42,29 +42,29 @@ units:
   workout_minutes: min
 ---
 
-# Weekly Health Summary — 2026-W28
+# Range Health Summary — 2026-07-06_to_2026-07-11
 
-Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
+Generated from 3 HealthKit daily aggregate snapshots in this range period.
 
 ## Coverage
 
-- **Period:** 2026-07-06 → 2026-07-12
-- **Days counted:** 3 / 7 (42.86%)
-- **Missing days:** 4
-- **Rule source:** `_healthmd_data_dictionary.json` schema v7
+- **Period:** 2026-07-06 → 2026-07-11
+- **Days counted:** 3 / 6 (50%)
+- **Missing days:** 3
+- **Rule source:** `_healthmd_data_dictionary.json` schema v8
 - **Source dates:** 2026-07-06, 2026-07-08, 2026-07-11
 
 ## Activity
 
 | Metric | Key | Value | Unit | Days | Rule |
 |---|---:|---:|---|---:|---|
-| Cardio Fitness | `vo2_max` | 40.2 | mL/kg/min | 2/7 | latest |
-| Cardio Fitness | `vo2_max_age_seconds` | 172,800 | seconds | 2/7 | latest |
-| Cardio Fitness | `vo2_max_carried_forward` | true | boolean | 2/7 | latest |
-| Cardio Fitness | `vo2_max_source_end` | 2026-07-11T11:01:00.000000000Z | datetime | 2/7 | latest |
-| Cardio Fitness | `vo2_max_source_start` | 2026-07-11T11:00:00.000000000Z | datetime | 2/7 | latest |
-| Cardio Fitness | `vo2_max_source_uuid` | 00000000-0000-0000-0000-000000000011 | uuid | 2/7 | latest |
-| Steps | `steps` | 17,500 | steps | 3/7 | sum |
+| Cardio Fitness | `vo2_max` | 40.2 | mL/kg/min | 2/6 | latest |
+| Cardio Fitness | `vo2_max_age_seconds` | 172,800 | seconds | 2/6 | latest |
+| Cardio Fitness | `vo2_max_carried_forward` | true | boolean | 2/6 | latest |
+| Cardio Fitness | `vo2_max_source_end` | 2026-07-11T11:01:00.000000000Z | datetime | 2/6 | latest |
+| Cardio Fitness | `vo2_max_source_start` | 2026-07-11T11:00:00.000000000Z | datetime | 2/6 | latest |
+| Cardio Fitness | `vo2_max_source_uuid` | 00000000-0000-0000-0000-000000000011 | uuid | 2/6 | latest |
+| Steps | `steps` | 17,500 | steps | 3/6 | sum |
 
 <details>
 <summary>Activity statistics</summary>
@@ -101,7 +101,7 @@ Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
 
 | Metric | Key | Value | Unit | Days | Rule |
 |---|---:|---:|---|---:|---|
-| Weight | `weight_kg` | 69.8 | kg | 2/7 | latest |
+| Weight | `weight_kg` | 69.8 | kg | 2/6 | latest |
 
 <details>
 <summary>Body Measurements statistics</summary>
@@ -120,9 +120,9 @@ Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
 
 | Metric | Key | Value | Unit | Days | Rule |
 |---|---:|---:|---|---:|---|
-| Average Heart Rate | `average_heart_rate` | 73 | bpm | 2/7 | average |
-| Maximum Heart Rate | `heart_rate_max` | 175 | bpm | 3/7 | maximum |
-| Minimum Heart Rate | `heart_rate_min` | 48 | bpm | 3/7 | minimum |
+| Average Heart Rate | `average_heart_rate` | 73 | bpm | 2/6 | average |
+| Maximum Heart Rate | `heart_rate_max` | 175 | bpm | 3/6 | maximum |
+| Minimum Heart Rate | `heart_rate_min` | 48 | bpm | 3/6 | minimum |
 
 <details>
 <summary>Heart statistics</summary>
@@ -149,7 +149,7 @@ Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
 
 | Metric | Key | Value | Unit | Days | Rule |
 |---|---:|---:|---|---:|---|
-| Menstrual Flow | `menstrual_flow` | light |  | 3/7 | histogram |
+| Menstrual Flow | `menstrual_flow` | light |  | 3/6 | histogram |
 
 <details>
 <summary>Reproductive Health statistics</summary>
@@ -166,9 +166,9 @@ Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
 
 | Metric | Key | Value | Unit | Days | Rule |
 |---|---:|---:|---|---:|---|
-| Bedtime | `sleep_bedtime` | 22:30 | time | 3/7 | time_of_day |
-| Total Sleep | `sleep_total_hours` | 24 | hours | 3/7 | sum |
-| Wake Time | `sleep_wake` | 06:30 | time | 3/7 | time_of_day |
+| Bedtime | `sleep_bedtime` | 22:30 | time | 3/6 | time_of_day |
+| Total Sleep | `sleep_total_hours` | 24 | hours | 3/6 | sum |
+| Wake Time | `sleep_wake` | 06:30 | time | 3/6 | time_of_day |
 
 <details>
 <summary>Sleep statistics</summary>
@@ -195,15 +195,15 @@ Generated from 3 HealthKit daily aggregate snapshots in this weekly period.
 
 | Metric | Key | Value | Unit | Days | Rule |
 |---|---:|---:|---|---:|---|
-| Workouts | `workout_avg_heart_rate` | 125.71 | bpm | 3/7 | weighted_average |
-| Workouts | `workout_calories` | 880 | kcal | 3/7 | sum |
-| Workouts | `workout_count` | 3 | count | 3/7 | sum |
-| Workouts | `workout_distance_km` | 31.5 | km | 3/7 | sum |
-| Workouts | `workout_distance_mi` | 19.57 | mi | 3/7 | sum |
-| Workouts | `workout_max_heart_rate` | 500 | bpm | 3/7 | sum |
-| Workouts | `workout_min_heart_rate` | 285 | bpm | 3/7 | sum |
-| Workouts | `workout_minutes` | 105 | min | 3/7 | sum |
-| Workouts | `workouts` | [cycling, running] |  | 3/7 | union |
+| Workouts | `workout_avg_heart_rate` | 125.71 | bpm | 3/6 | weighted_average |
+| Workouts | `workout_calories` | 880 | kcal | 3/6 | sum |
+| Workouts | `workout_count` | 3 | count | 3/6 | sum |
+| Workouts | `workout_distance_km` | 31.5 | km | 3/6 | sum |
+| Workouts | `workout_distance_mi` | 19.57 | mi | 3/6 | sum |
+| Workouts | `workout_max_heart_rate` | 500 | bpm | 3/6 | sum |
+| Workouts | `workout_min_heart_rate` | 285 | bpm | 3/6 | sum |
+| Workouts | `workout_minutes` | 105 | min | 3/6 | sum |
+| Workouts | `workouts` | [cycling, running] |  | 3/6 | union |
 
 <details>
 <summary>Workouts statistics</summary>

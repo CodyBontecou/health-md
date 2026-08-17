@@ -32,7 +32,6 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         }
 
         XCTAssertEqual(captured.records.map { ownerDate($0.date, timeZone: timeZone) }, [
-            "2026-03-09",
             "2026-03-15",
         ])
         XCTAssertEqual(captured.dailyOutputOwnerDates, ["2026-03-15"])
@@ -65,7 +64,6 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         }
 
         XCTAssertEqual(captured.records.map { ownerDate($0.date, timeZone: timeZone) }, [
-            "2026-03-09",
             "2026-03-15",
         ])
         XCTAssertEqual(captured.dailyOutputOwnerDates, ["2026-03-15"])
@@ -88,7 +86,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
             ownerDate(requestedDate, timeZone: timeZone) == "2026-03-09" ? source : nil
         }
 
-        XCTAssertEqual(captured.records.count, 1)
+        XCTAssertEqual(captured.records.count, 0)
         XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
         XCTAssertTrue(captured.selectedRecordDates.isEmpty)
         XCTAssertEqual(captured.failures.count, 1)
@@ -126,9 +124,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = [.json]
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = summaryOnly
         settings.includeGranularData = false
         retainedSettings.append(settings)

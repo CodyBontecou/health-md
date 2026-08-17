@@ -285,10 +285,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             )
         }
         guard Set(ownerDates).count == ownerDates.count,
-              (!dailyOutputOwnerDates.isEmpty ||
-                  settingsSnapshot.generateWeeklyRollups ||
-                  settingsSnapshot.generateMonthlyRollups ||
-                  settingsSnapshot.generateYearlyRollups),
+              (!dailyOutputOwnerDates.isEmpty || settingsSnapshot.generateRangeSummary),
               dailyOutputOwnerDates.isSubset(of: Set(ownerDates)) else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
@@ -632,9 +629,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
-        let hasConfiguredRollups = settingsSnapshot.generateWeeklyRollups
-            || settingsSnapshot.generateMonthlyRollups
-            || settingsSnapshot.generateYearlyRollups
+        let hasConfiguredRollups = settingsSnapshot.generateRangeSummary
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
             || surface == .directGeneratedFilesWithoutSideEffects
             || surface == .connectedReceivedRangeWithoutSideEffects
@@ -731,7 +726,6 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         let summaries = HealthRollupExporter.makeSummaries(
             from: sourceHealthData,
             settings: settings,
-            periods: settings.enabledRollupPeriods,
             generatedAt: generatedAt,
             calendar: calendar
         )
@@ -848,12 +842,14 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         var expectedFormatsByPath: [String: ExportFormat] = [:]
         for rollup in rollups {
             guard let period = rollup["period"] as? String,
-                  let startDate = rollup["start_date"] as? String else {
+                  let startDate = rollup["start_date"] as? String,
+                  let endDate = rollup["end_date"] as? String else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
             let (periodFolder, periodIdentifier) = try pureRustPeriodPath(
                 period: period,
                 startDate: startDate,
+                endDate: endDate,
                 settings: settings
             )
             for format in formats {
@@ -891,59 +887,33 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
     private static func pureRustPeriodPath(
         period: String,
         startDate: String,
+        endDate: String,
         settings: ExportSettingsSnapshot
     ) throws -> (folder: String, identifier: String) {
-        let pieces = startDate.split(separator: "-", omittingEmptySubsequences: false)
-        guard pieces.count == 3,
-              pieces[0].count == 4,
-              pieces[1].count == 2,
-              pieces[2].count == 2,
-              let year = Int(pieces[0]),
-              let month = Int(pieces[1]),
-              let day = Int(pieces[2]) else {
+        func validatedPieces(_ value: String) -> [Int] {
+            let pieces = value.split(separator: "-", omittingEmptySubsequences: false)
+            guard pieces.count == 3,
+                  pieces[0].count == 4,
+                  pieces[1].count == 2,
+                  pieces[2].count == 2,
+                  let year = Int(pieces[0]),
+                  let month = Int(pieces[1]),
+                  let day = Int(pieces[2]) else {
+                return []
+            }
+            return [year, month, day]
+        }
+
+        guard period == "range",
+              settings.generateRangeSummary else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
-        var calendar = Calendar(identifier: .iso8601)
-        calendar.timeZone = .gmt
-        var dateComponents = DateComponents()
-        dateComponents.calendar = calendar
-        dateComponents.timeZone = .gmt
-        dateComponents.year = year
-        dateComponents.month = month
-        dateComponents.day = day
-        guard let date = calendar.date(from: dateComponents),
-              calendar.component(.year, from: date) == year,
-              calendar.component(.month, from: date) == month,
-              calendar.component(.day, from: date) == day else {
+        let start = validatedPieces(startDate)
+        let end = validatedPieces(endDate)
+        guard start.count == 3, end.count == 3, startDate <= endDate else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
-        switch period {
-        case "iso_week":
-            guard settings.generateWeeklyRollups,
-                  calendar.component(.weekday, from: date) == 2 else {
-                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
-            }
-            return (
-                "Weekly",
-                String(
-                    format: "%04d-W%02d",
-                    calendar.component(.yearForWeekOfYear, from: date),
-                    calendar.component(.weekOfYear, from: date)
-                )
-            )
-        case "calendar_month":
-            guard settings.generateMonthlyRollups, day == 1 else {
-                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
-            }
-            return ("Monthly", String(format: "%04d-%02d", year, month))
-        case "calendar_year":
-            guard settings.generateYearlyRollups, month == 1, day == 1 else {
-                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
-            }
-            return ("Yearly", String(format: "%04d", year))
-        default:
-            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
-        }
+        return ("Range", "\(startDate)_to_\(endDate)")
     }
 
     private static func rollupPathPrefix(healthSubfolder: String) -> String {

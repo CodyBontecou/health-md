@@ -51,9 +51,7 @@ struct ConnectedMacDailyExportOperation {
                 surface: .legacyOnly
             )
         }
-        let hasConfiguredRollups = settingsSnapshot.generateWeeklyRollups
-            || settingsSnapshot.generateMonthlyRollups
-            || settingsSnapshot.generateYearlyRollups
+        let hasConfiguredRollups = settingsSnapshot.generateRangeSummary
         let surface: AppleExportOperationSurface = supportsRangePlan && hasConfiguredRollups
             ? .connectedReceivedRangeWithoutSideEffects
             : .connectedReceivedFilesWithoutSideEffects

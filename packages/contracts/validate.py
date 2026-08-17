@@ -751,7 +751,7 @@ def validate_native_renderer_golden(path: Path) -> None:
                 except json.JSONDecodeError:
                     fail(f"{output_context}: JSON output is invalid")
                 if profile == "apple-v7":
-                    if public_json.get("schema") != "healthmd.health_data" or public_json.get("schema_version") != 7:
+                    if public_json.get("schema") != "healthmd.health_data" or public_json.get("schema_version") != 8:
                         fail(f"{output_context}: Apple v7 discriminator mismatch")
                 elif profile == "android-frozen-v4":
                     if "schemaProfile" in public_json or "schemaVersion" in public_json:

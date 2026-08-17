@@ -13,7 +13,7 @@ import Foundation
 
 nonisolated enum HealthMdExportSchema {
     static let identifier = "healthmd.health_data"
-    static let version = 7
+    static let version = 8
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
 

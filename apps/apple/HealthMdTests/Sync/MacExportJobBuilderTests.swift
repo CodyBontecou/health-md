@@ -9,9 +9,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         settings.includeGranularData = false
         settings.archiveExportFiles = false
         settings.summaryOnlyExport = false
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         settings.dailyNoteInjection.enabled = false
         settings.individualTracking.globalEnabled = false
         let resolver = AppleExportEnginePolicyResolver(
@@ -30,7 +28,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertTrue(supported.appleExportEngineAuthorityIsFrozen)
         XCTAssertNil(supported.appleExportEnginePin)
 
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let rollup = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
             settings,
             healthSubfolder: "Health",
@@ -53,7 +51,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertTrue(corpusRollup.appleExportEngineAuthorityIsFrozen)
         XCTAssertEqual(corpusRollup.appleExportEnginePin?.engine, .rust)
 
-        settings.generateWeeklyRollups = false
+        settings.generateRangeSummary = false
         settings.summaryOnlyExport = false
         let providerSidecar = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
             settings,
@@ -140,7 +138,7 @@ final class MacExportJobBuilderTests: XCTestCase {
     func testBuild_summaryOnlyNeverFetchesGranularArchivesDespiteSavedToggle() async throws {
         let settings = makeSettings()
         settings.includeGranularData = true
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let date = Self.day(2026, 5, 12)
         var requestedGranularFlags: [Bool] = []
@@ -226,7 +224,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         let settings = makeSettings()
         settings.exportFormats = []
         settings.includeGranularData = true
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.dailyNotesOnly = true
         let date = Self.day(2026, 5, 12)
@@ -261,7 +259,7 @@ final class MacExportJobBuilderTests: XCTestCase {
 
     func testStreamingMetadataAndChunksUseTransferDatesWithOneBasedSequences() async throws {
         let settings = makeSettings()
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let start = Self.day(2026, 5, 12)
         let end = Self.day(2026, 5, 13)
 
@@ -275,19 +273,19 @@ final class MacExportJobBuilderTests: XCTestCase {
         let chunks = MacExportStreamingJobBuilder.chunks(for: metadata.transferDates, chunkSize: 3)
 
         XCTAssertEqual(metadata.totalRequestedDays, 2)
-        XCTAssertEqual(metadata.totalTransferDays, 7)
-        XCTAssertEqual(metadata.transferDates.first, Calendar.current.startOfDay(for: Self.day(2026, 5, 11)))
-        XCTAssertEqual(metadata.transferDates.last, Calendar.current.startOfDay(for: Self.day(2026, 5, 17)))
+        XCTAssertEqual(metadata.totalTransferDays, 2)
+        XCTAssertEqual(metadata.transferDates.first, Calendar.current.startOfDay(for: Self.day(2026, 5, 12)))
+        XCTAssertEqual(metadata.transferDates.last, Calendar.current.startOfDay(for: Self.day(2026, 5, 13)))
         XCTAssertEqual(metadata.requestedTarget.destinationDisplayName, "MacVault")
         XCTAssertEqual(metadata.settingsSnapshot.healthSubfolder, "2. Areas/Health")
-        XCTAssertEqual(chunks.map(\.sequence), [1, 2, 3])
-        XCTAssertEqual(chunks.map { $0.dates.count }, [3, 3, 1])
+        XCTAssertEqual(chunks.map(\.sequence), [1])
+        XCTAssertEqual(chunks.map { $0.dates.count }, [2])
     }
 
     func testBuild_includesFullRollupWindowRecordsWithoutGranularData() async throws {
         let settings = makeSettings()
         settings.includeGranularData = true
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         let start = Self.day(2026, 5, 12)
         let end = Self.day(2026, 5, 13)
         var requestedDates: [Date] = []
@@ -322,11 +320,11 @@ final class MacExportJobBuilderTests: XCTestCase {
             }
         )
 
-        XCTAssertEqual(job.records.count, 7)
-        XCTAssertEqual(requestedDates.first, Calendar.current.startOfDay(for: Self.day(2026, 5, 11)))
-        XCTAssertEqual(requestedDates.last, Calendar.current.startOfDay(for: Self.day(2026, 5, 17)))
+        XCTAssertEqual(job.records.count, 2)
+        XCTAssertEqual(requestedDates.first, Calendar.current.startOfDay(for: Self.day(2026, 5, 12)))
+        XCTAssertEqual(requestedDates.last, Calendar.current.startOfDay(for: Self.day(2026, 5, 13)))
         XCTAssertEqual(requestedGranularFlags.filter { $0 }.count, 2)
-        XCTAssertEqual(requestedGranularFlags.filter { !$0 }.count, 5)
+        XCTAssertEqual(requestedGranularFlags.filter { !$0 }.count, 0)
         XCTAssertEqual(externalRequestedDates, [
             Calendar.current.startOfDay(for: start),
             Calendar.current.startOfDay(for: end)
@@ -338,9 +336,7 @@ final class MacExportJobBuilderTests: XCTestCase {
 
     func testBuild_noncontiguousRequestedDatesDoesNotReinsertCompletedMiddleDay() async throws {
         let settings = makeSettings()
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         let first = Self.day(2026, 5, 10)
         let completedMiddle = Self.day(2026, 5, 11)
         let last = Self.day(2026, 5, 12)
