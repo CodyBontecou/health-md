@@ -56,14 +56,16 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
 
-        let noDataAlert = app.alerts["No Health Data Found"]
+        // The no-data guidance is a Geist-designed in-app dialog (not a native alert),
+        // matched by its localized title text like the other dialogs in this journey.
+        let noDataDialog = app.staticTexts["No Health Data Found"]
         XCTAssertTrue(
-            noDataAlert.waitForExistence(timeout: 30),
+            noDataDialog.waitForExistence(timeout: 30),
             "An empty Health store should produce a guided empty state, not a generic error"
         )
-        XCTAssertTrue(noDataAlert.buttons["Open Health App"].exists)
-        XCTAssertTrue(noDataAlert.buttons["Done"].exists)
-        XCTAssertFalse(app.alerts["Error"].exists)
+        XCTAssertTrue(app.buttons["Open Health App"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Done"].exists)
+        XCTAssertFalse(app.staticTexts["Export Couldn\u{2019}t Finish"].exists)
     }
 
     func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
