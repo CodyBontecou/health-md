@@ -105,6 +105,16 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
+            <!-- Some providers report .healthmdconfig files as plain application/json; the
+                 document picker itself requests that MIME type. MainActivity still validates
+                 the provider display name before reading, so generic JSON documents fail
+                 closed rather than reaching shared-setup decoding. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />

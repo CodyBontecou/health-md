@@ -1,5 +1,6 @@
 package com.healthmd.sharedsetup
 
+import java.nio.charset.CharacterCodingException
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -24,7 +25,14 @@ class SharedSetupCodec(
 
     fun decode(bytes: ByteArray): SharedSetupDecodeResult {
         if (bytes.size > SHARED_SETUP_MAX_BYTES) return invalid("Shared setup exceeds 256 KB.")
-        val text = bytes.decodeToString(throwOnInvalidSequence = true)
+        // Decode before the JSON try block: a malformed UTF-8 sequence must map to
+        // the promised Invalid result instead of escaping as an uncaught
+        // CharacterCodingException that leaves the import screen stuck on Loading.
+        val text = try {
+            bytes.decodeToString(throwOnInvalidSequence = true)
+        } catch (_: CharacterCodingException) {
+            return invalid("Shared setup is not valid UTF-8.")
+        }
         val root = try {
             json.parseToJsonElement(text)
         } catch (_: IllegalArgumentException) {
