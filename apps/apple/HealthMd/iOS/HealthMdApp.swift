@@ -272,6 +272,16 @@ struct HealthMdApp: App {
             forKey: ConfigurationProtectionManager.storageKey
         )
 
+        // Export profiles, their scheduled entries, and their destination
+        // bindings are UserDefaults-backed stores created after this reset
+        // was written; clear them so a UI-test journey never inherits profile
+        // state from an earlier journey on the same install.
+        UserDefaults.standard.removeObject(forKey: "exportProfiles.list")
+        UserDefaults.standard.removeObject(forKey: "exportProfiles.activeProfileID")
+        UserDefaults.standard.removeObject(forKey: "scheduledExportEntries.list")
+        UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.vaults")
+        UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.apiEndpoints")
+
         // All managers are @MainActor — set state in Task.
         Task { @MainActor in
             // HealthKit: set authorization state without showing dialogs
