@@ -28,12 +28,12 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `core/canonical-json-fields.md` | 49042 | `190177dfd3e5923f8e786902d422a7e7408d661793c7e2e52d0f7078555e6e48` | [Open page](/docs/reference/generated/core/canonical-json-fields/) | [Download](/docs/reference/generated/core/canonical-json-fields.md) |
 | `core/csv-row-contracts.md` | 44189 | `ced67eb454ff046de7a5746bbc938e09b95a4a4814343c2f49413f1a3929fcdc` | [Open page](/docs/reference/generated/core/csv-row-contracts/) | [Download](/docs/reference/generated/core/csv-row-contracts.md) |
 | `core/daily-json-fields.md` | 120624 | `cc4af5712c431922533bba1907ff0864a03907504b693a4936f7e350df66100c` | [Open page](/docs/reference/generated/core/daily-json-fields/) | [Download](/docs/reference/generated/core/daily-json-fields.md) |
-| `core/data-dictionary.json` | 246039 | `53ed0dd9d6a7cf8731f79aee7a717b324c25ecd23bb2c6538218589d1f94b6dc` | — | [Download](/docs/reference/generated/core/data-dictionary.json) |
+| `core/data-dictionary.json` | 222265 | `1dfcfc07801878319500cc26b9ca7f03f00d4f50e378bb3eb483bf6c753d04fd` | — | [Download](/docs/reference/generated/core/data-dictionary.json) |
 | `core/lossless-day-bases.md` | 15628 | `3f9a84f98206dd7ba7b52bcaa055f774ec89ec6b60b22755abdeb6ac65a4b1e1` | — | [Download](/docs/reference/generated/core/lossless-day-bases.md) |
 | `core/lossless-day.csv` | 58802 | `c67db49ecbfd74ae200b34e7e30d65c688bc716c9bb285ec7194382d645f009f` | — | [Download](/docs/reference/generated/core/lossless-day.csv) |
 | `core/lossless-day.json` | 84633 | `0465094abb79eb74257248c11f5fa7455e800920aa177e733bfa34cd61808356` | — | [Download](/docs/reference/generated/core/lossless-day.json) |
 | `core/lossless-day.md` | 24315 | `88d6574df1bf970585590a2cc1af88115d6ca26bf803c9583490657738176387` | — | [Download](/docs/reference/generated/core/lossless-day.md) |
-| `core/manifest.json` | 3253 | `85a845e79c270f8e5627f899678150e31b23d9aa50d383c195b42a93924a78e7` | — | [Download](/docs/reference/generated/core/manifest.json) |
+| `core/manifest.json` | 3253 | `020145dc076f6c66bc4e7b0f68d31cea638635c33766b6f926e85456fbccb373` | — | [Download](/docs/reference/generated/core/manifest.json) |
 | `core/metric-catalog.md` | 49571 | `556ef7535a6934e35c0e3576f83fe376938bb494e9da9aab8d2277dd0491a403` | [Open page](/docs/reference/generated/core/metric-catalog/) | [Download](/docs/reference/generated/core/metric-catalog.md) |
 | `core/metric-examples.md` | 62772 | `7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226` | [Open page](/docs/reference/generated/core/metric-examples/) | [Download](/docs/reference/generated/core/metric-examples.md) |
 | `core/provider-day-bases.md` | 2615 | `da3e5520aa73c2a12623957354596505a241ed861a5a2b2b17049a30705da559` | — | [Download](/docs/reference/generated/core/provider-day-bases.md) |
@@ -72,8 +72,8 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `rollups/aggregation-behavior.md` | 120672 | `6a39c4fae8ce914b736e9534796ed4634a157c35223de9d2c55700871eb0bbe4` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
-| `rollups/manifest.json` | 4348 | `93c8c45c8f84d905c3466a60e638eb5706c7db8f88724d21669c0b661eac1ac6` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
+| `rollups/aggregation-behavior.md` | 104830 | `c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
+| `rollups/manifest.json` | 4348 | `27696256e8e51c92e583c79d5a6fa3d746912d379ba7dfc22d301c0e0adb8654` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
 | `rollups/weekly-bases.md` | 11564 | `fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815` | — | [Download](/docs/reference/generated/rollups/weekly-bases.md) |
 | `rollups/weekly.csv` | 29797 | `447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9` | — | [Download](/docs/reference/generated/rollups/weekly.csv) |
 | `rollups/weekly.json` | 39632 | `58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84` | — | [Download](/docs/reference/generated/rollups/weekly.json) |
