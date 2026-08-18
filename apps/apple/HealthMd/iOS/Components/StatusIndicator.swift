@@ -305,26 +305,32 @@ struct PartialExportNoticeToast: View {
                 .padding(.bottom, bottomPadding)
             }
         }
-        .alert(item: $presentedNotice) { notice in
-            if let guidance = notice.permissionGuidance {
-                return Alert(
-                    title: Text("Health Permissions Needed"),
-                    message: Text(notice.permissionAlertMessage(instructions: guidance.iOSInstructions)),
-                    primaryButton: .default(Text("Request Access")) {
+        // Expand to the full proposed area so the dialog scrim covers the screen;
+        // the toast badge itself stays pinned to the bottom.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .geistDialog(
+            isPresented: Binding(
+                get: { presentedNotice != nil },
+                set: { if !$0 { presentedNotice = nil } }
+            ),
+            title: Text(presentedNotice?.permissionGuidance != nil ? "Health Permissions Needed" : "Partial Export"),
+            message: presentedNotice.map { notice in
+                if let guidance = notice.permissionGuidance {
+                    return Text(notice.permissionAlertMessage(instructions: guidance.iOSInstructions))
+                }
+                return Text(notice.genericAlertMessage)
+            },
+            actions: presentedNotice?.permissionGuidance != nil
+                ? [
+                    .action("Request Access") {
                         requestAdditionalHealthAccess()
                     },
-                    secondaryButton: .default(Text("Open Health App")) {
+                    .action("Open Health App") {
                         openHealthApp()
                     }
-                )
-            }
-
-            return Alert(
-                title: Text("Partial Export"),
-                message: Text(notice.genericAlertMessage),
-                dismissButton: .default(Text("OK"))
-            )
-        }
+                ]
+                : [.action("OK", role: .secondary)]
+        )
         .task(id: notice?.id) {
             guard notice != nil else { return }
             try? await Task.sleep(for: .seconds(8))

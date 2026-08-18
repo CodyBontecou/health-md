@@ -214,6 +214,7 @@ struct ExportDataSnapshot {
     let mobility: Mobility
     let hearing: Hearing
     let workouts: [WorkoutData]
+    let providers: HealthProviderSections?
 
     /// Lossless capture state and diagnostics are carried alongside, without changing summary meaning.
     let healthKitRecordCaptureStatus: HealthKitRecordCaptureStatus
@@ -405,6 +406,7 @@ extension HealthData {
                 environmentalSoundLevelDb: hearing.environmentalSoundLevel
             ),
             workouts: workouts,
+            providers: providers,
             healthKitRecordCaptureStatus: healthKitRecordCaptureStatus,
             healthKitRecordArchive: healthKitRecordArchive,
             partialFailures: partialFailures,

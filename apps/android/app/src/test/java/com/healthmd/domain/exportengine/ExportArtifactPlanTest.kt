@@ -118,7 +118,7 @@ class ExportArtifactPlanTest {
             artifactPlanVersion = 1u,
             requestId = TEST_REQUEST_ID,
             sessionId = TEST_SESSION_ID,
-            profile = CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V7,
+            profile = CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8,
             items = emptyList(),
             totalByteCount = 0uL,
         )

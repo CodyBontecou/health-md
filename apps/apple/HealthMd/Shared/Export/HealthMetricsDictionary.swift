@@ -13,7 +13,7 @@ import Foundation
 
 nonisolated enum HealthMdExportSchema {
     static let identifier = "healthmd.health_data"
-    static let version = 7
+    static let version = 8
     static let dataDictionaryFilename = "_healthmd_data_dictionary.json"
 }
 
@@ -380,7 +380,41 @@ enum HealthMetricDataDictionary {
         }
 
         entries.append(contentsOf: losslessArchiveDiagnosticEntries())
+        entries.append(contentsOf: whoopProviderEntries())
         return entries.sorted { $0.key < $1.key }
+    }
+
+    private static func whoopProviderEntries() -> [HealthMetricDataDictionaryEntry] {
+        WHOOPFlatMetricDefinition.all.map { definition in
+            HealthMetricDataDictionaryEntry(
+                key: definition.key,
+                canonicalKey: definition.key,
+                metricId: "provider.whoop",
+                displayName: definition.displayName,
+                category: definition.category,
+                unit: definition.unit,
+                healthKitIdentifier: nil,
+                aggregation: definition.key == "whoop_capture_status"
+                    ? "provider_capture_status"
+                    : "single_record_projection",
+                dailyAggregation: definition.key == "whoop_capture_status"
+                    ? "provider_capture_status"
+                    : "single_record_projection",
+                healthKitAggregation: "none",
+                rollup: HealthMetricRollupRule(
+                    primary: "none",
+                    statistics: [],
+                    periods: [],
+                    preferredSource: "daily_provider_section",
+                    nullHandling: "omit_when_missing_or_ambiguous",
+                    notes: definition.key == "whoop_capture_status"
+                        ? "Daily WHOOP capture status only; provider period roll-ups are not defined in v8."
+                        : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8."
+                ),
+                metricType: "provider",
+                schemaVersion: HealthMdExportSchema.version
+            )
+        }
     }
 
     private static func losslessArchiveDiagnosticEntries() -> [HealthMetricDataDictionaryEntry] {

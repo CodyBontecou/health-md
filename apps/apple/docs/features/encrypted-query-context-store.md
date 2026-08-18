@@ -1,6 +1,6 @@
 # Encrypted Mac query-context store
 
-Health.md's Mac query-context store is an internal contract independent of the daily export schema. Store contract v1 persists `HealthMdCompactContextDay` records as one encrypted generation file per owner day. It does not change daily export schema v7 or any exported JSON, CSV, Markdown, or Obsidian field.
+Health.md's Mac query-context store is an internal contract independent of the daily export schema. Store contract v1 persists `HealthMdCompactContextDay` records as one encrypted generation file per owner day. It does not change daily export schema v8 or any exported JSON, CSV, Markdown, or Obsidian field.
 
 ## Encryption and commits
 

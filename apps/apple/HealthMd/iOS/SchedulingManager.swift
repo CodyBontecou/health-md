@@ -66,6 +66,11 @@ struct NotificationExportResult: Equatable {
 
 /// Manages background task scheduling for automated health data exports
 class SchedulingManager: ObservableObject {
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes on older iOS runtimes when the last release happened off
+    // the main actor during app-host teardown. Matches AdvancedExportSettings.
+    nonisolated deinit {}
     enum PendingExportDrainTrigger {
         case notificationTap
         case appActive
@@ -1007,11 +1012,14 @@ class SchedulingManager: ObservableObject {
         let calendarTimeZone = TimeZone.current
         switch target {
         case .localIPhoneFolder:
+            let hasNativeOnlyCompanionAction = ConnectedAppsFeature.isEnabled
+                && (scheduledExternalIntegrations?.connectedProviderCount ?? 0) > 0
             return await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,
                 healthSubfolder: VaultManager().healthSubfolder,
                 calendarTimeZone: calendarTimeZone,
-                surface: .localVaultRangeWithoutSideEffects
+                surface: .localVaultRangeWithoutSideEffects,
+                hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
             )
         case .apiEndpoint:
             return await ExportSettingsSnapshot.forNewAppleOperation(
@@ -1145,7 +1153,11 @@ class SchedulingManager: ObservableObject {
         quotaJobID: UUID?,
         notificationOperationID: UUID?
     ) async -> ExportOrchestrator.ExportResult {
-        let normalizedDates = dates.map { Calendar.current.startOfDay(for: $0) }.sorted()
+        let sourceTimeZone = settingsSnapshot?.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:)) ?? .current
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = sourceTimeZone
+        let normalizedDates = dates.map { sourceCalendar.startOfDay(for: $0) }.sorted()
         guard let startDate = normalizedDates.first,
               let endDate = normalizedDates.last else {
             return ExportOrchestrator.ExportResult(successCount: 0, totalCount: 0, failedDateDetails: [])
@@ -1182,12 +1194,21 @@ class SchedulingManager: ObservableObject {
         let jobID = quotaJobID ?? UUID()
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+        let providerTimeZone = settingsSnapshot?.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
+        var providerCalendar = Calendar(identifier: .gregorian)
+        providerCalendar.timeZone = providerTimeZone
         let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
         if ConnectedAppsFeature.isEnabled,
            let scheduledExternalIntegrations,
            scheduledExternalIntegrations.connectedProviderCount > 0 {
             externalRecordFetcher = { date in
-                await scheduledExternalIntegrations.fetchDailyRecords(for: date)
+                await scheduledExternalIntegrations.fetchDailyRecords(
+                    for: date,
+                    calendar: providerCalendar
+                )
             }
         } else {
             externalRecordFetcher = nil
@@ -1228,7 +1249,8 @@ class SchedulingManager: ObservableObject {
                     try await HealthKitManager.shared.fetchHealthData(
                         for: date,
                         includeGranularData: includeGranularData,
-                        metricSelection: settings.metricSelection
+                        metricSelection: settings.metricSelection,
+                        timeZone: providerTimeZone
                     )
                 },
                 fetchExternalDailyRecords: externalRecordFetcher,
@@ -2021,7 +2043,7 @@ class SchedulingManager: ObservableObject {
             )
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: dates.count,
@@ -2029,16 +2051,15 @@ class SchedulingManager: ObservableObject {
                 formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
+        defer { accessLease.stop() }
 
-        let result = await ExportOrchestrator.exportDatesBackground(
+        return await ExportOrchestrator.exportDatesBackground(
             dates,
             healthKitManager: healthKitManager,
             vaultManager: vaultManager,
-            settings: advancedSettings
+            settings: advancedSettings,
+            externalIntegrations: scheduledExternalIntegrations
         )
-
-        vaultManager.stopVaultAccess()
-        return result
     }
 
     // MARK: - Background Task Execution
@@ -2411,7 +2432,7 @@ class SchedulingManager: ObservableObject {
         logger.info("Vault access confirmed")
         logger.info("Exporting \(dates.count) days of data")
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             logger.error("Could not start vault security scope in background")
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
@@ -2420,6 +2441,7 @@ class SchedulingManager: ObservableObject {
                 formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
+        defer { accessLease.stop() }
 
         let result = await ExportOrchestrator.exportDatesBackground(
             dates,
@@ -2430,6 +2452,7 @@ class SchedulingManager: ObservableObject {
             operationSurface: settingsSnapshot == nil
                 ? .legacyOnly
                 : .localVaultRangeWithoutSideEffects,
+            externalIntegrations: scheduledExternalIntegrations,
             onProgress: { [weak self] processed, total, date in
                 self?.updateNotificationExportActivity(
                     operationID: notificationOperationID,
@@ -2440,8 +2463,6 @@ class SchedulingManager: ObservableObject {
                 )
             }
         )
-
-        vaultManager.stopVaultAccess()
 
         logger.info("Background export completed. Success: \(result.successCount)/\(result.totalCount)")
         return result

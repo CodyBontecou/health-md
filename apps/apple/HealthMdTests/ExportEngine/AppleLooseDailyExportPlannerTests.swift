@@ -334,7 +334,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         let service = HealthMdCoreService()
         XCTAssertTrue(capturedPin.isCompatible(
             buildInfo: try service.buildInfo(),
-            registrySnapshot: try service.metricRegistry(profile: .appleHealthDataV7)
+            registrySnapshot: try service.metricRegistry(profile: .appleHealthDataV8)
         ))
         XCTAssertTrue(AppleLooseDailyExportPlanner.supports(
             healthData: [record],
@@ -905,6 +905,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             defaults: defaults,
             fileSystem: fileSystem,
             bookmarkResolver: resolver,
+            identityProbe: FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         Self.retainedManagers.append(manager)
@@ -918,7 +919,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
     ) throws -> AppleLooseDailyPlannedOperation {
         let service = HealthMdCoreService()
         let buildInfo = try service.buildInfo()
-        let registry = try service.metricRegistry(profile: .appleHealthDataV7)
+        let registry = try service.metricRegistry(profile: .appleHealthDataV8)
         let pin = try AppleExportEnginePin(
             engine: authority,
             calendarTimeZoneIdentifier: "UTC",
@@ -970,7 +971,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             id: NativeExportArtifactPlan.artifactID(
                 requestID: identity.requestID,
                 sessionID: identity.sessionID,
-                profile: .appleHealthDataV7,
+                profile: .appleHealthDataV8,
                 relativePath: path,
                 mediaType: "application/json",
                 writeMode: .overwrite,
@@ -987,7 +988,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             artifacts: [artifact],
             totalByteCount: artifact.byteCount,
             pin: pin

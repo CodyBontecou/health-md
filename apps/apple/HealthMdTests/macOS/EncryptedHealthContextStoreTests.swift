@@ -403,7 +403,7 @@ final class EncryptedHealthContextStoreTests: XCTestCase {
             try await store.upsert(unsupported)
         }
         let unchangedDates = try await store.listOwnerDates()
-        XCTAssertEqual(HealthMdExportSchema.version, 7)
+        XCTAssertEqual(HealthMdExportSchema.version, 8)
         XCTAssertEqual(unchangedDates, [])
     }
 

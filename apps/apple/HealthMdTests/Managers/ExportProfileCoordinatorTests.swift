@@ -63,7 +63,8 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         guard let defaults else { fatalError("test defaults missing") }
         return VaultManager(
             defaults: SystemUserDefaults(defaults: defaults),
-            bookmarkResolver: bookmarkResolver
+            bookmarkResolver: bookmarkResolver,
+            identityProbe: FakeVaultFolderIdentityProbe()
         )
     }
 

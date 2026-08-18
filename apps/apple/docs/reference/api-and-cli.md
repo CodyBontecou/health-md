@@ -6,7 +6,7 @@ Health.md exposes three independent automation boundaries:
 2. **Bundled Swift Mac CLI** uses the Mac-app loopback backend or an explicit authenticated direct-iPhone backend to request files or strict canonical JSON.
 3. **Query surfaces** are either the bundled Mac helper's loopback encrypted-context API or the standalone Rust CLI's 19-tool direct iPhone v3 MCP server. Portable MCP does not use the Mac app or localhost.
 
-`healthmd.health_data` v7 is the single public health-data source of truth. Export/API/job/query wrappers may have protocol versions for compatibility, paging, receipts, and failures, but they are not alternative health schemas. Direct CLI extraction emits canonical daily documents or selected canonical subtrees; typed sleep/alignment/comparison results are explicitly derived protocol views with source evidence.
+Apple `healthmd.health_data` v8 is the current public health-data source of truth. Export/API/job/query wrappers may have protocol versions for compatibility, paging, receipts, and failures, but they are not alternative health schemas. Direct CLI extraction emits canonical daily documents or selected canonical subtrees; typed sleep/alignment/comparison results are explicitly derived protocol views with source evidence.
 
 ## API Endpoint export
 
@@ -19,15 +19,15 @@ The iPhone sends an HTTP POST with `Content-Type: application/json`. When config
 | `schema` | string | `healthmd.api_export`. |
 | `schema_version` | integer | API envelope version. |
 | `daily_record_schema` | string | `healthmd.health_data`. |
-| `daily_record_schema_version` | integer | Current daily version, `7`. |
+| `daily_record_schema_version` | integer | Current Apple daily version, `8`. |
 | `exported_at` | timestamp | Envelope creation time. |
 | `source` | string | Exporting platform/source, normally `ios`. |
 | `date_range.start` | date | Requested first date. |
 | `date_range.end` | date | Requested last date. |
 | `record_count` | integer | Number of retained daily documents. |
-| `records` | array | Complete daily schema-v7 objects. |
+| `records` | array | Complete daily schema-v8 objects, including optional typed `providers.whoop`. |
 | `failed_date_details` | array | Dates that failed before a daily document could be retained. |
-| Provider sidecars | conditional | Independent v2 external/provider records when an integration is enabled. |
+| `external_records` | conditional | API v2 provider-native sidecars retained independently from typed provider data inside `records`. |
 
 A complete-empty lossless daily record is retained because its query manifest is evidence. A date that cannot produce a daily record is represented in `failed_date_details` rather than as a fabricated empty day.
 
@@ -161,7 +161,7 @@ File-mode responses normally report `files_written` and `external_record_count`.
 
 The iPhone's Direct CLI Access setting is opt-in and foreground-scoped for pairing and new commands. An already-connected export may use finite iOS background execution time to complete; expiration pauses its durable job for later resume. Pairing and trusted reconnect use a trust domain separate from Mac-app sync, mutual transcript authentication, fresh encrypted sessions, and installation binding. Nearby requires Multipeer encryption and retains the application-layer encryption/authentication used by Manual IP.
 
-Strict raw output keeps the same schema-v7 `healthmd.health_data` and `healthmd.raw_result` contracts. Generated-file mode runs the production iPhone exporters and requires an existing absolute Mac `--destination`; it validates paths, symlinks, manifests, digests, and restart-safe write receipts before committing. `--output` remains raw-only. Direct transfers are partitioned, disk-spooled, checksummed, resumable, and bound to an immutable request and paired device.
+Strict raw output keeps the same schema-v8 `healthmd.health_data` and `healthmd.raw_result` contracts, but remains canonical Apple Health only and omits typed/native provider data. Generated-file mode runs the production iPhone exporters and requires an existing absolute Mac `--destination`; it validates paths, symlinks, manifests, digests, and restart-safe write receipts before committing. `--output` remains raw-only. Direct transfers are partitioned, disk-spooled, checksummed, resumable, and bound to an immutable request and paired device.
 
 The bundled Swift helper's direct backend does not host `/v1/agent/*` or encrypted Mac-context query/evidence/refresh routes; those command paths return `backend_unsupported` rather than silently switching to the Mac app. Canonical `extract` uses the direct durable raw transport. Portable `healthmd mcp serve` provides direct metric catalog, readiness, typed query/evidence, visualization, and durable export tools through iPhone query protocol v3 without hosting the Mac HTTP API, while `healthmd setup codex` configures the same executable identity. See [Direct iPhone CLI backend](../features/cli-direct-iphone.md).
 
@@ -200,7 +200,7 @@ healthmd extract --all-metrics --yesterday --detail summary
 
 The CLI sends `raw_profile: health_data_projection` only as a bounded durable transport choice. `canonical_selection` is resolved and validated on Mac, persisted in the request fingerprint, and applied on iPhone before HealthKit reads. Summary requests do not capture `healthkit_record_archive`; lossless requests query only HealthKit types backing the selected metrics. Object and field pointers reduce emitted JSON, while metric/category/detail selection reduces actual iPhone acquisition and transfer.
 
-After checksum/range/profile validation, the CLI strips the raw-result transport wrapper. JSON output uses a protocol result with ordinary v7 documents under `health_data`, or exact JSON Pointer/value/status entries under `projections`, plus `healthmd.extract_receipt` containing selection, per-day outcomes, capture counts, and missing dates. Projection objects reference their source v7 document but do not carry `schema: healthmd.health_data`, so a selected subtree cannot masquerade as a complete daily export. JSONL emits one data item per line and writes the receipt to stderr or `OUTPUT.receipt.json`. Unselected data is not fabricated as zero; absent selected paths report complete-empty or the day’s incomplete status. `raw_capture_status: not_requested` means lossless records were not requested. Whole canonical documents stream by byte range; pointer projection decodes at most one bounded day at a time. A partial run emits no data unless `--allow-partial` is explicit. Current canonical extraction supports Apple Health only and rejects other sources instead of translating provider sidecars into a competing shape.
+After checksum/range/profile validation, the CLI strips the raw-result transport wrapper. JSON output uses a protocol result with ordinary v8 documents under `health_data`, or exact JSON Pointer/value/status entries under `projections`, plus `healthmd.extract_receipt` containing selection, per-day outcomes, capture counts, and missing dates. Projection objects reference their source v8 document but do not carry `schema: healthmd.health_data`, so a selected subtree cannot masquerade as a complete daily export. JSONL emits one data item per line and writes the receipt to stderr or `OUTPUT.receipt.json`. Unselected data is not fabricated as zero; absent selected paths report complete-empty or the day’s incomplete status. `raw_capture_status: not_requested` means lossless records were not requested. Whole canonical documents stream by byte range; pointer projection decodes at most one bounded day at a time. A partial run emits no data unless `--allow-partial` is explicit. Current canonical extraction supports Apple Health only and rejects other sources instead of translating provider sidecars into a competing shape.
 
 ## Strict raw profile
 
@@ -222,7 +222,7 @@ The result preserves public daily JSON as canonical strings during connected tra
 A strict result describes:
 
 - the requested profile/version and exact date range;
-- retained daily schema-v7 records;
+- retained daily schema-v8 records;
 - per-day states such as complete, complete-empty, warning, partial, failed, cancelled, or missing;
 - aggregate query status counts;
 - integrity warning counts/codes;

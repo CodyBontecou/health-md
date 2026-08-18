@@ -1,4 +1,4 @@
-//! Apple `healthmd.health_data` v7 profile renderer.
+//! Apple `healthmd.health_data` v8 profile renderer.
 
 use serde_json::Value;
 
@@ -39,7 +39,7 @@ pub(crate) fn add_rollups(
     config: &RenderSessionConfig,
     semantic: &SemanticResult,
 ) -> Result<(), RenderError> {
-    super::apple_rollup_v7::add_rollups(builder, config, semantic)
+    super::apple_rollup_v8::add_rollups(builder, config, semantic)
 }
 
 pub(crate) fn render_api_record(
@@ -87,7 +87,7 @@ pub(crate) fn render_api_envelope(
         ),
         (
             "daily_record_schema_version".to_owned(),
-            encode(Value::from(7))?,
+            encode(Value::from(8))?,
         ),
         (
             "exported_at".to_owned(),

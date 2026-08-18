@@ -110,6 +110,11 @@ enum HealthMdRenderInputAdapter {
         guard allowNativeProfileDocuments || presentationByOwnerDate.isEmpty else {
             throw AdapterError.invalidPresentation
         }
+        // Typed provider sections are deliberately not represented by generic
+        // render extensions. Provider-bearing v8 days stay native-authoritative.
+        guard presentationByOwnerDate.values.allSatisfy({ $0.providers?.isEmpty != false }) else {
+            throw AdapterError.invalidPresentation
+        }
 
         var effectiveOptions = options
         if !presentationByOwnerDate.isEmpty {
@@ -238,7 +243,7 @@ enum HealthMdRenderInputAdapter {
             "registry_version": Int(registry.registryVersion),
             "registry_sha256": registry.registrySha256,
             "profile_revision": Int(registry.profileRevision),
-            "render_profile_revision": 1,
+            "render_profile_revision": 2,
             "request_id": options.requestID,
             "session_id": sessionID,
             "profile": profile,

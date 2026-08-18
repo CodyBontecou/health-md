@@ -91,6 +91,8 @@ enum GeneratedAutomationReferenceDocumentation {
         let completeRecord = completeHealthData()
         let partialRecord = partialHealthData()
         let sidecar = providerSidecar()
+        var providerRecord = completeRecord
+        providerRecord.providers = ExportFixtures.whoopDay.providers
         let snapshot = settingsSnapshot()
         let completeRawResult = try CanonicalRawResultEnvelope(
             createdAt: createdAt,
@@ -184,6 +186,12 @@ enum GeneratedAutomationReferenceDocumentation {
             totalFilesWritten: 2,
             externalRecordFileCount: 1,
             failedDateDetails: [failedDateDetail],
+            partialFailures: [ExportPartialFailure(
+                date: dayEnd,
+                dataType: "Individual entries",
+                dateRangeDescription: "2026-03-16",
+                errorDescription: "Lossless records produced no individual entries for tracked metrics: weight not selected for the daily export."
+            )],
             completedDates: [dayStart, dayEnd],
             destinationDisplayName: "Synthetic Export Destination",
             destinationPathForDisplay: "/Synthetic/HealthExports",
@@ -202,7 +210,7 @@ enum GeneratedAutomationReferenceDocumentation {
         )
         let agentSource = HealthMdSourceDescriptor(
             schema: "healthmd.health_data",
-            schemaVersion: 7,
+            schemaVersion: HealthMdExportSchema.version,
             digest: String(repeating: "a", count: 64)
         )
         let agentEvidence = HealthMdEvidenceReference(
@@ -311,7 +319,7 @@ enum GeneratedAutomationReferenceDocumentation {
             connectedAppsEnabled: false
         ))
         generated["api-export-v2-provider-sidecar.json"] = try canonicalJSON(APIExportClient.makePayload(
-            records: [completeRecord],
+            records: [providerRecord],
             failedDateDetails: [failedDateDetail],
             externalRecords: [sidecar],
             settings: retainedSettings,

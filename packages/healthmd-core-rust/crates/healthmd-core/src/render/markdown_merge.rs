@@ -1,6 +1,11 @@
 //! Profile-exact managed Markdown merge behavior.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Range,
+};
+
+use unicode_normalization::UnicodeNormalization;
 
 use super::RenderError;
 use crate::semantic::SemanticProfile;
@@ -21,12 +26,12 @@ pub fn merge_profile_markdown(
     preserve_preamble: bool,
 ) -> Result<String, RenderError> {
     validate(existing, generated)?;
-    Ok(match profile {
-        SemanticProfile::AppleHealthDataV7 => apple_merge(existing, generated, preserve_preamble),
+    match profile {
+        SemanticProfile::AppleHealthDataV8 => apple_merge(existing, generated, preserve_preamble),
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => {
-            android_merge(existing, generated)
+            Ok(android_merge(existing, generated))
         }
-    })
+    }
 }
 
 fn validate(existing: &str, generated: &str) -> Result<(), RenderError> {
@@ -38,6 +43,38 @@ fn validate(existing: &str, generated: &str) -> Result<(), RenderError> {
         return Err(RenderError::ArtifactTooLarge);
     }
     Ok(())
+}
+
+#[derive(Clone)]
+struct PhysicalLine {
+    content: String,
+    ending: &'static str,
+}
+
+impl PhysicalLine {
+    fn append_to(&self, output: &mut String) {
+        output.push_str(&self.content);
+        output.push_str(self.ending);
+    }
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+enum FrontmatterPropertyKey {
+    String(String),
+    ImplicitlyTypedPlain(String),
+}
+
+#[derive(Clone)]
+struct FrontmatterPropertyBlock {
+    key: FrontmatterPropertyKey,
+    range: Range<usize>,
+}
+
+struct FrontmatterDocument {
+    opening: PhysicalLine,
+    content: Vec<PhysicalLine>,
+    closing: PhysicalLine,
+    suffix: Vec<PhysicalLine>,
 }
 
 #[derive(Clone)]
@@ -53,7 +90,14 @@ struct AppleDocument {
     sections: Vec<AppleSection>,
 }
 
-fn apple_merge(existing: &str, generated: &str, preserve_preamble: bool) -> String {
+fn apple_merge(
+    existing: &str,
+    generated: &str,
+    preserve_preamble: bool,
+) -> Result<String, RenderError> {
+    let boundary_line_ending = first_line_ending(existing)
+        .or_else(|| first_line_ending(generated))
+        .unwrap_or("\n");
     let existing = apple_parse(existing, apple_section_level(existing));
     let generated = apple_parse(generated, apple_section_level(generated));
     let mut generated_by_name = HashMap::new();
@@ -64,78 +108,99 @@ fn apple_merge(existing: &str, generated: &str, preserve_preamble: bool) -> Stri
             generated_order.push(section.name.clone());
         }
     }
-    let mut output = apple_merge_frontmatter(&existing.frontmatter, &generated.frontmatter);
-    output.push_str(if preserve_preamble {
-        &existing.preamble
-    } else {
-        &generated.preamble
-    });
+    let merged_frontmatter =
+        apple_merge_frontmatter(&existing.frontmatter, &generated.frontmatter)?;
+    let mut output = String::new();
+    append_markdown_fragment(&mut output, &merged_frontmatter, boundary_line_ending);
+    append_markdown_fragment(
+        &mut output,
+        if preserve_preamble {
+            &existing.preamble
+        } else {
+            &generated.preamble
+        },
+        boundary_line_ending,
+    );
     let mut placed = HashSet::new();
     for section in existing.sections {
         if let Some(replacement) = generated_by_name.get(&section.name) {
-            output.push_str(&replacement.heading);
-            output.push_str(&replacement.body);
+            append_markdown_fragment(&mut output, &replacement.heading, boundary_line_ending);
+            append_markdown_fragment(&mut output, &replacement.body, boundary_line_ending);
             placed.insert(section.name);
         } else {
-            output.push_str(&section.heading);
-            output.push_str(&section.body);
+            append_markdown_fragment(&mut output, &section.heading, boundary_line_ending);
+            append_markdown_fragment(&mut output, &section.body, boundary_line_ending);
         }
     }
     for name in generated_order {
         if !placed.contains(&name) {
             if let Some(section) = generated_by_name.get(&name) {
-                output.push_str(&section.heading);
-                output.push_str(&section.body);
+                append_markdown_fragment(&mut output, &section.heading, boundary_line_ending);
+                append_markdown_fragment(&mut output, &section.body, boundary_line_ending);
             }
         }
     }
-    output
+    Ok(output)
+}
+
+fn append_markdown_fragment(output: &mut String, fragment: &str, line_ending: &str) {
+    if fragment.is_empty() {
+        return;
+    }
+    if !output.is_empty()
+        && !matches!(output.as_bytes().last(), Some(b'\n' | b'\r'))
+        && !matches!(fragment.as_bytes().first(), Some(b'\n' | b'\r'))
+    {
+        output.push_str(line_ending);
+    }
+    output.push_str(fragment);
+}
+
+fn first_line_ending(text: &str) -> Option<&'static str> {
+    physical_lines(text)
+        .into_iter()
+        .find_map(|line| (!line.ending.is_empty()).then_some(line.ending))
 }
 
 fn apple_parse(content: &str, section_level: usize) -> AppleDocument {
-    let lines = content.split('\n').collect::<Vec<_>>();
-    let mut frontmatter = String::new();
-    let mut start = 0;
-    if lines.first().is_some_and(|line| line.trim() == "---") {
-        if let Some(index) = lines
-            .iter()
-            .enumerate()
-            .skip(1)
-            .find_map(|(index, line)| (line.trim() == "---").then_some(index))
-        {
-            frontmatter = format!("{}\n", lines[..=index].join("\n"));
-            start = index + 1;
-        }
-    }
+    let (frontmatter, lines) = if let Some(document) = frontmatter_document(content) {
+        let frontmatter = render_frontmatter_envelope(&document);
+        (frontmatter, document.suffix)
+    } else {
+        (String::new(), physical_lines(content))
+    };
+
     let mut preamble = String::new();
     let mut sections = Vec::new();
     let mut heading: Option<String> = None;
     let mut name: Option<String> = None;
-    let mut body = Vec::new();
-    for line in &lines[start..] {
-        if apple_heading_level(line) == section_level {
+    let mut body = String::new();
+
+    for line in lines {
+        if apple_heading_level(&line.content) == section_level {
             if let (Some(heading), Some(name)) = (heading.take(), name.take()) {
                 sections.push(AppleSection {
                     heading,
                     name,
-                    body: lines_with_newlines(&body),
+                    body: std::mem::take(&mut body),
                 });
-                body.clear();
             }
-            heading = Some(format!("{line}\n"));
-            name = Some(apple_heading_name(line));
+            let mut raw = String::new();
+            line.append_to(&mut raw);
+            heading = Some(raw);
+            name = Some(apple_heading_name(&line.content));
         } else if heading.is_none() {
-            preamble.push_str(line);
-            preamble.push('\n');
+            line.append_to(&mut preamble);
         } else {
-            body.push(*line);
+            line.append_to(&mut body);
         }
     }
+
     if let (Some(heading), Some(name)) = (heading, name) {
         sections.push(AppleSection {
             heading,
             name,
-            body: lines_with_newlines(&body),
+            body,
         });
     }
     AppleDocument {
@@ -143,15 +208,6 @@ fn apple_parse(content: &str, section_level: usize) -> AppleDocument {
         preamble,
         sections,
     }
-}
-
-fn lines_with_newlines(lines: &[&str]) -> String {
-    let mut output = String::new();
-    for line in lines {
-        output.push_str(line);
-        output.push('\n');
-    }
-    output
 }
 
 fn apple_heading_level(line: &str) -> usize {
@@ -198,90 +254,1180 @@ fn apple_section_level(content: &str) -> usize {
     2
 }
 
-fn apple_merge_frontmatter(existing: &str, generated: &str) -> String {
-    let existing_values = apple_frontmatter_properties(existing);
-    let generated_values = apple_frontmatter_properties(generated);
-    if existing_values.is_empty() && generated_values.is_empty() {
-        return String::new();
+fn apple_merge_frontmatter(existing: &str, generated: &str) -> Result<String, RenderError> {
+    let existing_document = frontmatter_document(existing);
+    let generated_document = frontmatter_document(generated);
+
+    let Some(existing_document) = existing_document else {
+        return Ok(generated_document.map_or_else(String::new, |_| generated.to_owned()));
+    };
+    let Some(generated_document) = generated_document else {
+        return Ok(existing.to_owned());
+    };
+
+    let Some(incoming_blocks) = property_blocks(&generated_document.content) else {
+        return Err(RenderError::InvalidArtifact);
+    };
+    if incoming_blocks.is_empty() {
+        return Ok(existing.to_owned());
     }
-    if existing_values.is_empty() {
-        return generated.to_owned();
-    }
-    if generated_values.is_empty() {
-        return existing.to_owned();
-    }
-    let mut order = Vec::new();
-    let mut values = HashMap::new();
-    for (key, value) in existing_values.into_iter().chain(generated_values) {
-        if !order.contains(&key) {
-            order.push(key.clone());
+
+    let line_ending = preferred_line_ending(&existing_document);
+    let mut incoming_order = Vec::new();
+    let mut incoming_by_key: HashMap<FrontmatterPropertyKey, Vec<PhysicalLine>> = HashMap::new();
+    for block in incoming_blocks {
+        if !incoming_by_key.contains_key(&block.key) {
+            incoming_order.push(block.key.clone());
         }
-        values.insert(key, value);
+        let lines = generated_document.content[block.range]
+            .iter()
+            .map(|line| PhysicalLine {
+                content: line.content.clone(),
+                ending: line_ending,
+            })
+            .collect();
+        incoming_by_key.insert(block.key, lines);
     }
-    let mut output = String::from("---\n");
-    for key in order {
-        if let Some(value) = values.get(&key) {
-            output.push_str(&apple_frontmatter_property(&key, value));
+
+    let Some(existing_blocks) = property_blocks(&existing_document.content) else {
+        // Unsupported or ambiguous YAML remains byte-for-byte intact rather than risking a
+        // partial replacement that leaves continuations attached to the wrong property.
+        return Err(RenderError::InvalidArtifact);
+    };
+    if !anchor_replacements_are_safe(
+        &existing_document.content,
+        &existing_blocks,
+        &incoming_by_key,
+    ) {
+        return Err(RenderError::InvalidArtifact);
+    }
+    let existing_by_start = existing_blocks
+        .into_iter()
+        .map(|block| (block.range.start, block))
+        .collect::<HashMap<_, _>>();
+    let mut merged = Vec::new();
+    let mut emitted = HashSet::new();
+    let mut index = 0;
+
+    while index < existing_document.content.len() {
+        let Some(block) = existing_by_start.get(&index) else {
+            merged.push(existing_document.content[index].clone());
+            index += 1;
+            continue;
+        };
+
+        if let Some(replacement) = incoming_by_key.get(&block.key) {
+            if emitted.insert(block.key.clone()) {
+                merged.extend(replacement.iter().cloned());
+            }
+        } else {
+            merged.extend(
+                existing_document.content[block.range.clone()]
+                    .iter()
+                    .cloned(),
+            );
+        }
+        index = block.range.end;
+    }
+
+    for key in incoming_order {
+        if emitted.insert(key.clone()) {
+            if let Some(lines) = incoming_by_key.get(&key) {
+                merged.extend(lines.iter().cloned());
+            }
         }
     }
-    output.push_str("---\n");
+
+    let mut output = String::new();
+    existing_document.opening.append_to(&mut output);
+    append_lines(&mut output, &merged);
+    existing_document.closing.append_to(&mut output);
+    append_lines(&mut output, &existing_document.suffix);
+    Ok(output)
+}
+
+fn frontmatter_document(text: &str) -> Option<FrontmatterDocument> {
+    let lines = physical_lines(text);
+    if lines.len() < 2 || !is_frontmatter_delimiter(&lines[0].content) {
+        return None;
+    }
+    let closing_index = lines
+        .iter()
+        .enumerate()
+        .skip(1)
+        .find_map(|(index, line)| is_frontmatter_delimiter(&line.content).then_some(index))?;
+    Some(FrontmatterDocument {
+        opening: lines[0].clone(),
+        content: lines[1..closing_index].to_vec(),
+        closing: lines[closing_index].clone(),
+        suffix: lines[closing_index + 1..].to_vec(),
+    })
+}
+
+struct FrontmatterPropertyHeader {
+    key: FrontmatterPropertyKey,
+    value: String,
+}
+
+struct BlockScalarHeader {
+    indentation: Option<usize>,
+    keeps_trailing_blank_lines: bool,
+}
+
+enum BlockScalarHeaderParse {
+    NotBlockScalar,
+    Header(BlockScalarHeader),
+    Invalid,
+}
+
+/// Minimal YAML flow lexer used only to prove where a top-level property's physical block ends.
+/// It deliberately rejects mismatched or trailing syntax instead of guessing ownership.
+#[derive(Default)]
+struct FlowCollectionState {
+    expected_closers: Vec<u8>,
+    quote: Option<u8>,
+    escaped: bool,
+}
+
+impl FlowCollectionState {
+    fn is_open(&self) -> bool {
+        !self.expected_closers.is_empty()
+    }
+
+    fn scan(&mut self, text: &str) -> bool {
+        let bytes = text.as_bytes();
+        let mut index = 0;
+
+        while index < bytes.len() {
+            let byte = bytes[index];
+            if self.quote == Some(b'"') {
+                if self.escaped {
+                    self.escaped = false;
+                } else if byte == b'\\' {
+                    self.escaped = true;
+                } else if byte == b'"' {
+                    self.quote = None;
+                }
+                index += 1;
+                continue;
+            }
+
+            if self.quote == Some(b'\'') {
+                if byte == b'\'' {
+                    if bytes.get(index + 1) == Some(&b'\'') {
+                        index += 2;
+                        continue;
+                    }
+                    self.quote = None;
+                }
+                index += 1;
+                continue;
+            }
+
+            if byte == b'#' {
+                if index == 0 || matches!(bytes[index - 1], b' ' | b'\t' | b',' | b'[' | b'{') {
+                    break;
+                }
+            } else if matches!(byte, b'"' | b'\'') {
+                self.quote = Some(byte);
+            } else if byte == b'[' {
+                self.expected_closers.push(b']');
+            } else if byte == b'{' {
+                self.expected_closers.push(b'}');
+            } else if matches!(byte, b']' | b'}') {
+                if self.expected_closers.last() != Some(&byte) {
+                    return false;
+                }
+                self.expected_closers.pop();
+                if self.expected_closers.is_empty() {
+                    let remainder = trim_horizontal(&text[index + 1..]);
+                    return remainder.is_empty() || remainder.starts_with('#');
+                }
+            }
+            index += 1;
+        }
+
+        // A backslash at the end of a double-quoted flow line escapes the physical line break,
+        // not the first character on the continuation line.
+        self.escaped = false;
+        true
+    }
+}
+
+struct QuotedScalarState {
+    quote: u8,
+    escaped: bool,
+    open: bool,
+}
+
+impl QuotedScalarState {
+    fn new(quote: u8) -> Self {
+        Self {
+            quote,
+            escaped: false,
+            open: true,
+        }
+    }
+
+    fn is_open(&self) -> bool {
+        self.open
+    }
+
+    fn scan(&mut self, text: &str) -> bool {
+        let bytes = text.as_bytes();
+        let mut index = 0;
+        while index < bytes.len() {
+            let byte = bytes[index];
+            if self.quote == b'"' {
+                if self.escaped {
+                    self.escaped = false;
+                } else if byte == b'\\' {
+                    self.escaped = true;
+                } else if byte == b'"' {
+                    self.open = false;
+                    let remainder = trim_horizontal(&text[index + 1..]);
+                    return remainder.is_empty() || remainder.starts_with('#');
+                }
+                index += 1;
+                continue;
+            }
+
+            if byte == b'\'' {
+                if bytes.get(index + 1) == Some(&b'\'') {
+                    index += 2;
+                    continue;
+                }
+                self.open = false;
+                let remainder = trim_horizontal(&text[index + 1..]);
+                return remainder.is_empty() || remainder.starts_with('#');
+            }
+            index += 1;
+        }
+
+        // A trailing backslash consumes the line break, not the first continuation byte.
+        self.escaped = false;
+        true
+    }
+}
+
+/// Discover complete top-level property blocks. None means some non-trivia line could not be
+/// assigned safely, so callers must preserve the original frontmatter unchanged.
+fn property_blocks(lines: &[PhysicalLine]) -> Option<Vec<FrontmatterPropertyBlock>> {
+    let mut blocks = Vec::new();
+    let mut index = 0;
+
+    while index < lines.len() {
+        let line = &lines[index].content;
+        if has_tab_in_yaml_indentation(line) {
+            return None;
+        }
+        if is_yaml_trivia(line) {
+            index += 1;
+            continue;
+        }
+        if is_indented(line) {
+            return None;
+        }
+        let header = property_header(line)?;
+
+        let end = match block_scalar_header(&header.value) {
+            BlockScalarHeaderParse::Invalid => return None,
+            BlockScalarHeaderParse::Header(scalar_header) => {
+                block_scalar_end(lines, index + 1, &scalar_header, 0)?
+            }
+            BlockScalarHeaderParse::NotBlockScalar => {
+                non_scalar_property_end(lines, index + 1, &header.value)?
+            }
+        };
+
+        blocks.push(FrontmatterPropertyBlock {
+            key: header.key,
+            range: index..end,
+        });
+        index = end;
+    }
+    Some(blocks)
+}
+
+fn non_scalar_property_end(lines: &[PhysicalLine], start: usize, value: &str) -> Option<usize> {
+    let mut flow_state = FlowCollectionState::default();
+    let mut quoted_scalar_state = None;
+    let initial_node = yaml_node(value)?;
+    if matches!(initial_node.as_bytes().first(), Some(b'[' | b'{')) {
+        if !flow_state.scan(initial_node) {
+            return None;
+        }
+    } else if let Some(quote @ (b'"' | b'\'')) = initial_node.as_bytes().first().copied() {
+        let mut state = QuotedScalarState::new(quote);
+        if !state.scan(&initial_node[1..]) {
+            return None;
+        }
+        quoted_scalar_state = Some(state);
+    }
+    let allows_indentationless_sequence = is_empty_or_comment_only_node(initial_node);
+    let mut end = start;
+
+    while end < lines.len() {
+        let continuation = &lines[end].content;
+        if has_tab_in_yaml_indentation(continuation) {
+            return None;
+        }
+
+        if let Some(state) = quoted_scalar_state.as_mut().filter(|state| state.is_open()) {
+            if !state.scan(continuation) {
+                return None;
+            }
+            end += 1;
+            continue;
+        }
+        if flow_state.is_open() {
+            if !flow_state.scan(continuation) {
+                return None;
+            }
+            end += 1;
+            continue;
+        }
+        if has_tab_after_block_sequence_dash(continuation) {
+            return None;
+        }
+
+        let is_owned_content = (allows_indentationless_sequence
+            && indentationless_sequence_node(continuation).is_some())
+            || (is_indented(continuation) && !is_yaml_trivia(continuation));
+        if is_owned_content {
+            if let Some((scalar_header, base_indentation)) =
+                block_scalar_continuation_header(continuation)
+            {
+                end = block_scalar_end(lines, end + 1, &scalar_header, base_indentation)?;
+                continue;
+            }
+            if let Some(node) = flow_collection_node(continuation) {
+                if !flow_state.scan(&node) {
+                    return None;
+                }
+            }
+            end += 1;
+            continue;
+        }
+
+        if is_yaml_trivia(continuation) {
+            // Comments and blank lines belong only when owned content resumes.
+            let mut next_content = end + 1;
+            while next_content < lines.len() && is_yaml_trivia(&lines[next_content].content) {
+                if has_tab_in_yaml_indentation(&lines[next_content].content) {
+                    return None;
+                }
+                next_content += 1;
+            }
+            if next_content < lines.len()
+                && is_owned_yaml_continuation(
+                    &lines[next_content].content,
+                    allows_indentationless_sequence,
+                )
+            {
+                end = next_content;
+                continue;
+            }
+            break;
+        }
+
+        if property_header(continuation).is_some() {
+            break;
+        }
+
+        // A column-zero closer, explicit complex key, directive, root sequence after a nonempty
+        // value, or other unsupported construct has ambiguous ownership.
+        return None;
+    }
+
+    (!flow_state.is_open()
+        && quoted_scalar_state
+            .as_ref()
+            .is_none_or(|state| !state.is_open()))
+    .then_some(end)
+}
+
+fn is_empty_or_comment_only_node(node: &str) -> bool {
+    node.is_empty() || node.starts_with('#')
+}
+
+fn indentationless_sequence_node(line: &str) -> Option<&str> {
+    let remainder = line.strip_prefix('-')?;
+    if !remainder.is_empty() && remainder.as_bytes().first() != Some(&b' ') {
+        return None;
+    }
+    Some(remainder.trim_start_matches(' '))
+}
+
+fn has_tab_after_block_sequence_dash(line: &str) -> bool {
+    let Some(after_dash) = line.trim_start_matches(' ').strip_prefix('-') else {
+        return false;
+    };
+    after_dash
+        .bytes()
+        .find(|byte| *byte != b' ')
+        .is_some_and(|byte| byte == b'\t')
+}
+
+fn is_owned_yaml_continuation(line: &str, allows_indentationless_sequence: bool) -> bool {
+    is_indented(line)
+        || (allows_indentationless_sequence && indentationless_sequence_node(line).is_some())
+}
+
+fn property_header(line: &str) -> Option<FrontmatterPropertyHeader> {
+    let first = line.chars().next()?;
+    if first.is_whitespace()
+        || line.starts_with('#')
+        || line.starts_with('%')
+        || is_frontmatter_delimiter(line)
+    {
+        return None;
+    }
+
+    if matches!(first, '\'' | '"') {
+        let (key, mut separator) = decoded_quoted_key(line, first)?;
+        while matches!(line.as_bytes().get(separator), Some(b' ' | b'\t')) {
+            separator += 1;
+        }
+        if line.as_bytes().get(separator) != Some(&b':') {
+            return None;
+        }
+        let value = &line[separator + 1..];
+        if !value.is_empty() && !value.chars().next().is_some_and(char::is_whitespace) {
+            return None;
+        }
+        return Some(FrontmatterPropertyHeader {
+            key: FrontmatterPropertyKey::String(key.nfc().collect()),
+            value: value.to_owned(),
+        });
+    }
+
+    for (separator, character) in line.char_indices() {
+        if character != ':' {
+            continue;
+        }
+        let value = &line[separator + 1..];
+        if value.is_empty() || value.chars().next().is_some_and(char::is_whitespace) {
+            let key = line[..separator].trim();
+            if !is_supported_plain_key(key) {
+                return None;
+            }
+            return Some(FrontmatterPropertyHeader {
+                key: property_key_for_plain(key),
+                value: value.to_owned(),
+            });
+        }
+    }
+    None
+}
+
+fn decoded_quoted_key(line: &str, quote: char) -> Option<(String, usize)> {
+    let mut key = String::new();
+    let mut index = 1;
+
+    while index < line.len() {
+        let character = line[index..].chars().next()?;
+        let next_index = index + character.len_utf8();
+
+        if quote == '\'' {
+            if character == '\'' {
+                if line.as_bytes().get(next_index) == Some(&b'\'') {
+                    key.push('\'');
+                    index = next_index + 1;
+                    continue;
+                }
+                return Some((key, next_index));
+            }
+            key.push(character);
+            index = next_index;
+            continue;
+        }
+
+        if character == '"' {
+            return Some((key, next_index));
+        }
+        if character != '\\' {
+            key.push(character);
+            index = next_index;
+            continue;
+        }
+
+        let escape = *line.as_bytes().get(next_index)?;
+        let after_escape = next_index + 1;
+        match escape {
+            b'0' => key.push('\0'),
+            b'a' => key.push('\u{0007}'),
+            b'b' => key.push('\u{0008}'),
+            b't' | b'\t' => key.push('\t'),
+            b'n' => key.push('\n'),
+            b'v' => key.push('\u{000B}'),
+            b'f' => key.push('\u{000C}'),
+            b'r' => key.push('\r'),
+            b'e' => key.push('\u{001B}'),
+            b' ' => key.push(' '),
+            b'"' => key.push('"'),
+            b'/' => key.push('/'),
+            b'\\' => key.push('\\'),
+            b'N' => key.push('\u{0085}'),
+            b'_' => key.push('\u{00A0}'),
+            b'L' => key.push('\u{2028}'),
+            b'P' => key.push('\u{2029}'),
+            b'x' | b'u' | b'U' => {
+                let count = match escape {
+                    b'x' => 2,
+                    b'u' => 4,
+                    _ => 8,
+                };
+                let digits_end = after_escape.checked_add(count)?;
+                let digits = line.as_bytes().get(after_escape..digits_end)?;
+                if !digits.iter().all(u8::is_ascii_hexdigit) {
+                    return None;
+                }
+                let digits = std::str::from_utf8(digits).ok()?;
+                key.push(char::from_u32(u32::from_str_radix(digits, 16).ok()?)?);
+                index = digits_end;
+                continue;
+            }
+            _ => return None,
+        }
+        index = after_escape;
+    }
+    None
+}
+
+fn property_key_for_plain(key: &str) -> FrontmatterPropertyKey {
+    let normalized = key.nfc().collect::<String>();
+    let lowercase = normalized.to_ascii_lowercase();
+    if matches!(
+        lowercase.as_str(),
+        "~" | "null"
+            | "y"
+            | "n"
+            | "true"
+            | "false"
+            | "yes"
+            | "no"
+            | "on"
+            | "off"
+            | ".nan"
+            | ".inf"
+            | "+.inf"
+            | "-.inf"
+    ) {
+        return FrontmatterPropertyKey::ImplicitlyTypedPlain(lowercase);
+    }
+    if is_implicit_numeric_or_timestamp_key(&normalized) {
+        FrontmatterPropertyKey::ImplicitlyTypedPlain(normalized)
+    } else {
+        FrontmatterPropertyKey::String(normalized)
+    }
+}
+
+fn is_implicit_numeric_or_timestamp_key(key: &str) -> bool {
+    let bytes = key.as_bytes();
+    let timestamp = bytes.len() >= 10
+        && bytes[0..4].iter().all(u8::is_ascii_digit)
+        && bytes[4] == b'-'
+        && bytes[5..7].iter().all(u8::is_ascii_digit)
+        && bytes[7] == b'-'
+        && bytes[8..10].iter().all(u8::is_ascii_digit)
+        && (bytes.len() == 10 || matches!(bytes[10], b'T' | b't' | b' ' | b'\t'));
+    if timestamp {
+        return true;
+    }
+
+    let unsigned = key.strip_prefix(['+', '-']).unwrap_or(key);
+    let radix_number = unsigned
+        .strip_prefix("0b")
+        .or_else(|| unsigned.strip_prefix("0B"))
+        .is_some_and(|digits| yaml_digit_run(digits, |byte| matches!(byte, b'0' | b'1')))
+        || unsigned
+            .strip_prefix("0o")
+            .or_else(|| unsigned.strip_prefix("0O"))
+            .is_some_and(|digits| yaml_digit_run(digits, |byte| matches!(byte, b'0'..=b'7')))
+        || unsigned
+            .strip_prefix("0x")
+            .or_else(|| unsigned.strip_prefix("0X"))
+            .is_some_and(|digits| yaml_digit_run(digits, |byte| byte.is_ascii_hexdigit()));
+    if radix_number || yaml_decimal_number(unsigned) {
+        return true;
+    }
+
+    let (sexagesimal, fraction) = unsigned
+        .split_once('.')
+        .map_or((unsigned, None), |(base, fraction)| (base, Some(fraction)));
+    if unsigned.matches('.').count() > 1
+        || fraction.is_some_and(|digits| !yaml_digit_run(digits, |byte| byte.is_ascii_digit()))
+    {
+        return false;
+    }
+    let mut parts = sexagesimal.split(':');
+    let Some(first) = parts.next() else {
+        return false;
+    };
+    let remaining = parts.collect::<Vec<_>>();
+    yaml_digit_run(first, |byte| byte.is_ascii_digit())
+        && !remaining.is_empty()
+        && remaining.iter().all(|part| {
+            (1..=2).contains(&part.len())
+                && part.bytes().all(|byte| byte.is_ascii_digit())
+                && part.parse::<u8>().is_ok_and(|value| value < 60)
+        })
+}
+
+fn yaml_decimal_number(unsigned: &str) -> bool {
+    let exponent_indices = unsigned
+        .match_indices(['e', 'E'])
+        .map(|(index, _)| index)
+        .collect::<Vec<_>>();
+    if exponent_indices.len() > 1 {
+        return false;
+    }
+    let (mantissa, exponent) = exponent_indices.first().map_or((unsigned, None), |index| {
+        let (mantissa, exponent) = unsigned.split_at(*index);
+        (mantissa, Some(&exponent[1..]))
+    });
+    if exponent.is_some_and(|value| {
+        let unsigned_exponent = value.strip_prefix(['+', '-']).unwrap_or(value);
+        unsigned_exponent.is_empty() || !unsigned_exponent.bytes().all(|byte| byte.is_ascii_digit())
+    }) {
+        return false;
+    }
+
+    if let Some((whole, fraction)) = mantissa.split_once('.') {
+        if fraction.contains('.') {
+            return false;
+        }
+        let whole_is_valid =
+            whole.is_empty() || yaml_digit_run(whole, |byte| byte.is_ascii_digit());
+        let fraction_is_valid =
+            fraction.is_empty() || yaml_digit_run(fraction, |byte| byte.is_ascii_digit());
+        return whole_is_valid && fraction_is_valid && !(whole.is_empty() && fraction.is_empty());
+    }
+
+    yaml_digit_run(mantissa, |byte| byte.is_ascii_digit())
+}
+
+fn yaml_digit_run(value: &str, is_digit: impl Fn(u8) -> bool) -> bool {
+    value.as_bytes().first().is_some_and(|byte| is_digit(*byte))
+        && value.bytes().all(|byte| is_digit(byte) || byte == b'_')
+}
+
+fn is_supported_plain_key(key: &str) -> bool {
+    let Some(first) = key.chars().next() else {
+        return false;
+    };
+    if matches!(
+        first,
+        '[' | ']' | '{' | '}' | ',' | '&' | '*' | '#' | '!' | '|' | '>' | '%' | '@' | '`'
+    ) || key == "-"
+        || key.starts_with("- ")
+        || key.starts_with("-\t")
+        || key == "?"
+        || key.starts_with("? ")
+        || key.starts_with("?\t")
+    {
+        return false;
+    }
+
+    let mut previous_was_whitespace = false;
+    for character in key.chars() {
+        if character == '#' && previous_was_whitespace {
+            return false;
+        }
+        previous_was_whitespace = character.is_whitespace();
+    }
+    true
+}
+
+fn block_scalar_header(value: &str) -> BlockScalarHeaderParse {
+    let Some(node) = yaml_node(value) else {
+        return BlockScalarHeaderParse::Invalid;
+    };
+    if !matches!(node.as_bytes().first(), Some(b'|' | b'>')) {
+        return BlockScalarHeaderParse::NotBlockScalar;
+    }
+
+    let mut indentation = None;
+    let mut chomping = None;
+    let mut index = 1;
+    while index < node.len() {
+        let byte = node.as_bytes()[index];
+        if matches!(byte, b' ' | b'\t') {
+            let remainder = trim_horizontal(&node[index..]);
+            if !remainder.is_empty() && !remainder.starts_with('#') {
+                return BlockScalarHeaderParse::Invalid;
+            }
+            return BlockScalarHeaderParse::Header(BlockScalarHeader {
+                indentation,
+                keeps_trailing_blank_lines: chomping == Some(b'+'),
+            });
+        }
+        if matches!(byte, b'+' | b'-') {
+            if chomping.is_some() {
+                return BlockScalarHeaderParse::Invalid;
+            }
+            chomping = Some(byte);
+        } else if (b'1'..=b'9').contains(&byte) {
+            if indentation.is_some() {
+                return BlockScalarHeaderParse::Invalid;
+            }
+            indentation = Some(usize::from(byte - b'0'));
+        } else {
+            return BlockScalarHeaderParse::Invalid;
+        }
+        index += 1;
+    }
+
+    BlockScalarHeaderParse::Header(BlockScalarHeader {
+        indentation,
+        keeps_trailing_blank_lines: chomping == Some(b'+'),
+    })
+}
+
+fn block_scalar_end(
+    lines: &[PhysicalLine],
+    start: usize,
+    header: &BlockScalarHeader,
+    base_indentation: usize,
+) -> Option<usize> {
+    let mut content_indent = header
+        .indentation
+        .map(|indentation| base_indentation + indentation);
+    let mut consumed_end = start;
+    let mut last_nonblank_end = None;
+    let mut index = start;
+
+    while index < lines.len() {
+        let line = &lines[index].content;
+        if is_blank_yaml_line(line) {
+            if line.contains('\t') {
+                let spaces_before_tab = line.bytes().take_while(|byte| *byte == b' ').count();
+                let minimum = content_indent.unwrap_or(base_indentation + 1);
+                if spaces_before_tab < minimum {
+                    return None;
+                }
+            }
+            consumed_end = index + 1;
+            index += 1;
+            continue;
+        }
+
+        let indentation = block_scalar_indentation(line, content_indent, base_indentation)?;
+        if content_indent.is_none() {
+            if indentation <= base_indentation {
+                break;
+            }
+            content_indent = Some(indentation);
+        }
+        if indentation < content_indent.expect("content indentation established") {
+            break;
+        }
+
+        consumed_end = index + 1;
+        last_nonblank_end = Some(index + 1);
+        index += 1;
+    }
+
+    Some(if header.keeps_trailing_blank_lines {
+        consumed_end
+    } else {
+        last_nonblank_end.unwrap_or(start)
+    })
+}
+
+/// Tabs are scalar payload only after the required space indentation has been satisfied.
+fn block_scalar_indentation(
+    line: &str,
+    required: Option<usize>,
+    base_indentation: usize,
+) -> Option<usize> {
+    let (spaces, encountered_tab) = leading_space_prefix(line);
+    if encountered_tab {
+        let minimum = required.unwrap_or(base_indentation + 1);
+        (spaces >= minimum).then_some(spaces)
+    } else {
+        Some(spaces)
+    }
+}
+
+fn block_scalar_continuation_header(line: &str) -> Option<(BlockScalarHeader, usize)> {
+    let indentation = leading_space_count(line)?;
+    let candidate = &line[indentation..];
+    let (value, base_indentation) =
+        if let Some(sequence_node) = indentationless_sequence_node(candidate) {
+            let sequence_node_offset = candidate.len() - sequence_node.len();
+            property_header(sequence_node).map_or_else(
+                || (sequence_node.to_owned(), indentation),
+                |header| (header.value, indentation + sequence_node_offset),
+            )
+        } else {
+            property_header(candidate).map_or_else(
+                || (candidate.to_owned(), indentation),
+                |header| (header.value, indentation),
+            )
+        };
+
+    match block_scalar_header(&value) {
+        BlockScalarHeaderParse::Header(header) => Some((header, base_indentation)),
+        BlockScalarHeaderParse::NotBlockScalar | BlockScalarHeaderParse::Invalid => None,
+    }
+}
+
+fn flow_collection_node(line: &str) -> Option<String> {
+    let mut candidate = trim_horizontal(line);
+    if let Some(after_dash) = candidate.strip_prefix('-') {
+        if after_dash.is_empty() || matches!(after_dash.as_bytes().first(), Some(b' ' | b'\t')) {
+            candidate = trim_horizontal(after_dash);
+        }
+    }
+
+    let node_text = if matches!(candidate.as_bytes().first(), Some(b'[' | b'{')) {
+        candidate.to_owned()
+    } else {
+        property_header(candidate)?.value
+    };
+    let node = yaml_node(&node_text)?;
+    matches!(node.as_bytes().first(), Some(b'[' | b'{')).then(|| node.to_owned())
+}
+
+/// Skip supported YAML tag/anchor node properties before a scalar or flow collection.
+fn yaml_node(text: &str) -> Option<&str> {
+    let mut node = trim_horizontal(text);
+
+    while matches!(node.as_bytes().first(), Some(b'!' | b'&')) {
+        let token_end = if node.starts_with("!<") {
+            node.find('>')?.checked_add(1)?
+        } else {
+            let end = node.find([' ', '\t']).unwrap_or(node.len());
+            if end == 1 {
+                return None;
+            }
+            end
+        };
+        node = trim_horizontal(&node[token_end..]);
+    }
+
+    Some(node)
+}
+
+fn trim_horizontal(text: &str) -> &str {
+    text.trim_start_matches([' ', '\t'])
+}
+
+fn is_yaml_trivia(line: &str) -> bool {
+    is_blank_yaml_line(line) || trim_horizontal(line).starts_with('#')
+}
+
+fn is_blank_yaml_line(line: &str) -> bool {
+    line.bytes().all(|byte| matches!(byte, b' ' | b'\t'))
+}
+
+fn leading_space_prefix(line: &str) -> (usize, bool) {
+    let mut count = 0;
+    for byte in line.bytes() {
+        if byte == b' ' {
+            count += 1;
+        } else {
+            return (count, byte == b'\t');
+        }
+    }
+    (count, false)
+}
+
+fn leading_space_count(line: &str) -> Option<usize> {
+    let (count, encountered_tab) = leading_space_prefix(line);
+    (!encountered_tab).then_some(count)
+}
+
+fn has_tab_in_yaml_indentation(line: &str) -> bool {
+    for byte in line.bytes() {
+        if byte == b' ' {
+            continue;
+        }
+        return byte == b'\t';
+    }
+    false
+}
+
+#[derive(Default)]
+struct AnchorReferences {
+    definitions: HashSet<String>,
+    aliases: HashSet<String>,
+}
+
+#[derive(Default)]
+struct AnchorLexerState {
+    quote: Option<u8>,
+    escaped: bool,
+}
+
+fn anchor_replacements_are_safe(
+    lines: &[PhysicalLine],
+    blocks: &[FrontmatterPropertyBlock],
+    incoming_by_key: &HashMap<FrontmatterPropertyKey, Vec<PhysicalLine>>,
+) -> bool {
+    let mut replaced_definitions = HashSet::new();
+    let mut preserved_aliases = HashSet::new();
+
+    for block in blocks {
+        let Some(references) = yaml_anchor_references(&lines[block.range.clone()]) else {
+            return false;
+        };
+        if incoming_by_key.contains_key(&block.key) {
+            replaced_definitions.extend(references.definitions);
+        } else {
+            preserved_aliases.extend(references.aliases);
+        }
+    }
+
+    replaced_definitions.is_disjoint(&preserved_aliases)
+}
+
+fn yaml_anchor_references(lines: &[PhysicalLine]) -> Option<AnchorReferences> {
+    let mut references = AnchorReferences::default();
+    let mut lexer = AnchorLexerState::default();
+    let mut index = 0;
+
+    while index < lines.len() {
+        let quote_was_open = lexer.quote.is_some();
+        if !scan_yaml_reference_tokens(&lines[index].content, &mut references, &mut lexer) {
+            return None;
+        }
+
+        if !quote_was_open && lexer.quote.is_none() {
+            if let Some((header, base_indentation)) =
+                block_scalar_continuation_header(&lines[index].content)
+            {
+                let end = block_scalar_end(lines, index + 1, &header, base_indentation)?;
+                index = std::cmp::max(index + 1, end);
+                continue;
+            }
+        }
+        index += 1;
+    }
+
+    Some(references)
+}
+
+fn consume_quoted_yaml_byte(
+    bytes: &[u8],
+    index: usize,
+    state: &mut AnchorLexerState,
+) -> Option<usize> {
+    let byte = bytes[index];
+    match state.quote {
+        Some(b'"') => {
+            if state.escaped {
+                state.escaped = false;
+            } else if byte == b'\\' {
+                state.escaped = true;
+            } else if byte == b'"' {
+                state.quote = None;
+            }
+            Some(index + 1)
+        }
+        Some(b'\'') => {
+            if byte == b'\'' {
+                if bytes.get(index + 1) == Some(&b'\'') {
+                    return Some(index + 2);
+                }
+                state.quote = None;
+            }
+            Some(index + 1)
+        }
+        _ => None,
+    }
+}
+
+fn scan_yaml_reference_tokens(
+    line: &str,
+    references: &mut AnchorReferences,
+    state: &mut AnchorLexerState,
+) -> bool {
+    let bytes = line.as_bytes();
+    let mut expects_node = state.quote.is_none();
+    let mut previous = None;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if let Some(next_index) = consume_quoted_yaml_byte(bytes, index, state) {
+            previous = Some(byte);
+            index = next_index;
+            continue;
+        }
+
+        if byte == b'#'
+            && (previous.is_none() || matches!(previous, Some(b' ' | b'\t' | b',' | b'[' | b'{')))
+        {
+            break;
+        }
+        if matches!(byte, b' ' | b'\t') {
+            previous = Some(byte);
+            index += 1;
+            continue;
+        }
+        if matches!(byte, b'"' | b'\'') {
+            state.quote = Some(byte);
+            expects_node = false;
+            previous = Some(byte);
+            index += 1;
+            continue;
+        }
+
+        if expects_node && byte == b'!' {
+            let token_end = if bytes.get(index + 1) == Some(&b'<') {
+                let Some(relative_end) = line[index + 1..].find('>') else {
+                    return false;
+                };
+                index + 1 + relative_end + 1
+            } else {
+                bytes[index + 1..]
+                    .iter()
+                    .position(|byte| {
+                        matches!(byte, b' ' | b'\t' | b'[' | b']' | b'{' | b'}' | b',')
+                    })
+                    .map_or(bytes.len(), |offset| index + 1 + offset)
+            };
+            if token_end <= index + 1 {
+                return false;
+            }
+            expects_node = true;
+            previous = Some(b'!');
+            index = token_end;
+            continue;
+        }
+
+        if expects_node && matches!(byte, b'&' | b'*') {
+            let name_start = index + 1;
+            let name_end = bytes[name_start..]
+                .iter()
+                .position(|byte| {
+                    matches!(
+                        byte,
+                        b' ' | b'\t' | b'[' | b']' | b'{' | b'}' | b',' | b'#' | b'?' | b':'
+                    )
+                })
+                .map_or(bytes.len(), |offset| name_start + offset);
+            if name_end <= name_start {
+                return false;
+            }
+            let name = line[name_start..name_end].to_owned();
+            if byte == b'&' {
+                references.definitions.insert(name);
+                expects_node = true;
+            } else {
+                references.aliases.insert(name);
+                expects_node = false;
+            }
+            previous = Some(byte);
+            index = name_end;
+            continue;
+        }
+
+        if matches!(byte, b'[' | b'{' | b',') {
+            expects_node = true;
+        } else if matches!(byte, b']' | b'}') {
+            expects_node = false;
+        } else if byte == b':' {
+            expects_node = bytes
+                .get(index + 1)
+                .is_none_or(|next| matches!(next, b' ' | b'\t' | b'[' | b'{'));
+        } else if expects_node && matches!(byte, b'-' | b'?') {
+            expects_node = bytes
+                .get(index + 1)
+                .is_some_and(|next| matches!(next, b' ' | b'\t'));
+        } else {
+            expects_node = false;
+        }
+
+        previous = Some(byte);
+        index += 1;
+    }
+
+    // A trailing double-quote escape applies to the physical line break, not the next byte.
+    state.escaped = false;
+    true
+}
+
+fn is_indented(line: &str) -> bool {
+    line.as_bytes()
+        .first()
+        .is_some_and(|byte| matches!(byte, b' ' | b'\t'))
+}
+
+fn is_frontmatter_delimiter(line: &str) -> bool {
+    line.strip_prefix("---").is_some_and(|suffix| {
+        suffix
+            .chars()
+            .all(|character| matches!(character, ' ' | '\t'))
+    })
+}
+
+fn preferred_line_ending(document: &FrontmatterDocument) -> &'static str {
+    std::iter::once(&document.opening)
+        .chain(document.content.iter())
+        .chain(std::iter::once(&document.closing))
+        .find_map(|line| (!line.ending.is_empty()).then_some(line.ending))
+        .unwrap_or("\n")
+}
+
+fn physical_lines(text: &str) -> Vec<PhysicalLine> {
+    let bytes = text.as_bytes();
+    let mut lines = Vec::new();
+    let mut start = 0;
+    let mut index = 0;
+
+    while index < bytes.len() {
+        if bytes[index] == b'\r' {
+            let content = text[start..index].to_owned();
+            if index + 1 < bytes.len() && bytes[index + 1] == b'\n' {
+                lines.push(PhysicalLine {
+                    content,
+                    ending: "\r\n",
+                });
+                index += 2;
+            } else {
+                lines.push(PhysicalLine {
+                    content,
+                    ending: "\r",
+                });
+                index += 1;
+            }
+            start = index;
+        } else if bytes[index] == b'\n' {
+            lines.push(PhysicalLine {
+                content: text[start..index].to_owned(),
+                ending: "\n",
+            });
+            index += 1;
+            start = index;
+        } else {
+            index += 1;
+        }
+    }
+
+    if start < bytes.len() {
+        lines.push(PhysicalLine {
+            content: text[start..].to_owned(),
+            ending: "",
+        });
+    }
+    lines
+}
+
+fn render_frontmatter_envelope(document: &FrontmatterDocument) -> String {
+    let mut output = String::new();
+    document.opening.append_to(&mut output);
+    append_lines(&mut output, &document.content);
+    document.closing.append_to(&mut output);
     output
 }
 
-fn apple_frontmatter_properties(frontmatter: &str) -> Vec<(String, String)> {
-    let mut properties = Vec::new();
-    let mut current_key: Option<String> = None;
-    let mut current_value = String::new();
-    let mut multiline = false;
-    for line in frontmatter.split('\n') {
-        let trimmed = line.trim();
-        if trimmed == "---" {
-            continue;
-        }
-        if trimmed.is_empty() && !multiline {
-            continue;
-        }
-        if let Some(colon) = line
-            .find(':')
-            .filter(|_| !multiline || !line.starts_with(' '))
-        {
-            if let Some(key) = current_key.take() {
-                properties.push((key, current_value.trim_matches('\n').to_owned()));
-            }
-            let key = line[..colon].trim().to_owned();
-            let value = line[colon + 1..].trim().to_owned();
-            multiline = value.is_empty()
-                || value == "|"
-                || value == ">"
-                || value.starts_with('[') && !value.ends_with(']');
-            current_key = Some(key);
-            current_value = value;
-        } else if multiline && current_key.is_some() {
-            if !current_value.is_empty() {
-                current_value.push('\n');
-            }
-            current_value.push_str(line);
-            if current_value.starts_with('[') && line.contains(']') {
-                multiline = false;
-            }
-        }
-    }
-    if let Some(key) = current_key {
-        properties.push((key, current_value.trim_matches('\n').to_owned()));
-    }
-    properties
-}
-
-fn apple_frontmatter_property(key: &str, value: &str) -> String {
-    if !value.contains('\n') {
-        return format!("{key}: {value}\n");
-    }
-    let mut lines = value.split('\n');
-    let first = lines.next().unwrap_or_default();
-    if matches!(first, "|" | ">") {
-        format!("{key}: {first}\n{}\n", lines.collect::<Vec<_>>().join("\n"))
-    } else {
-        format!("{key}:\n{value}\n")
+fn append_lines(output: &mut String, lines: &[PhysicalLine]) {
+    for line in lines {
+        line.append_to(output);
     }
 }
 
@@ -501,6 +1647,47 @@ fn android_merge_body(existing: &str, generated: &str) -> String {
 mod tests {
     use super::*;
 
+    #[derive(serde::Deserialize)]
+    struct MergeVectorFixture {
+        render_profile_revision: u32,
+        vectors: Vec<MergeVector>,
+    }
+
+    #[derive(serde::Deserialize)]
+    struct MergeVector {
+        id: String,
+        existing: String,
+        generated: String,
+        preserve_preamble: bool,
+        outcome: String,
+        expected: Option<String>,
+    }
+
+    #[test]
+    fn shared_managed_markdown_merge_vectors_match_exactly() {
+        let fixture: MergeVectorFixture =
+            serde_json::from_str(include_str!("../../tests/fixtures/markdown-merge-v1.json"))
+                .expect("shared merge fixture");
+        assert_eq!(fixture.render_profile_revision, 2);
+
+        for vector in fixture.vectors {
+            let result = merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                &vector.existing,
+                &vector.generated,
+                vector.preserve_preamble,
+            );
+            match vector.outcome.as_str() {
+                "merged" => assert_eq!(result.unwrap(), vector.expected.unwrap(), "{}", vector.id),
+                "rejected" => {
+                    assert_eq!(result, Err(RenderError::InvalidArtifact), "{}", vector.id);
+                    assert!(vector.expected.is_none(), "{}", vector.id);
+                }
+                other => panic!("unknown merge outcome {other} for {}", vector.id),
+            }
+        }
+    }
+
     #[test]
     fn apple_and_android_keep_their_distinct_preamble_contracts() {
         let existing =
@@ -508,7 +1695,7 @@ mod tests {
         let generated =
             "---\ndate: new\n---\n# Health Data — new\n\n## Sleep\nnew\n## Activity\nsteps\n";
         let apple = merge_profile_markdown(
-            SemanticProfile::AppleHealthDataV7,
+            SemanticProfile::AppleHealthDataV8,
             existing,
             generated,
             false,
@@ -523,5 +1710,337 @@ mod tests {
         assert!(android.contains("# User title"));
         assert!(android.contains("# Health Data — new"));
         assert!(android.contains("## Notes\nkeep"));
+    }
+
+    #[test]
+    fn apple_frontmatter_splice_preserves_physical_yaml_blocks() {
+        let existing = "---\ndate: 2026-08-03\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\n---\n";
+        let generated = "---\ndate: 2026-07-30\nsteps: 2119\n---\n";
+        let expected = "---\ndate: 2026-07-30\ntags:\n  - daily-notes\naliases:\n  - Health\n  - Journal\n# User-owned settings stay where they are.\n\npreferences:\n  dashboard:\n    visible: true\nsteps: 2119\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_splice_removes_only_colliding_duplicates() {
+        let existing = "---\nsteps: 100\ncustom: first\n# Keep this comment.\nsteps: 200\ncustom: second\n---\n";
+        let generated = "---\nsteps: 300\n---\n";
+        let expected =
+            "---\nsteps: 300\ncustom: first\n# Keep this comment.\ncustom: second\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_splice_preserves_crlf_scalars_delimiters_and_body() {
+        let frontmatter = "---\r\nsummary: |-\r\n  first line\r\n  ---\r\n  last line\r\n\r\nfolded: >+\r\n  one folded\r\n  paragraph\r\n---\r\n";
+        let body = "# My Daily Note\r\n\r\nUser prose with no final newline";
+        let generated = "---\nsteps: 42\n---\n";
+        let expected_frontmatter = "---\r\nsummary: |-\r\n  first line\r\n  ---\r\n  last line\r\n\r\nfolded: >+\r\n  one folded\r\n  paragraph\r\nsteps: 42\r\n---\r\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                &(frontmatter.to_owned() + body),
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected_frontmatter.to_owned() + body
+        );
+    }
+
+    #[test]
+    fn apple_merge_adds_only_required_line_boundaries() {
+        let frontmatter_only = "---\r\nuser: keep\r\n---";
+        let user_prose = "## Notes\nUser prose with no final newline";
+        let appended_section = "## Sleep\nfresh";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                frontmatter_only,
+                appended_section,
+                true,
+            )
+            .unwrap(),
+            frontmatter_only.to_owned() + "\r\n" + appended_section
+        );
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                user_prose,
+                appended_section,
+                true,
+            )
+            .unwrap(),
+            user_prose.to_owned() + "\n" + appended_section
+        );
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                frontmatter_only,
+                "",
+                true,
+            )
+            .unwrap(),
+            frontmatter_only
+        );
+        assert_eq!(
+            merge_profile_markdown(SemanticProfile::AppleHealthDataV8, user_prose, "", true)
+                .unwrap(),
+            user_prose
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_owns_comments_and_multiline_flow_continuations() {
+        let existing = "---\nmetadata:\n  source: old\n# This comment interrupts the nested mapping.\n  labels:\n    - stale\nsteps: [\n  100,\n  200\n]\nkeep: unchanged\n---\n";
+        let generated = "---\nmetadata: refreshed\nsteps: 300\n---\n";
+        let expected = "---\nmetadata: refreshed\nsteps: 300\nkeep: unchanged\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_canonicalizes_quoted_scalar_keys() {
+        let existing =
+            "---\n\"steps\": 100\n'steps': 200\n\"st\\u0065ps\": 250\nkeep: unchanged\n---\n";
+        let generated = "---\nsteps: 300\n---\n";
+        let expected = "---\nsteps: 300\nkeep: unchanged\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_replaces_keep_chomped_scalar_blank_lines() {
+        let existing = "---\nnotes: |2+\n  old\n\n\nkeep: unchanged\n---\n";
+        let generated = "---\nnotes: >+2\n  fresh\n\n---\n";
+        let expected = "---\nnotes: >+2\n  fresh\n\nkeep: unchanged\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_fails_closed_for_unsupported_complex_keys() {
+        let existing = "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\n";
+        let generated = "---\nsteps: 300\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            ),
+            Err(RenderError::InvalidArtifact)
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_owns_indentationless_sequences_and_multiline_flow_items() {
+        let existing = "---\nitems: !healthmd &items # Node properties still own the sequence.\n# Before the first item.\n- name: first\n  nested:\n    enabled: true\n\n# Between items.\n- [\n  second,\n  {nested: value}\n]\nkeep: unchanged\n---\n";
+        let generated = "---\nitems: refreshed\n---\n";
+        let expected = "---\nitems: refreshed\nkeep: unchanged\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_keeps_incoming_indentationless_sequence_boundaries() {
+        let existing = "---\nitems:\n- stale\nnext: old\nkeep: unchanged\n---\n";
+        let generated = "---\nitems:\n- fresh\n- second\nnext: new\n---\n";
+        let expected = "---\nitems:\n- fresh\n- second\nnext: new\nkeep: unchanged\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_does_not_claim_root_or_dash_prefixed_syntax() {
+        let generated = "---\nvalue: replacement\n---\n";
+        for existing in [
+            "---\nvalue: present\n- root-item\n---\n",
+            "---\nvalue:\n-foo\n---\n",
+        ] {
+            assert_eq!(
+                merge_profile_markdown(
+                    SemanticProfile::AppleHealthDataV8,
+                    existing,
+                    generated,
+                    true,
+                ),
+                Err(RenderError::InvalidArtifact)
+            );
+        }
+
+        let negative = "---\nvalue: -1\nkeep: unchanged\n---\n";
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                negative,
+                generated,
+                true,
+            )
+            .unwrap(),
+            "---\nvalue: replacement\nkeep: unchanged\n---\n"
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_fails_closed_when_preserved_blocks_alias_replaced_anchors() {
+        let existing = "---\ndefaults:\n  nested: {palette: &defaults [blue, green]}\ntheme:\n  <<: *defaults\nkeep: unchanged\n---\n";
+        let generated = "---\ndefaults: refreshed\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            ),
+            Err(RenderError::InvalidArtifact)
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_anchor_scan_ignores_comments_quotes_and_scalar_payloads() {
+        let existing = "---\nreplace:\n  double: \"&quoted\"\n  single: '&single'\n  multiline: \"quoted across lines\n    &multiline\"\n  commented: value # &commented\n  literal: |\n    &payload\n    *payload\nkeep:\n  aliases: [*quoted, *single, *multiline, *commented, *payload]\n---\n";
+        let generated = "---\nreplace: refreshed\n---\n";
+        let expected = "---\nreplace: refreshed\nkeep:\n  aliases: [*quoted, *single, *multiline, *commented, *payload]\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_matches_property_keys_by_nfc_without_rewriting_lines() {
+        let existing = "---\ncafé: first\ncafe\u{301}: second\nkeep: cafe\u{301}\n---\n";
+        let generated = "---\ncafé: discarded\n\"cafe\u{301}\": refreshed\n---\n";
+        let expected = "---\n\"cafe\u{301}\": refreshed\nkeep: cafe\u{301}\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_allows_tabs_after_block_scalar_indentation() {
+        let existing = "---\nnotes: |2\n  \tfirst payload line\n   \tsecond payload line\nnested:\n  literal: |2\n    \tnested payload line\nevents:\n- notes: |2\n    \tinline mapping payload\n- |2\n  \tdirect sequence payload\nkeep: unchanged\n---\n";
+        let generated = "---\nsteps: 42\n---\n";
+        let expected = "---\nnotes: |2\n  \tfirst payload line\n   \tsecond payload line\nnested:\n  literal: |2\n    \tnested payload line\nevents:\n- notes: |2\n    \tinline mapping payload\n- |2\n  \tdirect sequence payload\nkeep: unchanged\nsteps: 42\n---\n";
+
+        assert_eq!(
+            merge_profile_markdown(
+                SemanticProfile::AppleHealthDataV8,
+                existing,
+                generated,
+                true,
+            )
+            .unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn apple_frontmatter_rejects_tabs_before_required_yaml_indentation() {
+        let generated = "---\nsteps: 42\n---\n";
+        for existing in [
+            "---\nnotes: |2\n \tinvalid payload indentation\nkeep: unchanged\n---\n",
+            "---\nnotes: |2\n\t\nkeep: unchanged\n---\n",
+            "---\nnested:\n  literal: |2\n   \tinvalid nested payload indentation\nkeep: unchanged\n---\n",
+            "---\nevents:\n- notes: |2\n  \tinvalid inline mapping payload indentation\nkeep: unchanged\n---\n",
+            "---\nitems:\n\t- invalid sequence indentation\nkeep: unchanged\n---\n",
+            "---\nitems:\n-\tinvalid sequence separator\nkeep: unchanged\n---\n",
+            "---\nitems:\n- \tinvalid sequence separator\nkeep: unchanged\n---\n",
+            "---\nsettings:\n\u{00a0}child: true\nkeep: unchanged\n---\n",
+        ] {
+            assert_eq!(
+                merge_profile_markdown(
+                    SemanticProfile::AppleHealthDataV8,
+                    existing,
+                    generated,
+                    true,
+                ),
+                Err(RenderError::InvalidArtifact)
+            );
+        }
     }
 }

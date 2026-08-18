@@ -1,0 +1,509 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/schemas/proposals/unified-health-data-v9.schema.json",
+  "title": "Health.md unified cross-platform daily health data v9 proposal",
+  "description": "Proposed common public daily contract for Apple and Android. This is v9 because healthmd.health_data v8 already identifies the shipped Apple grammar.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "profile",
+    "owner_date",
+    "calendar",
+    "source",
+    "capture",
+    "metrics",
+    "platform"
+  ],
+  "properties": {
+    "schema": { "const": "healthmd.health_data" },
+    "schema_version": { "const": 9 },
+    "profile": { "const": "unified-cross-platform-v1" },
+    "owner_date": { "$ref": "#/$defs/date" },
+    "calendar": { "$ref": "#/$defs/calendar" },
+    "source": { "$ref": "#/$defs/source" },
+    "capture": { "$ref": "#/$defs/capture" },
+    "metrics": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/metric" }
+    },
+    "platform": { "$ref": "#/$defs/platform" },
+    "providers": {
+      "description": "Provider sections follow their independently versioned contracts. v1 permits WHOOP only.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "whoop": { "$ref": "#/$defs/whoopReference" }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/warning" }
+    }
+  },
+  "$defs": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z$",
+      "minLength": 20,
+      "maxLength": 64
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "boundedString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "calendar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identifier", "time_zone", "interval_start", "interval_end", "assignment_rule"],
+      "properties": {
+        "identifier": { "const": "gregorian" },
+        "time_zone": {
+          "type": "string",
+          "pattern": "^[A-Za-z_+-]+(?:/[A-Za-z0-9_+.-]+)+$|^UTC$",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "interval_start": { "$ref": "#/$defs/timestamp" },
+        "interval_end": { "$ref": "#/$defs/timestamp" },
+        "assignment_rule": { "const": "record_start_in_half_open_day_interval" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "source_profile"],
+      "properties": {
+        "platform": { "enum": ["apple", "android"] },
+        "source_profile": {
+          "enum": ["apple_health_data_v8", "android_frozen_v4", "android_analytical_v5"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "platform": { "const": "apple" } },
+            "required": ["platform"]
+          },
+          "then": {
+            "properties": { "source_profile": { "const": "apple_health_data_v8" } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "platform": { "const": "android" } },
+            "required": ["platform"]
+          },
+          "then": {
+            "properties": {
+              "source_profile": { "enum": ["android_frozen_v4", "android_analytical_v5"] }
+            }
+          }
+        }
+      ]
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "resources"],
+      "properties": {
+        "status": { "enum": ["complete", "partial", "not_requested"] },
+        "resources": {
+          "type": "array",
+          "maxItems": 4096,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/resource" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "complete" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "resources": {
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "properties": { "status": { "const": "complete" } },
+                  "required": ["status"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "partial" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "resources": {
+                "minItems": 1,
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "enum": ["unsupported", "unauthorized", "unavailable", "failed", "cancelled"]
+                    }
+                  },
+                  "required": ["status"]
+                },
+                "minContains": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "not_requested" } },
+            "required": ["status"]
+          },
+          "then": { "properties": { "resources": { "maxItems": 0 } } }
+        }
+      ]
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "resource", "status", "record_count"],
+      "properties": {
+        "source": { "enum": ["apple_health", "health_connect"] },
+        "resource": { "$ref": "#/$defs/identifier" },
+        "status": {
+          "enum": ["complete", "not_requested", "unsupported", "unauthorized", "unavailable", "failed", "cancelled"]
+        },
+        "record_count": { "type": "integer", "minimum": 0, "maximum": 10000000 },
+        "error": { "$ref": "#/$defs/safeError" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": { "enum": ["complete", "not_requested", "unsupported", "unauthorized", "unavailable"] }
+            },
+            "required": ["status"]
+          },
+          "then": { "not": { "required": ["error"] } }
+        },
+        {
+          "if": {
+            "properties": { "status": { "enum": ["failed", "cancelled"] } },
+            "required": ["status"]
+          },
+          "then": { "required": ["error"] }
+        }
+      ]
+    },
+    "safeError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": { "$ref": "#/$defs/identifier" },
+        "message": { "$ref": "#/$defs/boundedString" },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semantic_id", "statistic", "value", "provenance"],
+      "properties": {
+        "semantic_id": { "$ref": "#/$defs/identifier" },
+        "statistic": {
+          "enum": ["sum", "average", "minimum", "maximum", "latest", "count", "duration_sum", "first_time", "last_time"]
+        },
+        "value": { "$ref": "#/$defs/value" },
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+    "value": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value_type", "number", "unit"],
+          "properties": {
+            "value_type": { "const": "number" },
+            "number": { "$ref": "#/$defs/exactNumber" },
+            "unit": { "$ref": "#/$defs/identifier" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value_type", "text"],
+          "properties": {
+            "value_type": { "const": "text" },
+            "text": { "$ref": "#/$defs/boundedString" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value_type", "boolean"],
+          "properties": {
+            "value_type": { "const": "boolean" },
+            "boolean": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value_type", "items"],
+          "properties": {
+            "value_type": { "const": "text_list" },
+            "items": {
+              "type": "array",
+              "maxItems": 4096,
+              "items": { "$ref": "#/$defs/boundedString" }
+            }
+          }
+        }
+      ]
+    },
+    "exactNumber": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["representation", "bits"],
+          "properties": {
+            "representation": { "const": "binary64" },
+            "bits": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["representation", "decimal"],
+          "properties": {
+            "representation": { "const": "signed_integer" },
+            "decimal": { "type": "string", "pattern": "^(?:0|-?[1-9][0-9]*)$", "maxLength": 40 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["representation", "decimal"],
+          "properties": {
+            "representation": { "const": "unsigned_integer" },
+            "decimal": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)$", "maxLength": 40 }
+          }
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "source_semantic_id"],
+      "properties": {
+        "source": { "enum": ["apple_health", "health_connect"] },
+        "source_semantic_id": { "$ref": "#/$defs/identifier" },
+        "source_record_ids": {
+          "type": "array",
+          "maxItems": 10000,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+        },
+        "source_statistic": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "platform": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["apple"],
+          "properties": { "apple": { "$ref": "#/$defs/applePlatform" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["android"],
+          "properties": { "android": { "$ref": "#/$defs/androidPlatform" } }
+        }
+      ]
+    },
+    "applePlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schema_version", "source_schema_version"],
+      "properties": {
+        "schema": { "const": "healthmd.platform.apple_daily" },
+        "schema_version": { "const": 1 },
+        "source_schema_version": { "const": 8 },
+        "healthkit_record_archive": {
+          "$ref": "#/$defs/externalContractReference"
+        }
+      }
+    },
+    "androidPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schema_version", "source_schema_version", "source_profile"],
+      "properties": {
+        "schema": { "const": "healthmd.platform.android_daily" },
+        "schema_version": { "const": 1 },
+        "source_schema_version": { "enum": [4, 5] },
+        "source_profile": { "enum": ["android-frozen-v4", "android-analytical-v5"] },
+        "merge_provenance": {
+          "$ref": "#/$defs/externalContractReference"
+        },
+        "raw_snapshot_reference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "schema_version", "sha256"],
+          "properties": {
+            "schema": { "const": "healthmd.raw_snapshot" },
+            "schema_version": { "const": 1 },
+            "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "source_schema_version": { "const": 4 } },
+            "required": ["source_schema_version"]
+          },
+          "then": { "properties": { "source_profile": { "const": "android-frozen-v4" } } }
+        },
+        {
+          "if": {
+            "properties": { "source_schema_version": { "const": 5 } },
+            "required": ["source_schema_version"]
+          },
+          "then": { "properties": { "source_profile": { "const": "android-analytical-v5" } } }
+        }
+      ]
+    },
+    "externalContractReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "schema_version", "sha256", "byte_count"],
+      "properties": {
+        "schema": { "$ref": "#/$defs/identifier" },
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "byte_count": { "type": "integer", "minimum": 0, "maximum": 2147483648 }
+      }
+    },
+    "whoopReference": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema", "schema_version"],
+      "properties": {
+        "schema": { "const": "healthmd.provider.whoop_daily" },
+        "schema_version": { "const": 1 }
+      },
+      "description": "The full value must satisfy packages/contracts/proposals/provider-sections-v1/provider-sections-v1.schema.json#/$defs/whoopDaily."
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/identifier" },
+        "message": { "$ref": "#/$defs/boundedString" },
+        "semantic_id": { "$ref": "#/$defs/identifier" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": { "platform": { "const": "apple" } },
+            "required": ["platform"]
+          }
+        },
+        "required": ["source"]
+      },
+      "then": {
+        "properties": {
+          "capture": {
+            "type": "object",
+            "properties": {
+              "resources": {
+                "items": {
+                  "type": "object",
+                  "properties": { "source": { "const": "apple_health" } },
+                  "required": ["source"]
+                }
+              }
+            }
+          },
+          "platform": {
+            "type": "object",
+            "required": ["apple"],
+            "properties": { "apple": { "$ref": "#/$defs/applePlatform" } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "type": "object",
+            "properties": { "platform": { "const": "android" } },
+            "required": ["platform"]
+          }
+        },
+        "required": ["source"]
+      },
+      "then": {
+        "properties": {
+          "capture": {
+            "type": "object",
+            "properties": {
+              "resources": {
+                "items": {
+                  "type": "object",
+                  "properties": { "source": { "const": "health_connect" } },
+                  "required": ["source"]
+                }
+              }
+            }
+          },
+          "platform": {
+            "type": "object",
+            "required": ["android"],
+            "properties": { "android": { "$ref": "#/$defs/androidPlatform" } }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -42,7 +42,7 @@ const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.jso
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SemanticProfile {
-    AppleHealthDataV7,
+    AppleHealthDataV8,
     AndroidFrozenV4,
     AndroidAnalyticalV5,
 }
@@ -50,7 +50,7 @@ pub enum SemanticProfile {
 impl SemanticProfile {
     fn id(self) -> &'static str {
         match self {
-            Self::AppleHealthDataV7 => "apple_health_data_v7",
+            Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
         }
@@ -58,7 +58,7 @@ impl SemanticProfile {
 
     fn platform(self) -> &'static str {
         match self {
-            Self::AppleHealthDataV7 => "apple",
+            Self::AppleHealthDataV8 => "apple",
             Self::AndroidFrozenV4 | Self::AndroidAnalyticalV5 => "android",
         }
     }
@@ -408,7 +408,7 @@ impl SemanticSession {
         {
             return Err(CoreError::InvalidSemanticConfig);
         }
-        if config.profile != SemanticProfile::AppleHealthDataV7 && !config.rollup_periods.is_empty()
+        if config.profile != SemanticProfile::AppleHealthDataV8 && !config.rollup_periods.is_empty()
         {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
@@ -856,7 +856,7 @@ impl SemanticSession {
         if self.config.rollup_periods.is_empty() {
             return Ok(Some(Vec::new()));
         }
-        if self.config.profile != SemanticProfile::AppleHealthDataV7 {
+        if self.config.profile != SemanticProfile::AppleHealthDataV8 {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
         let mut results = Vec::new();
@@ -2229,7 +2229,7 @@ mod tests {
             registry_sha256: REGISTRY_SHA256.to_owned(),
             profile_revision: 1,
             session_id: "semantic-test".to_owned(),
-            profile: SemanticProfile::AppleHealthDataV7,
+            profile: SemanticProfile::AppleHealthDataV8,
             calendar_time_zone: "America/New_York".to_owned(),
             selected_selection_ids: selected.iter().map(ToString::to_string).collect(),
             disabled_output_keys: vec![],

@@ -61,6 +61,9 @@ struct ExportTabView: View {
     @State private var showClinicianReport = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
+    @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
+    @State private var isResolvingAllTimeRange = false
+    @State private var resumeExportTapWhenAllTimeResolves = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
@@ -115,37 +118,6 @@ struct ExportTabView: View {
                     .zIndex(1)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
-                Button("Open Health App") {
-                    if let healthURL = URL(string: "x-apple-health://") {
-                        UIApplication.shared.open(healthURL)
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
-            }
-            .alert("Finish Preview Setup", isPresented: $showPreviewRequirementsPrompt) {
-                if previewNeedsHealthPermission {
-                    Button("Connect Apple Health") {
-                        Task {
-                            _ = try? await healthKitManager.requestAuthorization()
-                            if healthKitManager.isAuthorized {
-                                await Task.yield()
-                                showPreview = true
-                            }
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text(previewRequirementsMessage)
-            }
-            .alert("Roll-Up Summaries", isPresented: $showRollupHelp) {
-                Button("Done", role: .cancel) { }
-            } message: {
-                Text("\(ExportRolloutCopy.rollupSummariesHelp)\n\n\(ExportRolloutCopy.pluginCompatibilityHelp)")
-            }
             .onChange(of: exportStatusMessage) { oldValue, newValue in
                 if !newValue.isEmpty && newValue != oldValue {
                     UIAccessibility.post(notification: .announcement, argument: newValue)
@@ -167,6 +139,64 @@ struct ExportTabView: View {
             #endif
             }
         }
+        .geistDialog(
+            isPresented: $showHealthPermissionsGuide,
+            title: Text("Adjust Health Permissions"),
+            message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
+            actions: [
+                .cancel(),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") {
+                        UIApplication.shared.open(healthURL)
+                    }
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showPreviewRequirementsPrompt,
+            title: Text("Finish Preview Setup"),
+            message: Text(previewRequirementsMessage),
+            actions: previewNeedsHealthPermission
+                ? [
+                    .cancel(),
+                    .action("Connect Apple Health") {
+                        Task {
+                            _ = try? await healthKitManager.requestAuthorization()
+                            if healthKitManager.isAuthorized {
+                                await Task.yield()
+                                showPreview = true
+                            }
+                        }
+                    }
+                ]
+                : [.cancel()]
+        )
+        .geistDialog(
+            isPresented: isPresentingLargeExportConfirmation,
+            title: Text("Confirm Large Export"),
+            message: Text(largeExportConfirmationMessage),
+            messageAccessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationMessage,
+            actions: [
+                .cancel(
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationCancelButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                },
+                .action(
+                    "Export Anyway",
+                    accessibilityIdentifier: AccessibilityID.Export.largeExportConfirmationConfirmButton
+                ) {
+                    pendingLargeExportConfirmation = nil
+                    onExportTapped()
+                }
+            ]
+        )
+        .geistDialog(
+            isPresented: $showRollupHelp,
+            title: Text("Roll-Up Summaries"),
+            message: Text(ExportRolloutCopy.rollupSummariesHelp),
+            actions: [.action("Done", role: .secondary)]
+        )
         .sheet(isPresented: $showFilenameEditor) {
             FilenameFormatEditor(filenameFormat: $advancedSettings.filenameFormat)
         }
@@ -328,7 +358,10 @@ struct ExportTabView: View {
             macSubtitle: macTargetSubtitle,
             apiSubtitle: apiTargetSubtitle,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            // Prompt on any state where the retained selection cannot be used
+            // right now (including temporary unavailability and the reselection/
+            // review states), not merely when no selection metadata is retained.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             onRequestFolderPicker: { showFolderPicker = true },
             onOpenAPISettings: { showAPIEndpointSettings = true }
         )
@@ -396,7 +429,10 @@ struct ExportTabView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -496,9 +532,19 @@ struct ExportTabView: View {
             return
         case .allTime:
             Task {
+                isResolvingAllTimeRange = true
                 let earliestDate = await healthKitManager.findEarliestHealthDataDate()
                 await MainActor.run {
-                    guard dateRangePreset == .allTime else { return }
+                    isResolvingAllTimeRange = false
+                    // A tap deferred while this resolution was in flight must be
+                    // judged against the resolved range, whether or not the user
+                    // has since switched presets.
+                    let resumeExportTap = resumeExportTapWhenAllTimeResolves
+                    resumeExportTapWhenAllTimeResolves = false
+                    guard dateRangePreset == .allTime else {
+                        if resumeExportTap { handleExportButtonTapped() }
+                        return
+                    }
                     configurationProtection.performConfigurationChange {
                         guard dateRangePreset == .allTime else { return }
                         applyResolvedDateRange(
@@ -506,6 +552,9 @@ struct ExportTabView: View {
                             allTimeStartDate: earliestDate,
                             allTimeEndDate: Date()
                         )
+                    }
+                    if resumeExportTap {
+                        handleExportButtonTapped()
                     }
                 }
             }
@@ -766,7 +815,10 @@ struct ExportTabView: View {
                 NavigationLink {
                     IndividualTrackingView(
                         settings: advancedSettings.individualTracking,
-                        metricSelection: advancedSettings.metricSelection
+                        metricSelection: advancedSettings.metricSelection,
+                        setIndividuallyTracked: { metricID, enabled in
+                            advancedSettings.setIndividuallyTracked(metricID, enabled: enabled)
+                        }
                     )
                 } label: {
                     inlineNavigationRowLabel(
@@ -1351,7 +1403,7 @@ struct ExportTabView: View {
     private var exportTargetSummary: String {
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : vaultManager.vaultName
+            return vaultManager.hasVaultSelection ? vaultManager.vaultName : "iPhone folder"
         case .connectedMac:
             return syncService.macDestinationStatus?.destinationDisplayName
                 ?? syncService.connectedPeerName
@@ -1377,7 +1429,7 @@ struct ExportTabView: View {
     }
 
     private var pearlExportButton: some View {
-        Button(action: onExportTapped) {
+        Button(action: handleExportButtonTapped) {
             HStack(spacing: Spacing.s2) {
                 if isExporting {
                     ProgressView()
@@ -1446,6 +1498,66 @@ struct ExportTabView: View {
         !healthKitManager.isAuthorized
     }
 
+    // MARK: - Large Export Confirmation
+
+    /// Guards only the interactive Export tab button. The scale verdict runs
+    /// before the `canExport` routing: a tap that first routes through the
+    /// Health-authorization flow re-enters the export after access is granted,
+    /// so a multi-thousand-day range must be confirmed up front or that path
+    /// could start it unconfirmed. Scheduled, shortcut, CLI, preview, and
+    /// programmatic export paths never pass through this handler.
+    private func handleExportButtonTapped() {
+        // All Time resolution updates startDate/endDate asynchronously; a tap
+        // during that window is judged against the resolved range, never the
+        // stale one it is about to replace.
+        if isResolvingAllTimeRange {
+            resumeExportTapWhenAllTimeResolves = true
+            return
+        }
+
+        let verdict = ExportScaleGuard.verdict(
+            startDate: startDate,
+            endDate: endDate,
+            granularDataEnabled: advancedSettings.effectiveGranularDataEnabled,
+            formatCount: advancedSettings.exportFormats.count,
+            dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
+        )
+
+        switch verdict {
+        case .proceed:
+            onExportTapped()
+        case .confirm(let scale):
+            pendingLargeExportConfirmation = scale
+        }
+    }
+
+    private var isPresentingLargeExportConfirmation: Binding<Bool> {
+        Binding(
+            get: { pendingLargeExportConfirmation != nil },
+            set: { isPresented in
+                if !isPresented { pendingLargeExportConfirmation = nil }
+            }
+        )
+    }
+
+    private var largeExportConfirmationMessage: String {
+        guard let scale = pendingLargeExportConfirmation else {
+            return ""
+        }
+
+        let scaleSummary: String
+        if advancedSettings.dailyNotesOnlyModeEnabled {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and updates about \(scale.estimatedFileCount) daily notes. Exports this large can take a long time to finish.")
+        } else {
+            scaleSummary = String(localized: "This export covers \(scale.dayCount) days and writes about \(scale.estimatedFileCount) files. Exports this large can take a long time to finish.")
+        }
+
+        guard scale.includesGranularData else { return scaleSummary }
+
+        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.")
+        return scaleSummary + "\n\n" + granularWarning
+    }
+
     private var previewRequirementsMessage: String {
         "To preview your export, connect Apple Health so Health.md can read your data."
     }
@@ -1474,7 +1586,7 @@ struct ExportTabView: View {
     private var previewDestinationLabel: String {
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : "iPhone: \(vaultManager.vaultName)"
+            return vaultManager.hasVaultSelection ? "iPhone: \(vaultManager.vaultName)" : "iPhone folder"
         case .connectedMac:
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
                 return "Mac: \(path)"

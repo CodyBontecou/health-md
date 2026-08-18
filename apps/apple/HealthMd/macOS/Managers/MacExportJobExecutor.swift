@@ -136,6 +136,7 @@ final class MacExportJobExecutor {
         var totalFilesWritten: Int = 0
         var looseAggregateFileCount: Int = 0
         var individualEntryFileCount: Int = 0
+        var individualEntryCoverageGaps: [ExportPartialFailure] = []
         var dataDictionaryFileCount: Int = 0
         var rollupFileCount: Int = 0
         var archiveFileCount: Int = 0
@@ -293,6 +294,7 @@ final class MacExportJobExecutor {
         var totalFilesWritten = 0
         var looseAggregateFileCount = 0
         var individualEntryFileCount = 0
+        var individualEntryCoverageGaps: [ExportPartialFailure] = []
         var dataDictionaryFileCount = 0
         var rollupFileCount = 0
         var dataDictionaryWritten = false
@@ -400,6 +402,9 @@ final class MacExportJobExecutor {
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                 looseAggregateFileCount += writeResult.aggregateFileCount
                 individualEntryFileCount += writeResult.individualEntryFileCount
+                individualEntryCoverageGaps.append(
+                    contentsOf: writeResult.individualEntryCoverageGaps
+                )
                 dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                 if writeResult.dataDictionaryFileCount > 0 { dataDictionaryWritten = true }
                 totalFilesWritten += writeResult.totalGeneratedFileCount
@@ -594,6 +599,7 @@ final class MacExportJobExecutor {
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             failedDateDetails: failedDateDetails,
+            partialFailures: individualEntryCoverageGaps,
             completedDates: Self.completedDates(
                 successfulRecords: successfulRecords,
                 failedDateDetails: failedDateDetails,
@@ -863,6 +869,9 @@ final class MacExportJobExecutor {
                     session.dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
                     session.looseAggregateFileCount += writeResult.aggregateFileCount
                     session.individualEntryFileCount += writeResult.individualEntryFileCount
+                    session.individualEntryCoverageGaps.append(
+                        contentsOf: writeResult.individualEntryCoverageGaps
+                    )
                     session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                     if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
@@ -1088,6 +1097,9 @@ final class MacExportJobExecutor {
                     session.successfulRecords.append(record)
                     session.looseAggregateFileCount += writeResult.aggregateFileCount
                     session.individualEntryFileCount += writeResult.individualEntryFileCount
+                    session.individualEntryCoverageGaps.append(
+                        contentsOf: writeResult.individualEntryCoverageGaps
+                    )
                     session.dataDictionaryFileCount += writeResult.dataDictionaryFileCount
                     if writeResult.dataDictionaryFileCount > 0 { session.dataDictionaryWritten = true }
                     session.totalFilesWritten += writeResult.totalGeneratedFileCount
@@ -1249,6 +1261,7 @@ final class MacExportJobExecutor {
             dailyNoteUpdateCount: session.dailyNoteUpdateCount,
             dailyNoteSkipCount: session.dailyNoteSkipCount,
             failedDateDetails: session.failedDateDetails,
+            partialFailures: session.individualEntryCoverageGaps,
             completedDates: Self.completedDates(
                 successfulRecords: session.successfulRecords,
                 failedDateDetails: session.failedDateDetails,
@@ -1623,7 +1636,7 @@ final class MacExportJobExecutor {
                     reason: .accessDenied,
                     errorDetails: exportError.localizedDescription
                 )
-            case .noFormatsSelected, .dailyNotePathConflict, .invalidExportPath:
+            case .markdownMergeRejected, .noFormatsSelected, .dailyNotePathConflict, .invalidExportPath:
                 return FailedDateDetail(date: date, reason: .fileWriteError, errorDetails: exportError.localizedDescription)
             }
         }

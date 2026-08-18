@@ -25,7 +25,7 @@ pub const CANONICAL_MODEL_VERSION: u32 = 1;
 pub const REGISTRY_VERSION: u32 = 1;
 /// SHA-256 of the exact embedded registry inventory for this build.
 pub const REGISTRY_SHA256: &str =
-    "e4f149047ba91f760ea2d890671022292b26692c6c8de9d606a79e73bb0b7097";
+    "a58de624d203f219b14f76e9a53a66b7cfe9f3b0c8f0f57b950312d34de75c44";
 /// Source revision supplied by reproducible native packaging scripts.
 pub const CORE_SOURCE_REVISION: &str = match option_env!("HEALTHMD_CORE_SOURCE_REVISION") {
     Some(revision) => revision,
@@ -347,7 +347,7 @@ mod tests {
                 registry_version: 1,
                 render_input_version: 1,
                 artifact_plan_version: 1,
-                render_profile_revision: 1,
+                render_profile_revision: 2,
                 persisted_state_version: 1,
             }
         );

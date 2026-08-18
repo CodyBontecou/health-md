@@ -340,7 +340,11 @@ private enum GeneratedRollupReferenceDocs {
             }
         }
 
-        let dictionaryPrimaryRules = Set(dictionaryEntries.map { $0.rollup.primary })
+        let dictionaryPrimaryRules = Set(
+            dictionaryEntries
+                .filter { $0.rollup.periods.contains(HealthRollupPeriod.weekly.rawValue) }
+                .map { $0.rollup.primary }
+        )
         let fixturePrimaryRules = Set(snapshot.metrics.map(\.rule))
         let missingRules = dictionaryPrimaryRules.subtracting(fixturePrimaryRules).sorted()
         guard missingRules.isEmpty else {
@@ -457,6 +461,7 @@ private enum GeneratedRollupReferenceDocs {
         case "union": return "Union list items in sorted order and count item occurrences across source days."
         case "histogram": return "Keep the latest category and count each category value across source days."
         case "time_of_day": return "Report earliest, latest, and average clock time without combining calendar dates."
+        case "none": return "Do not generate period roll-ups; retain only the daily provider projection."
         default: return "Apply the production generator fallback for this declared primary behavior."
         }
     }

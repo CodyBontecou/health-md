@@ -734,9 +734,13 @@ public actor DirectFileReceiver {
                   ) else {
                 throw DirectFileReceiverError.destinationConflict(relativePath)
             }
-            result = preservesPreamble
-                ? MarkdownMerger.mergePreservingPreamble(existing: old, new: new)
-                : MarkdownMerger.merge(existing: old, new: new)
+            let outcome = preservesPreamble
+                ? MarkdownMerger.mergePreservingPreambleOutcome(existing: old, new: new)
+                : MarkdownMerger.mergeOutcome(existing: old, new: new)
+            guard case .merged(let merged) = outcome else {
+                throw DirectFileReceiverError.destinationConflict(relativePath)
+            }
+            result = merged
         } else {
             result = new
         }

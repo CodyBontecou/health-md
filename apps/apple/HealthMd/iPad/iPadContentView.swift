@@ -11,15 +11,16 @@ struct iPadContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var schedulingManager: SchedulingManager
-    @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject var advancedSettings: AdvancedExportSettings
+        @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
-    @StateObject private var advancedSettings = AdvancedExportSettings()
 
     @State private var selectedTab: iPadNavItem? = .export
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var startDate = Date()
     @State private var endDate = Date()
     @State private var dateRangePreset: ExportDateRangePreset = .today
+    @State private var hasResolvedAllTimeRangeThisLaunch = false
     @State private var showFolderPicker = false
     @State private var showDestinationChangedAlert = false
     @State private var presentFirstExportPreview = false
@@ -57,6 +58,20 @@ struct iPadContentView: View {
         #else
         return true
         #endif
+    }
+
+    // MARK: - Interactive Export Lifecycle Marker
+
+    /// The marker is launch state, so it follows the same UI-testing and
+    /// marketing-capture guards as date-range persistence itself.
+    private func markInteractiveExportBegan() {
+        guard shouldPersistDateRangeSelection else { return }
+        ExportDateRangeSelectionStore.shared.markInteractiveExportBegan()
+    }
+
+    private func markInteractiveExportEnded() {
+        guard shouldPersistDateRangeSelection else { return }
+        ExportDateRangeSelectionStore.shared.markInteractiveExportEnded()
     }
 
     var body: some View {
@@ -160,42 +175,46 @@ struct iPadContentView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
-            .alert("Export Folder Changed", isPresented: $showDestinationChangedAlert) {
-                Button("Choose Folder") { showFolderPicker = true }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder.")
-            }
-            .alert(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle, isPresented: $showError) {
-                if errorReason == .noHealthData {
-                    Button("Open Health App") {
-                        if let healthURL = URL(string: "x-apple-health://") {
-                            UIApplication.shared.open(healthURL)
+            .geistDialog(
+                isPresented: $showDestinationChangedAlert,
+                title: Text("Export Folder Changed"),
+                message: Text("The saved folder now points to a different location. Health.md paused local exports so it won’t write somewhere you did not select. Review any duplicate or conflict in Files, then re-select the intended folder."),
+                actions: [
+                    .cancel(),
+                    .action("Choose Folder") { showFolderPicker = true }
+                ]
+            )
+            .geistDialog(
+                isPresented: $showError,
+                title: Text(errorReason?.alertTitle ?? ExportFailureReason.unknown.alertTitle),
+                message: Text(errorMessage),
+                actions: errorReason == .noHealthData
+                    ? [
+                        .action("Done", role: .secondary),
+                        .action("Open Health App") {
+                            if let healthURL = URL(string: "x-apple-health://") {
+                                UIApplication.shared.open(healthURL)
+                            }
                         }
-                    }
-                }
-                Button(errorReason == .noHealthData ? "Done" : "OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
-            .alert(
-                schedulingManager.notificationExportResult?.title ?? "Export",
+                    ]
+                    : [.action("OK", role: .secondary)]
+            )
+            .geistDialog(
                 isPresented: Binding(
                     get: {
                         guard let result = schedulingManager.notificationExportResult else { return false }
                         return !NotificationExportActivityTracker.shared.handles(result)
                     },
                     set: { if !$0 { schedulingManager.notificationExportResult = nil } }
-                )
-            ) {
-                Button("OK", role: .cancel) {
-                    schedulingManager.notificationExportResult = nil
-                }
-            } message: {
-                if let result = schedulingManager.notificationExportResult {
-                    Text(result.message)
-                }
-            }
+                ),
+                title: Text(schedulingManager.notificationExportResult?.title ?? "Export"),
+                message: schedulingManager.notificationExportResult.map { Text($0.message) },
+                actions: [
+                    .action("OK", role: .secondary) {
+                        schedulingManager.notificationExportResult = nil
+                    }
+                ]
+            )
             .healthMdReleaseNotesSheet()
             .keepsScreenAwake(while: isExporting)
             .task {
@@ -214,10 +233,11 @@ struct iPadContentView: View {
                         advancedSettings.generateYearlyRollups = true
                     }
                 }
-                await refreshDateRangeSelectionForOpening()
+                await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
             }
             .onChange(of: scenePhase) { _, newPhase in
                 guard newPhase == .active else { return }
+                vaultManager.refreshVaultAccess()
                 Task { await refreshDateRangeSelectionForOpening() }
             }
             .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
@@ -263,24 +283,52 @@ struct iPadContentView: View {
 
     private var canExport: Bool {
         healthKitManager.isAuthorized
-            && (vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection)
+            && vaultManager.hasVaultSelection
             && advancedSettings.hasFileDestinationOutput
     }
 
     // MARK: - Date Range Persistence
 
     @MainActor
-    private func refreshDateRangeSelectionForOpening() async {
+    private func refreshDateRangeSelectionForOpening(isInitialLaunch: Bool = false) async {
         guard shouldPersistDateRangeSelection else { return }
 
-        let selection = ExportDateRangeSelectionStore.shared.load()
+        let store = ExportDateRangeSelectionStore.shared
+        // A leftover in-flight marker means the previous run ended without a
+        // terminal export path (crash, kill, force quit). Consume it once per
+        // launch; a fresh process cannot have an export in flight yet.
+        let hadInterruptedInteractiveExport = isInitialLaunch
+            && store.consumeInterruptedInteractiveExportMarker()
+        let persisted = store.load()
+        let selection = ExportDateRangeLaunchPolicy.selectionToRestore(
+            persisted: persisted,
+            hadInterruptedInteractiveExport: hadInterruptedInteractiveExport,
+            resolvesAllTimeRange: isInitialLaunch
+        )
+
         dateRangePreset = selection.preset
         startDate = selection.startDate
         endDate = selection.endDate
 
-        guard selection.preset == .allTime,
-              healthKitManager.isAuthorized,
-              let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
+        // All Time always extends through the present; a warm foreground
+        // activation across midnight must not restore a stale end date that
+        // would silently truncate the export range.
+        if let refreshed = ExportDateRangeLaunchPolicy.selectionWithAllTimeEndDateRefreshed(
+            selection
+        ) {
+            endDate = refreshed.endDate
+        }
+
+        guard isInitialLaunch,
+              !hasResolvedAllTimeRangeThisLaunch,
+              selection.preset == .allTime,
+              healthKitManager.isAuthorized else {
+            return
+        }
+
+        hasResolvedAllTimeRangeThisLaunch = true
+
+        guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
             return
         }
 
@@ -407,6 +455,11 @@ struct iPadContentView: View {
             return
         }
 
+        // Set synchronously before any export work starts so a crash, kill, or
+        // force quit mid-export arms the interrupted marker for the next
+        // launch's downgrade. Cleared in the defer below on every terminal
+        // path (success, failure, cancellation).
+        markInteractiveExportBegan()
         isExporting = true
         exportProgress = 0.0
         exportStatusMessage = ""
@@ -414,6 +467,7 @@ struct iPadContentView: View {
 
         exportTask = Task {
             defer {
+                markInteractiveExportEnded()
                 isExporting = false
                 exportProgress = 0.0
                 exportTask = nil

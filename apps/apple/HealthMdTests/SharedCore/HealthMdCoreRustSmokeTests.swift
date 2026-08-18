@@ -18,7 +18,7 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
         XCTAssertEqual(info.registryVersion, 1)
         XCTAssertEqual(info.renderInputVersion, 1)
         XCTAssertEqual(info.artifactPlanVersion, 1)
-        XCTAssertEqual(info.renderProfileRevision, 1)
+        XCTAssertEqual(info.renderProfileRevision, 2)
         XCTAssertEqual(info.persistedStateVersion, 1)
     }
 
@@ -36,13 +36,33 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
     }
 
     func testRegistrySnapshotLoadsThroughPackagedNativeCore() throws {
-        let snapshot = try service.metricRegistry(profile: .appleHealthDataV7)
+        let snapshot = try service.metricRegistry(profile: .appleHealthDataV8)
 
         XCTAssertEqual(snapshot.registrySha256, try service.buildInfo().registrySha256)
-        XCTAssertEqual(snapshot.profileId, "apple_health_data_v7")
-        XCTAssertEqual(snapshot.publicSchemaVersion, 7)
+        XCTAssertEqual(snapshot.profileId, "apple_health_data_v8")
+        XCTAssertEqual(snapshot.publicSchemaVersion, 8)
         XCTAssertEqual(snapshot.metrics.count, 230)
         XCTAssertEqual(snapshot.outputs.count, 226)
+    }
+
+    func testLegacyMarkdownMergeUsesAppleProfileAndRejectsAmbiguousYAML() throws {
+        let merged = try service.mergeMarkdown(
+            existing: "---\ntags:\n  - personal\nkeep: unchanged\n---\n## Sleep\nold\n## Notes\nkeep\n",
+            generated: "---\ntags:\n  - healthmd\n---\n## Sleep\nnew\n"
+        )
+        XCTAssertEqual(
+            merged,
+            "---\ntags:\n  - healthmd\nkeep: unchanged\n---\n## Sleep\nnew\n## Notes\nkeep\n"
+        )
+
+        XCTAssertThrowsError(
+            try service.mergeMarkdown(
+                existing: "---\n? \"steps\"\n: 100\nkeep: unchanged\n---\n",
+                generated: "---\nsteps: 300\n---\n"
+            )
+        ) { error in
+            XCTAssertEqual(error as? HealthMdRenderServiceError, .invalidArtifact)
+        }
     }
 
     func testMalformedSyntheticFixtureReturnsStableHealthFreeError() {

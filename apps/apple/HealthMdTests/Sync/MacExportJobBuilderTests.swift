@@ -284,6 +284,36 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(chunks.map { $0.dates.count }, [3, 3, 1])
     }
 
+    func testMetadataUsesFrozenNonCurrentCalendarForRequestedDayOwnership() async throws {
+        let settings = makeSettings()
+        settings.includeGranularData = true
+        settings.exportTimeZoneOverride = TimeZone(identifier: "Pacific/Kiritimati")!
+        let instant = ISO8601DateFormatter().date(from: "2026-05-12T12:00:00Z")!
+
+        let metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
+            startDate: instant,
+            endDate: instant,
+            requestedDates: [instant],
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            enforceConnectedOperationGate: true,
+            hasNativeOnlyCompanionAction: true
+        )
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = settings.exportTimeZoneOverride!
+        let frozenDay = sourceCalendar.startOfDay(for: instant)
+
+        XCTAssertEqual(metadata.settingsSnapshot.calendarTimeZoneIdentifier, "Pacific/Kiritimati")
+        XCTAssertEqual(metadata.requestedDates, [frozenDay])
+        XCTAssertEqual(metadata.requestedDays, [frozenDay])
+        XCTAssertEqual(metadata.transferDates, [frozenDay])
+        XCTAssertTrue(MacExportStreamingJobBuilder.shouldIncludeGranularData(
+            for: instant,
+            metadata: metadata,
+            settings: settings
+        ))
+    }
+
     func testBuild_includesFullRollupWindowRecordsWithoutGranularData() async throws {
         let settings = makeSettings()
         settings.includeGranularData = true
@@ -363,6 +393,49 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.requestedDates, expected)
         XCTAssertEqual(fetchedDates, expected)
         XCTAssertFalse(fetchedDates.contains(Calendar.current.startOfDay(for: completedMiddle)))
+    }
+
+    func testBuild_carriesTypedSuccessfulEmptyWHOOPWithLocalRenderingParity() async throws {
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        let date = Self.day(2026, 5, 12)
+        let fetchedAt = Date(timeIntervalSince1970: 1_778_544_000)
+        let providerRecord = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-05-12",
+            fetchedAt: fetchedAt,
+            payloads: ["cycles", "recovery", "sleep", "workouts"].map {
+                ExternalProviderPayload(
+                    name: $0,
+                    endpoint: "https://redacted.invalid/\($0)",
+                    statusCode: 200,
+                    fetchedAt: fetchedAt,
+                    data: .object(["records": .array([])])
+                )
+            }
+        )
+        var local = HealthData(date: date, activity: ActivityData(steps: 123))
+        local.providers = HealthProviderSections.normalized(from: [providerRecord])
+
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: date,
+            endDate: date,
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            fetchHealthData: { requestedDate, _ in
+                HealthData(date: requestedDate, activity: ActivityData(steps: 123))
+            },
+            fetchExternalDailyRecords: { _ in [providerRecord] }
+        )
+
+        let connected = try XCTUnwrap(job.records.first)
+        XCTAssertEqual(connected.providers?.whoop?.captureStatus, .complete)
+        XCTAssertTrue(job.externalDailyRecords.isEmpty)
+        XCTAssertEqual(
+            try connected.exportThrowing(format: .json, settings: settings),
+            try local.exportThrowing(format: .json, settings: settings)
+        )
     }
 
     func testBuild_providerOnlyDayDoesNotFetchOrTransferExternalRecords() async throws {

@@ -9,7 +9,7 @@
 
 ## What it does
 
-API Endpoint export POSTs selected daily JSON records directly from iPhone to a user-configured HTTP(S) endpoint. Each record follows current `healthmd.health_data` schema v7. With **Lossless Health Records** on, it includes the authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1) alongside daily summaries.
+API Endpoint export POSTs selected daily JSON records directly from iPhone to a user-configured HTTP(S) endpoint. Each record follows current Apple `healthmd.health_data` schema v8. With **Lossless Health Records** on, it includes the authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1) alongside daily summaries.
 
 Lossless Health Records is off by default for new installs; existing explicit on or off choices are preserved. API export respects the selected metrics and this setting. The exhaustive envelope, request/response, sidecar, and parser contract is in [API and CLI](../reference/api-and-cli.md), with complete generated JSON fixtures.
 
@@ -66,7 +66,7 @@ Complete v1 and provider-sidecar v2 envelopes are under [`docs/reference/generat
 
 `records` contains the same public document described in [JSON Export](./json-export.md). A complete-empty lossless day is retained because its query manifest is evidence; dates that fail before a daily document can be built are reported through `failed_date_details`.
 
-Provider sidecars use independent rollout/versioning. With WHOOP enabled, the API wrapper may advance to v2 and add `external_records`; that does not change daily schema v7 or the HealthKit archive.
+With WHOOP enabled, the API wrapper advances to v2, keeps typed `providers.whoop` v1 data inside each retained daily v8 record, and retains provider-native sidecars under `external_records`. The HealthKit archive remains independently versioned.
 
 ## Endpoint guidance
 
@@ -133,6 +133,6 @@ If a single-day payload is larger than your endpoint accepts, reducing the selec
 
 - `HealthKitDailyCapture` centralizes one-day HealthKit capture, filtering, failure classification, and optional provider records across API and Connected Mac exports.
 - `APIEndpointExportRunner` tracks partial failures and splits normalized dates into sequential batches bounded by `defaultMaxBatchDaySpan` (7 days) and `defaultMaxBatchPayloadBytes` (8 MiB). It stops on the first failed batch and preserves exact completed dates from earlier batches.
-- `APIExportClient` wraps public v7 daily JSON, stores the optional token in Keychain-backed settings, and uploads the exact prepared body that the runner measured. The immutable destination is snapshotted once per action.
+- `APIExportClient` wraps public v8 daily JSON, stores the optional token in Keychain-backed settings, and uploads the exact prepared body that the runner measured. The immutable destination is snapshotted once per action.
 - `JSONExporter` and `HealthKitRecordArchiveSerializer` own the daily/archive contracts.
 - API output is direct iPhone → configured endpoint; Health.md does not proxy it through its servers.

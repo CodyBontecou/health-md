@@ -21,5 +21,4 @@ enum ExportRolloutCopy {
 
     static let rollupSummariesHelp = String(localized: "Roll-up summaries are off by default. They are aggregate weekly/monthly/yearly files (`\(HealthRollupExportSchema.identifier)`) generated from HealthKit daily snapshots and are not daily records. Each enabled period processes its complete touched calendar windows, so a yearly summary can read hundreds of source days even when the final files are small. Turn on Summary files only to skip daily files and write just the enabled summaries.")
 
-    static let pluginCompatibilityHelp = String(localized: "Before enabling roll-up summaries or format folders broadly, update the Obsidian plugin and run a mixed-export compatibility smoke test.")
 }

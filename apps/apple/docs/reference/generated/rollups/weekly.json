@@ -1446,16 +1446,16 @@
   ],
   "period_id" : "2026-W28",
   "rollup_period" : "weekly",
-  "rollup_rules_version" : 7,
+  "rollup_rules_version" : 8,
   "schema" : "healthmd.rollup_summary",
-  "schema_version" : 7,
+  "schema_version" : 8,
   "source_dates" : [
     "2026-07-06",
     "2026-07-08",
     "2026-07-11"
   ],
   "source_schema" : "healthmd.health_data",
-  "source_schema_version" : 7,
+  "source_schema_version" : 8,
   "start_date" : "2026-07-06",
   "type" : "health_rollup",
   "units" : {

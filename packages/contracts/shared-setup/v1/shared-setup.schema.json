@@ -1,0 +1,887 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/shared-setup/v1/shared-setup.schema.json",
+  "title": "Health.md Shared Setup v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "created_by",
+    "metric_registry",
+    "profile",
+    "metric_aliases",
+    "platform_extensions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "healthmd.shared_setup"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "created_by": {
+      "$ref": "#/$defs/createdBy"
+    },
+    "profile": {
+      "$ref": "#/$defs/profile"
+    },
+    "metric_aliases": {
+      "type": "array",
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/metricAlias"
+      }
+    },
+    "platform_extensions": {
+      "$ref": "#/$defs/platformExtensions"
+    },
+    "metric_registry": {
+      "$ref": "#/$defs/metricRegistry"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "created_by": {
+            "properties": { "platform": { "const": "apple" } },
+            "required": ["platform"]
+          }
+        },
+        "required": ["created_by"]
+      },
+      "then": {
+        "properties": {
+          "platform_extensions": {
+            "properties": { "apple": { "not": { "type": "null" } } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "created_by": {
+            "properties": { "platform": { "const": "android" } },
+            "required": ["platform"]
+          }
+        },
+        "required": ["created_by"]
+      },
+      "then": {
+        "properties": {
+          "platform_extensions": {
+            "properties": { "android": { "not": { "type": "null" } } }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": true,
+  "$defs": {
+    "boundedString": {
+      "type": "string",
+      "maxLength": 4096
+    },
+    "shortString": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "nonEmptyShortString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9_]*(?:[.-][a-z0-9_]+)*$"
+    },
+    "relativePath": {
+      "type": "string",
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*[\\\\%])(?!.*//)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*://)(?!.*[\\u0000-\\u001f]).*$"
+    },
+    "filenameTemplate": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!\\.{1,2}$)(?![A-Za-z]:)(?!.*[/\\\\%])(?!.*[\\u0000-\\u001f]).+$"
+    },
+    "createdBy": {
+      "type": "object",
+      "required": [
+        "platform",
+        "app_version"
+      ],
+      "properties": {
+        "platform": {
+          "enum": [
+            "apple",
+            "android"
+          ]
+        },
+        "app_version": {
+          "$ref": "#/$defs/nonEmptyShortString"
+        }
+      },
+      "additionalProperties": true
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "export",
+        "metrics",
+        "presentation",
+        "individual_entries",
+        "daily_notes",
+        "schedule",
+        "api_endpoint"
+      ],
+      "properties": {
+        "export": {
+          "$ref": "#/$defs/export"
+        },
+        "metrics": {
+          "$ref": "#/$defs/metrics"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "individual_entries": {
+          "$ref": "#/$defs/individualEntries"
+        },
+        "daily_notes": {
+          "$ref": "#/$defs/dailyNotes"
+        },
+        "schedule": {
+          "$ref": "#/$defs/schedule"
+        },
+        "api_endpoint": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/apiEndpoint"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "export": {
+      "type": "object",
+      "required": [
+        "formats",
+        "include_metadata",
+        "group_by_category",
+        "filename_template",
+        "folder_template",
+        "write_mode",
+        "include_granular_data"
+      ],
+      "properties": {
+        "formats": {
+          "type": "array",
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "markdown",
+              "obsidian_bases",
+              "json",
+              "csv"
+            ]
+          }
+        },
+        "include_metadata": {
+          "type": "boolean"
+        },
+        "group_by_category": {
+          "type": "boolean"
+        },
+        "filename_template": {
+          "$ref": "#/$defs/filenameTemplate"
+        },
+        "folder_template": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "write_mode": {
+          "enum": [
+            "overwrite",
+            "append",
+            "update"
+          ]
+        },
+        "include_granular_data": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "enabled_ids"
+      ],
+      "properties": {
+        "enabled_ids": {
+          "type": "array",
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "metricAlias": {
+      "type": "object",
+      "required": [
+        "semantic_id",
+        "equivalence",
+        "apple_selection_id",
+        "android_selection_id"
+      ],
+      "properties": {
+        "semantic_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "equivalence": {
+          "enum": [
+            "platform_exact_or_unavailable",
+            "mapped_alias",
+            "platform_distinct"
+          ]
+        },
+        "apple_selection_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/identifier"
+            }
+          ]
+        },
+        "android_selection_id": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/identifier"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "presentation": {
+      "type": "object",
+      "required": [
+        "date_format",
+        "time_format",
+        "units",
+        "frontmatter",
+        "markdown"
+      ],
+      "properties": {
+        "date_format": {
+          "enum": [
+            "iso8601",
+            "us_short",
+            "us_long",
+            "eu_short",
+            "eu_long",
+            "compact",
+            "friendly"
+          ]
+        },
+        "time_format": {
+          "enum": [
+            "hour_24",
+            "hour_24_seconds",
+            "hour_12",
+            "hour_12_seconds"
+          ]
+        },
+        "units": {
+          "enum": [
+            "metric",
+            "imperial"
+          ]
+        },
+        "frontmatter": {
+          "$ref": "#/$defs/frontmatter"
+        },
+        "markdown": {
+          "$ref": "#/$defs/markdown"
+        }
+      },
+      "additionalProperties": true
+    },
+    "frontmatter": {
+      "type": "object",
+      "required": [
+        "fields",
+        "custom_values",
+        "placeholders",
+        "include_date",
+        "include_type",
+        "date_key",
+        "type_key",
+        "type_value",
+        "key_style"
+      ],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/frontmatterField"
+          }
+        },
+        "custom_values": {
+          "type": "object",
+          "maxProperties": 128,
+          "propertyNames": {
+            "$ref": "#/$defs/nonEmptyShortString"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/boundedString"
+          }
+        },
+        "placeholders": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyShortString"
+          }
+        },
+        "include_date": {
+          "type": "boolean"
+        },
+        "include_type": {
+          "type": "boolean"
+        },
+        "date_key": {
+          "$ref": "#/$defs/nonEmptyShortString"
+        },
+        "type_key": {
+          "$ref": "#/$defs/nonEmptyShortString"
+        },
+        "type_value": {
+          "$ref": "#/$defs/boundedString"
+        },
+        "key_style": {
+          "enum": [
+            "snake_case",
+            "camel_case"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "frontmatterField": {
+      "type": "object",
+      "required": [
+        "source_key",
+        "output_key",
+        "enabled"
+      ],
+      "properties": {
+        "source_key": {
+          "$ref": "#/$defs/nonEmptyShortString"
+        },
+        "output_key": {
+          "$ref": "#/$defs/nonEmptyShortString"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "markdown": {
+      "type": "object",
+      "required": [
+        "style",
+        "custom_text",
+        "header_level",
+        "use_emoji",
+        "include_summary",
+        "bullet_style",
+        "origin_dialect"
+      ],
+      "properties": {
+        "style": {
+          "enum": [
+            "standard",
+            "compact",
+            "detailed",
+            "custom"
+          ]
+        },
+        "custom_text": {
+          "type": "string",
+          "maxLength": 65536
+        },
+        "header_level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "use_emoji": {
+          "type": "boolean"
+        },
+        "include_summary": {
+          "type": "boolean"
+        },
+        "bullet_style": {
+          "enum": [
+            "dash",
+            "asterisk",
+            "plus"
+          ]
+        },
+        "origin_dialect": {
+          "enum": [
+            "portable",
+            "apple",
+            "android"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "individualEntries": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "metrics",
+        "entries_folder",
+        "organize_by_category",
+        "filename_template"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "metrics": {
+          "type": "object",
+          "maxProperties": 256,
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/individualMetric"
+          }
+        },
+        "entries_folder": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "organize_by_category": {
+          "type": "boolean"
+        },
+        "filename_template": {
+          "$ref": "#/$defs/filenameTemplate"
+        }
+      },
+      "additionalProperties": true
+    },
+    "individualMetric": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "custom_folder"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "custom_folder": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/relativePath"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "dailyNotes": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "folder",
+        "filename_template",
+        "create_if_missing",
+        "inject_sections"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "folder": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "filename_template": {
+          "$ref": "#/$defs/filenameTemplate"
+        },
+        "create_if_missing": {
+          "type": "boolean"
+        },
+        "inject_sections": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "schedule": {
+      "type": "object",
+      "required": [
+        "activation_requested",
+        "cadence",
+        "local_time",
+        "lookback_days",
+        "date_window",
+        "desired_target"
+      ],
+      "properties": {
+        "activation_requested": {
+          "type": "boolean"
+        },
+        "cadence": {
+          "$ref": "#/$defs/cadence"
+        },
+        "local_time": {
+          "$ref": "#/$defs/localTime"
+        },
+        "lookback_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365
+        },
+        "date_window": {
+          "enum": [
+            "past_complete_days",
+            "today"
+          ]
+        },
+        "desired_target": {
+          "enum": [
+            "device_folder",
+            "api_endpoint"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "cadence": {
+      "type": "object",
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365
+        },
+        "unit": {
+          "enum": [
+            "minutes",
+            "hours",
+            "days",
+            "weeks",
+            "months"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "localTime": {
+      "type": "object",
+      "required": [
+        "hour",
+        "minute"
+      ],
+      "properties": {
+        "hour": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 23
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 59
+        }
+      },
+      "additionalProperties": true
+    },
+    "apiEndpoint": {
+      "type": "object",
+      "required": [
+        "scheme",
+        "host",
+        "port",
+        "path",
+        "query_omitted",
+        "credentials_required"
+      ],
+      "properties": {
+        "scheme": {
+          "const": "https"
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$"
+        },
+        "port": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          ]
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 2048,
+          "pattern": "^/(?!/)(?!.*[%?#\\u0000-\\u001f]).*$"
+        },
+        "query_omitted": {
+          "type": "boolean"
+        },
+        "credentials_required": {
+          "const": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "platformExtensions": {
+      "type": "object",
+      "required": [
+        "apple",
+        "android"
+      ],
+      "properties": {
+        "apple": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/appleExtension" }
+          ]
+        },
+        "android": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/androidExtension" }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "appleExtension": {
+      "type": "object",
+      "required": [
+        "extension_version",
+        "export",
+        "daily_notes",
+        "schedule"
+      ],
+      "properties": {
+        "extension_version": {
+          "const": 1
+        },
+        "export": {
+          "type": "object",
+          "required": [
+            "organize_formats_into_folders",
+            "archive_files",
+            "include_data_dictionary",
+            "summary_only",
+            "rollups"
+          ],
+          "properties": {
+            "organize_formats_into_folders": {
+              "type": "boolean"
+            },
+            "archive_files": {
+              "type": "boolean"
+            },
+            "include_data_dictionary": {
+              "type": "boolean"
+            },
+            "summary_only": {
+              "type": "boolean"
+            },
+            "rollups": {
+              "type": "array",
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "weekly",
+                  "monthly",
+                  "yearly"
+                ]
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "daily_notes": {
+          "type": "object",
+          "required": [
+            "only"
+          ],
+          "properties": {
+            "only": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "schedule": {
+          "type": "object",
+          "required": [
+            "frequency",
+            "custom_unit",
+            "weekday",
+            "today_refresh_requested",
+            "today_refresh_interval_hours",
+            "desired_target"
+          ],
+          "properties": {
+            "frequency": {
+              "enum": [
+                "daily",
+                "weekly",
+                "custom"
+              ]
+            },
+            "custom_unit": {
+              "enum": [
+                "days",
+                "weeks",
+                "months"
+              ]
+            },
+            "weekday": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7
+            },
+            "today_refresh_requested": {
+              "type": "boolean"
+            },
+            "today_refresh_interval_hours": {
+              "enum": [
+                3,
+                6,
+                12
+              ]
+            },
+            "desired_target": {
+              "enum": [
+                "local_iphone_folder",
+                "connected_mac",
+                "api_endpoint"
+              ]
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "androidExtension": {
+      "type": "object",
+      "required": [
+        "extension_version",
+        "export"
+      ],
+      "properties": {
+        "extension_version": {
+          "const": 1
+        },
+        "export": {
+          "type": "object",
+          "required": [
+            "compatibility_profile",
+            "include_legacy_aliases",
+            "include_android_native_fields",
+            "subfolder",
+            "folder_organization"
+          ],
+          "properties": {
+            "compatibility_profile": {
+              "enum": [
+                "frozen_v4",
+                "analytical_v5"
+              ]
+            },
+            "include_legacy_aliases": {
+              "type": "boolean"
+            },
+            "include_android_native_fields": {
+              "type": "boolean"
+            },
+            "subfolder": {
+              "$ref": "#/$defs/relativePath"
+            },
+            "folder_organization": {
+              "enum": [
+                "flat",
+                "by_year",
+                "by_month",
+                "by_year_month"
+              ]
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "metricRegistry": {
+      "type": "object",
+      "required": [
+        "schema",
+        "registry_version",
+        "registry_sha256"
+      ],
+      "properties": {
+        "schema": {
+          "const": "healthmd.metric_registry"
+        },
+        "registry_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "registry_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

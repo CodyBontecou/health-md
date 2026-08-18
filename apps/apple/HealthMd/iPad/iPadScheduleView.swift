@@ -350,11 +350,12 @@ struct iPadScheduleView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Today Refresh", isPresented: $showTodayRefreshInfo) {
-            Button("Got it", role: .cancel) {}
-        } message: {
-            Text(todayRefreshInfoMessage)
-        }
+        .geistDialog(
+            isPresented: $showTodayRefreshInfo,
+            title: Text("Today Refresh"),
+            message: Text(todayRefreshInfoMessage),
+            actions: [.action("Got it", role: .secondary)]
+        )
     }
 
     private var preferredTimeText: String {
@@ -386,7 +387,7 @@ struct iPadScheduleView: View {
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
@@ -457,7 +458,10 @@ struct iPadScheduleView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }

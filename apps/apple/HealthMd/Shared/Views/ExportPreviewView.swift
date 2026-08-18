@@ -154,26 +154,34 @@ struct ExportPreviewView: View {
         .task {
             await buildPreviews()
         }
-        .alert(item: $permissionGuidance) { guidance in
-            #if os(iOS)
-            Alert(
-                title: Text("Health Permissions Needed"),
-                message: Text(guidance.iOSInstructions),
-                primaryButton: .default(Text("Request Access")) {
-                    requestAdditionalHealthAccess()
-                },
-                secondaryButton: .default(Text("Open Health App")) {
-                    openHealthApp()
-                }
-            )
-            #else
-            Alert(
-                title: Text("Health Permissions Needed"),
-                message: Text(guidance.macInstructions),
-                dismissButton: .default(Text("Done"))
-            )
-            #endif
-        }
+        .geistDialog(
+            isPresented: Binding(
+                get: { permissionGuidance != nil },
+                set: { if !$0 { permissionGuidance = nil } }
+            ),
+            title: Text("Health Permissions Needed"),
+            message: permissionGuidance.map { guidance in
+                #if os(iOS)
+                Text(guidance.iOSInstructions)
+                #else
+                Text(guidance.macInstructions)
+                #endif
+            },
+            actions: {
+                #if os(iOS)
+                [
+                    .action("Request Access") {
+                        requestAdditionalHealthAccess()
+                    },
+                    .action("Open Health App") {
+                        openHealthApp()
+                    }
+                ]
+                #else
+                [.action("Done", role: .secondary)]
+                #endif
+            }()
+        )
     }
 
     // MARK: - States
@@ -1016,10 +1024,10 @@ struct ExportPreviewView: View {
             return .resolved(.emptyDocument)
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             return .unreadable(ExportError.accessDenied)
         }
-        defer { vaultManager.stopVaultAccess() }
+        defer { accessLease.stop() }
 
         if FileManager.default.fileExists(atPath: localURL.path) {
             do {

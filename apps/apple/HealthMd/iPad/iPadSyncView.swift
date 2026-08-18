@@ -273,16 +273,19 @@ struct iPadSyncView: View {
                 syncService.startAdvertising()
             }
         }
-        .alert("Adjust Health Permissions", isPresented: $showHealthPermissionsGuide) {
-            Button("Open Health App") {
-                if let healthURL = URL(string: "x-apple-health://") {
-                    UIApplication.shared.open(healthURL)
+        .geistDialog(
+            isPresented: $showHealthPermissionsGuide,
+            title: Text("Adjust Health Permissions"),
+            message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
+            actions: [
+                .cancel(),
+                .action("Open Health App") {
+                    if let healthURL = URL(string: "x-apple-health://") {
+                        UIApplication.shared.open(healthURL)
+                    }
                 }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off")
-        }
+            ]
+        )
     }
 
     // MARK: - Helpers

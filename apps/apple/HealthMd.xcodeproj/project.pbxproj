@@ -251,6 +251,7 @@
 				iOS/IPhoneExportRequestHandler.swift,
 				iOS/Managers/ExternalIntegrationManager.swift,
 				iOS/ReleaseNotes.swift,
+				iOS/SharedSetup/SharedSetupCoordinator.swift,
 				iOS/SchedulingManager.swift,
 				iOS/Views/ExportTabView.swift,
 				iOS/Views/ExportedMarkdownViewer.swift,
@@ -983,6 +984,7 @@
 		};
 		62A1B0082F50A00100000008 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = macos;
 			target = 62CC00052F15D70300F9103F /* HealthMd-macOS */;
 			targetProxy = 62A1B0012F50A00100000001 /* PBXContainerItemProxy */;
 		};
@@ -1006,6 +1008,7 @@
 		};
 		EE11BB000000000000000004 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 624B99EE2F15D70300F9103F /* HealthMd */;
 			targetProxy = EE11BB000000000000000003 /* PBXContainerItemProxy */;
 		};

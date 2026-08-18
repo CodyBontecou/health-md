@@ -50,6 +50,9 @@ extension Color {
     static let controlBackground = adaptiveColor(light: "FFFFFF", dark: "000000")
     static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
     static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
+
+    // Overlay scrim for Geist dialogs (light: gray-alpha-700)
+    static let dialogScrim = adaptiveColor(light: "00000070", dark: "000000B3")
     #elseif os(macOS)
     // Backgrounds
     static let bgPrimary = adaptiveColor(light: "FFFFFF", dark: "000000")
@@ -90,6 +93,9 @@ extension Color {
     static let controlBackground = adaptiveColor(light: "FFFFFF", dark: "000000")
     static let controlPressed = adaptiveColor(light: "F2F2F2", dark: "1A1A1A")
     static let selectedBackground = adaptiveColor(light: "F8F3FB", dark: "1E1439")
+
+    // Overlay scrim for Geist dialogs (light: gray-alpha-700)
+    static let dialogScrim = adaptiveColor(light: "00000070", dark: "000000B3")
     #endif
 
     private static func adaptiveColor(light: String, dark: String) -> Color {

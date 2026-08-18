@@ -1,3 +1,4 @@
+#if os(iOS)
 import XCTest
 @testable import HealthMd
 
@@ -123,8 +124,12 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
                     return false
                 },
                 refreshVaultAccess: { vaultEvents.append("refresh") },
-                startVaultAccess: { vaultEvents.append("start") },
-                stopVaultAccess: { vaultEvents.append("stop") },
+                withVaultAccess: { operation in
+                    vaultEvents.append("start")
+                    let result = await operation()
+                    vaultEvents.append("stop")
+                    return result
+                },
                 targetLabel: { "iPhone: TestVault" },
                 makeSettings: { AdvancedExportSettings() },
                 profileStore: ExportProfileStore(userDefaults: self.defaults),
@@ -182,8 +187,7 @@ private final class ProfileRunRecorder {
             hasVaultAccess: { true },
             requiresVaultReselection: { false },
             refreshVaultAccess: {},
-            startVaultAccess: {},
-            stopVaultAccess: {},
+            withVaultAccess: { operation in await operation() },
             targetLabel: { "iPhone: TestVault" },
             makeSettings: { AdvancedExportSettings() },
             profileStore: ExportProfileStore(userDefaults: defaults),
@@ -217,3 +221,4 @@ private final class ProfileRunRecorder {
         )
     }
 }
+#endif

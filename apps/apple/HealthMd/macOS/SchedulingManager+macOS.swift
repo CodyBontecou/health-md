@@ -308,7 +308,7 @@ class SchedulingManager: ObservableObject {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             logger.error("Could not start vault security scope")
             await sendNotification(
                 title: String(localized: "Export Failed", comment: "Notification title"),
@@ -316,11 +316,12 @@ class SchedulingManager: ObservableObject {
             )
             return
         }
-        defer { vaultManager.stopVaultAccess() }
+        defer { accessLease.stop() }
 
         var successCount = 0
         var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
+        var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var rollupFileCount = 0
         var archiveCount = 0
@@ -438,6 +439,7 @@ class SchedulingManager: ObservableObject {
                 )
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 if settings.dailyNotesOnlyModeEnabled {
                     switch writeResult.dailyNoteResult {
                     case .updated:
@@ -548,6 +550,7 @@ class SchedulingManager: ObservableObject {
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures,
             formatsPerDate: settings.looseFormatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,

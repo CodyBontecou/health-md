@@ -52,8 +52,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
         retainPlatformExtensions: Bool,
         rollupPeriods: [HealthRollupPeriod]
     ) throws -> Data {
-        guard registry.profileId == "apple_health_data_v7",
-              registry.publicProfileId == "apple-v7",
+        guard registry.profileId == "apple_health_data_v8",
+              registry.publicProfileId == "apple-v8",
               registry.publicSchema == HealthMdExportSchema.identifier,
               registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
               registry.profileRevision == 1,
@@ -86,7 +86,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
             "registry_sha256": registry.registrySha256,
             "profile_revision": registry.profileRevision,
             "session_id": sessionID,
-            "profile": "apple_health_data_v7",
+            "profile": "apple_health_data_v8",
             "calendar_time_zone": calendarTimeZoneIdentifier,
             "selected_selection_ids": selected,
             "disabled_output_keys": disabledOutputKeys,
@@ -108,8 +108,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
         calendarTimeZoneIdentifier: String,
         startingSourceOrdinal: UInt64 = 0
     ) throws -> EncodedBatch {
-        guard registry.profileId == "apple_health_data_v7",
-              registry.publicProfileId == "apple-v7",
+        guard registry.profileId == "apple_health_data_v8",
+              registry.publicProfileId == "apple-v8",
               registry.publicSchema == HealthMdExportSchema.identifier,
               registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
               registry.profileRevision == 1,
@@ -124,6 +124,11 @@ nonisolated enum HealthMdSemanticInputAdapter {
                   $0.timeContext.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier
               }) else {
             throw AdapterError.invalidTimeZone
+        }
+        // Provider sections are native-authoritative in v8. Reject them at the
+        // semantic boundary instead of allowing an older scalar-only path to drop them.
+        guard healthData.allSatisfy({ $0.providers?.isEmpty != false }) else {
+            throw AdapterError.invalidSessionResult
         }
         let capturedDays = healthData.enumerated().map { index, day in
             (index: index, day: day, ownerDate: ownerDateString(day.date, timeZone: calendarTimeZone))

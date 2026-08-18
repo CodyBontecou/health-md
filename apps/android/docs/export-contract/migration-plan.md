@@ -9,6 +9,19 @@
 
 ---
 
+## Ongoing cross-platform policy
+
+This migration aligned historical Android projections with Apple-facing consumers, but future parity work must not assume that an Apple key is automatically the shared semantic authority. The repository [Apple and Android unification policy](../../../../docs/architecture/cross-platform-unification-policy.md) now governs new work:
+
+- define one platform-neutral user and consumer outcome;
+- compare HealthKit and Health Connect meaning, units, statistics, time ownership, provenance, and failure behavior;
+- use common IDs/contracts only for proven equivalence;
+- retain OS-specific data in explicit Apple/Android sections or capability states;
+- mark temporary gaps `planned` with a concrete target;
+- never relabel related-but-distinct data merely to satisfy a parity table.
+
+The shipped Android frozen-v4 and analytical-v5 bytes remain immutable. New common semantics should target the proposed unified successor rather than extending those profiles in place.
+
 ## 1) Change inventory
 
 ### 1a) Breaking changes (old key/label removed)
@@ -107,14 +120,10 @@ will need to update their scripts. Provide the following migration table in rele
 **Before parity:** iOS and Android exports had different schema. Plugin dashboards built on
 iOS data would not correctly read Android exports, and vice versa.
 
-**After parity:** Both platforms produce compatible JSON/Bases/CSV. Mixed-device vaults
-work without additional configuration. Shared Obsidian dashboards see the same field names
-regardless of export source.
+**After the historical compatibility migration:** Android v4/v5 adopted the field names and format projections required by the then-current Apple-facing Obsidian consumer. This made supported dashboards interoperable, but it did not make the full Apple and Android public schemas or all metric semantics identical. Mixed-device tools must still dispatch on the explicit profile/version and handle platform-only data.
 
 **Note on `sleep_core_hours` vs `sleep_light_hours`:**  
-iOS Apple Watch uses "Core" sleep as a distinct stage. Health Connect uses "Light/NREM2" for
-the same bucket. Android exports `sleep_core_hours` by default. If Android compatibility keys are enabled,
-`sleep_light_hours` is also emitted with the same numeric value.
+iOS Apple Watch exposes "Core" sleep while Health Connect exposes "Light/NREM2." The historical Android compatibility profile projects the Health Connect value through `sleep_core_hours` for plugin compatibility and may also emit `sleep_light_hours` when compatibility keys are enabled. The proposed unified contract treats this as `mapped_alias`/`alias-review`; future common writers must not claim semantic equivalence until stage definitions, overlap behavior, and owner-day rules are reviewed.
 
 ---
 
@@ -171,7 +180,7 @@ Copy into Play Store "What's New" field:
 ```
 v1.3.0 — Android/iOS Export Parity
 
-• JSON, Markdown, Obsidian Bases, and CSV exports now match the iOS schema.
+• JSON, Markdown, Obsidian Bases, and CSV compatibility projections now use the field names expected by Apple-facing Obsidian tools.
 • Obsidian Health.md plugin charts read Android sleep, heart, HRV, oxygen, breathing, and VO2 Max correctly.
 • Richer metrics, preview, retry, schedule lookback, daily notes, and individual entries are ready.
 • Unsupported Health Connect metrics are omitted from Android exports.

@@ -9,7 +9,7 @@
 
 ## What it does
 
-CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v7 uses a six-name header and adds canonical JSON rows when **Lossless Health Records** is on. For compatibility, many aggregate rows serialize five fields by omitting the trailing empty `Timestamp`; metadata, canonical, diagnostic, and timestamped rows commonly serialize all six. Consumers must accept both row widths.
+CSV export writes one spreadsheet-friendly `.csv` file per date. Schema v8 uses a six-name header, adds canonical JSON rows when **Lossless Health Records** is on, and retains typed WHOOP scalars/records under provider-prefixed categories when present. For compatibility, many aggregate rows serialize five fields by omitting the trailing empty `Timestamp`; metadata, canonical, diagnostic, and timestamped rows commonly serialize all six. Consumers must accept both row widths.
 
 CSV is lossless because each source object is carried as canonical JSON in the `Value` cell, not flattened into a fragile set of columns. Use it in Numbers, Excel, Google Sheets, DuckDB, or scripts that support RFC 4180 CSV. Use JSON when nested object traversal is more convenient.
 
@@ -58,7 +58,7 @@ Binary values inside canonical JSON are base64. Available attachment data includ
 
 ## Summary rows
 
-Existing daily metric rows remain. Aggregate rows may have an empty `Timestamp`; source rows use exact UTC source-start timestamps. Schema v7 populates extended cycling, vitamin, mineral, reproductive, and other summary-row units from the same production data dictionary used by JSON/frontmatter and roll-ups. Examples include:
+Existing daily metric rows remain. Aggregate rows may have an empty `Timestamp`; source rows use exact UTC source-start timestamps. WHOOP recovery and body rows leave `Timestamp` empty because provider fetch time is not a measurement timestamp; repeated typed records use RFC 4180-safe canonical JSON cells. Schema v8 retains the v7 extended cycling, vitamin, mineral, reproductive, and other summary-row units from the same production data dictionary used by JSON/frontmatter and roll-ups. Examples include:
 
 ```csv
 2026-07-15,Activity,Stand Time,42.5,minutes,

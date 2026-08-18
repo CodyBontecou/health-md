@@ -244,7 +244,7 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
         }
         guard Self.isValidOperationID(requestID) else { throw ValidationError.invalidRequestID }
         guard Self.isValidOperationID(sessionID) else { throw ValidationError.invalidSessionID }
-        guard profile == .appleHealthDataV7,
+        guard profile == .appleHealthDataV8,
               pin.profile == AppleExportEnginePin.profileID else {
             throw ValidationError.invalidProfile
         }
@@ -340,7 +340,7 @@ nonisolated struct NativeExportArtifactPlan: Equatable, Sendable {
 
     private static func profileIdentifier(_ profile: CoreMetricRegistryProfile) -> String {
         switch profile {
-        case .appleHealthDataV7: "apple_health_data_v7"
+        case .appleHealthDataV8: "apple_health_data_v8"
         case .androidFrozenV4: "android_frozen_v4"
         case .androidAnalyticalV5: "android_analytical_v5"
         }

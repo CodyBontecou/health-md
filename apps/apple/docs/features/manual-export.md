@@ -40,7 +40,7 @@ MyVault/Health/2026-07-15.json
 MyVault/Health/2026-07-15.csv
 ```
 
-API target POSTs equivalent public v7 JSON records instead of writing daily files. For file destinations, **Write Data Dictionary** defaults on; turn it off to omit `_healthmd_data_dictionary.json` without suppressing selected Markdown or other aggregate formats.
+API target POSTs equivalent public v8 JSON records instead of writing daily files. For file destinations, **Write Data Dictionary** defaults on; turn it off to omit `_healthmd_data_dictionary.json` without suppressing selected Markdown or other aggregate formats.
 
 ## Capture outcomes
 
@@ -88,7 +88,7 @@ Lossless capture can include routes, waveforms, exact binary values, and attachm
 
 ## Tips
 
-- Preview after schema v7 migration and before backfills.
+- Preview after schema v8 migration and before backfills.
 - Use JSON when source completeness matters.
 - Check `raw_capture_status` for every date.
 - Keep v5 files as historical; re-export rather than relabel.
@@ -97,5 +97,5 @@ Lossless capture can include routes, waveforms, exact binary values, and attachm
 
 - `ExportOrchestrator.exportDates(...)` processes the inclusive range.
 - `HealthKitManager.fetchHealthData(for:includeGranularData:metricSelection:)` builds unchanged summaries and optional canonical archive.
-- Local export uses `VaultManager`; Connected Mac uses bounded `ConnectedTransfer`; API uses its independently versioned envelope containing schema-v7 daily records.
+- Local export uses `VaultManager`; Connected Mac uses bounded `ConnectedTransfer`; API uses its independently versioned envelope containing schema-v8 daily records.
 - `ExportResult` tracks file success/failure separately from source capture diagnostics.

@@ -58,8 +58,7 @@ enum ExportIntentRunner {
         var hasVaultAccess: () -> Bool
         var requiresVaultReselection: () -> Bool
         var refreshVaultAccess: () -> Void
-        var startVaultAccess: () -> Void
-        var stopVaultAccess: () -> Void
+        var withVaultAccess: (@escaping () async -> ExportOrchestrator.ExportResult) async -> ExportOrchestrator.ExportResult?
         var targetLabel: () -> String
         var makeSettings: () -> AdvancedExportSettings
         /// Profile store used for parameter resolution; injectable for tests.
@@ -111,11 +110,10 @@ enum ExportIntentRunner {
                 refreshVaultAccess: {
                     vaultManager.refreshVaultAccess()
                 },
-                startVaultAccess: {
-                    vaultManager.startVaultAccess()
-                },
-                stopVaultAccess: {
-                    vaultManager.stopVaultAccess()
+                withVaultAccess: { operation in
+                    guard let accessLease = vaultManager.beginVaultAccess() else { return nil }
+                    defer { accessLease.stop() }
+                    return await operation()
                 },
                 targetLabel: {
                     "iPhone: \(vaultManager.vaultName)"
@@ -253,13 +251,15 @@ enum ExportIntentRunner {
 
         let settings = runProfile.map(dependencies.makeSettingsForProfile)
             ?? dependencies.makeSettings()
-        dependencies.startVaultAccess()
-        defer { dependencies.stopVaultAccess() }
 
         // Shortcuts run without an interactive Mac peer handshake, so they keep
         // the existing local iPhone-vault destination semantics even if the app's
         // manual Export tab is currently set to Connected Mac.
-        let result = await dependencies.exportDatesBackground(dates, settings)
+        guard let result = await dependencies.withVaultAccess({
+            await dependencies.exportDatesBackground(dates, settings)
+        }) else {
+            return .noVault
+        }
 
         let sortedDates = dates.sorted()
 

@@ -1,17 +1,21 @@
 # RFC-0002: Unified `healthmd.health_data` v8
 
-- Status: **Deferred — do not implement during shared-core migration**
+- Status: **Deferred for a unified cross-platform schema; partially superseded by RFC-0003's Apple-only v8**
 - Decision date: 2026-07-26
 - Owners: Apple, Android, CLI, contracts, website, and Obsidian integration owners
-- Related: [ADR-0001](adr-0001-shared-rust-uniffi-core.md)
+- Related: [ADR-0001](adr-0001-shared-rust-uniffi-core.md), [RFC-0004](rfc-0004-unified-health-data-v9.md)
 
 ## Decision
+
+> **2026-08-12 update:** [RFC-0003](rfc-0003-apple-health-data-v8-provider-sections.md) approves an Apple-only v8 for typed provider sections. It does not unify or relabel Android. This RFC remains authoritative for the deferred unified cross-platform schema described below.
+>
+> **2026-08-13 update:** [RFC-0004](rfc-0004-unified-health-data-v9.md) and `packages/contracts/proposals/unified-health-data-v9/` reopen the contract design as a v9 proposal. A unified grammar cannot reuse v8 after Apple v8. This RFC's rollout gates remain in force until RFC-0004 is accepted with evidence.
 
 Health.md will **not** introduce a unified public v8 schema as part of the Rust/UniFFI migration or legacy-engine cleanup.
 
 Apple `healthmd.health_data` v7, Android frozen v4, and Android analytical v5 remain independent supported profiles. Moving deterministic semantics and rendering into Rust does not relabel, merge, or version those contracts. Historical fixtures remain immutable.
 
-A future v8 may proceed only as a separate cross-platform contract project after:
+A future unified successor may proceed only as a separate cross-platform contract project after:
 
 1. Rust export authority has completed its rollback window on Apple and Android;
 2. two stable release cycles have passed with no unexplained profile differences;
@@ -21,11 +25,11 @@ A future v8 may proceed only as a separate cross-platform contract project after
 
 Deferral is an affirmative compatibility decision, not an unresolved implementation task.
 
-## Why v8 is not a cleanup format
+## Why a unified successor is not a cleanup format
 
 The shipped profiles differ intentionally:
 
-- Apple v7 represents HealthKit summaries, Apple-only types, source archives, medications, state of mind, and Apple date/roll-up behavior.
+- Apple v8 represents HealthKit summaries, Apple-only types, source archives, medications, state of mind, Apple date/roll-up behavior, and typed provider sections.
 - Android frozen v4 preserves compatibility with the historical Apple/plugin-facing shape.
 - Android analytical v5 adds reviewed Android-native facts and exact source detail.
 - HealthKit HRV SDNN and Health Connect RMSSD are related but non-equivalent.
@@ -35,7 +39,7 @@ A single serializer cannot erase those distinctions without changing public mean
 
 ## Producers and consumers
 
-Any future v8 proposal must enumerate and test every producer and consumer.
+Any unified successor proposal must enumerate and test every producer and consumer.
 
 ### Producers
 
@@ -58,13 +62,13 @@ Any future v8 proposal must enumerate and test every producer and consumer.
 
 External user scripts are not discoverable in full, so backward-compatible dual-read and explicit version markers are mandatory.
 
-## Candidate v8 shape if reopened
+## Historical candidate shape before RFC-0004
 
 This section records design constraints, not an approved schema.
 
-A candidate should contain:
+This earlier constraint list informed the v9 proposal. A unified contract should contain:
 
-- `schema: "healthmd.health_data"` and `schema_version: 8`;
+- `schema: "healthmd.health_data"` and a new unambiguous version (`schema_version: 9` in RFC-0004);
 - explicit `source_platform` and source-app/profile provenance;
 - a shared summary block containing only reviewed semantically equivalent metrics;
 - tagged metric values with stable semantic identity, public presentation key, unit, reducer, and capture status;
@@ -80,7 +84,7 @@ Platform extensions must be ignorable without being lossy for consumers that und
 
 ## Migration and dual-read requirements
 
-If v8 is approved later:
+If a unified successor is approved later:
 
 1. Add a new language-neutral schema and fixtures; never rewrite v4/v5/v6/v7 fixtures.
 2. Keep readers for Apple v5/v6/v7 and Android v4/v5 for a documented support period.
@@ -89,7 +93,7 @@ If v8 is approved later:
 5. Persist the selected public profile with every scheduled, connected, and direct generated-file job.
 6. Keep API versions explicit. A v8 file schema does not implicitly change API envelope or direct protocol versions.
 7. Publish field-by-field mappings, non-equivalences, unit rules, omission behavior, and extension handling.
-8. Run the actual pinned Obsidian/visualization and CLI consumers against v8 fixtures.
+8. Run the actual pinned Obsidian/visualization and CLI consumers against unified-successor fixtures.
 9. Provide user-facing migration guidance for vault queries, Bases, scripts, and receivers.
 10. Treat removal of old writers/readers as a later compatibility decision with telemetry-free support evidence.
 
@@ -104,7 +108,7 @@ The current shared-core work changes internal contracts only:
 
 None changes a public key, type, unit, meaning, order, or serialized representation. Therefore no public schema bump is justified.
 
-A future v8 necessarily changes public modeling and must bump the public schema even if some individual rendered values happen to match v7/v5 bytes.
+A unified successor necessarily changes public modeling and must bump the public schema even if some individual rendered values happen to match historical bytes. Because Apple v8 now exists, the unified successor must use v9 or a distinct schema identity.
 
 ## Rejected alternatives
 
@@ -124,16 +128,16 @@ Rejected. Adding a public field changes immutable contracts and historical signa
 
 Rejected. Implementation ownership and public schema support are independent. Rust must continue rendering historical profiles byte-for-byte.
 
-## Reopening this RFC
+## Acceptance of the reopened proposal
 
-Reopening requires a new reviewed change that supplies:
+Accepting RFC-0004 requires a reviewed change that supplies:
 
 - recorded M6/M8 release and rollback evidence;
-- a proposed v8 schema and canonical fixtures;
+- the proposed unified schema and canonical fixtures;
 - complete producer/consumer impact analysis;
 - a dual-read/write plan;
 - external consumer test results;
 - privacy/security review for source archives and provenance;
 - explicit owner approvals.
 
-Until then, the authoritative decision is to preserve Apple v7 and Android v4/v5 without a unified v8.
+Until then, the authoritative decision is to preserve shipped Apple v8 and Android v4/v5 without a production unified writer. The v9 schema, ledger, and fixtures are review artifacts only.

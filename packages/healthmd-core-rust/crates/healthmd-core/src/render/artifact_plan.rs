@@ -265,7 +265,7 @@ mod tests {
     #[test]
     fn detects_exact_case_and_unicode_collisions() {
         let mut exact =
-            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV7);
+            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV8);
         exact
             .add(
                 "Health/day.md".to_owned(),
@@ -285,7 +285,7 @@ mod tests {
         );
 
         let mut case =
-            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV7);
+            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV8);
         case.add(
             "Health/Day.md".to_owned(),
             "text/markdown",
@@ -304,7 +304,7 @@ mod tests {
         );
 
         let mut unicode =
-            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV7);
+            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV8);
         unicode
             .add(
                 "Caf\u{00e9}/day.md".to_owned(),
@@ -324,7 +324,7 @@ mod tests {
         );
 
         let mut casefold =
-            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV7);
+            ArtifactPlanBuilder::new("request", "session", SemanticProfile::AppleHealthDataV8);
         casefold
             .add(
                 "Straße/day.md".to_owned(),

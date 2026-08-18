@@ -400,6 +400,90 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDates_multiDayCompletesAndReportsProgressPerDay() async {
+        let baseDate = HealthKitFixtures.referenceDate
+        let calendar = Calendar.current
+        let dates = [0, 1, 2].compactMap {
+            calendar.date(byAdding: .day, value: $0, to: baseDate)
+        }
+        let store = FakeHealthStore()
+        for date in dates {
+            HealthKitFixtures.populateAllCategories(store, date: date)
+        }
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/ExportOrchestratorMultiDayProgressVault")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        var progress: [(processed: Int, total: Int, label: String)] = []
+
+        let result = await ExportOrchestrator.exportDates(
+            dates,
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings,
+            onProgress: { processed, total, label in
+                progress.append((processed, total, label))
+            }
+        )
+
+        XCTAssertEqual(result.successCount, 3)
+        XCTAssertTrue(result.didCompleteAllRequestedDates)
+        // Cooperative yields between days must not change onProgress delivery:
+        // one call per day plus the terminal completion call.
+        XCTAssertEqual(progress.map(\.0), [0, 1, 2, 3])
+        XCTAssertTrue(progress.allSatisfy { $0.total == 3 })
+        XCTAssertEqual(progress.dropLast().map(\.2), ["2026-03-15", "2026-03-16", "2026-03-17"])
+        XCTAssertEqual(progress.last?.processed, 3)
+        XCTAssertEqual(progress.last?.label, "2026-03-17")
+    }
+
+    @MainActor
+    func testExportDates_midLoopCancellationKeepsPartialResults() async {
+        let firstDate = HealthKitFixtures.referenceDate
+        let calendar = Calendar.current
+        let remainingDates = [1, 2].compactMap {
+            calendar.date(byAdding: .day, value: $0, to: firstDate)
+        }
+        let dates = [firstDate] + remainingDates
+        let store = FakeHealthStore()
+        for date in dates {
+            HealthKitFixtures.populateAllCategories(store, date: date)
+        }
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, _) = makeVaultManager(vaultPath: "/tmp/ExportOrchestratorMidLoopCancelVault")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.includeGranularData = false
+        var progressIndexes: [Int] = []
+
+        var exportTask: Task<ExportOrchestrator.ExportResult, Never>?
+        let task = Task { @MainActor in
+            await ExportOrchestrator.exportDates(
+                dates,
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                onProgress: { processed, _, _ in
+                    progressIndexes.append(processed)
+                    if processed == 1 {
+                        exportTask?.cancel()
+                    }
+                }
+            )
+        }
+        exportTask = task
+        let result = await task.value
+
+        // Cancellation lands either in day 1's write (CancellationError) or at
+        // day 2's loop check; both paths must preserve day 0's partial output.
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(progressIndexes, [0, 1], "Progress stops at the cancelled day")
+        XCTAssertGreaterThanOrEqual(result.successCount, 1)
+        XCTAssertLessThanOrEqual(result.successCount, 2)
+        XCTAssertEqual(result.completedDates?.first, firstDate)
+        XCTAssertEqual(result.completedDates?.count, result.successCount)
+    }
+
+    @MainActor
     func testDerivedOutputRetention_releasesLooseDaysAndStripsRollupArchives() {
         let date = HealthKitFixtures.referenceDate
         let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!
@@ -435,6 +519,50 @@ final class ExportOrchestratorTests: XCTestCase {
             settings: archiveSettings
         )
         XCTAssertNil(archiveRecord, "Archive source days are disk-backed instead of retained in memory")
+    }
+
+    @MainActor
+    func testDerivedOutputRetention_sanitizesGranularDayBeforeRollupRetention() {
+        let date = HealthKitFixtures.referenceDate
+        var healthData = HealthData(date: date)
+        healthData.activity.steps = 12_500
+        healthData.heart.heartRateSamples = [
+            TimeSample(timestamp: date, value: 72),
+            TimeSample(timestamp: date.addingTimeInterval(60), value: 75),
+        ]
+        healthData.heart.hrvSamples = [
+            TimeSample(timestamp: date, value: 42)
+        ]
+        healthData.vitals.bloodOxygenSamples = [
+            TimeSample(timestamp: date, value: 0.97)
+        ]
+        healthData.sleep.stages = [
+            SleepStageSample(
+                stage: "deep",
+                startDate: date,
+                endDate: date.addingTimeInterval(5_400)
+            )
+        ]
+
+        let rollupSettings = makeExportSettings(formats: [.json], rollupPeriods: [.weekly])
+        let retained = ExportOrchestrator.retainedHealthDataForDerivedOutputs(
+            healthData,
+            settings: rollupSettings
+        )
+
+        // Roll-ups only need daily aggregates; granular time-series must be
+        // sanitized before the day is retained for the whole-run window.
+        XCTAssertEqual(
+            retained?.activity.steps,
+            12_500,
+            "Aggregate metrics must survive retention for roll-up summaries"
+        )
+        XCTAssertTrue(retained?.heart.heartRateSamples.isEmpty == true)
+        XCTAssertTrue(retained?.heart.hrvSamples.isEmpty == true)
+        XCTAssertTrue(retained?.vitals.bloodOxygenSamples.isEmpty == true)
+        XCTAssertTrue(retained?.sleep.stages.isEmpty == true)
+        XCTAssertNil(retained?.healthKitRecordArchive)
+        XCTAssertEqual(retained?.healthKitRecordCaptureStatus, .notRequested)
     }
 
     @MainActor
@@ -945,6 +1073,7 @@ final class ExportOrchestratorTests: XCTestCase {
             defaults: defaults,
             fileSystem: fileSystem,
             bookmarkResolver: bookmarkResolver,
+            identityProbe: FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         manager.healthSubfolder = "Health"

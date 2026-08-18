@@ -7,7 +7,7 @@
     {"$ref": "#/$defs/batch"}
   ],
   "$defs": {
-    "profile": {"enum": ["apple_health_data_v7", "android_frozen_v4", "android_analytical_v5"]},
+    "profile": {"enum": ["apple_health_data_v8", "android_frozen_v4", "android_analytical_v5"]},
     "format": {"enum": ["markdown", "obsidian_bases", "json", "csv"]},
     "configuration": {
       "type": "object",
@@ -21,7 +21,7 @@
         "registry_version": {"const": 1},
         "registry_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "profile_revision": {"const": 1},
-        "render_profile_revision": {"const": 1},
+        "render_profile_revision": {"const": 2},
         "request_id": {"type": "string", "minLength": 1, "maxLength": 128},
         "session_id": {"type": "string", "minLength": 1, "maxLength": 128},
         "profile": {"$ref": "#/$defs/profile"},

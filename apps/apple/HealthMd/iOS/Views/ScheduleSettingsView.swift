@@ -24,7 +24,7 @@ struct ScheduleRetryExportPolicy {
         case .noFormatsSelected:
             reason = .unknown
             details = exportError.localizedDescription
-        case .dailyNotePathConflict, .invalidExportPath:
+        case .markdownMergeRejected, .dailyNotePathConflict, .invalidExportPath:
             reason = .fileWriteError
             details = exportError.localizedDescription
         }
@@ -318,11 +318,12 @@ struct ScheduleSettingsView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .alert("Today Refresh", isPresented: $showTodayRefreshInfo) {
-            Button("Got it", role: .cancel) {}
-        } message: {
-            Text(todayRefreshInfoMessage)
-        }
+        .geistDialog(
+            isPresented: $showTodayRefreshInfo,
+            title: Text("Today Refresh"),
+            message: Text(todayRefreshInfoMessage),
+            actions: [.action("Got it", role: .secondary)]
+        )
         .overlay {
             if isRetrying {
                 RetryProgressOverlay(
@@ -331,11 +332,12 @@ struct ScheduleSettingsView: View {
                 )
             }
         }
-        .alert("Retry Failed", isPresented: $showRetryError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(retryErrorMessage)
-        }
+        .geistDialog(
+            isPresented: $showRetryError,
+            title: Text("Retry Failed"),
+            message: Text(retryErrorMessage),
+            actions: [.action("OK", role: .secondary)]
+        )
     }
 
     // MARK: - Sections
@@ -888,7 +890,9 @@ struct ScheduleSettingsView: View {
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            // See the export tab: prompt from current destination usability, not
+            // retained-selection metadata, so unavailable folders still open the picker.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
@@ -959,7 +963,10 @@ struct ScheduleSettingsView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -1263,13 +1270,14 @@ struct ScheduleSettingsView: View {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             await MainActor.run {
                 retryErrorMessage = ExportFailureReason.accessDenied.detailedDescription
                 showRetryError = true
             }
             return
         }
+        defer { accessLease.stop() }
 
         let totalDays = datesToExport.count
         var successCount = 0
@@ -1318,6 +1326,7 @@ struct ScheduleSettingsView: View {
                     )
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 looseAggregateFileCount += writeResult.aggregateFileCount
                 individualEntryFileCount += writeResult.individualEntryFileCount
                 dataDictionaryFileCount += writeResult.dataDictionaryFileCount
@@ -1339,8 +1348,6 @@ struct ScheduleSettingsView: View {
                 )
             }
         }
-
-        vaultManager.stopVaultAccess()
 
         await MainActor.run {
             retryProgress = 1.0

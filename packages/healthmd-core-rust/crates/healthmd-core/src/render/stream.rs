@@ -338,7 +338,7 @@ mod tests {
             StreamArtifactConfig {
                 request_id: "stream-request".to_owned(),
                 session_id: "stream-session".to_owned(),
-                profile: SemanticProfile::AppleHealthDataV7,
+                profile: SemanticProfile::AppleHealthDataV8,
                 relative_path: "Health/Raw/archive.json".to_owned(),
                 media_type: "application/json".to_owned(),
                 write_mode: WriteMode::Overwrite,
@@ -360,7 +360,7 @@ mod tests {
                 StreamArtifactConfig {
                     request_id: "request".to_owned(),
                     session_id: "session".to_owned(),
-                    profile: SemanticProfile::AppleHealthDataV7,
+                    profile: SemanticProfile::AppleHealthDataV8,
                     relative_path: "../private".to_owned(),
                     media_type: "application/json".to_owned(),
                     write_mode: WriteMode::Overwrite,

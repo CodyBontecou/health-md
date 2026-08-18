@@ -35,6 +35,16 @@ enum AccessibilityID {
         static let activityBanner = "export.activityBanner"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
+
+        // Large interactive export confirmation (Export tab only).
+        // SwiftUI alert titles cannot carry accessibility identifiers; the
+        // `largeExportConfirmationTitle` constant documents the alert's stable
+        // identifier while UI tests match the alert by its localized title text,
+        // matching how the other Export tab alerts are located.
+        static let largeExportConfirmationTitle = "export.confirmLargeExport.title"
+        static let largeExportConfirmationMessage = "export.confirmLargeExport.message"
+        static let largeExportConfirmationConfirmButton = "export.confirmLargeExport.confirmButton"
+        static let largeExportConfirmationCancelButton = "export.confirmLargeExport.cancelButton"
     }
 
     // MARK: - Mac Destination
@@ -132,6 +142,18 @@ enum AccessibilityID {
         static let vaultRow = "settings.vaultRow"
         static let exportSettingsRow = "settings.exportSettingsRow"
         static let macSyncRow = "settings.macSyncRow"
+    }
+
+    // MARK: - Shared Setup
+    enum SharedSetup {
+        static let configurationCard = "sharedSetup.configurationCard"
+        static let use = "sharedSetup.use"
+        static let share = "sharedSetup.share"
+        static let review = "sharedSetup.review"
+        static let apply = "sharedSetup.apply"
+        static let success = "sharedSetup.success"
+        static let undo = "sharedSetup.undo"
+        static let finish = "sharedSetup.finish"
     }
 
     // MARK: - Configuration Protection

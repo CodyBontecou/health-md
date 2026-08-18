@@ -594,3 +594,46 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | Summary | Workouts | Swimming Start Time | 5 | time | no | no | 1 |
 | Summary | Workouts | Workout Activity Type | 6 | empty | yes | yes | 3 |
 | Summary | Workouts | Workout Sport | 6 | empty | yes | yes | 3 |
+| WHOOP provider | Activity | Steps | 5 | count | no | no | 1 |
+| WHOOP provider | Metadata | schema | 6 | empty | yes | no | 1 |
+| WHOOP provider | Metadata | schema_version | 6 | empty | yes | no | 1 |
+| WHOOP provider | Metadata | time_context.calendar_timezone | 6 | empty | yes | no | 1 |
+| WHOOP provider | Metadata | time_context.timestamp_timezone | 6 | empty | yes | no | 1 |
+| WHOOP provider | Metadata | unit_system | 6 | empty | yes | no | 1 |
+| WHOOP provider | Raw HealthKit | Raw Capture Status | 6 | status | yes | no | 1 |
+| WHOOP provider | WHOOP Body | Body Height Snapshot | 6 | m | yes | no | 1 |
+| WHOOP provider | WHOOP Body | Body Snapshot | 6 | json | yes | no | 1 |
+| WHOOP provider | WHOOP Body | Body Weight Snapshot | 6 | kg | yes | no | 1 |
+| WHOOP provider | WHOOP Body | Maximum Heart Rate Snapshot | 6 | bpm | yes | no | 1 |
+| WHOOP provider | WHOOP Capture | Capture Status | 6 | status | yes | no | 1 |
+| WHOOP provider | WHOOP Capture | Resource Result | 6 | json | yes | no | 5 |
+| WHOOP provider | WHOOP Cycle | Cycle Average Heart Rate | 6 | bpm | yes | yes | 1 |
+| WHOOP provider | WHOOP Cycle | Cycle Energy | 6 | kJ | yes | yes | 1 |
+| WHOOP provider | WHOOP Cycle | Cycle Maximum Heart Rate | 6 | bpm | yes | yes | 1 |
+| WHOOP provider | WHOOP Cycle | Cycle Record | 6 | json | yes | yes | 1 |
+| WHOOP provider | WHOOP Cycle | Cycle Strain Score | 6 | score | yes | yes | 1 |
+| WHOOP provider | WHOOP Recovery | HRV (RMSSD) | 6 | ms | yes | no | 1 |
+| WHOOP provider | WHOOP Recovery | Recovery Record | 6 | json | yes | no | 1 |
+| WHOOP provider | WHOOP Recovery | Recovery Score | 6 | percent | yes | no | 1 |
+| WHOOP provider | WHOOP Recovery | Resting Heart Rate | 6 | bpm | yes | no | 1 |
+| WHOOP provider | WHOOP Recovery | Skin Temperature | 6 | °C | yes | no | 1 |
+| WHOOP provider | WHOOP Recovery | SpO₂ | 6 | percent | yes | no | 1 |
+| WHOOP provider | WHOOP Sleep | Awake Duration | 6 | ms | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Light Sleep Duration | 6 | ms | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | REM Sleep Duration | 6 | ms | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Recent Nap Adjustment | 6 | ms | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Respiratory Rate | 6 | breaths/min | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Sleep Consistency | 6 | percent | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Sleep Efficiency | 6 | percent | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Sleep Performance | 6 | percent | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Sleep Record | 6 | json | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Slow Wave Sleep Duration | 6 | ms | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Total In Bed | 6 | ms | yes | yes | 1 |
+| WHOOP provider | WHOOP Sleep | Total Sleep | 6 | ms | yes | yes | 1 |
+| WHOOP provider | WHOOP Workout | Workout Average Heart Rate | 6 | bpm | yes | yes | 1 |
+| WHOOP provider | WHOOP Workout | Workout Distance | 6 | m | yes | yes | 1 |
+| WHOOP provider | WHOOP Workout | Workout Energy | 6 | kJ | yes | yes | 1 |
+| WHOOP provider | WHOOP Workout | Workout Maximum Heart Rate | 6 | bpm | yes | yes | 1 |
+| WHOOP provider | WHOOP Workout | Workout Record | 6 | json | yes | yes | 1 |
+| WHOOP provider | WHOOP Workout | Workout Sport | 6 | empty | yes | yes | 1 |
+| WHOOP provider | WHOOP Workout | Workout Strain Score | 6 | score | yes | yes | 1 |
