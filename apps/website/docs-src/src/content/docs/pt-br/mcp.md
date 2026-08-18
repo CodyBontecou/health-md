@@ -231,6 +231,19 @@ Primeiro, selecione e mantenha uma pasta de destino gravável no Health.md para 
 
 Use `date_selection: "all_available"` sem `date_range` para obter todo o histórico. Os campos opcionais `metric_ids`, `categories` ou `all_metrics` restringem a aquisição no iPhone sem alterar as configurações salvas. `detail_level` se aplica somente quando uma dessas seleções está presente. `all_metrics` não pode ser combinado com listas explícitas de métricas ou categorias.
 
+Para executar um perfil de exportação salvo, defina `settings_policy` como `"profile"` e passe `profile_reference` com o UUID estável do perfil (um `name` de exibição opcional é registrado apenas para erros):
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+O perfil é o dono do escopo de configurações: `profile_reference` não pode ser combinado com `metric_ids`, `categories`, `all_metrics` nem com a política de configurações salvas, e um UUID desconhecido falha com um erro tipado em vez de recorrer às configurações ativas.
+
 Inspecione:
 
 - `status` e `state` persistente;

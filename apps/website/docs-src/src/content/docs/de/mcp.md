@@ -231,6 +231,19 @@ Wählen und speichern Sie zuerst in Health.md für Mac einen beschreibbaren Ziel
 
 Für eine vollständige Historie verwenden Sie `date_selection: "all_available"` ohne `date_range`. Mit den optionalen Feldern `metric_ids`, `categories` oder `all_metrics` begrenzen Sie die iPhone-Erfassung, ohne gespeicherte Einstellungen zu ändern. `detail_level` gilt nur, wenn eine dieser Auswahlmöglichkeiten vorhanden ist. `all_metrics` kann nicht mit expliziten Metrik-/Kategorielisten kombiniert werden.
 
+Um stattdessen ein gespeichertes Export-Profil auszuführen, setzen Sie `settings_policy` auf `"profile"` und übergeben Sie `profile_reference` mit der stabilen UUID des Profils (ein optionaler Anzeige-`name` wird nur für Fehler protokolliert):
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+Das Profil besitzt den Einstellungsbereich: `profile_reference` lässt sich nicht mit `metric_ids`, `categories`, `all_metrics` oder der Gespeicherte-Einstellungen-Richtlinie kombinieren, und eine unbekannte UUID schlägt mit einem typisierten Fehler fehl, anstatt auf live Einstellungen zurückzufallen.
+
 Überprüfen:
 
 - `status` und persistenter `state`;

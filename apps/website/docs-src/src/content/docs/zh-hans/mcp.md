@@ -231,6 +231,19 @@ healthmd mcp schema # complete fixed catalog
 
 要获取完整历史记录，请使用 `date_selection: "all_available"`，并省略 `date_range`。可选的 `metric_ids`、`categories` 或 `all_metrics` 会缩小 iPhone 获取范围，但不会更改已保存的设置。只有提供其中一种选择时，`detail_level` 才适用。`all_metrics` 不能与明确的指标或类别列表组合。
 
+要改为运行已保存的导出配置文件，请将 `settings_policy` 设为 `"profile"`，并传入带有该配置文件稳定 UUID 的 `profile_reference`（可选的显示用 `name` 仅用于错误记录）：
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+配置文件拥有设置范围：`profile_reference` 不能与 `metric_ids`、`categories`、`all_metrics` 或已保存设置策略组合，未知的 UUID 会以类型化错误失败，而不会回退到当前设置。
+
 请检查：
 
 - `status` 和持久 `state`；

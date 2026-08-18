@@ -5,16 +5,23 @@ description: "Otto App Intent consentono di avviare esportazioni, ottenere riepi
 
 ## Intent disponibili
 <div class="options">
-<div class="option"><strong>Esporta i dati sanitari di ieri</strong><p>Comando rapido senza parametri. Il modo più veloce per «esportare semplicemente i dati di ieri senza ulteriori interazioni». Usa lo stesso motore dell'esportazione manuale.</p></div>
-<div class="option"><strong>Esporta i dati sanitari per una data</strong><p>Un solo parametro <em>Data</em>. L'ora viene ignorata. Utile nelle automazioni basate sul calendario.</p></div>
-<div class="option"><strong>Esporta i dati sanitari per un intervallo di date</strong><p>Parametri <em>Data di inizio</em> e <em>Data di fine</em>, entrambe incluse. Utile per recuperare dati pregressi.</p></div>
-<div class="option"><strong>Esporta i dati sanitari degli ultimi N giorni</strong><p>Parametro <em>Numero di giorni</em> (1–366). L'intervallo termina ieri. Il valore predefinito è 7. Ideale per automazioni come «ogni domenica, esporta gli ultimi 7 giorni».</p></div>
+<div class="option"><strong>Esporta i dati sanitari di ieri</strong><p>Comando rapido senza parametri. Il modo più veloce per «esportare semplicemente i dati di ieri senza ulteriori interazioni». Usa lo stesso motore dell'esportazione manuale. Parametro opzionale <em>Profilo</em> (vedi <a href="#profiles">Profili di esportazione</a>).</p></div>
+<div class="option"><strong>Esporta i dati sanitari per una data</strong><p>Un solo parametro <em>Data</em>. L'ora viene ignorata. Utile nelle automazioni basate sul calendario. Parametro opzionale <em>Profilo</em>.</p></div>
+<div class="option"><strong>Esporta i dati sanitari per un intervallo di date</strong><p>Parametri <em>Data di inizio</em> e <em>Data di fine</em>, entrambe incluse. Utile per recuperare dati pregressi. Parametro opzionale <em>Profilo</em>.</p></div>
+<div class="option"><strong>Esporta i dati sanitari degli ultimi N giorni</strong><p>Parametro <em>Numero di giorni</em> (1–366). L'intervallo termina ieri. Il valore predefinito è 7. Ideale per automazioni come «ogni domenica, esporta gli ultimi 7 giorni». Parametro opzionale <em>Profilo</em>.</p></div>
 <div class="option"><strong>Ottieni il riepilogo sanitario per una data</strong><p>Restituisce un'istantanea strutturata — passi, calorie attive, sonno, frequenza cardiaca — senza scrivere nulla nella cartella. Puoi usarla in Comandi Rapidi per passare i valori ad altre app.</p></div>
 <div class="option"><strong>Ottieni lo stato dell'ultima esportazione</strong><p>Restituisce la data e l'ora, lo stato di riuscita, il numero di giorni e l'eventuale motivo dell'errore dell'esportazione registrata più recente. Una richiesta effettuata con il dispositivo bloccato rimane in sospeso fino a un nuovo tentativo e, finché è in sospeso, non viene restituita come stato corrente.</p></div>
 <div class="option"><strong>Attiva o disattiva l'esportazione programmata</strong><p>Parametro booleano. Consente di sospendere la programmazione, ad esempio durante la modalità Full immersion Vacanza, e di riattivarla in seguito.</p></div>
-<div class="option"><strong>Esporta i dati sanitari</strong><p>Esportazione generica: usa l'intervallo di date dell'ultimo stato della finestra modale Esporta nell'app. È usata meno frequentemente; le varianti con intervallo di date sono in genere più chiare.</p></div>
+<div class="option"><strong>Esporta i dati sanitari</strong><p>Esportazione generica: usa l'intervallo di date dell'ultimo stato della finestra modale Esporta nell'app. È usata meno frequentemente; le varianti con intervallo di date sono in genere più chiare. Parametro opzionale <em>Profilo</em>.</p></div>
 </div>
 
+<a id="profiles"></a>
+## Profili di esportazione
+<p>I cinque intent di esportazione accettano un parametro opzionale <em>Profilo</em>. Lascialo vuoto per eseguire con le impostazioni di esportazione attuali dell'app; indica il nome di un profilo salvato per eseguire la configurazione congelata di quel profilo — selezione delle metriche, formati e destinazione — indipendentemente da ciò che l'app mostra al momento.</p>
+<div class="callout">
+<strong>Attenzione per i collegamenti esistenti senza parametri.</strong>
+<p style="margin-top:6px;">Dopo aver creato il primo profilo di esportazione nell'app, un collegamento senza <em>Profilo</em> impostato esporta usando le impostazioni salvate del profilo <em>attivo</em> anziché le impostazioni attive dell'app. Se ti affidi al comportamento precedente, fissa il collegamento a un profilo specifico (oppure mantieni zero profili) per restare esplicito. Un nome profilo inesistente fallisce con un errore chiaro invece di esportare la cosa sbagliata.</p>
+</div>
 ## Dove trovarli
 <p>Apri l'app Comandi Rapidi su iOS o macOS. Tocca il pulsante <em>+</em> per creare un nuovo comando rapido, quindi cerca &quot;Health.md&quot; o uno dei titoli degli intent riportati sopra. Sono disponibili nella categoria <em>Salute</em>.</p>
 <p>La maggior parte degli intent usa <code>openAppWhenRun = false</code>, quindi viene eseguita senza interfaccia: l'app non si apre e non compare alcuna schermata. Funzionano con le automazioni, i filtri delle modalità Full immersion, le richieste a “Ehi Siri” e il tasto Azione.</p>

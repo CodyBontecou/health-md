@@ -20,6 +20,13 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// Frozen output-affecting settings for durable scheduled work. A missing snapshot identifies
     /// an explicitly legacy request that continues to read mutable settings at execution time.
     let settingsSnapshot: ExportSettingsSnapshot?
+    /// Export profile this scheduled request runs (phase 3). Per-profile
+    /// in-flight identity: two profiles' pending requests never deduplicate
+    /// each other. Nil identifies legacy profile-free requests.
+    let profileID: UUID?
+    /// Display name captured at queue time for notifications and history
+    /// labels. Not used for resolution — `profileID` is authoritative.
+    let profileName: String?
 
     var usesLegacyMutableSettings: Bool { settingsSnapshot == nil }
 
@@ -33,6 +40,8 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         notificationMetadata: [String: String] = [:],
         exportTarget: ExportTargetSelection? = nil,
         settingsSnapshot: ExportSettingsSnapshot? = nil,
+        profileID: UUID? = nil,
+        profileName: String? = nil,
         calendar: Calendar = .current
     ) {
         self.id = id
@@ -44,6 +53,8 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.notificationMetadata = notificationMetadata
         self.exportTarget = source == .scheduled ? exportTarget : nil
         self.settingsSnapshot = settingsSnapshot
+        self.profileID = source == .scheduled ? profileID : nil
+        self.profileName = source == .scheduled ? profileName : nil
     }
 
     init(from decoder: Decoder) throws {
@@ -65,6 +76,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
             ExportSettingsSnapshot.self,
             forKey: .settingsSnapshot
         )
+        // Phase-3 identity is additive: legacy persisted requests decode as
+        // profile-free and keep their legacy execution path.
+        profileID = try container.decodeIfPresent(UUID.self, forKey: .profileID)
+        profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
     }
 
     private static func normalizedDates(_ dates: [Date], calendar: Calendar = .current) -> [Date] {

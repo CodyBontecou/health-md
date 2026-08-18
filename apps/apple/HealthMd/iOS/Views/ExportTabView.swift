@@ -44,6 +44,9 @@ struct ExportTabView: View {
     let canExport: Bool
     var onCancelExport: (() -> Void)?
     let onExportTapped: () -> Void
+    /// Optional profile switcher section rendered above the target section
+    /// once export profiles are active. See `ExportProfilePickerSection`.
+    var profileSection: AnyView? = nil
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -88,6 +91,9 @@ struct ExportTabView: View {
                     heroHeader
                     statusBadges
                         .configurationChangesProtected()
+                    if let profileSection {
+                        profileSection
+                    }
                     clinicianReportSection
                     exportTargetSection
                         .configurationChangesProtected()

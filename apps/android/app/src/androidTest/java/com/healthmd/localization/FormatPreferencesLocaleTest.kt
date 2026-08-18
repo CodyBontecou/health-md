@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.healthmd.domain.model.DateFormatPreference
 import java.time.LocalDate
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,13 +27,18 @@ class FormatPreferencesLocaleTest {
             }
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
 
-            val appLocale = InstrumentationRegistry.getInstrumentation()
-                .targetContext
-                .resources
-                .configuration
-                .locales[0]
+            // Per-app locale changes propagate to the target context's
+            // configuration asynchronously (activity/config update), which
+            // waitForIdleSync does not cover; poll briefly so the assertion
+            // does not race the system locale broadcast.
+            val deadline = System.currentTimeMillis() + 10_000
+            var appLocale = currentAppLocale()
+            while (appLocale.language != "fr" && System.currentTimeMillis() < deadline) {
+                Thread.sleep(200)
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+                appLocale = currentAppLocale()
+            }
             val formatted = DateFormatPreference.US_LONG.format(LocalDate.of(2026, 1, 13))
-
             assertEquals("fr", appLocale.language)
             assertTrue("expected a French month name, got: $formatted", formatted.contains("janvier"))
         } finally {
@@ -42,4 +48,11 @@ class FormatPreferencesLocaleTest {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         }
     }
+
+    private fun currentAppLocale(): Locale =
+        InstrumentationRegistry.getInstrumentation()
+            .targetContext
+            .resources
+            .configuration
+            .locales[0]
 }

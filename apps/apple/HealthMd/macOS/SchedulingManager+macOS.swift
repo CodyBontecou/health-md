@@ -98,6 +98,19 @@ class SchedulingManager: ObservableObject {
         }
     }
 
+    /// Phase-3 shim matching the iOS scheduling surface: macOS scheduling
+    /// remains single-schedule (per-profile scheduled entries are an iOS
+    /// runtime feature), so activity mirrors the legacy schedule. Shared UI
+    /// compiled for both platforms reads this instead of `schedule.isEnabled`.
+    var isSchedulingActive: Bool { schedule.isEnabled }
+
+    /// Phase-3 shim: re-arm macOS automation for the current state. macOS owns
+    /// a polling timer plus the worker mirror rather than BGTask wake-ups.
+    func refreshScheduledAutomation() {
+        rescheduleTimer()
+        PushRegistrationManager.shared.syncSchedule(schedule)
+    }
+
     private var exportTimer: Timer?
     private var isExporting = false
     private let pendingExportStore = PendingExportStore()

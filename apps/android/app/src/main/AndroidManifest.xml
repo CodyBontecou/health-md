@@ -233,6 +233,11 @@
             android:name=".data.scheduler.ScheduledExportAlarmReceiver"
             android:exported="false" />
 
+        <!-- Explicit-only per-profile exact alarm receiver (phase 6). -->
+        <receiver
+            android:name=".data.scheduler.ScheduledProfileAlarmReceiver"
+            android:exported="false" />
+
         <!-- Restore one-shot alarms after reboot, app update, clock changes, and access changes. -->
         <receiver
             android:name=".data.scheduler.BootReceiver"

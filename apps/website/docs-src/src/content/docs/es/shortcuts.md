@@ -5,16 +5,23 @@ description: "Ocho App Intents te permiten iniciar exportaciones, obtener resúm
 
 ## Intents disponibles
 <div class="options">
-<div class="option"><strong>Exportar los datos de salud de ayer</strong><p>Atajo sin parámetros. La ruta rápida para "exportar los datos de ayer y no molestar más". Usa el mismo motor que la exportación manual.</p></div>
-<div class="option"><strong>Exportar datos de salud para una fecha</strong><p>Un único parámetro de <em>Fecha</em>. La hora del día se ignora. Resulta útil en automatizaciones basadas en calendario.</p></div>
-<div class="option"><strong>Exportar datos de salud para un intervalo de fechas</strong><p>Parámetros de <em>Fecha inicial</em> y <em>Fecha final</em>, inclusivos en ambos extremos. Úsalo para cargas históricas.</p></div>
-<div class="option"><strong>Exportar los últimos N días de datos de salud</strong><p>Parámetro <em>Número de días</em> (1–366). Termina ayer. Valor predeterminado: 7. Bueno para automatizaciones como "cada domingo, exportar los últimos 7 días".</p></div>
+<div class="option"><strong>Exportar los datos de salud de ayer</strong><p>Atajo sin parámetros. La ruta rápida para "exportar los datos de ayer y no molestar más". Usa el mismo motor que la exportación manual. Parámetro opcional <em>Perfil</em> (véase <a href="#profiles">Perfiles de exportación</a>).</p></div>
+<div class="option"><strong>Exportar datos de salud para una fecha</strong><p>Un único parámetro de <em>Fecha</em>. La hora del día se ignora. Resulta útil en automatizaciones basadas en calendario. Parámetro opcional <em>Perfil</em>.</p></div>
+<div class="option"><strong>Exportar datos de salud para un intervalo de fechas</strong><p>Parámetros de <em>Fecha inicial</em> y <em>Fecha final</em>, inclusivos en ambos extremos. Úsalo para cargas históricas. Parámetro opcional <em>Perfil</em>.</p></div>
+<div class="option"><strong>Exportar los últimos N días de datos de salud</strong><p>Parámetro <em>Número de días</em> (1–366). Termina ayer. Valor predeterminado: 7. Bueno para automatizaciones como "cada domingo, exportar los últimos 7 días". Parámetro opcional <em>Perfil</em>.</p></div>
 <div class="option"><strong>Obtener resumen de salud para una fecha</strong><p>Devuelve una instantánea estructurada: pasos, calorías activas, sueño y frecuencia cardíaca, sin escribir nada en la bóveda. Úsalo en Shortcuts para pasar valores a otras apps.</p></div>
 <div class="option"><strong>Obtener estado de la última exportación</strong><p>Devuelve la marca de tiempo, el estado de éxito, el recuento de días y cualquier motivo de fallo de la exportación registrada más reciente. Una solicitud con el dispositivo bloqueado queda pendiente hasta que se reintente, por lo que no se devuelve como estado actual mientras está pendiente.</p></div>
 <div class="option"><strong>Activar o desactivar exportación programada</strong><p>Parámetro booleano. Úsalo para suspender la programación, por ejemplo durante una Concentración de vacaciones, y reanudarla más tarde.</p></div>
-<div class="option"><strong>Exportar datos de salud</strong><p>Exportación genérica: usa el intervalo de fechas del último estado del modal Exportar dentro de la app. Es menos común; las variantes con intervalo de fechas suelen ser más claras.</p></div>
+<div class="option"><strong>Exportar datos de salud</strong><p>Exportación genérica: usa el intervalo de fechas del último estado del modal Exportar dentro de la app. Es menos común; las variantes con intervalo de fechas suelen ser más claras. Parámetro opcional <em>Perfil</em>.</p></div>
 </div>
 
+<a id="profiles"></a>
+## Perfiles de exportación
+<p>Los cinco intents de exportación aceptan un parámetro opcional <em>Perfil</em>. Déjalo vacío para ejecutar con tus ajustes de exportación actuales de la app; pasa el nombre de un perfil guardado para ejecutar la configuración congelada de ese perfil —su selección de métricas, formatos y destino— sin importar lo que la app muestre en ese momento.</p>
+<div class="callout">
+<strong>Atención para los atajos existentes sin parámetro.</strong>
+<p style="margin-top:6px;">Una vez que crees tu primer perfil de exportación en la app, un atajo sin <em>Perfil</em> definido exporta usando los ajustes guardados del perfil <em>activo</em> en lugar de los ajustes en vivo de la app. Si dependes del comportamiento anterior, fija el atajo a un perfil concreto (o mantén cero perfiles) para seguir siendo explícito. Un nombre de perfil que ya no existe falla con un error claro en lugar de exportar lo incorrecto.</p>
+</div>
 ## Dónde encontrarlos
 <p>Abre la app Shortcuts en iOS o macOS. Toca el botón <em>+</em> para crear un nuevo atajo y busca &quot;Health.md&quot; o cualquiera de los títulos de intent anteriores. Están en la categoría <em>Salud</em>.</p>
 <p>La mayoría de los intents tienen <code>openAppWhenRun = false</code>, así que se ejecutan sin abrir la app: sin lanzamiento visible ni parpadeo de interfaz. Funcionan desde automatizaciones, filtros de Concentración, el traspaso de Hey Siri y el Action Button.</p>

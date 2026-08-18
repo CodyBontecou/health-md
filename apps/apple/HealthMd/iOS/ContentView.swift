@@ -54,6 +54,7 @@ struct ContentView: View {
     @State private var showMarketingPaywall = false
     @State private var showMarketingOnboarding = false
     @AppStorage(ExportTargetSelection.storageKey) private var exportTargetSelection: ExportTargetSelection = .localIPhoneFolder
+    @State private var profileCoordinator: ExportProfileCoordinator?
     @EnvironmentObject var externalIntegrationManager: ExternalIntegrationManager
     @State private var activeMacExportJobID: UUID?
     @State private var macExportPayloadSent = false
@@ -109,6 +110,7 @@ struct ContentView: View {
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
                     vaultManager.setVaultFolder(url)
+                    profileCoordinator?.vaultFolderWasSelected()
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -152,7 +154,10 @@ struct ContentView: View {
                         presentFirstExportPreview: $presentFirstExportPreview,
                         canExport: canExport,
                         onCancelExport: cancelExport,
-                        onExportTapped: exportData
+                        onExportTapped: exportData,
+                        profileSection: profileCoordinator.map {
+                            AnyView(ExportProfilePickerSection(coordinator: $0))
+                        }
                     )
                     .tabItem {
                         Label("Export", systemImage: "arrow.up.doc.fill")
@@ -192,6 +197,20 @@ struct ContentView: View {
                     .tag(NavTab.settings)
                 }
                 .tint(Color.accent)
+                .task { ensureProfileCoordinator() }
+                .onChange(of: exportTargetSelection) { _, newValue in
+                    profileCoordinator?.userSelectedTarget(newValue)
+                }
+                .onChange(of: profileCoordinator?.activeTarget) { _, newValue in
+                    guard let newValue, newValue != exportTargetSelection else { return }
+                    exportTargetSelection = newValue
+                }
+                .onChange(of: apiExportSettings.endpointURLString) { _, _ in
+                    profileCoordinator?.apiEndpointDidChange()
+                }
+                .onChange(of: apiExportSettings.bearerToken) { _, _ in
+                    profileCoordinator?.apiEndpointDidChange()
+                }
                 .onAppear {
                     if directCLIService.pendingPairingLink != nil { selectedTab = .sync }
                 }
@@ -874,6 +893,23 @@ struct ContentView: View {
 
     // MARK: - Export
 
+    /// Lazily builds the export-profile coordinator after the main UI exists.
+    /// Bootstrapping synthesizes the migration Default profile (bound to the
+    /// current settings, vault, and API endpoint) on first profile-mode
+    /// launch and activates the persisted active profile thereafter.
+    private func ensureProfileCoordinator() {
+        guard profileCoordinator == nil else { return }
+        profileCoordinator = ExportProfileCoordinator(
+            profileStore: ExportProfileStore(),
+            destinationStore: ProfileDestinationStore(),
+            scheduledEntryStore: ScheduledExportEntryStore(),
+            settings: advancedSettings,
+            vaultManager: vaultManager,
+            apiExportSettings: apiExportSettings,
+            initialTarget: exportTargetSelection
+        )
+    }
+
     private func cancelExport() {
         if let jobID = activeMacExportJobID,
            corpusRecoveryManager.journal(jobID: jobID) != nil {
@@ -899,6 +935,9 @@ struct ContentView: View {
     }
 
     private func exportData() {
+        // Persist any in-flight profile edits before freezing the request.
+        profileCoordinator?.flushEdits()
+
         // Durable work outlives this view and even the app process. Repeated
         // taps should focus that immutable export, not create a competing job.
         if restoreInteractiveCorpusExportIfNeeded() { return }

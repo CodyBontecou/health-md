@@ -583,6 +583,38 @@ class AdvancedExportSettings: ObservableObject {
         subscribeToDailyNoteInjection()
     }
 
+    /// Loads a frozen profile snapshot into this live settings object so the
+    /// active export profile becomes the editing authority. Mirrors the
+    /// snapshot restore used by `init(snapshot:userDefaults:)` without
+    /// replacing the object identity SwiftUI and the export pipeline observe.
+    /// Each published property observer persists to this object's defaults,
+    /// which keeps the legacy backing store synchronized with the loaded
+    /// profile; the profile itself remains the durable source of truth.
+    func apply(snapshot: ExportSettingsSnapshot) {
+        snapshot.metricSelection.apply(to: metricSelection)
+        snapshot.formatCustomization.apply(to: formatCustomization)
+        snapshot.individualTracking.apply(to: individualTracking)
+        snapshot.dailyNoteInjection.apply(to: dailyNoteInjection)
+
+        exportFormats = snapshot.exportFormats
+        includeMetadata = snapshot.includeMetadata
+        groupByCategory = snapshot.groupByCategory
+        filenameFormat = snapshot.filenameFormat
+        folderStructure = snapshot.folderStructure
+        organizeFormatsIntoFolders = snapshot.organizeFormatsIntoFolders
+        archiveExportFiles = snapshot.archiveExportFiles
+        includeDataDictionary = snapshot.includeDataDictionary
+        summaryOnlyExport = snapshot.summaryOnlyExport
+        writeMode = snapshot.writeMode
+        includeGranularData = snapshot.includeGranularData
+        generateWeeklyRollups = snapshot.generateWeeklyRollups
+        generateMonthlyRollups = snapshot.generateMonthlyRollups
+        generateYearlyRollups = snapshot.generateYearlyRollups
+        executionAppleExportEnginePin = snapshot.appleExportEnginePin
+        executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
+        exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
+    }
+
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
 

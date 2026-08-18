@@ -15,6 +15,14 @@ struct ExportLastNDaysIntent: AppIntent {
 
     static var openAppWhenRun: Bool = false
 
+    /// Optional export profile name (trimmed, case-insensitive). Empty uses
+    /// the active profile once profiles exist.
+    @Parameter(
+        title: "Profile",
+        description: "Name of the export profile to run. Leave empty to use the active profile."
+    )
+    var profile: String?
+
     @Parameter(
         title: "Number of Days",
         description: "How many days back to export, ending yesterday.",
@@ -59,7 +67,7 @@ struct ExportLastNDaysIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let dates = Self.exportDates(days: days)
-        let outcome = await ExportIntentRunner.run(dates: dates)
+        let outcome = await ExportIntentRunner.run(dates: dates, profileName: profile)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }
 }

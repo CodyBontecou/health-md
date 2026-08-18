@@ -1828,6 +1828,67 @@ final class VaultManager: ObservableObject {
         defaults.set(healthSubfolder, forKey: Self.subfolderKey)
     }
 
+    /// Read-only view of the currently persisted vault destination, used by
+    /// the export-profile destination store to seed or rebind profile-bound
+    /// folders without duplicating bookmark-key knowledge outside this class.
+    struct PersistedVaultSnapshot {
+        let bookmarkData: Data
+        let standardizedPath: String
+        let displayName: String
+    }
+
+    /// Returns the persisted bookmark and trusted selection when a complete,
+    /// current vault selection exists; nil when no folder is saved.
+    func persistedVaultSnapshot() -> PersistedVaultSnapshot? {
+        guard let bookmarkData = defaults.data(forKey: bookmarkKey) else { return nil }
+
+        if let savedData = defaults.data(forKey: vaultSelectionKey),
+           let decoded = try? JSONDecoder().decode(SavedVaultSelection.self, from: savedData),
+           decoded.version == Self.savedSelectionVersion,
+           !decoded.standardizedPath.isEmpty {
+            return PersistedVaultSnapshot(
+                bookmarkData: bookmarkData,
+                standardizedPath: decoded.standardizedPath,
+                displayName: decoded.displayName
+            )
+        }
+
+        guard let legacyPath = defaults.string(forKey: vaultPathKey), !legacyPath.isEmpty else {
+            return nil
+        }
+        return PersistedVaultSnapshot(
+            bookmarkData: bookmarkData,
+            standardizedPath: URL(fileURLWithPath: legacyPath).standardizedFileURL.path,
+            displayName: defaults.string(forKey: vaultNameKey)
+                ?? URL(fileURLWithPath: legacyPath).lastPathComponent
+        )
+    }
+
+    /// Loads a profile-bound folder destination as the active vault by writing
+    /// its bookmark and trusted selection into the same keys the legacy
+    /// single-vault flow uses, then re-running the verified load path. The
+    /// destination-store row is authoritative only for storage; resolution,
+    /// staleness, and expected-path verification remain VaultManager's.
+    func adoptPersistedVault(
+        bookmarkData: Data,
+        standardizedPath: String,
+        displayName: String
+    ) {
+        defaults.set(bookmarkData, forKey: bookmarkKey)
+        let selection = SavedVaultSelection(
+            version: Self.savedSelectionVersion,
+            standardizedPath: standardizedPath,
+            displayName: displayName,
+            identity: nil
+        )
+        if let encoded = try? JSONEncoder().encode(selection) {
+            defaults.set(encoded, forKey: vaultSelectionKey)
+        }
+        defaults.set(displayName, forKey: vaultNameKey)
+        defaults.set(standardizedPath, forKey: vaultPathKey)
+        loadSavedSettings()
+    }
+
     // MARK: - Folder Selection
 
     func setVaultFolder(_ url: URL) {

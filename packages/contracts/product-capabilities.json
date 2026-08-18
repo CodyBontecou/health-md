@@ -323,6 +323,26 @@
       ]
     },
     {
+      "id": "export.profiles",
+      "name": "Saved export profiles",
+      "classification": "planned",
+      "summary": "Save multiple named export configurations with independent metric selection, formats, output options, and destinations, and run any of them manually, from automation, or on independent schedules. Profiles choose which request produces files; they never change the public export schema, which remains healthmd.health_data per output profile.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "iOS/macOS export profile store, manual export picker, and per-profile scheduled entries"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Android export profile repository, AutomationReceiver profile extra, and per-profile WorkManager schedules"
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/export-profiles.md"
+      ]
+    },
+    {
       "id": "apple.hearing-and-symptoms",
       "name": "HealthKit hearing and symptom records",
       "classification": "apple_only",

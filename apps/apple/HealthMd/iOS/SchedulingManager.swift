@@ -127,8 +127,30 @@ class SchedulingManager: ObservableObject {
     @MainActor private var inFlightPendingExportIDs: Set<PendingExportRequest.ID> = []
     @MainActor private var notificationTappedPendingExportIDs: Set<PendingExportRequest.ID> = []
     @MainActor private var inFlightScheduledOccurrenceKeys: Set<Date> = []
+    /// Phase-3 per-profile occurrence keys: "profileID|kind|fireMinute". Two
+    /// profiles firing at the same minute never deduplicate each other
+    /// (decision 6), while a duplicate trigger for the same profile does.
+    @MainActor private var inFlightProfileOccurrenceKeys: Set<String> = []
     @MainActor private var scheduledExportDependenciesConfigured = false
     @MainActor private var scheduledExportDependencyWaiters: [CheckedContinuation<Void, Never>] = []
+
+    // MARK: - Phase 3 profile scheduling
+
+    /// Scheduled entries, profile store, and destination store. Separate
+    /// instances read the same UserDefaults keys the UI layer writes, so the
+    /// runtime observes UI mutations on next read.
+    private let scheduledEntryStore: ScheduledExportEntryStore
+    private let scheduledProfileStore: ExportProfileStore
+    private let scheduledDestinationStore: ProfileDestinationStore
+    /// Serializes local-folder profile runs: adopting a profile's vault writes
+    /// shared persisted destination state that `VaultManager()` resolves, so
+    /// folder-target runs must not overlap. Non-folder targets run
+    /// concurrently (decision 6).
+    private let profileFolderRunGate = AsyncSemaphore()
+    /// Overridable destination adoption for tests; production adopts through
+    /// persisted vault keys + APIExportSettings exactly like the UI
+    /// coordinator.
+    private let scheduledProfileDestinationAdopter: @MainActor (ExportProfile?) -> Void
 
     /// Result from notification-triggered export, observed by UI to show alert
     /// when no in-app activity banner owns the operation.
@@ -139,31 +161,47 @@ class SchedulingManager: ObservableObject {
         }
     }
 
+    /// True when the legacy schedule or any scheduled entry is enabled. The
+    /// UI master toggle and status pills read this instead of the legacy
+    /// schedule alone (phase 3: entries own scheduling after migration).
+    @MainActor @Published private(set) var isSchedulingActive: Bool = false
+
+    /// Re-arms background automation and worker sync for the current state:
+    /// the legacy schedule and every scheduled entry. Called from the legacy
+    /// `schedule` didSet and by the UI after entry mutations.
+    @MainActor func refreshScheduledAutomation() {
+        isSchedulingActive = schedule.isEnabled || hasEnabledProfileEntries
+        guard systemSideEffectsEnabled else { return }
+        guard !TestMode.isUITesting else { return }
+        #if DEBUG
+        guard !MarketingCapture.isActive else { return }
+        #endif
+        let active = isSchedulingActive
+        Task { @MainActor in
+            if active {
+                self.scheduleBackgroundTask()
+                await self.setupHealthKitBackgroundDelivery()
+                await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()
+            } else {
+                self.cancelBackgroundTask()
+                await self.disableHealthKitBackgroundDelivery()
+            }
+        }
+        // Mirror the coalesced state to the worker so server-side cron can
+        // deliver silent push at the earliest preferred minute. Disabling
+        // everything sends isEnabled:false so the worker drops the row.
+        PushRegistrationManager.shared.syncSchedules(
+            scheduledEntryStore.entries,
+            legacy: schedule
+        )
+    }
+
     @MainActor @Published var schedule: ExportSchedule {
         didSet {
             if persistScheduleChanges {
                 schedule.save()
             }
-            guard systemSideEffectsEnabled else { return }
-            // Skip background task and HealthKit setup in UI test / marketing capture mode
-            guard !TestMode.isUITesting else { return }
-            #if DEBUG
-            guard !MarketingCapture.isActive else { return }
-            #endif
-            Task {
-                if schedule.isEnabled {
-                    scheduleBackgroundTask()
-                    await setupHealthKitBackgroundDelivery()
-                    await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()
-                } else {
-                    cancelBackgroundTask()
-                    await disableHealthKitBackgroundDelivery()
-                }
-            }
-            // Mirror the schedule to the worker so server-side cron can
-            // deliver silent push at the precise minute. Disabling sends
-            // isEnabled:false so the worker drops the row.
-            PushRegistrationManager.shared.syncSchedule(schedule)
+            refreshScheduledAutomation()
         }
     }
 
@@ -191,7 +229,11 @@ class SchedulingManager: ObservableObject {
             }
         },
         scheduledMacExportTimeout: TimeInterval = 120,
-        now: @MainActor @escaping () -> Date = Date.init
+        now: @MainActor @escaping () -> Date = Date.init,
+        scheduledEntryStore: ScheduledExportEntryStore = ScheduledExportEntryStore(),
+        scheduledProfileStore: ExportProfileStore = ExportProfileStore(),
+        scheduledDestinationStore: ProfileDestinationStore = ProfileDestinationStore(),
+        scheduledProfileDestinationAdopter: (@MainActor (ExportProfile?) -> Void)? = nil
     ) {
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
@@ -205,11 +247,17 @@ class SchedulingManager: ObservableObject {
         self.persistScheduleChanges = persistScheduleChanges
         self.systemSideEffectsEnabled = systemSideEffectsEnabled
         self.now = now
+        self.scheduledEntryStore = scheduledEntryStore
+        self.scheduledProfileStore = scheduledProfileStore
+        self.scheduledDestinationStore = scheduledDestinationStore
+        self.scheduledProfileDestinationAdopter = scheduledProfileDestinationAdopter
+            ?? { profile in Self.defaultAdoptProfileDestinations(profile) }
         self.scheduledExportCoordinator = ScheduledExportCoordinator(
             pendingExportStore: pendingExportStore,
             exportNotificationScheduler: exportNotificationScheduler
         )
         self.schedule = initialSchedule
+        isSchedulingActive = self.schedule.isEnabled || self.hasEnabledProfileEntries
     }
 
     @MainActor func configureScheduledExportDependencies(
@@ -267,6 +315,12 @@ class SchedulingManager: ObservableObject {
     @MainActor private func handleHealthKitBackgroundDelivery() async {
         logger.info("HealthKit background delivery received")
         WidgetCenter.shared.reloadAllTimelines()
+
+        // Phase 3: entries own due evaluation when any are enabled.
+        if hasEnabledProfileEntries {
+            await runDueProfileOccurrences()
+            return
+        }
 
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, ignoring background delivery")
@@ -372,7 +426,7 @@ class SchedulingManager: ObservableObject {
         // Cancel any existing tasks
         cancelBackgroundTask(cancelPendingFallbacks: cancelPendingFallbacks)
 
-        guard schedule.isEnabled else {
+        guard schedule.isEnabled || hasEnabledProfileEntries else {
             logger.info("Schedule disabled, not scheduling background task")
             return
         }
@@ -389,6 +443,9 @@ class SchedulingManager: ObservableObject {
         // API Endpoint and Connected Mac scheduled targets need networking.
         request.requiresExternalPower = false  // Don't require, but prefer
         request.requiresNetworkConnectivity = schedule.target.requiresNetworkForScheduledExport
+            || scheduledEntryStore.entries
+                .filter(\.isEnabled)
+                .contains { $0.dateMathProjection.target.requiresNetworkForScheduledExport }
 
         do {
             try BGTaskScheduler.shared.submit(request)
@@ -520,7 +577,7 @@ class SchedulingManager: ObservableObject {
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
             )
-        case .noVault, .destinationChanged, .paywall, .failure:
+        case .noVault, .destinationChanged, .paywall, .failure, .profileNotFound:
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
@@ -552,6 +609,14 @@ class SchedulingManager: ObservableObject {
 
         logger.info("Draining pending scheduled export request \(request.id.uuidString)")
         let target = scheduledTarget(for: request)
+        // Phase 3: profile requests run against their profile's destinations;
+        // the active profile's destinations are restored afterward.
+        let profileForRun: ExportProfile?
+        if let profileID = request.profileID {
+            profileForRun = scheduledProfileStore.profile(id: profileID)
+        } else {
+            profileForRun = nil
+        }
         let wasNotificationTapDeferred = notificationTappedPendingExportIDs.remove(request.id) != nil
         let notificationOperationID: UUID?
         if trigger == .notificationTap || wasNotificationTapDeferred {
@@ -565,13 +630,26 @@ class SchedulingManager: ObservableObject {
         } else {
             notificationOperationID = nil
         }
-        let result = await runScheduledExport(
-            dates: request.dates,
-            target: target,
-            settingsSnapshot: request.settingsSnapshot,
-            quotaJobID: request.id,
-            notificationOperationID: notificationOperationID
-        )
+        let result: ExportOrchestrator.ExportResult
+        if let profileForRun {
+            result = await runProfileScopedExport(
+                profile: profileForRun,
+                dates: request.dates,
+                target: target,
+                settings: request.settingsSnapshot
+                    ?? ExportSettingsSnapshot.from(AdvancedExportSettings()),
+                quotaJobID: request.id,
+                notificationOperationID: notificationOperationID
+            )
+        } else {
+            result = await runScheduledExport(
+                dates: request.dates,
+                target: target,
+                settingsSnapshot: request.settingsSnapshot,
+                quotaJobID: request.id,
+                notificationOperationID: notificationOperationID
+            )
+        }
 
         let completion = await completePendingScheduledExport(request, result: result)
         processPendingScheduledExportResult(
@@ -586,6 +664,23 @@ class SchedulingManager: ObservableObject {
         _ request: PendingExportRequest,
         trigger: PendingExportDrainTrigger
     ) -> Bool {
+        // Phase 3: profile requests gate on their entry's enabled state, not
+        // the legacy schedule.
+        if let profileID = request.profileID {
+            let entry = scheduledEntryStore.entry(profileID: profileID)
+            guard entry?.isEnabled == true else {
+                logger.info("Profile schedule disabled, skipping pending request \(request.id.uuidString)")
+                notificationTappedPendingExportIDs.remove(request.id)
+                return false
+            }
+            if let fireDate = request.scheduledFireDate, fireDate > now() {
+                logger.info("Skipping future profile pending request \(request.id.uuidString)")
+                notificationTappedPendingExportIDs.remove(request.id)
+                return false
+            }
+            return true
+        }
+
         guard schedule.isEnabled else {
             logger.info("Schedule disabled, skipping pending scheduled export request \(request.id.uuidString)")
             notificationTappedPendingExportIDs.remove(request.id)
@@ -771,15 +866,25 @@ class SchedulingManager: ObservableObject {
             || (completion == nil && result.didCompleteAllRequestedDates)
 
         if didCompleteRequest {
-            var updatedSchedule = schedule
-            switch request.scheduledKind {
-            case .completedDay:
-                updatedSchedule.updateLastExport(at: request.scheduledFireDate ?? now())
-            case .todayRefresh:
-                updatedSchedule.lastTodayRefreshDate = request.scheduledFireDate ?? now()
-                updatedSchedule.save()
+            if let profileID = request.profileID {
+                // Phase 3: profile requests advance their entry's progress
+                // state; the legacy schedule stays untouched.
+                scheduledEntryStore.recordSuccess(
+                    profileID: profileID,
+                    kind: request.scheduledKind,
+                    occurrenceDate: request.scheduledFireDate ?? now()
+                )
+            } else {
+                var updatedSchedule = schedule
+                switch request.scheduledKind {
+                case .completedDay:
+                    updatedSchedule.updateLastExport(at: request.scheduledFireDate ?? now())
+                case .todayRefresh:
+                    updatedSchedule.lastTodayRefreshDate = request.scheduledFireDate ?? now()
+                    updatedSchedule.save()
+                }
+                schedule = updatedSchedule
             }
-            schedule = updatedSchedule
         }
 
         if !isExportLimitResult(result), result.successCount > 0 || result.totalCount > 0 {
@@ -790,7 +895,8 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: range.end,
                 targetLabel: targetLabel,
                 exportTarget: target,
-                appleExportEnginePin: request.settingsSnapshot?.appleExportEnginePin
+                appleExportEnginePin: request.settingsSnapshot?.appleExportEnginePin,
+                profileName: request.profileName
             )
         }
 
@@ -1959,8 +2065,256 @@ class SchedulingManager: ObservableObject {
     // MARK: - Background Task Execution
 
     /// Handles background task execution
+    // MARK: - Phase 3 profile scheduling runtime
+
+    /// True when any scheduled entry is enabled; background triggers use the
+    /// per-profile evaluator instead of the legacy single schedule.
+    @MainActor var hasEnabledProfileEntries: Bool {
+        scheduledEntryStore.entries.contains(where: \.isEnabled)
+    }
+
+    /// Production destination adoption: writes the profile's folder binding
+    /// into the persisted vault keys (a fresh `VaultManager()` resolves them
+    /// during the run) and loads the profile's API endpoint into
+    /// `APIExportSettings`. Nil adopts the active profile's destinations,
+    /// restoring the state the UI expects after a profile run.
+    @MainActor private static func defaultAdoptProfileDestinations(_ profile: ExportProfile?) {
+        let destinationStore = ProfileDestinationStore()
+        if let profile,
+           let bindingID = profile.folderVaultID,
+           let destination = destinationStore.vault(id: bindingID) {
+            VaultManager().adoptPersistedVault(
+                bookmarkData: destination.bookmarkData,
+                standardizedPath: destination.standardizedPath,
+                displayName: destination.name
+            )
+        }
+        if let profile,
+           let endpointID = profile.apiEndpointID,
+           let endpoint = destinationStore.apiEndpoint(id: endpointID) {
+            let apiSettings = APIExportSettings()
+            apiSettings.endpointURLString = endpoint.endpointURLString
+            apiSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
+        }
+    }
+
+    /// Per-profile occurrence in-flight key. Unlike the legacy fire-minute
+    /// key, this includes the profile so two profiles at the same minute run
+    /// independently.
+    @MainActor private func profileOccurrenceKey(
+        profileID: UUID,
+        kind: ScheduledExportKind,
+        fireDate: Date
+    ) -> String {
+        let minute = scheduledOccurrenceKey(for: fireDate).timeIntervalSince1970
+        return "\(profileID.uuidString)|\(kind.rawValue)|\(Int(minute))"
+    }
+
+    /// Evaluates every enabled entry and runs each due occurrence. The
+    /// coalesced wake-up's single decision point: one BGTask wake-up or
+    /// HealthKit delivery calls this. Local-folder runs serialize on the
+    /// folder gate (persisted vault state is global); all other targets run
+    /// concurrently.
+    @MainActor func runDueProfileOccurrences() async {
+        let due = scheduledEntryStore.dueOccurrences(now: now())
+        guard !due.isEmpty else { return }
+
+        await withTaskGroup(of: Void.self) { group in
+            for occurrence in due {
+                group.addTask { [weak self] in
+                    await self?.runProfileOccurrence(occurrence)
+                }
+            }
+        }
+
+        // Re-arm the wake-up for the next occurrence across all entries.
+        if systemSideEffectsEnabled, !TestMode.isUITesting {
+            scheduleBackgroundTask()
+        }
+    }
+
+    /// MainActor body executed under the folder gate: adopt destinations,
+    /// run, restore. Called from the sendable gate closure with `await`.
+    @MainActor private func runGatedFolderProfileExport(
+        profile: ExportProfile,
+        dates: [Date],
+        target: ExportTargetSelection,
+        settings: ExportSettingsSnapshot,
+        quotaJobID: UUID?,
+        notificationOperationID: UUID?
+    ) async -> ExportOrchestrator.ExportResult {
+        scheduledProfileDestinationAdopter(profile)
+        defer {
+            scheduledProfileDestinationAdopter(scheduledProfileStore.activeProfile)
+        }
+        return await runScheduledExport(
+            dates: dates,
+            target: target,
+            settingsSnapshot: settings,
+            quotaJobID: quotaJobID,
+            notificationOperationID: notificationOperationID
+        )
+    }
+
+    /// Runs one profile-scoped export with destination adoption and restore.
+    /// Local-folder runs serialize on the folder gate because adopted vault
+    /// state is process-global; other targets run without the gate.
+    @MainActor private func runProfileScopedExport(
+        profile: ExportProfile,
+        dates: [Date],
+        target: ExportTargetSelection,
+        settings: ExportSettingsSnapshot,
+        quotaJobID: UUID?,
+        notificationOperationID: UUID? = nil
+    ) async -> ExportOrchestrator.ExportResult {
+        if target == .localIPhoneFolder {
+            return await profileFolderRunGate.withPermit {
+                await self.runGatedFolderProfileExport(
+                    profile: profile,
+                    dates: dates,
+                    target: target,
+                    settings: settings,
+                    quotaJobID: quotaJobID,
+                    notificationOperationID: notificationOperationID
+                )
+            }
+        }
+
+        scheduledProfileDestinationAdopter(profile)
+        defer {
+            scheduledProfileDestinationAdopter(scheduledProfileStore.activeProfile)
+        }
+        return await runScheduledExport(
+            dates: dates,
+            target: target,
+            settingsSnapshot: settings,
+            quotaJobID: quotaJobID,
+            notificationOperationID: notificationOperationID
+        )
+    }
+
+    @MainActor private func runProfileOccurrence(
+        _ due: ScheduledExportEntryStore.DueEntryOccurrence
+    ) async {
+        let key = profileOccurrenceKey(
+            profileID: due.profileID,
+            kind: due.kind,
+            fireDate: due.fireDate
+        )
+        guard !inFlightProfileOccurrenceKeys.contains(key) else {
+            logger.info("Profile occurrence already in flight, skipping duplicate: \(key)")
+            return
+        }
+        inFlightProfileOccurrenceKeys.insert(key)
+        defer { inFlightProfileOccurrenceKeys.remove(key) }
+
+        guard let entry = scheduledEntryStore.entry(id: due.entryID) else { return }
+        guard let profile = scheduledProfileStore.profile(id: due.profileID) else {
+            logger.error("Scheduled entry references a missing profile; disabling entry")
+            scheduledEntryStore.update(profileID: due.profileID) { $0.isEnabled = false }
+            return
+        }
+
+        let dates: [Date]
+        switch due.kind {
+        case .completedDay:
+            dates = due.exportDates.isEmpty
+                ? ScheduleDateMath.scheduledExportDates(
+                    schedule: entry.dateMathProjection,
+                    fireDate: due.fireDate
+                )
+                : due.exportDates
+        case .todayRefresh:
+            dates = [Calendar.current.startOfDay(for: now())]
+        }
+
+        let context = ScheduledExportCoordinator.ScheduledProfileRequestContext(
+            profileID: profile.id,
+            profileName: profile.name,
+            target: profile.target,
+            settings: profile.settings
+        )
+        let pendingRequest: PendingExportRequest?
+        do {
+            pendingRequest = try await scheduledExportCoordinator.preparePendingScheduledExport(
+                schedule: entry.dateMathProjection,
+                fireDate: due.fireDate,
+                kind: due.kind,
+                profile: context
+            )
+        } catch {
+            logger.error("Failed to prepare profile scheduled export: \(error.localizedDescription)")
+            pendingRequest = nil
+        }
+        cancelPendingExportFallbackNotification(for: pendingRequest)
+
+        let target = context.target
+        let result = await runProfileScopedExport(
+            profile: profile,
+            dates: dates,
+            target: target,
+            settings: context.settings,
+            quotaJobID: pendingRequest?.id
+        )
+
+        if result.didCompleteAllRequestedDates {
+            scheduledEntryStore.recordSuccess(
+                profileID: due.profileID,
+                kind: due.kind,
+                occurrenceDate: due.fireDate
+            )
+        }
+
+        let completion = await completePendingScheduledExport(pendingRequest, result: result)
+        _ = completion
+
+        let rangeStart = dates.first ?? due.fireDate
+        let rangeEnd = dates.last ?? due.fireDate
+        if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
+            if result.didCompleteAllRequestedDates {
+                await sendExportNotification(
+                    success: true,
+                    daysExported: result.successCount,
+                    dailyNoteUpdateCount: result.dailyNoteUpdateCount,
+                    dailyNoteSkipCount: result.dailyNoteSkipCount
+                )
+            }
+            if !isExportLimitResult(result) {
+                ExportOrchestrator.recordResult(
+                    result,
+                    source: .scheduled,
+                    dateRangeStart: rangeStart,
+                    dateRangeEnd: rangeEnd,
+                    targetLabel: scheduledTargetLabel(for: target),
+                    exportTarget: target,
+                    appleExportEnginePin: context.settings.appleExportEnginePin,
+                    profileName: profile.name
+                )
+            }
+        } else if result.totalCount > 0, !isExportLimitResult(result) {
+            ExportOrchestrator.recordResult(
+                result,
+                source: .scheduled,
+                dateRangeStart: rangeStart,
+                dateRangeEnd: rangeEnd,
+                targetLabel: scheduledTargetLabel(for: target),
+                exportTarget: target,
+                appleExportEnginePin: context.settings.appleExportEnginePin,
+                profileName: profile.name
+            )
+        }
+    }
+
     @MainActor private func handleBackgroundTask(_ task: BGProcessingTask) async {
         logger.info("Background processing task started")
+
+        // Phase 3: scheduled entries own the wake-up when any are enabled.
+        if hasEnabledProfileEntries {
+            // runDueProfileOccurrences re-arms the next wake-up itself.
+            await runDueProfileOccurrences()
+            task.setTaskCompleted(success: true)
+            return
+        }
 
         let currentDate = now()
         guard let occurrence = ScheduleDateMath.dueScheduledOccurrences(
@@ -2464,7 +2818,20 @@ class SchedulingManager: ObservableObject {
 
     /// Calculates the next scheduled run date based on current settings.
     private func calculateNextRunOccurrence() -> ScheduleDateMath.DueScheduledOccurrence? {
-        ScheduleDateMath.nextScheduledOccurrences(schedule: schedule, now: now()).first
+        // Phase 3: the coalesced wake-up arms for the earliest next occurrence
+        // across every enabled entry, falling back to the legacy schedule.
+        let entryOccurrences = scheduledEntryStore.entries
+            .filter(\.isEnabled)
+            .flatMap {
+                ScheduleDateMath.nextScheduledOccurrences(schedule: $0.dateMathProjection, now: now())
+            }
+        if hasEnabledProfileEntries {
+            let legacy = schedule.isEnabled
+                ? ScheduleDateMath.nextScheduledOccurrences(schedule: schedule, now: now())
+                : []
+            return (entryOccurrences + legacy).min { $0.fireDate < $1.fireDate }
+        }
+        return ScheduleDateMath.nextScheduledOccurrences(schedule: schedule, now: now()).first
     }
 
     private func calculateNextRunDate() -> Date {
@@ -2474,7 +2841,7 @@ class SchedulingManager: ObservableObject {
 
     /// Returns a human-readable string describing the next scheduled export.
     @MainActor func getNextExportDescription() -> String? {
-        guard schedule.isEnabled else { return nil }
+        guard isSchedulingActive else { return nil }
 
         let nextDate = calculateNextRunDate()
         let formatter = DateFormatter()

@@ -774,6 +774,7 @@ mod tests {
                         },
                     ),
                     settings_policy: healthmd_protocol::models::SettingsPolicy::RequestedDatesOnly,
+                    profile_reference: None,
                     response_mode: healthmd_protocol::models::ResponseMode::RawJson,
                     raw_profile: Some(healthmd_protocol::wire::RawProfile::HealthDataProjection),
                     canonical_selection: None,

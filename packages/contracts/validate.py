@@ -371,6 +371,66 @@ def validate_v1_fixture(path: Path) -> None:
         fail(f"{context}: binary frame digest does not match its body")
 
 
+def validate_profile_policy_fixture(path: Path) -> None:
+    context = "healthmd.direct.ios profile policy fixture"
+    payload = require_exact_keys(
+        load_json(path, context),
+        {
+            "schema",
+            "schema_version",
+            "profile_request_json_base64",
+            "profile_request_message_json_base64",
+            "profile_request_fingerprint",
+            "profile_request_unnamed_reference_json_base64",
+        },
+        context,
+    )
+    if (
+        payload["schema"] != "healthmd.direct_profile_policy_swift_reference"
+        or payload["schema_version"] != 1
+    ):
+        fail(f"{context}: schema metadata is invalid")
+
+    fingerprint = payload["profile_request_fingerprint"]
+    if not isinstance(fingerprint, str) or not SHA256_RE.fullmatch(fingerprint):
+        fail(f"{context}: profile_request_fingerprint must be lowercase SHA-256 hex")
+
+    request_bytes, request = decode_json_base64(
+        payload["profile_request_json_base64"], f"{context}.profile_request"
+    )
+    if canonical_json(request) != request_bytes:
+        fail(f"{context}: profile request JSON is not canonical sorted compact JSON")
+    if hashlib.sha256(request_bytes).hexdigest() != fingerprint:
+        fail(f"{context}: fingerprint does not match profile request bytes")
+    reference = request.get("profileReference")
+    if request.get("settingsPolicy") != "profile" or not isinstance(reference, dict):
+        fail(f"{context}: profile request must pin settings_policy=profile with a reference")
+    if not isinstance(reference.get("profileID"), str) or not reference["profileID"]:
+        fail(f"{context}: profileReference.profileID must be a non-empty string")
+    if not isinstance(reference.get("name"), str):
+        fail(f"{context}: named-reference vector must carry a name")
+
+    message_bytes, message = decode_json_base64(
+        payload["profile_request_message_json_base64"], f"{context}.profile_request_message"
+    )
+    if canonical_json(message) != message_bytes:
+        fail(f"{context}: profile request message is not canonical sorted compact JSON")
+    if message.get("exportRequest", {}).get("_0") != request:
+        fail(f"{context}: message envelope must wrap the profile request unchanged")
+
+    unnamed_bytes, unnamed = decode_json_base64(
+        payload["profile_request_unnamed_reference_json_base64"],
+        f"{context}.profile_request_unnamed_reference",
+    )
+    if canonical_json(unnamed) != unnamed_bytes:
+        fail(f"{context}: unnamed-reference JSON is not canonical sorted compact JSON")
+    unnamed_reference = unnamed.get("profileReference")
+    if unnamed.get("settingsPolicy") != "profile":
+        fail(f"{context}: unnamed-reference vector must pin settings_policy=profile")
+    if not isinstance(unnamed_reference, dict) or "name" in unnamed_reference:
+        fail(f"{context}: unnamed-reference vector must omit the name field")
+
+
 def validate_semantic_fixture(root: Path, path: Path) -> None:
     context = "healthmd.semantic_input v1 fixture"
     payload = require_exact_keys(
@@ -630,7 +690,8 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["schema_version"] != 1
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
-        or payload["registry_sha256"] != "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319"
+        or payload["registry_sha256"]
+        != "a58de624d203f219b14f76e9a53a66b7cfe9f3b0c8f0f57b950312d34de75c44"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
@@ -2323,7 +2384,12 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             fixture_count += 1
 
             if identifier == "healthmd.direct.ios":
-                validate_v1_fixture(fixture_path)
+                if fixture_path.name == "swift-reference.json":
+                    validate_v1_fixture(fixture_path)
+                elif fixture_path.name == "profile-policy-swift-reference.json":
+                    validate_profile_policy_fixture(fixture_path)
+                else:
+                    fail(f"{fixture_context}: unknown healthmd.direct.ios fixture file")
             elif identifier == "healthmd.direct.ios-query":
                 validate_v3_fixture(fixture_path)
             elif identifier == "healthmd.direct.android":

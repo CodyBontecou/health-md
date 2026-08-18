@@ -342,7 +342,7 @@ final class ExportIntentRunnerTests: XCTestCase {
                     self?.exportDatesCount += 1
                     return result
                 },
-                recordResult: { [weak self] result, _, _, _, _ in
+                recordResult: { [weak self] result, _, _, _, _, _ in
                     self?.recordedResults.append(result)
                 },
                 recordExportUse: { [weak self] in

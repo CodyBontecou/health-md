@@ -14,6 +14,39 @@ enum ExportIntentRunner {
         case destinationChanged
         case paywall
         case failure(reason: String)
+        /// A profile parameter referenced a name that no longer exists.
+        case profileNotFound(name: String)
+    }
+
+    /// Resolution of an intent's optional profile parameter (phase 4,
+    /// decision 9): an explicit name resolves by trimmed/case-insensitive
+    /// lookup and fails closed when missing; no name uses the active profile
+    /// once any profile exists; with no profiles at all, legacy live settings
+    /// keep pre-profile behavior.
+    enum IntentProfileResolution: Equatable {
+        case profile(ExportProfile)
+        case legacySettings
+        case notFound(String)
+    }
+
+    static func resolveProfile(
+        named rawName: String?,
+        profileStore: ExportProfileStore
+    ) -> IntentProfileResolution {
+        guard profileStore.hasProfiles else { return .legacySettings }
+
+        guard let rawName,
+              !rawName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            if let active = profileStore.activeProfile {
+                return .profile(active)
+            }
+            return .legacySettings
+        }
+
+        if let named = profileStore.profile(named: rawName) {
+            return .profile(named)
+        }
+        return .notFound(rawName)
     }
 
     private static let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "ExportIntent")
@@ -28,8 +61,20 @@ enum ExportIntentRunner {
         var withVaultAccess: (@escaping () async -> ExportOrchestrator.ExportResult) async -> ExportOrchestrator.ExportResult?
         var targetLabel: () -> String
         var makeSettings: () -> AdvancedExportSettings
+        /// Profile store used for parameter resolution; injectable for tests.
+        var profileStore: ExportProfileStore = ExportProfileStore()
+        /// Phase 4: profile-scoped runs build request settings from the
+        /// profile's frozen snapshot instead of live settings.
+        var makeSettingsForProfile: (ExportProfile) -> AdvancedExportSettings = { profile in
+            AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+        }
+        /// Phase 4: adopt a profile's destinations (persisted vault keys +
+        /// API endpoint) before a run; call with nil to adopt the active
+        /// profile's destinations when restoring.
+        var adoptProfileDestinations: (ExportProfile?) -> Void = { _ in }
+        var restoreActiveProfileDestinations: () -> Void = { }
         var exportDatesBackground: ([Date], AdvancedExportSettings) async -> ExportOrchestrator.ExportResult
-        var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?) -> Void
+        var recordResult: (ExportOrchestrator.ExportResult, ExportSource, Date, Date, String?, String?) -> Void
         var recordExportUse: () -> Void
         var trackExportSucceeded: (PricingAnalyticsExportMetadata) -> Void
         var updateScheduleLastExport: () -> Void
@@ -76,6 +121,16 @@ enum ExportIntentRunner {
                 makeSettings: {
                     settings
                 },
+                makeSettingsForProfile: { profile in
+                    AdvancedExportSettings(snapshot: profile.settings, userDefaults: .standard)
+                },
+                adoptProfileDestinations: { profile in
+                    ExportIntentRunner.adoptDestinationsForIntentRun(profile)
+                },
+                restoreActiveProfileDestinations: {
+                    let store = ExportProfileStore()
+                    ExportIntentRunner.adoptDestinationsForIntentRun(store.activeProfile)
+                },
                 exportDatesBackground: { dates, settings in
                     await ExportOrchestrator.exportDatesBackground(
                         dates,
@@ -84,13 +139,14 @@ enum ExportIntentRunner {
                         settings: settings
                     )
                 },
-                recordResult: { result, source, dateRangeStart, dateRangeEnd, targetLabel in
+                recordResult: { result, source, dateRangeStart, dateRangeEnd, targetLabel, profileName in
                     ExportOrchestrator.recordResult(
                         result,
                         source: source,
                         dateRangeStart: dateRangeStart,
                         dateRangeEnd: dateRangeEnd,
-                        targetLabel: targetLabel
+                        targetLabel: targetLabel,
+                        profileName: profileName
                     )
                 },
                 recordExportUse: {
@@ -115,14 +171,76 @@ enum ExportIntentRunner {
         }
     }
 
-    static func run(dates: [Date], source: ExportSource = .shortcut) async -> Outcome {
-        await run(dates: dates, source: source, dependencies: .live())
+    /// Adopts a profile's destination bindings into the persisted vault keys
+    /// and API endpoint settings so the runner's `VaultManager` (re-resolved
+    /// by `refreshVaultAccess`) and API pipeline use the profile's
+    /// destinations for this run. Mirrors `ExportProfileCoordinator` adoption.
+    static func adoptDestinationsForIntentRun(_ profile: ExportProfile?) {
+        let destinationStore = ProfileDestinationStore()
+        if let profile,
+           let bindingID = profile.folderVaultID,
+           let destination = destinationStore.vault(id: bindingID) {
+            VaultManager().adoptPersistedVault(
+                bookmarkData: destination.bookmarkData,
+                standardizedPath: destination.standardizedPath,
+                displayName: destination.name
+            )
+        }
+        if let profile,
+           let endpointID = profile.apiEndpointID,
+           let endpoint = destinationStore.apiEndpoint(id: endpointID) {
+            let apiSettings = APIExportSettings()
+            apiSettings.endpointURLString = endpoint.endpointURLString
+            apiSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
+        }
+    }
+
+    /// Convenience for intent entry points: resolves the live dependency
+    /// graph on the main actor. Kept separate from the full `run` overload so
+    /// `.live()` is never a default argument (SE-0466 default arguments are
+    /// evaluated in a nonisolated context and `live()` is main-actor-isolated).
+    static func run(
+        dates: [Date],
+        source: ExportSource = .shortcut,
+        profileName: String? = nil
+    ) async -> Outcome {
+        await run(dates: dates, source: source, profileName: profileName, dependencies: .live())
     }
 
     static func run(dates: [Date], source: ExportSource = .shortcut, dependencies: Dependencies) async -> Outcome {
+        await run(dates: dates, source: source, profileName: nil, dependencies: dependencies)
+    }
+
+    static func run(
+        dates: [Date],
+        source: ExportSource = .shortcut,
+        profileName: String? = nil,
+        dependencies: Dependencies
+    ) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")
         }
+
+        // Phase 4: resolve the profile before vault access so the runner's
+        // vault manager re-resolves the profile's adopted destination.
+        let runProfile: ExportProfile?
+        switch resolveProfile(named: profileName, profileStore: dependencies.profileStore) {
+        case .legacySettings:
+            runProfile = nil
+        case .profile(let profile):
+            runProfile = profile
+        case .notFound(let name):
+            return .profileNotFound(name: name)
+        }
+        if let runProfile {
+            dependencies.adoptProfileDestinations(runProfile)
+        }
+        defer {
+            if runProfile != nil {
+                dependencies.restoreActiveProfileDestinations()
+            }
+        }
+        let profileNameForHistory = runProfile?.name
 
         dependencies.refreshVaultAccess()
         guard !dependencies.requiresVaultReselection() else {
@@ -139,7 +257,8 @@ enum ExportIntentRunner {
             return .paywall
         }
 
-        let settings = dependencies.makeSettings()
+        let settings = runProfile.map(dependencies.makeSettingsForProfile)
+            ?? dependencies.makeSettings()
 
         // Shortcuts run without an interactive Mac peer handshake, so they keep
         // the existing local iPhone-vault destination semantics even if the app's
@@ -160,7 +279,8 @@ enum ExportIntentRunner {
                 source,
                 sortedDates.first!,
                 sortedDates.last!,
-                dependencies.targetLabel()
+                dependencies.targetLabel(),
+                profileNameForHistory
             )
             return .partial(
                 exported: 0,
@@ -191,7 +311,8 @@ enum ExportIntentRunner {
                 source,
                 sortedDates.first!,
                 sortedDates.last!,
-                dependencies.targetLabel()
+                dependencies.targetLabel(),
+                profileNameForHistory
             )
             logger.error("Shortcut export failed: \(reason)")
             return .failure(reason: reason)
@@ -202,7 +323,8 @@ enum ExportIntentRunner {
             source,
             sortedDates.first!,
             sortedDates.last!,
-            dependencies.targetLabel()
+            dependencies.targetLabel(),
+            profileNameForHistory
         )
 
         dependencies.recordExportUse()
@@ -307,6 +429,8 @@ enum ExportIntentRunner {
             return "Exported \(exported) of \(total) days. \(reason)."
         case .pending:
             return "Pending. Unlock your phone and tap the Health.md notification to export."
+        case .profileNotFound(let name):
+            return "No export profile named \(name) was found. Open Health.md to review your profiles."
         case .noVault:
             return "No vault selected. Open Health.md and choose a vault first."
         case .destinationChanged:

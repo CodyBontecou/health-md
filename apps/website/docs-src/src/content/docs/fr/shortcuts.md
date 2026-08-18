@@ -5,16 +5,23 @@ description: "Huit App Intents permettent de déclencher des exports, d’obteni
 
 ## App Intents disponibles
 <div class="options">
-<div class="option"><strong>Export Yesterday's Health Data</strong><p>Raccourci sans paramètre. La méthode rapide pour exporter simplement les données d’hier. Utilise le même moteur que l’export manuel.</p></div>
-<div class="option"><strong>Export Health Data for a Date</strong><p>Un paramètre <em>Date</em>. L’heure est ignorée. Utile dans les automatisations pilotées par un calendrier.</p></div>
-<div class="option"><strong>Export Health Data for Date Range</strong><p>Paramètres <em>Start Date</em> et <em>End Date</em>, bornes incluses. À utiliser pour récupérer un historique.</p></div>
-<div class="option"><strong>Export Last N Days of Health Data</strong><p>Paramètre <em>Number of Days</em> (1–366). La période se termine hier. Valeur par défaut : 7. Adapté aux automatisations du type « chaque dimanche, exporter les 7 derniers jours ».</p></div>
+<div class="option"><strong>Export Yesterday's Health Data</strong><p>Raccourci sans paramètre. La méthode rapide pour exporter simplement les données d’hier. Utilise le même moteur que l’export manuel. Paramètre facultatif <em>Profil</em> (voir <a href="#profiles">Profils d'export</a>).</p></div>
+<div class="option"><strong>Export Health Data for a Date</strong><p>Un paramètre <em>Date</em>. L’heure est ignorée. Utile dans les automatisations pilotées par un calendrier. Paramètre facultatif <em>Profil</em>.</p></div>
+<div class="option"><strong>Export Health Data for Date Range</strong><p>Paramètres <em>Start Date</em> et <em>End Date</em>, bornes incluses. À utiliser pour récupérer un historique. Paramètre facultatif <em>Profil</em>.</p></div>
+<div class="option"><strong>Export Last N Days of Health Data</strong><p>Paramètre <em>Number of Days</em> (1–366). La période se termine hier. Valeur par défaut : 7. Adapté aux automatisations du type « chaque dimanche, exporter les 7 derniers jours ». Paramètre facultatif <em>Profil</em>.</p></div>
 <div class="option"><strong>Get Health Summary for a Date</strong><p>Renvoie un instantané structuré — nombre de pas, calories actives, sommeil, fréquence cardiaque — sans rien écrire dans le coffre. Utilisez-le dans Shortcuts pour transmettre des valeurs à d’autres apps.</p></div>
 <div class="option"><strong>Get Last Export Status</strong><p>Renvoie l’horodatage, l’état de réussite, le nombre de jours et le motif éventuel d’échec du dernier export enregistré. Une demande effectuée lorsque l’appareil est verrouillé reste en attente jusqu’à une nouvelle tentative et n’est donc pas renvoyée comme état actuel.</p></div>
 <div class="option"><strong>Turn Scheduled Export On or Off</strong><p>Paramètre booléen. Suspendez la planification, par exemple avec le mode de concentration Vacances, puis reprenez-la.</p></div>
-<div class="option"><strong>Export Health Data</strong><p>Export générique qui reprend la dernière plage de dates choisie dans la fenêtre Export de l’app. Moins courant ; les variantes par plage sont généralement plus claires.</p></div>
+<div class="option"><strong>Export Health Data</strong><p>Export générique qui reprend la dernière plage de dates choisie dans la fenêtre Export de l’app. Moins courant ; les variantes par plage sont généralement plus claires. Paramètre facultatif <em>Profil</em>.</p></div>
 </div>
 
+<a id="profiles"></a>
+## Profils d'export
+<p>Les cinq intents d'export acceptent un paramètre facultatif <em>Profil</em>. Laissez-le vide pour utiliser vos réglages d'export actuels de l'app ; indiquez le nom d'un profil enregistré pour exécuter la configuration figée de ce profil — sélection de métriques, formats et destination — quel que soit l'état actuel de l'app.</p>
+<div class="callout">
+<strong>Avertissement pour les raccourcis existants sans paramètre.</strong>
+<p style="margin-top:6px;">Dès que vous créez votre premier profil d'export dans l'app, un raccourci sans <em>Profil</em> défini exporte avec les réglages enregistrés du profil <em>actif</em> plutôt qu'avec les réglages actifs de l'app. Si vous comptez sur l'ancien comportement, épinglez le raccourci sur un profil précis (ou n'utilisez aucun profil) pour rester explicite. Un nom de profil qui n'existe plus échoue avec une erreur claire au lieu d'exporter la mauvaise chose.</p>
+</div>
 ## Où les trouver
 <p>Ouvrez l’app Shortcuts sur iOS ou macOS. Touchez <em>+</em> pour créer un raccourci, puis recherchez « Health.md » ou l’un des titres ci-dessus. Ils figurent dans la catégorie <em>Health</em>.</p>
 <p>La plupart des intentions définissent <code>openAppWhenRun = false</code> et s’exécutent donc sans interface : aucun lancement d’app ni clignotement. Elles fonctionnent depuis les automatisations, les filtres de concentration, la commande « Dis Siri » et le bouton Action.</p>

@@ -236,6 +236,19 @@ Sélectionnez et conservez d’abord un dossier de destination accessible en éc
 
 Utilisez `date_selection: "all_available"` sans `date_range` pour l’historique complet. Les paramètres facultatifs `metric_ids`, `categories` ou `all_metrics` réduisent l’acquisition iPhone sans modifier les réglages enregistrés. `detail_level` s’applique uniquement lorsqu’une de ces sélections est présente. `all_metrics` ne peut pas être combiné avec des listes explicites de métriques/catégories.
 
+Pour exécuter plutôt un profil d'export enregistré, réglez `settings_policy` sur `"profile"` et passez `profile_reference` avec l'UUID stable du profil (un `name` d'affichage optionnel n'est consigné que pour les erreurs) :
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+Le profil possède la portée des réglages : `profile_reference` ne se combine pas avec `metric_ids`, `categories`, `all_metrics` ni avec la politique de réglages enregistrés, et un UUID inconnu échoue avec une erreur typée au lieu de revenir aux réglages actifs.
+
 Inspectez :
 
 - `status` et le `state` de la tâche persistante ;

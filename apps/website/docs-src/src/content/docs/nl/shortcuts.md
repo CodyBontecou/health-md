@@ -5,16 +5,23 @@ description: "Met acht App Intents start je exports, haal je samenvattingen op e
 
 ## Beschikbare intenties
 <div class="options">
-<div class="option"><strong>Gezondheidsgegevens van gisteren exporteren</strong><p>Snelkoppeling zonder parameters. De snelste manier om gewoon de gegevens van gisteren te exporteren zonder extra vragen. Gebruikt dezelfde engine als de handmatige export.</p></div>
-<div class="option"><strong>Gezondheidsgegevens voor een datum exporteren</strong><p>Eén parameter <em>Datum</em>. Het tijdstip wordt genegeerd. Handig voor automatiseringen op basis van een kalender.</p></div>
-<div class="option"><strong>Gezondheidsgegevens voor een datumbereik exporteren</strong><p>Parameters <em>Begindatum</em> en <em>Einddatum</em>, beide inclusief. Gebruik dit om historische gegevens aan te vullen.</p></div>
-<div class="option"><strong>Gezondheidsgegevens van de laatste N dagen exporteren</strong><p>Parameter <em>Aantal dagen</em> (1–366). Het bereik eindigt gisteren en de standaardwaarde is 7. Geschikt voor automatiseringen zoals 'exporteer elke zondag de laatste 7 dagen'.</p></div>
+<div class="option"><strong>Gezondheidsgegevens van gisteren exporteren</strong><p>Snelkoppeling zonder parameters. De snelste manier om gewoon de gegevens van gisteren te exporteren zonder extra vragen. Gebruikt dezelfde engine als de handmatige export. Optionele parameter <em>Profiel</em> (zie <a href="#profiles">Exportprofielen</a>).</p></div>
+<div class="option"><strong>Gezondheidsgegevens voor een datum exporteren</strong><p>Eén parameter <em>Datum</em>. Het tijdstip wordt genegeerd. Handig voor automatiseringen op basis van een kalender. Optionele parameter <em>Profiel</em>.</p></div>
+<div class="option"><strong>Gezondheidsgegevens voor een datumbereik exporteren</strong><p>Parameters <em>Begindatum</em> en <em>Einddatum</em>, beide inclusief. Gebruik dit om historische gegevens aan te vullen. Optionele parameter <em>Profiel</em>.</p></div>
+<div class="option"><strong>Gezondheidsgegevens van de laatste N dagen exporteren</strong><p>Parameter <em>Aantal dagen</em> (1–366). Het bereik eindigt gisteren en de standaardwaarde is 7. Geschikt voor automatiseringen zoals 'exporteer elke zondag de laatste 7 dagen'. Optionele parameter <em>Profiel</em>.</p></div>
 <div class="option"><strong>Gezondheidssamenvatting voor een datum ophalen</strong><p>Geeft een gestructureerde momentopname terug van stappen, actieve calorieën, slaap en hartslag zonder iets naar de kluis te schrijven. Gebruik deze intentie in Shortcuts om waarden aan andere apps door te geven.</p></div>
 <div class="option"><strong>Status van laatste export ophalen</strong><p>Geeft het tijdstempel, de successtatus, het aantal dagen en een eventuele foutreden van de meest recente vastgelegde export terug. Een verzoek op een vergrendeld apparaat blijft in behandeling tot een nieuwe poging en verschijnt in die tussentijd niet als huidige status.</p></div>
 <div class="option"><strong>Geplande export in- of uitschakelen</strong><p>Booleaanse parameter. Gebruik deze om het schema te pauzeren, bijvoorbeeld tijdens de focus Vakantie, en later te hervatten.</p></div>
-<div class="option"><strong>Gezondheidsgegevens exporteren</strong><p>Algemene export die het datumbereik uit de laatst gebruikte status van het exportvenster in de app overneemt. Deze is minder gebruikelijk; de varianten met een expliciet datumbereik zijn meestal duidelijker.</p></div>
+<div class="option"><strong>Gezondheidsgegevens exporteren</strong><p>Algemene export die het datumbereik uit de laatst gebruikte status van het exportvenster in de app overneemt. Deze is minder gebruikelijk; de varianten met een expliciet datumbereik zijn meestal duidelijker. Optionele parameter <em>Profiel</em>.</p></div>
 </div>
 
+<a id="profiles"></a>
+## Exportprofielen
+<p>Alle vijf exportintents accepteren een optionele parameter <em>Profiel</em>. Laat hem leeg om met je huidige in-app exportinstellingen te draaien; geef de naam van een opgeslagen profiel door om de bevroren configuratie van dat profiel — metrieselectie, formaten en bestemming — uit te voeren, ongeacht wat de app op dat moment toont.</p>
+<div class="callout">
+<strong>Let op voor bestaande sneltoetsen zonder parameter.</strong>
+<p style="margin-top:6px;">Zodra je je eerste exportprofiel in de app aanmaakt, exporteert een sneltoets zonder ingesteld <em>Profiel</em> met de opgeslagen instellingen van het <em>actieve</em> profiel in plaats van de actuele app-instellingen. Vertrouw je op het oude gedrag, pin de sneltoets dan op een specifiek profiel (of houd nul profielen) om expliciet te blijven. Een profielnaam die niet meer bestaat faalt met een duidelijke fout in plaats van het verkeerde te exporteren.</p>
+</div>
 ## Waar je ze vindt
 <p>Open de app Shortcuts op iOS of macOS. Tik op <em>+</em> om een nieuwe snelkoppeling te maken en zoek naar 'Health.md' of een van de bovenstaande namen. De intenties staan in de categorie <em>Gezondheid</em>.</p>
 <p>De meeste intenties hebben <code>openAppWhenRun = false</code>. Ze worden dus zonder zichtbare app uitgevoerd: de app opent niet en de interface flitst niet in beeld. Je kunt ze gebruiken vanuit automatiseringen en focusfilters, via Hé Siri en met de actieknop.</p>

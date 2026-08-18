@@ -291,6 +291,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
     let failureReason: ExportFailureReason?
     let failedDateDetails: [FailedDateDetail]
     let targetLabel: String?
+    /// Export profile display name captured when the run executed under a
+    /// profile (phase 3). Nil for profile-free historical runs.
+    let profileName: String?
     let exportTarget: ExportTargetSelection?
     /// Exact generated-file total when authoritative. Nil means no exact total was available.
     let fileCount: Int?
@@ -306,7 +309,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, timestamp, source, success, dateRangeStart, dateRangeEnd
         case successCount, totalCount, failureReason, failedDateDetails
-        case targetLabel, exportTarget, fileCount, outputBreakdown
+        case targetLabel, exportTarget, fileCount, outputBreakdown, profileName
         case dailyNoteUpdateCount, dailyNoteSkipCount, partialFailures
         case appleExportEnginePin, operationDetails
     }
@@ -330,7 +333,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
-        operationDetails: ExportHistoryOperationDetails? = nil
+        operationDetails: ExportHistoryOperationDetails? = nil,
+        profileName: String? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -343,6 +347,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.failureReason = failureReason
         self.failedDateDetails = failedDateDetails
         self.targetLabel = targetLabel
+        self.profileName = profileName
         self.exportTarget = exportTarget
         self.fileCount = fileCount.map(ExportHistoryOutputBreakdown.boundedCount)
         self.outputBreakdown = outputBreakdown
@@ -366,6 +371,7 @@ struct ExportHistoryEntry: Codable, Identifiable {
         failureReason = try container.decodeIfPresent(ExportFailureReason.self, forKey: .failureReason)
         failedDateDetails = try container.decodeIfPresent([FailedDateDetail].self, forKey: .failedDateDetails) ?? []
         targetLabel = try container.decodeIfPresent(String.self, forKey: .targetLabel)
+        profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
         exportTarget = try container.decodeIfPresent(ExportTargetSelection.self, forKey: .exportTarget)
         fileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
             .map(ExportHistoryOutputBreakdown.boundedCount)
@@ -797,7 +803,8 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
-        operationDetails: ExportHistoryOperationDetails? = nil
+        operationDetails: ExportHistoryOperationDetails? = nil,
+        profileName: String? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -816,7 +823,8 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
             appleExportEnginePin: appleExportEnginePin,
-            operationDetails: operationDetails
+            operationDetails: operationDetails,
+            profileName: profileName
         )
         addEntry(entry)
     }
@@ -839,7 +847,8 @@ class ExportHistoryManager: ObservableObject {
         dailyNoteSkipCount: Int = 0,
         partialFailures: [ExportPartialFailure] = [],
         appleExportEnginePin: AppleExportEnginePin? = nil,
-        operationDetails: ExportHistoryOperationDetails? = nil
+        operationDetails: ExportHistoryOperationDetails? = nil,
+        profileName: String? = nil
     ) {
         let entry = ExportHistoryEntry(
             id: id,
@@ -859,7 +868,8 @@ class ExportHistoryManager: ObservableObject {
             dailyNoteSkipCount: dailyNoteSkipCount,
             partialFailures: partialFailures,
             appleExportEnginePin: appleExportEnginePin,
-            operationDetails: operationDetails
+            operationDetails: operationDetails,
+            profileName: profileName
         )
         addEntry(entry)
     }

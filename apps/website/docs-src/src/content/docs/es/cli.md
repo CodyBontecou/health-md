@@ -141,7 +141,12 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
+
+# Run a saved export profile by UUID (frozen settings + destination)
+healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
+
+`--profile PROFILE_ID` resuelve un perfil de exportación guardado en el iPhone por su UUID estable: la ejecución usa la selección de métricas, los formatos y el destino congelados de ese perfil en lugar de los ajustes activos de la app. No se puede combinar con `--use-iphone-settings` ni con selectores de métrica/categoría (el perfil es el dueño del alcance de ajustes), y un UUID desconocido falla con un error tipado `profile_not_found` en lugar de recurrir a los ajustes activos. Consulta el UUID en el selector de perfiles de la pestaña Exportar de la app.
 
 Actualmente no existe un límite de días calendario. `--all` le pide al iPhone que descubra el registro fuente seleccionado más antiguo disponible, fija el rango resuelto y lo procesa a través de particiones acotadas. El almacenamiento disponible y un día inusualmente denso siguen siendo límites prácticos.
 

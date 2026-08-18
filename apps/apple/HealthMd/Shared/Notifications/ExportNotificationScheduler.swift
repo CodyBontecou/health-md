@@ -139,7 +139,14 @@ struct UserNotificationExportScheduler: ExportNotificationScheduling {
 
     private func pendingExportContent(for request: PendingExportRequest) -> UNNotificationContent {
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "Health Export Needs Attention", comment: "Pending export recovery notification title")
+        if let profileName = request.profileName {
+            content.title = String(
+                localized: "Health Export Needs Attention — \(profileName)",
+                comment: "Pending export recovery notification title with export profile name"
+            )
+        } else {
+            content.title = String(localized: "Health Export Needs Attention", comment: "Pending export recovery notification title")
+        }
         content.body = String(localized: "Open Health.md and tap to retry the remaining health export dates.", comment: "Pending export recovery notification body")
         content.sound = .default
         content.categoryIdentifier = ExportNotificationCategories.pendingExport
@@ -163,9 +170,14 @@ final class InspectableExportNotificationScheduler: ExportNotificationScheduling
     private(set) var scheduledRequests: [PendingExportRequest.ID: PendingExportRequest] = [:]
     private(set) var immediateRequests: [PendingExportRequest.ID: PendingExportRequest] = [:]
     private(set) var canceledRequestIDs: [PendingExportRequest.ID] = []
+    /// Historical log of every scheduled pending request, never removed by
+    /// cancellation. Assertions that must survive the pre-run fallback cancel
+    /// read this instead of `scheduledRequests`.
+    private(set) var allScheduledRequests: [PendingExportRequest] = []
 
     func schedulePendingExportNotification(for request: PendingExportRequest) async throws {
         scheduledRequests[request.id] = request
+        allScheduledRequests.append(request)
     }
 
     func sendImmediatePendingExportNotification(for request: PendingExportRequest) async throws {

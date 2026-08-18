@@ -293,24 +293,31 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
     }
 }
 
-private final class InMemoryPendingExportStore: PendingExportStoring {
+final class InMemoryPendingExportStore: PendingExportStoring, @unchecked Sendable {
+    private let lock = NSLock()
     private var requests: [PendingExportRequest] = []
 
     func loadAll() throws -> [PendingExportRequest] {
-        requests
+        lock.withLock { requests }
     }
 
     func upsert(_ request: PendingExportRequest) throws {
-        requests.removeAll { $0.id == request.id }
-        requests.append(request)
+        lock.withLock {
+            requests.removeAll { $0.id == request.id }
+            requests.append(request)
+        }
     }
 
     func remove(id: PendingExportRequest.ID) throws {
-        requests.removeAll { $0.id == id }
+        lock.withLock {
+            requests.removeAll { $0.id == id }
+        }
     }
 
     func clearCompletedRequests(ids: Set<PendingExportRequest.ID>) throws {
-        requests.removeAll { ids.contains($0.id) }
+        lock.withLock {
+            requests.removeAll { ids.contains($0.id) }
+        }
     }
 
     func notificationIdentifier(for request: PendingExportRequest) -> String {
