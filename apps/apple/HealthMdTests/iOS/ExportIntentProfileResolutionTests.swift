@@ -43,7 +43,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     }
 
     func testUnnamedResolutionUsesActiveProfile() throws {
-        let store = ExportProfileStore(userDefaults: defaults)
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         store.add(name: "Daily", settings: makeSettings(filenameFormat: "d-{date}"), target: .localIPhoneFolder)
         let weekly = store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint)
         store.activate(id: weekly.id)
@@ -59,7 +59,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     }
 
     func testNamedResolutionIsTrimmedAndCaseInsensitive() throws {
-        let store = ExportProfileStore(userDefaults: defaults)
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         let weekly = store.add(name: "Weekly Sleep", settings: makeSnapshot(), target: .apiEndpoint)
 
         let resolution = ExportIntentRunner.resolveProfile(named: "  weekly sleep ", profileStore: store)
@@ -68,7 +68,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     }
 
     func testUnknownNameFailsClosed() {
-        let store = ExportProfileStore(userDefaults: defaults)
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         store.add(name: "Daily", settings: makeSnapshot(), target: .localIPhoneFolder)
 
         let resolution = ExportIntentRunner.resolveProfile(named: "Missing", profileStore: store)
@@ -79,7 +79,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     }
 
     func testProfileRunUsesProfileSnapshotAndAdoptsDestinations() async throws {
-        let store = ExportProfileStore(userDefaults: defaults)
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         let profile = store.add(
             name: "Sleep",
             settings: makeSettings(filenameFormat: "sleep-{date}"),
@@ -104,7 +104,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     }
 
     func testProfileNotFoundShortCircuitsBeforeVaultAccess() async {
-        let store = ExportProfileStore(userDefaults: defaults)
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         store.add(name: "Daily", settings: makeSnapshot(), target: .localIPhoneFolder)
 
         var vaultEvents: [String] = []
@@ -129,7 +129,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
                 },
                 targetLabel: { "iPhone: TestVault" },
                 makeSettings: { AdvancedExportSettings() },
-                profileStore: ExportProfileStore(userDefaults: self.defaults),
+                profileStore: ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: self.defaults)),
                 exportDatesBackground: { _, _ in
                     XCTFail("no export should run for an unresolvable profile")
                     return ExportOrchestrator.ExportResult(
@@ -193,7 +193,7 @@ private final class ProfileRunRecorder {
             withVaultAccess: { operation in await operation() },
             targetLabel: { "iPhone: TestVault" },
             makeSettings: { AdvancedExportSettings() },
-            profileStore: ExportProfileStore(userDefaults: defaults),
+            profileStore: ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults)),
             makeSettingsForProfile: { profile in
                 AdvancedExportSettings(snapshot: profile.settings, userDefaults: defaults)
             },
@@ -233,5 +233,11 @@ private final class ProfileRunRecorder {
 /// STATIC RETENTION JUSTIFICATION: retain Dependencies for the process lifetime.
 enum ProfileResolutionRetainer {
     static var retained: [ExportIntentRunner.Dependencies] = []
+    static var retainedStores: [ExportProfileStore] = []
+
+    static func retain(_ store: ExportProfileStore) -> ExportProfileStore {
+        retainedStores.append(store)
+        return store
+    }
 }
 #endif

@@ -121,7 +121,7 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
 
     func testCorruptedDataStartsEmpty() {
         defaults.set(Data("garbage".utf8), forKey: "scheduledExportEntries.list")
-        XCTAssertTrue(makeStore().entries.isEmpty)
+        let reloaded = makeStore(); Self.retainedStores.append(reloaded); XCTAssertTrue(reloaded.entries.isEmpty)
     }
 
     func testDeleteAndRecordSuccess() {

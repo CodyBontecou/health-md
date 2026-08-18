@@ -188,6 +188,7 @@ final class ExportProfileStoreTests: XCTestCase {
 
     func testUpdateSettingsAndTargetBumpTimestamp() throws {
         let store = ExportProfileStore(userDefaults: defaults, now: { self.fixedNow })
+        Self.retainedStores.append(store)
         let profile = store.add(
             name: "Workouts",
             settings: makeSnapshot(filenameFormat: "old-{date}"),
@@ -197,6 +198,7 @@ final class ExportProfileStoreTests: XCTestCase {
 
         let later = fixedNow.addingTimeInterval(3_600)
         let laterStore = ExportProfileStore(userDefaults: defaults, now: { later })
+        Self.retainedStores.append(laterStore)
         let updatedSnapshot = makeSnapshot(filenameFormat: "new-{date}")
 
         XCTAssertTrue(laterStore.updateSettings(id: profile.id, settings: updatedSnapshot))

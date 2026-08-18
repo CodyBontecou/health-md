@@ -106,7 +106,7 @@ final class ProfileDestinationStoreTests: XCTestCase {
 
         XCTAssertNil(store.vault(id: a.id))
         XCTAssertNotNil(store.vault(id: b.id))
-        XCTAssertEqual(makeStore().vaults.map(\.id), [b.id])
+        let reloaded = makeStore(); Self.retainedStores.append(reloaded); XCTAssertEqual(reloaded.vaults.map(\.id), [b.id])
     }
 
     // MARK: - API endpoints
@@ -149,7 +149,7 @@ final class ProfileDestinationStoreTests: XCTestCase {
 
         XCTAssertTrue(store.apiEndpoints.isEmpty)
         XCTAssertNil(store.token(for: endpoint.id))
-        XCTAssertNil(makeStore().apiEndpoint(id: endpoint.id))
+        let reloadedEndpoint = makeStore(); Self.retainedStores.append(reloadedEndpoint); XCTAssertNil(reloadedEndpoint.apiEndpoint(id: endpoint.id))
     }
 
     func testAPIEndpointsPersistAcrossStoreInstances() {
