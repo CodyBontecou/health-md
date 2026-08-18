@@ -542,8 +542,12 @@ final class ExportJourneyUITests: XCTestCase {
         let yesterdayPreset = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
         let allTimePreset = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        XCTAssertTrue(todayPreset.exists, "Today preset should be visible")
-        XCTAssertTrue(yesterdayPreset.exists, "Yesterday preset should be visible")
+        // The export-profile picker section sits above Date Range once profiles
+        // are active, so presets render lazily below the fold; scroll to them.
+        scrollUntilExists(todayPreset, in: app)
+        XCTAssertTrue(todayPreset.exists, "Today preset should be reachable")
+        scrollUntilExists(yesterdayPreset, in: app)
+        XCTAssertTrue(yesterdayPreset.exists, "Yesterday preset should be reachable")
         scrollUntilExists(allTimePreset, in: app)
         XCTAssertTrue(allTimePreset.exists, "All Time preset should be reachable by scrolling")
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible beside All Time")

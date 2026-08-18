@@ -139,7 +139,10 @@ final class ScheduledExportEntryStore: ObservableObject {
 
     private static let storageKey = "scheduledExportEntries.list"
 
-    init(
+    /// `nonisolated` so default-argument construction in nonisolated contexts
+    /// (SE-0466 default arguments) stays legal; the body only assigns stored
+    /// properties and decodes UserDefaults, which is thread-safe.
+    nonisolated init(
         userDefaults: UserDefaults = .standard,
         now: @escaping () -> Date = { Date() }
     ) {
@@ -158,7 +161,7 @@ final class ScheduledExportEntryStore: ObservableObject {
         }
     }
 
-    private static func decodeStoredEntries(from userDefaults: UserDefaults) -> [ScheduledExportEntry] {
+    nonisolated private static func decodeStoredEntries(from userDefaults: UserDefaults) -> [ScheduledExportEntry] {
         guard let data = userDefaults.data(forKey: storageKey),
               let decoded = try? JSONDecoder().decode([ScheduledExportEntry].self, from: data) else {
             return []

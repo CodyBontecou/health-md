@@ -81,7 +81,10 @@ final class ExportProfileStore: ObservableObject {
 
     static let defaultProfileName = String(localized: "Default", comment: "Name of the export profile migrated from existing settings")
 
-    init(
+    /// `nonisolated` so default-argument construction in nonisolated contexts
+    /// (SE-0466 default arguments) stays legal; the body only assigns stored
+    /// properties and decodes UserDefaults, which is thread-safe.
+    nonisolated init(
         userDefaults: UserDefaults = .standard,
         now: @escaping () -> Date = { Date() }
     ) {
@@ -352,7 +355,7 @@ final class ExportProfileStore: ObservableObject {
         )
     }
 
-    private func decodedContainsProfile(withID id: UUID, in list: [ExportProfile]) -> Bool {
+    nonisolated private func decodedContainsProfile(withID id: UUID, in list: [ExportProfile]) -> Bool {
         list.contains { $0.id == id }
     }
 }

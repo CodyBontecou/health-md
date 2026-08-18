@@ -62,7 +62,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         func makeManager(
             defaults: UserDefaults,
             keychain: FakeKeychainStore,
-            now: @escaping () -> Date
+            now: @escaping @Sendable () -> Date
         ) -> SchedulingManager {
             let harness = self
             return SchedulingManager(

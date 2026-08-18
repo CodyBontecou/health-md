@@ -195,8 +195,16 @@ enum ExportIntentRunner {
         }
     }
 
-    static func run(dates: [Date], source: ExportSource = .shortcut) async -> Outcome {
-        await run(dates: dates, source: source, profileName: nil, dependencies: .live())
+    /// Convenience for intent entry points: resolves the live dependency
+    /// graph on the main actor. Kept separate from the full `run` overload so
+    /// `.live()` is never a default argument (SE-0466 default arguments are
+    /// evaluated in a nonisolated context and `live()` is main-actor-isolated).
+    static func run(
+        dates: [Date],
+        source: ExportSource = .shortcut,
+        profileName: String? = nil
+    ) async -> Outcome {
+        await run(dates: dates, source: source, profileName: profileName, dependencies: .live())
     }
 
     static func run(dates: [Date], source: ExportSource = .shortcut, dependencies: Dependencies) async -> Outcome {
@@ -207,7 +215,7 @@ enum ExportIntentRunner {
         dates: [Date],
         source: ExportSource = .shortcut,
         profileName: String? = nil,
-        dependencies: Dependencies = .live()
+        dependencies: Dependencies
     ) async -> Outcome {
         guard !dates.isEmpty else {
             return .failure(reason: "No dates to export")

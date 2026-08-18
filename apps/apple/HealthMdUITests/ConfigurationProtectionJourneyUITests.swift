@@ -5,6 +5,16 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// The export-profile picker section sits above Date Range once profiles
+    /// are active, so preset buttons render lazily below the fold; scroll to
+    /// them before asserting or tapping.
+    private func scrollUntilExists(_ element: XCUIElement, in app: XCUIApplication) {
+        let scrollView = app.scrollViews.firstMatch
+        for _ in 0..<6 where !element.exists {
+            scrollView.swipeUp()
+        }
+    }
+
     func testBlockedChangeToastNavigatesToProtectionToggle() {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
@@ -19,6 +29,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.isHittable, "Manual export must remain available while configuration is protected")
 
         let protectedControl = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
+        scrollUntilExists(protectedControl, in: app)
         XCTAssertTrue(protectedControl.waitForExistence(timeout: 5))
         protectedControl.tap()
 
@@ -123,6 +134,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         exportTab.tap()
 
         let yesterday = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
+        scrollUntilExists(yesterday, in: app)
         XCTAssertTrue(yesterday.waitForExistence(timeout: 5))
         XCTAssertTrue(yesterday.isEnabled, "Configuration controls should be enabled after protection is turned off")
         XCTAssertFalse(app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion].firstMatch.exists)
