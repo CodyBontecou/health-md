@@ -25,6 +25,10 @@ final class ExportProfileCoordinatorTests: XCTestCase {
     // ObservableObjects use Combine subscriptions; existing tests retain them
     // to avoid platform-specific deinit crashes while the process tears down.
     private static var retainedSettings: [AdvancedExportSettings] = []
+    // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
+    // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
+    // where nested store release aborts; retain for the process lifetime.
+    private static var retainedInstances: [AnyObject] = []
 
     private var defaults: UserDefaults!
     private var defaultsSuiteName: String!
@@ -81,7 +85,7 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         let resolvedSettings = settings ?? makeSettings()
         let resolvedVaultManager = vaultManager ?? makeVaultManager()
         let resolvedAPIExportSettings = apiExportSettings ?? makeAPIExportSettings()
-        return ExportProfileCoordinator(
+        let coordinator = ExportProfileCoordinator(
             profileStore: ExportProfileStore(userDefaults: defaults),
             destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
             scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
@@ -90,6 +94,9 @@ final class ExportProfileCoordinatorTests: XCTestCase {
             apiExportSettings: resolvedAPIExportSettings,
             initialTarget: initialTarget
         )
+        Self.retainedInstances.append(coordinator)
+        Self.retainedInstances.append(resolvedVaultManager)
+        return coordinator
     }
 
     /// Saves a complete vault selection through VaultManager's real path so

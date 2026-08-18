@@ -2,6 +2,11 @@ import XCTest
 @testable import HealthMd
 
 final class ScheduledExportEntryStoreTests: XCTestCase {
+
+    // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
+    // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
+    // where nested store release aborts; retain for the process lifetime.
+    private static var retainedStores: [AnyObject] = []
     private var defaults: UserDefaults!
     private var defaultsSuiteName: String!
     private var calendar: Calendar!
@@ -29,7 +34,9 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
     }
 
     private func makeStore() -> ScheduledExportEntryStore {
-        ScheduledExportEntryStore(userDefaults: defaults, now: { self.fixedNow })
+        let store = ScheduledExportEntryStore(userDefaults: defaults, now: { self.fixedNow })
+        Self.retainedStores.append(store)
+        return store
     }
 
     private func makeDate(
@@ -107,7 +114,7 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
             }
         )
 
-        let second = ScheduledExportEntryStore(userDefaults: defaults, now: { self.fixedNow })
+        let second = ScheduledExportEntryStore(userDefaults: defaults, now: { self.fixedNow }); Self.retainedStores.append(second)
         XCTAssertEqual(second.entries, first.entries)
         XCTAssertEqual(second.entry(profileID: idA)?.weekday, 3)
     }
@@ -171,7 +178,7 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
         var otherDefaults: UserDefaults!
         otherSuiteName = "disabled.\(UUID().uuidString)"
         otherDefaults = UserDefaults(suiteName: otherSuiteName)
-        let otherStore = ScheduledExportEntryStore(userDefaults: otherDefaults, now: { self.fixedNow })
+        let otherStore = ScheduledExportEntryStore(userDefaults: otherDefaults, now: { self.fixedNow }); Self.retainedStores.append(otherStore)
         XCTAssertFalse(
             otherStore.migrateLegacyScheduleIfNeeded(
                 legacy: ExportSchedule(isEnabled: false),

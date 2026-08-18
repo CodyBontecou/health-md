@@ -12,6 +12,10 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
     // observation state that is unsafe during test teardown on some macOS
     // runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
+    // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
+    // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
+    // where nested store release aborts; retain for the process lifetime.
+    private static var retainedInstances: [AnyObject] = []
 
     private var defaults: UserDefaults!
     private var defaultsSuiteName: String!
@@ -65,7 +69,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             now: @escaping @Sendable () -> Date
         ) -> SchedulingManager {
             let harness = self
-            return SchedulingManager(
+            let manager = SchedulingManager(
                 pendingExportStore: pendingStore,
                 exportNotificationScheduler: notificationScheduler,
                 initialSchedule: ExportSchedule(isEnabled: false),
@@ -92,6 +96,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                     harness.adoptedProfiles.append(profile?.name)
                 }
             )
+            SchedulingManagerProfileSchedulingTests.retainedInstances.append(manager)
+            return manager
         }
     }
 

@@ -3,6 +3,11 @@ import XCTest
 
 @MainActor
 final class ProfileDestinationStoreTests: XCTestCase {
+
+    // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
+    // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
+    // where nested store release aborts; retain for the process lifetime.
+    private static var retainedStores: [AnyObject] = []
     private var defaults: UserDefaults!
     private var defaultsSuiteName: String!
     private var keychain: FakeKeychainStore!
@@ -26,7 +31,9 @@ final class ProfileDestinationStoreTests: XCTestCase {
     }
 
     private func makeStore() -> ProfileDestinationStore {
-        ProfileDestinationStore(userDefaults: defaults, keychain: keychain)
+        let store = ProfileDestinationStore(userDefaults: defaults, keychain: keychain)
+        Self.retainedStores.append(store)
+        return store
     }
 
     // MARK: - Vault destinations

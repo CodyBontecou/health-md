@@ -6,6 +6,10 @@ final class ExportProfileStoreTests: XCTestCase {
     // ObservableObjects use Combine subscriptions; existing tests retain them
     // to avoid platform-specific deinit crashes while the process tears down.
     private static var retainedSettings: [AdvancedExportSettings] = []
+    // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
+    // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
+    // where nested store release aborts; retain for the process lifetime.
+    private static var retainedStores: [AnyObject] = []
 
     private var defaults: UserDefaults!
     private var defaultsSuiteName: String!
@@ -32,7 +36,9 @@ final class ExportProfileStoreTests: XCTestCase {
     // MARK: - Helpers
 
     private func makeStore() -> ExportProfileStore {
-        ExportProfileStore(userDefaults: defaults, now: { self.fixedNow })
+        let store = ExportProfileStore(userDefaults: defaults, now: { self.fixedNow })
+        Self.retainedStores.append(store)
+        return store
     }
 
     private func makeSnapshot(filenameFormat: String = "health-{date}") -> ExportSettingsSnapshot {

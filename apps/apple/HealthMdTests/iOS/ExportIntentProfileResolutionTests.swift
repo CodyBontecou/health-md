@@ -108,10 +108,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         store.add(name: "Daily", settings: makeSnapshot(), target: .localIPhoneFolder)
 
         var vaultEvents: [String] = []
-        let outcome = await ExportIntentRunner.run(
-            dates: [Date()],
-            profileName: "Ghost Profile",
-            dependencies: ExportIntentRunner.Dependencies(
+        let ghostDependencies = ExportIntentRunner.Dependencies(
                 refreshPurchaseStatus: {},
                 canExport: { true },
                 trackExportBlockedByQuota: {},
@@ -149,7 +146,13 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
                 exportNotificationScheduler: InspectableExportNotificationScheduler(),
                 now: Date.init,
                 calendar: .current
-            )
+        )
+        ProfileResolutionRetainer.retained.append(ghostDependencies)
+
+        let outcome = await ExportIntentRunner.run(
+            dates: [Date()],
+            profileName: "Ghost Profile",
+            dependencies: ghostDependencies
         )
 
         guard case .profileNotFound(let name) = outcome else {
@@ -180,7 +183,7 @@ private final class ProfileRunRecorder {
     var historyProfileNames: [String?] = []
 
     func makeDependencies(defaults: UserDefaults) -> ExportIntentRunner.Dependencies {
-        ExportIntentRunner.Dependencies(
+        let dependencies = ExportIntentRunner.Dependencies(
             refreshPurchaseStatus: {},
             canExport: { true },
             trackExportBlockedByQuota: {},
@@ -219,6 +222,16 @@ private final class ProfileRunRecorder {
             now: Date.init,
             calendar: .current
         )
+        ProfileResolutionRetainer.retained.append(dependencies)
+        return dependencies
     }
+}
+
+/// Process-lifetime retention pool for dependency graphs built by these tests.
+/// Dependencies own their stores; releasing MainActor-isolated stores via the
+/// back-deployed deinit path aborts on older runtimes (CI's iOS 26.2 simulator).
+/// STATIC RETENTION JUSTIFICATION: retain Dependencies for the process lifetime.
+enum ProfileResolutionRetainer {
+    static var retained: [ExportIntentRunner.Dependencies] = []
 }
 #endif
