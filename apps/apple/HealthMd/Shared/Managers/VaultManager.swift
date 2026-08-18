@@ -1389,14 +1389,41 @@ enum VaultDestinationState: Equatable {
     case notSelected
     case available
     case temporarilyUnavailable
+    case requiresReviewIdentityUnavailable
     case requiresReselectionDestinationChanged
     case requiresReselectionMissingExpectedPath
 }
 
+/// Operation-scoped ownership of one successful security-scope acquisition.
+/// The exact URL is captured at acquisition time so destination refreshes,
+/// clearing, reselection, or overlapping operations cannot retarget the stop.
+@MainActor
+final class VaultAccessLease {
+    // Keep deallocation on the releasing thread (swiftlang/swift#85663);
+    // the captured lease is released off the main actor during teardown.
+    nonisolated deinit {}
+    private let url: URL
+    private let bookmarkResolver: BookmarkResolving
+    private var isActive = true
+
+    fileprivate init(url: URL, bookmarkResolver: BookmarkResolving) {
+        self.url = url
+        self.bookmarkResolver = bookmarkResolver
+    }
+
+    func stop() {
+        guard isActive else { return }
+        isActive = false
+        bookmarkResolver.stopAccessing(url)
+    }
+}
+
 @MainActor
 final class VaultManager: ObservableObject {
-    // Keep deallocation on the releasing thread (swiftlang/swift#85663);
-    // ported from the bookmark-identity branch.
+    // Keep deallocation on the releasing thread. Avoid Swift 6.2+'s crashing
+    // isolated-deinit executor hop (swiftlang/swift#85663), which aborted CI
+    // test processes on older iOS runtimes when the last release happened off
+    // the main actor. Matches the AdvancedExportSettings convention.
     nonisolated deinit {}
     static let defaultHealthSubfolder = ""
 
@@ -1404,6 +1431,7 @@ final class VaultManager: ObservableObject {
         let version: Int
         let standardizedPath: String
         let displayName: String
+        let identity: VaultFolderIdentity?
     }
 
     @Published var vaultURL: URL?
@@ -1420,7 +1448,7 @@ final class VaultManager: ObservableObject {
         #if DEBUG && os(macOS)
         if let marketingCaptureDisplayPath { return marketingCaptureDisplayPath }
         #endif
-        return vaultURL?.path(percentEncoded: false)
+        return vaultURL?.path(percentEncoded: false) ?? defaults.string(forKey: vaultPathKey)
     }
 
     /// Localized semantic presentation for `lastExportStatus`. The stored value remains
@@ -1458,15 +1486,17 @@ final class VaultManager: ObservableObject {
     private let bookmarkKey = "obsidianVaultBookmark"
     private let vaultNameKey = "obsidianVaultName"
     private let vaultPathKey = "obsidianVaultPath"
-    private let vaultSelectionKey = "obsidianVaultSelectionV1"
+    private let legacyVaultSelectionKey = "obsidianVaultSelectionV1"
+    private let vaultSelectionKey = "obsidianVaultSelectionV2"
     private static let subfolderKey = "healthSubfolder"
-    private static let savedSelectionVersion = 1
+    private static let savedSelectionVersion = 2
 
     private let defaults: UserDefaultsStoring
     private let fileSystem: FileSystemAccessing
     private let fileCoordinator: FileCoordinating
     private let aggregateFileWriter: AggregateFileWriter
     private let bookmarkResolver: BookmarkResolving
+    private let identityProbe: VaultFolderIdentityProbing
     private let appleLooseDailyPlanner: any AppleLooseDailyExportPlanning
 
     #if DEBUG
@@ -1488,7 +1518,8 @@ final class VaultManager: ObservableObject {
 
     var requiresVaultReselection: Bool {
         switch destinationState {
-        case .requiresReselectionDestinationChanged,
+        case .requiresReviewIdentityUnavailable,
+             .requiresReselectionDestinationChanged,
              .requiresReselectionMissingExpectedPath:
             return true
         case .notSelected, .available, .temporarilyUnavailable:
@@ -1496,8 +1527,18 @@ final class VaultManager: ObservableObject {
         }
     }
 
+    /// True only when the retained destination can be used right now. The local
+    /// folder picker prompt is based on this (not on retained-selection metadata)
+    /// so temporarily unavailable and review/reselection states still open the
+    /// picker when their subtitle tells the user to tap to re-select.
+    var isVaultDestinationUsable: Bool {
+        destinationState == .available
+    }
+
     var vaultIssueMessage: String? {
         switch destinationState {
+        case .requiresReviewIdentityUnavailable:
+            return Self.missingExpectedPathMessage
         case .requiresReselectionDestinationChanged:
             return Self.destinationChangedMessage
         case .requiresReselectionMissingExpectedPath:
@@ -1511,7 +1552,8 @@ final class VaultManager: ObservableObject {
 
     var vaultRecoveryMessage: String? {
         switch destinationState {
-        case .requiresReselectionDestinationChanged,
+        case .requiresReviewIdentityUnavailable,
+             .requiresReselectionDestinationChanged,
              .requiresReselectionMissingExpectedPath:
             return String(localized: "Review the location in Files, then re-select the intended folder.")
         case .temporarilyUnavailable:
@@ -1526,6 +1568,7 @@ final class VaultManager: ObservableObject {
         fileSystem: FileSystemAccessing = SystemFileSystem(),
         fileCoordinator: FileCoordinating? = nil,
         bookmarkResolver: BookmarkResolving = SystemBookmarkResolver(),
+        identityProbe: VaultFolderIdentityProbing = SystemVaultFolderIdentityProbe(),
         appleLooseDailyPlanner: (any AppleLooseDailyExportPlanning)? = nil
     ) {
         self.defaults = defaults
@@ -1544,6 +1587,7 @@ final class VaultManager: ObservableObject {
             fileCoordinator: resolvedFileCoordinator
         )
         self.bookmarkResolver = bookmarkResolver
+        self.identityProbe = identityProbe
         self.appleLooseDailyPlanner = appleLooseDailyPlanner ?? AppleLooseDailyExportPlanner()
         loadSavedSettings()
     }
@@ -1637,29 +1681,22 @@ final class VaultManager: ObservableObject {
         }
 
         let expectedSelection: SavedVaultSelection?
-        if let savedData = defaults.data(forKey: vaultSelectionKey),
-           let decoded = try? JSONDecoder().decode(SavedVaultSelection.self, from: savedData),
-           decoded.version == Self.savedSelectionVersion,
+        let savedSelectionData = defaults.data(forKey: vaultSelectionKey)
+            ?? defaults.data(forKey: legacyVaultSelectionKey)
+        if let savedSelectionData,
+           let decoded = try? JSONDecoder().decode(SavedVaultSelection.self, from: savedSelectionData),
+           (decoded.version == 1 || decoded.version == Self.savedSelectionVersion),
            !decoded.standardizedPath.isEmpty {
             expectedSelection = decoded
         } else if let legacyPath = defaults.string(forKey: vaultPathKey),
                   !legacyPath.isEmpty {
-            let migrated = SavedVaultSelection(
-                version: Self.savedSelectionVersion,
+            expectedSelection = SavedVaultSelection(
+                version: 1,
                 standardizedPath: URL(fileURLWithPath: legacyPath).standardizedFileURL.path,
                 displayName: defaults.string(forKey: vaultNameKey)
-                    ?? URL(fileURLWithPath: legacyPath).lastPathComponent
+                    ?? URL(fileURLWithPath: legacyPath).lastPathComponent,
+                identity: nil
             )
-            do {
-                let encoded = try JSONEncoder().encode(migrated)
-                defaults.set(encoded, forKey: vaultSelectionKey)
-                defaults.set(migrated.standardizedPath, forKey: vaultPathKey)
-                defaults.set(migrated.displayName, forKey: vaultNameKey)
-                expectedSelection = migrated
-                Self.logger.info("Legacy vault selection migrated")
-            } catch {
-                expectedSelection = nil
-            }
         } else {
             expectedSelection = nil
         }
@@ -1675,55 +1712,109 @@ final class VaultManager: ObservableObject {
 
         do {
             let (resolvedURL, isStale) = try bookmarkResolver.resolveBookmark(data: bookmarkData)
-            guard resolvedURL.standardizedFileURL.path == expectedSelection.standardizedPath else {
-                vaultURL = nil
-                vaultName = expectedSelection.displayName
-                destinationState = .requiresReselectionDestinationChanged
-                lastExportStatus = Self.destinationChangedMessage
-                clearLastExportPresentationTarget()
-                Self.logger.error("Vault destination mismatch blocked")
+            guard bookmarkResolver.startAccessing(resolvedURL) else {
+                setTemporarilyUnavailable(selection: expectedSelection)
+                Self.logger.error("Vault security-scoped access temporarily unavailable")
+                return
+            }
+            defer { bookmarkResolver.stopAccessing(resolvedURL) }
+
+            let resolvedIdentity = try identityProbe.persistentIdentity(for: resolvedURL)
+            let pathMatches = resolvedURL.standardizedFileURL.path == expectedSelection.standardizedPath
+
+            if let expectedIdentity = expectedSelection.identity,
+               let resolvedIdentity,
+               expectedIdentity != resolvedIdentity {
+                setDestinationChanged(selection: expectedSelection)
+                Self.logger.error("Vault persistent identity mismatch blocked")
                 return
             }
 
-            vaultURL = resolvedURL
-            vaultName = expectedSelection.displayName
-            destinationState = .available
-            clearTransientFolderStatusIfNeeded()
-            Self.logger.info("Vault bookmark resolution matched expected destination")
-
-            if isStale, bookmarkResolver.startAccessing(resolvedURL) {
-                defer { bookmarkResolver.stopAccessing(resolvedURL) }
-                do {
-                    let refreshedBookmark = try bookmarkResolver.createBookmarkData(for: resolvedURL)
-                    defaults.set(refreshedBookmark, forKey: bookmarkKey)
-                    Self.logger.info("Stale vault bookmark refresh succeeded")
-                } catch {
-                    lastExportStatus = Self.staleBookmarkRefreshStatus
-                    Self.logger.error("Stale vault bookmark refresh failed")
-                }
+            guard pathMatches || (expectedSelection.identity != nil && expectedSelection.identity == resolvedIdentity) else {
+                vaultURL = nil
+                vaultName = expectedSelection.displayName
+                destinationState = .requiresReviewIdentityUnavailable
+                lastExportStatus = Self.missingExpectedPathMessage
+                clearLastExportPresentationTarget()
+                Self.logger.error("Vault moved-path identity unavailable; review required")
+                return
             }
+
+            let acceptedName = pathMatches ? expectedSelection.displayName : resolvedURL.lastPathComponent
+            let acceptedSelection = SavedVaultSelection(
+                version: Self.savedSelectionVersion,
+                standardizedPath: resolvedURL.standardizedFileURL.path,
+                displayName: acceptedName,
+                identity: resolvedIdentity ?? expectedSelection.identity
+            )
+            let needsSelectionUpdate = acceptedSelection != expectedSelection
+            let needsBookmarkRefresh = isStale || !pathMatches
+
+            var refreshedBookmark: Data?
+            var persistenceRefreshFailed = false
+            do {
+                if needsBookmarkRefresh {
+                    refreshedBookmark = try bookmarkResolver.createBookmarkData(for: resolvedURL)
+                }
+                if needsSelectionUpdate {
+                    let selectionData = try JSONEncoder().encode(acceptedSelection)
+                    if let refreshedBookmark { defaults.set(refreshedBookmark, forKey: bookmarkKey) }
+                    defaults.set(selectionData, forKey: vaultSelectionKey)
+                    defaults.set(acceptedSelection.standardizedPath, forKey: vaultPathKey)
+                    defaults.set(acceptedSelection.displayName, forKey: vaultNameKey)
+                    defaults.removeObject(forKey: legacyVaultSelectionKey)
+                } else if let refreshedBookmark {
+                    defaults.set(refreshedBookmark, forKey: bookmarkKey)
+                }
+            } catch {
+                persistenceRefreshFailed = true
+                lastExportStatus = Self.staleBookmarkRefreshStatus
+                Self.logger.error("Vault bookmark/selection refresh failed")
+            }
+
+            vaultURL = resolvedURL
+            vaultName = acceptedName
+            destinationState = .available
+            if !persistenceRefreshFailed {
+                clearTransientFolderStatusIfNeeded()
+            }
+            Self.logger.info("Vault bookmark resolution accepted after identity validation")
         } catch {
-            vaultURL = nil
-            vaultName = expectedSelection.displayName
-            destinationState = .temporarilyUnavailable
-            lastExportStatus = Self.savedFolderUnavailableStatus
-            clearLastExportPresentationTarget()
-            Self.logger.error("Vault bookmark resolution temporarily unavailable")
+            setTemporarilyUnavailable(selection: expectedSelection)
+            Self.logger.error("Vault bookmark or identity probe temporarily unavailable")
         }
+    }
+
+    private func setTemporarilyUnavailable(selection: SavedVaultSelection) {
+        vaultURL = nil
+        vaultName = selection.displayName
+        destinationState = .temporarilyUnavailable
+        lastExportStatus = Self.savedFolderUnavailableStatus
+        clearLastExportPresentationTarget()
+    }
+
+    private func setDestinationChanged(selection: SavedVaultSelection) {
+        vaultURL = nil
+        vaultName = selection.displayName
+        destinationState = .requiresReselectionDestinationChanged
+        lastExportStatus = Self.destinationChangedMessage
+        clearLastExportPresentationTarget()
     }
 
     private func makeSavedSelection(for url: URL) throws -> (SavedVaultSelection, Data) {
         let selection = SavedVaultSelection(
             version: Self.savedSelectionVersion,
             standardizedPath: url.standardizedFileURL.path,
-            displayName: url.lastPathComponent
+            displayName: url.lastPathComponent,
+            identity: try identityProbe.persistentIdentity(for: url)
         )
         return (selection, try JSONEncoder().encode(selection))
     }
 
     private func clearTransientFolderStatusIfNeeded() {
         switch lastExportStatus {
-        case Self.savedFolderUnavailableStatus,
+        case Self.staleBookmarkRefreshStatus,
+             Self.savedFolderUnavailableStatus,
              Self.folderAccessDeniedStatus,
              Self.destinationChangedMessage,
              Self.missingExpectedPathMessage:
@@ -1753,6 +1844,7 @@ final class VaultManager: ObservableObject {
 
             defaults.set(bookmarkData, forKey: bookmarkKey)
             defaults.set(selectionData, forKey: vaultSelectionKey)
+            defaults.removeObject(forKey: legacyVaultSelectionKey)
             defaults.set(selection.displayName, forKey: vaultNameKey)
             defaults.set(selection.standardizedPath, forKey: vaultPathKey)
 
@@ -1771,6 +1863,7 @@ final class VaultManager: ObservableObject {
         defaults.removeObject(forKey: bookmarkKey)
         defaults.removeObject(forKey: vaultNameKey)
         defaults.removeObject(forKey: vaultPathKey)
+        defaults.removeObject(forKey: legacyVaultSelectionKey)
         defaults.removeObject(forKey: vaultSelectionKey)
         vaultURL = nil
         vaultName = "No vault selected"
@@ -1877,8 +1970,26 @@ final class VaultManager: ObservableObject {
         defaults.data(forKey: bookmarkKey) != nil
     }
 
+    /// True when UI should present a retained folder selection, even while its
+    /// bookmark is temporarily unavailable or requires review.
+    var hasVaultSelection: Bool {
+        destinationState != .notSelected
+    }
+
+    var vaultAvailabilityText: String {
+        switch destinationState {
+        case .notSelected: return String(localized: "Choose Folder")
+        case .available: return String(localized: "Selected")
+        case .temporarilyUnavailable: return String(localized: "Unavailable")
+        case .requiresReviewIdentityUnavailable,
+             .requiresReselectionDestinationChanged,
+             .requiresReselectionMissingExpectedPath:
+            return String(localized: "Needs Access")
+        }
+    }
+
     var isVaultConfigured: Bool {
-        hasVaultAccess || hasSavedVaultFolder || defaults.data(forKey: vaultSelectionKey) != nil
+        hasVaultSelection
     }
 
     /// Returns whether the selected vault folder can currently be accessed via
@@ -1902,24 +2013,18 @@ final class VaultManager: ObservableObject {
         loadSavedSettings()
     }
 
-    /// Start accessing the vault (for background tasks)
-    @discardableResult
-    func startVaultAccess() -> Bool {
+    /// Begin operation-scoped vault access. The returned lease owns the exact
+    /// URL that was successfully started and must be stopped by the caller.
+    func beginVaultAccess() -> VaultAccessLease? {
         guard destinationState == .available, let url = vaultURL else {
             lastExportStatus = vaultIssueMessage
-            return false
+            return nil
         }
-        let didStartAccess = bookmarkResolver.startAccessing(url)
-        if !didStartAccess {
+        guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = Self.folderAccessDeniedStatus
+            return nil
         }
-        return didStartAccess
-    }
-
-    /// Stop accessing the vault (for background tasks)
-    func stopVaultAccess() {
-        guard destinationState == .available, let url = vaultURL else { return }
-        bookmarkResolver.stopAccessing(url)
+        return VaultAccessLease(url: url, bookmarkResolver: bookmarkResolver)
     }
 
     private var unavailableExportError: ExportError {

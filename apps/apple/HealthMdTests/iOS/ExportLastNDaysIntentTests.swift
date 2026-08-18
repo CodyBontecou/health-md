@@ -330,11 +330,11 @@ final class ExportIntentRunnerTests: XCTestCase {
                 refreshVaultAccess: { [weak self] in
                     self?.destinationEvents.append("refresh")
                 },
-                startVaultAccess: { [weak self] in
+                withVaultAccess: { [weak self] operation in
                     self?.startVaultAccessCount += 1
-                },
-                stopVaultAccess: { [weak self] in
+                    let result = await operation()
                     self?.stopVaultAccessCount += 1
+                    return result
                 },
                 targetLabel: { "iPhone: TestVault" },
                 makeSettings: { AdvancedExportSettings() },

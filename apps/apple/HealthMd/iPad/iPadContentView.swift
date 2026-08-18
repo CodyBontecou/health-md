@@ -237,6 +237,7 @@ struct iPadContentView: View {
             }
             .onChange(of: scenePhase) { _, newPhase in
                 guard newPhase == .active else { return }
+                vaultManager.refreshVaultAccess()
                 Task { await refreshDateRangeSelectionForOpening() }
             }
             .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
@@ -282,7 +283,7 @@ struct iPadContentView: View {
 
     private var canExport: Bool {
         healthKitManager.isAuthorized
-            && (vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection)
+            && vaultManager.hasVaultSelection
             && advancedSettings.hasFileDestinationOutput
     }
 

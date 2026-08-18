@@ -1024,10 +1024,10 @@ struct ExportPreviewView: View {
             return .resolved(.emptyDocument)
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             return .unreadable(ExportError.accessDenied)
         }
-        defer { vaultManager.stopVaultAccess() }
+        defer { accessLease.stop() }
 
         if FileManager.default.fileExists(atPath: localURL.path) {
             do {

@@ -718,10 +718,10 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
     ) throws {
         guard let root = vault.vaultURL,
               root.lastPathComponent == "HealthMdPerformanceLab",
-              vault.startVaultAccess() else {
+              let accessLease = vault.beginVaultAccess() else {
             throw LabError.localDestinationUnavailable
         }
-        defer { vault.stopVaultAccess() }
+        defer { accessLease.stop() }
         let marker = root.appendingPathComponent(".healthmd-performance-lab")
         let attributes = try? FileManager.default.attributesOfItem(atPath: marker.path)
         if let fileType = attributes?[.type] as? FileAttributeType,
@@ -1011,7 +1011,8 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
             vault.refreshVaultAccess()
             if let root = vault.vaultURL,
                root.lastPathComponent == "HealthMdPerformanceLab",
-               vault.startVaultAccess() {
+               let accessLease = vault.beginVaultAccess() {
+                defer { accessLease.stop() }
                 if localMarkerMatches(root: root, binding: binding) {
                     let runsRoot = root.appendingPathComponent("Runs", isDirectory: true)
                         .standardizedFileURL
@@ -1021,7 +1022,6 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
                         try? FileManager.default.removeItem(at: destination)
                     }
                 }
-                vault.stopVaultAccess()
             }
         }
         let telemetryRoot = FileManager.default.urls(

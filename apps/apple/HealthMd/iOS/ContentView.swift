@@ -444,6 +444,7 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
             restoreInteractiveCorpusExportIfNeeded()
+            vaultManager.refreshVaultAccess()
             Task { await refreshDateRangeSelectionForOpening() }
         }
         .onChange(of: dateRangePreset) { _, _ in
@@ -2474,7 +2475,7 @@ struct SettingsTabView: View {
     }
 
     private var vaultStatusLabel: String {
-        vaultManager.vaultURL == nil ? "Not Set" : "Configured"
+        vaultManager.vaultAvailabilityText
     }
 
     private var showDebugTools: Bool {
@@ -2555,7 +2556,7 @@ struct SettingsTabView: View {
         ) {
             HStack(spacing: Spacing.sm) {
                 SettingsStatusPill(text: purchaseManager.isUnlocked ? "Full Access" : "Free Plan", tone: purchaseStatusTone)
-                SettingsStatusPill(text: vaultManager.vaultURL == nil ? "Vault Needed" : "Vault Set", tone: vaultManager.vaultURL == nil ? .warning : .success)
+                SettingsStatusPill(text: vaultManager.vaultAvailabilityText, tone: vaultManager.vaultURL == nil ? .warning : .success)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Purchase status: \(purchaseManager.isUnlocked ? "full access" : "free plan"). Vault status: \(vaultStatusLabel.lowercased()).")
@@ -2615,10 +2616,10 @@ struct SettingsTabView: View {
             SettingsRow(
                 icon: "folder.fill",
                 title: "Obsidian Vault",
-                subtitle: vaultManager.isVaultConfigured ? vaultManager.vaultName : "Choose a folder for exports",
+                subtitle: vaultManager.hasVaultSelection ? vaultManager.vaultName : "Choose a folder for exports",
                 status: vaultStatusLabel,
                 statusTone: vaultManager.vaultURL == nil ? .warning : .success,
-                isActive: vaultManager.vaultURL != nil,
+                isActive: vaultManager.hasVaultSelection,
                 accessibilityHint: "Double tap to choose an Obsidian vault folder",
                 action: { showFolderPicker = true }
             )

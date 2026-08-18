@@ -104,7 +104,9 @@ struct iPadSettingsView: View {
                                     vaultManager.saveSubfolderSetting()
                                 }
                         }
+                    }
 
+                    if vaultManager.hasVaultSelection {
                         Button("Clear Folder Selection", role: .destructive) {
                             vaultManager.clearVaultFolder()
                         }
@@ -386,13 +388,13 @@ struct iPadSettingsView: View {
 
     private var folderStatus: some View {
         HStack(spacing: 8) {
-            if let url = vaultManager.vaultURL {
-                Image(systemName: "folder.fill")
-                    .foregroundStyle(Color.accent)
+            if vaultManager.hasVaultSelection {
+                Image(systemName: vaultManager.vaultURL == nil ? "folder.badge.exclamationmark" : "folder.fill")
+                    .foregroundStyle(vaultManager.vaultURL == nil ? Color.warning : Color.accent)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(vaultManager.vaultName)
                         .font(Typography.bodyEmphasis())
-                    Text(url.path(percentEncoded: false))
+                    Text(vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
                         .font(Typography.caption())
                         .foregroundStyle(Color.textMuted)
                         .lineLimit(2)
@@ -409,7 +411,7 @@ struct iPadSettingsView: View {
     }
 
     private var folderPickerButton: some View {
-        Button(vaultManager.vaultURL != nil ? "Change…" : "Choose…") {
+        Button(vaultManager.hasVaultSelection ? "Change…" : "Choose…") {
             showFolderPicker = true
         }
         .tint(Color.accent)

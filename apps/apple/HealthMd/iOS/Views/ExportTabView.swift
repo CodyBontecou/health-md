@@ -352,7 +352,10 @@ struct ExportTabView: View {
             macSubtitle: macTargetSubtitle,
             apiSubtitle: apiTargetSubtitle,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            // Prompt on any state where the retained selection cannot be used
+            // right now (including temporary unavailability and the reselection/
+            // review states), not merely when no selection metadata is retained.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             onRequestFolderPicker: { showFolderPicker = true },
             onOpenAPISettings: { showAPIEndpointSettings = true }
         )
@@ -420,7 +423,10 @@ struct ExportTabView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -1391,7 +1397,7 @@ struct ExportTabView: View {
     private var exportTargetSummary: String {
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : vaultManager.vaultName
+            return vaultManager.hasVaultSelection ? vaultManager.vaultName : "iPhone folder"
         case .connectedMac:
             return syncService.macDestinationStatus?.destinationDisplayName
                 ?? syncService.connectedPeerName
@@ -1574,7 +1580,7 @@ struct ExportTabView: View {
     private var previewDestinationLabel: String {
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : "iPhone: \(vaultManager.vaultName)"
+            return vaultManager.hasVaultSelection ? "iPhone: \(vaultManager.vaultName)" : "iPhone folder"
         case .connectedMac:
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
                 return "Mac: \(path)"

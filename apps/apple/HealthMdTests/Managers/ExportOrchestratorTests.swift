@@ -1073,6 +1073,7 @@ final class ExportOrchestratorTests: XCTestCase {
             defaults: defaults,
             fileSystem: fileSystem,
             bookmarkResolver: bookmarkResolver,
+            identityProbe: FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         manager.healthSubfolder = "Health"

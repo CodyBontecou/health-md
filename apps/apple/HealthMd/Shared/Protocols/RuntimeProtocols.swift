@@ -43,6 +43,18 @@ protocol HTTPClientProtocol: Sendable {
 
 // MARK: - Bookmark Resolution
 
+/// Stable identity evidence for a directory on a volume that Foundation reports
+/// supports persistent file identifiers.
+struct VaultFolderIdentity: Codable, Equatable, Sendable {
+    let volumeUUIDString: String
+    let fileIdentifier: UInt64
+}
+
+/// Probes optional persistent identity evidence for a resolved vault folder.
+protocol VaultFolderIdentityProbing {
+    func persistentIdentity(for url: URL) throws -> VaultFolderIdentity?
+}
+
 /// Abstracts URL bookmark resolution and security-scoped resource access
 /// used by VaultManager for vault folder persistence.
 protocol BookmarkResolving {
@@ -69,7 +81,7 @@ nonisolated enum FileCoordinationError: Error, Equatable, Sendable {
 }
 
 /// Coordinates mutations of user-selected external files without changing the
-/// destination authorized by VaultManager's saved-selection path check.
+/// destination authorized by VaultManager's saved-selection identity check.
 nonisolated protocol FileCoordinating: Sendable {
     func coordinateWriting<Output>(
         at url: URL,

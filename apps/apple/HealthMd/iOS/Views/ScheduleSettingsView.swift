@@ -851,7 +851,9 @@ struct ScheduleSettingsView: View {
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            // See the export tab: prompt from current destination usability, not
+            // retained-selection metadata, so unavailable folders still open the picker.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
@@ -922,7 +924,10 @@ struct ScheduleSettingsView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -1226,13 +1231,14 @@ struct ScheduleSettingsView: View {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             await MainActor.run {
                 retryErrorMessage = ExportFailureReason.accessDenied.detailedDescription
                 showRetryError = true
             }
             return
         }
+        defer { accessLease.stop() }
 
         let totalDays = datesToExport.count
         var successCount = 0
@@ -1303,8 +1309,6 @@ struct ScheduleSettingsView: View {
                 )
             }
         }
-
-        vaultManager.stopVaultAccess()
 
         await MainActor.run {
             retryProgress = 1.0

@@ -1937,7 +1937,7 @@ class SchedulingManager: ObservableObject {
             )
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
                 totalCount: dates.count,
@@ -1945,17 +1945,15 @@ class SchedulingManager: ObservableObject {
                 formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
+        defer { accessLease.stop() }
 
-        let result = await ExportOrchestrator.exportDatesBackground(
+        return await ExportOrchestrator.exportDatesBackground(
             dates,
             healthKitManager: healthKitManager,
             vaultManager: vaultManager,
             settings: advancedSettings,
             externalIntegrations: scheduledExternalIntegrations
         )
-
-        vaultManager.stopVaultAccess()
-        return result
     }
 
     // MARK: - Background Task Execution
@@ -2080,7 +2078,7 @@ class SchedulingManager: ObservableObject {
         logger.info("Vault access confirmed")
         logger.info("Exporting \(dates.count) days of data")
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             logger.error("Could not start vault security scope in background")
             return ExportOrchestrator.ExportResult(
                 successCount: 0,
@@ -2089,6 +2087,7 @@ class SchedulingManager: ObservableObject {
                 formatsPerDate: advancedSettings.looseFormatsPerDate
             )
         }
+        defer { accessLease.stop() }
 
         let result = await ExportOrchestrator.exportDatesBackground(
             dates,
@@ -2110,8 +2109,6 @@ class SchedulingManager: ObservableObject {
                 )
             }
         )
-
-        vaultManager.stopVaultAccess()
 
         logger.info("Background export completed. Success: \(result.successCount)/\(result.totalCount)")
         return result
