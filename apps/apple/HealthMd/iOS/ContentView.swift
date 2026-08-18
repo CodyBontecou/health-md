@@ -902,6 +902,7 @@ struct ContentView: View {
         profileCoordinator = ExportProfileCoordinator(
             profileStore: ExportProfileStore(),
             destinationStore: ProfileDestinationStore(),
+            scheduledEntryStore: ScheduledExportEntryStore(),
             settings: advancedSettings,
             vaultManager: vaultManager,
             apiExportSettings: apiExportSettings,

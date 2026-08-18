@@ -84,6 +84,7 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         return ExportProfileCoordinator(
             profileStore: ExportProfileStore(userDefaults: defaults),
             destinationStore: ProfileDestinationStore(userDefaults: defaults, keychain: keychain),
+            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: defaults),
             settings: resolvedSettings,
             vaultManager: resolvedVaultManager,
             apiExportSettings: resolvedAPIExportSettings,

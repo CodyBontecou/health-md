@@ -46,7 +46,7 @@ final class ExportProfileCoordinator: ObservableObject {
     init(
         profileStore: ExportProfileStore,
         destinationStore: ProfileDestinationStore,
-        scheduledEntryStore: ScheduledExportEntryStore = ScheduledExportEntryStore(),
+        scheduledEntryStore: ScheduledExportEntryStore,
         settings: AdvancedExportSettings,
         vaultManager: VaultManager,
         apiExportSettings: APIExportSettings,

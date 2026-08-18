@@ -31,7 +31,7 @@ enum ExportIntentRunner {
 
     static func resolveProfile(
         named rawName: String?,
-        profileStore: ExportProfileStore = ExportProfileStore()
+        profileStore: ExportProfileStore
     ) -> IntentProfileResolution {
         guard profileStore.hasProfiles else { return .legacySettings }
 
