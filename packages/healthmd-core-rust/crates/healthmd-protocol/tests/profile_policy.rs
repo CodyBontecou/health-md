@@ -91,6 +91,7 @@ fn old_peer_fails_closed_on_profile_policy() {
         CurrentIphoneSettings,
     }
     #[derive(Deserialize)]
+    #[allow(dead_code)] // wire-shape mirror: only decode success/failure is asserted
     struct LegacyRequest {
         settings_policy: LegacySettingsPolicy,
     }
