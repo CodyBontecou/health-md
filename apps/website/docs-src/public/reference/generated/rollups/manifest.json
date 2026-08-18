@@ -2,9 +2,9 @@
   "artifact_set" : "healthmd.generated_rollup_reference_docs",
   "artifacts" : [
     {
-      "bytes" : 120672,
+      "bytes" : 104830,
       "path" : "aggregation-behavior.md",
-      "sha256" : "6a39c4fae8ce914b736e9534796ed4634a157c35223de9d2c55700871eb0bbe4"
+      "sha256" : "c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68"
     },
     {
       "bytes" : 11564,
@@ -152,7 +152,7 @@
   },
   "manifest_version" : 1,
   "schema" : {
-    "data_dictionary_entry_count" : 262,
+    "data_dictionary_entry_count" : 232,
     "rollup" : "healthmd.rollup_summary",
     "source" : "healthmd.health_data",
     "source_version" : 8

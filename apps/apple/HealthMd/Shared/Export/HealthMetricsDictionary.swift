@@ -346,7 +346,8 @@ struct HealthMetricDataDictionaryEntry: Codable, Equatable {
 
 enum HealthMetricDataDictionary {
     static func entries(
-        using customization: FormatCustomization = FormatCustomization()
+        using customization: FormatCustomization = FormatCustomization(),
+        includeProviderEntries: Bool = ConnectedAppsFeature.isEnabled(.whoop)
     ) -> [HealthMetricDataDictionaryEntry] {
         let definitionsById = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
         var entries: [HealthMetricDataDictionaryEntry] = []
@@ -380,7 +381,13 @@ enum HealthMetricDataDictionary {
         }
 
         entries.append(contentsOf: losslessArchiveDiagnosticEntries())
-        entries.append(contentsOf: whoopProviderEntries())
+        // Provider rows document optional v8 schema keys. A build with the
+        // WHOOP integration compiled out must not advertise its metrics in
+        // exported dictionaries, so they are included only when the provider
+        // rollout flag is enabled (schema tests pass true explicitly).
+        if includeProviderEntries {
+            entries.append(contentsOf: whoopProviderEntries())
+        }
         return entries.sorted { $0.key < $1.key }
     }
 

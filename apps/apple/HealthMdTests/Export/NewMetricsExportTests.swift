@@ -653,7 +653,7 @@ final class NewMetricsExportTests: XCTestCase {
     }
 
     func testDataDictionaryDocumentsRollupRulesForEveryExportedKey() {
-        let entries = HealthMetricDataDictionary.entries()
+        let entries = HealthMetricDataDictionary.entries(includeProviderEntries: true)
         let canonicalKeys = Set(entries.map(\.canonicalKey))
 
         let diagnosticKeys: Set<String> = [
@@ -679,6 +679,19 @@ final class NewMetricsExportTests: XCTestCase {
                 XCTAssertEqual(entry.rollup.periods, ["weekly", "monthly", "yearly"], "\(entry.canonicalKey) has unexpected roll-up periods")
             }
         }
+    }
+
+    func testDataDictionaryOmitsProviderRowsWhenWHOOPRolloutIsDisabled() {
+        // A build with CONNECTED_APPS_WHOOP_ENABLED=NO ships no WHOOP
+        // integration; its exported data dictionary must not advertise
+        // provider metrics the user cannot access.
+        let entries = HealthMetricDataDictionary.entries(includeProviderEntries: false)
+        XCTAssertTrue(entries.allSatisfy { $0.metricId != "provider.whoop" })
+        let whoopKeys = Set(WHOOPFlatMetricDefinition.all.map(\.key))
+        XCTAssertTrue(
+            entries.map(\.canonicalKey).allSatisfy { !whoopKeys.contains($0) },
+            "flag-off dictionary must not contain WHOOP schema keys"
+        )
     }
 
     func testDataDictionaryUsesActualFrontmatterUnitsForLegacyAndDerivedKeys() {

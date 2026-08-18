@@ -247,7 +247,8 @@ final class WHOOPProviderSectionsExportTests: XCTestCase {
     }
 
     func testProviderFlatDictionaryHasNoRollupsAndRMSSDIsNotSDNN() {
-        let entries = HealthMetricDataDictionary.entries().filter { $0.metricId == "provider.whoop" }
+        let entries = HealthMetricDataDictionary.entries(includeProviderEntries: true)
+            .filter { $0.metricId == "provider.whoop" }
         XCTAssertEqual(entries.count, WHOOPFlatMetricDefinition.all.count)
         XCTAssertTrue(entries.allSatisfy { $0.rollup.periods.isEmpty && $0.rollup.primary == "none" })
         let hrv = entries.first { $0.canonicalKey == "whoop_hrv_rmssd_ms" }
