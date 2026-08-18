@@ -95,11 +95,9 @@ fn old_peer_fails_closed_on_profile_policy() {
         settings_policy: LegacySettingsPolicy,
     }
 
-    let legacy_request: Result<LegacyRequest, _> =
-        serde_json::from_str(&base_request_json().replace(
-            "\"requested_dates_only\"",
-            "\"profile\"",
-        ));
+    let legacy_request: Result<LegacyRequest, _> = serde_json::from_str(
+        &base_request_json().replace("\"requested_dates_only\"", "\"profile\""),
+    );
     assert!(legacy_request.is_err());
 }
 

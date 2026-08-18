@@ -355,9 +355,7 @@ impl GeneratedFileExportInput {
                 profile_reference,
                 response_mode: ResponseMode::WriteFiles,
                 raw_profile: None,
-                canonical_selection: self
-                    .selection
-                    .generated_files(self.use_device_settings)?,
+                canonical_selection: self.selection.generated_files(self.use_device_settings)?,
                 destination: Some(ExportDestination {
                     root_path: self.destination.clone(),
                 }),
@@ -436,7 +434,9 @@ pub fn generated_file_export_from_value(
                 .get("profile_reference")
                 .and_then(Value::as_object)
                 .ok_or_else(|| {
-                    OperationInputError::invalid("profile_reference is required with settings_policy profile")
+                    OperationInputError::invalid(
+                        "profile_reference is required with settings_policy profile",
+                    )
                 })?;
             ensure_keys(reference, &["profileID", "name"])?;
             let profile_id = reference
@@ -779,7 +779,12 @@ mod tests {
     #[test]
     fn profile_policy_builds_reference_and_rejects_conflicting_scopes() {
         let destination = tempfile::tempdir().unwrap();
-        let destination_text = destination.path().canonicalize().unwrap().to_string_lossy().into_owned();
+        let destination_text = destination
+            .path()
+            .canonicalize()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
         let base_input = GeneratedFileExportInput {
             dates: DateOptions::exact("2026-07-01".to_owned(), "2026-07-07".to_owned()),
             selection: SelectionOptions::default(),
@@ -793,11 +798,20 @@ mod tests {
         };
 
         let invocation = base_input
-            .build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap())
+            .build(
+                Uuid::new_v4(),
+                Utc::now(),
+                NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+            )
             .unwrap();
         assert_eq!(invocation.request.settings_policy, SettingsPolicy::Profile);
         assert_eq!(
-            invocation.request.profile_reference.as_ref().unwrap().profile_id,
+            invocation
+                .request
+                .profile_reference
+                .as_ref()
+                .unwrap()
+                .profile_id,
             "11111111-2222-4333-8444-555555555555"
         );
         assert!(invocation.request.canonical_selection.is_none());
@@ -805,17 +819,44 @@ mod tests {
         // Device-settings policy conflict.
         let mut conflict = base_input.clone();
         conflict.use_device_settings = true;
-        assert!(conflict.build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()).is_err());
+        assert!(
+            conflict
+                .build(
+                    Uuid::new_v4(),
+                    Utc::now(),
+                    NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()
+                )
+                .is_err()
+        );
 
         // Selector conflict.
         let mut selectors = base_input.clone();
         selectors.selection.categories = vec!["Sleep".to_owned()];
-        assert!(selectors.build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()).is_err());
+        assert!(
+            selectors
+                .build(
+                    Uuid::new_v4(),
+                    Utc::now(),
+                    NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()
+                )
+                .is_err()
+        );
 
         // Empty ID is rejected.
         let mut empty_id = base_input;
-        empty_id.profile = Some(ProfileReference { profile_id: "  ".to_owned(), name: None });
-        assert!(empty_id.build(Uuid::new_v4(), Utc::now(), NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()).is_err());
+        empty_id.profile = Some(ProfileReference {
+            profile_id: "  ".to_owned(),
+            name: None,
+        });
+        assert!(
+            empty_id
+                .build(
+                    Uuid::new_v4(),
+                    Utc::now(),
+                    NaiveDate::from_ymd_opt(2026, 8, 1).unwrap()
+                )
+                .is_err()
+        );
     }
 
     #[test]
