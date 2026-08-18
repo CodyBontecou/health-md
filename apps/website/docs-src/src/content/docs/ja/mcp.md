@@ -231,6 +231,19 @@ healthmd mcp schema # complete fixed catalog
 
 全履歴には、`date_selection: "all_available"`を`date_range`なしで使用します。任意の`metric_ids`、`categories`、`all_metrics`で、保存済み設定を変更せずにiPhoneでの取得範囲を狭められます。`detail_level`は、これらの選択項目のいずれかがある場合だけ適用されます。`all_metrics`は、明示的な指標リストやカテゴリリストと併用できません。
 
+代わりに保存されたエクスポートプロファイルを実行するには、`settings_policy` を `"profile"` に設定し、プロファイルの安定した UUID を持つ `profile_reference` を渡します（省略可能な表示用 `name` はエラー時の記録専用です）:
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+プロファイルが設定スコープを所有します: `profile_reference` は `metric_ids`、`categories`、`all_metrics`、保存設定ポリシーと組み合わせることはできず、不明な UUID は型付きエラーで失敗し、現在の設定へフォールバックしません。
+
 次の項目を確認します。
 
 - `status`と永続的な`state`

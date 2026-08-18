@@ -141,7 +141,12 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
+
+# Run a saved export profile by UUID (frozen settings + destination)
+healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
+
+`--profile PROFILE_ID` 通过稳定的 UUID 在 iPhone 上解析已保存的导出配置文件：运行时使用该配置文件冻结的指标选择、格式和目标，而不是应用的当前设置。它不能与 `--use-iphone-settings` 或指标/类别选择器组合（配置文件拥有设置范围），未知的 UUID 会以类型化的 `profile_not_found` 错误失败，而不会回退到当前设置。请在应用的“导出”标签页配置文件选择器中查看 UUID。
 
 目前没有日历日数量上限。`--all` 会要求 iPhone 查找所选来源记录中最早可用的一条，固定解析后的日期范围，再通过有界分区处理。可用存储空间和某个异常密集的日期仍是实际限制。
 

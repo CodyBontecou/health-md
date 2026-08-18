@@ -5,16 +5,23 @@ description: "Oito App Intents permitem acionar exportações, obter resumos e a
 
 ## Intents disponíveis
 <div class="options">
-<div class="option"><strong>Exportar dados de saúde de ontem</strong><p>Atalho sem parâmetros. O caminho rápido para exportar os dados de ontem. Usa o mesmo mecanismo da exportação manual.</p></div>
-<div class="option"><strong>Exportar dados de saúde de uma data</strong><p>Um parâmetro <em>Data</em>. A hora é ignorada. Útil em automações baseadas no calendário.</p></div>
-<div class="option"><strong>Exportar dados de saúde de um intervalo</strong><p>Parâmetros <em>Data inicial</em> e <em>Data final</em>, ambas inclusivas. Use para preenchimentos retroativos.</p></div>
-<div class="option"><strong>Exportar os últimos N dias de dados de saúde</strong><p>Parâmetro <em>Número de dias</em> (1–366). Termina ontem. Padrão: 7. Bom para automações semanais.</p></div>
+<div class="option"><strong>Exportar dados de saúde de ontem</strong><p>Atalho sem parâmetros. O caminho rápido para exportar os dados de ontem. Usa o mesmo mecanismo da exportação manual. Parâmetro opcional <em>Perfil</em> (veja <a href="#profiles">Perfis de exportação</a>).</p></div>
+<div class="option"><strong>Exportar dados de saúde de uma data</strong><p>Um parâmetro <em>Data</em>. A hora é ignorada. Útil em automações baseadas no calendário. Parâmetro opcional <em>Perfil</em>.</p></div>
+<div class="option"><strong>Exportar dados de saúde de um intervalo</strong><p>Parâmetros <em>Data inicial</em> e <em>Data final</em>, ambas inclusivas. Use para preenchimentos retroativos. Parâmetro opcional <em>Perfil</em>.</p></div>
+<div class="option"><strong>Exportar os últimos N dias de dados de saúde</strong><p>Parâmetro <em>Número de dias</em> (1–366). Termina ontem. Padrão: 7. Bom para automações semanais. Parâmetro opcional <em>Perfil</em>.</p></div>
 <div class="option"><strong>Obter resumo de saúde de uma data</strong><p>Retorna uma captura estruturada — passos, calorias ativas, sono e frequência cardíaca — sem gravar no cofre.</p></div>
 <div class="option"><strong>Obter status da última exportação</strong><p>Retorna data e hora, sucesso, número de dias e motivo de falha da exportação registrada mais recente. Uma solicitação com o dispositivo bloqueado permanece pendente até ser repetida e não aparece como status atual.</p></div>
 <div class="option"><strong>Ativar ou desativar exportação agendada</strong><p>Parâmetro booleano. Suspenda o agendamento, por exemplo durante o Foco Férias, e retome depois.</p></div>
-<div class="option"><strong>Exportar dados de saúde</strong><p>Exportação genérica que usa o último intervalo do modal Exportar no app. As variantes com intervalo costumam ser mais claras.</p></div>
+<div class="option"><strong>Exportar dados de saúde</strong><p>Exportação genérica que usa o último intervalo do modal Exportar no app. As variantes com intervalo costumam ser mais claras. Parâmetro opcional <em>Perfil</em>.</p></div>
 </div>
 
+<a id="profiles"></a>
+## Perfis de exportação
+<p>Os cinco intents de exportação aceitam um parâmetro opcional <em>Perfil</em>. Deixe-o vazio para executar com as configurações de exportação atuais do app; passe o nome de um perfil salvo para executar a configuração congelada desse perfil — seleção de métricas, formatos e destino — independentemente do que o app mostra no momento.</p>
+<div class="callout">
+<strong>Atenção para atalhos existentes sem parâmetro.</strong>
+<p style="margin-top:6px;">Assim que você criar seu primeiro perfil de exportação no app, um atalho sem <em>Perfil</em> definido exporta usando as configurações salvas do perfil <em>ativo</em> em vez das configurações atuais do app. Se você depende do comportamento antigo, fixe o atalho em um perfil específico (ou mantenha zero perfis) para continuar explícito. Um nome de perfil que não existe mais falha com um erro claro em vez de exportar a coisa errada.</p>
+</div>
 ## Onde encontrá-los
 <p>Abra o app Atalhos no iOS ou macOS. Toque em <em>+</em>, crie um atalho e busque "Health.md" ou um dos títulos acima. Eles ficam na categoria <em>Saúde</em>.</p>
 <p>A maioria usa <code>openAppWhenRun = false</code> e é executada sem interface. Funciona em automações, filtros de Foco, transferência do Hey Siri e Botão de Ação.</p>

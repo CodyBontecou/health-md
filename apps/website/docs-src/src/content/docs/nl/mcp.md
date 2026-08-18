@@ -231,6 +231,19 @@ Selecteer en bewaar eerst een beschrijfbare bestemmingsmap in Health.md voor Mac
 
 Gebruik `date_selection: "all_available"` zonder `date_range` voor de volledige geschiedenis. Optionele `metric_ids`, `categories` of `all_metrics` beperken de gegevensophaling op de iPhone zonder opgeslagen instellingen te wijzigen. `detail_level` geldt alleen als een van die selecties aanwezig is. `all_metrics` kan niet worden gecombineerd met expliciete lijsten van meetwaarden of categorieën.
 
+Om in plaats daarvan een opgeslagen exportprofiel uit te voeren, zet je `settings_policy` op `"profile"` en geef je `profile_reference` mee met de stabiele UUID van het profiel (een optionele weergavenaam `name` wordt alleen voor fouten vastgelegd):
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+Het profiel bepaalt het instellingenbereik: `profile_reference` kan niet worden gecombineerd met `metric_ids`, `categories`, `all_metrics` of het beleid voor opgeslagen instellingen, en een onbekende UUID faalt met een getypeerde fout in plaats van terug te vallen op actuele instellingen.
+
 Controleer:
 
 - `status` en de persistente `state`;

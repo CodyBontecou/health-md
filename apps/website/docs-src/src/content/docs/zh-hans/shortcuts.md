@@ -5,16 +5,23 @@ description: "八个 App Intent 可让您通过 Siri、快捷指令 App、专注
 
 ## 可用 Intent
 <div class="options">
-<div class="option"><strong>导出昨天的健康数据</strong><p>无需参数的快捷指令。适合“只导出昨天的数据，不要再提示”的快速操作。使用与手动导出相同的引擎。</p></div>
-<div class="option"><strong>导出指定日期的健康数据</strong><p>接受一个<em>日期</em>参数。忽略具体时间。适用于日历驱动的自动化。</p></div>
-<div class="option"><strong>导出指定日期范围的健康数据</strong><p>接受<em>开始日期</em>和<em>结束日期</em>参数，包含首尾两天。适用于补录历史数据。</p></div>
-<div class="option"><strong>导出最近 N 天的健康数据</strong><p>接受<em>天数</em>参数（1–366），截止到昨天，默认为 7。适合“每周日导出最近 7 天数据”之类的自动化。</p></div>
+<div class="option"><strong>导出昨天的健康数据</strong><p>无需参数的快捷指令。适合“只导出昨天的数据，不要再提示”的快速操作。使用与手动导出相同的引擎。 可选的<em>配置文件</em>参数（参见<a href="#profiles">导出配置文件</a>）。</p></div>
+<div class="option"><strong>导出指定日期的健康数据</strong><p>接受一个<em>日期</em>参数。忽略具体时间。适用于日历驱动的自动化。 可选的<em>配置文件</em>参数。</p></div>
+<div class="option"><strong>导出指定日期范围的健康数据</strong><p>接受<em>开始日期</em>和<em>结束日期</em>参数，包含首尾两天。适用于补录历史数据。 可选的<em>配置文件</em>参数。</p></div>
+<div class="option"><strong>导出最近 N 天的健康数据</strong><p>接受<em>天数</em>参数（1–366），截止到昨天，默认为 7。适合“每周日导出最近 7 天数据”之类的自动化。 可选的<em>配置文件</em>参数。</p></div>
 <div class="option"><strong>获取指定日期的健康摘要</strong><p>返回包含步数、活动消耗热量、睡眠和心率的结构化快照，不会向知识库写入任何内容。可在快捷指令中将这些值传递给其他 App。</p></div>
 <div class="option"><strong>获取上次导出状态</strong><p>返回最近一次已记录导出的时间戳、成功状态、天数及失败原因。设备锁定时发起的请求会保持待处理状态，直到重试，因此待处理期间不会作为当前状态返回。</p></div>
 <div class="option"><strong>开启或关闭计划导出</strong><p>接受一个布尔参数。可用于暂停计划（例如开启度假专注模式时），之后再恢复。</p></div>
-<div class="option"><strong>导出健康数据</strong><p>通用导出操作，使用 App 内“导出”弹窗上次保存的日期范围。此操作较少使用；指定日期范围的变体通常更清晰。</p></div>
+<div class="option"><strong>导出健康数据</strong><p>通用导出操作，使用 App 内“导出”弹窗上次保存的日期范围。此操作较少使用；指定日期范围的变体通常更清晰。 可选的<em>配置文件</em>参数。</p></div>
 </div>
 
+<a id="profiles"></a>
+## 导出配置文件
+<p>全部五个导出意图都接受可选的<em>配置文件</em>参数。留空表示使用应用当前的导出设置运行；传入已保存配置文件的名称，则无论应用当前显示什么，都以该配置文件冻结的配置（指标选择、格式和目标）运行。</p>
+<div class="callout">
+<strong>提醒使用无参数快捷指令的用户。</strong>
+<p style="margin-top:6px;">在应用中创建第一个导出配置文件后，未设置<em>配置文件</em>的快捷指令将使用<em>活动</em>配置文件的已保存设置导出，而不是应用的实时设置。如果你依赖旧行为，请将快捷指令固定到特定配置文件（或保持零个配置文件）以保持明确。不再存在的配置文件名称会以清晰的错误失败，而不是导出错误的内容。</p>
+</div>
 ## 如何找到这些 Intent
 <p>在 iOS 或 macOS 上打开快捷指令 App。轻点 <em>+</em> 按钮创建快捷指令，然后搜索“Health.md”或上述任一 Intent 标题。它们位于<em>健康</em>类别下。</p>
 <p>大多数 Intent 都设置了 <code>openAppWhenRun = false</code>，因此可在后台执行，不会启动 App，也不会闪现界面。它们可用于自动化、专注模式过滤器、“嘿 Siri”接力和操作按钮。</p>

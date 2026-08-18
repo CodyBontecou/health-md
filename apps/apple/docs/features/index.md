@@ -23,7 +23,7 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Setup | [HealthKit permissions](./healthkit-permissions.md) | Connect Health.md to Apple Health and choose readable data types. | Drafted | High | `HealthKitManager`, `OnboardingView` |
 | Setup | [Vault/folder selection](./vault-folder-selection.md) | Pick an Obsidian vault, iCloud Drive folder, or Files location for exports. | Drafted | High | `VaultManager`, `FolderPicker` |
 | Export | [Manual date-range export](./manual-export.md) | Export one day or a range of days on demand. | Drafted | High | `ExportTabView`, `ExportOrchestrator` |
-| Export | [Export profiles](./export-profiles.md) | Save named export configurations with independent settings and destinations. | Draft (in progress) | Medium | `ExportProfile`, `ExportProfileStore` |
+| Export | [Export profiles](./export-profiles.md) | Save named export configurations with independent settings and destinations. | Drafted | Medium | `ExportProfile`, `ExportProfileStore` |
 | Export | [Export preview](./export-preview.md) | Inspect generated files before writing them to disk. | Drafted | Medium | `Shared/Views/ExportPreviewView.swift` |
 | Export | [Metric selection](./metric-selection.md) | Select 225+ summary and archive-only definitions across 21 categories, with explicit special-access flows. | Drafted | High | `MetricSelectionView`, `HealthKitRecordCatalog` |
 | Export | [Multi-format export](./multi-format-export.md) | Write Markdown, Obsidian Bases, JSON, and CSV in one export run. | Drafted | High | `AdvancedExportSettings`, `VaultManager` |

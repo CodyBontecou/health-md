@@ -152,6 +152,15 @@ The iPhone uses production JSON/CSV/Markdown/ZIP/data-dictionary/roll-up/individ
 
 Default requested-date jobs keep saved formats, subfolder, templates, filenames, write mode, and Daily Note behavior while suppressing roll-ups and summary-only mode. Metric/category/detail selectors replace only that job's acquisition scope. `--use-iphone-settings` mirrors all saved behavior and cannot combine with selectors.
 
+`--profile PROFILE_ID` runs a saved iPhone export profile by its stable UUID: the profile's frozen settings and destination replace both live settings and per-job selectors. It cannot combine with `--use-iphone-settings` or metric/category selectors; an unknown UUID fails with a typed `profile_not_found` error and never falls back to live settings. Read the UUID from the app's Export tab profile picker (`healthmd profiles list` is planned, not shipped):
+
+```bash
+healthmd export --last 7 --profile 11111111-2222-4333-8444-555555555555 \
+  --destination "$HOME/Documents/HealthVault"
+```
+
+The equivalent MCP generated-file export arguments are `settings_policy: "profile"` plus `profile_reference: { "profileID": UUID }` under the same scope-exclusivity rules.
+
 Protocol v1 treats the destination as an opaque immutable label on iPhone. The receiving host validates and durably binds the native absolute path before sending the request.
 
 ## Codex and Claude MCP
