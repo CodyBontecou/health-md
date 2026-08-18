@@ -13,6 +13,14 @@ This package contains language-neutral specifications, interoperability vectors,
 | [`direct-protocol`](direct-protocol) | Normative direct-device protocol specifications and canonical interoperability vectors |
 | [`semantic-input/v1`](semantic-input/v1/contract.md) | Internal post-capture semantic envelope, strict schemas, and synthetic cross-language differential corpus |
 | [`render-input/v1`](render-input/v1/contract.md) | Internal profile rendering, artifact-plan, path, merge, API batching, and bounded lossless-stream contract |
+| [`shared-setup/v1`](shared-setup/v1/contract.md) | Public bounded Apple/Android portable setup profile, registry-backed metric alias ledger, and non-operative schedule/API destination intent |
+
+## Typed provider contracts
+
+| Path | Purpose |
+|---|---|
+| [`proposals/provider-sections-v1`](proposals/provider-sections-v1/contract.md) | Canonical typed, namespaced WHOOP provider section for Apple `healthmd.health_data` v8; the historical proposal path is retained for stable links |
+| [`proposals/unified-health-data-v9`](proposals/unified-health-data-v9/contract.md) | Proposed unified Apple/Android daily contract with exact typed metrics, provenance, capture completeness, platform sections, mapping ledger, schema, and synthetic fixtures; no production writer is approved yet |
 
 Run the package checks from the repository root:
 
@@ -37,7 +45,15 @@ The manifest distinguishes three states:
 
 `healthmd.render_input` v1 is a separate internal boundary from one completed semantic result to exact profile artifacts. Its fixtures include reviewed Rust plans plus independently frozen bytes from the pre-cutover Swift and Kotlin renderers. It does not grant Rust access to destinations, HTTP, HealthKit, Health Connect, ZIP containers, or credentials.
 
-The current Apple daily export contract is version 7. Android's compatibility exporter remains frozen at version 4, while Android's additive local analytical profile is version 5. They are deliberately separate inventory entries: moving them into one package without reconciling their semantics would hide real version and unit differences. This extraction does **not** change `healthmd.health_data`, any exporter, metric mapping, unit, frontmatter key, CSV row, or schema version.
+The current Apple daily export contract is version 8. Android's compatibility exporter remains frozen at version 4, while Android's additive local analytical profile is version 5. They are deliberately separate shipped inventory entries: moving them into one package without reconciling their semantics would hide real version and unit differences. Apple v8 adds the reviewed `providers.whoop` section and provider-prefixed Markdown, Bases/frontmatter, CSV, and data-dictionary projections. Android v4/v5 contracts remain unchanged.
+
+`healthmd.shared_setup` v1 is a separate pre-canonical public configuration contract candidate, deferred pending physical-device interoperability and accessibility QA. It carries only explicitly allowlisted portable preferences, exact registry semantic metric IDs, typed native extensions, and disabled schedule/API intent. It never carries health data, credentials, folder grants, purchases, or runtime state and does not bump any health export schema or direct protocol.
+
+A unified cross-platform successor is now specified as a **deferred `healthmd.health_data` v9 proposal**. It cannot use v8 because Apple v8 already identifies a different shipped grammar. The proposal does not enable writers or alter current output profiles; acceptance remains gated by RFC-0004, mapping review, dual-read consumers, privacy/security review, and release evidence.
+
+## Cross-platform unification policy
+
+[`docs/architecture/cross-platform-unification-policy.md`](../../docs/architecture/cross-platform-unification-policy.md) makes parity the default and divergence an evidence-backed exception. New mobile capabilities should start with a platform-neutral outcome and both-platform API review. Equivalent semantics use common IDs/contracts; OS-specific or non-equivalent data uses explicit capability states, distinct semantic IDs, or independently versioned platform sections. Similar labels and matching field counts are never sufficient evidence.
 
 ## Product capability inventory
 

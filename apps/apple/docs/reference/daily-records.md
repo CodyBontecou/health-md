@@ -1,11 +1,12 @@
 # Daily records
 
-A Health.md daily record combines a readable summary projection with optional source-level Apple Health records.
+A Health.md daily record combines a readable Apple Health summary projection with optional typed provider data and source-level Apple Health records.
 
 ```text
-healthmd.health_data v7
+healthmd.health_data v8
 ├── identity, date, timezone, and units
-├── optional summary sections
+├── optional Apple summary sections
+├── optional providers.whoop (healthmd.provider.whoop_daily v1)
 ├── raw capture status
 ├── optional healthkit_record_archive
 └── optional exporter diagnostics
@@ -18,14 +19,15 @@ Use summaries for dashboards and journaling. Use the canonical archive for sourc
 | Field | Type | Presence | Meaning |
 |---|---|---|---|
 | `schema` | string | Always | `healthmd.health_data`. |
-| `schema_version` | integer | Always | Current daily contract version, `7`. |
+| `schema_version` | integer | Always | Current Apple daily contract version, `8`. |
 | `date` | `YYYY-MM-DD` string | Normal successful document | Calendar day represented by the summary. |
 | `type` | string | Always | Normally `health-data`; serialization-error fallback documents use a distinct value. |
 | `time_context` | object | Always | Captured calendar timezone and machine timestamp timezone. |
-| `unit_system` | string | JSON | Structured v7 JSON currently reports `metric`; display preferences affect prose, not canonical structured values. |
+| `unit_system` | string | JSON | Structured v8 JSON currently reports `metric`; display preferences affect prose, not canonical structured values. |
 | `units` | object | JSON/frontmatter | Exported summary key to canonical unit. Empty/list-like fields are omitted. |
 | `raw_capture_status` | enum string | Always | `complete`, `partial`, `not_requested`, or `legacy_unavailable`. |
 | Summary sections | object/array | Conditional | Emitted only when the selected section has retained data. |
+| `providers` | object | Conditional | Typed provider namespace. Apple v8 currently permits `providers.whoop` v1. |
 | `healthkit_record_archive` | object | Conditional | Present when source capture was requested and available. |
 | `diagnostics` | object | Conditional | Export/fetch partial failures outside the archive query manifest. |
 
@@ -64,12 +66,14 @@ Daily JSON may emit these sections. Fields are omitted when no retained value ex
 | `hearing` | Headphone and environmental sound levels | Additional hearing events may be archive-only. |
 | `reproductiveHealth` | Selected reproductive summary values | Many newer reproductive/pregnancy definitions are archive-only. |
 | `cyclingPerformance` | Speed, power, cadence, FTP | Workout-associated samples also appear in workout graphs. |
-| `vitamins` | Every selected vitamin total | Microgram keys use the canonical `µg` unit in the v7 dictionary. |
+| `vitamins` | Every selected vitamin total | Microgram keys retain the canonical `µg` unit introduced in the v7 dictionary. |
 | `minerals` | Every selected mineral total | Microgram and milligram nutrients remain distinct. |
 | `symptoms` | Symptom occurrence counts | Source categories and raw values live in the archive. |
 | `medications` | Inventory summaries and dose-event projections | Canonical dose events and inventory identities are retained separately. |
 | `other` | UV, daylight, falls, alcohol, insulin, hygiene, water/depth | Exact availability depends on OS and authorization. |
 | `workouts` | Identity, type, duration, distance, rates, laps, splits, route, series | The canonical workout graph is authoritative for complete public source data. |
+
+WHOOP data remains provider-namespaced and never populates these Apple summary sections. Its exact nested paths are generated from [`generated/core/provider-day.json`](./generated/core/provider-day.json); repeated records remain structured, while unambiguous daily scalars use `whoop_*` keys in Bases/frontmatter and CSV.
 
 The exhaustive metric-to-summary-key table is generated at [`generated/core/metric-catalog.md`](./generated/core/metric-catalog.md). It includes every selected metric definition, category, HealthKit identifier, source aggregation, canonical summary keys, units, and archive-only status. [`generated/core/metric-examples.md`](./generated/core/metric-examples.md) provides one synthetic, source-derived reference entry for every metric ID.
 
@@ -106,7 +110,7 @@ Structured output uses stable units. Examples include:
 - temperatures in degrees Celsius;
 - percentages either as documented ratios or explicit percent fields;
 - Stand Time in minutes and Stand Hours as a distinct hour count;
-- microgram summary nutrients as `µg`, matching the production v7 dictionary and CSV `Unit` cells;
+- microgram summary nutrients as `µg`, matching the production v8 dictionary and CSV `Unit` cells;
 - exact reviewed HealthKit query units inside source quantity payloads, including `mcg` for microgram source records.
 
 Markdown prose can use the selected Metric or Imperial display preference. Never infer a structured unit from rendered prose.
@@ -133,9 +137,13 @@ Markdown prose can use the selected Metric or Imperial display preference. Never
 
 - [`generated/core/summary-day.json`](./generated/core/summary-day.json)
 - [`generated/core/lossless-day.json`](./generated/core/lossless-day.json)
+- [`generated/core/provider-day.json`](./generated/core/provider-day.json)
 - [`generated/core/summary-day.csv`](./generated/core/summary-day.csv)
 - [`generated/core/lossless-day.csv`](./generated/core/lossless-day.csv)
+- [`generated/core/provider-day.csv`](./generated/core/provider-day.csv)
 - [`generated/core/summary-day.md`](./generated/core/summary-day.md)
+- [`generated/core/provider-day.md`](./generated/core/provider-day.md)
 - [`generated/core/summary-day-bases.md`](./generated/core/summary-day-bases.md)
+- [`generated/core/provider-day-bases.md`](./generated/core/provider-day-bases.md)
 
 These files are generated by production exporters. They are examples, not templates to mutate into a different schema.

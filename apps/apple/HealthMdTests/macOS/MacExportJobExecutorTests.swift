@@ -2116,7 +2116,7 @@ final class ConnectedMacPlannerProbe: AppleLooseDailyExportPlanning {
                 id: NativeExportArtifactPlan.artifactID(
                     requestID: identity.requestID,
                     sessionID: identity.sessionID,
-                    profile: .appleHealthDataV7,
+                    profile: .appleHealthDataV8,
                     relativePath: target.relativePath,
                     mediaType: mediaType,
                     writeMode: .overwrite,
@@ -2134,7 +2134,7 @@ final class ConnectedMacPlannerProbe: AppleLooseDailyExportPlanning {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin

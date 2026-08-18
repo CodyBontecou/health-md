@@ -8,6 +8,7 @@ struct iPadSettingsView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var sharedSetupCoordinator: SharedSetupCoordinator
     @Binding var showFolderPicker: Bool
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -115,6 +116,14 @@ struct iPadSettingsView: View {
                 .padding(Spacing.s4)
                 .iPadLiquidGlass()
                 .configurationChangesProtected()
+
+                // MARK: Configuration
+                VStack(alignment: .leading, spacing: Spacing.s3) {
+                    iPadBrandLabel("Configuration")
+                    SharedSetupConfigurationCard(coordinator: sharedSetupCoordinator)
+                }
+                .padding(Spacing.s4)
+                .iPadLiquidGlass()
 
                 // MARK: Purchases
                 VStack(alignment: .leading, spacing: Spacing.s3) {

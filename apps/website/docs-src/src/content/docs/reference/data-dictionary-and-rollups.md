@@ -110,7 +110,7 @@ A period minimum is the minimum of daily minima. A period maximum is the maximum
 
 ### Latest
 
-Identity/inventory-like values keep the latest observed daily value and can include value counts. Numeric latest metrics can also expose trend context. In schema v7, `vo2_max` explicitly follows this rule: the period headline is the latest daily measurement even when an earlier day has a higher value; `maximum_daily_value` remains available as context.
+Identity/inventory-like values keep the latest observed daily value and can include value counts. Numeric latest metrics can also expose trend context. In schema v8, `vo2_max` retains the v7 rule: the period headline is the latest daily measurement even when an earlier day has a higher value; `maximum_daily_value` remains available as context.
 
 ### Lists
 

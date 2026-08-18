@@ -1,0 +1,159 @@
+{
+  "calendar": {
+    "assignment_rule": "record_start_in_half_open_day_interval",
+    "identifier": "gregorian",
+    "interval_end": "2026-07-14T04:00:00Z",
+    "interval_start": "2026-07-13T04:00:00Z",
+    "time_zone": "America/New_York"
+  },
+  "capture": {
+    "resources": [
+      {
+        "record_count": 0,
+        "resource": "steps",
+        "source": "apple_health",
+        "status": "complete"
+      }
+    ],
+    "status": "complete"
+  },
+  "metrics": [],
+  "owner_date": "2026-07-13",
+  "platform": {
+    "apple": {
+      "schema": "healthmd.platform.apple_daily",
+      "schema_version": 1,
+      "source_schema_version": 8
+    }
+  },
+  "profile": "unified-cross-platform-v1",
+  "providers": {
+    "whoop": {
+      "body": {
+        "height_meters": 1.82,
+        "max_heart_rate_bpm": 190,
+        "observed_at": "2026-07-13T18:00:00Z",
+        "source_kind": "current_profile_snapshot",
+        "weight_kilograms": 78.4
+      },
+      "capture_status": "complete",
+      "cycles": [
+        {
+          "average_heart_rate_bpm": 68,
+          "end_time": "2026-07-13T12:00:00Z",
+          "energy_kilojoules": 8500.25,
+          "id": "cycle-synthetic-001",
+          "max_heart_rate_bpm": 172,
+          "score_state": "SCORED",
+          "start_time": "2026-07-12T12:00:00Z",
+          "strain_score": 14.2,
+          "timezone_offset": "-04:00"
+        }
+      ],
+      "fetched_at": "2026-07-13T18:00:00Z",
+      "recoveries": [
+        {
+          "cycle_id": "cycle-synthetic-001",
+          "hrv_rmssd_ms": 54.3,
+          "recovery_score_percent": 82,
+          "resting_heart_rate_bpm": 49,
+          "score_state": "SCORED",
+          "skin_temperature_celsius": 33.1,
+          "sleep_id": "sleep-synthetic-001",
+          "spo2_percent": 97.4,
+          "user_calibrating": false
+        }
+      ],
+      "resources": [
+        {
+          "record_count": 1,
+          "resource": "cycles",
+          "status": "success"
+        },
+        {
+          "record_count": 1,
+          "resource": "recovery",
+          "status": "success"
+        },
+        {
+          "record_count": 1,
+          "resource": "sleep",
+          "status": "success"
+        },
+        {
+          "record_count": 1,
+          "resource": "workouts",
+          "status": "success"
+        },
+        {
+          "record_count": 1,
+          "resource": "body",
+          "status": "success"
+        }
+      ],
+      "schema": "healthmd.provider.whoop_daily",
+      "schema_version": 1,
+      "sleep": [
+        {
+          "awake_milliseconds": 900000,
+          "baseline_sleep_need_milliseconds": 28800000,
+          "cycle_id": "cycle-synthetic-001",
+          "disturbance_count": 4,
+          "end_time": "2026-07-13T11:30:00Z",
+          "id": "sleep-synthetic-001",
+          "is_nap": false,
+          "light_sleep_milliseconds": 10800000,
+          "no_data_milliseconds": 0,
+          "recent_nap_adjustment_milliseconds": -900000,
+          "recent_strain_need_milliseconds": 600000,
+          "rem_sleep_milliseconds": 7200000,
+          "respiratory_rate_breaths_per_minute": 14.5,
+          "score_state": "SCORED",
+          "sleep_consistency_percent": 88,
+          "sleep_cycle_count": 5,
+          "sleep_debt_need_milliseconds": 1800000,
+          "sleep_efficiency_percent": 91.2,
+          "sleep_performance_percent": 85,
+          "slow_wave_sleep_milliseconds": 5400000,
+          "start_time": "2026-07-13T03:00:00Z",
+          "timezone_offset": "-04:00",
+          "total_in_bed_milliseconds": 30600000,
+          "total_sleep_milliseconds": 23400000
+        }
+      ],
+      "warnings": [],
+      "workouts": [
+        {
+          "altitude_change_meters": -5.25,
+          "altitude_gain_meters": 120.5,
+          "average_heart_rate_bpm": 145,
+          "distance_meters": 10000.75,
+          "end_time": "2026-07-13T16:00:00Z",
+          "energy_kilojoules": 2300.5,
+          "id": "workout-synthetic-001",
+          "max_heart_rate_bpm": 178,
+          "percent_recorded": 99.5,
+          "score_state": "SCORED",
+          "sport_name": "running",
+          "start_time": "2026-07-13T15:00:00Z",
+          "strain_score": 12.7,
+          "timezone_offset": "-04:00",
+          "zone_durations": {
+            "zone_five_milliseconds": 300000,
+            "zone_four_milliseconds": 900000,
+            "zone_one_milliseconds": 300000,
+            "zone_three_milliseconds": 1200000,
+            "zone_two_milliseconds": 600000,
+            "zone_zero_milliseconds": 300000
+          }
+        }
+      ]
+    }
+  },
+  "schema": "healthmd.health_data",
+  "schema_version": 9,
+  "source": {
+    "platform": "apple",
+    "source_profile": "apple_health_data_v8"
+  }
+}

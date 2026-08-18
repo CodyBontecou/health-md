@@ -2,14 +2,14 @@
   "artifact_set" : "healthmd.generated_rollup_reference_docs",
   "artifacts" : [
     {
-      "bytes" : 104830,
+      "bytes" : 120672,
       "path" : "aggregation-behavior.md",
-      "sha256" : "862b68fc9df42a318d622a911ed5da4d27265928b8e57124fc3b6eef6b6de7ce"
+      "sha256" : "6a39c4fae8ce914b736e9534796ed4634a157c35223de9d2c55700871eb0bbe4"
     },
     {
       "bytes" : 11564,
       "path" : "weekly-bases.md",
-      "sha256" : "044217e1750d593c48621fbe782531c3278d7b490b98f58142401a047dce92fe"
+      "sha256" : "fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815"
     },
     {
       "bytes" : 29797,
@@ -19,12 +19,12 @@
     {
       "bytes" : 39632,
       "path" : "weekly.json",
-      "sha256" : "834d7446019ffe715d739513ed3fc74888c167e222bfcd789e0ec7cbf7d78734"
+      "sha256" : "58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84"
     },
     {
       "bytes" : 9203,
       "path" : "weekly.md",
-      "sha256" : "ccd6eaadcc1c8a8c3879de94b84ffd5c7ff0f3a576211bf8b4a5e2ebf2cff710"
+      "sha256" : "c2b7fc33e559fea8f71a86a04781feeec9c63dfa21c7cffc1ec681bd79888774"
     }
   ],
   "fixture" : {
@@ -152,9 +152,9 @@
   },
   "manifest_version" : 1,
   "schema" : {
-    "data_dictionary_entry_count" : 232,
+    "data_dictionary_entry_count" : 262,
     "rollup" : "healthmd.rollup_summary",
     "source" : "healthmd.health_data",
-    "source_version" : 7
+    "source_version" : 8
   }
 }

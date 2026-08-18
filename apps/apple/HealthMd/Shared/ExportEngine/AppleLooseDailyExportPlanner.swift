@@ -71,7 +71,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
             let service = HealthMdCoreService()
             return AppleLooseDailyCoreContext(
                 buildInfo: try service.buildInfo(),
-                registry: try service.metricRegistry(profile: .appleHealthDataV7)
+                registry: try service.metricRegistry(profile: .appleHealthDataV8)
             )
         }
     }
@@ -304,7 +304,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             requestedMode = .legacy
         } else {
             requestedMode = policyResolver.requestedModeForNewOperation(
-                profile: .appleHealthDataV7
+                profile: .appleHealthDataV8
             )
         }
         guard requestedMode != .legacy else { return .legacy }
@@ -768,7 +768,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 id: NativeExportArtifactPlan.artifactID(
                     requestID: identity.requestID,
                     sessionID: identity.sessionID,
-                    profile: .appleHealthDataV7,
+                    profile: .appleHealthDataV8,
                     relativePath: output.relativePath,
                     mediaType: mediaType,
                     writeMode: writeMode,
@@ -786,7 +786,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin

@@ -61,6 +61,7 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel(),
     paywallViewModel: PaywallViewModel = hiltViewModel(),
     onComplete: () -> Unit,
+    onUseSharedSetup: () -> Unit = {},
     initialPage: Int = 0,
     allowAutomaticAdvance: Boolean = true,
 ) {
@@ -230,7 +231,7 @@ fun OnboardingScreen(
                         },
                 ) {
                     when (page) {
-                        0 -> WelcomePage()
+                        0 -> WelcomePage(onUseSharedSetup = onUseSharedSetup)
                         1 -> HealthAccessPage(
                             hasPermissions = uiState.hasPermissions,
                             actionError = healthConnectError,
@@ -346,7 +347,7 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun WelcomePage() {
+private fun WelcomePage(onUseSharedSetup: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -401,6 +402,12 @@ private fun WelcomePage() {
             text = stringResource(R.string.onboarding_welcome_feature_3),
         )
 
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        OutlinedButton(onClick = onUseSharedSetup) {
+            Icon(Icons.Outlined.FileOpen, contentDescription = null)
+            Spacer(modifier = Modifier.width(Spacing.xs))
+            Text(stringResource(R.string.shared_setup_use))
+        }
     }
 }
 

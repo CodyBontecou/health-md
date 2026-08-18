@@ -42,7 +42,7 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
         XCTAssertEqual(metric("vitamin_d", in: day).value, .quantity(value: 12.5, unit: "µg"))
         XCTAssertEqual(metric("iron", in: day).value, .quantity(value: 8.25, unit: "mg"))
         XCTAssertEqual(day.source.schema, HealthMdExportSchema.identifier)
-        XCTAssertEqual(day.source.schemaVersion, 7)
+        XCTAssertEqual(day.source.schemaVersion, 8)
         XCTAssertFalse(day.source.digest.isEmpty)
     }
 
@@ -430,7 +430,7 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
         XCTAssertEqual(decoded.ownerDate, day.ownerDate)
     }
 
-    func testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV7() throws {
+    func testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8() throws {
         let start = iso("2026-05-01T00:00:00Z")
         let ids = Set(HealthMetrics.all.map(\.id))
         let day = try HealthMdQueryContextProjector.project(
@@ -438,8 +438,8 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
             options: .init(enabledMetricIDs: ids)
         )
         XCTAssertEqual(Set(day.metrics.map(\.metricID)), ids)
-        XCTAssertEqual(HealthMdExportSchema.version, 7)
-        XCTAssertEqual(day.source.schemaVersion, 7)
+        XCTAssertEqual(HealthMdExportSchema.version, 8)
+        XCTAssertEqual(day.source.schemaVersion, 8)
         XCTAssertEqual(day.schemaVersion, 1)
     }
 

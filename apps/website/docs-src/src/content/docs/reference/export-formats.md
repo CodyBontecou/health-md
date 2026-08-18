@@ -11,6 +11,7 @@ Health.md uses one captured daily data set to produce formats with different rol
 | Capability | JSON | CSV | Markdown | Obsidian Bases |
 |---|---:|---:|---:|---:|
 | Daily summaries | Yes | Yes | Yes | Yes |
+| Typed WHOOP provider data | Nested section | Scalars + canonical JSON rows | Labeled tables | Unambiguous `whoop_*` scalars |
 | Canonical UUID-backed records | Embedded | Canonical JSON rows | No | No |
 | UUID-free external records | Embedded | Canonical JSON rows | Count only | No dedicated count |
 | Full query manifest | Embedded | Archive Manifest row | Counts/safe details | Failure count only |
@@ -25,7 +26,8 @@ Health.md uses one captured daily data set to produce formats with different rol
 
 JSON is the authoritative single-file daily representation.
 
-- Top-level schema: `healthmd.health_data` v7.
+- Top-level schema: `healthmd.health_data` v8.
+- Optional typed provider section: `providers.whoop` using `healthmd.provider.whoop_daily` v1.
 - Nested archive: `healthmd.healthkit_records` v1 when lossless capture is requested and available.
 - Keys are sorted in production output for deterministic serialization.
 - Optional summary sections and fields are omitted when absent.
@@ -36,6 +38,7 @@ Complete examples:
 
 - [`generated/core/summary-day.json`](/docs/reference/generated/core/summary-day.json)
 - [`generated/core/lossless-day.json`](/docs/reference/generated/core/lossless-day.json)
+- [`generated/core/provider-day.json`](/docs/reference/generated/core/provider-day.json)
 
 ### JSON parser guidance
 
@@ -52,7 +55,7 @@ CSV begins with the header:
 Date,Category,Metric,Value,Unit,Timestamp
 ```
 
-Production v7 rows have an intentional compatibility detail:
+Production v8 rows retain an intentional v7 compatibility detail:
 
 - many aggregate rows serialize five fields and omit the trailing empty Timestamp field;
 - metadata, diagnostic, canonical, and timestamped sample rows commonly serialize six fields.
@@ -72,13 +75,16 @@ Do not split CSV on commas or physical newline characters. Canonical JSON cells 
 | `Raw HealthKit / Query Failure` | One failed/cancelled query result. |
 | `Raw HealthKit / Integrity Warning` | One warning. |
 | `Diagnostics / Partial Failure` | One exporter/fetch partial failure. |
+| `WHOOP Capture / Resource Result` | One safe typed resource result as canonical JSON. |
+| `WHOOP Cycle/Recovery/Sleep/Workout/Body / * Record` | Typed WHOOP records as canonical JSON; timed records use source start timestamps. |
 
-JSON and CSV canonical record UUIDs and objects must match.
+Unambiguous WHOOP daily scalars also use provider-prefixed categories. Recovery and body snapshot rows never substitute provider fetch time for a measurement timestamp. JSON and CSV canonical HealthKit record UUIDs and objects must match.
 
 Complete examples and generated row inventory:
 
 - [`generated/core/summary-day.csv`](/docs/reference/generated/core/summary-day.csv)
 - [`generated/core/lossless-day.csv`](/docs/reference/generated/core/lossless-day.csv)
+- [`generated/core/provider-day.csv`](/docs/reference/generated/core/provider-day.csv)
 - [`generated/core/csv-row-contracts.md`](/docs/reference/generated/core/csv-row-contracts/)
 
 ## Markdown
@@ -87,7 +93,8 @@ Markdown is a readable daily note. With **Include Metadata** on (the default), i
 
 - selected daily summary sections;
 - optional workout details and compatibility sample tables;
-- compact lossless capture diagnostics.
+- compact lossless capture diagnostics;
+- labeled WHOOP summaries and deterministic repeated-record tables when a typed provider section is present.
 
 It does not embed recursive canonical records, route graphs, clinical payloads, waveforms, or binary data. Pair it with JSON or CSV when source identity matters.
 
@@ -95,12 +102,13 @@ Complete generated example:
 
 - [`generated/core/summary-day.md`](/docs/reference/generated/core/summary-day.md)
 - [`generated/core/lossless-day.md`](/docs/reference/generated/core/lossless-day.md)
+- [`generated/core/provider-day.md`](/docs/reference/generated/core/provider-day.md)
 
 ## Obsidian Bases
 
 Bases output is a frontmatter-only Markdown file. It exposes selected summary properties and compact diagnostics for database views.
 
-Reserved v7 diagnostics are:
+Reserved v8 diagnostics are:
 
 - `raw_capture_status`
 - `raw_record_count`
@@ -109,12 +117,13 @@ Reserved v7 diagnostics are:
 - `raw_record_schema`
 - `raw_record_schema_version`
 
-There are no dedicated Bases/frontmatter properties for external-record count or medication-inventory count. Markdown's body can show those additional counts.
+There are no dedicated Bases/frontmatter properties for external-record count or medication-inventory count. Markdown's body can show those additional counts. Typed WHOOP sections add reserved `whoop_*` scalar properties only when the projection is unambiguous; repeated records are not flattened into indexed keys.
 
 Complete generated examples:
 
 - [`generated/core/summary-day-bases.md`](/docs/reference/generated/core/summary-day-bases.md)
 - [`generated/core/lossless-day-bases.md`](/docs/reference/generated/core/lossless-day-bases.md)
+- [`generated/core/provider-day-bases.md`](/docs/reference/generated/core/provider-day-bases.md)
 
 ## Units by format
 
@@ -124,7 +133,7 @@ Complete generated examples:
 - Bases uses stable values plus a frontmatter `units` map.
 - Canonical record quantities carry their own exact unit.
 
-The v7 data dictionary uses `µg` for microgram summary keys.
+The v8 data dictionary retains `µg` for microgram summary keys and adds provider-prefixed WHOOP entries with no period roll-ups.
 
 ## Summary-only behavior
 

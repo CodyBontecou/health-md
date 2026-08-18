@@ -7,12 +7,12 @@
   ],
   "output_profiles": [
     {
-      "id": "apple-v7",
-      "name": "Apple v7",
+      "id": "apple-v8",
+      "name": "Apple v8",
       "platform": "apple",
       "contract_id": "healthmd.health_data.apple",
       "public_schema": "healthmd.health_data",
-      "public_schema_version": 7,
+      "public_schema_version": 8,
       "compatibility": "shipped",
       "comparison": "byte_for_byte"
     },
@@ -44,7 +44,7 @@
       "classification": "shared",
       "summary": "Create user-owned daily health exports in JSON, CSV, Markdown, and Obsidian Bases formats.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -67,7 +67,7 @@
       "classification": "shared",
       "summary": "Export sleep duration and the stages that both platform APIs expose.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -89,7 +89,7 @@
       "classification": "shared",
       "summary": "Export comparable steps, distance, energy, exercise, flights, wheelchair, and swimming activity.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -111,7 +111,7 @@
       "classification": "shared",
       "summary": "Export comparable heart-rate, respiratory-rate, and oxygen-saturation summaries; platform-specific HRV methods remain explicitly non-equivalent.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -133,7 +133,7 @@
       "classification": "shared",
       "summary": "Export comparable pressure, glucose, temperature, weight, height, body fat, BMI, and lean-mass quantities.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -155,7 +155,7 @@
       "classification": "shared",
       "summary": "Export nutrient quantities where units and meanings match across platform APIs.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -177,7 +177,7 @@
       "classification": "shared",
       "summary": "Export comparable mindfulness session totals without treating Apple State of Mind as equivalent.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -199,7 +199,7 @@
       "classification": "shared",
       "summary": "Export completed workout sessions and detail time series exposed by each source API.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -221,7 +221,7 @@
       "classification": "apple_only",
       "summary": "Preserve the public HealthKit source representation embedded by Apple v7.",
       "profiles": [
-        "apple-v7"
+        "apple-v8"
       ],
       "platforms": {
         "apple": {
@@ -242,7 +242,7 @@
       "classification": "apple_only",
       "summary": "Export the HealthKit medication catalog and scheduled, taken, and skipped dose events.",
       "profiles": [
-        "apple-v7"
+        "apple-v8"
       ],
       "platforms": {
         "apple": {
@@ -263,7 +263,7 @@
       "classification": "apple_only",
       "summary": "Export mood, valence, labels, associations, and momentary emotion values from HealthKit.",
       "profiles": [
-        "apple-v7"
+        "apple-v8"
       ],
       "platforms": {
         "apple": {
@@ -284,7 +284,7 @@
       "classification": "apple_only",
       "summary": "Export Apple Watch wrist-temperature measurements without aliasing Android skin-temperature deltas.",
       "profiles": [
-        "apple-v7"
+        "apple-v8"
       ],
       "platforms": {
         "apple": {
@@ -305,7 +305,7 @@
       "classification": "shared",
       "summary": "Export explicitly mapped walking, running, cycling, cadence, and power metrics while preserving platform-specific selectors and aggregations.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -328,7 +328,7 @@
       "classification": "apple_only",
       "summary": "Export HealthKit hearing exposure and symptom categories that have no Health Connect equivalent.",
       "profiles": [
-        "apple-v7"
+        "apple-v8"
       ],
       "platforms": {
         "apple": {
@@ -498,6 +498,28 @@
       ]
     },
     {
+      "id": "apple.typed-whoop-provider-section",
+      "name": "Typed WHOOP daily provider section",
+      "classification": "apple_only",
+      "summary": "Embed reviewed WHOOP cycle, recovery, sleep, workout, and current-day body snapshot data in Apple v8 while retaining provider-native sidecars.",
+      "profiles": [
+        "apple-v8"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "unavailable",
+          "reason": "Android frozen v4 and analytical v5 remain unchanged; Android adoption requires a new reviewed public profile."
+        }
+      },
+      "evidence": [
+        "packages/contracts/proposals/provider-sections-v1/contract.md",
+        "apps/apple/docs/features/third-party-integrations.md"
+      ]
+    },
+    {
       "id": "source.private-platform-database",
       "name": "Private platform health database export",
       "classification": "unavailable",
@@ -519,12 +541,36 @@
       ]
     },
     {
+      "id": "setup.share-portable-configuration",
+      "name": "Share My Setup",
+      "classification": "planned",
+      "summary": "Export, review, and transactionally import a bounded portable setup profile without health data, credentials, device grants, purchases, or runtime state; physical-device QA remains before availability.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Complete Messages, AirDrop, Files, cold/warm document-open, VoiceOver, Dynamic Type, rollback, and Undo testing on supported Apple devices."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Complete Sharesheet, OpenDocument/CreateDocument, cold/warm intent, TalkBack, large-font, RTL, rollback, and Undo testing on supported Android devices."
+        }
+      },
+      "evidence": [
+        "packages/contracts/shared-setup/v1/contract.md",
+        "apps/apple/HealthMd/iOS/SharedSetup/SharedSetupCoordinator.swift",
+        "apps/apple/HealthMdTests/SharedSetup/SharedSetupV1Tests.swift",
+        "apps/android/app/src/main/java/com/healthmd/sharedsetup/SharedSetupScreen.kt",
+        "apps/android/app/src/test/java/com/healthmd/sharedsetup/SharedSetupCodecMapperTest.kt"
+      ]
+    },
+    {
       "id": "core.shared-rust-metric-registry",
       "name": "Shared Rust metric registry",
       "classification": "shared",
       "summary": "Own stable metric identities, profile order, units, aliases, and backed/unavailable decisions in one deterministic registry.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
@@ -548,14 +594,14 @@
       "classification": "planned",
       "summary": "Run deterministic post-capture modeling and serialization through the shared Rust core on both native products.",
       "profiles": [
-        "apple-v7",
+        "apple-v8",
         "android-frozen-v4",
         "android-analytical-v5"
       ],
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Migrate Apple v7 through legacy, shadow, and Rust profile-scoped gates."
+          "target": "Migrate provider-free Apple v8 through legacy, shadow, and Rust profile-scoped gates while provider sections remain native-authoritative."
         },
         "android": {
           "state": "planned",

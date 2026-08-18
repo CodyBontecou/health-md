@@ -496,7 +496,10 @@ final class IPhoneDirectFileExportProducer {
             let externalFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
             if shouldFetchExternal, let externalIntegrations {
                 externalFetcher = { date in
-                    await externalIntegrations.fetchDailyRecords(for: date)
+                    await externalIntegrations.fetchDailyRecords(
+                        for: date,
+                        calendar: sourceCalendar
+                    )
                 }
             } else {
                 externalFetcher = nil

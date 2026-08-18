@@ -369,7 +369,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
 
 // MARK: - Format Customization Snapshot
 
-/// Audited subset where Rust can plan exact Apple v7 bytes without asking a native renderer for
+/// Audited subset where Rust can plan exact Apple v8 bytes without asking a native renderer for
 /// expected content. Shadow remains broader because native output stays authoritative there.
 nonisolated enum ApplePureRustAuthorityAdmission {
     static func applies(to surface: AppleExportOperationSurface) -> Bool {

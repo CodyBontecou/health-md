@@ -72,6 +72,9 @@ protocol UserNotificationCentering: AnyObject {
 }
 
 final class SystemUserNotificationCenterAdapter: UserNotificationCentering {
+    // Avoid the crashing isolated-deinit executor hop on older iOS runtimes
+    // (swiftlang/swift#85663).
+    nonisolated deinit {}
     private let center: UNUserNotificationCenter
 
     init(center: UNUserNotificationCenter = .current()) {

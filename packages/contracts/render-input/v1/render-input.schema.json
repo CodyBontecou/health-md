@@ -7,7 +7,7 @@
     {"$ref": "#/$defs/batch"}
   ],
   "$defs": {
-    "profile": {"enum": ["apple_health_data_v7", "android_frozen_v4", "android_analytical_v5"]},
+    "profile": {"enum": ["apple_health_data_v8", "android_frozen_v4", "android_analytical_v5"]},
     "format": {"enum": ["markdown", "obsidian_bases", "json", "csv"]},
     "configuration": {
       "type": "object",

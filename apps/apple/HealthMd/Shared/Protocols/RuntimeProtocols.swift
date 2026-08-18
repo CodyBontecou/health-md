@@ -15,9 +15,11 @@ protocol KeychainStoring: Sendable {
     func readInt(key: String) -> Int
     func writeInt(key: String, value: Int)
     func readString(key: String) -> String?
+    func readStringOrThrow(key: String) throws -> String?
     func writeString(key: String, value: String)
     func writeStringOrThrow(key: String, value: String) throws
     func remove(key: String)
+    func removeOrThrow(key: String) throws
 }
 
 // MARK: - UserDefaults

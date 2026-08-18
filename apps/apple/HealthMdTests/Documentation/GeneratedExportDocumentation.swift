@@ -13,12 +13,15 @@ enum GeneratedExportDocumentation {
 
         let summary = DocumentationExportFixtures.exhaustiveSummaryDay
         let lossless = DocumentationExportFixtures.exhaustiveLosslessDay
+        let provider = ExportFixtures.whoopDay
         let archive = DocumentationExportFixtures.canonicalArchive
         let summaryJSON = try summary.toJSONThrowing(customization: customization)
         let losslessJSON = try lossless.toJSONThrowing(customization: customization)
+        let providerJSON = try provider.toJSONThrowing(customization: customization)
         let archiveJSON = try HealthKitRecordArchiveSerializer.string(for: archive)
         let summaryCSV = try summary.toCSVThrowing(customization: customization)
         let losslessCSV = try lossless.toCSVThrowing(customization: customization)
+        let providerCSV = try provider.toCSVThrowing(customization: customization)
         let dictionaryEntries = HealthMetricDataDictionary.entries(using: customization)
 
         var generated: [String: Data] = [:]
@@ -30,6 +33,10 @@ enum GeneratedExportDocumentation {
         generated["lossless-day.csv"] = text(losslessCSV)
         generated["lossless-day.md"] = text(lossless.toMarkdown(customization: customization))
         generated["lossless-day-bases.md"] = text(lossless.toObsidianBases(customization: customization))
+        generated["provider-day.json"] = text(providerJSON)
+        generated["provider-day.csv"] = text(providerCSV)
+        generated["provider-day.md"] = text(provider.toMarkdown(customization: customization))
+        generated["provider-day-bases.md"] = text(provider.toObsidianBases(customization: customization))
         generated["canonical-archive.json"] = text(archiveJSON)
         generated["data-dictionary.json"] = try encodedJSON(dictionaryEntries)
         generated["metric-catalog.md"] = text(metricCatalog(
@@ -48,6 +55,7 @@ enum GeneratedExportDocumentation {
             sections: [
                 ("Summary day", try jsonObject(summaryJSON)),
                 ("Lossless day", try jsonObject(losslessJSON)),
+                ("WHOOP provider day", try jsonObject(providerJSON)),
             ]
         ))
         let recordObjects = try archive.records.map {
@@ -68,12 +76,13 @@ enum GeneratedExportDocumentation {
         generated["specialized-records.md"] = text(try specializedRecords(archive: archive))
         generated["csv-row-contracts.md"] = text(csvRowContracts(
             summaryCSV: summaryCSV,
-            losslessCSV: losslessCSV
+            losslessCSV: losslessCSV,
+            providerCSV: providerCSV
         ))
 
         for name in generated.keys where name.hasSuffix(".json") || name.hasSuffix(".csv") || name.hasSuffix(".md") {
             let value = String(decoding: generated[name] ?? Data(), as: UTF8.self)
-            if name.hasPrefix("summary-day") || name.hasPrefix("lossless-day") || name == "canonical-archive.json" {
+            if name.hasPrefix("summary-day") || name.hasPrefix("lossless-day") || name.hasPrefix("provider-day") || name == "canonical-archive.json" {
                 precondition(!value.contains("...") && !value.contains("…"), "Complete example contains an ellipsis: \(name)")
             }
         }
@@ -354,8 +363,16 @@ enum GeneratedExportDocumentation {
         return lines.joined(separator: "\n")
     }
 
-    private static func csvRowContracts(summaryCSV: String, losslessCSV: String) -> String {
-        let sources = [("Summary", summaryCSV), ("Lossless", losslessCSV)]
+    private static func csvRowContracts(
+        summaryCSV: String,
+        losslessCSV: String,
+        providerCSV: String
+    ) -> String {
+        let sources = [
+            ("Summary", summaryCSV),
+            ("Lossless", losslessCSV),
+            ("WHOOP provider", providerCSV),
+        ]
         var counts: [CSVContract: Int] = [:]
         var header: [String] = []
         for (source, csv) in sources {

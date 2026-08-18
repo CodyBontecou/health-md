@@ -12,39 +12,39 @@
       "sha256" : "190177dfd3e5923f8e786902d422a7e7408d661793c7e2e52d0f7078555e6e48"
     },
     {
-      "bytes" : 40763,
+      "bytes" : 44189,
       "path" : "csv-row-contracts.md",
-      "sha256" : "a6ee9fa79eb9a84042b890cacd2184ca3ad9320ab8b21a8e625cbc7b64127a1f"
+      "sha256" : "ced67eb454ff046de7a5746bbc938e09b95a4a4814343c2f49413f1a3929fcdc"
     },
     {
-      "bytes" : 113901,
+      "bytes" : 120624,
       "path" : "daily-json-fields.md",
-      "sha256" : "21fe506773d7a6aa13e89e4f73b69b102f5094e7f9bafd4cb9986e2bbf894669"
+      "sha256" : "cc4af5712c431922533bba1907ff0864a03907504b693a4936f7e350df66100c"
     },
     {
-      "bytes" : 222265,
+      "bytes" : 246039,
       "path" : "data-dictionary.json",
-      "sha256" : "c21317d5477a28d8b637d85bf37e26596401e377f1be0e62780ce6e7951c9ab5"
+      "sha256" : "53ed0dd9d6a7cf8731f79aee7a717b324c25ecd23bb2c6538218589d1f94b6dc"
     },
     {
       "bytes" : 15628,
       "path" : "lossless-day-bases.md",
-      "sha256" : "a6b555dcd0dffb4cd3605c64b02057ed1631fc095ebeb8513b457429843c4aaa"
+      "sha256" : "3f9a84f98206dd7ba7b52bcaa055f774ec89ec6b60b22755abdeb6ac65a4b1e1"
     },
     {
       "bytes" : 58802,
       "path" : "lossless-day.csv",
-      "sha256" : "64d70119add4b2c3285f5c8acf1c8cf7cabf6e3ff1500f03dd1839b4255a43e9"
+      "sha256" : "c67db49ecbfd74ae200b34e7e30d65c688bc716c9bb285ec7194382d645f009f"
     },
     {
       "bytes" : 84633,
       "path" : "lossless-day.json",
-      "sha256" : "3594e36e71e8ece084ec4a7f6e33c2f7638daae753ebbcfb625c7c466f314a51"
+      "sha256" : "0465094abb79eb74257248c11f5fa7455e800920aa177e733bfa34cd61808356"
     },
     {
       "bytes" : 24315,
       "path" : "lossless-day.md",
-      "sha256" : "7fc31004fbe80f56e6a5e2f05127303212d7909f797699e18a096acaec1de04b"
+      "sha256" : "88d6574df1bf970585590a2cc1af88115d6ca26bf803c9583490657738176387"
     },
     {
       "bytes" : 49571,
@@ -57,6 +57,26 @@
       "sha256" : "7137c304d100c9832692f080068095016b9e72d8cbc02ffc4148aa0630d90226"
     },
     {
+      "bytes" : 2615,
+      "path" : "provider-day-bases.md",
+      "sha256" : "da3e5520aa73c2a12623957354596505a241ed861a5a2b2b17049a30705da559"
+    },
+    {
+      "bytes" : 5703,
+      "path" : "provider-day.csv",
+      "sha256" : "4de16a7b0d40729ebe83fc2ca8ba3fd9fe8c35e045b9d84acde111547758abe9"
+    },
+    {
+      "bytes" : 4394,
+      "path" : "provider-day.json",
+      "sha256" : "067736bf621aa3620aa99f39442526d99752f6da25325a72939937c8fc96bb41"
+    },
+    {
+      "bytes" : 3980,
+      "path" : "provider-day.md",
+      "sha256" : "81ffc3ef864489c072172b9a7ce8e409174e116fda5fbfc46d36128e52496f91"
+    },
+    {
       "bytes" : 35348,
       "path" : "specialized-records.md",
       "sha256" : "48005d79f738fd4b87642b887cc10d8a9119f9b6f808d52ada69fe41272eadef"
@@ -64,24 +84,24 @@
     {
       "bytes" : 15558,
       "path" : "summary-day-bases.md",
-      "sha256" : "9f2bc71cb5612c5d9a77161bca8367b1abd783e2fb8f09ed9999d99e48371bca"
+      "sha256" : "8778bcb8cbaa6f3373d4d5632a75f3f13741f70f8571c2bc87554d351d36b349"
     },
     {
       "bytes" : 17202,
       "path" : "summary-day.csv",
-      "sha256" : "08a85ca200b7c990cfa807ae1b7252664848c92140ef8d6ab057c85636f4633b"
+      "sha256" : "26d92b4f1aa3ad231da83adc36a92f27b017078a50b6a2c8ec71dba7f322db6d"
     },
     {
       "bytes" : 27749,
       "path" : "summary-day.json",
-      "sha256" : "a6469242d60e315d7f84fa28c65d8769ac6f658916d0a523f06a32edd8367082"
+      "sha256" : "8e8edc9da7f5cd8903c218e91c22392a79d1cbdc12114a833552397a6a65bf06"
     },
     {
       "bytes" : 23358,
       "path" : "summary-day.md",
-      "sha256" : "63ff8dd143f3246e6a3e09abed577726db3cc883b456485f7eb5d7a0a0d1a2c4"
+      "sha256" : "db91c14af62d0e264ec2459b69bbaeff73c1ce3011801a340203f3283272e63a"
     }
   ],
   "schema" : "healthmd.health_data",
-  "schema_version" : 7
+  "schema_version" : 8
 }

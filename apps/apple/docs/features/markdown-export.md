@@ -25,12 +25,12 @@ Sleep summary attribution retains its established journaling behavior: the expor
 
 ## Example output (abridged)
 
-The complete production-generated note is [`docs/reference/generated/core/lossless-day.md`](../reference/generated/core/lossless-day.md).
+The complete production-generated note is [`docs/reference/generated/core/lossless-day.md`](../reference/generated/core/lossless-day.md). A typed WHOOP table example is [`docs/reference/generated/core/provider-day.md`](../reference/generated/core/provider-day.md).
 
 ```markdown
 ---
 schema: healthmd.health_data
-schema_version: 7
+schema_version: 8
 date: 2026-07-15
 type: health-data
 raw_capture_status: complete
@@ -107,6 +107,6 @@ For exact records:
 ## Implementation notes
 
 - `HealthData.toMarkdown(...)` renders summaries from `ExportDataSnapshot`.
-- `ExportHelpers` adds v7 schema, units, and lossless diagnostic frontmatter.
+- `ExportHelpers` adds v8 schema, units, lossless diagnostics, and unambiguous `whoop_*` frontmatter projections.
 - `MarkdownExporter.losslessHealthRecordsMarkdown(...)` renders counts and safe diagnostics, not canonical record JSON.
 - `VaultManager.writeOneFormat(...)` writes the file; `.update` uses `MarkdownMerger` only for readable Markdown.
