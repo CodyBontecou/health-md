@@ -19,6 +19,14 @@ import Combine
 /// `APIExportSettings` used by the export pipeline.
 @MainActor
 final class ExportProfileCoordinator: ObservableObject {
+    /// `nonisolated deinit` keeps teardown off the MainActor back-deployed
+    /// dealloc path, which trips a libmalloc
+    /// POINTER_BEING_FREED_WAS_NOT_ALLOCATED abort on the iOS 26.2 runtime
+    /// when nested ObservableObject stores are released (seen on CI
+    /// simulators; fixed in newer runtimes). All state is already torn down
+    /// by the time deinit runs, so no isolation is required.
+    nonisolated deinit {}
+
     /// Non-nil once a profile is active. UI uses this to label the export
     /// surface with the active profile name.
     @Published private(set) var activeProfileName: String?

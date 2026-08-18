@@ -68,6 +68,14 @@ struct ExportProfile: Codable, Identifiable, Equatable {
 ///
 /// Use from the main thread, matching `AdvancedExportSettings`.
 final class ExportProfileStore: ObservableObject {
+    /// `nonisolated deinit` keeps teardown off the MainActor back-deployed
+    /// dealloc path, which trips a libmalloc
+    /// POINTER_BEING_FREED_WAS_NOT_ALLOCATED abort on the iOS 26.2 runtime
+    /// when nested ObservableObject stores are released (seen on CI
+    /// simulators; fixed in newer runtimes). All state is already torn down
+    /// by the time deinit runs, so no isolation is required.
+    nonisolated deinit {}
+
     @Published private(set) var profiles: [ExportProfile]
     @Published private(set) var activeProfileID: UUID?
 

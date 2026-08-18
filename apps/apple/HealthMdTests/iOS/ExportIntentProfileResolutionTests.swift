@@ -37,7 +37,7 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
     func testNoProfilesResolvesLegacySettings() {
         let resolution = ExportIntentRunner.resolveProfile(
             named: "Weekly Sleep",
-            profileStore: ExportProfileStore(userDefaults: defaults)
+            profileStore: ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
         )
         XCTAssertEqual(resolution, .legacySettings)
     }
