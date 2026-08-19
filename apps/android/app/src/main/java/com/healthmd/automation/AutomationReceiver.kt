@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.scheduler.ProfileFolderAdoptionScope
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
@@ -53,6 +54,7 @@ class AutomationReceiver : BroadcastReceiver() {
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var exportHistoryRepository: ExportHistoryRepository
     @Inject lateinit var exportProfileRepository: ExportProfileRepository
+    @Inject lateinit var profileFolderAdoption: ProfileFolderAdoptionScope
 
     override fun onReceive(context: Context, intent: Intent) {
         val pendingResult = goAsync()
@@ -107,8 +109,13 @@ class AutomationReceiver : BroadcastReceiver() {
      * profile once any profile exists; with no profiles at all, live settings keep pre-profile
      * behavior. Failing resolution publishes a typed error without touching export state.
      */
-    /** Resolved run scope: restored profile settings (null = live settings) plus its name. */
-    private data class ProfileRunScope(val settings: ExportSettings?, val profileName: String?)
+    /** Resolved run scope: restored profile settings (null = live settings) plus the profile. */
+    private data class ProfileRunScope(
+        val settings: ExportSettings?,
+        val profile: ExportProfile?,
+    ) {
+        val profileName: String? get() = profile?.name
+    }
 
     private suspend fun resolveProfileForRun(
         profileReference: String?,
@@ -119,7 +126,7 @@ class AutomationReceiver : BroadcastReceiver() {
             if (profiles.isEmpty()) return ProfileRunScope(null, null)
             val active = exportProfileRepository.getActiveProfile()
                 ?: return ProfileRunScope(null, null)
-            return ProfileRunScope(resolveProfileSettings(active), active.name)
+            return ProfileRunScope(resolveProfileSettings(active), active)
         }
         return when (
             val resolution = ExportProfileRules.resolve(
@@ -129,7 +136,7 @@ class AutomationReceiver : BroadcastReceiver() {
             )
         ) {
             is ExportProfileResolution.Resolved ->
-                ProfileRunScope(resolveProfileSettings(resolution.profile), resolution.profile.name)
+                ProfileRunScope(resolveProfileSettings(resolution.profile), resolution.profile)
             is ExportProfileResolution.NotFound ->
                 throw AutomationProfileNotFound(reference)
             ExportProfileResolution.LegacySettings -> ProfileRunScope(null, null)
@@ -162,11 +169,13 @@ class AutomationReceiver : BroadcastReceiver() {
             publishExportResult(result, "$PROTOCOL_PROFILE_NOT_FOUND:$profileReference")
             return
         }
-        val profileName = profileSettingsAndName.profileName
+        val profile = profileSettingsAndName.profile
         val settings = profileSettingsAndName.settings ?: settingsRepository.getExportSettings()
         val isPurchased = settingsRepository.isPurchased.first()
         val freeExportsRemaining = settingsRepository.getFreeExportsRemaining()
+        // A folder-bound profile satisfies the destination requirement on its own.
         val folderUri = settingsRepository.getExportFolderUri()
+            ?: profile?.folderUri?.takeIf { it.isNotBlank() }
 
         if (!isPurchased && freeExportsRemaining <= 0) {
             val result = ExportResult(
@@ -219,8 +228,12 @@ class AutomationReceiver : BroadcastReceiver() {
             return
         }
 
+        val profileName = profileSettingsAndName.profileName
         val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
-        val result = orchestrator.exportDates(dates, settings)
+        // Per-profile folder: adopt the resolved profile's binding around the run.
+        val result = profile?.let {
+            profileFolderAdoption.withProfileFolder(it) { orchestrator.exportDates(dates, settings) }
+        } ?: orchestrator.exportDates(dates, settings)
         recordHistory(
             context,
             dates,

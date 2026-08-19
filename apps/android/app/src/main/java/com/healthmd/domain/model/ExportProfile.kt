@@ -22,6 +22,12 @@ data class ExportProfile(
     val target: ExportTarget,
     /** Non-secret endpoint URL binding when [target] is [ExportTarget.API_ENDPOINT]. */
     val apiEndpointUrl: String? = null,
+    /** Persisted SAF tree-URI binding when [target] is [ExportTarget.DEVICE_FOLDER]. Null keeps
+     * the currently selected device folder (the migration default binds it instead of leaving
+     * this null, mirroring the iOS folder-vault binding). */
+    val folderUri: String? = null,
+    /** Privacy-safe display name of [folderUri] for list/detail surfaces. */
+    val folderDisplayName: String? = null,
     /** Legacy marker for the profile synthesized from pre-profile settings during migration. */
     val isMigrationDefault: Boolean = false,
     val createdAtEpochMillis: Long,
@@ -100,8 +106,9 @@ object ExportProfileRules {
         byId(profiles, activeProfileId) ?: profiles.firstOrNull()
 
     /**
-     * One-time migration of current settings into a Default profile bound to the current target.
-     * Returns null when a profile already exists (idempotent bootstrap).
+     * One-time migration of current settings into a Default profile bound to the current target
+     * (and endpoint URL for API targets, matching the iOS bootstrap binding). Returns null when
+     * a profile already exists (idempotent bootstrap).
      */
     fun migrateDefault(
         existing: List<ExportProfile>,
@@ -109,6 +116,7 @@ object ExportProfileRules {
         target: ExportTarget,
         nowEpochMillis: Long,
         newId: () -> String,
+        apiEndpointUrl: String? = null,
     ): ExportProfile? {
         if (existing.isNotEmpty()) return null
         return ExportProfile(
@@ -116,6 +124,7 @@ object ExportProfileRules {
             name = DEFAULT_PROFILE_NAME,
             settingsSnapshotJson = snapshotJson,
             target = target,
+            apiEndpointUrl = apiEndpointUrl,
             isMigrationDefault = true,
             createdAtEpochMillis = nowEpochMillis,
             updatedAtEpochMillis = nowEpochMillis,
@@ -135,4 +144,15 @@ data class ExportSettingsSnapshotView(
     val exportFormats: Set<String> = emptySet(),
     val filenameFormat: String? = null,
     val includeGranularData: Boolean? = null,
-)
+    val metricSelection: MetricSelectionView? = null,
+) {
+    /** Number of enabled health metrics in the frozen snapshot. */
+    val enabledMetricCount: Int
+        get() = metricSelection?.enabledMetrics?.size ?: 0
+
+    /** @Serializable projection of [com.healthmd.domain.model.MetricSelectionState]. */
+    @Serializable
+    data class MetricSelectionView(
+        val enabledMetrics: Set<String> = emptySet(),
+    )
+}

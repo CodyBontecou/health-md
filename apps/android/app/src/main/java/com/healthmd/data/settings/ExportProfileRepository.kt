@@ -68,6 +68,8 @@ class ExportProfileRepository @Inject constructor(
         settingsSnapshotJson: String,
         target: ExportTarget,
         apiEndpointUrl: String? = null,
+        folderUri: String? = null,
+        folderDisplayName: String? = null,
     ): ExportProfile {
         require(ExportProfileRules.isValidName(name)) { "Profile name must not be blank." }
         val existing = getProfiles()
@@ -79,6 +81,8 @@ class ExportProfileRepository @Inject constructor(
             settingsSnapshotJson = settingsSnapshotJson,
             target = target,
             apiEndpointUrl = apiEndpointUrl?.takeIf { it.isNotBlank() },
+            folderUri = folderUri?.takeIf { it.isNotBlank() },
+            folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
             createdAtEpochMillis = now,
             updatedAtEpochMillis = now,
         )
@@ -92,6 +96,32 @@ class ExportProfileRepository @Inject constructor(
             }
         }
         return profile
+    }
+
+    /** Binds a profile to a SAF folder tree URI (or clears the binding with nulls). */
+    suspend fun bindFolder(
+        id: String,
+        folderUri: String?,
+        folderDisplayName: String?,
+    ): Boolean {
+        var applied = false
+        dataStore.edit { prefs ->
+            val existing = decodeProfiles(prefs[Keys.PROFILES])
+            val index = existing.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val updated = existing[index].copy(
+                    folderUri = folderUri?.takeIf { it.isNotBlank() },
+                    folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                )
+                prefs[Keys.PROFILES] = json.encodeToString(
+                    listSerializer,
+                    existing.toMutableList().apply { set(index, updated) },
+                )
+                applied = true
+            }
+        }
+        return applied
     }
 
     /** Replaces the frozen snapshot (and optionally target/endpoint); bumps updatedAt. */
@@ -182,12 +212,13 @@ class ExportProfileRepository @Inject constructor(
     }
 
     /**
-     * One-time migration of current settings into a Default profile bound to the current target,
-     * activated immediately. No-op when any profile exists.
+     * One-time migration of current settings into a Default profile bound to the current target
+     * and endpoint, activated immediately. No-op when any profile exists.
      */
     suspend fun migrateDefaultIfNeeded(
         settingsSnapshotJson: String,
         target: ExportTarget,
+        apiEndpointUrl: String? = null,
     ): ExportProfile? {
         if (getProfiles().isNotEmpty()) return null
         val profile = ExportProfileRules.migrateDefault(
@@ -196,6 +227,7 @@ class ExportProfileRepository @Inject constructor(
             target = target,
             nowEpochMillis = System.currentTimeMillis(),
             newId = { UUID.randomUUID().toString() },
+            apiEndpointUrl = apiEndpointUrl,
         ) ?: return null
         dataStore.edit { prefs ->
             prefs[Keys.PROFILES] = json.encodeToString(listSerializer, listOf(profile))

@@ -103,6 +103,7 @@ fun ExportScreen(
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToAdvancedSettings: () -> Unit = {},
     onNavigateToClinicianReport: () -> Unit = {},
+    onNavigateToExportProfiles: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -605,6 +606,8 @@ fun ExportScreen(
                 },
             )
         }
+
+        ExportProfilesEntryCard(onOpen = onNavigateToExportProfiles)
 
         GeistCardClickable(
             onClick = onNavigateToClinicianReport,

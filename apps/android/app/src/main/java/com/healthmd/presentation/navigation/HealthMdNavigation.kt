@@ -36,6 +36,7 @@ import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.paywall.PaywallViewModel
 import com.healthmd.presentation.directcli.DirectCliScreen
 import com.healthmd.presentation.clinicianreport.ClinicianReportScreen
+import com.healthmd.presentation.export.ExportProfilesScreen
 import com.healthmd.presentation.export.ExportScreen
 import com.healthmd.presentation.history.HistoryScreen
 import com.healthmd.presentation.metrics.MetricSelectionScreen
@@ -230,6 +231,7 @@ fun HealthMdNavigation(
                     },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
                     onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
+                    onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
@@ -253,6 +255,9 @@ fun HealthMdNavigation(
             }
 
             // Sub-screens
+            composable(SubRoutes.EXPORT_PROFILES) {
+                ExportProfilesScreen(onBack = { navController.popBackStack() })
+            }
             composable(SubRoutes.DIRECT_CLI) {
                 DirectCliScreen(onBack = { navController.popBackStack() })
             }

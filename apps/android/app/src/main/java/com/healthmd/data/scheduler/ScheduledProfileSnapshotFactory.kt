@@ -63,6 +63,21 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         profile: ExportProfile,
         current: ExportSettings,
         lookbackDays: Int,
+    ): ExportSettings? = applyForActivation(profile, current)?.copy(
+        scheduleLookbackDays = lookbackDays,
+    )
+
+    /**
+     * Restores a profile's frozen snapshot onto live settings for interactive editing (profile
+     * activation). Same restore semantics as [restoreForRun] — endpoint URL applied first so
+     * `restoreOnto`'s fail-closed fingerprint check validates, frozen engine authority
+     * re-injected, targets forced to the profile binding — except run-scoped fields (lookback)
+     * stay at the user's live values. Returns null when the snapshot is undecodable or invalid;
+     * callers fail closed and keep live settings unchanged.
+     */
+    fun applyForActivation(
+        profile: ExportProfile,
+        current: ExportSettings,
     ): ExportSettings? {
         val snapshot = AndroidExportSettingsSnapshotCodec.decodeOrNull(profile.settingsSnapshotJson)
             ?: return null
@@ -74,7 +89,6 @@ class ScheduledProfileSnapshotFactory @Inject constructor(
         return restored.copy(
             exportTarget = target,
             scheduledExportTarget = target,
-            scheduleLookbackDays = lookbackDays,
             executionEnginePin = snapshot.enginePin,
             executionEngineAuthorityIsFrozen = true,
         )

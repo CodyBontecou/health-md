@@ -32,6 +32,7 @@ object SubRoutes {
     const val CLINICIAN_REPORT = "clinician_report"
     const val DIRECT_CLI = "direct_cli"
     const val SHARED_SETUP = "shared_setup"
+    const val EXPORT_PROFILES = "export_profiles"
     const val PAYWALL = "paywall"
 }
 

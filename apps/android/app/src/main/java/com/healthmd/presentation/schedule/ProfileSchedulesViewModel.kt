@@ -8,6 +8,7 @@ import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.scheduler.ScheduledProfileUsageProjection
 import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
@@ -46,6 +47,7 @@ class ProfileSchedulesViewModel @Inject constructor(
     private val profileScheduler: ScheduledProfileScheduler,
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
     private val settingsRepository: SettingsRepository,
+    private val profileCoordinator: ExportProfileCoordinator,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileSchedulesUiState())
@@ -106,6 +108,9 @@ class ProfileSchedulesViewModel @Inject constructor(
                         zoneId = java.time.ZoneId.systemDefault().id,
                     ),
                 )
+                // Duplicates activate the copy (iOS picker parity): the user edits the
+                // new profile immediately; its snapshot equals the captured current state.
+                profileCoordinator.activate(profile.id)
             }.onFailure { Timber.e(it, "Could not create profile") }
         }
     }

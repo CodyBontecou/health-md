@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.theme.HealthMdTheme
 import com.healthmd.presentation.navigation.HealthMdNavigation
@@ -48,6 +49,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var exportScheduler: ExportScheduler
+
+    @Inject
+    lateinit var exportProfileCoordinator: ExportProfileCoordinator
 
     @Inject
     lateinit var widgetLifecycle: HealthWidgetLifecycleCoordinator
@@ -86,6 +90,9 @@ class MainActivity : ComponentActivity() {
             }
         }
         enableEdgeToEdge()
+        // Editing authority (export-profile decision 1): bootstrap the Default profile,
+        // apply the active profile onto live settings, and keep edits flushing back.
+        exportProfileCoordinator.ensureStarted()
         observeActiveExports()
         setContent {
             HealthMdTheme {

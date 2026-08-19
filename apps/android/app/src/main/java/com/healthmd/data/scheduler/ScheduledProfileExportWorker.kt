@@ -58,6 +58,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val profileRepository: ExportProfileRepository,
     private val entryStore: ScheduledProfileEntryStore,
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
+    private val folderAdoption: ProfileFolderAdoptionScope,
     private val profileScheduler: dagger.Lazy<ScheduledProfileScheduler>,
 ) : CoroutineWorker(appContext, workerParams) {
 
@@ -200,19 +201,23 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         val result = try {
             when (target) {
                 ExportTarget.DEVICE_FOLDER ->
-                    if (useDurableFolder) {
-                        ExportOrchestrator(healthRepository, exportRepository)
-                            .exportDatesDurably(
-                                dates = dates,
-                                settings = settings,
-                                durableFolderOperationId = "profile-folder-$operationId",
-                                durableSettingsSnapshotJson = snapshotJson,
-                                requireExistingJournal = runAttemptCount > 0,
-                            )
-                    } else {
-                        ExportOrchestrator(healthRepository, exportRepository)
-                            .exportDates(dates, settings)
-                    }.copy(target = ExportTarget.DEVICE_FOLDER)
+                    // Per-profile folder: adopt the profile's binding around the run (the live
+                    // folder URI is process-global plumbing; see ProfileFolderAdoptionScope).
+                    folderAdoption.withProfileFolder(profile) {
+                        if (useDurableFolder) {
+                            ExportOrchestrator(healthRepository, exportRepository)
+                                .exportDatesDurably(
+                                    dates = dates,
+                                    settings = settings,
+                                    durableFolderOperationId = "profile-folder-$operationId",
+                                    durableSettingsSnapshotJson = snapshotJson,
+                                    requireExistingJournal = runAttemptCount > 0,
+                                )
+                        } else {
+                            ExportOrchestrator(healthRepository, exportRepository)
+                                .exportDates(dates, settings)
+                        }.copy(target = ExportTarget.DEVICE_FOLDER)
+                    }
 
                 ExportTarget.API_ENDPOINT ->
                     apiEndpointExportRunner.exportDates(

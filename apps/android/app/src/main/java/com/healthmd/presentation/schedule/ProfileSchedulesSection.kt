@@ -168,7 +168,7 @@ private fun ProfileScheduleRow(
     }
 }
 
-private fun cadenceSummary(entry: ScheduledProfileEntry?): String {
+internal fun cadenceSummary(entry: ScheduledProfileEntry?): String {
     if (entry == null || !entry.isEnabled) return "Not scheduled. Tap to configure."
     val time = LocalTime.of(entry.hour, entry.minute)
         .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
@@ -184,7 +184,7 @@ private fun cadenceSummary(entry: ScheduledProfileEntry?): String {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProfileCadenceEditorDialog(
+internal fun ProfileCadenceEditorDialog(
     profileId: String,
     profileName: String,
     entry: ScheduledProfileEntry?,
