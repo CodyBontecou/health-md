@@ -52,6 +52,12 @@ enum AccessibilityID {
         static let exportActivity = "mac.exportActivity"
     }
 
+    // MARK: - Export Profiles Management
+    enum ExportProfiles {
+        static let makeActiveButton = "export.profiles.makeActive"
+        static let copyIDButton = "export.profiles.copyID"
+    }
+
     // MARK: - Clinician Report
     enum ClinicianReport {
         static let entry = "clinicianReport.entry"

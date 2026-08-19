@@ -262,6 +262,14 @@ final class ExportProfileCoordinator: ObservableObject {
         return copy
     }
 
+    /// Duplicates an arbitrary profile (including destination bindings)
+    /// without activating the copy. The copy starts unscheduled; activating
+    /// it later adopts its destinations like any other switch.
+    @discardableResult
+    func duplicateProfile(id: UUID) -> ExportProfile? {
+        profileStore.duplicate(id: id)
+    }
+
     /// Deletes a profile (forbidden for the last remaining profile by the
     /// store) and activates the first remaining profile. The profile's
     /// scheduled entry is removed so no orphaned automation survives the

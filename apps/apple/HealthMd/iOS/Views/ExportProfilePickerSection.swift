@@ -11,6 +11,7 @@ struct ExportProfilePickerSection: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
     @State private var showRenameAlert = false
     @State private var showDeleteConfirmation = false
+    @State private var showManageProfiles = false
     @State private var renameText = ""
 
     var body: some View {
@@ -77,6 +78,19 @@ struct ExportProfilePickerSection: View {
                         )
                     }
                     .disabled(coordinator.profileStore.profiles.count <= 1)
+
+                    #if os(iOS)
+                    Divider()
+
+                    Button {
+                        showManageProfiles = true
+                    } label: {
+                        Label(
+                            String(localized: "Manage Profiles…", comment: "Action: open the export profiles management view"),
+                            systemImage: "list.bullet"
+                        )
+                    }
+                    #endif
                 } label: {
                     HStack(spacing: Spacing.s2) {
                         Text(coordinator.activeProfileName ?? String(localized: "Profile", comment: "Fallback export profile label"))
@@ -106,6 +120,11 @@ struct ExportProfilePickerSection: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.bgSecondary)
         )
+        #if os(iOS)
+        .navigationDestination(isPresented: $showManageProfiles) {
+            ExportProfilesView(coordinator: coordinator)
+        }
+        #endif
         .alert(
             String(localized: "Rename Profile", comment: "Alert title: rename export profile"),
             isPresented: $showRenameAlert

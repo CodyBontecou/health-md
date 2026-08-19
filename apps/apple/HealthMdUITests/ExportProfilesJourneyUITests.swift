@@ -198,4 +198,94 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         )
         snap("10-weekly-cadence-saved")
     }
+
+    // MARK: - Journey D: dedicated management view
+
+    func testQA_ManageProfilesViewDetailCopyIDActivateAndRename() {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+        openExportTab(app)
+        XCTAssertTrue(app.staticTexts["Default"].waitForExistence(timeout: 10))
+
+        // Create a second profile so activation switching is observable.
+        let pickerButton = app.buttons["Export profile picker"].firstMatch
+        XCTAssertTrue(pickerButton.waitForExistence(timeout: 5))
+        pickerButton.tap()
+        let duplicate = app.buttons["New Profile From Current"]
+        XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
+        duplicate.tap()
+        XCTAssertTrue(app.staticTexts["Default 2"].waitForExistence(timeout: 5))
+
+        // Open the management view from the picker menu.
+        pickerButton.tap()
+        let manage = app.buttons["Manage Profiles…"]
+        XCTAssertTrue(manage.waitForExistence(timeout: 5), "Manage Profiles entry should exist in the picker menu")
+        manage.tap()
+        XCTAssertTrue(
+            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            "management view should push within the Export tab"
+        )
+        snap("11-manage-profiles-list")
+
+        // Both profiles are visible with their names.
+        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default 2"].firstMatch.waitForExistence(timeout: 5))
+
+        // Open the inactive profile's detail via its stable row identifier.
+        let defaultRow = app.buttons["export.profiles.row.Default"]
+        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5), "profile rows should expose stable identifiers")
+        defaultRow.tap()
+        XCTAssertTrue(
+            app.buttons["export.profiles.makeActive"].waitForExistence(timeout: 5),
+            "inactive profile detail should offer activation"
+        )
+        XCTAssertTrue(app.staticTexts["Profile ID"].waitForExistence(timeout: 5), "detail should expose the profile ID card")
+        XCTAssertTrue(app.staticTexts["Output"].waitForExistence(timeout: 5), "detail should summarize the frozen output settings")
+        XCTAssertTrue(app.staticTexts["Schedule"].waitForExistence(timeout: 5), "detail should show schedule status")
+        snap("12-profile-detail")
+
+        // Copy the profile ID for CLI/automation references.
+        let copy = app.buttons["export.profiles.copyID"]
+        XCTAssertTrue(copy.waitForExistence(timeout: 5))
+        copy.tap()
+        XCTAssertTrue(app.staticTexts["Copied"].waitForExistence(timeout: 5), "copy should confirm")
+
+        // Activate the profile: detail pops and the active banner reflects it.
+        app.buttons["export.profiles.makeActive"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            "activating from detail should return to the management list"
+        )
+        app.buttons["export.profiles.row.Default"].tap()
+        XCTAssertTrue(
+            app.staticTexts
+                .matching(NSPredicate(format: "label CONTAINS 'Active profile'"))
+                .firstMatch.waitForExistence(timeout: 5),
+            "activated profile should show the active banner"
+        )
+        XCTAssertFalse(
+            app.buttons["export.profiles.makeActive"].exists,
+            "the active profile should not offer activation"
+        )
+        snap("13-activated-banner")
+
+        // Rename from the detail actions.
+        app.buttons["Rename…"].tap()
+        let field = app.alerts.textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText(String(repeating: "\u{8}", count: 40))
+        field.typeText("Daily Everything")
+        app.alerts.buttons["Save"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Daily Everything"].waitForExistence(timeout: 5),
+            "detail navigation title should follow the rename"
+        )
+        app.navigationBars.buttons.firstMatch.tap() // back to the list
+        XCTAssertTrue(
+            app.staticTexts["Daily Everything"].firstMatch.waitForExistence(timeout: 5),
+            "list should show the renamed profile"
+        )
+        snap("14-renamed-in-list")
+    }
 }
