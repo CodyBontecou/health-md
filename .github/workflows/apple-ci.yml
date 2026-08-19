@@ -331,8 +331,8 @@ jobs:
             -only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
-            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfilePicker \
-            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_PickerDuplicateRenameDeleteAndLastProfileGuard \
+            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings \
+            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndUsageFooter \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename \
             -test-timeouts-enabled YES \

@@ -44,9 +44,6 @@ struct ExportTabView: View {
     let canExport: Bool
     var onCancelExport: (() -> Void)?
     let onExportTapped: () -> Void
-    /// Optional profile switcher section rendered above the target section
-    /// once export profiles are active. See `ExportProfilePickerSection`.
-    var profileSection: AnyView? = nil
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -58,7 +55,6 @@ struct ExportTabView: View {
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
     @State private var showAPIEndpointSettings = false
-    @State private var showClinicianReport = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
@@ -66,7 +62,6 @@ struct ExportTabView: View {
     @State private var resumeExportTapWhenAllTimeResolves = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.locale) private var locale
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
@@ -91,10 +86,6 @@ struct ExportTabView: View {
                     heroHeader
                     statusBadges
                         .configurationChangesProtected()
-                    if let profileSection {
-                        profileSection
-                    }
-                    clinicianReportSection
                     exportTargetSection
                         .configurationChangesProtected()
                     dateRangeSection
@@ -221,12 +212,6 @@ struct ExportTabView: View {
             APIExportSettingsSheet(settings: apiExportSettings)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showClinicianReport) {
-            ClinicianReportView(
-                healthKitManager: healthKitManager,
-                unitPreference: advancedSettings.formatCustomization.unitPreference
-            )
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
@@ -618,41 +603,6 @@ struct ExportTabView: View {
                 losslessHealthRecordsInlineRow
                     .configurationChangesProtected()
             }
-        }
-    }
-
-    private var clinicianReportSection: some View {
-        let copy = ClinicianReportCopy(locale: locale)
-        return sectionCard(title: copy.string(.title)) {
-            Button {
-                showClinicianReport = true
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "doc.text.fill")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.accent)
-                        .frame(width: 28, height: 44)
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(copy.string(.title))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.textPrimary)
-                        Text(copy.string(.entry_subtitle))
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .multilineTextAlignment(.leading)
-                    }
-                    Spacer(minLength: Spacing.xs)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-                }
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(AccessibilityID.ClinicianReport.entry)
-            .accessibilityLabel(copy.string(.title))
-            .accessibilityHint(copy.string(.accessibility_hint))
         }
     }
 

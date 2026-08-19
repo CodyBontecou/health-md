@@ -54,6 +54,7 @@ enum AccessibilityID {
 
     // MARK: - Export Profiles Management
     enum ExportProfiles {
+        static let entry = "export.profiles.entry"
         static let makeActiveButton = "export.profiles.makeActive"
         static let copyIDButton = "export.profiles.copyID"
     }

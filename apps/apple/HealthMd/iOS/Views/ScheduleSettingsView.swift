@@ -93,6 +93,9 @@ struct ScheduleSettingsView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
     @Binding var showFolderPicker: Bool
+    /// Built by ContentView when the main UI appears; forwarded so
+    /// `ProfileScheduleSection` observes the shared profile stores.
+    var profileCoordinator: ExportProfileCoordinator? = nil
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -295,7 +298,9 @@ struct ScheduleSettingsView: View {
                 heroHeader
                 scheduleAutomationCard
 #if os(iOS)
-                ProfileScheduleSection()
+                if let profileCoordinator {
+                    ProfileScheduleSection(coordinator: profileCoordinator)
+                }
 #endif
                 if schedulingManager.schedule.isEnabled {
                     scheduledDestinationSection

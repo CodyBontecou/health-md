@@ -10,11 +10,21 @@ import SwiftUI
 /// worker sync follow immediately. The footer surfaces the projected monthly
 /// exporting-request count (decision 4: the free plan's 10 actions are shared
 /// across every profile, schedule, and manual export).
+///
+/// Observes the shared `ExportProfileCoordinator`'s stores so profiles created
+/// or removed on other screens (for example Settings → Export Profiles) appear
+/// here immediately; a private store instance would snapshot the list once and
+/// go stale, hiding newly added profiles.
 struct ProfileScheduleSection: View {
     @EnvironmentObject private var schedulingManager: SchedulingManager
-    @StateObject private var profileStore = ExportProfileStore()
-    @StateObject private var entryStore = ScheduledExportEntryStore()
+    @ObservedObject private var profileStore: ExportProfileStore
+    @ObservedObject private var entryStore: ScheduledExportEntryStore
     @State private var editingProfile: ExportProfile?
+
+    init(coordinator: ExportProfileCoordinator) {
+        _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
+        _entryStore = ObservedObject(wrappedValue: coordinator.scheduledEntryStore)
+    }
 
     private func rowDivider(leading: CGFloat = 0) -> some View {
         Rectangle()

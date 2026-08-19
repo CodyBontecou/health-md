@@ -230,8 +230,6 @@ fun HealthMdNavigation(
                         navController.navigate(PaywallEntryPoint.EXPORT_LIMIT.route)
                     },
                     onNavigateToAdvancedSettings = { navController.navigate(SubRoutes.ADVANCED_SETTINGS) },
-                    onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
-                    onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
                 )
             }
             composable(NavDestination.SCHEDULE.route) {
@@ -249,6 +247,8 @@ fun HealthMdNavigation(
                     onNavigateToPaywall = {
                         navController.navigate(PaywallEntryPoint.UPGRADE.route)
                     },
+                    onNavigateToExportProfiles = { navController.navigate(SubRoutes.EXPORT_PROFILES) },
+                    onNavigateToClinicianReport = { navController.navigate(SubRoutes.CLINICIAN_REPORT) },
                     onNavigateToDirectCli = { navController.navigate(SubRoutes.DIRECT_CLI) },
                     onNavigateToSharedSetup = { navController.navigate(SubRoutes.SHARED_SETUP) },
                 )

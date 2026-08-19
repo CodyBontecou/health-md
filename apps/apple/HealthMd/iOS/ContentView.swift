@@ -47,6 +47,8 @@ struct ContentView: View {
     @State private var browsedFileURL: URL?
     @State private var showExportFolderBrowser = false
     @State private var showPaywall = false
+    @State private var showExportProfiles = false
+    @State private var showClinicianReport = false
     @State private var showMarketingMetricSelection = false
     @State private var showMarketingFormatCustomization = false
     @State private var showMarketingIndividualTracking = false
@@ -154,10 +156,7 @@ struct ContentView: View {
                         presentFirstExportPreview: $presentFirstExportPreview,
                         canExport: canExport,
                         onCancelExport: cancelExport,
-                        onExportTapped: exportData,
-                        profileSection: profileCoordinator.map {
-                            AnyView(ExportProfilePickerSection(coordinator: $0))
-                        }
+                        onExportTapped: exportData
                     )
                     .tabItem {
                         Label("Export", systemImage: "arrow.up.doc.fill")
@@ -168,7 +167,8 @@ struct ContentView: View {
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
                         apiExportSettings: apiExportSettings,
-                        showFolderPicker: $showFolderPicker
+                        showFolderPicker: $showFolderPicker,
+                        profileCoordinator: profileCoordinator
                     )
                     .environmentObject(schedulingManager)
                     .environmentObject(healthKitManager)
@@ -189,7 +189,10 @@ struct ContentView: View {
                         vaultManager: vaultManager,
                         advancedSettings: advancedSettings,
                         externalIntegrationManager: externalIntegrationManager,
-                        showFolderPicker: $showFolderPicker
+                        profileCoordinator: profileCoordinator,
+                        showFolderPicker: $showFolderPicker,
+                        showExportProfiles: $showExportProfiles,
+                        showClinicianReport: $showClinicianReport
                     )
                     .tabItem {
                         Label("Settings", systemImage: "gearshape.fill")
@@ -311,6 +314,19 @@ struct ContentView: View {
             PaywallView(context: currentPaywallContext)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showExportProfiles) {
+            if let profileCoordinator {
+                NavigationStack {
+                    ExportProfilesView(coordinator: profileCoordinator)
+                }
+            }
+        }
+        .sheet(isPresented: $showClinicianReport) {
+            ClinicianReportView(
+                healthKitManager: healthKitManager,
+                unitPreference: advancedSettings.formatCustomization.unitPreference
+            )
         }
         #if DEBUG
         .sheet(isPresented: $showMarketingMetricSelection) {
@@ -2445,6 +2461,7 @@ struct ScheduleTabView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
     @Binding var showFolderPicker: Bool
+    var profileCoordinator: ExportProfileCoordinator? = nil
 
     var body: some View {
         NavigationStack {
@@ -2452,7 +2469,8 @@ struct ScheduleTabView: View {
                 vaultManager: vaultManager,
                 advancedSettings: advancedSettings,
                 apiExportSettings: apiExportSettings,
-                showFolderPicker: $showFolderPicker
+                showFolderPicker: $showFolderPicker,
+                profileCoordinator: profileCoordinator
             )
         }
     }
@@ -2464,10 +2482,16 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
+    /// Built by ContentView when the main UI appears; observed inside
+    /// `ExportProfilesSettingsRow` so the active-profile status stays live.
+    var profileCoordinator: ExportProfileCoordinator?
     @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
         @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
+    @Environment(\.locale) private var locale
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @Binding var showFolderPicker: Bool
+    @Binding var showExportProfiles: Bool
+    @Binding var showClinicianReport: Bool
     @State private var showMailCompose = false
     @State private var showPaywall = false
     @State private var showExternalIntegrations = false
@@ -2532,6 +2556,7 @@ struct SettingsTabView: View {
                     settingsHeader
                     configurationProtectionSection
                     accountAndStorageSection
+                    profilesAndReportsSection
                     sharedSetupSection
                 privacyAndAnalyticsSection
                 if ConnectedAppsFeature.isEnabled {
@@ -2664,6 +2689,35 @@ struct SettingsTabView: View {
             )
             .configurationChangesProtected()
         }
+    }
+
+    private var profilesAndReportsSection: some View {
+        SettingsSectionCard(
+            title: "Profiles & Reports",
+            subtitle: "Manage saved export configurations and clinician-ready summaries."
+        ) {
+            if let profileCoordinator {
+                ExportProfilesSettingsRow(coordinator: profileCoordinator) {
+                    showExportProfiles = true
+                }
+
+                SettingsRowDivider()
+            }
+
+            SettingsRow(
+                icon: "doc.text.fill",
+                title: clinicianReportCopy.string(.title),
+                subtitle: clinicianReportCopy.string(.entry_subtitle),
+                isActive: true,
+                accessibilityHint: clinicianReportCopy.string(.accessibility_hint),
+                accessibilityIdentifier: AccessibilityID.ClinicianReport.entry,
+                action: { showClinicianReport = true }
+            )
+        }
+    }
+
+    private var clinicianReportCopy: ClinicianReportCopy {
+        ClinicianReportCopy(locale: locale)
     }
 
     private var sharedSetupSection: some View {
@@ -2915,6 +2969,7 @@ private struct SettingsRow: View {
     let statusTone: SettingsStatusTone
     let isActive: Bool
     let accessibilityHint: String
+    let accessibilityIdentifier: String?
     let action: () -> Void
 
     @State private var isPressed = false
@@ -2927,6 +2982,7 @@ private struct SettingsRow: View {
         statusTone: SettingsStatusTone = .muted,
         isActive: Bool,
         accessibilityHint: String? = nil,
+        accessibilityIdentifier: String? = nil,
         action: @escaping () -> Void
     ) {
         self.icon = icon
@@ -2936,6 +2992,7 @@ private struct SettingsRow: View {
         self.statusTone = statusTone
         self.isActive = isActive
         self.accessibilityHint = accessibilityHint ?? "Double tap to open \(title)"
+        self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
     }
 
@@ -2993,6 +3050,7 @@ private struct SettingsRow: View {
         .accessibilityValue(status ?? (isActive ? "Configured" : "Not configured"))
         .accessibilityHint(accessibilityHint)
         .accessibilityAddTraits(.isButton)
+        .modifier(SettingsRowIdentifier(identifier: accessibilityIdentifier))
     }
 
     private func withOptionalMotionAnimation(_ updates: () -> Void) {
@@ -3001,6 +3059,43 @@ private struct SettingsRow: View {
         } else {
             withAnimation(.easeInOut(duration: 0.15), updates)
         }
+    }
+}
+
+/// Applies an accessibility identifier only when one is provided, so rows
+/// without stable identifiers keep their default accessibility element.
+private struct SettingsRowIdentifier: ViewModifier {
+    let identifier: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let identifier {
+            content.accessibilityIdentifier(identifier)
+        } else {
+            content
+        }
+    }
+}
+
+/// Export Profiles entry row. Isolated from `SettingsTabView` so the
+/// coordinator (which ContentView builds just after first render) can be
+/// observed here while remaining optional at the call site.
+private struct ExportProfilesSettingsRow: View {
+    @ObservedObject var coordinator: ExportProfileCoordinator
+    let action: () -> Void
+
+    var body: some View {
+        SettingsRow(
+            icon: "square.and.arrow.down.on.square",
+            title: "Export Profiles",
+            subtitle: "Save multiple export configurations and run them on their own schedules.",
+            status: coordinator.activeProfileName,
+            statusTone: .accent,
+            isActive: true,
+            accessibilityHint: "Double tap to manage export profiles",
+            accessibilityIdentifier: AccessibilityID.ExportProfiles.entry,
+            action: action
+        )
     }
 }
 

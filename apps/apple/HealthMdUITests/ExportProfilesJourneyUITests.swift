@@ -1,10 +1,11 @@
 import XCTest
 
 /// Pre-release QA journeys for export profiles (release 3.1.0 scope).
-/// Covers: first-launch migration to the Default profile, the Export-tab
-/// picker (duplicate/rename/delete + last-profile guard), and per-profile
-/// schedules (enable toggle, cadence editor, projected-usage footer).
-/// Screenshots are written to /tmp/qa-shots for manual review.
+/// Covers: first-launch migration to the Default profile, the Settings→
+/// Export Profiles management surface (duplicate/rename/delete + last-profile
+/// guard), and per-profile schedules (enable toggle, cadence editor,
+/// projected-usage footer). Screenshots are written to /tmp/qa-shots for
+/// manual review.
 final class ExportProfilesJourneyUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -19,64 +20,71 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         try? png.write(to: URL(fileURLWithPath: "/tmp/qa-shots/\(name).png"))
     }
 
-    private func openExportTab(_ app: XCUIApplication) {
-        let exportTab = app.tabBars.buttons["Export"]
-        XCTAssertTrue(exportTab.waitForExistence(timeout: 10))
-        exportTab.tap()
+    private func openSettingsTab(_ app: XCUIApplication) {
+        let settingsTab = app.tabBars.buttons["Settings"]
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
+        settingsTab.tap()
     }
 
-    // MARK: - Journey A: migration + picker
+    /// Opens the Export Profiles management sheet from Settings.
+    private func openProfilesManagementSheet(_ app: XCUIApplication) {
+        openSettingsTab(app)
+        let row = app.buttons["export.profiles.entry"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Export Profiles row should exist in Settings")
+        row.tap()
+        XCTAssertTrue(
+            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            "management sheet should open from Settings"
+        )
+    }
 
-    func testQA_MigrationShowsDefaultProfilePicker() {
+    // MARK: - Journey A: migration + Settings entry
+
+    func testQA_MigrationShowsDefaultProfileInSettings() {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        openExportTab(app)
+        // Migration synthesizes the Default profile before the row renders,
+        // so the Settings row carries its name as the status value.
+        openSettingsTab(app)
+        let row = app.buttons["export.profiles.entry"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Export Profiles row should exist in Settings")
+        snap("01-settings-profiles-row")
+        let defaultValue = expectation(for: NSPredicate(format: "value == 'Default'"), evaluatedWith: row)
+        wait(for: [defaultValue], timeout: 10)
 
-        // Migration synthesizes the Default profile on first UI appearance.
-        let section = app.staticTexts["Export Profile"]
-        XCTAssertTrue(section.waitForExistence(timeout: 10), "profile section should appear after migration")
-        XCTAssertTrue(app.staticTexts["Default"].waitForExistence(timeout: 5), "migrated Default profile should be active")
-
-        let picker = app.buttons["Export profile picker"].firstMatch
-        XCTAssertTrue(picker.waitForExistence(timeout: 5), "profile picker capsule should be reachable")
-        snap("01-export-tab-default-profile")
-
-        // Notice copy explains switching + last-profile protection.
+        openProfilesManagementSheet(app)
         XCTAssertTrue(
-            app.staticTexts
-                .matching(NSPredicate(format: "label CONTAINS 'last remaining profile'"))
-                .firstMatch.exists,
-            "profile notice should explain the deletion guard"
+            app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5),
+            "management list should show the migrated Default profile"
         )
+        snap("01b-management-default-profile")
     }
 
     // MARK: - Journey B: profile CRUD + last-profile guard
 
-    func testQA_PickerDuplicateRenameDeleteAndLastProfileGuard() {
+    func testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard() {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
-        openExportTab(app)
-        XCTAssertTrue(app.staticTexts["Default"].waitForExistence(timeout: 10))
+        openProfilesManagementSheet(app)
+        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
 
-        // Open the picker menu.
-        let pickerButton = app.buttons["Export profile picker"].firstMatch
-        XCTAssertTrue(pickerButton.waitForExistence(timeout: 5), "profile picker menu not reachable")
-        pickerButton.tap()
-        snap("02-picker-menu-open")
-
-        // Duplicate the active profile.
-        let duplicate = app.buttons["New Profile From Current"]
-        XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
-        duplicate.tap()
+        // Duplicate the active profile from the management toolbar. The copy
+        // becomes active (duplicate-activates), matching the picker behavior
+        // this journey previously covered.
+        let addButton = app.buttons["New profile from current"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5), "management toolbar should offer duplication")
+        addButton.tap()
         XCTAssertTrue(
             app.staticTexts["Default 2"].waitForExistence(timeout: 5),
             "duplicate should be created with a unique name and activated"
         )
         snap("03-duplicated-profile-active")
 
-        // Rename the active profile.
-        app.buttons["Export profile picker"].firstMatch.tap()
+        // Rename the duplicated profile from its detail actions.
+        let duplicatedRow = app.buttons["export.profiles.row.Default 2"]
+        XCTAssertTrue(duplicatedRow.waitForExistence(timeout: 5))
+        duplicatedRow.tap()
         let rename = app.buttons["Rename…"]
         XCTAssertTrue(rename.waitForExistence(timeout: 5))
         rename.tap()
@@ -88,23 +96,34 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         field.typeText("Weekly Sleep")
         app.alerts.buttons["Save"].tap()
         XCTAssertTrue(
-            app.staticTexts["Weekly Sleep"].waitForExistence(timeout: 5),
-            "rename should update the picker label"
+            app.navigationBars["Weekly Sleep"].waitForExistence(timeout: 5),
+            "detail navigation title should follow the rename"
+        )
+        app.navigationBars.buttons.firstMatch.tap() // back to the list
+        XCTAssertTrue(
+            app.staticTexts["Weekly Sleep"].firstMatch.waitForExistence(timeout: 5),
+            "rename should update the management list"
         )
         snap("04-renamed-profile")
 
-        // Switch back to Default via the menu.
-        app.buttons["Export profile picker"].firstMatch.tap()
-        let defaultItem = app.buttons["Default"].firstMatch
-        XCTAssertTrue(defaultItem.waitForExistence(timeout: 5))
-        defaultItem.tap()
-        XCTAssertTrue(app.staticTexts["Default"].waitForExistence(timeout: 5))
+        // Switch back to Default via detail activation.
+        let defaultRow = app.buttons["export.profiles.row.Default"]
+        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5))
+        defaultRow.tap()
+        XCTAssertTrue(
+            app.buttons["export.profiles.makeActive"].waitForExistence(timeout: 5),
+            "inactive profile detail should offer activation"
+        )
+        app.buttons["export.profiles.makeActive"].tap()
+        XCTAssertTrue(
+            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            "activating from detail should return to the management list"
+        )
 
-        // Delete "Weekly Sleep": switch to it, then delete.
-        app.buttons["Export profile picker"].firstMatch.tap()
-        app.buttons["Weekly Sleep"].firstMatch.tap()
-        XCTAssertTrue(app.staticTexts["Weekly Sleep"].waitForExistence(timeout: 5))
-        app.buttons["Export profile picker"].firstMatch.tap()
+        // Delete "Weekly Sleep": open its detail, then delete.
+        let weeklyRow = app.buttons["export.profiles.row.Weekly Sleep"]
+        XCTAssertTrue(weeklyRow.waitForExistence(timeout: 5))
+        weeklyRow.tap()
         let delete = app.buttons["Delete Profile…"]
         XCTAssertTrue(delete.waitForExistence(timeout: 5))
         delete.tap()
@@ -114,18 +133,18 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.tap()
         XCTAssertTrue(
-            app.staticTexts["Default"].waitForExistence(timeout: 5),
-            "deleting the active profile should fall back to the remaining profile"
+            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            "deleting from detail should return to the management list"
         )
         snap("05-after-delete")
 
         // Last-profile guard: with one profile left, Delete must be disabled.
-        app.buttons["Export profile picker"].firstMatch.tap()
+        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5))
+        defaultRow.tap()
         let guardedDelete = app.buttons["Delete Profile…"]
         XCTAssertTrue(guardedDelete.waitForExistence(timeout: 5))
         XCTAssertFalse(guardedDelete.isEnabled, "the last remaining profile must not be deletable")
         snap("06-last-profile-guard")
-        // Leave the menu open; the test ends here.
     }
 
     // MARK: - Journey C: per-profile schedules
@@ -204,28 +223,14 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     func testQA_ManageProfilesViewDetailCopyIDActivateAndRename() {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
-        openExportTab(app)
-        XCTAssertTrue(app.staticTexts["Default"].waitForExistence(timeout: 10))
+        openProfilesManagementSheet(app)
+        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
 
         // Create a second profile so activation switching is observable.
-        let pickerButton = app.buttons["Export profile picker"].firstMatch
-        XCTAssertTrue(pickerButton.waitForExistence(timeout: 5))
-        pickerButton.tap()
-        let duplicate = app.buttons["New Profile From Current"]
-        XCTAssertTrue(duplicate.waitForExistence(timeout: 5))
-        duplicate.tap()
+        let addButton = app.buttons["New profile from current"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 5))
+        addButton.tap()
         XCTAssertTrue(app.staticTexts["Default 2"].waitForExistence(timeout: 5))
-
-        // Open the management view from the picker menu.
-        pickerButton.tap()
-        let manage = app.buttons["Manage Profiles…"]
-        XCTAssertTrue(manage.waitForExistence(timeout: 5), "Manage Profiles entry should exist in the picker menu")
-        manage.tap()
-        XCTAssertTrue(
-            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
-            "management view should push within the Export tab"
-        )
-        snap("11-manage-profiles-list")
 
         // Both profiles are visible with their names.
         XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
