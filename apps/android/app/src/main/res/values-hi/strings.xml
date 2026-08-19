@@ -814,6 +814,7 @@
     <string name="direct_cli_failure_timeout">Direct CLI सत्र Android की समय सीमा तक पहुँच गया।</string>
     <string name="direct_cli_failure_quota">निःशुल्क निर्यात सीमा पूरी हो चुकी है।</string>
     <string name="direct_cli_failure_fitbit_range">Fitbit रॉ निर्यात के लिए अधिकतम 366 दिनों की स्पष्ट रेंज ज़रूरी है।</string>
+    <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">अनुरोधित स्वास्थ्य प्रदाता इस डिवाइस पर उपलब्ध नहीं है।</string>
     <string name="direct_cli_failure_health_access">Android डिवाइस पर स्वास्थ्य एक्सेस आवश्यक है।</string>
     <string name="direct_cli_failure_device_locked">स्वास्थ्य डेटा निर्यात करने से पहले Android डिवाइस अनलॉक करें।</string>

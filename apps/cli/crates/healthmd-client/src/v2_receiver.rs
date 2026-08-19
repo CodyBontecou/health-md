@@ -2421,6 +2421,7 @@ mod tests {
             },
             product: ExportProduct::GeneratedFilesV1 {
                 settings_policy: v2::SettingsPolicy::SavedDeviceSettings,
+                profile_reference: None,
             },
             destination: Some(v2::DestinationBinding {
                 binding_sha256: destination.binding_sha256().unwrap(),

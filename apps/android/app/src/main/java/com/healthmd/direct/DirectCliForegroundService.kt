@@ -234,6 +234,9 @@ class DirectCliForegroundService : Service() {
         DirectCliFailure.FITBIT_RANGE_REQUIRED -> getString(
             R.string.direct_cli_failure_fitbit_range,
         )
+        DirectCliFailure.PROFILE_NOT_FOUND -> getString(
+            R.string.direct_cli_failure_profile_not_found,
+        )
         DirectCliFailure.SOURCE_UNAVAILABLE -> getString(
             R.string.direct_cli_failure_source_unavailable,
         )

@@ -814,6 +814,7 @@
     <string name="direct_cli_failure_timeout">Direct CLI সেশন Android-এর সময়সীমায় পৌঁছেছে।</string>
     <string name="direct_cli_failure_quota">বিনামূল্যের এক্সপোর্ট সীমায় পৌঁছে গেছে।</string>
     <string name="direct_cli_failure_fitbit_range">Fitbit-এর কাঁচা রপ্তানির জন্য সর্বোচ্চ ৩৬৬ দিনের একটি সুস্পষ্ট পরিসর প্রয়োজন।</string>
+    <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">অনুরোধ করা স্বাস্থ্য প্রদানকারীটি এই ডিভাইসে অনুপলভ্য।</string>
     <string name="direct_cli_failure_health_access">Android ডিভাইসে স্বাস্থ্য অ্যাক্সেস প্রয়োজন।</string>
     <string name="direct_cli_failure_device_locked">স্বাস্থ্য ডেটা এক্সপোর্ট করার আগে Android ডিভাইস আনলক করুন।</string>

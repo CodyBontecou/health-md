@@ -1304,9 +1304,34 @@ async fn direct_android_export(
         || !options.selection.sources.is_empty()
     {
         return Err(usage_error(
-            "Android generated-file direct export currently uses saved device selections; remove CLI selectors",
+            "Android generated-file direct export uses saved device selections or a profile; remove CLI selectors",
         ));
     }
+    let profile_reference = options
+        .profile_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(|profile_id| v2::ProfileReference {
+            profile_id: profile_id.to_owned(),
+            name: None,
+        });
+    if options
+        .profile_id
+        .as_deref()
+        .is_some_and(|id| id.trim().is_empty())
+    {
+        return Err(usage_error("--profile requires a non-empty profile ID"));
+    }
+    if profile_reference.is_some() && options.use_device_settings {
+        return Err(usage_error(
+            "--profile cannot combine with --use-device-settings; the profile owns the settings scope",
+        ));
+    }
+    let (settings_policy, profile_reference) = match profile_reference {
+        Some(reference) => (v2::SettingsPolicy::Profile, Some(reference)),
+        None => (v2::SettingsPolicy::SavedDeviceSettings, None),
+    };
     let destination_path = options
         .destination
         .ok_or_else(|| usage_error("direct generated-file export requires --destination"))?;
@@ -1326,7 +1351,8 @@ async fn direct_android_export(
         source_installation_id: source_id,
         date_selection,
         product: v2::ExportProduct::GeneratedFilesV1 {
-            settings_policy: v2::SettingsPolicy::SavedDeviceSettings,
+            settings_policy,
+            profile_reference,
         },
         destination: Some(v2::DestinationBinding {
             binding_sha256: destination

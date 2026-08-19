@@ -776,6 +776,7 @@
     <string name="direct_cli_failure_timeout">Direct CLI сеансы Android белгілеген уақыт шегіне жетті.</string>
     <string name="direct_cli_failure_quota">Тегін экспорттар шегіне жетті.</string>
     <string name="direct_cli_failure_fitbit_range">Fitbit өңделмеген экспорты үшін 366 күннен аспайтын нақты ауқым қажет.</string>
+    <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">Сұралған денсаулық провайдері бұл құрылғыда қолжетімсіз.</string>
     <string name="direct_cli_failure_health_access">Android құрылғысында денсаулық деректеріне қатынас қажет.</string>
     <string name="direct_cli_failure_device_locked">Денсаулық деректерін экспорттамас бұрын Android құрылғысының құлпын ашыңыз.</string>

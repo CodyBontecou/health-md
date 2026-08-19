@@ -814,6 +814,7 @@
     <string name="direct_cli_failure_timeout">Direct CLI ਸੈਸ਼ਨ Android ਦੀ ਸਮਾਂ ਸੀਮਾ \'ਤੇ ਪਹੁੰਚ ਗਿਆ।</string>
     <string name="direct_cli_failure_quota">ਮੁਫ਼ਤ ਨਿਰਯਾਤ ਸੀਮਾ ਪੂਰੀ ਹੋ ਗਈ ਹੈ।</string>
     <string name="direct_cli_failure_fitbit_range">Fitbit ਦੇ ਰਾਅ ਨਿਰਯਾਤ ਲਈ ਵੱਧ ਤੋਂ ਵੱਧ 366 ਦਿਨਾਂ ਦੀ ਸਪਸ਼ਟ ਰੇਂਜ ਲੋੜੀਂਦੀ ਹੈ।</string>
+    <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">ਮੰਗਿਆ ਗਿਆ ਸਿਹਤ ਪ੍ਰਦਾਤਾ ਇਸ ਡਿਵਾਈਸ \'ਤੇ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।</string>
     <string name="direct_cli_failure_health_access">Android ਡਿਵਾਈਸ \'ਤੇ ਸਿਹਤ ਪਹੁੰਚ ਲੋੜੀਂਦੀ ਹੈ।</string>
     <string name="direct_cli_failure_device_locked">ਸਿਹਤ ਡਾਟਾ ਨਿਰਯਾਤ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ Android ਡਿਵਾਈਸ ਅਨਲੌਕ ਕਰੋ।</string>

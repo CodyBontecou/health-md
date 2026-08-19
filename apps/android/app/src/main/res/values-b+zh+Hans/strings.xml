@@ -763,6 +763,7 @@
     <string name="direct_cli_failure_timeout">Direct CLI 会话已达到 Android 的时间限制。</string>
     <string name="direct_cli_failure_quota">已达到免费导出次数上限。</string>
     <string name="direct_cli_failure_fitbit_range">Fitbit 原始导出需要明确指定不超过 366 天的范围。</string>
+    <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">此设备无法使用所请求的健康数据提供商。</string>
     <string name="direct_cli_failure_health_access">需要在 Android 设备上授予健康数据访问权限。</string>
     <string name="direct_cli_failure_device_locked">导出健康数据前，请解锁 Android 设备。</string>

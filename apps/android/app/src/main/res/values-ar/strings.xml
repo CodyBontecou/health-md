@@ -893,6 +893,7 @@
     <string name="direct_cli_failure_timeout">بلغت جلسة Direct CLI المهلة الزمنية التي يفرضها Android.</string>
     <string name="direct_cli_failure_quota">تم بلوغ حد التصدير المجاني.</string>
     <string name="direct_cli_failure_fitbit_range">يتطلب تصدير Fitbit الخام نطاقًا محددًا لا يتجاوز 366 يومًا.</string>
+    <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">موفّر الصحة المطلوب غير متاح على هذا الجهاز.</string>
     <string name="direct_cli_failure_health_access">يلزم السماح بالوصول إلى البيانات الصحية على جهاز Android.</string>
     <string name="direct_cli_failure_device_locked">افتح قفل جهاز Android قبل تصدير البيانات الصحية.</string>

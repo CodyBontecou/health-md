@@ -867,6 +867,7 @@
     <string name="direct_cli_failure_timeout">Сеанс Direct CLI достиг ограничения времени Android.</string>
     <string name="direct_cli_failure_quota">Лимит бесплатных экспортов исчерпан.</string>
     <string name="direct_cli_failure_fitbit_range">Для необработанного экспорта Fitbit необходимо явно выбрать диапазон не более 366 дней.</string>
+    <string name="direct_cli_failure_profile_not_found">The referenced export profile does not exist on this device.</string>
     <string name="direct_cli_failure_source_unavailable">Запрошенный поставщик данных о здоровье недоступен на этом устройстве.</string>
     <string name="direct_cli_failure_health_access">На устройстве Android требуется доступ к данным о здоровье.</string>
     <string name="direct_cli_failure_device_locked">Разблокируйте устройство Android перед экспортом данных о здоровье.</string>
