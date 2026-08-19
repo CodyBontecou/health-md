@@ -335,7 +335,7 @@
         },
         "android": {
           "state": "planned",
-          "target": "Android export profile repository, AutomationReceiver profile extra, and per-profile WorkManager schedules"
+          "target": "Android export profile repository, AutomationReceiver profile extra, per-profile WorkManager schedules, per-profile SAF folder bindings, and the v2 direct-protocol profile settings policy"
         }
       },
       "evidence": [

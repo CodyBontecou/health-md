@@ -139,6 +139,54 @@ class ScheduledProfileOccurrenceMathTest {
     }
 
     @Test
+    fun `monthly anchor day clamps calendar-naturally across month lengths`() {
+        // iOS parity: an anchor on the 31st fires on the 31st in 31-day months and the last
+        // day of shorter months (Jan 31 → Feb 28 → Mar 31), never a flat day-28.
+        val anchor31 = entry(
+            cadenceUnit = ScheduledProfileCadenceUnit.MONTH,
+            anchorEpochDay = LocalDate.of(2026, 1, 31).toEpochDay(),
+        )
+
+        // January: the 31st stays the 31st.
+        val midJanuary = millisOf(LocalDate.of(2026, 1, 10), LocalTime.of(12, 0))
+        assertEquals(
+            LocalDateTime.of(LocalDate.of(2026, 1, 31), LocalTime.of(8, 0)).atZone(zone).toInstant(),
+            ScheduledProfileOccurrenceMath.nextOccurrence(anchor31, midJanuary),
+        )
+
+        // After Jan 31: next occurrence is Feb 28 (clamped to the shorter month).
+        val februaryFirst = millisOf(LocalDate.of(2026, 2, 1), LocalTime.of(12, 0))
+        assertEquals(
+            LocalDateTime.of(LocalDate.of(2026, 2, 28), LocalTime.of(8, 0)).atZone(zone).toInstant(),
+            ScheduledProfileOccurrenceMath.nextOccurrence(anchor31, februaryFirst),
+        )
+
+        // After Feb 28: March fires on the 31st again (clamping is per-month, not sticky).
+        val marchFirst = millisOf(LocalDate.of(2026, 3, 1), LocalTime.of(12, 0))
+        assertEquals(
+            LocalDateTime.of(LocalDate.of(2026, 3, 31), LocalTime.of(8, 0)).atZone(zone).toInstant(),
+            ScheduledProfileOccurrenceMath.nextOccurrence(anchor31, marchFirst),
+        )
+    }
+
+    @Test
+    fun `monthly previous boundary follows the same natural clamp`() {
+        val anchor31 = entry(
+            cadenceUnit = ScheduledProfileCadenceUnit.MONTH,
+            anchorEpochDay = LocalDate.of(2026, 1, 31).toEpochDay(),
+        )
+
+        // Standing on March 10 with no success yet: the previous boundary is Feb 28.
+        val marchTenth = millisOf(LocalDate.of(2026, 3, 10), LocalTime.of(12, 0))
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(anchor31, marchTenth)
+        assertNotNull(due)
+        assertEquals(
+            LocalDateTime.of(LocalDate.of(2026, 2, 28), LocalTime.of(8, 0)).atZone(zone).toInstant().toEpochMilli(),
+            due!!.fireAtMillis,
+        )
+    }
+
+    @Test
     fun `usage projection counts main runs across cadences`() {
         assertEquals(30, ScheduledProfileUsageProjection.projectedMonthlyRequests(entry()))
         assertEquals(5, ScheduledProfileUsageProjection.projectedMonthlyRequests(entry(cadenceUnit = ScheduledProfileCadenceUnit.WEEK)))

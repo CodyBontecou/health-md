@@ -193,9 +193,11 @@ object ScheduledProfileOccurrenceMath {
         everyMonths: Int,
     ): LocalDateTime? {
         val anchorDayOfMonth = LocalDate.ofEpochDay(anchorEpochDay).dayOfMonth
-        val safeDay = anchorDayOfMonth.coerceAtMost(28)
-        var candidate = now.toLocalDate().withDayOfMonth(safeDay).atTime(preferred)
-        if (!candidate.isAfter(now)) candidate = candidate.plusMonths(everyMonths.toLong())
+        var candidate = withAnchorDayOfMonth(now.toLocalDate(), anchorDayOfMonth).atTime(preferred)
+        if (!candidate.isAfter(now)) {
+            val nextMonth = candidate.toLocalDate().plusMonths(everyMonths.toLong())
+            candidate = withAnchorDayOfMonth(nextMonth, anchorDayOfMonth).atTime(preferred)
+        }
         return candidate
     }
 
@@ -206,17 +208,20 @@ object ScheduledProfileOccurrenceMath {
         everyMonths: Int,
     ): LocalDateTime? {
         val anchorDayOfMonth = LocalDate.ofEpochDay(anchorEpochDay).dayOfMonth
-        val safeDay = anchorDayOfMonth.coerceAtMost(28)
-        var candidate = now.toLocalDate().withDayOfMonth(safeDay).atTime(preferred)
-        if (candidate.isAfter(now)) candidate = candidate.minusMonths(everyMonths.toLong())
+        var candidate = withAnchorDayOfMonth(now.toLocalDate(), anchorDayOfMonth).atTime(preferred)
+        if (candidate.isAfter(now)) {
+            val previousMonth = candidate.toLocalDate().minusMonths(everyMonths.toLong())
+            candidate = withAnchorDayOfMonth(previousMonth, anchorDayOfMonth).atTime(preferred)
+        }
         return candidate
     }
 
     /**
-     * Monthly occurrence day clamped to 28 diverges from the iOS calendar math; entries using
-     * MONTH cadence are accepted but the runtime must document the clamp per-platform.
+     * Calendar-natural monthly anchor day (iOS parity): an anchor like the 31st fires on the
+     * 31st in 31-day months and the last day of shorter months (Jan 31 → Feb 28 → Mar 31).
      */
-    fun monthDayClampNote(): String = "Monthly profile entries clamp to day <= 28 on Android."
+    private fun withAnchorDayOfMonth(month: LocalDate, anchorDayOfMonth: Int): LocalDate =
+        month.withDayOfMonth(minOf(anchorDayOfMonth, month.lengthOfMonth()))
 }
 
 /**
