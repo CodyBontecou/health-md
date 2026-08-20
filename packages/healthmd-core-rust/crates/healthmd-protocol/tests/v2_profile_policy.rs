@@ -125,7 +125,7 @@ fn old_peer_fails_closed_on_unknown_profile_policy() {
         settings_policy: LegacySettingsPolicy,
     }
 
-    let json = serde_json::to_value(&profile_request()).unwrap();
+    let json = serde_json::to_value(profile_request()).unwrap();
     let legacy: Result<LegacyProduct, _> = serde_json::from_value(json["product"].clone());
     assert!(legacy.is_err());
 }
@@ -141,7 +141,7 @@ fn old_peer_fails_closed_on_unknown_profile_reference_field() {
         settings_policy: String,
     }
 
-    let json = serde_json::to_value(&profile_request()).unwrap();
+    let json = serde_json::to_value(profile_request()).unwrap();
     let legacy: Result<LegacyProduct, _> = serde_json::from_value(json["product"].clone());
     assert!(legacy.is_err());
 }
