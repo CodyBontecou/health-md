@@ -26,7 +26,7 @@ import kotlin.coroutines.resume
  * Architecture:
  * - Application-scoped singleton (Hilt-injected)
  * - Owns one process-lifetime BillingClient; screen ViewModels must not close it
- * - Uses BillingClient v7.1.1 with pending purchases enabled
+ * - Uses BillingClient v8.3.0 with pending purchases enabled
  * - Caches unlock state in SharedPreferences (healthmd_purchase_prefs)
  * - Supports Auto Backup for purchase state persistence
  * 
@@ -54,6 +54,7 @@ class BillingRepositoryImpl(
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
+        .enableAutoServiceReconnection()
         .enablePendingPurchases(
             PendingPurchasesParams.newBuilder()
                 .enableOneTimeProducts()

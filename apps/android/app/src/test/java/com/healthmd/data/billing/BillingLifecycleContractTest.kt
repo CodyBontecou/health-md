@@ -17,8 +17,23 @@ class BillingLifecycleContractTest {
         assertThat(module).contains("@Singleton")
         assertThat(contract).doesNotContain("fun endConnection(")
         assertThat(implementation).doesNotContain("billingClient.endConnection()")
+        assertThat(implementation).contains(".enableAutoServiceReconnection()")
         assertThat(paywallViewModel).doesNotContain("billingRepository.endConnection()")
         assertThat(scheduleViewModel).doesNotContain("billingRepository.endConnection()")
+    }
+
+    @Test
+    fun playBillingDependencyMeetsGooglePlayMinimum() {
+        val catalog = File(androidProjectRoot(), "gradle/libs.versions.toml").readText()
+        val version = Regex("""(?m)^billing = \"(\d+)\.(\d+)\.(\d+)\"$""")
+            .find(catalog)
+            ?.groupValues
+            ?.drop(1)
+            ?.map(String::toInt)
+
+        assertThat(version).isNotNull()
+        val (major, minor, patch) = requireNotNull(version)
+        assertThat(major > 8 || (major == 8 && (minor > 0 || (minor == 0 && patch >= 0)))).isTrue()
     }
 
     private fun readSource(relativePath: String): String =
