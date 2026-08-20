@@ -1091,6 +1091,7 @@ struct MacExportResultPayload: Codable {
         guard let outputBreakdown else { return true }
         guard outputBreakdown.requestedDataDayCount == totalCount,
               outputBreakdown.successfulDataDayCount == successCount,
+              outputBreakdown.providerSidecarFileCount <= externalRecordFileCount,
               outputBreakdown.generatedFileCount <= totalFilesWritten else { return false }
         // Budget truncation can reduce the provider category and the generated
         // aggregate independently of the producer's exact wire totals. It is
