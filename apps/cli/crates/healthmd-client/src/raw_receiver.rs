@@ -965,6 +965,16 @@ fn validate_complete_corpus(
                 ));
             }
         }
+        // A direct export request is immutable, so every retained daily document in one corpus
+        // must use the same source schema version. Reject mixed corpora rather than publishing an
+        // ambiguous protocol-v1 scalar or pretending either version describes the whole job.
+        if source_versions
+            .values()
+            .next()
+            .is_some_and(|version| *version != identity.schema_version)
+        {
+            return Err(invalid("corpus mixes source schema versions"));
+        }
         source_versions.insert(manifest.date.clone(), identity.schema_version);
     }
     Ok(source_versions)
@@ -1357,11 +1367,17 @@ fn assemble_extraction(
         .collect();
     let summary = capture_summary(&manifests)?;
     let distinct_source_versions: BTreeSet<_> = source_versions.values().copied().collect();
-    let mut receipt = json!({
+    // Protocol-v1 receipts historically always exposed the scalar v7 source version. Empty day
+    // manifests contain no source document identity, so preserve that backward-compatible scalar
+    // for an all-empty corpus while the plural field explicitly records that no version was
+    // evidenced. A non-empty homogeneous corpus uses its validated source version.
+    let source_schema_version = distinct_source_versions.first().copied().unwrap_or(7);
+    let receipt = json!({
         "protocol": "healthmd.extract_receipt",
         "protocol_version": 1,
         "status": status,
         "source_schema": "healthmd.health_data",
+        "source_schema_version": source_schema_version,
         "source_schema_versions": distinct_source_versions,
         "selection": {
             "metric_ids": selection.metric_ids,
@@ -1382,9 +1398,6 @@ fn assemble_extraction(
         },
         "total_requested_days": dates.len()
     });
-    if distinct_source_versions.len() == 1 {
-        receipt["source_schema_version"] = json!(distinct_source_versions.first());
-    }
     output.write_all(b"],\"receipt\":").map_err(storage_error)?;
     output
         .write_all(&canonical_json(&receipt).map_err(|_| invalid("receipt JSON failed"))?)
@@ -1995,6 +2008,243 @@ mod tests {
         assert!(!valid_time_zone("private health value"));
         assert!(is_safe_machine_code("permission_required"));
         assert!(!is_safe_machine_code("PRIVATE VALUE"));
+    }
+
+    struct TestCorpus {
+        _temporary: TempDir,
+        receiver: RawReceiver,
+        job_id: Uuid,
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn test_corpus(source_schema_versions: &[Option<i64>]) -> TestCorpus {
+        let dates = ["2026-07-23", "2026-07-24"];
+        assert!(!source_schema_versions.is_empty() && source_schema_versions.len() <= dates.len());
+        let dates: Vec<String> = dates[..source_schema_versions.len()]
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        let temporary = TempDir::new().unwrap();
+        let layout = StorageLayout {
+            root: temporary.path().join("state"),
+        };
+        let jobs = JobStore::new(layout.clone()).unwrap();
+        let created_at = Utc::now().with_nanosecond(0).unwrap();
+        let job_id = SwiftUuid(Uuid::new_v4());
+        let selection = CanonicalSelection {
+            metric_ids: vec!["sleep_total".into()],
+            categories: vec!["Sleep".into()],
+            source_ids: vec!["apple_health".into()],
+            object_paths: Vec::new(),
+            field_pointers: Vec::new(),
+            all_metrics: false,
+            detail_level: DetailLevel::Summary,
+        };
+        let request = ExportRequest {
+            protocol_version: 1,
+            job_id,
+            created_at,
+            date_selection: DateSelection::Exact(ExactDateSelection {
+                start: dates.first().unwrap().clone(),
+                end: dates.last().unwrap().clone(),
+            }),
+            settings_policy: SettingsPolicy::RequestedDatesOnly,
+            profile_reference: None,
+            response_mode: ResponseMode::RawJson,
+            raw_profile: Some(RawProfile::HealthDataProjection),
+            canonical_selection: Some(selection.clone()),
+            destination: None,
+        };
+        jobs.save(&JobRecord::new(request.clone())).unwrap();
+        let binding = PeerBinding {
+            source_installation_id: SwiftUuid(Uuid::new_v4()),
+            destination_installation_id: SwiftUuid(Uuid::new_v4()),
+        };
+        let accepted = ExportAccepted {
+            job_id,
+            accepted_at: created_at,
+            peer_binding: binding.clone(),
+            resolved_date_identifiers: dates.clone(),
+            source_device_name: "iPhone".into(),
+            source_time_zone_identifier: "UTC".into(),
+            resolved_canonical_selection: Some(selection),
+        };
+        let session = TransferSession {
+            protocol_version: 1,
+            session_id: SwiftUuid(Uuid::new_v4()),
+            job_id,
+            request_fingerprint: request_fingerprint(&request).unwrap(),
+            peer_binding: binding,
+            partition_target_bytes: 48 * 1024 * 1024,
+            created_at,
+        };
+        let mut receiver = RawReceiver::new(layout, jobs);
+        receiver
+            .prepare(request, accepted, session.clone())
+            .unwrap();
+        let mut previous_sha256 = None;
+        for (index, (date, source_schema_version)) in
+            dates.iter().zip(source_schema_versions).enumerate()
+        {
+            let payload = source_schema_version.map(|source_schema_version| {
+                serde_json::to_vec_pretty(&json!({
+                    "schema": "healthmd.health_data",
+                    "schema_version": source_schema_version,
+                    "date": date,
+                    "raw_capture_status": "complete"
+                }))
+                .unwrap()
+            });
+            let payload_digest = payload.as_ref().map(|payload| sha256_hex(payload));
+            let status = if payload.is_some() {
+                "complete"
+            } else {
+                "complete_empty"
+            };
+            receiver
+                .store_manifest(RawDayManifest {
+                    job_id,
+                    date: date.clone(),
+                    status: status.into(),
+                    capture_status: Some(status.into()),
+                    sample_count: 0,
+                    record_count: 0,
+                    query_status_counts: BTreeMap::new(),
+                    integrity_warning_count: 0,
+                    integrity_warning_codes: Vec::new(),
+                    partial_failure_count: 0,
+                    partial_failure_types: Vec::new(),
+                    failure_code: None,
+                    health_data_byte_count: payload
+                        .as_ref()
+                        .map_or(0, |payload| i64::try_from(payload.len()).unwrap()),
+                    health_data_sha256: payload_digest.clone(),
+                })
+                .unwrap();
+            let Some(payload) = payload else {
+                continue;
+            };
+            let payload_digest = payload_digest.unwrap();
+            let transfer_id = SwiftUuid(Uuid::new_v4());
+            let partition = TransferPartition {
+                index: i64::try_from(index).unwrap(),
+                transfer_id,
+                source_dates: vec![date.clone()],
+                byte_count: i64::try_from(payload.len()).unwrap(),
+                chunk_count: 1,
+                sha256: payload_digest.clone(),
+                previous_sha256: previous_sha256.clone(),
+                item_segment: Some(TransferItemSegment {
+                    item_id: date.clone(),
+                    offset: 0,
+                    item_byte_count: i64::try_from(payload.len()).unwrap(),
+                    is_final_segment: true,
+                }),
+            };
+            receiver
+                .disposition(TransferOpen {
+                    session: session.clone(),
+                    partition,
+                })
+                .unwrap();
+            receiver
+                .receive_chunk(TransferChunk {
+                    transfer_id,
+                    sequence: 1,
+                    data: payload,
+                    sha256: payload_digest.clone(),
+                })
+                .unwrap();
+            receiver
+                .commit_partition(TransferPartitionComplete {
+                    session_id: session.session_id,
+                    job_id,
+                    partition_index: i64::try_from(index).unwrap(),
+                    transfer_id,
+                    partition_sha256: payload_digest.clone(),
+                })
+                .unwrap();
+            previous_sha256 = Some(payload_digest);
+        }
+        TestCorpus {
+            _temporary: temporary,
+            receiver,
+            job_id: job_id.0,
+        }
+    }
+
+    fn assert_receipt_versions(receipt: &Value, scalar: i64, plural: &[i64]) {
+        assert_eq!(receipt["protocol_version"], 1);
+        assert_eq!(receipt["source_schema_version"], scalar);
+        assert_eq!(receipt["source_schema_versions"], json!(plural));
+    }
+
+    #[test]
+    fn all_empty_corpus_preserves_v1_scalar_and_records_no_evidenced_versions() {
+        let corpus = test_corpus(&[None, None]);
+        let json_artifact = corpus.receiver.extraction(corpus.job_id, &[]).unwrap();
+        let json: Value = serde_json::from_slice(&fs::read(json_artifact.path).unwrap()).unwrap();
+        assert_eq!(json["health_data"], json!([]));
+        assert_receipt_versions(&json["receipt"], 7, &[]);
+        assert!(
+            json["receipt"]["days"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|day| day.get("source_schema_version").is_none())
+        );
+
+        let jsonl = corpus
+            .receiver
+            .extraction_jsonl(corpus.job_id, &[])
+            .unwrap();
+        assert!(fs::read_to_string(jsonl.path).unwrap().is_empty());
+        let receipt: Value =
+            serde_json::from_slice(&fs::read(jsonl.receipt_path).unwrap()).unwrap();
+        assert_receipt_versions(&receipt, 7, &[]);
+    }
+
+    #[test]
+    fn homogeneous_v7_and_v8_corpora_report_evidenced_versions_in_json_and_jsonl() {
+        for source_schema_version in [7, 8] {
+            let corpus = test_corpus(&[Some(source_schema_version), Some(source_schema_version)]);
+            let json_artifact = corpus.receiver.extraction(corpus.job_id, &[]).unwrap();
+            let json: Value =
+                serde_json::from_slice(&fs::read(json_artifact.path).unwrap()).unwrap();
+            assert_eq!(json["health_data"].as_array().unwrap().len(), 2);
+            assert_receipt_versions(
+                &json["receipt"],
+                source_schema_version,
+                &[source_schema_version],
+            );
+
+            let jsonl = corpus
+                .receiver
+                .extraction_jsonl(corpus.job_id, &[])
+                .unwrap();
+            assert_eq!(fs::read_to_string(jsonl.path).unwrap().lines().count(), 2);
+            let receipt: Value =
+                serde_json::from_slice(&fs::read(jsonl.receipt_path).unwrap()).unwrap();
+            assert_receipt_versions(&receipt, source_schema_version, &[source_schema_version]);
+        }
+    }
+
+    #[test]
+    fn mixed_v7_v8_corpus_is_rejected_for_json_and_jsonl() {
+        let corpus = test_corpus(&[Some(7), Some(8)]);
+        for error in [
+            corpus.receiver.extraction(corpus.job_id, &[]).unwrap_err(),
+            corpus
+                .receiver
+                .extraction_jsonl(corpus.job_id, &[])
+                .unwrap_err(),
+        ] {
+            assert!(matches!(
+                error,
+                ClientError::InvalidTransfer(message)
+                    if message == "corpus mixes source schema versions"
+            ));
+        }
     }
 
     #[test]
