@@ -346,6 +346,30 @@
       ]
     },
     {
+      "id": "destination.google-drive",
+      "name": "Direct Google Drive export destination",
+      "classification": "planned",
+      "summary": "Authorize a Google account with the drive.file scope, bind an export profile to a Picker-selected writable Drive folder, and deliver the existing byte-identical Health.md artifacts directly from the device for manual and scheduled exports without a Health.md-hosted health-data or token service.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Implement mobile Picker authorization-code PKCE, protected refresh credentials, durable resumable Drive commits, profiles, manual export, and best-effort schedules."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Implement Google Play services AuthorizationClient mobile Picker, durable resumable Drive commits, profiles, manual export, WorkManager schedules, and foreground reauthorization recovery."
+        }
+      },
+      "evidence": [
+        "docs/architecture/google-drive-export-destination.md"
+      ]
+    },
+    {
       "id": "apple.hearing-and-symptoms",
       "name": "HealthKit hearing and symptom records",
       "classification": "apple_only",
