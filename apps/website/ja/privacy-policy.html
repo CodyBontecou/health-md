@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">法的事項 · プライバシー</p>
         <h1 id="privacy-title">プライバシーを、<br>わかりやすく。</h1>
-        <p class="legal-updated">最終更新日：2026年8月6日</p>
+        <p class="legal-updated">最終更新日：2026年8月20日</p>
         <p class="legal-lede">Health.mdは、Health.md独自のヘルスデータクラウドを構築することなく、機密性の高いヘルスデータを移動します。デバイスがユーザーの許可した記録を読み取り、各エクスポートまたは直接応答の送信先はユーザーが選択します。</p>
 
         <div class="legal-promise" role="list" aria-label="プライバシー原則">
@@ -132,6 +132,7 @@
             <li><strong>ユーザーのAPIエンドポイント：</strong>ユーザーが選択したエクスポートを受信する、ユーザー設定のAPIエンドポイント。保護されたエンドポイントモードではHTTPSが必要です。</li>
             <li><strong>接続したヘルスプロバイダ：</strong>ユーザーが接続を許可した後に開始される、読み取り専用のプロバイダリクエスト。</li>
           </ul>
+          <p><strong>Google Driveへの直接エクスポート：</strong>この送信先が利用可能になり、ユーザーが選択した場合、Health.mdはGoogleの<code>drive.file</code>スコープを要求し、Google Pickerを使用して、選択されたアカウントと、マイドライブまたは共有ドライブ内の書き込み可能なフォルダを紐付けます。インストール済みアプリは機密性の高いエクスポートファイルをGoogleへ直接送信します。Health.mdはヘルスデータのアップロードサーバーもGoogleトークンサーバーも運用しません。これはApple FilesまたはAndroid SAFでGoogle Driveプロバイダを選ぶ方法とは別です。Googleは、ユーザーのGoogleまたはWorkspaceの設定と規約に従ってコピーを受領・保持します。Health.mdによるGoogle APIから受領した情報の使用および移転は、Limited Use要件を含む<a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>に準拠します。接続を解除するとローカルの認証情報と今後のアクセスは削除されますが、Drive内の既存ファイルは削除されません。<a href="../ja/docs/guides/google-drive-export/">Google Driveへアップロード</a>をご覧ください。</p>
           <p>Health.mdは、後日のクエリに備えてヘルスデータのサーバーコピーを保持しません。Apple Healthへの直接クエリでは、iPhoneが引き続きデータソースとなります。直接転送により、ペアリングされたコンピューター上に永続的なジョブ状態や出力が残ることはありますが、それらはHealth.mdがホストするヘルスデータ集積ではありません。</p>
         </section>
 

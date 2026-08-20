@@ -11,6 +11,7 @@ This is a curated discovery aid for language-model clients. `llms.txt` is an eme
 - [MCP server and tools](https://healthmd.app/docs/mcp/): released Mac tools and clearly marked portable preview.
 - [Health.md CLI](https://healthmd.app/docs/cli/): bundled Mac CLI and portable-preview boundaries.
 - [Typed query cookbook](https://healthmd.app/docs/agent-queries/): metric, sleep, workout, coverage, comparison, and evidence workflows.
+- [Google Drive export — planned](https://healthmd.app/docs/guides/google-drive-export/): direct-vs-file-provider boundaries, consent, sensitive-data transfer, schedules, conflicts, retention, and recovery.
 
 ## Contracts and machine-readable artifacts
 

@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">Legal · Privacy</p>
         <h1 id="privacy-title">Privacy,<br>in plain language.</h1>
-        <p class="legal-updated">Last updated: August 6, 2026</p>
+        <p class="legal-updated">Last updated: August 20, 2026</p>
         <p class="legal-lede">Health.md moves sensitive health data without building a Health.md health-data cloud. Your device reads the records you authorize, and you choose where each export or direct response goes.</p>
 
         <div class="legal-promise" role="list" aria-label="Privacy principles">
@@ -129,6 +129,7 @@
             <li><strong>Your API endpoint:</strong> a user-configured API endpoint that receives the export you select. Protected endpoint mode requires HTTPS.</li>
             <li><strong>Connected health providers:</strong> read-only provider requests initiated after you authorize the connection.</li>
           </ul>
+          <p><strong>Direct Google Drive export:</strong> when this destination is available and you choose it, Health.md requests Google's <code>drive.file</code> scope and uses Google's Picker to bind the account and writable My Drive or Shared Drive folder you select. The installed app sends sensitive export files directly to Google; Health.md does not operate a health-data upload server or a Google token server. This is separate from choosing a Google Drive provider in Apple Files or Android SAF. Google receives and retains its copy under your Google or Workspace settings and terms. Health.md's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including its Limited Use requirements. Disconnecting removes local credentials and future access but does not delete files already in Drive. See <a href="docs/guides/google-drive-export/">Upload to Google Drive</a>.</p>
           <p>Health.md does not retain a health-data server copy for later queries. The iPhone remains the source for direct Apple Health queries. Direct transfer can leave durable job state and output on the paired computer, but that state is not a Health.md-hosted health corpus.</p>
         </section>
 

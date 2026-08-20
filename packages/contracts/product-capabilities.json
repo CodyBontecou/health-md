@@ -349,7 +349,7 @@
       "id": "destination.google-drive",
       "name": "Direct Google Drive export destination",
       "classification": "planned",
-      "summary": "Authorize a Google account with the drive.file scope, bind an export profile to a Picker-selected writable Drive folder, and deliver the existing byte-identical Health.md artifacts directly from the device for manual and scheduled exports without a Health.md-hosted health-data or token service.",
+      "summary": "Planned direct mobile destination: authorize one Google account with drive.file, bind an export profile to a Picker-selected writable My Drive or Shared Drive folder, and deliver unchanged renderer artifacts manually or on a best-effort schedule without a Health.md health-data or Google-token server; release remains blocked on both platform integrations and external review.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -366,7 +366,10 @@
         }
       },
       "evidence": [
-        "docs/architecture/google-drive-export-destination.md"
+        "docs/architecture/google-drive-export-destination.md",
+        "docs/features/google-drive-export.md",
+        "docs/qa/google-drive-export-release-checklist.md",
+        "apps/website/docs-src/src/content/docs/guides/google-drive-export.md"
       ]
     },
     {

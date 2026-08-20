@@ -1,6 +1,8 @@
 # Google Drive export destination
 
-Status: implementation contract
+Status: implementation contract; public capability remains `planned`
+
+Release documentation: [product and privacy boundaries](../features/google-drive-export.md), [customer guide](../../apps/website/docs-src/src/content/docs/guides/google-drive-export.md), and [OAuth/store/release checklist](../qa/google-drive-export-release-checklist.md).
 
 ## Outcome
 
@@ -183,6 +185,8 @@ Both platforms use the same privacy-safe semantic IDs:
 HTTP response bodies, tokens, account names, file/folder IDs, paths, and exported contents are excluded from user analytics and ordinary logs.
 
 ## Acceptance gates
+
+Documentation completion does not make the destination available. `destination.google-drive` remains `planned` until both platform integrations, production-shaped physical-device testing, external OAuth/store reviews, and the [release checklist](../qa/google-drive-export-release-checklist.md) pass.
 
 The integration is complete only when:
 

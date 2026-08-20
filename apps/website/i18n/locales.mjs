@@ -4,6 +4,7 @@ export const defaultLocale = 'en';
 // routes while their translated editions are pending. Fallback pages stay noindex.
 export const canonicalEnglishDocSlugs = Object.freeze([
   'docs/guides/connect-agent',
+  'docs/guides/google-drive-export',
 ]);
 
 // Authored user guides are translated. Generated contract/reference pages remain
