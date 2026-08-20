@@ -90,7 +90,12 @@ class ExportProfileCoordinator @Inject constructor(
         val profile = profileRepository.profileById(profileId) ?: return false
         val active = profileRepository.getActiveProfile()
         if (active?.id == profile.id) {
-            return applyProfile(profile, settingsRepository.getExportSettings())
+            // Re-applying the already-active profile (editor save, folder rebind): the frozen
+            // snapshot refreshes live settings and the binding follows so manual exports
+            // immediately write to the profile's destination.
+            val applied = applyProfile(profile, settingsRepository.getExportSettings())
+            if (applied) adoptFolderBinding(profile)
+            return applied
         }
 
         // Stage the restore before any persisted change: an invalid snapshot must not move

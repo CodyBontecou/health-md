@@ -320,6 +320,20 @@ struct ContentView: View {
                 NavigationStack {
                     ExportProfilesView(coordinator: profileCoordinator)
                 }
+                // The sheet covers the app-level toast, so blocked profile
+                // mutations surface a sheet-local one that stays visible over
+                // pushed detail screens; its settings shortcut closes the
+                // sheet and routes to the protection toggle.
+                .overlay(alignment: .top) {
+                    ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.top, Spacing.s2)
+                }
+                .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+                    if requestID != nil {
+                        showExportProfiles = false
+                    }
+                }
             }
         }
         .sheet(isPresented: $showClinicianReport) {
