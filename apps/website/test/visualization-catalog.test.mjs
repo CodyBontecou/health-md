@@ -76,6 +76,11 @@ test("plugin-generated preview fixtures cover v7 daily views and current roll-up
     assert.ok(rollup.start_date >= days[0].date);
     assert.ok(rollup.end_date <= days.at(-1).date);
   }
+  const rangeRollup = rollups[1];
+  assert.deepEqual(rangeRollup.units, { steps: "count" });
+  assert.deepEqual(rangeRollup.categories, {
+    Activity: rangeRollup.metrics.filter((metric) => metric.category === "Activity"),
+  });
 
   const serialized = JSON.stringify({ days, rollups }).toLowerCase();
   for (const forbidden of ["fhir_resource", "clinical_record", "verifiable_clinical", "cda_document", "original_uuid"]) {
