@@ -1094,8 +1094,20 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertEqual(breakdown.providerSidecarFileCount, 0)
         XCTAssertLessThan(breakdown.providerSidecarFileCount, payload.externalRecordFileCount)
         XCTAssertTrue(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.isTotalFilesWrittenAuthoritative)
         XCTAssertFalse(payload.hasAuthoritativeFileCount)
         XCTAssertEqual(payload.generatedFileCountDescription, "at least \(budget + 1) file(s)")
+
+        struct LegacyAccountingReader: Decodable {
+            let totalFilesWritten: Int
+            let isTotalFilesWrittenAuthoritative: Bool
+        }
+        let legacyDecoded = try JSONDecoder().decode(
+            LegacyAccountingReader.self,
+            from: JSONEncoder().encode(payload)
+        )
+        XCTAssertEqual(legacyDecoded.totalFilesWritten, budget + 1)
+        XCTAssertFalse(legacyDecoded.isTotalFilesWrittenAuthoritative)
 
         let roundTrippedPayload = try JSONDecoder().decode(
             MacExportResultPayload.self,
@@ -1121,6 +1133,92 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         )
         XCTAssertNil(reconstructedHistory.fileCount)
         XCTAssertTrue(reconstructedHistory.outputBreakdown?.wasTruncated == true)
+    }
+
+    func testDecodeNormalizesTruncatedBreakdownAuthorityFromMixedVersionPeer() throws {
+        let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: budget + 1,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: budget,
+                providerSidecarFileCount: 1,
+                isFileCategoryBreakdownComplete: true
+            ),
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(payload)) as? [String: Any]
+        )
+        object["isTotalFilesWrittenAuthoritative"] = true
+
+        let decoded = try JSONDecoder().decode(
+            MacExportResultPayload.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.totalFilesWritten, budget + 1)
+        XCTAssertTrue(decoded.outputBreakdown?.wasTruncated == true)
+        XCTAssertFalse(decoded.isTotalFilesWrittenAuthoritative)
+        XCTAssertFalse(decoded.hasAuthoritativeFileCount)
+    }
+
+    func testPayloadRejectsOverflowingTopLevelAccounting() {
+        let multiplicationOverflow = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: Int.max,
+            totalCount: Int.max,
+            formatsPerDate: 2,
+            totalFilesWritten: Int.max,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        XCTAssertFalse(multiplicationOverflow.hasConsistentFileAccounting)
+
+        let knownFileSumOverflow = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: Int.max,
+            totalCount: Int.max,
+            formatsPerDate: 1,
+            totalFilesWritten: Int.max,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        XCTAssertFalse(knownFileSumOverflow.hasConsistentFileAccounting)
+
+        let noteSumOverflow = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 0,
+            totalCount: Int.max,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            dailyNoteUpdateCount: Int.max,
+            dailyNoteSkipCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+        XCTAssertFalse(noteSumOverflow.hasConsistentFileAccounting)
     }
 
     func testTruncatedPayloadRejectsProviderSidecarCountAboveWireTotal() {

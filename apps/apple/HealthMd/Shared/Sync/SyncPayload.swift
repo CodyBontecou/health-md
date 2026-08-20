@@ -1016,7 +1016,11 @@ struct MacExportResultPayload: Codable {
         self.totalCount = totalCount
         self.formatsPerDate = formatsPerDate
         self.totalFilesWritten = totalFilesWritten
+        // Older readers do not understand breakdown truncation and rely only on
+        // this wire flag. Never let a budget-reduced breakdown advertise an exact
+        // total, while retaining totalFilesWritten as lower-bound evidence.
         self.isTotalFilesWrittenAuthoritative = isTotalFilesWrittenAuthoritative
+            && outputBreakdown?.wasTruncated != true
         self.externalRecordFileCount = externalRecordFileCount
         self.outputBreakdown = outputBreakdown
         self.hadTerminalRangeFailure = hadTerminalRangeFailure
@@ -1038,7 +1042,7 @@ struct MacExportResultPayload: Codable {
         totalCount = try container.decode(Int.self, forKey: .totalCount)
         formatsPerDate = try container.decode(Int.self, forKey: .formatsPerDate)
         totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
-        isTotalFilesWrittenAuthoritative = try container.decodeIfPresent(
+        let decodedAuthority = try container.decodeIfPresent(
             Bool.self,
             forKey: .isTotalFilesWrittenAuthoritative
         ) ?? false
@@ -1047,6 +1051,10 @@ struct MacExportResultPayload: Codable {
             ExportHistoryOutputBreakdown.self,
             forKey: .outputBreakdown
         )
+        // Normalize newer malformed/mixed-version input before it can be
+        // re-encoded for a reader that does not know the truncation field.
+        isTotalFilesWrittenAuthoritative = decodedAuthority
+            && outputBreakdown?.wasTruncated != true
         hadTerminalRangeFailure = try container.decodeIfPresent(
             Bool.self,
             forKey: .hadTerminalRangeFailure
@@ -1091,6 +1099,12 @@ struct MacExportResultPayload: Codable {
               externalRecordFileCount <= totalFilesWritten,
               dailyNoteUpdateCount >= 0,
               dailyNoteSkipCount >= 0 else { return false }
+        let looseFiles = successCount.multipliedReportingOverflow(by: formatsPerDate)
+        guard !looseFiles.overflow else { return false }
+        let knownFiles = looseFiles.partialValue.addingReportingOverflow(externalRecordFileCount)
+        guard !knownFiles.overflow else { return false }
+        let dailyNoteActions = dailyNoteUpdateCount.addingReportingOverflow(dailyNoteSkipCount)
+        guard !dailyNoteActions.overflow else { return false }
         guard let outputBreakdown else { return true }
         guard outputBreakdown.requestedDataDayCount == totalCount,
               outputBreakdown.successfulDataDayCount == successCount,

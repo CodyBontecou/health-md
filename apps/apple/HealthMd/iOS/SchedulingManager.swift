@@ -1564,6 +1564,45 @@ class SchedulingManager: ObservableObject {
     }
 
     @discardableResult
+    @MainActor func completeRecoveredScheduledMacExport(
+        with failure: MacExportFailure
+    ) async -> Bool {
+        guard let jobID = failure.jobID else { return false }
+        let request: PendingExportRequest
+        do {
+            guard let storedRequest = try pendingExportStore.loadAll().first(where: {
+                $0.id == jobID
+                    && $0.source == .scheduled
+                    && scheduledTarget(for: $0) == .connectedMac
+            }) else { return false }
+            request = storedRequest
+        } catch {
+            logger.error("Could not load a rejected recovered Mac export: \(error.localizedDescription)")
+            return false
+        }
+
+        let settings = request.settingsSnapshot?.makeAdvancedExportSettings()
+            ?? AdvancedExportSettings()
+        let result = scheduledMacFailureResult(
+            failure,
+            dateRangeStart: request.dates.first ?? request.scheduledFireDate ?? now(),
+            dateRangeEnd: request.dates.last ?? request.scheduledFireDate ?? now(),
+            settings: settings
+        )
+        let range = scheduledExportHistoryRange(for: request)
+        await processAutomaticScheduledExportResult(
+            result,
+            pendingRequest: request,
+            target: .connectedMac,
+            dateRangeStart: range.start,
+            dateRangeEnd: range.end,
+            fallbackDaysToExport: range.totalCount,
+            scheduledFireDate: request.scheduledFireDate ?? now()
+        )
+        return true
+    }
+
+    @discardableResult
     @MainActor func completeScheduledMacExport(with failure: MacExportFailure) -> Bool {
         guard let jobID = failure.jobID,
               let context = scheduledMacExportContexts.removeValue(forKey: jobID) else {

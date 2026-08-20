@@ -112,6 +112,8 @@ struct ExportOrchestrator {
         /// Provider records encoded in an API request; never generated files.
         let externalRecordPayloadCount: Int
         let unclassifiedFileCount: Int
+        /// Confirmed wire total retained even when category persistence was truncated.
+        let fileCountLowerBound: Int?
         let authoritativeFileCount: Int?
         let isFileCategoryBreakdownComplete: Bool
         /// True when persistence budgeting reduced one or more file-category counts.
@@ -134,6 +136,7 @@ struct ExportOrchestrator {
             externalRecordFileCount: Int = 0,
             externalRecordPayloadCount: Int = 0,
             unclassifiedFileCount: Int = 0,
+            fileCountLowerBound: Int? = nil,
             authoritativeFileCount: Int? = nil,
             isFileCategoryBreakdownComplete: Bool = false,
             wasFileAccountingTruncated: Bool = false,
@@ -167,7 +170,11 @@ struct ExportOrchestrator {
             self.archiveCount = max(archiveCount, 0)
             self.externalRecordFileCount = max(externalRecordFileCount, 0)
             self.externalRecordPayloadCount = max(externalRecordPayloadCount, 0)
-            self.unclassifiedFileCount = max(unclassifiedFileCount, 0) + legacyUnclassified
+            self.unclassifiedFileCount = Self.saturatingAdd(
+                max(unclassifiedFileCount, 0),
+                legacyUnclassified
+            )
+            self.fileCountLowerBound = fileCountLowerBound.map { max($0, 0) }
             self.authoritativeFileCount = authoritativeFileCount.map { max($0, 0) }
             self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
                 && looseAggregateFileCount != nil
@@ -203,6 +210,7 @@ struct ExportOrchestrator {
                     + (breakdown?.wasTruncated == true
                         ? 0
                         : max(payload.totalFilesWritten - classified, 0)),
+                fileCountLowerBound: payload.totalFilesWritten,
                 authoritativeFileCount: payload.isTotalFilesWrittenAuthoritative
                     ? payload.totalFilesWritten : nil,
                 isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete ?? false,
@@ -213,6 +221,11 @@ struct ExportOrchestrator {
                 hadTerminalRangeFailure: payload.hadTerminalRangeFailure,
                 completedDates: payload.completedDates
             )
+        }
+
+        private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
+            let result = lhs.addingReportingOverflow(rhs)
+            return result.overflow ? Int.max : result.partialValue
         }
 
         var hasPartialFailures: Bool { !partialFailures.isEmpty }
@@ -250,11 +263,21 @@ struct ExportOrchestrator {
         }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
         var categorizedFileCount: Int {
-            looseAggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
-                + rollupFileCount + archiveCount + externalRecordFileCount
+            [
+                looseAggregateFileCount,
+                individualEntryFileCount,
+                dataDictionaryFileCount,
+                rollupFileCount,
+                archiveCount,
+                externalRecordFileCount
+            ].reduce(0, Self.saturatingAdd)
         }
-        var knownFileCount: Int { categorizedFileCount + unclassifiedFileCount }
-        var totalFilesWritten: Int { authoritativeFileCount ?? knownFileCount }
+        var knownFileCount: Int {
+            Self.saturatingAdd(categorizedFileCount, unclassifiedFileCount)
+        }
+        var totalFilesWritten: Int {
+            max(authoritativeFileCount ?? 0, max(fileCountLowerBound ?? 0, knownFileCount))
+        }
         var hasAuthoritativeFileCount: Bool {
             !outputBreakdown.wasTruncated
                 && (authoritativeFileCount != nil || isFileCategoryBreakdownComplete)
