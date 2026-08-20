@@ -131,6 +131,8 @@ struct ExportProfilesView: View {
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     @EnvironmentObject private var schedulingManager: SchedulingManager
 
+    @State private var showCreationSheet = false
+
     init(coordinator: ExportProfileCoordinator) {
         self.coordinator = coordinator
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
@@ -168,12 +170,17 @@ struct ExportProfilesView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    coordinator.addProfileDuplicatingActive()
+                    showCreationSheet = true
                 } label: {
                     Image(systemName: "plus")
                 }
-                .accessibilityLabel(String(localized: "New profile from current", comment: "Toolbar action adding a profile duplicating the active one"))
+                .accessibilityLabel(String(localized: "New profile", comment: "Toolbar action opening the profile creation form"))
             }
+        }
+        .sheet(isPresented: $showCreationSheet) {
+            ExportProfileEditorSheet(coordinator: coordinator)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -364,7 +371,11 @@ struct ExportProfileDetailView: View {
     @State private var renameText = ""
     @State private var showDeleteConfirmation = false
     @State private var showScheduleEditor = false
+    @State private var showSettingsEditor = false
     @State private var idCopied = false
+    /// Pending overlap warning for a just-duplicated profile; undo deletes
+    /// the copy (the source profile stays untouched and active).
+    @State private var duplicateOverlapWarning: (copyID: UUID, names: [String])?
 
     init(coordinator: ExportProfileCoordinator, profileID: UUID) {
         self.coordinator = coordinator
@@ -405,6 +416,7 @@ struct ExportProfileDetailView: View {
         ScrollView {
             VStack(spacing: Spacing.md) {
                 activeBanner(for: profile)
+                overlapCard(for: profile)
                 destinationCard(for: profile)
                 outputCard(for: profile)
                 scheduleCard(for: profile)
@@ -415,6 +427,99 @@ struct ExportProfileDetailView: View {
             .padding(.top, Spacing.md)
             .padding(.bottom, Spacing.lg)
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showSettingsEditor = true
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                }
+                .accessibilityLabel(String(localized: "Edit profile settings", comment: "Toolbar action opening the profile settings editor"))
+                .accessibilityIdentifier("export.profiles.edit.button")
+            }
+        }
+        .sheet(isPresented: $showSettingsEditor) {
+            ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
+        .geistDialog(
+            isPresented: Binding(
+                get: { duplicateOverlapWarning != nil },
+                set: { if !$0 { duplicateOverlapWarning = nil } }
+            ),
+            title: Text("Overlapping Exports"),
+            message: Text(duplicateOverlapMessage),
+            actions: [
+                .cancel("Keep It") {
+                    duplicateOverlapWarning = nil
+                },
+                .destructive("Undo Duplicate") {
+                    undoDuplicate()
+                }
+            ]
+        )
+    }
+
+    /// Persistent warning while this profile's output paths overlap another
+    /// profile's: binds/settings can change after creation, so the detail
+    /// surface keeps naming the collision.
+    private func overlapCard(for profile: ExportProfile) -> some View {
+        let overlapping = coordinator.overlappingProfileNames(for: profile.id)
+        return Group {
+            if !overlapping.isEmpty {
+                let names = overlapping.joined(separator: ", ")
+                VStack(alignment: .leading, spacing: Spacing.s2) {
+                    Label(
+                        String(localized: "Overlapping exports", comment: "Card title for the profile output-overlap warning"),
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(Typography.bodyEmphasis())
+                    .foregroundStyle(Color.warning)
+
+                    Text(String(
+                        localized: "This profile writes the same files as \(names). The later run overwrites the earlier one. Give each profile its own folder or filename template to keep them separate.",
+                        comment: "Detail warning that this profile's output files overlap other profiles; the interpolated value is a comma-separated profile name list"
+                    ))
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.warning.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.warning.opacity(0.35), lineWidth: 1)
+                )
+                .accessibilityIdentifier("export.profiles.overlap-warning")
+            }
+        }
+    }
+
+    private func duplicateAndWarn(_ profile: ExportProfile) {
+        guard let copy = coordinator.duplicateProfile(id: profile.id) else { return }
+        let overlapping = coordinator.overlappingProfileNames(for: copy.id)
+        guard !overlapping.isEmpty else { return }
+        duplicateOverlapWarning = (copyID: copy.id, names: overlapping)
+    }
+
+    private func undoDuplicate() {
+        guard let warning = duplicateOverlapWarning else { return }
+        duplicateOverlapWarning = nil
+        _ = coordinator.deleteProfile(id: warning.copyID)
+    }
+
+    private var duplicateOverlapMessage: String {
+        guard let warning = duplicateOverlapWarning else { return "" }
+        let names = warning.names.joined(separator: ", ")
+        return String(
+            localized: "The duplicate writes the same files as \(names). Later runs overwrite earlier ones. Undo, then change its folder or filename template if you want separate files.",
+            comment: "Warning when a duplicated export profile overlaps another profile's output files; the interpolated value is a comma-separated profile name list"
+        )
     }
 
     // MARK: Cards
@@ -704,7 +809,7 @@ struct ExportProfileDetailView: View {
                 rowDivider()
 
                 Button {
-                    _ = coordinator.duplicateProfile(id: profile.id)
+                    duplicateAndWarn(profile)
                 } label: {
                     actionRowLabel(
                         icon: "plus.square.on.square",
@@ -818,6 +923,534 @@ struct ExportProfileDetailView: View {
         Rectangle()
             .fill(Color.borderSubtle)
             .frame(height: 1)
+    }
+}
+#endif
+
+#if os(iOS)
+/// Unified full-field profile editor. Serves both creation (no profile) and
+/// editing (existing profile): name, destination, output formats, templates,
+/// roll-ups, metric selection (the shipped picker, pushed), Daily Notes, and
+/// Individual Entries all edit a draft, with the live overlap warning
+/// recomputing against the draft — so nothing is saved until Create/Save,
+/// and overlap is visible while choices can still change.
+struct ExportProfileEditorSheet: View {
+    @ObservedObject var coordinator: ExportProfileCoordinator
+    @ObservedObject private var profileStore: ExportProfileStore
+    @ObservedObject private var destinationStore: ProfileDestinationStore
+    @Environment(\.dismiss) private var dismiss
+
+    /// Nil = creation mode; the profile being edited otherwise.
+    private let editingProfileID: UUID?
+
+    @State private var name: String
+    @State private var target: ExportTargetSelection
+    @State private var folderVaultID: UUID?
+    @State private var apiEndpointID: UUID?
+    @State private var draft: ExportSettingsSnapshot
+    @StateObject private var metricState: MetricSelectionState
+    /// Presents the system folder picker for a new destination binding.
+    @State private var showFolderImporter = false
+    /// Presents the inline form for a new API endpoint binding.
+    @State private var showEndpointForm = false
+
+    init(
+        coordinator: ExportProfileCoordinator,
+        editing profile: ExportProfile? = nil
+    ) {
+        self.coordinator = coordinator
+        _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
+        _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
+        editingProfileID = profile?.id
+
+        if let profile {
+            _name = State(initialValue: profile.name)
+            _target = State(initialValue: profile.target)
+            _folderVaultID = State(initialValue: profile.folderVaultID)
+            _apiEndpointID = State(initialValue: profile.apiEndpointID)
+            _draft = State(initialValue: profile.settings)
+        } else {
+            // Creation defaults mirror what a plain duplicate would produce,
+            // so the overlap warning starts honest.
+            _name = State(initialValue: coordinator.suggestedProfileName())
+            _target = State(initialValue: coordinator.activeTarget ?? .localIPhoneFolder)
+            let active = coordinator.profileStore.activeProfile
+            _folderVaultID = State(initialValue: active?.folderVaultID)
+            _apiEndpointID = State(initialValue: active?.apiEndpointID)
+            _draft = State(initialValue: ExportSettingsSnapshot.from(coordinator.liveSettings))
+        }
+
+        let state = MetricSelectionState()
+        (profile?.settings ?? ExportSettingsSnapshot.from(coordinator.liveSettings))
+            .metricSelection.apply(to: state)
+        _metricState = StateObject(wrappedValue: state)
+    }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var editingProfile: ExportProfile? {
+        editingProfileID.flatMap { profileStore.profile(id: $0) }
+    }
+
+    private var canSave: Bool {
+        !trimmedName.isEmpty
+            && (draft.dailyNoteInjection.dailyNotesOnly || !draft.exportFormats.isEmpty)
+    }
+
+    private var overlappingNames: [String] {
+        coordinator.overlapPreviewNames(
+            target: target,
+            folderVaultID: folderVaultID,
+            settings: savedSnapshot()
+        )
+    }
+
+    /// The snapshot Save/Create will persist, with the picker's metric state
+    /// folded back in.
+    private func savedSnapshot() -> ExportSettingsSnapshot {
+        var snapshot = draft
+        snapshot.metricSelection = MetricSelectionSnapshot.from(metricState)
+        return snapshot
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                identitySection
+                destinationSection
+                outputSection
+                rollupSection
+                metricsSection
+                dailyNotesSection
+                individualTrackingSection
+                overlapSection
+            }
+            .navigationTitle(Text(editingProfile == nil ? "New Profile" : "Edit Profile"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(editingProfile == nil ? "Create" : "Save") {
+                        save()
+                        dismiss()
+                    }
+                    .disabled(!canSave)
+                    .accessibilityIdentifier("export.profiles.editor.confirm")
+                }
+            }
+        }
+        .sheet(isPresented: $showFolderImporter) {
+            FolderPicker { url in
+                if let destinationID = coordinator.importFolderSelection(url) {
+                    folderVaultID = destinationID
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        // Presentation modifiers must attach at the body's top level, not
+        // inside the Form's conditional Section: a Section re-render (for
+        // example when the destination store publishes) tears down sheets
+        // attached within it, which dismissed the endpoint form a moment
+        // after it appeared.
+        .sheet(isPresented: $showEndpointForm) {
+            ExportProfileEndpointFormSheet { name, url, token in
+                if let endpointID = coordinator.importAPIEndpointSelection(
+                    name: name,
+                    endpointURLString: url,
+                    bearerToken: token
+                ) {
+                    apiEndpointID = endpointID
+                }
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    private func save() {
+        let snapshot = savedSnapshot()
+        if let editingProfile {
+            coordinator.updateProfile(
+                id: editingProfile.id,
+                name: trimmedName,
+                target: target,
+                folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
+                apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil,
+                settings: snapshot
+            )
+        } else {
+            coordinator.createProfile(
+                name: trimmedName,
+                target: target,
+                folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
+                settings: snapshot
+            )
+        }
+    }
+
+    // MARK: - Sections
+
+    private var identitySection: some View {
+        Section {
+            TextField(
+                String(localized: "Name", comment: "Profile editor name field label"),
+                text: $name
+            )
+        } header: {
+            Text("Profile")
+        } footer: {
+            Text(editingProfile == nil
+                ? "Starts from the current export settings."
+                : "Scheduled exports pick up the new settings on their next run.")
+        }
+    }
+
+    private var destinationSection: some View {
+        Section {
+            Picker(
+                String(localized: "Target", comment: "Profile editor target picker label"),
+                selection: $target
+            ) {
+                Text("Local Folder").tag(ExportTargetSelection.localIPhoneFolder)
+                Text("Connected Mac").tag(ExportTargetSelection.connectedMac)
+                Text("API Endpoint").tag(ExportTargetSelection.apiEndpoint)
+            }
+            .pickerStyle(.segmented)
+
+            switch target {
+            case .localIPhoneFolder:
+                Picker(
+                    String(localized: "Folder", comment: "Profile editor folder picker label"),
+                    selection: $folderVaultID
+                ) {
+                    Text(String(
+                        localized: "Current folder (from Export tab)",
+                        comment: "Editor option using the live shared vault"
+                    ))
+                    .tag(UUID?.none)
+                    ForEach(destinationStore.vaults) { vault in
+                        Text(vault.name).tag(UUID?.some(vault.id))
+                    }
+                }
+                Button {
+                    showFolderImporter = true
+                } label: {
+                    Label(
+                        String(localized: "Choose New Folder…", comment: "Profile editor action opening the system folder picker"),
+                        systemImage: "folder.badge.plus"
+                    )
+                }
+                .accessibilityIdentifier("export.profiles.editor.chooseFolder")
+            case .apiEndpoint:
+                Picker(
+                    String(localized: "Endpoint", comment: "Profile editor endpoint picker label"),
+                    selection: $apiEndpointID
+                ) {
+                    Text(String(
+                        localized: "Current endpoint (from Export tab)",
+                        comment: "Editor option using the live API endpoint"
+                    ))
+                    .tag(UUID?.none)
+                    ForEach(destinationStore.apiEndpoints) { endpoint in
+                        Text(endpoint.name).tag(UUID?.some(endpoint.id))
+                    }
+                }
+                Button {
+                    showEndpointForm = true
+                } label: {
+                    Label(
+                        String(localized: "Add Endpoint…", comment: "Profile editor action adding a new API endpoint"),
+                        systemImage: "network.badge.plus"
+                    )
+                }
+                .accessibilityIdentifier("export.profiles.editor.addEndpoint")
+            case .connectedMac:
+                EmptyView()
+            }
+        } header: {
+            Text("Destination")
+        }
+    }
+
+    private var outputSection: some View {
+        Section {
+            ForEach(ExportFormat.allCases, id: \.rawValue) { format in
+                Toggle(
+                    format.localizedDisplayName,
+                    isOn: Binding(
+                        get: { draft.exportFormats.contains(format) },
+                        set: { isEnabled in
+                            if isEnabled {
+                                draft.exportFormats.insert(format)
+                            } else {
+                                draft.exportFormats.remove(format)
+                            }
+                        }
+                    )
+                )
+                .disabled(draft.dailyNoteInjection.dailyNotesOnly)
+            }
+
+            Picker(
+                String(localized: "When file exists", comment: "Profile editor write mode picker label"),
+                selection: $draft.writeMode
+            ) {
+                ForEach(WriteMode.allCases, id: \.rawValue) { mode in
+                    Text(mode.localizedDisplayName).tag(mode)
+                }
+            }
+
+            TextField(
+                String(localized: "Filename template", comment: "Profile editor filename template field"),
+                text: $draft.filenameFormat
+            )
+            .font(Typography.mono())
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+
+            TextField(
+                String(localized: "Folder template", comment: "Profile editor folder template field"),
+                text: $draft.folderStructure
+            )
+            .font(Typography.mono())
+            .autocorrectionDisabled()
+            .textInputAutocapitalization(.never)
+
+            Toggle(
+                String(localized: "Format folders", comment: "Profile editor format folders toggle"),
+                isOn: $draft.organizeFormatsIntoFolders
+            )
+            Toggle(
+                String(localized: "Zip archive", comment: "Profile editor zip toggle"),
+                isOn: $draft.archiveExportFiles
+            )
+            Toggle(
+                String(localized: "Data dictionary", comment: "Profile editor data dictionary toggle"),
+                isOn: $draft.includeDataDictionary
+            )
+            Toggle(
+                String(localized: "Lossless records", comment: "Profile editor lossless toggle"),
+                isOn: $draft.includeGranularData
+            )
+            Toggle(
+                String(localized: "Summary only", comment: "Profile editor summary-only toggle"),
+                isOn: $draft.summaryOnlyExport
+            )
+        } header: {
+            Text("Output")
+        } footer: {
+            Text("Templates accept {date}, {year}, {month}, {day}, {weekday}, {monthName}, and {quarter}.")
+        }
+    }
+
+    private var rollupSection: some View {
+        Section {
+            Toggle(
+                String(localized: "Weekly roll-ups", comment: "Profile editor weekly rollup toggle"),
+                isOn: $draft.generateWeeklyRollups
+            )
+            Toggle(
+                String(localized: "Monthly roll-ups", comment: "Profile editor monthly rollup toggle"),
+                isOn: $draft.generateMonthlyRollups
+            )
+            Toggle(
+                String(localized: "Yearly roll-ups", comment: "Profile editor yearly rollup toggle"),
+                isOn: $draft.generateYearlyRollups
+            )
+        } header: {
+            Text("Roll-Ups")
+        }
+    }
+
+    private var metricsSection: some View {
+        Section {
+            let enabled = metricState.enabledMetrics.count
+            let total = HealthMetrics.availableInCurrentBuild
+                .filter { !$0.isPendingAppleApproval && $0.availability.isAvailableOnCurrentPlatform }
+                .count
+            NavigationLink {
+                MetricSelectionView(
+                    selectionState: metricState,
+                    healthKitManager: HealthKitManager.shared
+                )
+            } label: {
+                HStack {
+                    Text("Health Metrics")
+                    Spacer()
+                    Text(String(
+                        localized: "\(enabled) of \(total)",
+                        comment: "Enabled versus total metric count in the profile editor"
+                    ))
+                    .foregroundStyle(Color.textSecondary)
+                }
+            }
+        } header: {
+            Text("Metrics")
+        }
+    }
+
+    private var dailyNotesSection: some View {
+        Section {
+            Toggle(
+                String(localized: "Inject into daily notes", comment: "Profile editor daily note injection toggle"),
+                isOn: $draft.dailyNoteInjection.enabled
+            )
+            Toggle(
+                String(localized: "Daily Notes only", comment: "Profile editor daily-notes-only toggle"),
+                isOn: $draft.dailyNoteInjection.dailyNotesOnly
+            )
+            if draft.dailyNoteInjection.enabled {
+                TextField(
+                    String(localized: "Notes folder", comment: "Profile editor daily notes folder field"),
+                    text: $draft.dailyNoteInjection.folderPath
+                )
+                .font(Typography.mono())
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                TextField(
+                    String(localized: "Notes filename", comment: "Profile editor daily notes filename field"),
+                    text: $draft.dailyNoteInjection.filenamePattern
+                )
+                .font(Typography.mono())
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                Toggle(
+                    String(localized: "Create if missing", comment: "Profile editor daily notes create toggle"),
+                    isOn: $draft.dailyNoteInjection.createIfMissing
+                )
+                Toggle(
+                    String(localized: "Markdown sections", comment: "Profile editor daily notes sections toggle"),
+                    isOn: $draft.dailyNoteInjection.injectMarkdownSections
+                )
+            }
+        } header: {
+            Text("Daily Notes")
+        }
+    }
+
+    private var individualTrackingSection: some View {
+        Section {
+            Toggle(
+                String(localized: "Individual entries", comment: "Profile editor individual tracking toggle"),
+                isOn: $draft.individualTracking.globalEnabled
+            )
+            if draft.individualTracking.globalEnabled {
+                TextField(
+                    String(localized: "Entries folder", comment: "Profile editor entries folder field"),
+                    text: $draft.individualTracking.entriesFolder
+                )
+                .font(Typography.mono())
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                Toggle(
+                    String(localized: "Category folders", comment: "Profile editor category folders toggle"),
+                    isOn: $draft.individualTracking.useCategoryFolders
+                )
+            }
+        } header: {
+            Text("Individual Entries")
+        } footer: {
+            Text("Per-metric entry rules are edited from the Export tab while this profile is active.")
+        }
+    }
+
+    @ViewBuilder
+    private var overlapSection: some View {
+        if !overlappingNames.isEmpty {
+            let names = overlappingNames.joined(separator: ", ")
+            Section {
+                Label(String(
+                    localized: "Overlaps \(names): later runs overwrite earlier ones. Choose a different folder or filename template to keep them separate.",
+                    comment: "Live editor warning that the profile's output files overlap other profiles; the interpolated value is a comma-separated profile name list"
+                ), systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.warning)
+                    .font(Typography.caption())
+            }
+        }
+    }
+}
+
+/// Inline form for adding a new API endpoint destination from the profile
+/// editor. Nothing is imported until Add; the token is stored in the
+/// destination store's Keychain-backed slot, not in the live shared endpoint
+/// settings.
+private struct ExportProfileEndpointFormSheet: View {
+    let onAdd: (String, String, String?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var name = ""
+    @State private var url = ""
+    @State private var token = ""
+
+    private var trimmedURL: String {
+        url.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canAdd: Bool {
+        !trimmedURL.isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(
+                        String(localized: "Name", comment: "Endpoint form name field label"),
+                        text: $name
+                    )
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                } header: {
+                    Text("Endpoint")
+                } footer: {
+                    Text("Optional. Defaults to the URL.")
+                }
+
+                Section {
+                    TextField(
+                        String(localized: "URL", comment: "Endpoint form URL field label"),
+                        text: $url
+                    )
+                    .keyboardType(.URL)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+
+                    SecureField(
+                        String(localized: "Bearer token", comment: "Endpoint form token field label"),
+                        text: $token
+                    )
+                } header: {
+                    Text("Credentials")
+                } footer: {
+                    Text("Stored in the Keychain. Optional if your endpoint doesn't require one.")
+                }
+            }
+            .navigationTitle(Text("New Endpoint"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        let trimmedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+                        onAdd(
+                            name,
+                            trimmedURL,
+                            trimmedToken.isEmpty ? nil : trimmedToken
+                        )
+                        dismiss()
+                    }
+                    .disabled(!canAdd)
+                    .accessibilityIdentifier("export.profiles.editor.addEndpoint.confirm")
+                }
+            }
+        }
     }
 }
 #endif

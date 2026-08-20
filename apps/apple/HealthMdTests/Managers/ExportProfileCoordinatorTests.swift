@@ -308,4 +308,281 @@ final class ExportProfileCoordinatorTests: XCTestCase {
             "flushed-{date}"
         )
     }
+
+    // MARK: - Creation form
+
+    func testCreateProfileUsesChosenNameTargetAndFolderBinding() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/FirstVault")
+        coordinator.vaultFolderWasSelected()
+
+        let destination = try XCTUnwrap(coordinator.destinationStore.vaults.first)
+        let created = try XCTUnwrap(
+            coordinator.createProfile(
+                name: "  Archive  ",
+                target: .localIPhoneFolder,
+                folderVaultID: destination.id
+            )
+        )
+
+        XCTAssertEqual(created.name, "Archive")
+        XCTAssertEqual(created.target, .localIPhoneFolder)
+        XCTAssertEqual(created.folderVaultID, destination.id)
+        XCTAssertEqual(coordinator.profileStore.activeProfileID, created.id, "creation activates the new profile")
+        XCTAssertEqual(
+            vaultManager.pathForDisplay,
+            "/Users/x/FirstVault",
+            "an explicit binding is adopted on activation so the live vault matches the created profile"
+        )
+    }
+
+    func testSuggestedProfileNameSkipsTakenNames() throws {
+        let coordinator = makeCoordinator()
+        XCTAssertEqual(coordinator.suggestedProfileName(), "Profile")
+
+        _ = coordinator.renameProfile(
+            id: coordinator.profileStore.activeProfileID!,
+            to: "Profile"
+        )
+        XCTAssertEqual(coordinator.suggestedProfileName(), "Profile 2")
+
+        _ = coordinator.createProfile(name: "Profile 2", target: .apiEndpoint)
+        XCTAssertEqual(coordinator.suggestedProfileName(), "Profile 3")
+    }
+
+    func testOverlapPreviewNamesTrackChosenDestination() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/SharedVault")
+        coordinator.vaultFolderWasSelected()
+        let defaultName = try XCTUnwrap(coordinator.profileStore.profiles.first?.name)
+
+        // Same live vault, duplicated templates: overlap with the Default profile.
+        XCTAssertEqual(
+            coordinator.overlapPreviewNames(target: .localIPhoneFolder, folderVaultID: nil),
+            [defaultName]
+        )
+
+        // A different destination clears the overlap.
+        let other = coordinator.destinationStore.upsertVault(
+            name: "Archive",
+            standardizedPath: "/Users/x/ArchiveVault",
+            bookmarkData: Data("fake-bookmark-ArchiveVault".utf8)
+        )
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(target: .localIPhoneFolder, folderVaultID: other.id).isEmpty
+        )
+
+        // API endpoints upload rather than write files: never overlap.
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(target: .apiEndpoint, folderVaultID: nil).isEmpty
+        )
+    }
+
+    // MARK: - Profile editor
+
+    func testUpdateProfileEditsNonActiveProfileWithoutTouchingLiveState() throws {
+        let settings = makeSettings()
+        let coordinator = makeCoordinator(settings: settings)
+        let other = try XCTUnwrap(coordinator.addProfileDuplicatingActive())
+        let defaultID = try XCTUnwrap(
+            coordinator.profileStore.profiles.first(where: { $0.id != other.id })?.id
+        )
+        // Re-activate Default so `other` is NOT active, then establish the
+        // live value the debounced edit flush would capture. Mutating live
+        // settings while `other` is active would (correctly) flush into the
+        // active profile and race this assertion.
+        coordinator.activate(profileID: defaultID)
+        settings.filenameFormat = "live-{date}"
+        coordinator.flushEdits()
+
+        var edited = coordinator.profileStore.profile(id: other.id)!.settings
+        edited.filenameFormat = "edited-{date}"
+        edited.exportFormats = [.json]
+        let updated = try XCTUnwrap(
+            coordinator.updateProfile(
+                id: other.id,
+                name: "  Renamed  ",
+                target: .apiEndpoint,
+                folderVaultID: nil,
+                apiEndpointID: nil,
+                settings: edited
+            )
+        )
+
+        XCTAssertEqual(updated.name, "Renamed")
+        XCTAssertEqual(updated.target, .apiEndpoint)
+        XCTAssertEqual(updated.settings.exportFormats, [.json])
+        XCTAssertEqual(updated.settings.filenameFormat, "edited-{date}")
+        XCTAssertNil(updated.folderVaultID, "non-local targets clear the folder binding")
+        XCTAssertEqual(
+            coordinator.profileStore.activeProfileID,
+            defaultID,
+            "editing never changes activation"
+        )
+        XCTAssertEqual(
+            settings.filenameFormat,
+            "live-{date}",
+            "editing a non-active profile must not touch live settings"
+        )
+        XCTAssertEqual(
+            coordinator.profileStore.profile(id: defaultID)?.settings.filenameFormat,
+            "live-{date}",
+            "the debounced flush captured the live value on the active profile"
+        )
+    }
+
+    func testUpdateProfileOnActiveProfileSyncsLiveState() throws {
+        let settings = makeSettings()
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(settings: settings, vaultManager: vaultManager)
+        let activeID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/FirstVault")
+        coordinator.vaultFolderWasSelected()
+
+        let archiveVault = coordinator.destinationStore.upsertVault(
+            name: "Archive",
+            standardizedPath: "/Users/x/ArchiveVault",
+            bookmarkData: Data("fake-bookmark-ArchiveVault".utf8)
+        )
+
+        var edited = coordinator.profileStore.profile(id: activeID)!.settings
+        edited.filenameFormat = "synced-{date}"
+        edited.exportFormats = [.csv]
+        _ = try XCTUnwrap(
+            coordinator.updateProfile(
+                id: activeID,
+                name: "Renamed Active",
+                target: .localIPhoneFolder,
+                folderVaultID: archiveVault.id,
+                apiEndpointID: nil,
+                settings: edited
+            )
+        )
+
+        XCTAssertEqual(coordinator.activeProfileName, "Renamed Active")
+        XCTAssertEqual(settings.filenameFormat, "synced-{date}", "live settings adopt the saved snapshot")
+        XCTAssertEqual(settings.exportFormats, [.csv])
+        XCTAssertEqual(
+            vaultManager.pathForDisplay,
+            "/Users/x/ArchiveVault",
+            "the edited folder binding is adopted into live vault state"
+        )
+    }
+
+    func testImportFolderSelectionUpsertsDestinationWithoutTouchingLiveVault() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        XCTAssertNil(vaultManager.pathForDisplay, "precondition: no live vault selected")
+
+        let imported = try XCTUnwrap(
+            coordinator.importFolderSelection(URL(fileURLWithPath: "/Users/x/EditorVault"))
+        )
+
+        let destination = try XCTUnwrap(
+            coordinator.destinationStore.vaults.first { $0.id == imported }
+        )
+        XCTAssertEqual(destination.standardizedPath, "/Users/x/EditorVault")
+        XCTAssertEqual(destination.name, "EditorVault")
+        XCTAssertNil(
+            vaultManager.pathForDisplay,
+            "importing a folder must not change the live shared vault"
+        )
+        XCTAssertNil(
+            coordinator.profileStore.activeProfile?.folderVaultID,
+            "importing does not bind anything until the editor saves"
+        )
+
+        // Re-selecting the same folder reuses the destination row.
+        let again = try XCTUnwrap(
+            coordinator.importFolderSelection(URL(fileURLWithPath: "/Users/x/EditorVault"))
+        )
+        XCTAssertEqual(again, imported)
+        XCTAssertEqual(
+            coordinator.destinationStore.vaults.filter { $0.standardizedPath == "/Users/x/EditorVault" }.count,
+            1
+        )
+    }
+
+    func testImportAPIEndpointSelectionUpsertsEndpointAndTokenWithoutTouchingLiveSettings() throws {
+        let coordinator = makeCoordinator()
+        XCTAssertEqual(coordinator.apiExportSettingsForTesting.endpointURLString, "", "precondition: no live endpoint")
+
+        let imported = try XCTUnwrap(
+            coordinator.importAPIEndpointSelection(
+                name: "  Nightly Sink  ",
+                endpointURLString: "  https://example.com/hook  ",
+                bearerToken: " secret-token "
+            )
+        )
+
+        let endpoint = try XCTUnwrap(
+            coordinator.destinationStore.apiEndpoints.first { $0.id == imported }
+        )
+        XCTAssertEqual(endpoint.name, "Nightly Sink")
+        XCTAssertEqual(endpoint.endpointURLString, "https://example.com/hook")
+        XCTAssertEqual(
+            coordinator.destinationStore.token(for: imported),
+            "secret-token",
+            "the token lands in the destination store's keychain slot, trimmed"
+        )
+        XCTAssertEqual(
+            coordinator.apiExportSettingsForTesting.endpointURLString,
+            "",
+            "importing an endpoint must not change the live shared endpoint"
+        )
+
+        // Empty URL is rejected; a nil token leaves the stored value intact
+        // when re-importing the same URL, and an empty name falls back to URL.
+        XCTAssertNil(coordinator.importAPIEndpointSelection(name: "", endpointURLString: "   ", bearerToken: nil))
+        let reused = try XCTUnwrap(
+            coordinator.importAPIEndpointSelection(
+                name: "",
+                endpointURLString: "https://EXAMPLE.com/hook",
+                bearerToken: nil
+            )
+        )
+        XCTAssertEqual(reused, imported, "same URL (case-insensitive) reuses the endpoint row")
+        XCTAssertEqual(coordinator.destinationStore.apiEndpoints.count, 1)
+        XCTAssertEqual(
+            coordinator.destinationStore.token(for: reused),
+            "secret-token",
+            "re-import without a token keeps the stored token"
+        )
+        XCTAssertEqual(
+            coordinator.destinationStore.apiEndpoints.first?.name,
+            "Nightly Sink",
+            "re-import with an empty name keeps the existing name"
+        )
+    }
+
+    func testOverlapPreviewUsesEditorDraftSettings() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/SharedVault")
+        coordinator.vaultFolderWasSelected()
+        let defaultName = try XCTUnwrap(coordinator.profileStore.profiles.first?.name)
+
+        var draft = ExportSettingsSnapshot.from(coordinator.liveSettings)
+        XCTAssertEqual(
+            coordinator.overlapPreviewNames(
+                target: .localIPhoneFolder,
+                folderVaultID: nil,
+                settings: draft
+            ),
+            [defaultName],
+            "identical templates overlap"
+        )
+
+        draft.filenameFormat = "unique-{date}"
+        XCTAssertTrue(
+            coordinator.overlapPreviewNames(
+                target: .localIPhoneFolder,
+                folderVaultID: nil,
+                settings: draft
+            ).isEmpty,
+            "a diverging draft template clears the overlap"
+        )
+    }
 }

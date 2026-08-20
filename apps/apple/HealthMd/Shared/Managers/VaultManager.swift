@@ -1891,6 +1891,30 @@ final class VaultManager: ObservableObject {
 
     // MARK: - Folder Selection
 
+    /// Bookmark metadata for a folder picked outside the shared-vault flow
+    /// (for example the profile editor's destination picker). Creates the
+    /// security-scoped bookmark without changing the live shared vault
+    /// selection — callers own where the resulting binding is applied.
+    func selectionMetadata(for url: URL) -> (bookmarkData: Data, standardizedPath: String, displayName: String)? {
+        guard bookmarkResolver.startAccessing(url) else {
+            lastExportStatus = "Failed to access folder"
+            return nil
+        }
+        defer { bookmarkResolver.stopAccessing(url) }
+
+        do {
+            let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
+            return (
+                bookmarkData,
+                url.standardizedFileURL.path,
+                url.lastPathComponent
+            )
+        } catch {
+            lastExportStatus = error.localizedDescription
+            return nil
+        }
+    }
+
     func setVaultFolder(_ url: URL) {
         guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = "Failed to access folder"

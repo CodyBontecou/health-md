@@ -41,6 +41,14 @@ final class ExportProfileCoordinator: ObservableObject {
     /// deletion (entry cleanup) stay coupled.
     let scheduledEntryStore: ScheduledExportEntryStore
 
+    /// The shared live export settings the Export tab edits. Read-only access
+    /// for surfaces (profile editor) that seed a draft from current state.
+    var liveSettings: AdvancedExportSettings { settings }
+
+    /// The shared live API endpoint settings. Test/verification access for
+    /// asserting that editor imports never touch live state.
+    var apiExportSettingsForTesting: APIExportSettings { apiExportSettings }
+
     private let settings: AdvancedExportSettings
     private let vaultManager: VaultManager
     private let apiExportSettings: APIExportSettings
@@ -226,6 +234,55 @@ final class ExportProfileCoordinator: ObservableObject {
         profileStore.setFolderBinding(profileID: activeID, destinationID: destination.id)
     }
 
+    /// Imports a freshly picked folder into the shared destination store for
+    /// the profile editor — without touching the live shared vault. Returns
+    /// the destination id for the editor draft's folder binding; the binding
+    /// only reaches live state when saving an active profile adopts it.
+    /// Re-selecting an already-saved folder reuses its destination row.
+    @discardableResult
+    func importFolderSelection(_ url: URL) -> UUID? {
+        guard let selection = vaultManager.selectionMetadata(for: url) else { return nil }
+        let destination = destinationStore.upsertVault(
+            name: selection.displayName,
+            standardizedPath: selection.standardizedPath,
+            bookmarkData: selection.bookmarkData
+        )
+        return destination.id
+    }
+
+    /// Imports a newly configured API endpoint into the shared destination
+    /// store for the profile editor — without touching the live shared
+    /// endpoint settings. The bearer token is stored in the destination
+    /// store's Keychain-backed token slot. Re-entering an already-saved URL
+    /// reuses its endpoint row. Returns the endpoint id for the editor
+    /// draft's binding; the binding only reaches live state when saving an
+    /// active profile adopts it.
+    @discardableResult
+    func importAPIEndpointSelection(
+        name: String,
+        endpointURLString: String,
+        bearerToken: String?
+    ) -> UUID? {
+        let trimmedURL = endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedURL.isEmpty else { return nil }
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Upsert overwrites the row's name, so an empty form name must fall
+        // back to the existing row's name (then the URL) rather than blank it.
+        let existing = destinationStore.apiEndpoint(id: destinationStore.apiEndpoints.first {
+            $0.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare(trimmedURL) == .orderedSame
+        }?.id)?.name
+        let resolvedName = !trimmedName.isEmpty
+            ? trimmedName
+            : (existing ?? trimmedURL)
+        let endpoint = destinationStore.upsertAPIEndpoint(
+            name: resolvedName,
+            endpointURLString: trimmedURL,
+            bearerToken: bearerToken
+        )
+        return endpoint.id
+    }
+
     /// Called when API endpoint settings change while a profile is active.
     /// Upserts the endpoint and binds it to the active profile.
     func apiEndpointDidChange() {
@@ -245,6 +302,82 @@ final class ExportProfileCoordinator: ObservableObject {
     }
 
     // MARK: - Profile management
+
+    /// Creates a new profile from the flushed live settings with an explicit
+    /// name, target, and destination binding — the creation-form path. When a
+    /// folder binding is chosen, activation adopts it so the Export tab's
+    /// live state matches the profile the user just configured.
+    @discardableResult
+    func createProfile(
+        name: String,
+        target: ExportTargetSelection,
+        folderVaultID: UUID? = nil,
+        settings newSettings: ExportSettingsSnapshot? = nil
+    ) -> ExportProfile? {
+        flushEdits()
+        guard let source = profileStore.activeProfile else { return nil }
+        let created = profileStore.add(
+            name: name,
+            settings: newSettings ?? ExportSettingsSnapshot.from(settings),
+            target: target,
+            folderVaultID: folderVaultID,
+            apiEndpointID: source.apiEndpointID
+        )
+        activate(profileID: created.id, adoptVault: folderVaultID != nil)
+        return created
+    }
+
+    /// Prefill suggestion for the creation form: "Profile", then "Profile 2",
+    /// "Profile 3", … skipping names already taken (case-insensitive).
+    func suggestedProfileName() -> String {
+        let taken = Set(
+            profileStore.profiles
+                .map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        )
+        guard !taken.contains("profile") else {
+            var counter = 2
+            while taken.contains("profile \(counter)") { counter += 1 }
+            return "Profile \(counter)"
+        }
+        return "Profile"
+    }
+
+    /// Live creation-form overlap preview: names of existing profiles whose
+    /// exports would write the same files as a candidate with this target,
+    /// folder binding, and the flushed live settings the form will save.
+    func overlapPreviewNames(target: ExportTargetSelection, folderVaultID: UUID?) -> [String] {
+        overlapPreviewNames(
+            target: target,
+            folderVaultID: folderVaultID,
+            settings: ExportSettingsSnapshot.from(settings)
+        )
+    }
+
+    /// Overlap preview with an explicit settings override — the profile
+    /// editor passes its draft so the warning tracks in-progress edits.
+    func overlapPreviewNames(
+        target: ExportTargetSelection,
+        folderVaultID: UUID?,
+        settings: ExportSettingsSnapshot
+    ) -> [String] {
+        let candidateID = UUID()
+        let identities = profilePathIdentities() + [
+            ExportProfileOverlapDetector.ProfilePathIdentity(
+                profileID: candidateID,
+                name: "",
+                target: target,
+                settings: settings,
+                destinationRootKey: destinationRootKey(
+                    target: target,
+                    folderVaultID: folderVaultID
+                )
+            )
+        ]
+        return ExportProfileOverlapDetector.overlappingProfileNames(
+            for: candidateID,
+            among: identities
+        )
+    }
 
     /// Creates a new profile duplicating the active profile's current frozen
     /// state and destinations, then activates it.
@@ -290,5 +423,110 @@ final class ExportProfileCoordinator: ObservableObject {
             activeProfileName = renamed
         }
         return renamed
+    }
+
+    /// Full profile update from the editor sheet: identity, destination
+    /// bindings, and the frozen settings snapshot in one save. Editing the
+    /// active profile also syncs the shared live settings and adopts the new
+    /// bindings so the Export tab reflects the edit immediately; editing a
+    /// non-active profile never touches live state.
+    @discardableResult
+    func updateProfile(
+        id: UUID,
+        name: String,
+        target: ExportTargetSelection,
+        folderVaultID: UUID?,
+        apiEndpointID: UUID?,
+        settings newSettings: ExportSettingsSnapshot
+    ) -> ExportProfile? {
+        guard profileStore.profile(id: id) != nil else { return nil }
+
+        _ = profileStore.rename(id: id, to: name)
+        _ = profileStore.updateTarget(id: id, target: target)
+        _ = profileStore.setFolderBinding(
+            profileID: id,
+            destinationID: target == .localIPhoneFolder ? folderVaultID : nil
+        )
+        _ = profileStore.setAPIEndpointBinding(
+            profileID: id,
+            endpointID: target == .apiEndpoint ? apiEndpointID : nil
+        )
+        _ = profileStore.updateSettings(id: id, settings: newSettings)
+
+        guard let updated = profileStore.profile(id: id) else { return nil }
+        guard id == profileStore.activeProfileID else { return updated }
+
+        // Active-profile sync: live settings, published identity, and the
+        // bound destinations must match what the editor just saved. No
+        // flushEdits first — the live settings are about to be replaced by
+        // the saved snapshot, so flushing would only write stale values.
+        settings.apply(snapshot: newSettings)
+        activeProfileName = updated.name
+        activeTarget = updated.target
+        if let folderVaultID {
+            adoptVaultDestination(for: updated)
+        }
+        if let apiEndpointID {
+            adoptAPIEndpoint(for: updated)
+        }
+        return updated
+    }
+
+    // MARK: - Output path overlap
+
+    /// Path identities for every profile, resolving each local-folder
+    /// profile's effective destination root: its bound vault when one is
+    /// bound, otherwise the live shared vault (unbound profiles export
+    /// through the legacy shared vault state). Connected Mac profiles share
+    /// the Mac's single selected destination; API endpoints upload rather
+    /// than write files and never participate.
+    func profilePathIdentities() -> [ExportProfileOverlapDetector.ProfilePathIdentity] {
+        let liveVaultRoot = vaultManager.vaultURL?.standardizedFileURL.path
+            ?? vaultManager.pathForDisplay
+        return profileStore.profiles.map { profile in
+            ExportProfileOverlapDetector.ProfilePathIdentity(
+                profileID: profile.id,
+                name: profile.name,
+                target: profile.target,
+                settings: profile.settings,
+                destinationRootKey: destinationRootKey(
+                    target: profile.target,
+                    folderVaultID: profile.folderVaultID,
+                    liveVaultRoot: liveVaultRoot
+                )
+            )
+        }
+    }
+
+    /// Names of other profiles whose exports write the same files for shared
+    /// dates (same destination root and identical rendered output paths).
+    /// Surfaced when a profile is created or duplicated and as a persistent
+    /// detail-card warning, because profile names never appear in file paths
+    /// and the collision is otherwise invisible until files are overwritten.
+    func overlappingProfileNames(for profileID: UUID) -> [String] {
+        ExportProfileOverlapDetector.overlappingProfileNames(
+            for: profileID,
+            among: profilePathIdentities()
+        )
+    }
+
+    private func destinationRootKey(
+        target: ExportTargetSelection,
+        folderVaultID: UUID?,
+        liveVaultRoot: String? = nil
+    ) -> String? {
+        switch target {
+        case .localIPhoneFolder:
+            if let vault = destinationStore.vault(id: folderVaultID) {
+                return vault.standardizedPath
+            }
+            return liveVaultRoot
+                ?? vaultManager.vaultURL?.standardizedFileURL.path
+                ?? vaultManager.pathForDisplay
+        case .connectedMac:
+            return ExportProfileOverlapDetector.connectedMacRootKey
+        case .apiEndpoint:
+            return nil
+        }
     }
 }
