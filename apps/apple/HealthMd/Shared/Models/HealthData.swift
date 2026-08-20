@@ -1341,13 +1341,20 @@ nonisolated struct ExportTimeContext: Codable, Equatable, Sendable {
     static let timestampTimeZoneIdentifier = "UTC"
 
     let calendarTimeZoneIdentifier: String
+    /// Which daily note owned sleep sessions when this day was captured
+    /// (issue #104). Nil means the capture used the shipped default
+    /// `night_begins` (or predates the setting), which is behaviorally
+    /// identical, so only non-default captures encode a value. This keeps
+    /// previously persisted and synced records byte-identical.
+    let sleepDayAttribution: SleepDayAttribution?
 
-    init(calendarTimeZoneIdentifier: String) {
+    init(calendarTimeZoneIdentifier: String, sleepDayAttribution: SleepDayAttribution? = nil) {
         self.calendarTimeZoneIdentifier = calendarTimeZoneIdentifier
+        self.sleepDayAttribution = sleepDayAttribution
     }
 
-    init(timeZone: TimeZone) {
-        self.init(calendarTimeZoneIdentifier: timeZone.identifier)
+    init(timeZone: TimeZone, sleepDayAttribution: SleepDayAttribution? = nil) {
+        self.init(calendarTimeZoneIdentifier: timeZone.identifier, sleepDayAttribution: sleepDayAttribution)
     }
 
     static func captured() -> ExportTimeContext {
@@ -1356,6 +1363,23 @@ nonisolated struct ExportTimeContext: Codable, Equatable, Sendable {
 
     var calendarTimeZone: TimeZone {
         TimeZone(identifier: calendarTimeZoneIdentifier) ?? TimeZone(secondsFromGMT: 0)!
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case calendarTimeZoneIdentifier
+        case sleepDayAttribution
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        calendarTimeZoneIdentifier = try container.decode(String.self, forKey: .calendarTimeZoneIdentifier)
+        sleepDayAttribution = try container.decodeIfPresent(SleepDayAttribution.self, forKey: .sleepDayAttribution)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(calendarTimeZoneIdentifier, forKey: .calendarTimeZoneIdentifier)
+        try container.encodeIfPresent(sleepDayAttribution, forKey: .sleepDayAttribution)
     }
 }
 

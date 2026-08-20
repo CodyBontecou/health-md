@@ -1142,6 +1142,183 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         XCTAssertNil(data.sleep.sessionStart)
     }
 
+    // MARK: - Sleep Day Attribution (issue #104)
+
+    @MainActor
+    func test_sleepDayAttribution_defaultsToNightBegins_andPersists() {
+        let store = FakeHealthStore()
+        let suiteName = "HealthKitManagerTests.attribution.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let sut = HealthKitManager(store: store, userDefaults: defaults)
+        XCTAssertEqual(sut.sleepDayAttribution, .nightBegins, "missing key must keep shipped behavior")
+
+        sut.setSleepDayAttribution(.morningEnds)
+        XCTAssertEqual(sut.sleepDayAttribution, .morningEnds)
+        XCTAssertEqual(defaults.string(forKey: "healthKit.sleepDayAttribution"), "morning_ends")
+
+        // A new manager over the same defaults reloads the persisted mode.
+        let reloaded = HealthKitManager(store: FakeHealthStore(), userDefaults: defaults)
+        XCTAssertEqual(reloaded.sleepDayAttribution, .morningEnds)
+
+        // An unknown persisted value fails closed to the shipped default.
+        defaults.set("solstice", forKey: "healthKit.sleepDayAttribution")
+        XCTAssertEqual(HealthKitManager(store: FakeHealthStore(), userDefaults: defaults).sleepDayAttribution, .nightBegins)
+    }
+
+    @MainActor
+    func test_sleepWindow_morningEnds_reachesBackOneFurtherNoon() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let exportDate = calendar.date(from: DateComponents(year: 2026, month: 6, day: 11))!
+
+        let window = HealthKitManager.sleepWindow(for: exportDate, attribution: .morningEnds, calendar: calendar)
+
+        XCTAssertEqual(
+            window.start,
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 12)),
+            "the wake-up-date fetch must reach back to the previous day's noon"
+        )
+        XCTAssertEqual(
+            window.end,
+            calendar.date(from: DateComponents(year: 2026, month: 6, day: 12, hour: 12))
+        )
+    }
+
+    /// Session 23:45 on D → 07:30 on D+1 (the late-night edge from issue #104).
+    private func lateNightSessionSamples(for date: Date, calendar: Calendar) -> [CategorySampleValue] {
+        let start = calendar.date(bySettingHour: 23, minute: 45, second: 0, of: date)!
+        let end = calendar.date(bySettingHour: 7, minute: 30, second: 0, of: calendar.date(byAdding: .day, value: 1, to: date)!)!
+        return [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: start, endDate: end),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end),
+        ]
+    }
+
+    @MainActor
+    func test_sleep_nightBegins_overnightSessionOwnedByStartDay() async throws {
+        let store = FakeHealthStore()
+        let calendar = Calendar.current
+        let night = HealthKitFixtures.referenceDate
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] =
+            lateNightSessionSamples(for: night, calendar: calendar)
+        let sut = makeSUT(store: store)
+
+        // Default mode: the start date's note owns the whole session…
+        let startDay = try await sut.fetchHealthData(for: night)
+        XCTAssertEqual(startDay.sleep.totalDuration, 7 * 3600 + 45 * 60, accuracy: 1)
+        XCTAssertEqual(startDay.sleep.sessionStart, calendar.date(bySettingHour: 23, minute: 45, second: 0, of: night))
+        XCTAssertEqual(startDay.sleep.sessionEnd, calendar.date(bySettingHour: 7, minute: 30, second: 0, of: calendar.date(byAdding: .day, value: 1, to: night)!))
+
+        // …and the wake date's note has none of it.
+        let wakeDay = try await sut.fetchHealthData(for: calendar.date(byAdding: .day, value: 1, to: night)!)
+        XCTAssertEqual(wakeDay.sleep.totalDuration, 0)
+        XCTAssertNil(wakeDay.sleep.sessionStart)
+    }
+
+    @MainActor
+    func test_sleep_morningEnds_lateNightSessionOwnedByWakeDay_wholeSession() async throws {
+        let store = FakeHealthStore()
+        let calendar = Calendar.current
+        let night = HealthKitFixtures.referenceDate
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] =
+            lateNightSessionSamples(for: night, calendar: calendar)
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+
+        // The wake date's note owns the full session, unclipped.
+        let wakeDay = try await sut.fetchHealthData(for: calendar.date(byAdding: .day, value: 1, to: night)!)
+        XCTAssertEqual(wakeDay.sleep.totalDuration, 7 * 3600 + 45 * 60, accuracy: 1, "whole session must stay together, never split at midnight")
+        XCTAssertEqual(wakeDay.sleep.inBedTime, 7 * 3600 + 45 * 60, accuracy: 1)
+        XCTAssertEqual(wakeDay.sleep.sessionStart, calendar.date(bySettingHour: 23, minute: 45, second: 0, of: night))
+        XCTAssertEqual(wakeDay.sleep.sessionEnd, calendar.date(bySettingHour: 7, minute: 30, second: 0, of: calendar.date(byAdding: .day, value: 1, to: night)!))
+
+        // The start date's note no longer owns it.
+        let startDay = try await sut.fetchHealthData(for: night)
+        XCTAssertEqual(startDay.sleep.totalDuration, 0)
+        XCTAssertNil(startDay.sleep.sessionStart)
+    }
+
+    @MainActor
+    func test_sleep_morningEnds_afternoonNapOwnedByItsOwnDay() async throws {
+        let store = FakeHealthStore()
+        let calendar = Calendar.current
+        let day = HealthKitFixtures.referenceDate
+        let napStart = calendar.date(bySettingHour: 14, minute: 0, second: 0, of: day)!
+        let napEnd = napStart.addingTimeInterval(90 * 60)
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: napStart, endDate: napEnd),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: napStart, endDate: napEnd),
+        ]
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+
+        // A session entirely inside one calendar day stays on that day in both modes.
+        let sameDay = try await sut.fetchHealthData(for: day)
+        XCTAssertEqual(sameDay.sleep.totalDuration, 90 * 60, accuracy: 1)
+
+        let nextDay = try await sut.fetchHealthData(for: calendar.date(byAdding: .day, value: 1, to: day)!)
+        XCTAssertEqual(nextDay.sleep.totalDuration, 0, "a nap ending on its own day must not leak into the next note")
+    }
+
+    @MainActor
+    func test_sleep_morningEnds_eveningSessionStartingLateIsOwnedByNextMorning() async throws {
+        let store = FakeHealthStore()
+        let calendar = Calendar.current
+        let day = HealthKitFixtures.referenceDate
+        let start = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: day)!
+        let end = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: calendar.date(byAdding: .day, value: 1, to: day)!)!
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: start, endDate: end),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue, startDate: start, endDate: end),
+        ]
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+
+        let startDayNote = try await sut.fetchHealthData(for: day)
+        XCTAssertEqual(startDayNote.sleep.totalDuration, 0, "a session ending tomorrow belongs to tomorrow's note")
+
+        let wakeDayNote = try await sut.fetchHealthData(for: calendar.date(byAdding: .day, value: 1, to: day)!)
+        XCTAssertEqual(wakeDayNote.sleep.totalDuration, 8 * 3600, accuracy: 1)
+    }
+
+    @MainActor
+    func test_sleep_morningEnds_granularStagesKeepOriginalTimestamps() async throws {
+        let store = FakeHealthStore()
+        let calendar = Calendar.current
+        let night = HealthKitFixtures.referenceDate
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] =
+            lateNightSessionSamples(for: night, calendar: calendar)
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+
+        let wakeDay = try await sut.fetchHealthData(
+            for: calendar.date(byAdding: .day, value: 1, to: night)!,
+            includeGranularData: true
+        )
+
+        let expectedStart = calendar.date(bySettingHour: 23, minute: 45, second: 0, of: night)
+        let expectedEnd = calendar.date(bySettingHour: 7, minute: 30, second: 0, of: calendar.date(byAdding: .day, value: 1, to: night)!)
+        XCTAssertTrue(
+            wakeDay.sleep.stages.contains { $0.stage == "inBed" && $0.startDate == expectedStart && $0.endDate == expectedEnd },
+            "granular stage rows must keep the session's original timestamps, not be clipped to the wake date"
+        )
+    }
+
+    @MainActor
+    func test_fetchHealthData_recordsCaptureAttributionInTimeContext() async throws {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let nightBegins = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
+        XCTAssertNil(nightBegins.timeContext.sleepDayAttribution, "default captures keep legacy record bytes")
+
+        sut.setSleepDayAttribution(.morningEnds)
+        let morningEnds = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
+        XCTAssertEqual(morningEnds.timeContext.sleepDayAttribution, .morningEnds)
+    }
+
     // MARK: - Body Aggregation
 
     @MainActor

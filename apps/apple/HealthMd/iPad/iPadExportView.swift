@@ -274,6 +274,38 @@ struct iPadExportView: View {
                     .accessibilityLabel("Lossless Health Records")
                     .accessibilityHint("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
                     .configurationChangesProtected()
+
+                    Divider().background(Color.borderSubtle)
+
+                    // Issue #104: which daily note owns a midnight-spanning
+                    // sleep session. Stored on the capturing device and applied
+                    // to every capture path.
+                    HStack(alignment: .top, spacing: Spacing.s3) {
+                        Image(systemName: "moon.zzz")
+                            .foregroundStyle(Color.accent)
+                            .frame(width: 24)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: Spacing.s1) {
+                            Picker("Sleep Day Attribution", selection: Binding(
+                                get: { healthKitManager.sleepDayAttribution },
+                                set: { healthKitManager.setSleepDayAttribution($0) }
+                            )) {
+                                ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
+                                    Text(mode.localizedDisplayName).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .font(Typography.bodyEmphasis())
+                            .accessibilityLabel("Sleep Day Attribution")
+                            .accessibilityHint(SleepDayAttribution.morningEnds.localizedDescription)
+
+                            Text(healthKitManager.sleepDayAttribution.localizedDescription)
+                                .font(Typography.caption())
+                                .foregroundStyle(Color.textMuted)
+                        }
+                    }
+                    .configurationChangesProtected()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)

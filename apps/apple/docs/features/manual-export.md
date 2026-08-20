@@ -55,7 +55,7 @@ Do not treat a successful write or non-empty summary as proof the source archive
 
 ## Day behavior
 
-Canonical records belong to the day containing their source start in the captured timezone and are never clipped. Daily sleep summaries retain noon-to-noon compatibility behavior. For long/midnight-spanning events, use archive ownership.
+Canonical records belong to the day containing their source start in the captured timezone and are never clipped. Daily sleep summaries retain noon-to-noon compatibility behavior unless the user selects the **Morning ends** sleep-attribution mode (issue #104), which moves the whole midnight-spanning session to the wake-up date's note. For long/midnight-spanning events, use archive ownership.
 
 ## Roll-ups and summary-only
 

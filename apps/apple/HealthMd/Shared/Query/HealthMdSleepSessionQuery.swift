@@ -16,10 +16,15 @@ nonisolated enum HealthMdSleepSessionQuery {
         ownerDate: String,
         ownerIntervalStart: Date,
         calendarTimeZone: String,
-        evidenceIDs: [String]
+        evidenceIDs: [String],
+        attribution: SleepDayAttribution = .nightBegins
     ) throws -> [HealthMdContextSleepSession] {
         let timeZone = TimeZone(identifier: calendarTimeZone) ?? TimeZone(secondsFromGMT: 0)!
-        let sleepWindow = sleepWindow(ownerIntervalStart: ownerIntervalStart, timeZone: timeZone)
+        let sleepWindow = sleepWindow(
+            ownerIntervalStart: ownerIntervalStart,
+            timeZone: timeZone,
+            attribution: attribution
+        )
         let intervals = sleep.stages.compactMap { sample -> HealthMdContextSleepStageInterval? in
             guard sample.endDate > sample.startDate else { return nil }
             return .init(stage: normalizedStage(sample.stage), start: sample.startDate, end: sample.endDate)
@@ -526,17 +531,26 @@ nonisolated enum HealthMdSleepSessionQuery {
         return .sleep
     }
 
+    /// The capture window that produced the day's sleep samples, used only for
+    /// truncation/completeness labeling. It mirrors `HealthKitManager.sleepWindow`
+    /// for each attribution mode (issue #104): noon-to-noon of the owner day for
+    /// `.nightBegins`, and one noon earlier for `.morningEnds`, whose fetch bound
+    /// must contain the whole wake-up-date session.
     private static func sleepWindow(
         ownerIntervalStart: Date,
-        timeZone: TimeZone
+        timeZone: TimeZone,
+        attribution: SleepDayAttribution = .nightBegins
     ) -> (start: Date, end: Date) {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let startOfDay = calendar.startOfDay(for: ownerIntervalStart)
+        let windowStartDay = attribution == .morningEnds
+            ? (calendar.date(byAdding: .day, value: -1, to: startOfDay) ?? startOfDay)
+            : startOfDay
         let nextDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)
             ?? startOfDay.addingTimeInterval(86_400)
-        let start = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: startOfDay)
-            ?? startOfDay.addingTimeInterval(12 * 3_600)
+        let start = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: windowStartDay)
+            ?? windowStartDay.addingTimeInterval(12 * 3_600)
         let end = calendar.date(bySettingHour: 12, minute: 0, second: 0, of: nextDay)
             ?? nextDay.addingTimeInterval(12 * 3_600)
         return (start, end)

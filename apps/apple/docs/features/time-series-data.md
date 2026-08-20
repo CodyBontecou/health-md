@@ -92,7 +92,7 @@ The query manifest distinguishes `success` with zero records from `unsupported`,
 
 ## Day ownership and identity
 
-Canonical records belong to the day containing their source start timestamp in the captured timezone. Health.md does not clip records crossing midnight. The sleep summary retains its noon-to-noon compatibility window, so use archive ownership for raw event reconstruction.
+Canonical records belong to the day containing their source start timestamp in the captured timezone. Health.md does not clip records crossing midnight. The sleep summary retains its noon-to-noon compatibility window by default (or the wake-up-date window when the user selects the **Morning ends** sleep-attribution mode, issue #104), so use archive ownership for raw event reconstruction.
 
 Repeated query views merge only by original UUID. External records merge only by documented external identity. Similar values or timestamps remain separate records.
 
