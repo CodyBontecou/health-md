@@ -233,7 +233,7 @@ class GoogleDriveAuthorizationManager @Inject constructor(
     private fun extractPickerFileIds(bundle: Bundle?): List<String> {
         if (bundle == null) return emptyList()
         val acceptedKeys = setOf(
-            "pickerFileIds", "picker_file_ids", "PICKER_FILE_IDS",
+            "picked_file_ids", "pickerFileIds", "picker_file_ids", "PICKER_FILE_IDS",
             AuthorizationRequest.ResourceParameter.PICKER_FILE_IDS.name,
         )
         return acceptedKeys.flatMap { key ->
