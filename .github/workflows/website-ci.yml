@@ -68,6 +68,12 @@ jobs:
           npm --prefix docs-src ci
           npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" ci
 
+      - name: Test pinned Obsidian plugin source
+        run: |
+          npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" test
+          npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" run typecheck
+          npm --prefix "$GITHUB_WORKSPACE/.external/health-md-visualizations" run build
+
       - name: Sync visualizations from external plugin source
         run: npm run visualizations:sync
         env:
