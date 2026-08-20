@@ -578,8 +578,8 @@ impl RawReceiver {
         pointers: &[String],
     ) -> Result<RawReceiveArtifact, ClientError> {
         let journal = load_journal(&self.session_directory(job_id)?.join("journal.json"))?;
-        validate_complete_corpus(&self.layout, &journal)?;
-        assemble_extraction(&self.layout, &journal, pointers)
+        let source_versions = validate_complete_corpus(&self.layout, &journal)?;
+        assemble_extraction(&self.layout, &journal, pointers, &source_versions)
     }
 
     /// Materialize canonical extraction as one JSON value per line plus a receipt sidecar.
@@ -845,11 +845,12 @@ fn validate_open(open: &TransferOpen, journal: &RawJournal) -> Result<(), Client
 fn validate_complete_corpus(
     layout: &StorageLayout,
     journal: &RawJournal,
-) -> Result<(), ClientError> {
+) -> Result<BTreeMap<String, i64>, ClientError> {
     if journal.manifests.len() != journal.accepted.resolved_date_identifiers.len() {
         return Err(invalid("not every date has a manifest"));
     }
     let mut by_date: BTreeMap<&str, Vec<&TransferPartition>> = BTreeMap::new();
+    let mut source_versions = BTreeMap::new();
     let validation_directory = layout
         .corpus_sessions_dir()
         .join(journal.request.job_id.0.to_string().to_lowercase());
@@ -934,7 +935,7 @@ fn validate_complete_corpus(
             .end()
             .map_err(|_| invalid("logical day has trailing JSON"))?;
         if identity.schema != "healthmd.health_data"
-            || identity.schema_version != 7
+            || !matches!(identity.schema_version, 7 | 8)
             || identity.date != manifest.date
         {
             return Err(invalid("logical day identity does not match its manifest"));
@@ -964,8 +965,9 @@ fn validate_complete_corpus(
                 ));
             }
         }
+        source_versions.insert(manifest.date.clone(), identity.schema_version);
     }
-    Ok(())
+    Ok(source_versions)
 }
 
 struct BoundedWriter<W> {
@@ -1186,6 +1188,7 @@ fn assemble_extraction(
     layout: &StorageLayout,
     journal: &RawJournal,
     pointers: &[String],
+    source_versions: &BTreeMap<String, i64>,
 ) -> Result<RawReceiveArtifact, ClientError> {
     if journal.request.raw_profile != Some(RawProfile::HealthDataProjection) {
         return Err(invalid("job is not a canonical projection"));
@@ -1269,11 +1272,17 @@ fn assemble_extraction(
                 }
                 selections.push(selection);
             }
+            let source_version = source_versions
+                .get(&manifest.date)
+                .ok_or_else(|| invalid("validated source version is missing"))?;
+            if source.get("schema_version").and_then(Value::as_i64) != Some(*source_version) {
+                return Err(invalid("validated source version changed"));
+            }
             let projection = json!({
                 "source": {
-                    "schema": source.get("schema").cloned().unwrap_or(json!("healthmd.health_data")),
-                    "schema_version": source.get("schema_version").cloned().unwrap_or(json!(7)),
-                    "date": source.get("date").cloned().unwrap_or(json!(manifest.date)),
+                    "schema": source["schema"],
+                    "schema_version": source_version,
+                    "date": source["date"],
                     "raw_capture_status": source.get("raw_capture_status").cloned().unwrap_or(Value::Null)
                 },
                 "selections": selections
@@ -1303,6 +1312,10 @@ fn assemble_extraction(
             );
             day.insert("date".into(), json!(manifest.date));
             day.insert("status".into(), json!(manifest.status));
+            if let Some(source_version) = source_versions.get(&manifest.date) {
+                day.insert("source_schema".into(), json!("healthmd.health_data"));
+                day.insert("source_schema_version".into(), json!(source_version));
+            }
             if let Some(value) = &manifest.failure_code {
                 day.insert("failure_code".into(), json!(value));
             }
@@ -1343,12 +1356,13 @@ fn assemble_extraction(
         .map(|manifest| manifest.date.clone())
         .collect();
     let summary = capture_summary(&manifests)?;
-    let receipt = json!({
+    let distinct_source_versions: BTreeSet<_> = source_versions.values().copied().collect();
+    let mut receipt = json!({
         "protocol": "healthmd.extract_receipt",
         "protocol_version": 1,
         "status": status,
         "source_schema": "healthmd.health_data",
-        "source_schema_version": 7,
+        "source_schema_versions": distinct_source_versions,
         "selection": {
             "metric_ids": selection.metric_ids,
             "source_ids": selection.source_ids,
@@ -1368,6 +1382,9 @@ fn assemble_extraction(
         },
         "total_requested_days": dates.len()
     });
+    if distinct_source_versions.len() == 1 {
+        receipt["source_schema_version"] = json!(distinct_source_versions.first());
+    }
     output.write_all(b"],\"receipt\":").map_err(storage_error)?;
     output
         .write_all(&canonical_json(&receipt).map_err(|_| invalid("receipt JSON failed"))?)
@@ -1981,8 +1998,13 @@ mod tests {
     }
 
     #[test]
+    fn shipped_apple_daily_schema_versions_survive_raw_and_extract_receipts() {
+        assert_one_day_corpus_schema_version(7);
+        assert_one_day_corpus_schema_version(8);
+    }
+
     #[allow(clippy::too_many_lines)]
-    fn one_day_corpus_is_durable_and_assembled_as_json() {
+    fn assert_one_day_corpus_schema_version(source_schema_version: i64) {
         let temporary = TempDir::new().unwrap();
         let layout = StorageLayout {
             root: temporary.path().join("state"),
@@ -2040,7 +2062,7 @@ mod tests {
         };
         let payload = serde_json::to_vec_pretty(&json!({
             "schema": "healthmd.health_data",
-            "schema_version": 7,
+            "schema_version": source_schema_version,
             "date": "2026-07-23",
             "raw_capture_status": "complete"
         }))
@@ -2167,6 +2189,10 @@ mod tests {
             response["raw_result"]["days"][0]["health_data"]["schema"],
             "healthmd.health_data"
         );
+        assert_eq!(
+            response["raw_result"]["days"][0]["health_data"]["schema_version"],
+            source_schema_version
+        );
         let extraction = receiver.extraction(job_id.0, &["/schema".into()]).unwrap();
         let extraction: Value =
             serde_json::from_slice(&fs::read(extraction.path).unwrap()).unwrap();
@@ -2174,6 +2200,22 @@ mod tests {
         assert_eq!(
             extraction["projections"][0]["selections"][0]["value"],
             "healthmd.health_data"
+        );
+        assert_eq!(
+            extraction["projections"][0]["source"]["schema_version"],
+            source_schema_version
+        );
+        assert_eq!(
+            extraction["receipt"]["source_schema_version"],
+            source_schema_version
+        );
+        assert_eq!(
+            extraction["receipt"]["source_schema_versions"],
+            json!([source_schema_version])
+        );
+        assert_eq!(
+            extraction["receipt"]["days"][0]["source_schema_version"],
+            source_schema_version
         );
         let jsonl = receiver
             .extraction_jsonl(job_id.0, &["/schema".into()])
@@ -2187,6 +2229,11 @@ mod tests {
         let receipt: Value =
             serde_json::from_slice(&fs::read(jsonl.receipt_path).unwrap()).unwrap();
         assert_eq!(receipt["protocol"], "healthmd.extract_receipt");
+        assert_eq!(receipt["source_schema_version"], source_schema_version);
+        assert_eq!(
+            receipt["days"][0]["source_schema_version"],
+            source_schema_version
+        );
         let canonical_jsonl = receiver.extraction_jsonl(job_id.0, &[]).unwrap();
         let canonical_data = fs::read_to_string(canonical_jsonl.path).unwrap();
         assert_eq!(canonical_data.lines().count(), 1);

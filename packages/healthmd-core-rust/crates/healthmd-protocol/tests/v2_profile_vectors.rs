@@ -30,7 +30,10 @@ struct ProfilePolicyVectors {
 fn vectors() -> ProfilePolicyVectors {
     let vectors: ProfilePolicyVectors =
         serde_json::from_str(include_str!("fixtures/profile-policy-reference.json")).unwrap();
-    assert_eq!(vectors.schema, "healthmd.direct_v2_profile_policy_reference");
+    assert_eq!(
+        vectors.schema,
+        "healthmd.direct_v2_profile_policy_reference"
+    );
     assert_eq!(vectors.schema_version, 1);
     vectors
 }
@@ -75,12 +78,9 @@ fn unnamed_reference_request() -> ExportRequest {
 fn canonical_request_json_matches_frozen_vector() {
     let vectors = vectors();
     let canonical = canonical_json(&profile_request()).unwrap();
-    let frozen = STANDARD
-        .decode(vectors.request_json_base64)
-        .unwrap();
+    let frozen = STANDARD.decode(vectors.request_json_base64).unwrap();
     assert_eq!(
-        canonical,
-        frozen,
+        canonical, frozen,
         "canonical profile request bytes must match the frozen vector"
     );
 }
@@ -97,9 +97,7 @@ fn envelope_framing_matches_frozen_vector() {
     let vectors = vectors();
     let envelope = Envelope::new(Message::ExportRequest(profile_request()));
     let canonical = canonical_json(&envelope).unwrap();
-    let frozen = STANDARD
-        .decode(vectors.envelope_json_base64)
-        .unwrap();
+    let frozen = STANDARD.decode(vectors.envelope_json_base64).unwrap();
     assert_eq!(canonical, frozen);
 
     let decoded: Envelope = serde_json::from_slice(&frozen).unwrap();
