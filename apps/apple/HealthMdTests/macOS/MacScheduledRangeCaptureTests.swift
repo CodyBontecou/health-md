@@ -30,6 +30,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         ])
         XCTAssertEqual(captured.dailyOutputOwnerDates, ["2026-03-15"])
         XCTAssertEqual(captured.selectedRecordDates, [selectedDate])
+        XCTAssertEqual(captured.selectedRenderableDates, [selectedDate])
         XCTAssertTrue(captured.failures.isEmpty)
 
         let requestedRange = try HealthRollupRangeRequest(
@@ -64,6 +65,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         XCTAssertEqual(captured.records.count, 1)
         XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
         XCTAssertEqual(captured.selectedRecordDates, [selectedDate])
+        XCTAssertTrue(captured.selectedRenderableDates.isEmpty)
         XCTAssertTrue(captured.failures.isEmpty)
     }
 
@@ -85,6 +87,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         }
 
         XCTAssertEqual(captured.selectedRecordDates, [firstDate, emptyDate])
+        XCTAssertEqual(captured.selectedRenderableDates, [firstDate])
         XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
         XCTAssertTrue(captured.failures.isEmpty)
         let requestedRange = try HealthRollupRangeRequest(
@@ -147,6 +150,108 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         XCTAssertEqual(sources?.map { ownerDate($0.date, timeZone: timeZone) }, [
             "2026-03-13", "2026-03-14", "2026-03-15",
         ])
+    }
+
+    func testResidualRangeRetryRestoresPreviouslySuccessfulEmptyCachedDay() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let priorDate = try date(2026, 3, 14, timeZone: timeZone)
+        let residualDate = try date(2026, 3, 15, timeZone: timeZone)
+        let emptyPrior = HealthData(date: priorDate, timeContext: ExportFixtures.timeContext)
+        let residual = record(on: residualDate)
+        let settings = makeSettings(summaryOnly: false)
+
+        let captured = MacScheduledRangeCapture.capture(
+            selectedDates: [residualDate],
+            rollupRequestedDates: [priorDate, residualDate],
+            settings: settings,
+            timeZone: timeZone,
+            latestAllowedDate: residualDate
+        ) { requestedDate in
+            switch ownerDate(requestedDate, timeZone: timeZone) {
+            case "2026-03-14": return emptyPrior
+            case "2026-03-15": return residual
+            default: return nil
+            }
+        }
+
+        XCTAssertEqual(captured.records.map { ownerDate($0.date, timeZone: timeZone) }, [
+            "2026-03-14", "2026-03-15",
+        ])
+        XCTAssertEqual(captured.selectedRecordDates, [residualDate])
+        XCTAssertEqual(captured.selectedRenderableDates, [residualDate])
+        XCTAssertTrue(captured.failures.isEmpty)
+    }
+
+    func testPinnedAndLegacyScheduledRangesOverLimitFallBackToDailyWithWarning() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let start = try date(2000, 1, 1, timeZone: timeZone)
+        let end = try date(2027, 5, 19, timeZone: timeZone)
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
+        XCTAssertEqual(dates.count, 10_001)
+        let settings = makeSettings(summaryOnly: true)
+        let legacySnapshot = ExportSettingsSnapshot.from(
+            settings,
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
+        var pinnedSnapshot = legacySnapshot
+        pinnedSnapshot.appleExportEnginePin = try makeSyntheticAppleExportEnginePin(
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
+
+        for snapshot in [legacySnapshot, pinnedSnapshot] {
+            let availability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+                snapshot,
+                requestedDates: dates,
+                calendarTimeZone: timeZone
+            )
+            let effective = availability.snapshot.makeAdvancedExportSettings()
+            XCTAssertFalse(effective.generateRangeSummary)
+            XCTAssertFalse(effective.summaryOnlyModeEnabled)
+            XCTAssertEqual(effective.exportFormats, [.json])
+            XCTAssertEqual(availability.warning?.dataType, "Range Summary")
+            XCTAssertEqual(
+                availability.warning?.errorDescription,
+                HealthRollupRangeRequest.dayLimitUnavailableMessage
+            )
+            XCTAssertEqual(
+                availability.snapshot.appleExportEnginePin,
+                snapshot.appleExportEnginePin
+            )
+        }
+    }
+
+    func testScheduledResultReconciliationLeavesOnlyUncapturedResidualDate() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let firstDate = try date(2026, 3, 13, timeZone: timeZone)
+        let emptyDate = try date(2026, 3, 14, timeZone: timeZone)
+        let missingDate = try date(2026, 3, 15, timeZone: timeZone)
+
+        let result = MacLocalExportResultReconciliation.makeResult(
+            requestedDates: [firstDate, emptyDate, missingDate],
+            successCount: 1,
+            failedDateDetails: [
+                FailedDateDetail(date: emptyDate, reason: .noHealthData),
+                FailedDateDetail(date: missingDate, reason: .noHealthData),
+            ],
+            partialFailures: [],
+            formatsPerDate: 1,
+            completedDates: [firstDate, emptyDate],
+            summaryOnly: false,
+            capturedRequestedDates: [firstDate, emptyDate],
+            hasRenderableSummaryData: true,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(
+            result.remainingDates(from: [firstDate, emptyDate, missingDate], calendar: calendar),
+            [missingDate]
+        )
+        XCTAssertEqual(result.completedDates, [firstDate, emptyDate])
+        XCTAssertEqual(result.completedDateCount, 2)
     }
 
     func testArchiveResidualRetryRequiresEveryOriginalSourceBeforeReplacement() throws {
