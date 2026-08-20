@@ -262,7 +262,7 @@ final class MacExportJobExecutor {
             return .failure(validationFailure)
         }
 
-        let dailyExportOperation: ConnectedMacDailyExportOperation
+        var dailyExportOperation: ConnectedMacDailyExportOperation
         do {
             dailyExportOperation = try ConnectedMacDailyExportOperation.resolve(
                 settingsSnapshot: job.settingsSnapshot,
@@ -274,7 +274,6 @@ final class MacExportJobExecutor {
             return .failure(Self.engineResolutionFailure(jobID: job.jobID, error: error))
         }
 
-        let settings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
         guard let originalRequestedDates = Self.validatedOriginalRangeDates(
             job.originalRequestedDates,
             originalCalendarTimeZoneIdentifier: job.originalCalendarTimeZoneIdentifier,
@@ -286,6 +285,18 @@ final class MacExportJobExecutor {
                 message: "Mac export original range authority is missing or inconsistent. No files were written."
             ))
         }
+        let originalSettings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        let originalCalendar = Self.sourceCalendar(for: originalSettings)
+        let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+            dailyExportOperation.settingsSnapshot,
+            requestedDates: originalRequestedDates,
+            calendarTimeZone: originalCalendar.timeZone
+        )
+        dailyExportOperation = ConnectedMacDailyExportOperation(
+            settingsSnapshot: rangeAvailability.snapshot,
+            surface: dailyExportOperation.surface
+        )
+        let settings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
         do {
             try vaultManager.preflightExportDestinations(
                 settings: settings,
@@ -308,7 +319,7 @@ final class MacExportJobExecutor {
         var totalFilesWritten = 0
         var looseAggregateFileCount = 0
         var individualEntryFileCount = 0
-        var individualEntryCoverageGaps: [ExportPartialFailure] = []
+        var individualEntryCoverageGaps: [ExportPartialFailure] = rangeAvailability.warning.map { [$0] } ?? []
         var dataDictionaryFileCount = 0
         var rollupFileCount = 0
         var dataDictionaryWritten = false
@@ -607,10 +618,9 @@ final class MacExportJobExecutor {
 
         if settings.summaryOnlyModeEnabled && totalFilesWritten == 0 && failedDateDetails.isEmpty {
             successCount = 0
-            failedDateDetails.append(FailedDateDetail(
-                date: requestedDates.first ?? Date(),
-                reason: .noHealthData,
-                errorDetails: "No roll-up summary data was available for the selected period."
+            failedDateDetails.append(contentsOf: ExportOrchestrator.terminalNoDataFailures(
+                for: requestedDates,
+                calendar: operationCalendar
             ))
         }
 
@@ -729,7 +739,7 @@ final class MacExportJobExecutor {
                 message: "Mac export stream dates or counters were malformed or inconsistent."
             ))
         }
-        let dailyExportOperation: ConnectedMacDailyExportOperation
+        var dailyExportOperation: ConnectedMacDailyExportOperation
         do {
             dailyExportOperation = try ConnectedMacDailyExportOperation.resolve(
                 settingsSnapshot: start.settingsSnapshot,
@@ -751,6 +761,17 @@ final class MacExportJobExecutor {
                 message: "Mac export stream original range authority is missing or inconsistent. No files were written."
             ))
         }
+        let originalSettings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        let originalCalendar = Self.sourceCalendar(for: originalSettings)
+        let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+            dailyExportOperation.settingsSnapshot,
+            requestedDates: originalRequestedDates,
+            calendarTimeZone: originalCalendar.timeZone
+        )
+        dailyExportOperation = ConnectedMacDailyExportOperation(
+            settingsSnapshot: rangeAvailability.snapshot,
+            surface: dailyExportOperation.surface
+        )
         do {
             try vaultManager.preflightExportDestinations(
                 settings: dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings(),
@@ -774,7 +795,8 @@ final class MacExportJobExecutor {
             formatsPerDate: Self.looseFormatsPerDate(
                 for: dailyExportOperation.settingsSnapshot
             ),
-            dailyExportOperation: dailyExportOperation
+            dailyExportOperation: dailyExportOperation,
+            individualEntryCoverageGaps: rangeAvailability.warning.map { [$0] } ?? []
         )
 
         sendProgress(
@@ -1308,10 +1330,9 @@ final class MacExportJobExecutor {
 
         if settings.summaryOnlyModeEnabled && session.totalFilesWritten == 0 && session.failedDateDetails.isEmpty {
             session.successCount = 0
-            session.failedDateDetails.append(FailedDateDetail(
-                date: session.requestedDates.first ?? session.start.dateRangeStart,
-                reason: .noHealthData,
-                errorDetails: "No roll-up summary data was available for the selected period."
+            session.failedDateDetails.append(contentsOf: ExportOrchestrator.terminalNoDataFailures(
+                for: session.requestedDates,
+                calendar: operationCalendar
             ))
         }
 

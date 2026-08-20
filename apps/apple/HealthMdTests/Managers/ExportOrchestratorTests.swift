@@ -455,6 +455,7 @@ final class ExportOrchestratorTests: XCTestCase {
             vaultPath: "/tmp/ExportOrchestratorRangeLimitVault"
         )
         let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.summaryOnlyExport = true
         settings.includeGranularData = false
         let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         settings.exportTimeZoneOverride = timezone
@@ -1102,7 +1103,8 @@ final class ExportOrchestratorTests: XCTestCase {
         )
 
         XCTAssertEqual(result.successCount, 0)
-        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
+        XCTAssertEqual(result.failedDateDetails.map(\.date), dates)
         XCTAssertEqual(Set(result.completedDates ?? []), Set(dates))
         XCTAssertTrue(result.didCompleteAllRequestedDates)
     }

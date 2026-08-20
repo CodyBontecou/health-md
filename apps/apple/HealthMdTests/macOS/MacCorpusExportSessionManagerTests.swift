@@ -911,6 +911,143 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertTrue(rangeContent.contains("\"days_counted\" : 1"))
     }
 
+    func testPinnedConnectedMultiDateAllEmptySummaryOnlyIsTerminalExactlyOncePerDate() async throws {
+        let dates = [Self.day(2026, 2, 10), Self.day(2026, 2, 11)]
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateRangeSummary = true
+        settings.summaryOnlyExport = true
+        let snapshot = try await makePinnedSnapshot(
+            engine: .rust,
+            settings: settings,
+            record: HealthData(date: dates[0])
+        )
+        let context = try makeContext(
+            requestedDates: dates,
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: "UTC",
+            transferDates: dates
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        for date in dates { assembler.append(try emptyHealthItem(date: date)) }
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: vaultManager
+        )
+        guard case .files(let result, let acknowledgement) = outcome else {
+            return XCTFail("Expected terminal no-data result")
+        }
+        XCTAssertEqual(result.status, .failure)
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData, .noHealthData])
+        XCTAssertEqual(result.failedDateDetails.map(\.date), dates)
+        XCTAssertEqual(result.completedDates, dates)
+        XCTAssertEqual(acknowledgement.completedDates, dates)
+        XCTAssertEqual(result.totalFilesWritten, 0)
+    }
+
+    func testPinnedConnectedSummaryOnlyRangeOverTenThousandDaysFallsBackToDailyOutput() async throws {
+        let requestedDate = Self.day(2026, 5, 12)
+        let originalDates = [Self.day(2000, 1, 1), Self.day(2027, 5, 20)]
+        let record = HealthData(date: requestedDate, activity: ActivityData(steps: 4_321))
+        let settings = makeSettings()
+        settings.exportFormats = [.json]
+        settings.includeGranularData = false
+        settings.generateRangeSummary = true
+        settings.summaryOnlyExport = true
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
+        let snapshot = try await makePinnedSnapshot(engine: .rust, settings: settings, record: record)
+        let effectiveSnapshot = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+            snapshot,
+            requestedDates: originalDates,
+            calendarTimeZone: TimeZone(identifier: "UTC")!
+        ).snapshot
+        XCTAssertTrue(AppleLooseDailyExportPlanner.supports(
+            settingsSnapshot: effectiveSnapshot,
+            surface: .connectedReceivedRangeWithoutSideEffects
+        ))
+        let context = try makeContext(
+            requestedDates: [requestedDate],
+            settings: settings,
+            settingsSnapshot: snapshot,
+            sourceTimeZoneIdentifier: "UTC",
+            transferDates: [originalDates[0], requestedDate, originalDates[1]],
+            originalRequestedDates: originalDates
+        )
+        let assembler = try ConnectedCorpusPartitionAssembler(
+            sessionID: context.session.sessionID,
+            jobID: context.session.jobID,
+            targetBytes: context.session.partitionTargetBytes
+        )
+        assembler.append(try emptyHealthItem(date: originalDates[0], isRequestedDate: false))
+        assembler.append(try healthItem(date: requestedDate))
+        assembler.append(try emptyHealthItem(date: originalDates[1], isRequestedDate: false))
+        let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
+        defer { partition.remove() }
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+        let open = ConnectedCorpusTransferOpen(
+            session: context.session,
+            partition: partition.descriptor,
+            exportManifest: context.manifest
+        )
+        XCTAssertEqual(manager.open(open, vaultManager: vaultManager).disposition, .accept)
+        try await manager.applyPartition(
+            fileURL: partition.file.url,
+            descriptor: partition.descriptor,
+            vaultManager: vaultManager
+        )
+
+        let outcome = try await manager.finalize(
+            ConnectedCorpusTransferFinalize(
+                sessionID: context.session.sessionID,
+                jobID: context.session.jobID,
+                requestFingerprint: context.session.requestFingerprint,
+                partitionCount: 1,
+                totalByteCount: partition.descriptor.byteCount,
+                finalPartitionSHA256: partition.descriptor.sha256
+            ),
+            vaultManager: vaultManager
+        )
+        guard case .files(let result, _) = outcome else {
+            return XCTFail("Expected nonterminal range warning")
+        }
+        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.formatsPerDate, 1)
+        XCTAssertEqual(result.partialFailures?.map(\.dataType), ["Range Summary"])
+        XCTAssertTrue(result.partialFailures?.first?.errorDescription.contains("10,000 days") == true)
+        XCTAssertNotNil(fileSystem.files[vaultRoot.appendingPathComponent("Health/2026-05-12.json").path])
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
     func testPinnedConnectedRangeRetainsPublishedPlanAfterPostRenameSyncFailure() async throws {
         let interrupted = try await prepareInterruptedPinnedRange(
             failAfterDictionaryWrite: false,
@@ -3133,6 +3270,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         settingsSnapshot suppliedSettingsSnapshot: ExportSettingsSnapshot? = nil,
         sourceTimeZoneIdentifier: String? = nil,
         transferDates suppliedTransferDates: [Date]? = nil,
+        originalRequestedDates: [Date]? = nil,
         selectedSourceIDs: [String]? = nil
     ) throws -> (
         manifest: ConnectedCorpusExportManifest,
@@ -3164,6 +3302,12 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             dateRangeStart: requestedDates.first!,
             dateRangeEnd: requestedDates.last!,
             requestedDates: requestedDates,
+            originalRequestedDates: originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: originalRequestedDates == nil
+                ? nil
+                : (suppliedSettingsSnapshot?.calendarTimeZoneIdentifier
+                    ?? sourceTimeZoneIdentifier
+                    ?? settings.exportTimeZoneOverride?.identifier),
             requestedDateIdentifiers: requestedDateIdentifiers,
             transferDates: suppliedTransferDates ?? requestedDates,
             settingsSnapshot: suppliedSettingsSnapshot
@@ -3226,6 +3370,25 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             sourceDate: date,
             isRequestedDate: isRequestedDate,
             itemID: itemID
+        )
+    }
+
+    private func emptyHealthItem(
+        date: Date,
+        isRequestedDate: Bool = true
+    ) throws -> ConnectedCorpusSpoolItem {
+        try ConnectedCorpusSpoolItem.encode(
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: date,
+                isRequestedDate: isRequestedDate,
+                record: HealthData(date: date),
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            kind: .macHealthDay,
+            sourceDate: date,
+            isRequestedDate: isRequestedDate,
+            itemID: UUID()
         )
     }
 

@@ -786,16 +786,6 @@ struct ExportOrchestrator {
                     requestedDates: immutableRollupDates,
                     calendarTimeZone: sourceTimeZone
                 ))
-                if settingsSnapshot.summaryOnlyExport {
-                    return ExportResult(
-                        successCount: 0,
-                        totalCount: totalCount,
-                        failedDateDetails: [],
-                        partialFailures: partialFailures,
-                        formatsPerDate: 0,
-                        completedDates: dates
-                    )
-                }
                 // The range artifact is independently bounded. Keep the frozen daily renderer
                 // authority and continue the residual daily request without asking core for v9.
                 effectiveSettingsSnapshot.generateRangeSummary = false
@@ -939,11 +929,7 @@ struct ExportOrchestrator {
 
         guard !records.isEmpty, hasRenderableCapture else {
             if isSummaryOnly && partialFailures.isEmpty && totalCount > 0 {
-                failures.append(FailedDateDetail(
-                    date: dates.first ?? Date(),
-                    reason: .noHealthData,
-                    errorDetails: "No roll-up summary data was available for the selected period."
-                ))
+                failures.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
                 completedDates = dates
             }
             return ExportResult(
@@ -985,11 +971,7 @@ struct ExportOrchestrator {
                     && partialFailures.isEmpty
                     && totalCount > 0
                 if isTerminalNoData {
-                    failures.append(FailedDateDetail(
-                        date: dates.first ?? Date(),
-                        reason: .noHealthData,
-                        errorDetails: "No roll-up summary data was available for the selected period."
-                    ))
+                    failures.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
                 }
                 if filesWritten > 0 || isTerminalNoData {
                     completedDates = dates
@@ -1670,11 +1652,7 @@ struct ExportOrchestrator {
             && failedDateDetails.isEmpty
             && partialFailures.isEmpty
         if isTerminalNoData {
-            failedDateDetails.append(FailedDateDetail(
-                date: dates.first ?? Date(),
-                reason: .noHealthData,
-                errorDetails: "No roll-up summary data was available for the selected period."
-            ))
+            failedDateDetails.append(contentsOf: terminalNoDataFailures(for: dates, calendar: calendar))
         }
 
         return ExportResult(
@@ -1816,6 +1794,57 @@ struct ExportOrchestrator {
                 )
             )
             return 0
+        }
+    }
+
+    static func settingsByDisablingUnavailableRangeSummary(
+        _ snapshot: ExportSettingsSnapshot,
+        requestedDates: [Date],
+        calendarTimeZone: TimeZone
+    ) -> (snapshot: ExportSettingsSnapshot, warning: ExportPartialFailure?) {
+        guard snapshot.generateRangeSummary else { return (snapshot, nil) }
+        do {
+            _ = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: Set(requestedDates.map {
+                    HealthKitDailyOwnershipMetadata.ownerDate(
+                        for: $0,
+                        calendarTimeZoneIdentifier: calendarTimeZone.identifier
+                    )
+                }),
+                calendarTimeZoneIdentifier: calendarTimeZone.identifier
+            )
+            return (snapshot, nil)
+        } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+            var effectiveSnapshot = snapshot
+            effectiveSnapshot.generateRangeSummary = false
+            return (
+                effectiveSnapshot,
+                rangeSummaryUnavailableFailure(
+                    requestedDates: requestedDates,
+                    calendarTimeZone: calendarTimeZone
+                )
+            )
+        } catch {
+            // Preserve the frozen request for the renderer to report any non-limit validation
+            // failure through its existing terminal path.
+            return (snapshot, nil)
+        }
+    }
+
+    static func terminalNoDataFailures(
+        for requestedDates: [Date],
+        calendar: Calendar = .current,
+        errorDetails: String = "No roll-up summary data was available for the selected period."
+    ) -> [FailedDateDetail] {
+        var seen: Set<Date> = []
+        return requestedDates.compactMap { date in
+            let day = calendar.startOfDay(for: date)
+            guard seen.insert(day).inserted else { return nil }
+            return FailedDateDetail(
+                date: date,
+                reason: .noHealthData,
+                errorDetails: errorDetails
+            )
         }
     }
 

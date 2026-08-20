@@ -565,14 +565,23 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                     pin: pin
                 )
             } else {
-                rustPlan = try Self.filterPureRustRollupPlan(
+                let dailyFormatsByPath = try Self.pureRustDailyFormatsByPath(
+                    preparedExports: preparedExports,
+                    dailyOutputOwnerDates: dailyOutputOwnerDates,
+                    settings: frozenSettings,
+                    healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
+                    calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                )
+                rustPlan = try Self.filterPureRustPlan(
                     completeRustPlan,
+                    dailyPaths: Set(dailyFormatsByPath.keys),
                     healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
                     pin: pin
                 )
-                expectedOutputs = try Self.pureRustRollupOutputs(
+                expectedOutputs = try Self.pureRustOutputs(
                     from: rustPlan,
                     semanticResult: semanticResult,
+                    dailyFormatsByPath: dailyFormatsByPath,
                     settings: settingsSnapshot,
                     healthSubfolder: settingsSnapshot.healthSubfolder ?? ""
                 )
@@ -695,7 +704,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               !settingsSnapshot.exportFormats.isEmpty,
               settingsSnapshot.exportFormats.isSubset(of: Set(ExportFormat.allCases)),
               !settingsSnapshot.archiveExportFiles,
-              (!settingsSnapshot.summaryOnlyExport || (isSummaryOnly && isRangeSurface)),
+              (!settingsSnapshot.summaryOnlyExport
+                || (isSummaryOnly && isRangeSurface)
+                || (!hasConfiguredRollups && isRangeSurface)),
               !settingsSnapshot.includeGranularData,
               (!hasConfiguredRollups || isRangeSurface),
               !settingsSnapshot.dailyNoteInjection.enabled,
@@ -852,13 +863,45 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         )
     }
 
-    private static func filterPureRustRollupPlan(
+    private static func pureRustDailyFormatsByPath(
+        preparedExports: [PreparedHealthDataExport],
+        dailyOutputOwnerDates: Set<String>,
+        settings: AdvancedExportSettings,
+        healthSubfolder: String,
+        calendarTimeZoneIdentifier: String
+    ) throws -> [String: ExportFormat] {
+        let root = URL(fileURLWithPath: "/__HealthMdPlanningRoot__", isDirectory: true)
+        var formatsByPath: [String: ExportFormat] = [:]
+        for preparedExport in preparedExports {
+            let ownerDate = HealthKitDailyOwnershipMetadata.ownerDate(
+                for: preparedExport.filteredData.date,
+                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+            )
+            guard dailyOutputOwnerDates.contains(ownerDate) else { continue }
+            for target in try ExportPathPlanner.aggregateOutputTargets(
+                vaultURL: root,
+                healthSubfolder: healthSubfolder,
+                settings: settings,
+                date: preparedExport.filteredData.date
+            ) {
+                guard formatsByPath.updateValue(target.format, forKey: target.relativePath) == nil else {
+                    throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                }
+            }
+        }
+        return formatsByPath
+    }
+
+    private static func filterPureRustPlan(
         _ plan: NativeExportArtifactPlan,
+        dailyPaths: Set<String>,
         healthSubfolder: String,
         pin: AppleExportEnginePin
     ) throws -> NativeExportArtifactPlan {
         let prefix = rollupPathPrefix(healthSubfolder: healthSubfolder)
-        let artifacts = plan.artifacts.filter { $0.relativePath.hasPrefix(prefix) }
+        let artifacts = plan.artifacts.filter {
+            dailyPaths.contains($0.relativePath) || $0.relativePath.hasPrefix(prefix)
+        }
         return try NativeExportArtifactPlan(
             artifactPlanVersion: plan.artifactPlanVersion,
             requestID: plan.requestID,
@@ -870,9 +913,10 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         )
     }
 
-    private static func pureRustRollupOutputs(
+    private static func pureRustOutputs(
         from plan: NativeExportArtifactPlan,
         semanticResult: Data,
+        dailyFormatsByPath: [String: ExportFormat],
         settings: ExportSettingsSnapshot,
         healthSubfolder: String
     ) throws -> [ExpectedOutput] {
@@ -910,18 +954,21 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 }
             }
         }
-        guard plan.artifacts.count == expectedFormatsByPath.count else {
+        guard plan.artifacts.count == expectedFormatsByPath.count + dailyFormatsByPath.count else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         return try plan.artifacts.map { artifact in
+            let dailyFormat = dailyFormatsByPath[artifact.relativePath]
+            let rollupFormat = expectedFormatsByPath[artifact.relativePath]
             guard artifact.role == .file,
-                  let format = expectedFormatsByPath[artifact.relativePath],
+                  let format = dailyFormat ?? rollupFormat,
+                  (dailyFormat == nil) != (rollupFormat == nil),
                   artifact.mediaType == mediaType(for: format),
                   artifact.writeMode == .overwrite else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
             return ExpectedOutput(
-                kind: .rollup,
+                kind: dailyFormat == nil ? .rollup : .daily,
                 format: format,
                 relativePath: artifact.relativePath,
                 nativeContent: nil

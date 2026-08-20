@@ -79,14 +79,16 @@ struct IPhoneDirectGeneratedFile: Codable, Equatable {
 
 /// Durable state for generated-file direct exports only. Raw and canonical direct journals retain
 /// their independent models. V1 is fully legacy, v2 may carry an export-engine pin, v3 may
-/// carry a direct-protocol pin, and v4 stores captured days as bounded application-item streams.
+/// carry a direct-protocol pin, v4 stores captured days as bounded application-item streams, v5
+/// freezes original range authority, and v6 persists terminal derived-output reconciliation.
 struct IPhoneDirectFileJournal: Codable {
     static let legacyVersion = 1
     static let exportEnginePinVersion = 2
     static let directProtocolPinVersion = 3
     static let fileBackedCaptureVersion = 4
     static let immutableRangeRequestVersion = 5
-    static let currentVersion = immutableRangeRequestVersion
+    static let derivedOutputReconciliationVersion = 6
+    static let currentVersion = derivedOutputReconciliationVersion
 
     let version: Int
     let request: DirectExportRequest
@@ -107,6 +109,9 @@ struct IPhoneDirectFileJournal: Codable {
     var partitions: [DirectTransferPartition]
     var committedPartitionCount: Int
     var committedBytes: Int64
+    var derivedOutputPartialFailures: [ExportPartialFailure]
+    var terminalNoDataDateIdentifiers: [String]
+    var generationCompleted: Bool
     var state: String
     var completionRecorded: Bool
     var updatedAt: Date
@@ -133,6 +138,9 @@ struct IPhoneDirectFileJournal: Codable {
         partitions: [DirectTransferPartition],
         committedPartitionCount: Int,
         committedBytes: Int64,
+        derivedOutputPartialFailures: [ExportPartialFailure] = [],
+        terminalNoDataDateIdentifiers: [String] = [],
+        generationCompleted: Bool = false,
         state: String,
         completionRecorded: Bool,
         updatedAt: Date
@@ -160,6 +168,9 @@ struct IPhoneDirectFileJournal: Codable {
         self.partitions = partitions
         self.committedPartitionCount = committedPartitionCount
         self.committedBytes = committedBytes
+        self.derivedOutputPartialFailures = derivedOutputPartialFailures
+        self.terminalNoDataDateIdentifiers = terminalNoDataDateIdentifiers
+        self.generationCompleted = generationCompleted
         self.state = state
         self.completionRecorded = completionRecorded
         self.updatedAt = updatedAt
@@ -199,6 +210,18 @@ struct IPhoneDirectFileJournal: Codable {
         partitions = try container.decode([DirectTransferPartition].self, forKey: .partitions)
         committedPartitionCount = try container.decode(Int.self, forKey: .committedPartitionCount)
         committedBytes = try container.decode(Int64.self, forKey: .committedBytes)
+        derivedOutputPartialFailures = try container.decodeIfPresent(
+            [ExportPartialFailure].self,
+            forKey: .derivedOutputPartialFailures
+        ) ?? []
+        terminalNoDataDateIdentifiers = try container.decodeIfPresent(
+            [String].self,
+            forKey: .terminalNoDataDateIdentifiers
+        ) ?? []
+        generationCompleted = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .generationCompleted
+        ) ?? false
         state = try container.decode(String.self, forKey: .state)
         completionRecorded = try container.decodeIfPresent(Bool.self, forKey: .completionRecorded) ?? false
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)

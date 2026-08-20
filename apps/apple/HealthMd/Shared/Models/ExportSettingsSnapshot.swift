@@ -454,10 +454,9 @@ nonisolated enum ApplePureRustAuthorityAdmission {
         settings: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
-        guard settings.summaryOnlyExport,
-              settings.generateRangeSummary else {
-            return false
-        }
+        let isRangeSummaryOnly = settings.summaryOnlyExport && settings.generateRangeSummary
+        let isRangeLimitDailyFallback = settings.summaryOnlyExport && !settings.generateRangeSummary
+        guard isRangeSummaryOnly || isRangeLimitDailyFallback else { return false }
         switch surface {
         case .localVaultRangeWithoutSideEffects,
              .directGeneratedFilesWithoutSideEffects,
