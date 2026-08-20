@@ -10,7 +10,7 @@ final class ExportProfileCardSummaryTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: ObservableObject-backed settings use
     // Combine machinery; retain for the process lifetime to avoid
     // platform-specific deinit aborts while the test process tears down
-    // (matches the pattern in ExportProfileStoreTests).
+    // JUSTIFICATION: matches the process-lifetime pattern in ExportProfileStoreTests.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
     override func setUp() {
