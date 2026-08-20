@@ -286,6 +286,7 @@ class ExportViewModelTest {
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
                 googleDriveDestinationId: String?,
+                googleDriveProfileId: String?,
             ): ExportResult {
                 rawExportCalls++
                 return ExportResult(1, 1, target = target)

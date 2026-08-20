@@ -224,7 +224,9 @@ class GoogleDriveAuthorizationManager @Inject constructor(
             GoogleDriveAuthorizationGrant(
                 accessToken = token,
                 accountName = account.name,
-                accountLabel = signIn.displayName ?: signIn.email ?: "Google account",
+                // The exact Account name stays only in encrypted authority storage. Display
+                // name/email never enters destination JSON, history, analytics, or backups.
+                accountLabel = "Google account",
                 selectedFolderIds = folderIds,
             ),
         )

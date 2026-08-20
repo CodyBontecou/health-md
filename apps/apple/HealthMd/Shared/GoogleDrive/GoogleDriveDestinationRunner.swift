@@ -129,6 +129,14 @@ final class GoogleDriveDestinationRunner {
         await journalStore.contains(operationID: operationID)
     }
 
+    func recoveryJournal(operationID: UUID) async throws -> GoogleDriveOperationJournal {
+        try await journalStore.prune()
+        guard !(await journalStore.isAbandoned(operationID: operationID)) else {
+            throw GoogleDriveError(.ambiguousCommit)
+        }
+        return try await journalStore.load(operationID: operationID)
+    }
+
     func hasRecoverableJournal(operationID: UUID) async throws -> Bool {
         try await journalStore.prune()
         guard !(await journalStore.isAbandoned(operationID: operationID)) else {
@@ -765,6 +773,10 @@ nonisolated enum GoogleDriveFinalByteMerger {
         case .overwrite:
             return fragment
         case .append:
+            guard String(data: baseline, encoding: .utf8) != nil,
+                  String(data: fragment, encoding: .utf8) != nil else {
+                throw GoogleDriveError(.remoteConflict)
+            }
             let separator = Data("\n\n".utf8)
             let block = separator + fragment
             if baseline == fragment || baseline.suffix(block.count) == block { return baseline }

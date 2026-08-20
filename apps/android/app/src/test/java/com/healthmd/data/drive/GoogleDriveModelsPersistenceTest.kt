@@ -27,6 +27,8 @@ class GoogleDriveModelsPersistenceTest {
     fun `configuration requires a nonblank public client id`() {
         assertThat(GoogleDriveConfiguration.isConfigured("")).isFalse()
         assertThat(GoogleDriveConfiguration.isConfigured("   ")).isFalse()
+        assertThat(GoogleDriveConfiguration.isConfigured("$(GOOGLE_DRIVE_ANDROID_CLIENT_ID)")).isFalse()
+        assertThat(GoogleDriveConfiguration.isConfigured("000000-example.apps.googleusercontent.com")).isFalse()
         assertThat(GoogleDriveConfiguration.isConfigured("android-client.apps.googleusercontent.com")).isTrue()
     }
 

@@ -222,6 +222,11 @@ final class GoogleDriveFoundationTests: XCTestCase {
             try GoogleDriveFinalByteMerger.merge(baseline: appended, fragment: Data("new".utf8), intent: .append),
             appended
         )
+        XCTAssertThrowsError(try GoogleDriveFinalByteMerger.merge(
+            baseline: Data([0xff, 0xfe]),
+            fragment: Data("new".utf8),
+            intent: .append
+        ))
 
         let existing = "My preamble\n\n## Sleep\nold\n\n## Notes\nkeep\n"
         let generated = "Generated preamble\n\n## Sleep\nnew\n"

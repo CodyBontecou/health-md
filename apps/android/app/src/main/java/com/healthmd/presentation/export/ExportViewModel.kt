@@ -445,6 +445,9 @@ class ExportViewModel @Inject constructor(
 
             val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
+            val googleDriveOperationId = if (
+                settings.exportMode != ExportMode.RAW_SNAPSHOT && settings.exportTarget == ExportTarget.GOOGLE_DRIVE
+            ) java.util.UUID.randomUUID().toString() else null
 
             val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                 _uiState.update {
@@ -487,6 +490,7 @@ class ExportViewModel @Inject constructor(
                         settings = settings,
                         destinationId = destinationId,
                         source = "manual",
+                        operationId = requireNotNull(googleDriveOperationId),
                         onProgress = progress,
                     )
                 } ?: ExportResult(
@@ -536,6 +540,11 @@ class ExportViewModel @Inject constructor(
             // Successful manual export actions consume one free-tier use.
             if (ExportAccountingPolicy.shouldConsumeFreeExport(result, _uiState.value.isPurchased)) {
                 settingsRepository.recordFreeExportUse()
+            }
+            if (presentationResult.isFullSuccess && presentationResult.target == ExportTarget.GOOGLE_DRIVE) {
+                presentationResult.retryDriveOperationIds.values.toSet().forEach { operationId ->
+                    googleDriveExportOrchestrator.acknowledgeAfterHistory(operationId)
+                }
             }
 
             // Review prompts use their own counter, separate from free-tier quota. A Play

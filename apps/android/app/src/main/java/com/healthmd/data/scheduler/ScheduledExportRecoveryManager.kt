@@ -235,6 +235,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                                 targetDates.size,
                                 target = ExportTarget.GOOGLE_DRIVE,
                                 artifactCount = resumed.artifactCount,
+                                retryDriveOperationIds = targetDates.associateWith { operation.driveOperationId },
                                 exportMode = targetSettings.exportMode,
                             )
                             is GoogleDriveRunResult.Stopped -> ExportResult(
@@ -373,6 +374,11 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
                 )
                 settingsRepository.updateExportSettings(latestSettings)
+                if (targetResult.isFullSuccess && target == ExportTarget.GOOGLE_DRIVE) {
+                    targetResult.retryDriveOperationIds.values.toSet().forEach { driveOperationId ->
+                        googleDriveExportOrchestrator.acknowledgeAfterHistory(driveOperationId)
+                    }
+                }
                 val allFailuresDetachedForFreshCapture =
                     targetResult.failedDateDetails.all { failure ->
                         failure.date in targetResult.freshCaptureRetryDates

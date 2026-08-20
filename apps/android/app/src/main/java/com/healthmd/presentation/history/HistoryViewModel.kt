@@ -204,6 +204,9 @@ class HistoryViewModel @Inject constructor(
                         driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
                     )
                 )
+                if (result.isFullSuccess && entry.target == ExportTarget.GOOGLE_DRIVE) {
+                    entry.driveOperationId?.let { googleDriveDestinationRunner.acknowledgeAfterHistory(it) }
+                }
                 _uiState.update {
                     it.copy(
                         selectedEntry = null,

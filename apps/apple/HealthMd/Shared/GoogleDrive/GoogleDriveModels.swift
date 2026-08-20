@@ -300,7 +300,7 @@ nonisolated struct GoogleDriveGeneratedArtifact: Equatable, Sendable {
         createIfMissing: Bool = true,
         fragmentBytes: Data
     ) throws {
-        guard GoogleDrivePath.isSafe(relativePath) else {
+        guard GoogleDrivePath.isSafe(relativePath), !fragmentBytes.isEmpty else {
             throw GoogleDriveError(.remoteConflict)
         }
         let digest = GoogleDriveDigest.sha256(fragmentBytes)

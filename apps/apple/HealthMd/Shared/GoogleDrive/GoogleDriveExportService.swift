@@ -145,6 +145,14 @@ final class GoogleDriveArtifactBundleProducer {
     }
 }
 
+nonisolated struct GoogleDriveRecoveredOperation: Sendable {
+    let operationID: UUID
+    let profileID: UUID?
+    let sourceDates: [Date]
+    let destinationID: UUID
+    let result: ExportOrchestrator.ExportResult
+}
+
 @MainActor
 final class GoogleDriveExportService {
     nonisolated deinit {}
@@ -176,6 +184,35 @@ final class GoogleDriveExportService {
         }
         connectionManager.refreshReadiness(destinationID: destination.id)
         return connectionManager.readiness
+    }
+
+    /// Resumes exact protected bytes without recapturing HealthKit or rerendering. The caller owns
+    /// durable history/quota recording and must acknowledge only after those side effects succeed.
+    func resumeRecoverableOperation(_ operationID: UUID) async -> GoogleDriveRecoveredOperation? {
+        do {
+            let journal = try await runner.recoveryJournal(operationID: operationID)
+            destinationStore.reload()
+            guard let destination = destinationStore.destination(
+                id: journal.destinationSnapshot.destinationID
+            ), destination.fingerprint == journal.destinationSnapshot.fingerprint else {
+                throw GoogleDriveError(.folderUnavailable)
+            }
+            let token = try await connectionManager.accessToken(destination: destination)
+            let driveResult = await runner.resume(
+                operationID: operationID,
+                destination: destination,
+                accessToken: token
+            )
+            return GoogleDriveRecoveredOperation(
+                operationID: operationID,
+                profileID: journal.profileID,
+                sourceDates: journal.sourceDates,
+                destinationID: destination.id,
+                result: Self.resumedResult(driveResult, dates: journal.sourceDates)
+            )
+        } catch {
+            return nil
+        }
     }
 
     /// Called only after the owning manual/scheduled path durably records its terminal history.

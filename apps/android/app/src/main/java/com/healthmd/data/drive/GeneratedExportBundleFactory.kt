@@ -8,6 +8,7 @@ import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
+import com.healthmd.domain.exportengine.ExportArtifactWriteMode
 import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
 import com.healthmd.domain.exportengine.ProductionDailyAggregateNativePlanBuilder
 import com.healthmd.domain.exportengine.ShadowExportDiagnosticSink
@@ -115,15 +116,26 @@ class GeneratedExportBundleFactory private constructor(
         relativePath: String,
         mediaType: String,
         exactFile: File,
+        artifactChecksumSha256: String,
     ): GeneratedExportBundle {
         require(exactFile.isFile && exactFile.length() <= MAX_RAW_BYTES)
         val bytes = exactFile.readBytes()
+        require(artifactChecksumSha256.matches(Regex("[0-9a-f]{64}")))
+        require(sha256Hex(bytes) == artifactChecksumSha256)
         val artifact = artifact(
             operationId = operationId,
             path = relativePath,
             mediaType = mediaType,
             intent = GeneratedArtifactWriteIntent.OVERWRITE,
             bytes = bytes,
+        )
+        val displayName = relativePath.substringAfterLast('/')
+        val checksumArtifact = artifact(
+            operationId = operationId,
+            path = "$relativePath.sha256",
+            mediaType = "application/vnd.healthmd.sha256",
+            intent = GeneratedArtifactWriteIntent.OVERWRITE,
+            bytes = "$artifactChecksumSha256  $displayName\n".encodeToByteArray(),
         )
         return GeneratedExportBundle(
             operationId = operationId,
@@ -132,7 +144,7 @@ class GeneratedExportBundleFactory private constructor(
             dates = generateSequence(startDate) { it.plusDays(1) }.takeWhile { !it.isAfter(endDate) }.toList(),
             settingsSnapshotSha256 = sha256Hex(settingsSnapshotJson.encodeToByteArray()),
             rendererPin = "android-raw-snapshot-v1",
-            artifacts = listOf(artifact),
+            artifacts = listOf(artifact, checksumArtifact),
         )
     }
 
@@ -156,7 +168,12 @@ class GeneratedExportBundleFactory private constructor(
                         operationId = operationId,
                         path = item.relativePath,
                         mediaType = item.mediaType,
-                        intent = GeneratedArtifactWriteIntent.OVERWRITE,
+                        intent = when (item.writeMode) {
+                            ExportArtifactWriteMode.overwrite -> GeneratedArtifactWriteIntent.OVERWRITE
+                            ExportArtifactWriteMode.append -> GeneratedArtifactWriteIntent.APPEND
+                            ExportArtifactWriteMode.markdown_merge -> GeneratedArtifactWriteIntent.MARKDOWN_UPDATE
+                            ExportArtifactWriteMode.api_post -> error("Drive plan cannot contain API request artifacts")
+                        },
                         bytes = item.content,
                     )
                 },

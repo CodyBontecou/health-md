@@ -217,6 +217,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         googleDriveDestinationId = profile.destinationId.takeIf {
                             target == ExportTarget.GOOGLE_DRIVE
                         },
+                        googleDriveProfileId = profile.id.takeIf { target == ExportTarget.GOOGLE_DRIVE },
                     )
                 }
                 if (target == ExportTarget.DEVICE_FOLDER) {
@@ -280,7 +281,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             )
         }
 
-        recordHistory(
+        val historyRecorded = recordHistory(
             profile = profile,
             dates = dates,
             result = result,
@@ -291,6 +292,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
         if (result.isFullSuccess) {
             entryStore.recordSuccess(profileId, fireAtMillis = due.fireAtMillis)
+            if (historyRecorded && profile.target == ExportTarget.GOOGLE_DRIVE) {
+                result.retryDriveOperationIds.values.toSet().forEach { driveOperationId ->
+                    googleDriveExportOrchestrator.acknowledgeAfterHistory(driveOperationId)
+                }
+            }
         }
 
         if (!result.isFullSuccess && !result.wasCancelled) {
@@ -329,9 +335,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         failureReason: ExportFailureReason?,
         warning: String?,
         operationId: String,
-    ) {
-        if (dates.isEmpty()) return
-        runCatchingCancellable {
+    ): Boolean {
+        if (dates.isEmpty()) return false
+        return runCatchingCancellable {
             exportHistoryRepository.insertEntry(
                 ExportHistoryEntry(
                     timestamp = System.currentTimeMillis(),
@@ -352,7 +358,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
                 ),
             )
+            true
         }.onFailure { Timber.e(it, "Could not record profile export history") }
+            .getOrDefault(false)
     }
 
     private fun showFailureNotification(profileName: String) {

@@ -20,6 +20,8 @@ import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.export.ExportFixtures
+import java.nio.file.Files
+import java.time.LocalDate
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -125,6 +127,35 @@ class GeneratedExportBundleFactoryTest {
             .isEqualTo(
                 MarkdownMerger().merge(prefix.decodeToString(), artifact.bytes.decodeToString()).encodeToByteArray(),
             )
+    }
+
+    @Test
+    fun `raw snapshot includes exact checksum sidecar`() {
+        val bytes = "{\"schema\":\"healthmd.raw-snapshot\"}\n".encodeToByteArray()
+        val file = Files.createTempFile("healthmd-drive-raw", ".ndjson").toFile()
+        try {
+            file.writeBytes(bytes)
+            val checksum = com.healthmd.domain.exportengine.sha256Hex(bytes)
+            val bundle = factory.rawSnapshot(
+                operationId = "raw-operation",
+                profileId = "profile-1",
+                startDate = LocalDate.parse("2026-03-15"),
+                endDate = LocalDate.parse("2026-03-15"),
+                settingsSnapshotJson = "{}",
+                relativePath = "raw/snapshot.ndjson",
+                mediaType = "application/x-ndjson",
+                exactFile = file,
+                artifactChecksumSha256 = checksum,
+            )
+
+            assertThat(bundle.artifacts.map { it.relativePath })
+                .containsExactly("raw/snapshot.ndjson", "raw/snapshot.ndjson.sha256").inOrder()
+            assertThat(bundle.artifacts[0].bytes).isEqualTo(bytes)
+            assertThat(bundle.artifacts[1].bytes.decodeToString())
+                .isEqualTo("$checksum  snapshot.ndjson\n")
+        } finally {
+            file.delete()
+        }
     }
 
     @Test

@@ -119,9 +119,12 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 failedDateDetails = failures,
                 target = ExportTarget.GOOGLE_DRIVE,
                 artifactCount = result.artifactCount,
+                retryDriveOperationIds = normalized.associateWith { operationId },
             )
             is GoogleDriveRunResult.Stopped -> ExportResult(
-                successCount = if (result.completedArtifactCount > 0) captured.size.coerceAtMost(normalized.size - failures.size) else 0,
+                // Artifact completion cannot prove a whole date completed; remain conservative
+                // until every required artifact in the operation verifies.
+                successCount = 0,
                 totalCount = normalized.size,
                 failedDateDetails = failures + normalized.filterNot { date -> failures.any { it.date == date } }.map {
                     FailedDateDetail(it, result.error.toFailureReason(), result.error.serialId)
@@ -145,9 +148,10 @@ class GoogleDriveExportOrchestrator @Inject constructor(
             totalCount = dates.size,
             target = ExportTarget.GOOGLE_DRIVE,
             artifactCount = artifactCount,
+            retryDriveOperationIds = dates.associateWith { operationId },
         )
         is GoogleDriveRunResult.Stopped -> ExportResult(
-            successCount = if (completedArtifactCount > 0) dates.size else 0,
+            successCount = 0,
             totalCount = dates.size,
             failedDateDetails = dates.map {
                 FailedDateDetail(it, error.toFailureReason(), error.serialId)

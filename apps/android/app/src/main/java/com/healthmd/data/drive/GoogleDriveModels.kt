@@ -11,8 +11,12 @@ const val GOOGLE_DRIVE_SCOPE: String = "https://www.googleapis.com/auth/drive.fi
 const val GOOGLE_DRIVE_FOLDER_MIME_TYPE: String = "application/vnd.google-apps.folder"
 
 object GoogleDriveConfiguration {
-    fun isConfigured(clientId: String = BuildConfig.GOOGLE_DRIVE_ANDROID_CLIENT_ID): Boolean =
-        clientId.isNotBlank()
+    fun isConfigured(clientId: String = BuildConfig.GOOGLE_DRIVE_ANDROID_CLIENT_ID): Boolean {
+        val value = clientId.trim()
+        return value == clientId && value.length in 20..255 &&
+            value.matches(Regex("[A-Za-z0-9._-]+\\.apps\\.googleusercontent\\.com")) &&
+            !value.contains("example", ignoreCase = true) && !value.contains("$(")
+    }
 }
 
 /** Stable privacy-safe identifiers shared with the Apple implementation contract. */

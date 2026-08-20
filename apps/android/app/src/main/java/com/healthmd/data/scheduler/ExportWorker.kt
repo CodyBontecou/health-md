@@ -583,6 +583,11 @@ class ExportWorker @AssistedInject constructor(
                     GoogleDriveRecoveryWorker.enqueue(applicationContext, operationId)
                 }
             }
+            if (result.isFullSuccess && settings.scheduledExportTarget == ExportTarget.GOOGLE_DRIVE) {
+                result.retryDriveOperationIds.values.toSet().forEach { operationId ->
+                    googleDriveExportOrchestrator.acknowledgeAfterHistory(operationId)
+                }
+            }
 
             val titleResId = when {
                 result.isFullSuccess -> R.string.export_notification_title_complete

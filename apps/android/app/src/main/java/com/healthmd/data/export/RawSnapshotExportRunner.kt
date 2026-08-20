@@ -63,6 +63,7 @@ interface RawSnapshotService {
         target: ExportTarget = settings.exportTarget,
         expectedDestinationFingerprint: String? = null,
         googleDriveDestinationId: String? = null,
+        googleDriveProfileId: String? = null,
     ): ExportResult
 
     /** Performs the same native source read as an export without writing or uploading a user artifact. */
@@ -93,6 +94,7 @@ class RawSnapshotExportRunner @Inject constructor(
         target: ExportTarget,
         expectedDestinationFingerprint: String?,
         googleDriveDestinationId: String?,
+        googleDriveProfileId: String?,
     ): ExportResult {
         if (endDate.isBefore(startDate)) {
             return failure(startDate, target, ExportFailureReason.UNKNOWN)
@@ -140,6 +142,7 @@ class RawSnapshotExportRunner @Inject constructor(
                     providerId, repository, startDate, endDate, request, settings, target,
                     apiConfiguration,
                     frozenGoogleDriveDestinationId,
+                    googleDriveProfileId,
                 )
             }
             results += result
@@ -296,6 +299,7 @@ class RawSnapshotExportRunner @Inject constructor(
         target: ExportTarget,
         apiConfiguration: APIExportRequestConfiguration?,
         googleDriveDestinationId: String?,
+        googleDriveProfileId: String?,
     ): ExportResult = try {
         when (target) {
             ExportTarget.DEVICE_FOLDER -> exportToFolder(providerId, repository, startDate, endDate, request, settings)
@@ -308,6 +312,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 request,
                 settings,
                 googleDriveDestinationId,
+                googleDriveProfileId,
             )
         }
     } catch (_: CancellationException) {
@@ -410,6 +415,7 @@ class RawSnapshotExportRunner @Inject constructor(
         request: RawSnapshotRequest,
         settings: ExportSettings,
         expectedDestinationId: String?,
+        profileId: String?,
     ): ExportResult {
         val destinationId = expectedDestinationId ?: driveSelectionStore.get()
             ?: return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.NO_FOLDER_SELECTED)
@@ -428,18 +434,21 @@ class RawSnapshotExportRunner @Inject constructor(
         return try {
             val bundle = driveBundleFactory.rawSnapshot(
                 operationId = raw.snapshotId,
-                profileId = null,
+                profileId = profileId,
                 startDate = startDate,
                 endDate = endDate,
                 settingsSnapshotJson = kotlinx.serialization.json.Json.encodeToString(ExportSettings.serializer(), settings),
                 relativePath = relativePath,
                 mediaType = if (extension == "json") "application/json" else "application/x-ndjson",
                 exactFile = artifactFile,
+                artifactChecksumSha256 = raw.artifactChecksumSha256,
             )
             when (val result = driveRunner.run(bundle, destinationId)) {
                 is GoogleDriveRunResult.Complete -> ExportResult(
                     1, 1, target = ExportTarget.GOOGLE_DRIVE,
-                    exportMode = ExportMode.RAW_SNAPSHOT, artifactCount = result.artifactCount,
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    artifactCount = result.artifactCount,
+                    retryDriveOperationIds = mapOf(startDate to bundle.operationId),
                 )
                 is GoogleDriveRunResult.Stopped -> failure(
                     startDate,

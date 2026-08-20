@@ -1215,20 +1215,64 @@ struct ScheduleSettingsView: View {
         }
     }
 
-    private func performRetryExport(_ entry: ExportHistoryEntry) async {
-        guard !entry.isGoogleDriveDelivery else {
-            await MainActor.run {
-                retryErrorMessage = "Google Drive retries must resume the exact protected upload journal. Open the profile's Google Drive destination to reconnect or recover it; no local-folder fallback was used."
-                showRetryError = true
-            }
+    private func performGoogleDriveJournalRetry(_ entry: ExportHistoryEntry) async {
+        guard purchaseManager.canExport else {
+            retryErrorMessage = "Free export limit reached. Unlock Full Access to retry this export."
+            showRetryError = true
             return
         }
+        guard let service = GoogleDriveExportService.shared,
+              let recovered = await service.resumeRecoverableOperation(entry.id) else {
+            retryErrorMessage = "The protected Google Drive operation is unavailable or needs the bound account to be reconnected. No local-folder fallback was used."
+            showRetryError = true
+            return
+        }
+
+        let result = recovered.result
+        let dates = recovered.sourceDates
+        let startDate = dates.first ?? entry.dateRangeStart
+        let endDate = dates.last ?? entry.dateRangeEnd
+        ExportOrchestrator.recordResult(
+            result,
+            source: .manual,
+            dateRangeStart: startDate,
+            dateRangeEnd: endDate,
+            targetLabel: "Google Drive",
+            exportTarget: .googleDrive,
+            fileCount: result.totalFilesWritten,
+            idempotencyKey: recovered.operationID,
+            profileName: entry.profileName
+        )
+
+        if result.isFullSuccess {
+            do {
+                try purchaseManager.recordExportUse(jobID: recovered.operationID)
+                await service.acknowledgeCompletedOperation(recovered.operationID)
+                retryProgress = 1.0
+                retryStatusMessage = "Google Drive export recovered successfully."
+            } catch {
+                retryErrorMessage = "The upload completed, but local quota accounting could not be confirmed. The protected journal was retained for safe recovery."
+                showRetryError = true
+            }
+        } else {
+            retryErrorMessage = result.failedDateDetails.first?.errorDetails
+                .map { "Google Drive recovery stopped (\($0)). The exact protected bytes remain available." }
+                ?? "Google Drive recovery remains incomplete. The exact protected bytes remain available."
+            showRetryError = true
+        }
+    }
+
+    private func performRetryExport(_ entry: ExportHistoryEntry) async {
         defer {
             Task { @MainActor in
                 isRetrying = false
                 retryProgress = 0.0
                 retryStatusMessage = ""
             }
+        }
+        if entry.isGoogleDriveDelivery {
+            await performGoogleDriveJournalRetry(entry)
+            return
         }
 
         // Determine which dates to retry
@@ -1630,8 +1674,7 @@ struct ExportHistoryDetailView: View {
     }
 
     private var canRetry: Bool {
-        !entry.isFullSuccess && entry.source != .macAgent && entry.operationDetails == nil &&
-            !entry.isGoogleDriveDelivery
+        !entry.isFullSuccess && entry.source != .macAgent && entry.operationDetails == nil
     }
 
     private var statusColor: Color {
@@ -1931,7 +1974,7 @@ struct ExportHistoryDetailView: View {
                 if entry.isGoogleDriveDelivery, !entry.isFullSuccess {
                     Section {
                         Label {
-                            Text("Open the export profile to reconnect Google Drive or resume its exact protected upload journal. Generic Retry Export is disabled because it must never write Drive history to the local vault.")
+                            Text("Reconnect the bound Google account if needed, then use Resume Google Drive below. Recovery reuses the exact protected upload journal and never writes to the local vault.")
                                 .font(Typography.body())
                                 .foregroundStyle(Color.textPrimary)
                         } icon: {
@@ -1954,19 +1997,21 @@ struct ExportHistoryDetailView: View {
                         }) {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
-                                Text("Retry Export")
+                                Text(entry.isGoogleDriveDelivery ? "Resume Google Drive" : "Retry Export")
                             }
                             .frame(maxWidth: .infinity)
                             .foregroundStyle(Color.accent)
                         }
-                        .accessibilityLabel("Retry export")
+                        .accessibilityLabel(entry.isGoogleDriveDelivery ? "Resume Google Drive export" : "Retry export")
                         .accessibilityHint(entry.failedDateDetails.isEmpty
                             ? "Double tap to retry export for all dates"
                             : "Double tap to retry \(entry.failedDateDetails.count) failed dates")
                     } footer: {
-                        Text(entry.failedDateDetails.isEmpty
-                            ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
-                            : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")"
+                        Text(entry.isGoogleDriveDelivery
+                            ? "Resume the retained Drive operation without recapturing health data"
+                            : (entry.failedDateDetails.isEmpty
+                                ? "Re-export all dates from \(formatDateRange(entry.dateRangeStart, entry.dateRangeEnd))"
+                                : "Re-export \(entry.failedDateDetails.count) failed date\(entry.failedDateDetails.count == 1 ? "" : "s")")
                         )
                         .font(Typography.caption())
                         .foregroundStyle(Color.textSecondary)

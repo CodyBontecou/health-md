@@ -891,7 +891,9 @@ class ExportHistoryManager: ObservableObject {
     // MARK: - Private Methods
 
     private func addEntry(_ entry: ExportHistoryEntry) {
-        guard !history.contains(where: { $0.id == entry.id }) else { return }
+        // Durable destination operations replay one stable id. Replace their prior partial/failure
+        // row after exact-journal recovery instead of either duplicating it or freezing stale state.
+        history.removeAll { $0.id == entry.id }
         history.insert(entry, at: 0)
 
         // Trim history to max entries
