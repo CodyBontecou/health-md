@@ -16,6 +16,17 @@ const pluginRepo = path.resolve(configuredPluginRepo);
 const outputDirectory = path.join(websiteRoot, "assets", "visualizations-data");
 const dailyOutput = path.join(outputDirectory, "health-sample.json");
 const rollupOutput = path.join(outputDirectory, "health-rollups.json");
+const appleOutputDirectory = path.join(
+  repositoryRoot,
+  "apps",
+  "apple",
+  "HealthMd",
+  "iOS",
+  "Resources",
+  "PluginVisualization"
+);
+const appleDailyOutput = path.join(appleOutputDirectory, "health-sample.js");
+const appleRollupOutput = path.join(appleOutputDirectory, "health-rollups.js");
 const startDate = process.env.HEALTHMD_VISUALIZATION_SAMPLE_START_DATE || "2026-04-18";
 const endDate = process.env.HEALTHMD_VISUALIZATION_SAMPLE_END_DATE || "2026-05-17";
 
@@ -117,6 +128,9 @@ try {
   if (days.some((day) => day.schema !== "healthmd.health_data" || day.schema_version !== 8)) {
     throw new Error("Plugin mock-data generator must produce only healthmd.health_data v8 daily samples");
   }
+  if (days.some((day) => "healthkit_record_archive" in day || day.raw_capture_status !== "not_requested")) {
+    throw new Error("Archive-free plugin daily v8 samples must report raw_capture_status not_requested");
+  }
   const rawRollups = await Promise.all([historicalWeeklyFixture, rangeFixture].map(async (fixture) =>
     JSON.parse(await fs.readFile(fixture, "utf8"))
   ));
@@ -132,13 +146,21 @@ try {
   }
   const rollups = rawRollups.map(alignRollupToSample);
 
-  await fs.mkdir(outputDirectory, { recursive: true });
   await Promise.all([
-    fs.writeFile(dailyOutput, `${JSON.stringify(days)}\n`, "utf8"),
-    fs.writeFile(rollupOutput, `${JSON.stringify(rollups, null, 2)}\n`, "utf8"),
+    fs.mkdir(outputDirectory, { recursive: true }),
+    fs.mkdir(appleOutputDirectory, { recursive: true }),
+  ]);
+  const serializedDays = JSON.stringify(days);
+  const serializedRollups = JSON.stringify(rollups, null, 2);
+  await Promise.all([
+    fs.writeFile(dailyOutput, `${serializedDays}\n`, "utf8"),
+    fs.writeFile(rollupOutput, `${serializedRollups}\n`, "utf8"),
+    fs.writeFile(appleDailyOutput, `window.HealthMdSampleData = ${serializedDays};\n`, "utf8"),
+    fs.writeFile(appleRollupOutput, `window.HealthMdRollupSampleData = ${serializedRollups};\n`, "utf8"),
   ]);
   console.log(`Wrote ${path.relative(websiteRoot, dailyOutput)} with ${days.length} privacy-safe plugin-generated days`);
   console.log(`Wrote ${path.relative(websiteRoot, rollupOutput)} with historical v8 weekly and v9 range examples aligned to the sample window`);
+  console.log(`Wrote matching Apple PluginVisualization daily and roll-up resources`);
 } finally {
   await fs.rm(tmpDir, { recursive: true, force: true });
 }
