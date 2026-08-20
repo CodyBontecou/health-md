@@ -1922,6 +1922,40 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertTrue(fileSystem.files.isEmpty)
     }
 
+    func testExecute_finalDayCancellationStopsBeforeDerivedCommit() async {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.includeGranularData = false
+            settings.generateRangeSummary = true
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: makeSnapshot(from: settings)
+        )
+
+        let result = await executor.execute(job, vaultManager: manager) { progress in
+            if progress.phase == .writing, progress.processedDays == 1 {
+                _ = executor.cancel(jobID: job.jobID)
+            }
+        }
+
+        guard case .success(let payload) = result else {
+            return XCTFail("Expected a terminal cancellation payload")
+        }
+        XCTAssertEqual(payload.status, .cancelled)
+        XCTAssertEqual(payload.successCount, 1, "The committed final daily file remains accounted")
+        XCTAssertEqual(payload.completedDates?.count, 1)
+        XCTAssertTrue(
+            Calendar.current.isDate(payload.completedDates?.first ?? .distantPast, inSameDayAs: date)
+        )
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-05-12.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
     private func makeManager(
         defaults: FakeUserDefaults? = nil,
         fileSystem: FileSystemAccessing? = nil,

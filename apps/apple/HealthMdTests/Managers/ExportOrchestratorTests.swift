@@ -656,6 +656,76 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testExportDates_finalDayCancellationStopsBeforeDerivedCommit() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorFinalForegroundCancelVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.includeGranularData = false
+
+        var exportTask: Task<ExportOrchestrator.ExportResult, Never>?
+        let task = Task { @MainActor in
+            await ExportOrchestrator.exportDates(
+                [date],
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                onProgress: { processed, total, _ in
+                    if processed == total { exportTask?.cancel() }
+                }
+            )
+        }
+        exportTask = task
+        let result = await task.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(result.successCount, 1, "The committed daily file remains accounted")
+        XCTAssertEqual(result.rollupFileCount, 0)
+        XCTAssertEqual(result.completedDates, [date])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
+    @MainActor
+    func testExportDatesBackground_finalDayCancellationStopsBeforeDerivedCommit() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let healthKitManager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorFinalBackgroundCancelVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.includeGranularData = false
+
+        var exportTask: Task<ExportOrchestrator.ExportResult, Never>?
+        let task = Task { @MainActor in
+            await ExportOrchestrator.exportDatesBackground(
+                [date],
+                healthKitManager: healthKitManager,
+                vaultManager: vaultManager,
+                settings: settings,
+                onProgress: { processed, total, _ in
+                    if processed == total { exportTask?.cancel() }
+                }
+            )
+        }
+        exportTask = task
+        let result = await task.value
+
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(result.successCount, 1, "The committed daily file remains accounted")
+        XCTAssertEqual(result.rollupFileCount, 0)
+        XCTAssertEqual(result.completedDates, [date])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
+    @MainActor
     func testDerivedOutputRetention_releasesLooseDaysAndStripsRollupArchives() {
         let date = HealthKitFixtures.referenceDate
         let end = Calendar.current.date(byAdding: .day, value: 1, to: date)!

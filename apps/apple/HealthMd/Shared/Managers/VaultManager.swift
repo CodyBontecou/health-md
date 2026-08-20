@@ -1501,6 +1501,10 @@ final class VaultManager: ObservableObject {
 
     #if DEBUG
     var archiveEntryWillAppendForTesting: (() -> Void)?
+    /// Runs after the ZIP's atomic rename has committed but before presentation
+    /// state is recorded, allowing tests to prove committed success wins over a
+    /// cancellation delivered after publication.
+    var archiveDidPublishForTesting: (() -> Void)?
     var exactDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
     var productionDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
     var productionDestinationDidValidateForTesting: (@Sendable () throws -> Void)?
@@ -3353,7 +3357,12 @@ final class VaultManager: ObservableObject {
             try await Self.performArchiveIO {
                 try writer.finish(cancellationCheck: { Task.isCancelled })
             }
-            try Task.checkCancellation()
+            // `finish` atomically publishes the destination. Cancellation is a
+            // pre-commit concern; once it returns, committed success owns the
+            // result and presentation must not be suppressed.
+            #if DEBUG
+            archiveDidPublishForTesting?()
+            #endif
         } catch {
             try? await Self.performArchiveIO { writer.abandon() }
             if error as? FileCoordinationError == .destinationChanged

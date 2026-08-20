@@ -235,6 +235,46 @@ final class MacExportViewLocalPathTests: XCTestCase {
         XCTAssertNil(manager.lastExportPresentationTarget)
     }
 
+    func testArchiveCancellationAfterPublicationReturnsCommittedSuccessAndPresentsArtifact() async throws {
+        let vaultURL = try temporaryVault()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeVaultManager(vaultURL: vaultURL)
+        let settings = makeSettings()
+        settings.archiveExportFiles = true
+        settings.generateRangeSummary = true
+        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
+        let record = record(on: selectedDate)
+        let archiveURL = vaultURL.appendingPathComponent("Health.md Export 2026-03-15.zip")
+        var exportTask: Task<MacManualRangeDerivedOutputCommitter.Result, Error>?
+        manager.archiveDidPublishForTesting = { exportTask?.cancel() }
+
+        let task = Task { @MainActor in
+            try await MacManualRangeDerivedOutputCommitter.commit(
+                requestedDates: [selectedDate],
+                capturedHealthData: [record],
+                rollupHealthData: [record],
+                settings: settings,
+                timeZone: settings.exportTimeZoneOverride!,
+                fetchHealthData: { _ in record },
+                vaultManager: manager
+            )
+        }
+        exportTask = task
+        let result = try await task.value
+
+        XCTAssertTrue(task.isCancelled, "Cancellation must arrive after the atomic publication")
+        XCTAssertEqual(result, .init(rollupFileCount: 0, archiveCount: 1))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: archiveURL.path))
+        XCTAssertEqual(
+            manager.lastExportPresentationTarget,
+            ExportPresentationTarget(
+                fileURL: archiveURL,
+                securityScopedRootURL: vaultURL
+            )
+        )
+    }
+
     func testManualAllEmptySummaryOnlyMarksEveryRequestedDateTerminalExactlyOnce() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         var calendar = Calendar(identifier: .gregorian)

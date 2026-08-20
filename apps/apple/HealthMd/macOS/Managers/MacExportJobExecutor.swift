@@ -514,6 +514,45 @@ final class MacExportJobExecutor {
             }
         }
 
+        // Non-streamed execution has no next iteration after the final daily
+        // destination await. Honor a task/job cancellation at that boundary
+        // before any range roll-up or archive transaction can begin.
+        if cancelledJobIDs.contains(job.jobID) || Task.isCancelled {
+            let result = MacExportResultPayload(
+                jobID: job.jobID,
+                status: .cancelled,
+                successCount: successCount,
+                totalCount: totalDays,
+                formatsPerDate: formatsPerDate,
+                totalFilesWritten: totalFilesWritten,
+                externalRecordFileCount: externalRecordFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                failedDateDetails: failedDateDetails,
+                completedDates: Self.completedDates(
+                    successfulRecords: successfulRecords,
+                    failedDateDetails: failedDateDetails,
+                    requestedDates: requestedDates,
+                    includeSuccessfulRecords: !settings.archiveModeEnabled
+                        && !settings.summaryOnlyModeEnabled
+                ),
+                destinationDisplayName: vaultManager.vaultName,
+                destinationPathForDisplay: vaultManager.vaultURL?.path,
+                completedAt: Date()
+            )
+            sendProgress(
+                jobID: job.jobID,
+                phase: .cancelled,
+                processedDays: processedDays,
+                totalDays: totalDays,
+                currentDate: nil,
+                filesWritten: totalFilesWritten,
+                message: "Mac export cancelled.",
+                progress: progress
+            )
+            return .success(result)
+        }
+
         let rollupRecords = Self.rollupRecords(
             for: originalRequestedDates,
             recordsByDate: recordsByDate,

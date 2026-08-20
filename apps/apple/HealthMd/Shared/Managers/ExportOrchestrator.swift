@@ -714,6 +714,25 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
+        // A cancellation delivered by the final source-day await must stop before
+        // any range-level artifact begins. Daily files already committed remain
+        // accounted, while archive mode has no durable per-day success yet.
+        if Task.isCancelled {
+            return ExportResult(
+                successCount: successCount,
+                totalCount: totalDays,
+                failedDateDetails: failedDateDetails,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                externalRecordFileCount: externalRecordFileCount,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                wasCancelled: true,
+                completedDates: settings.archiveModeEnabled
+                    ? terminalNoDataDates(in: failedDateDetails)
+                    : completedDates
+            )
+        }
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
             requestedDates: dates,
@@ -1405,6 +1424,18 @@ struct ExportOrchestrator {
                     } else {
                         archiveSpool.markCapturedWithoutOutput(healthData.date)
                     }
+                } catch is CancellationError {
+                    return ExportResult(
+                        successCount: successCount,
+                        totalCount: dates.count,
+                        failedDateDetails: failedDateDetails,
+                        partialFailures: partialFailures,
+                        formatsPerDate: formatsPerDate,
+                        dailyNoteUpdateCount: dailyNoteUpdateCount,
+                        dailyNoteSkipCount: dailyNoteSkipCount,
+                        wasCancelled: true,
+                        completedDates: terminalNoDataDates(in: failedDateDetails)
+                    )
                 } catch {
                     archiveHasCompleteOriginalSources = false
                     partialFailures.append(ExportPartialFailure(
@@ -1424,6 +1455,24 @@ struct ExportOrchestrator {
             settings: settings,
             partialFailures: &partialFailures
         )
+        // Recheck after the final awaited capture. Without this boundary a
+        // cancelled foreground/background task can still publish a range roll-up
+        // or ZIP after its final requested day has returned.
+        if Task.isCancelled {
+            return ExportResult(
+                successCount: successCount,
+                totalCount: dates.count,
+                failedDateDetails: failedDateDetails,
+                partialFailures: partialFailures,
+                formatsPerDate: formatsPerDate,
+                dailyNoteUpdateCount: dailyNoteUpdateCount,
+                dailyNoteSkipCount: dailyNoteSkipCount,
+                wasCancelled: true,
+                completedDates: settings.archiveModeEnabled
+                    ? terminalNoDataDates(in: failedDateDetails)
+                    : completedDates
+            )
+        }
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
             requestedDates: immutableRollupDates,

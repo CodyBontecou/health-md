@@ -38,7 +38,9 @@ struct MacManualRangeDerivedOutputCommitter {
                 startDate: requestedDates.first ?? Date(),
                 endDate: requestedDates.last ?? requestedDates.first ?? Date()
             )
-            try Task.checkCancellation()
+            // VaultManager owns the archive commit boundary: cancellation is
+            // honored before publication, while a returned URL is committed
+            // success even if cancellation arrives immediately afterward.
             guard archiveURL != nil else { throw ExportError.noHealthData }
             return Result(rollupFileCount: 0, archiveCount: 1)
         }
@@ -909,7 +911,8 @@ struct MacExportView: View {
                     fetchHealthData: healthDataStore.fetchHealthData(for:),
                     vaultManager: vaultManager
                 )
-                if Task.isCancelled { throw CancellationError() }
+                // The committer returns only after its publication boundary. Do
+                // not relabel a committed archive/roll-up as cancelled afterward.
                 rollupFileCount = derived.rollupFileCount
                 archiveCount = derived.archiveCount
                 if archiveCount > 0 {
