@@ -2083,9 +2083,8 @@ mod tests {
             .prepare(request, accepted, session.clone())
             .unwrap();
         let mut previous_sha256 = None;
-        for (index, (date, source_schema_version)) in
-            dates.iter().zip(source_schema_versions).enumerate()
-        {
+        let mut partition_index = 0;
+        for (date, source_schema_version) in dates.iter().zip(source_schema_versions) {
             let payload = source_schema_version.map(|source_schema_version| {
                 serde_json::to_vec_pretty(&json!({
                     "schema": "healthmd.health_data",
@@ -2127,7 +2126,7 @@ mod tests {
             let payload_digest = payload_digest.unwrap();
             let transfer_id = SwiftUuid(Uuid::new_v4());
             let partition = TransferPartition {
-                index: i64::try_from(index).unwrap(),
+                index: partition_index,
                 transfer_id,
                 source_dates: vec![date.clone()],
                 byte_count: i64::try_from(payload.len()).unwrap(),
@@ -2159,11 +2158,12 @@ mod tests {
                 .commit_partition(TransferPartitionComplete {
                     session_id: session.session_id,
                     job_id,
-                    partition_index: i64::try_from(index).unwrap(),
+                    partition_index,
                     transfer_id,
                     partition_sha256: payload_digest.clone(),
                 })
                 .unwrap();
+            partition_index += 1;
             previous_sha256 = Some(payload_digest);
         }
         TestCorpus {
@@ -2202,6 +2202,30 @@ mod tests {
         let receipt: Value =
             serde_json::from_slice(&fs::read(jsonl.receipt_path).unwrap()).unwrap();
         assert_receipt_versions(&receipt, 7, &[]);
+    }
+
+    #[test]
+    fn empty_day_and_retained_v8_day_report_only_the_evidenced_version() {
+        let corpus = test_corpus(&[None, Some(8)]);
+        let json_artifact = corpus.receiver.extraction(corpus.job_id, &[]).unwrap();
+        let json: Value = serde_json::from_slice(&fs::read(json_artifact.path).unwrap()).unwrap();
+        assert_eq!(json["health_data"].as_array().unwrap().len(), 1);
+        assert_receipt_versions(&json["receipt"], 8, &[8]);
+        let days = json["receipt"]["days"].as_array().unwrap();
+        assert!(days[0].get("source_schema_version").is_none());
+        assert_eq!(days[1]["source_schema_version"], 8);
+
+        let jsonl = corpus
+            .receiver
+            .extraction_jsonl(corpus.job_id, &[])
+            .unwrap();
+        assert_eq!(fs::read_to_string(jsonl.path).unwrap().lines().count(), 1);
+        let receipt: Value =
+            serde_json::from_slice(&fs::read(jsonl.receipt_path).unwrap()).unwrap();
+        assert_receipt_versions(&receipt, 8, &[8]);
+        let days = receipt["days"].as_array().unwrap();
+        assert!(days[0].get("source_schema_version").is_none());
+        assert_eq!(days[1]["source_schema_version"], 8);
     }
 
     #[test]
