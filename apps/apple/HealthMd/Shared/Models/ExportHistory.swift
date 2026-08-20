@@ -136,7 +136,13 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
     /// Confirmed files whose category was unavailable from the producer.
     let unclassifiedFileCount: Int
     /// True only when every physical generated-file category was measured.
+    /// Deliberately independent from `wasTruncated`: an exhausted budget never
+    /// silently flips category-completeness.
     let isFileCategoryBreakdownComplete: Bool
+    /// True when the shared file-category budget reduced any persisted count, so
+    /// readers can distinguish exact totals from budget-limited ones. Entries
+    /// persisted before this flag existed decode as untruncated.
+    let wasTruncated: Bool
 
     private enum CodingKeys: String, CodingKey {
         case requestedDataDayCount
@@ -151,6 +157,7 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
         case dailyNoteSkipCount
         case unclassifiedFileCount
         case isFileCategoryBreakdownComplete
+        case wasTruncated
     }
 
     init(
@@ -165,33 +172,47 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         unclassifiedFileCount: Int = 0,
-        isFileCategoryBreakdownComplete: Bool = true
+        isFileCategoryBreakdownComplete: Bool = true,
+        /// Truncation flag for a value that was already persisted with this shape.
+        /// Leave nil to derive the flag from the shared-budget allocation below;
+        /// decoding passes the stored flag so a budget-limited history entry keeps
+        /// advertising that its counts were reduced.
+        persistedWasTruncated: Bool? = nil
     ) {
         self.requestedDataDayCount = Self.boundedCount(requestedDataDayCount)
         self.successfulDataDayCount = min(
             Self.boundedCount(successfulDataDayCount),
             self.requestedDataDayCount
         )
-        self.looseAggregateFileCount = Self.boundedCount(looseAggregateFileCount)
-        self.individualEntryFileCount = Self.boundedCount(individualEntryFileCount)
-        self.dataDictionaryFileCount = Self.boundedCount(dataDictionaryFileCount)
-        self.zipArchiveFileCount = Self.boundedCount(zipArchiveFileCount)
-        self.rollupFileCount = Self.boundedCount(rollupFileCount)
-        self.providerSidecarFileCount = Self.boundedCount(providerSidecarFileCount)
         self.dailyNoteUpdateCount = Self.boundedCount(dailyNoteUpdateCount)
         self.dailyNoteSkipCount = Self.boundedCount(dailyNoteSkipCount)
-        self.unclassifiedFileCount = Self.boundedCount(unclassifiedFileCount)
-        let categorizedCounts = [
-            self.looseAggregateFileCount,
-            self.individualEntryFileCount,
-            self.dataDictionaryFileCount,
-            self.zipArchiveFileCount,
-            self.rollupFileCount,
-            self.providerSidecarFileCount
-        ]
+
+        // One shared budget funds every generated-file category so the persisted
+        // *sum* stays bounded; categories are funded in declaration order until
+        // the budget runs out. Data-day and daily-note counts keep their per-field
+        // bounds and are not part of this budget. Any reduction — per-field
+        // clamping or an exhausted budget — marks the breakdown truncated.
+        var remainingFileCategoryBudget = Self.maximumPersistedCount
+        var reducedAnyAllocation = false
+        func allocate(_ rawCount: Int) -> Int {
+            let allocated = min(Self.boundedCount(rawCount), remainingFileCategoryBudget)
+            remainingFileCategoryBudget -= allocated
+            if allocated != rawCount { reducedAnyAllocation = true }
+            return allocated
+        }
+        self.looseAggregateFileCount = allocate(looseAggregateFileCount)
+        self.individualEntryFileCount = allocate(individualEntryFileCount)
+        self.dataDictionaryFileCount = allocate(dataDictionaryFileCount)
+        self.zipArchiveFileCount = allocate(zipArchiveFileCount)
+        self.rollupFileCount = allocate(rollupFileCount)
+        self.providerSidecarFileCount = allocate(providerSidecarFileCount)
+        self.unclassifiedFileCount = allocate(unclassifiedFileCount)
+        self.wasTruncated = persistedWasTruncated ?? reducedAnyAllocation
+        // The shared budget bounds the file-category aggregate by construction, so
+        // completeness no longer needs a separate aggregate check. Truncation is
+        // reported through `wasTruncated` instead of silently flipping completeness.
         self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
             && self.unclassifiedFileCount == 0
-            && Self.hasValidAggregate(categorizedCounts)
     }
 
     init(from decoder: Decoder) throws {
@@ -238,6 +259,13 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
             isFileCategoryBreakdownComplete: try container.decode(
                 Bool.self,
                 forKey: .isFileCategoryBreakdownComplete
+            ),
+            // Counts that pass the guards above already fit the shared budget, so
+            // allocation cannot reduce them; the persisted truncation flag stays
+            // authoritative. Legacy entries without the key decode as untruncated.
+            persistedWasTruncated: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .wasTruncated
             )
         )
     }

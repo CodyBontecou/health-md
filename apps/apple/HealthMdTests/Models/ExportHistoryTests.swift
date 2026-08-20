@@ -806,3 +806,167 @@ final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
     }
     #endif
 }
+
+final class ExportHistoryOutputBreakdownBudgetTests: XCTestCase {
+    private let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+
+    func testSharedBudgetBoundsPersistedSumAcrossFileCategories() {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 30,
+            successfulDataDayCount: 30,
+            looseAggregateFileCount: budget - 2,
+            individualEntryFileCount: 5,
+            dataDictionaryFileCount: 4,
+            zipArchiveFileCount: 3,
+            rollupFileCount: 2,
+            providerSidecarFileCount: 1,
+            unclassifiedFileCount: 9
+        )
+
+        // Categories are funded in declaration order until the budget runs out.
+        XCTAssertEqual(breakdown.looseAggregateFileCount, budget - 2)
+        XCTAssertEqual(breakdown.individualEntryFileCount, 2)
+        XCTAssertEqual(breakdown.dataDictionaryFileCount, 0)
+        XCTAssertEqual(breakdown.zipArchiveFileCount, 0)
+        XCTAssertEqual(breakdown.rollupFileCount, 0)
+        XCTAssertEqual(breakdown.providerSidecarFileCount, 0)
+        XCTAssertEqual(breakdown.unclassifiedFileCount, 0)
+        XCTAssertEqual(breakdown.generatedFileCount, budget)
+        XCTAssertTrue(breakdown.wasTruncated)
+    }
+
+    func testPerFieldClampingReducesCountsAndFlagsTruncation() {
+        let oversized = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: budget + 5,
+            successfulDataDayCount: budget + 9,
+            looseAggregateFileCount: budget * 3
+        )
+        XCTAssertEqual(oversized.requestedDataDayCount, budget)
+        XCTAssertEqual(oversized.successfulDataDayCount, budget)
+        XCTAssertEqual(oversized.looseAggregateFileCount, budget)
+        XCTAssertEqual(oversized.generatedFileCount, budget)
+        XCTAssertTrue(oversized.wasTruncated)
+
+        let negative = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: -3,
+            successfulDataDayCount: -7,
+            looseAggregateFileCount: -1,
+            individualEntryFileCount: 2
+        )
+        XCTAssertEqual(negative.requestedDataDayCount, 0)
+        XCTAssertEqual(negative.successfulDataDayCount, 0)
+        XCTAssertEqual(negative.looseAggregateFileCount, 0)
+        XCTAssertEqual(negative.individualEntryFileCount, 2)
+        // Raw negative file counts were reduced to the persisted floor.
+        XCTAssertTrue(negative.wasTruncated)
+    }
+
+    func testWasTruncatedStaysFalseWhenBudgetIsExactlyConsumedOrUntouched() {
+        let exactFit = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget / 2,
+            individualEntryFileCount: budget / 2
+        )
+        XCTAssertFalse(exactFit.wasTruncated)
+        XCTAssertEqual(exactFit.generatedFileCount, budget)
+
+        let everyday = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 3,
+            successfulDataDayCount: 3,
+            looseAggregateFileCount: 4,
+            individualEntryFileCount: 35,
+            dataDictionaryFileCount: 1
+        )
+        XCTAssertFalse(everyday.wasTruncated)
+    }
+
+    func testTruncationDoesNotFlipFileCategoryCompleteness() {
+        let truncatedButMeasured = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget,
+            individualEntryFileCount: budget,
+            isFileCategoryBreakdownComplete: true
+        )
+        XCTAssertTrue(truncatedButMeasured.isFileCategoryBreakdownComplete)
+        XCTAssertTrue(truncatedButMeasured.wasTruncated)
+        XCTAssertEqual(truncatedButMeasured.individualEntryFileCount, 0)
+
+        // Existing completeness semantics are preserved: confirmed-but-unclassified
+        // files still flip it, independently of truncation.
+        let withUnclassified = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            unclassifiedFileCount: 2
+        )
+        XCTAssertFalse(withUnclassified.isFileCategoryBreakdownComplete)
+        XCTAssertFalse(withUnclassified.wasTruncated)
+    }
+
+    func testLegacyJSONWithoutWasTruncatedDecodesAsUntruncated() throws {
+        let truncated = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 2,
+            successfulDataDayCount: 2,
+            looseAggregateFileCount: budget,
+            individualEntryFileCount: budget
+        )
+        XCTAssertTrue(truncated.wasTruncated)
+
+        let encoded = try JSONEncoder().encode(truncated)
+        let roundTripped = try JSONDecoder().decode(
+            ExportHistoryOutputBreakdown.self,
+            from: encoded
+        )
+        XCTAssertEqual(roundTripped, truncated)
+        XCTAssertTrue(roundTripped.wasTruncated)
+
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        XCTAssertEqual(object["wasTruncated"] as? Bool, true)
+        object["wasTruncated"] = nil
+
+        // Entries persisted before the flag existed decode as untruncated.
+        let legacy = try JSONDecoder().decode(
+            ExportHistoryOutputBreakdown.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertFalse(legacy.wasTruncated)
+        XCTAssertEqual(legacy.looseAggregateFileCount, budget)
+        XCTAssertEqual(legacy.individualEntryFileCount, 0)
+    }
+
+    func testInitNeverPersistsABreakdownItsOwnDecoderRejects() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        let extremeInputs: [[Int]] = [
+            [budget, budget, budget, budget, budget, budget, budget],
+            [budget / 2, budget / 2, 1, 1, 1, 1, 1],
+            [-1, -2, -3, 0, Int.max, Int.min, 99],
+            [0, 0, 0, 0, 0, 0, 0]
+        ]
+
+        for counts in extremeInputs {
+            let breakdown = ExportHistoryOutputBreakdown(
+                requestedDataDayCount: Int.max,
+                successfulDataDayCount: Int.max,
+                looseAggregateFileCount: counts[0],
+                individualEntryFileCount: counts[1],
+                dataDictionaryFileCount: counts[2],
+                zipArchiveFileCount: counts[3],
+                rollupFileCount: counts[4],
+                providerSidecarFileCount: counts[5],
+                unclassifiedFileCount: counts[6],
+                isFileCategoryBreakdownComplete: false
+            )
+            XCTAssertLessThanOrEqual(breakdown.generatedFileCount, budget)
+
+            let decoded = try decoder.decode(
+                ExportHistoryOutputBreakdown.self,
+                from: encoder.encode(breakdown)
+            )
+            XCTAssertEqual(decoded, breakdown)
+        }
+    }
+}
