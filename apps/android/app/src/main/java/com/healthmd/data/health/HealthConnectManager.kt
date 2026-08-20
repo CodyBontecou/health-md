@@ -22,9 +22,14 @@ import com.healthmd.domain.model.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import com.healthmd.domain.model.BloodPressureSample
 import com.healthmd.domain.model.SleepStageEntry
 import com.healthmd.domain.model.TimestampedSample
+import com.healthmd.rawexport.ExerciseRouteConsentGateway
+import com.healthmd.rawexport.NoExerciseRouteConsentGateway
+import com.healthmd.rawexport.PendingExerciseRouteConsent
+import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -39,6 +44,7 @@ import kotlin.time.Duration.Companion.minutes
 class HealthConnectManager(
     private val context: Context,
     sharedClient: HealthConnectClient? = null,
+    private val routeConsentGateway: ExerciseRouteConsentGateway = NoExerciseRouteConsentGateway,
 ) {
     private val healthConnectClient by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
@@ -968,7 +974,8 @@ class HealthConnectManager(
         for ((date, sessions) in sessionsByDate) {
             if (date !in requestedDates) continue
 
-            val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData) }
+            val grantedRoutes = requestGrantedExerciseRoutes(sessions)
+            val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData, grantedRoutes) }
             val minutes = sessions.sumOf {
                 java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
             }
@@ -2765,12 +2772,40 @@ class HealthConnectManager(
                 elevationRecords = readRecordsOrEmpty(ElevationGainedRecord::class, timeRange),
             )
 
+            val grantedRoutes = requestGrantedExerciseRoutes(response.records)
             response.records.map { session ->
-                buildWorkoutData(session, zone, sources, includeGranularData = true)
+                buildWorkoutData(
+                    session,
+                    zone,
+                    sources,
+                    includeGranularData = true,
+                    grantedRoutes = grantedRoutes,
+                )
             }
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
             emptyList()
+        }
+    }
+
+    /**
+     * Asks the interactive consent gateway for third-party routes Health Connect reported as
+     * ConsentRequired. Non-interactive runs (scheduled exports, automation, the direct CLI
+     * protocol) and denied prompts return no grants, so workouts keep reporting
+     * WorkoutRouteAccess.CONSENT_REQUIRED with no route points.
+     */
+    private suspend fun requestGrantedExerciseRoutes(sessions: List<ExerciseSessionRecord>): Map<String, ExerciseRoute> {
+        if (!currentCoroutineContext().allowsInteractiveRouteConsent()) return emptyMap()
+        val pending = sessions
+            .filter { it.exerciseRouteResult is ExerciseRouteResult.ConsentRequired }
+            .map { PendingExerciseRouteConsent(it.metadata.id, it.startTime, it.endTime) }
+        if (pending.isEmpty()) return emptyMap()
+        return try {
+            routeConsentGateway.requestRoutes(pending)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            emptyMap()
         }
     }
 
@@ -2779,6 +2814,7 @@ class HealthConnectManager(
         zone: ZoneId,
         sources: WorkoutSourceRecords,
         includeGranularData: Boolean,
+        grantedRoutes: Map<String, ExerciseRoute> = emptyMap(),
     ): WorkoutData {
         val duration = java.time.Duration.between(session.startTime, session.endTime)
         val heartSamples = sources.heartRateRecords
@@ -2858,7 +2894,14 @@ class HealthConnectManager(
             .filter { it.overlaps(session.startTime, session.endTime) }
             .sumOf { it.energy.inKilocalories }
             .positiveOrNull()
-        val routeResult = session.exerciseRouteResult
+        // A route granted through the interactive per-session consent flow is equivalent to
+        // Health Connect returning it inline; sessions without a grant keep their exact
+        // inline result, including consent_required.
+        val routeResult = when (val inline = session.exerciseRouteResult) {
+            is ExerciseRouteResult.ConsentRequired ->
+                grantedRoutes[session.metadata.id]?.let { ExerciseRouteResult.Data(it) } ?: inline
+            else -> inline
+        }
         val routeAccess = when (routeResult) {
             is ExerciseRouteResult.Data -> WorkoutRouteAccess.DATA
             is ExerciseRouteResult.ConsentRequired -> WorkoutRouteAccess.CONSENT_REQUIRED

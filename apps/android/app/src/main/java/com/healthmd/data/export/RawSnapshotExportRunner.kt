@@ -28,6 +28,7 @@ import com.healthmd.rawexport.RawSnapshotRequest
 import com.healthmd.rawexport.RawSnapshotStatus
 import com.healthmd.rawexport.RawSnapshotScope
 import com.healthmd.rawexport.SafRawExportStorage
+import com.healthmd.rawexport.withInteractiveRouteConsent
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -56,6 +57,7 @@ interface RawSnapshotService {
         settings: ExportSettings,
         target: ExportTarget = settings.exportTarget,
         expectedDestinationFingerprint: String? = null,
+        allowInteractiveRouteConsent: Boolean = false,
     ): ExportResult
 
     /** Performs the same native source read as an export without writing or uploading a user artifact. */
@@ -63,6 +65,7 @@ interface RawSnapshotService {
         startDate: LocalDate,
         endDate: LocalDate,
         settings: ExportSettings,
+        allowInteractiveRouteConsent: Boolean = false,
     ): ExportPreview
 }
 
@@ -82,6 +85,7 @@ class RawSnapshotExportRunner @Inject constructor(
         settings: ExportSettings,
         target: ExportTarget,
         expectedDestinationFingerprint: String?,
+        allowInteractiveRouteConsent: Boolean,
     ): ExportResult {
         if (endDate.isBefore(startDate)) {
             return failure(startDate, target, ExportFailureReason.UNKNOWN)
@@ -119,10 +123,20 @@ class RawSnapshotExportRunner @Inject constructor(
             val result = if (repository == null) {
                 failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
             } else {
-                exportProvider(
-                    providerId, repository, startDate, endDate, request, settings, target,
-                    apiConfiguration,
-                )
+                // Only runs explicitly marked interactive may launch Health Connect's per-session
+                // exercise route consent UI; every other caller (scheduled exports, the direct
+                // CLI protocol, background jobs) reports consent_required routes unchanged.
+                val providerExport: suspend () -> ExportResult = {
+                    exportProvider(
+                        providerId, repository, startDate, endDate, request, settings, target,
+                        apiConfiguration,
+                    )
+                }
+                if (allowInteractiveRouteConsent) {
+                    withInteractiveRouteConsent { providerExport() }
+                } else {
+                    providerExport()
+                }
             }
             results += result
             if (result.wasCancelled) break
@@ -135,6 +149,7 @@ class RawSnapshotExportRunner @Inject constructor(
         startDate: LocalDate,
         endDate: LocalDate,
         settings: ExportSettings,
+        allowInteractiveRouteConsent: Boolean,
     ): ExportPreview {
         val requestedDateCount = selectedDateCount(startDate, endDate)
         if (endDate.isBefore(startDate)) {
@@ -181,11 +196,12 @@ class RawSnapshotExportRunner @Inject constructor(
 
             var artifact: File? = null
             try {
-                val raw = RawSnapshotExportOrchestrator(
-                    context,
-                    repository,
-                    NoBackupRawExportStorage(context),
-                ).export(request)
+                val produce: suspend () -> RawExportResult = { producePreviewArtifact(repository, request, context) }
+                val raw = if (allowInteractiveRouteConsent) {
+                    withInteractiveRouteConsent { produce() }
+                } else {
+                    produce()
+                }
                 artifact = File(raw.finalLocation)
                 check(artifact.isFile) { "Completed raw snapshot preview artifact is missing." }
                 val bounded = readRawArtifactPreview(artifact)
@@ -242,6 +258,16 @@ class RawSnapshotExportRunner @Inject constructor(
             isRangeArtifact = true,
         )
     }
+
+    private suspend fun producePreviewArtifact(
+        repository: RawHealthRepository,
+        request: RawSnapshotRequest,
+        context: Context,
+    ): RawExportResult = RawSnapshotExportOrchestrator(
+        context,
+        repository,
+        NoBackupRawExportStorage(context),
+    ).export(request)
 
     private suspend fun selectedProviderIds(): List<String> {
         val selectedProviderId = settingsRepository.getSelectedHealthProviderId()

@@ -3,6 +3,7 @@ package com.healthmd.presentation.export
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.health.connect.client.contracts.ExerciseRouteRequestContract
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -116,6 +117,24 @@ fun ExportScreen(
     ) { uri ->
         uri?.let {
             attemptConfigurationChange { viewModel.onFolderSelected(it) }
+        }
+    }
+
+    // Health Connect per-session exercise route consent for third-party sessions. Attached for
+    // the whole screen lifetime; only manual export/preview coroutines carry the interactive
+    // marker, so scheduled, automation, and direct CLI runs never trigger a prompt from here.
+    val routeConsentSurface = remember { LauncherExerciseRouteConsentSurface() }
+    val routeConsentLauncher = rememberLauncherForActivityResult(
+        contract = ExerciseRouteRequestContract(),
+    ) { route ->
+        routeConsentSurface.onLaunchResult(route)
+    }
+    DisposableEffect(viewModel.routeConsentCoordinator) {
+        routeConsentSurface.bind(routeConsentLauncher)
+        viewModel.routeConsentCoordinator.attach(routeConsentSurface)
+        onDispose {
+            viewModel.routeConsentCoordinator.detach(routeConsentSurface)
+            routeConsentSurface.close()
         }
     }
 

@@ -285,6 +285,7 @@ class ExportViewModelTest {
                 settings: ExportSettings,
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
+                allowInteractiveRouteConsent: Boolean,
             ): ExportResult {
                 rawExportCalls++
                 return ExportResult(1, 1, target = target)
@@ -294,6 +295,7 @@ class ExportViewModelTest {
                 startDate: LocalDate,
                 endDate: LocalDate,
                 settings: ExportSettings,
+                allowInteractiveRouteConsent: Boolean,
             ): ExportPreview {
                 rawPreviewCalls++
                 return ExportPreview(

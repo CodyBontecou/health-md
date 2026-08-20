@@ -5,6 +5,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.feature.ExperimentalPersonalHealthRecordApi
 import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_HISTORY
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MedicalDataSource
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.request.GetMedicalDataSourcesRequest
@@ -17,6 +18,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -30,6 +32,7 @@ class HealthConnectRawDataProvider(
     sharedClient: HealthConnectClient? = null,
     private val catalog: List<HealthConnectRecordDescriptor<out Record>> = HealthConnectRecordCatalog.records,
     private val historyAccessBoundary: HistoryAccessBoundary = HistoryAccessBoundary { null },
+    private val routeConsentGateway: ExerciseRouteConsentGateway = NoExerciseRouteConsentGateway,
 ) : RawHealthDataProvider {
     private val client by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
@@ -222,7 +225,37 @@ class HealthConnectRawDataProvider(
         descriptor: HealthConnectRecordDescriptor<out Record>,
         request: RawSnapshotRequest,
         emitRecord: suspend (RawRecord) -> Unit,
-    ): Long = readTypedDescriptor(descriptor as HealthConnectRecordDescriptor<Record>, request, emitRecord)
+    ): Long {
+        // Exercise routes written by other apps come back ConsentRequired. Interactive exports
+        // resolve them through Health Connect's per-session consent flow and merge granted
+        // routes; every other run keeps reporting consent_required with empty locations.
+        if (request.includeExerciseRoutes &&
+            currentCoroutineContext().allowsInteractiveRouteConsent() &&
+            descriptor.recordClass == ExerciseSessionRecord::class
+        ) {
+            @Suppress("UNCHECKED_CAST")
+            val exerciseDescriptor = descriptor as HealthConnectRecordDescriptor<ExerciseSessionRecord>
+            return emitExerciseSessionsWithRouteConsent(
+                request = request,
+                gateway = routeConsentGateway,
+                readPage = { token ->
+                    val response = client.readRecords(
+                        ReadRecordsRequest(
+                            recordType = exerciseDescriptor.recordClass,
+                            timeRangeFilter = TimeRangeFilter.between(request.startTime.toInstant(), request.endTime.toInstant()),
+                            ascendingOrder = true,
+                            pageSize = request.pageSize,
+                            pageToken = token,
+                        ),
+                    )
+                    response.records to response.pageToken
+                },
+                mapper = { native -> requireNotNull(exerciseDescriptor.mapper).invoke(native) },
+                emitRecord = emitRecord,
+            )
+        }
+        return readTypedDescriptor(descriptor as HealthConnectRecordDescriptor<Record>, request, emitRecord)
+    }
 
     private suspend fun <T : Record> readTypedDescriptor(
         descriptor: HealthConnectRecordDescriptor<T>,
