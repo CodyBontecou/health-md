@@ -333,6 +333,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     func recordRecoveredCompletion(_ payload: MacExportResultPayload) {
+        guard payload.hasConsistentFileAccounting else { return }
         guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return }

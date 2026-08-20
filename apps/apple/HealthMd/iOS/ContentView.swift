@@ -2024,6 +2024,7 @@ struct ContentView: View {
     }
 
     private func completeMacExport(with result: MacExportResultPayload) {
+        guard result.hasConsistentFileAccounting else { return }
         let durableJournal = corpusRecoveryManager.journal(jobID: result.jobID)
         let completionSettings = durableJournal?.exportManifest.settingsSnapshot
             .makeAdvancedExportSettings() ?? advancedSettings

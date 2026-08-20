@@ -1499,6 +1499,7 @@ class SchedulingManager: ObservableObject {
 
     @discardableResult
     @MainActor func completeScheduledMacExport(with payload: MacExportResultPayload) -> Bool {
+        guard payload.hasConsistentFileAccounting else { return false }
         guard let context = scheduledMacExportContexts.removeValue(forKey: payload.jobID) else {
             return false
         }
@@ -1525,6 +1526,7 @@ class SchedulingManager: ObservableObject {
     @MainActor func completeRecoveredScheduledMacExport(
         with payload: MacExportResultPayload
     ) async -> Bool {
+        guard payload.hasConsistentFileAccounting else { return false }
         let request: PendingExportRequest
         do {
             guard let storedRequest = try pendingExportStore.loadAll().first(where: {

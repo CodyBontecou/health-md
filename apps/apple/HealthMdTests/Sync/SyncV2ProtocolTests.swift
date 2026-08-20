@@ -1155,6 +1155,57 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(payload.hasConsistentFileAccounting)
     }
 
+    func testPayloadRejectsWireSidecarCountAboveTotalFilesWritten() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 2,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+        XCTAssertEqual(payload.generatedFileCountDescription, "at least 1 file(s)")
+    }
+
+    func testNontruncatedPayloadRejectsCategorySumAboveWireTotal() {
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: 2,
+            isFileCategoryBreakdownComplete: true
+        )
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: breakdown,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(breakdown.wasTruncated)
+        XCTAssertGreaterThan(breakdown.generatedFileCount, payload.totalFilesWritten)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+    }
+
     func testNontruncatedPayloadRetainsExactAuthorityAndDisplay() {
         let payload = MacExportResultPayload(
             jobID: UUID(),

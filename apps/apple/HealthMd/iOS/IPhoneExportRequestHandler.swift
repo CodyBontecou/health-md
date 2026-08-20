@@ -598,6 +598,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
+        guard payload.hasConsistentFileAccounting else { return false }
         guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
         streamAbortMessages.removeValue(forKey: payload.jobID)
         activeRequestID = nil

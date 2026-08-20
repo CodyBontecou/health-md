@@ -1067,7 +1067,9 @@ struct MacExportResultPayload: Codable {
     /// Exact-count authority for consumers that persist the bounded category breakdown.
     /// The wire total may be exact while the persisted categories are intentionally capped.
     var hasAuthoritativeFileCount: Bool {
-        isTotalFilesWrittenAuthoritative && outputBreakdown?.wasTruncated != true
+        isTotalFilesWrittenAuthoritative
+            && outputBreakdown?.wasTruncated != true
+            && hasConsistentFileAccounting
     }
 
     /// Human-readable count fragment for legacy UI surfaces. Nil means no useful count is known.
@@ -1086,6 +1088,7 @@ struct MacExportResultPayload: Codable {
               formatsPerDate >= 0,
               totalFilesWritten >= 0,
               externalRecordFileCount >= 0,
+              externalRecordFileCount <= totalFilesWritten,
               dailyNoteUpdateCount >= 0,
               dailyNoteSkipCount >= 0 else { return false }
         guard let outputBreakdown else { return true }
