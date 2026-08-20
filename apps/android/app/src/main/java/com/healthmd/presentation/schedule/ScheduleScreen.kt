@@ -110,6 +110,7 @@ fun ScheduleScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val historyViewModel: HistoryViewModel = hiltViewModel()
     val historyUiState by historyViewModel.uiState.collectAsStateWithLifecycle()
+    val profileSchedulesViewModel: ProfileSchedulesViewModel = hiltViewModel()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val protection = LocalConfigurationProtection.current
@@ -362,6 +363,8 @@ fun ScheduleScreen(
         )
 
         Spacer(modifier = Modifier.height(Spacing.sm))
+
+        ProfileSchedulesSection(viewModel = profileSchedulesViewModel)
 
         ScheduleSectionLabel(stringResource(R.string.automatic_export_title))
 

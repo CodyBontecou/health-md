@@ -187,6 +187,10 @@ final class MacCorpusExportSessionManager {
         var externalRecordFileCount: Int
         var dailyNoteUpdateCount: Int?
         var dailyNoteSkipCount: Int?
+        /// Write-side warnings (individual-entry coverage gaps under lossless
+        /// records) collected across the session and replayed in the terminal
+        /// result payload. Optional so earlier journals decode unchanged.
+        var individualEntryCoverageGaps: [ExportPartialFailure]? = nil
         /// Canonical strict-raw retained-day result survives payload spool cleanup and restart.
         var strictRawRetainedDayCount: Int? = nil
         /// Optional so journals created before one-time dictionary tracking decode unchanged.
@@ -978,11 +982,15 @@ final class MacCorpusExportSessionManager {
             )
             var rollupBlockedRequestedDates: Set<Date> = []
             if !unavailableRollupDates.isEmpty && derivedSettings.rollupSummariesEnabled {
-                // The range summary spans the entire requested range, so any
-                // unavailable transfer day blocks the summary for every
-                // requested day.
                 for requestedDate in journal.exportManifest.requestedDates {
-                    let affectsRequestedDate = !unavailableRollupDates.isEmpty
+                    let affectsRequestedDate = derivedSettings.enabledRollupPeriods.contains { period in
+                        let window = HealthRollupPeriodWindow.window(
+                            containing: requestedDate,
+                            period: period,
+                            calendar: sourceCalendar
+                        )
+                        return unavailableRollupDates.contains { $0 >= window.startDate && $0 <= window.endDate }
+                    }
                     if affectsRequestedDate {
                         rollupBlockedRequestedDates.insert(requestedDate)
                         session.journal.completedDates.removeAll { $0 == requestedDate }
@@ -1795,6 +1803,9 @@ final class MacCorpusExportSessionManager {
                             (session.journal.dailyNoteUpdateCount ?? 0) + writeResult.dailyNoteUpdatedCount
                         session.journal.dailyNoteSkipCount =
                             (session.journal.dailyNoteSkipCount ?? 0) + writeResult.dailyNoteSkippedCount
+                        session.journal.individualEntryCoverageGaps =
+                            (session.journal.individualEntryCoverageGaps ?? [])
+                            + writeResult.individualEntryCoverageGaps
 
                         if settings.dailyNotesOnlyModeEnabled {
                             switch writeResult.dailyNoteResult {
@@ -2054,7 +2065,7 @@ final class MacCorpusExportSessionManager {
                 artifactPlanVersion: materialized.operation.selectedPlan.artifactPlanVersion,
                 requestID: materialized.operation.selectedPlan.requestID,
                 sessionID: materialized.operation.selectedPlan.sessionID,
-                profile: "apple_health_data_v7",
+                profile: "apple_health_data_v8",
                 totalByteCount: materialized.operation.selectedPlan.totalByteCount,
                 immutablePlanSHA256: "",
                 dataDictionary: storedDictionary,
@@ -2399,7 +2410,7 @@ final class MacCorpusExportSessionManager {
               plan.artifactPlanVersion == plan.pin.artifactPlanVersion,
               plan.requestID == journal.session.jobID.uuidString.lowercased(),
               plan.sessionID == journal.session.sessionID.uuidString.lowercased(),
-              plan.profile == "apple_health_data_v7",
+              plan.profile == "apple_health_data_v8",
               plan.dailyFileCount >= 0,
               plan.rollupFileCount >= 0,
               fileCount.partialValue == plan.artifacts.count,
@@ -2522,7 +2533,7 @@ final class MacCorpusExportSessionManager {
             artifactPlanVersion: plan.artifactPlanVersion,
             requestID: plan.requestID,
             sessionID: plan.sessionID,
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             artifacts: nativeArtifacts,
             totalByteCount: plan.totalByteCount,
             pin: plan.pin
@@ -3717,6 +3728,7 @@ final class MacCorpusExportSessionManager {
             dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
             dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0,
             failedDateDetails: session.journal.failedDateDetails,
+            partialFailures: session.journal.individualEntryCoverageGaps ?? [],
             completedDates: Array(Set(session.journal.completedDates)).sorted(),
             destinationDisplayName: nil,
             destinationPathForDisplay: nil,
@@ -4749,14 +4761,16 @@ final class MacCorpusExportSessionManager {
             })
         }
         if settings.hasFileDestinationOutput {
-            for format in settings.exportFormats {
-                candidates.append(HealthRollupExporter.folderURL(
-                    vaultURL: vaultURL,
-                    healthSubfolder: healthSubfolder,
-                    period: .range,
-                    format: format,
-                    settings: settings
-                ))
+            for period in settings.enabledRollupPeriods {
+                for format in settings.exportFormats {
+                    candidates.append(HealthRollupExporter.folderURL(
+                        vaultURL: vaultURL,
+                        healthSubfolder: healthSubfolder,
+                        period: period,
+                        format: format,
+                        settings: settings
+                    ))
+                }
             }
         }
         let canonicalRoot = vaultURL.standardizedFileURL.resolvingSymlinksInPath().path

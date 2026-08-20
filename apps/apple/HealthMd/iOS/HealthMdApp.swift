@@ -99,13 +99,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
                 completionHandler()
             }
-        } else if request.identifier.contains("export.reminder") {
-            Task { @MainActor in
-                await SchedulingManager.shared.waitForScheduledExportDependencies()
-                await SchedulingManager.shared.performNotificationTriggeredExport()
-                completionHandler()
-            }
         } else {
+            // Recovery notifications all carry a pending-export payload with a
+            // stable request ID; anything else (result banners from older
+            // builds included) has no retry semantics to honor on tap.
             completionHandler()
         }
     }
@@ -124,6 +121,8 @@ struct HealthMdApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var schedulingManager = SchedulingManager.shared
+    @StateObject private var advancedSettings: AdvancedExportSettings
+    @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService = SyncService()
     @StateObject private var directCLIService = IPhoneDirectCLIService()
@@ -133,12 +132,23 @@ struct HealthMdApp: App {
     @StateObject private var configurationProtection = ConfigurationProtectionManager()
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
+    @StateObject private var sharedSetupCoordinator: SharedSetupCoordinator
+    @State private var hasInstalledSharedSetupURLHandler = false
     #if DEBUG
     @StateObject private var exportPerformanceLab = IPhoneExportPerformanceLabCoordinator()
     #endif
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
+        let advancedSettings = AdvancedExportSettings()
+        let apiExportSettings = APIExportSettings()
+        _advancedSettings = StateObject(wrappedValue: advancedSettings)
+        _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
+        _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
+            settings: advancedSettings,
+            apiExportSettings: apiExportSettings
+        ))
+
         configureTransparentTabBarAppearance()
 
         // Register defaults for local Mac destination compatibility.
@@ -259,6 +269,16 @@ struct HealthMdApp: App {
             forKey: ConfigurationProtectionManager.storageKey
         )
 
+        // Export profiles, their scheduled entries, and their destination
+        // bindings are UserDefaults-backed stores created after this reset
+        // was written; clear them so a UI-test journey never inherits profile
+        // state from an earlier journey on the same install.
+        UserDefaults.standard.removeObject(forKey: "exportProfiles.list")
+        UserDefaults.standard.removeObject(forKey: "exportProfiles.activeProfileID")
+        UserDefaults.standard.removeObject(forKey: "scheduledExportEntries.list")
+        UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.vaults")
+        UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.apiEndpoints")
+
         // All managers are @MainActor — set state in Task.
         Task { @MainActor in
             // HealthKit: set authorization state without showing dialogs
@@ -298,7 +318,21 @@ struct HealthMdApp: App {
             .environmentObject(directCLIService)
             .environmentObject(externalIntegrationManager)
             .environmentObject(corpusRecoveryManager)
-            .environmentObject(configurationProtection)
+            .environmentObject(advancedSettings)
+            .environmentObject(apiExportSettings)
+            .environmentObject(sharedSetupCoordinator)
+            .sheet(isPresented: $sharedSetupCoordinator.isFlowPresented) {
+                SharedSetupFlowView(coordinator: sharedSetupCoordinator)
+            }
+            .alert("Shared Setup", isPresented: Binding(
+                get: { sharedSetupCoordinator.errorMessage != nil },
+                set: { if !$0 { sharedSetupCoordinator.errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(sharedSetupCoordinator.errorMessage ?? "")
+            }
+                        .environmentObject(configurationProtection)
             .safeAreaInset(edge: .top, spacing: 0) {
                 Group {
                     if let snapshot = notificationExportActivity.snapshot {
@@ -456,6 +490,10 @@ struct HealthMdApp: App {
                 )
             }
             .onOpenURL { url in
+                if sharedSetupCoordinator.handleOpenURL(url, cold: !hasInstalledSharedSetupURLHandler) {
+                    hasInstalledSharedSetupURLHandler = true
+                    return
+                }
                 #if DEBUG
                 if exportPerformanceLab.handle(url: url) {
                     if exportPerformanceLab.canAutonomouslyStart {
@@ -473,6 +511,7 @@ struct HealthMdApp: App {
                 guard IPhoneDirectCLIPairingLink(url: url) != nil else { return }
                 directCLIService.rejectExternalPairingLink()
             }
+            .onAppear { hasInstalledSharedSetupURLHandler = true }
             .onChange(of: scenePhase) { _, phase in
                 guard !TestMode.suppressesRuntimeServices else { return }
                 switch phase {

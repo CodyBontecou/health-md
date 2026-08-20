@@ -113,7 +113,19 @@ enum class ArtifactFormat {
 enum class SettingsPolicy {
     @SerialName("requested_scope") REQUESTED_SCOPE,
     @SerialName("saved_device_settings") SAVED_DEVICE_SETTINGS,
+    /** Resolve settings from a named export profile on the Android source by stable ID
+     * (additive; older peers fail closed on the unknown variant). */
+    @SerialName("profile") PROFILE,
 }
+
+/** Reference to an export profile resolved on the Android source. The stable profile ID is
+ * authoritative; the name is a display convenience used for resolution only when the ID is
+ * absent. */
+@Serializable
+data class ProfileReference(
+    @SerialName("profile_id") val profileId: String,
+    val name: String? = null,
+)
 
 @Serializable
 data class ArtifactSchema(

@@ -11,9 +11,9 @@ struct iPadContentView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var schedulingManager: SchedulingManager
-    @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
+    @EnvironmentObject var advancedSettings: AdvancedExportSettings
+        @EnvironmentObject var configurationProtection: ConfigurationProtectionManager
     @StateObject private var vaultManager = VaultManager()
-    @StateObject private var advancedSettings = AdvancedExportSettings()
 
     @State private var selectedTab: iPadNavItem? = .export
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
@@ -228,13 +228,16 @@ struct iPadContentView: View {
                         advancedSettings.exportFormats = [.markdown]
                         advancedSettings.includeGranularData = true
                         advancedSettings.metricSelection.selectAll()
-                        advancedSettings.generateRangeSummary = true
+                        advancedSettings.generateWeeklyRollups = true
+                        advancedSettings.generateMonthlyRollups = true
+                        advancedSettings.generateYearlyRollups = true
                     }
                 }
                 await refreshDateRangeSelectionForOpening(isInitialLaunch: true)
             }
             .onChange(of: scenePhase) { _, newPhase in
                 guard newPhase == .active else { return }
+                vaultManager.refreshVaultAccess()
                 Task { await refreshDateRangeSelectionForOpening() }
             }
             .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
@@ -280,7 +283,7 @@ struct iPadContentView: View {
 
     private var canExport: Bool {
         healthKitManager.isAuthorized
-            && (vaultManager.vaultURL != nil || vaultManager.requiresVaultReselection)
+            && vaultManager.hasVaultSelection
             && advancedSettings.hasFileDestinationOutput
     }
 

@@ -24,9 +24,10 @@ The generated artifacts are rebuilt by running the real production code against 
 
 | Surface | Identifier | Current version | Purpose |
 |---|---:|---:|---|
-| Daily record | `healthmd.health_data` | 7 | Daily summaries, diagnostics, and optional canonical archive. |
+| Daily record | `healthmd.health_data` | 8 | Apple daily summaries, optional typed provider sections, diagnostics, and optional canonical archive. |
+| Typed WHOOP day | `healthmd.provider.whoop_daily` | 1 | Provider-namespaced WHOOP cycles, recovery, sleep, workouts, body snapshot, and safe resource status. |
 | Canonical Apple Health archive | `healthmd.healthkit_records` | 1 | Source records, provenance, relationships, query results, and external records. |
-| Roll-up summary | `healthmd.rollup_summary` | 8 | One range summary per export derived from daily summaries. |
+| Roll-up summary | `healthmd.rollup_summary` | 8 | Weekly, monthly, and yearly projections derived from daily summaries. |
 | API Endpoint envelope | `healthmd.api_export` | 1 or 2 | One or more daily records sent to a configured endpoint; v2 adds provider sidecars. |
 | Strict CLI raw result | `healthmd.raw_result` | 1 | Canonical daily records returned through the Mac CLI without writing files. |
 | Compact context day | `healthmd.query_context_day` | 1 | Portable typed query input with coverage and evidence locators. |
@@ -48,7 +49,7 @@ Versions advance independently. A newer API or connected-protocol envelope does 
 | Send to your own service | API Endpoint | Yes when lossless capture is enabled | No |
 | Terminal automation | Mac CLI strict raw | Yes | No |
 | Local queries and evidence | Loopback query API/CLI/MCP | Directly scoped | Typed JSON |
-| Range trends | Roll-ups | No; summary projections | Yes |
+| Weekly/monthly/yearly trends | Roll-ups | No; summary projections | Yes |
 
 ## Reference map
 
@@ -71,7 +72,7 @@ The generated directory contains complete, copyable fixtures rather than shorten
 
 - [`generated/core/`](./generated/core/): daily exports, canonical records, data dictionary, metric catalog, path/type inventories, and CSV contracts.
 - [`generated/individual/`](./generated/individual/): canonical and compatibility entry notes, filename/path behavior, and recursive frontmatter inventory.
-- [`generated/rollups/`](./generated/rollups/): production range JSON/CSV/Markdown/Bases output and the complete aggregation matrix.
+- [`generated/rollups/`](./generated/rollups/): production weekly JSON/CSV/Markdown/Bases output and the complete aggregation matrix.
 - [`generated/automation/`](./generated/automation/): API, localhost control, strict raw, sync-message, connected-transfer, and Mac job/result contracts.
 - [`generated/cli/`](./generated/cli/): executable CLI requests, responses, diagnostics, and exit-code behavior.
 
@@ -86,7 +87,7 @@ Generated files may be large because they intentionally exercise optional branch
 5. Use source UUIDs or documented external identities for deduplication.
 6. Use canonical archive timestamps for source-event joins; summary clock fields are presentation values.
 7. Parse CSV with an RFC 4180 implementation. Do not split on commas or physical lines.
-8. Keep historical files under their original version. Never relabel older exports as v7.
+8. Keep historical files under their original version. Never relabel older exports as v8.
 
 ## Privacy
 

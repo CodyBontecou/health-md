@@ -38,7 +38,7 @@ pub(crate) fn render_frontmatter(
         .iter()
         .collect::<BTreeSet<_>>();
     let mut output = String::from("---\n");
-    let apple = config.profile == SemanticProfile::AppleHealthDataV7;
+    let apple = config.profile == SemanticProfile::AppleHealthDataV8;
     if apple {
         output.push_str("schema: healthmd.health_data\nschema_version: 8\n");
         output.push_str("time_context:\n  calendar_timezone: ");
@@ -421,7 +421,7 @@ pub(crate) fn render_csv(
         }
         return output.into_bytes();
     }
-    if profile == SemanticProfile::AppleHealthDataV7 {
+    if profile == SemanticProfile::AppleHealthDataV8 {
         for row in [
             [
                 day.owner_date.as_str(),
@@ -585,7 +585,7 @@ pub(crate) fn public_json_entries(
     public_fields.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
     let mut entries = Vec::new();
     match profile {
-        SemanticProfile::AppleHealthDataV7 => {
+        SemanticProfile::AppleHealthDataV8 => {
             entries.push((
                 "schema".to_owned(),
                 Value::String("healthmd.health_data".to_owned()),
@@ -1095,7 +1095,7 @@ pub(crate) fn render_daily_note(
 /// Returns a stable size/encoding error when either bounded document is invalid.
 pub fn merge_markdown(existing: &str, generated: &str) -> Result<String, RenderError> {
     super::markdown_merge::merge_profile_markdown(
-        SemanticProfile::AppleHealthDataV7,
+        SemanticProfile::AppleHealthDataV8,
         existing,
         generated,
         false,

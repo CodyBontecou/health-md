@@ -53,36 +53,59 @@ struct ExportRollupOutputProjection: Equatable {
 /// every selected daily-summary key is present, avoiding the severe undercount
 /// caused by applying one small average byte size to every file format.
 enum ExportRollupOutputSizeEstimator {
+    private struct WindowShape: Hashable {
+        let period: HealthRollupPeriod
+        let daysExpected: Int
+        let sourceDateCount: Int
+    }
+
     static func estimate(
         selectedDates: [Date],
-        rollupsEnabled: Bool,
+        periods: [HealthRollupPeriod],
         formats: Set<ExportFormat>,
         metricSelection: MetricSelectionState,
         customization: FormatCustomization,
         latestAllowedDate: Date = Date(),
         calendar: Calendar = .current
     ) -> ExportRollupOutputProjection {
-        guard rollupsEnabled,
-              !selectedDates.isEmpty,
-              !formats.isEmpty else {
+        guard !selectedDates.isEmpty, !periods.isEmpty, !formats.isEmpty else {
             return ExportRollupOutputProjection(byteCount: 0, fileCount: 0, sourceDateCount: 0)
         }
 
         let latestAllowedDay = calendar.startOfDay(for: latestAllowedDate)
-        let requestedDays = Set(selectedDates.map { calendar.startOfDay(for: $0) })
-        guard let firstDay = requestedDays.min(), let lastDay = requestedDays.max() else {
-            return ExportRollupOutputProjection(byteCount: 0, fileCount: 0, sourceDateCount: 0)
-        }
-        guard firstDay <= latestAllowedDay else {
-            return ExportRollupOutputProjection(byteCount: 0, fileCount: 0, sourceDateCount: 0)
+        var windows = Set<HealthRollupPeriodWindow>()
+        for period in periods {
+            for date in selectedDates {
+                let window = HealthRollupPeriodWindow.window(
+                    containing: calendar.startOfDay(for: date),
+                    period: period,
+                    calendar: calendar
+                )
+                if calendar.startOfDay(for: window.startDate) <= latestAllowedDay {
+                    windows.insert(window)
+                }
+            }
         }
 
-        let window = HealthRollupPeriodWindow.rangeWindow(
-            from: firstDay,
-            to: min(lastDay, latestAllowedDay),
-            calendar: calendar
-        )
-        let sourceDates = requestedDays.filter { $0 <= latestAllowedDay }
+        var sourceDateSet = Set<Date>()
+        var shapeCounts: [WindowShape: Int] = [:]
+
+        for window in windows {
+            let sourceDates = sourceDates(
+                for: window,
+                through: latestAllowedDay,
+                calendar: calendar
+            )
+            guard !sourceDates.isEmpty else { continue }
+            sourceDateSet.formUnion(sourceDates)
+
+            let shape = WindowShape(
+                period: window.period,
+                daysExpected: window.daysExpected,
+                sourceDateCount: sourceDates.count
+            )
+            shapeCounts[shape, default: 0] += 1
+        }
 
         let metricCount = HealthMetricDataDictionary.entries(using: customization)
             .count { entry in
@@ -91,22 +114,44 @@ enum ExportRollupOutputSizeEstimator {
             }
 
         var projectedBytes: Int64 = 0
-        for format in formats {
-            projectedBytes = addingClamped(
-                projectedBytes,
-                estimatedBytes(
+        for (shape, count) in shapeCounts {
+            for format in formats {
+                let bytesPerFile = estimatedBytes(
                     for: format,
                     metricCount: metricCount,
-                    sourceDateCount: sourceDates.count
+                    sourceDateCount: shape.sourceDateCount
                 )
-            )
+                projectedBytes = addingClamped(
+                    projectedBytes,
+                    multiplyingClamped(bytesPerFile, Int64(count))
+                )
+            }
         }
 
         return ExportRollupOutputProjection(
             byteCount: projectedBytes,
-            fileCount: formats.count,
-            sourceDateCount: sourceDates.count
+            fileCount: windows.count * formats.count,
+            sourceDateCount: sourceDateSet.count
         )
+    }
+
+    private static func sourceDates(
+        for window: HealthRollupPeriodWindow,
+        through latestAllowedDay: Date,
+        calendar: Calendar
+    ) -> [Date] {
+        let start = calendar.startOfDay(for: window.startDate)
+        let end = min(calendar.startOfDay(for: window.endDate), latestAllowedDay)
+        guard start <= end else { return [] }
+
+        var dates: [Date] = []
+        var current = start
+        while current <= end {
+            dates.append(current)
+            guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = next
+        }
+        return dates
     }
 
     /// Constants model each renderer's fixed envelope, per-metric rows, repeated
@@ -136,9 +181,14 @@ enum ExportRollupOutputSizeEstimator {
         }
     }
 
+    private static func multiplyingClamped(_ lhs: Int64, _ rhs: Int64) -> Int64 {
+        let result = lhs.multipliedReportingOverflow(by: rhs)
+        return result.overflow ? Int64.max : result.partialValue
+    }
+
     private static func addingClamped(_ lhs: Int64, _ rhs: Int64) -> Int64 {
-        let (result, overflow) = lhs.addingReportingOverflow(rhs)
-        return overflow ? Int64.max : max(0, result)
+        let result = lhs.addingReportingOverflow(rhs)
+        return result.overflow ? Int64.max : result.partialValue
     }
 }
 

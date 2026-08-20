@@ -1012,14 +1012,18 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
-        settings.generateRangeSummary = true
+        settings.generateWeeklyRollups = true
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = true
         settings.summaryOnlyExport = true
 
         let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
-        XCTAssertTrue(reloaded.generateRangeSummary)
+        XCTAssertTrue(reloaded.generateWeeklyRollups)
+        XCTAssertFalse(reloaded.generateMonthlyRollups)
+        XCTAssertTrue(reloaded.generateYearlyRollups)
         XCTAssertTrue(reloaded.summaryOnlyExport)
         XCTAssertTrue(reloaded.summaryOnlyModeEnabled)
-        XCTAssertEqual(reloaded.enabledRollupPeriods, [.range])
+        XCTAssertEqual(reloaded.enabledRollupPeriods, [.weekly, .yearly])
     }
 
     func testSchemaAffectingExportOptionsDefaultOffForFreshInstall() throws {
@@ -1034,7 +1038,9 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertEqual(settings.exportFormats, [.markdown])
         XCTAssertFalse(settings.organizeFormatsIntoFolders, "Format-folder migration must stay opt-in for existing flat vault paths")
         XCTAssertNil(settings.formatFolderPath(for: date, format: .markdown))
-        XCTAssertFalse(settings.generateRangeSummary)
+        XCTAssertFalse(settings.generateWeeklyRollups)
+        XCTAssertFalse(settings.generateMonthlyRollups)
+        XCTAssertFalse(settings.generateYearlyRollups)
         XCTAssertFalse(settings.rollupSummariesEnabled)
         XCTAssertFalse(settings.summaryOnlyExport)
         XCTAssertFalse(settings.summaryOnlyModeEnabled)
@@ -1052,7 +1058,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         settings.exportFormats = [.markdown, .json]
         settings.archiveExportFiles = true
         settings.summaryOnlyExport = true
-        settings.generateRangeSummary = true
+        settings.generateWeeklyRollups = true
         settings.individualTracking.globalEnabled = true
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.dailyNotesOnly = true
@@ -1075,7 +1081,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertFalse(settings.dailyNotesOnlyModeEnabled)
         XCTAssertEqual(settings.effectiveFileExportMode, .summaryOnly)
         XCTAssertTrue(settings.archiveModeEnabled)
-        XCTAssertEqual(settings.enabledRollupPeriods, [.range])
+        XCTAssertEqual(settings.enabledRollupPeriods, [.weekly])
     }
 
     func testDailyNotesOnlyAllowsFileDestinationWithoutAggregateFormats() throws {

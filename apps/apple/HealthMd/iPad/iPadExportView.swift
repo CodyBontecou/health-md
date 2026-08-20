@@ -121,14 +121,12 @@ struct iPadExportView: View {
                             Image(systemName: "folder.fill")
                                 .foregroundStyle(vaultManager.requiresVaultReselection ? Color.error : (vaultManager.vaultURL == nil ? Color.textMuted : Color.accent))
                                 .accessibilityHidden(true)
-                            Text(vaultManager.vaultURL == nil ? "Folder" : vaultManager.vaultName)
+                            Text(vaultManager.hasVaultSelection ? vaultManager.vaultName : "Folder")
                                 .font(Typography.bodyEmphasis())
                                 .foregroundStyle(Color.textPrimary)
                                 .lineLimit(1)
                             Spacer()
-                            Text(vaultManager.requiresVaultReselection
-                                ? "Needs Review"
-                                : (vaultManager.vaultURL != nil ? "Selected" : (vaultManager.hasSavedVaultFolder ? "Reconnect" : "Choose Folder")))
+                            Text(vaultManager.vaultAvailabilityText)
                                 .font(Typography.label())
                                 .foregroundStyle(vaultManager.requiresVaultReselection ? Color.error : (vaultManager.vaultURL == nil ? Color.accent : Color.success))
                                 .geistPill(tint: vaultManager.requiresVaultReselection ? Color.error : (vaultManager.vaultURL == nil ? Color.accent : Color.success))
@@ -136,13 +134,13 @@ struct iPadExportView: View {
 
                         Text(vaultManager.requiresVaultReselection
                             ? "Saved folder changed. Review it in Files, then re-select it."
-                            : (vaultManager.vaultURL?.path(percentEncoded: false) ?? "Choose where Health.md writes exports"))
+                            : (vaultManager.pathForDisplay ?? "Choose where Health.md writes exports"))
                             .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
                             .lineLimit(1)
                             .truncationMode(.middle)
 
-                        Button(vaultManager.requiresVaultReselection ? "Re-select Folder" : (vaultManager.vaultURL != nil ? "Change…" : "Choose Folder")) {
+                        Button(vaultManager.requiresVaultReselection ? "Re-select Folder" : (vaultManager.hasVaultSelection ? "Change…" : "Choose Folder")) {
                             showFolderPicker = true
                         }
                         .font(Typography.bodyEmphasis())
@@ -359,17 +357,23 @@ struct iPadExportView: View {
                         Text("Roll-Up Summaries")
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
-                        Text("Generate one summary file covering the selected export range for every selected export format.")
+                        Text("Generate weekly, monthly, or yearly summary files for every selected export format.")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
 
-                        Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
+                        Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                            .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                        Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
+                            .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                        Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                             .tint(Color.accent)
                             .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
-                        Text("Skips daily files and writes only the range summary.")
+                        Text("Skips daily files when at least one roll-up period is enabled.")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textMuted)
                     }
@@ -678,7 +682,7 @@ struct iPadExportView: View {
                 endDate: previewDateRange.endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
-                destinationLabel: vaultManager.vaultURL == nil ? "iPad folder" : "iPad: \(vaultManager.vaultName)",
+                destinationLabel: vaultManager.hasVaultSelection ? "iPad: \(vaultManager.vaultName)" : "iPad folder",
                 destinationRootName: nil,
                 dateRangePreset: dateRangePreset,
                 targetType: .localFile,
@@ -780,13 +784,16 @@ struct iPadExportView: View {
     // MARK: - Helpers
 
     private var readinessMessage: String {
-        if !healthKitManager.isAuthorized && vaultManager.vaultURL == nil {
+        if !healthKitManager.isAuthorized && !vaultManager.hasVaultSelection {
             return "Connect Apple Health and choose an export folder to get started."
-        } else if !healthKitManager.isAuthorized {
-            return "Connect Apple Health to export."
-        } else {
-            return "Choose an export folder to get started."
         }
+        if !healthKitManager.isAuthorized {
+            return "Connect Apple Health to export."
+        }
+        if vaultManager.hasVaultSelection && vaultManager.vaultURL == nil {
+            return "Reconnect or re-select \(vaultManager.vaultName) to restore export access."
+        }
+        return "Choose an export folder to get started."
     }
 
     private var previewNeedsHealthPermission: Bool {

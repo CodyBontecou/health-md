@@ -37,7 +37,7 @@ Canonical records use strict source-start day ownership. Sleep summary keeps its
 
 ## Completeness
 
-Scheduled file/upload completion and source-capture completeness are separate. Review `raw_capture_status` in each v7 daily record:
+Scheduled file/upload completion and source-capture completeness are separate. Review `raw_capture_status` in each v8 daily record:
 
 - `complete` can include successful empty queries;
 - `partial` retains successful data but records incomplete branches;
@@ -50,7 +50,7 @@ A downstream automation should not equate a written file with a complete canonic
 
 Before a scheduled occurrence, Health.md persists exact requested dates, source, schedule kind, destination snapshot, fire date, and notification routing metadata. It does not store HealthKit samples in the worker.
 
-If HealthKit is protected while locked, the unresolved dates remain pending. Partial runs remove exact terminal dates (successfully written/uploaded days and iPhone HealthKit no-data outcomes) and keep only retryable dates, preventing append-mode duplicates. Missing Mac cache data remains retryable because a later iPhone sync may populate it. The immediate “Health Export Needs Attention” notification carries the stable pending request ID; Health.md does not announce an incomplete run as completed. Open Health.md and tap to retry. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs or re-expansion of completed dates.
+If HealthKit is protected while locked, the unresolved dates remain pending. Partial runs remove exact terminal dates (successfully written/uploaded days and iPhone HealthKit no-data outcomes) and keep only retryable dates, preventing append-mode duplicates. Missing Mac cache data remains retryable because a later iPhone sync may populate it. The immediate “Health Export Needs Attention” notification carries the stable pending request ID; Health.md does not announce an incomplete run as completed. Open Health.md and tap to retry. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs or re-expansion of completed dates. Whichever trigger actually runs the request — notification tap, app-open catch-up, or Connected Mac handshake resume — the run is presented through the scheduled-export activity banner with live progress; on a cold-launch notification tap the app-open drain may win the race and own the banner, and a result is never surfaced as a standalone alert. The +60s fallback notification armed for a profile occurrence carries that profile's identity (exact dates, destination, frozen settings), so a tap runs the profile's own export while profile scheduling owns the wake-up; legacy-shaped requests are never armed while only profile entries are enabled. A preserved retry and its recovery notification survive wake-up re-arms and profile edits — only not-yet-fired fallback notifications are canceled when automation is re-armed or disabled — and the armed fallback is defused the moment its retry starts running, so it never surfaces mid-run.
 
 ## Scheduling/privacy architecture
 

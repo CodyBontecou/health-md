@@ -111,6 +111,42 @@ final class HealthKitDailyCaptureTests: XCTestCase {
 
         XCTAssertEqual(outcome.externalDailyRecords.count, 1)
         XCTAssertTrue(outcome.externalDailyRecords[0].shouldExport)
+        XCTAssertNotNil(outcome.record?.providers?.whoop)
+    }
+
+    func testSuccessfulEmptyProviderCaptureIsTypedEvenWhenNoSidecarIsRetained() async throws {
+        let fetchedAt = Date(timeIntervalSince1970: 1_778_371_200)
+        let empty = ExternalDailyRecord(
+            provider: .whoop,
+            date: "2026-05-10",
+            fetchedAt: fetchedAt,
+            payloads: ["cycles", "recovery", "sleep", "workouts"].map {
+                ExternalProviderPayload(
+                    name: $0,
+                    endpoint: "https://redacted.invalid/\($0)",
+                    statusCode: 200,
+                    fetchedAt: fetchedAt,
+                    data: .object(["records": .array([])])
+                )
+            }
+        )
+        let outcome = try await HealthKitDailyCapture.capture(
+            date: day(10),
+            includeGranularData: false,
+            metricSelection: MetricSelectionState(),
+            transform: .none,
+            emptyRecordPolicy: .retain,
+            fetchExternalRecords: true,
+            failurePolicy: .apiEndpoint,
+            fetchHealthData: { requestedDate, _, _ in
+                HealthData(date: requestedDate, activity: ActivityData(steps: 1))
+            },
+            fetchExternalDailyRecords: { _ in [empty] }
+        )
+
+        XCTAssertTrue(outcome.externalDailyRecords.isEmpty)
+        XCTAssertEqual(outcome.record?.providers?.whoop?.captureStatus, .complete)
+        XCTAssertEqual(outcome.record?.providers?.whoop?.resources.map(\.recordCount), [0, 0, 0, 0])
     }
 
     func testFailurePoliciesKeepEstablishedAuthorizationSemanticsExplicit() async throws {

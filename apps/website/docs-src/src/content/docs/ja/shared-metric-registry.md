@@ -15,7 +15,7 @@ description: Health.mdのクロスプラットフォーム指標IDと互換性�
 
 | 内部プロファイル | 公開プロファイル | スキーマ | 順序付き選択項目 | 出力記述子 |
 |---|---|---:|---:|---:|
-| `apple_health_data_v7` | `apple-v7` | 7 | 230 | 226 |
+| `apple_health_data_v8` | `apple-v8` | 7 | 230 | 226 |
 | `android_frozen_v4` | `android-frozen-v4` | 4 | 106 | 161 |
 | `android_analytical_v5` | `android-analytical-v5` | 5 | 106 | 161 |
 

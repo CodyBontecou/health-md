@@ -14,8 +14,8 @@ const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.jso
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MetricRegistryProfile {
-    /// Apple `healthmd.health_data` v7.
-    AppleHealthDataV7,
+    /// Apple `healthmd.health_data` v8.
+    AppleHealthDataV8,
     /// Android byte-frozen iOS-compatible v4.
     AndroidFrozenV4,
     /// Android additive analytical v5.
@@ -27,7 +27,7 @@ impl MetricRegistryProfile {
     #[must_use]
     pub const fn id(self) -> &'static str {
         match self {
-            Self::AppleHealthDataV7 => "apple_health_data_v7",
+            Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
         }
@@ -430,7 +430,7 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
     let profile_ids: HashSet<&str> = unique_nonempty(&profile_id_values)?;
     if profile_ids
         != HashSet::from([
-            "apple_health_data_v7",
+            "apple_health_data_v8",
             "android_frozen_v4",
             "android_analytical_v5",
         ])
@@ -809,7 +809,7 @@ mod tests {
     #[test]
     fn validates_and_projects_all_three_profiles() {
         assert_eq!(validate_embedded_registry(), Ok((230, 106, 3)));
-        let apple = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV7, 1).unwrap();
+        let apple = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV8, 1).unwrap();
         let frozen = metric_registry_snapshot(MetricRegistryProfile::AndroidFrozenV4, 1).unwrap();
         let analytical =
             metric_registry_snapshot(MetricRegistryProfile::AndroidAnalyticalV5, 1).unwrap();
@@ -874,7 +874,7 @@ mod tests {
             "../registry/native-baseline-android-v4-v5.json"
         ))
         .unwrap();
-        let apple = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV7, 1).unwrap();
+        let apple = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV8, 1).unwrap();
         let frozen = metric_registry_snapshot(MetricRegistryProfile::AndroidFrozenV4, 1).unwrap();
         let analytical =
             metric_registry_snapshot(MetricRegistryProfile::AndroidAnalyticalV5, 1).unwrap();
@@ -936,7 +936,7 @@ mod tests {
     #[test]
     fn rejects_wrong_version_without_parsing_registry() {
         assert_eq!(
-            metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV7, 2),
+            metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV8, 2),
             Err(CoreError::UnsupportedRegistryVersion)
         );
     }

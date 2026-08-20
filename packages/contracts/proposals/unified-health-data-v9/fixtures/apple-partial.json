@@ -1,0 +1,53 @@
+{
+  "calendar": {
+    "assignment_rule": "record_start_in_half_open_day_interval",
+    "identifier": "gregorian",
+    "interval_end": "2026-11-02T05:00:00Z",
+    "interval_start": "2026-11-01T04:00:00Z",
+    "time_zone": "America/New_York"
+  },
+  "capture": {
+    "resources": [
+      {
+        "record_count": 0,
+        "resource": "steps",
+        "source": "apple_health",
+        "status": "complete"
+      },
+      {
+        "error": {
+          "code": "capture_cancelled",
+          "message": "The capture was cancelled before this resource completed.",
+          "retryable": true
+        },
+        "record_count": 0,
+        "resource": "heart_rate_variability_sdnn",
+        "source": "apple_health",
+        "status": "cancelled"
+      }
+    ],
+    "status": "partial"
+  },
+  "metrics": [],
+  "owner_date": "2026-11-01",
+  "platform": {
+    "apple": {
+      "schema": "healthmd.platform.apple_daily",
+      "schema_version": 1,
+      "source_schema_version": 8
+    }
+  },
+  "profile": "unified-cross-platform-v1",
+  "schema": "healthmd.health_data",
+  "schema_version": 9,
+  "source": {
+    "platform": "apple",
+    "source_profile": "apple_health_data_v8"
+  },
+  "warnings": [
+    {
+      "code": "partial_capture",
+      "message": "One requested resource did not complete."
+    }
+  ]
+}

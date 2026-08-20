@@ -5,16 +5,23 @@ description: "Acht App Intents starten Exporte, rufen Zusammenfassungen ab und s
 
 ## Verfügbare Intents
 <div class="options">
-<div class="option"><strong>Gesundheitsdaten von gestern exportieren</strong><p>Kurzbefehl ohne Parameter. Der schnellste Weg, um einfach die gestrigen Daten zu exportieren. Verwendet dieselbe Engine wie der manuelle Export.</p></div>
-<div class="option"><strong>Gesundheitsdaten für ein Datum exportieren</strong><p>Ein einzelner Parameter <em>Datum</em>. Die Uhrzeit wird ignoriert. Nützlich für kalendergesteuerte Automationen.</p></div>
-<div class="option"><strong>Gesundheitsdaten für einen Datumsbereich exportieren</strong><p>Die Parameter <em>Startdatum</em> und <em>Enddatum</em>, beide einschließlich. Für rückwirkende Exporte.</p></div>
-<div class="option"><strong>Gesundheitsdaten der letzten N Tage exportieren</strong><p>Parameter <em>Anzahl der Tage</em> (1–366). Endet gestern. Standardwert 7. Geeignet für Automationen wie „jeden Sonntag die letzten 7 Tage exportieren“.</p></div>
+<div class="option"><strong>Gesundheitsdaten von gestern exportieren</strong><p>Kurzbefehl ohne Parameter. Der schnellste Weg, um einfach die gestrigen Daten zu exportieren. Verwendet dieselbe Engine wie der manuelle Export. Optionaler Parameter <em>Profil</em> (siehe <a href="#profiles">Export-Profile</a>).</p></div>
+<div class="option"><strong>Gesundheitsdaten für ein Datum exportieren</strong><p>Ein einzelner Parameter <em>Datum</em>. Die Uhrzeit wird ignoriert. Nützlich für kalendergesteuerte Automationen. Optionaler Parameter <em>Profil</em>.</p></div>
+<div class="option"><strong>Gesundheitsdaten für einen Datumsbereich exportieren</strong><p>Die Parameter <em>Startdatum</em> und <em>Enddatum</em>, beide einschließlich. Für rückwirkende Exporte. Optionaler Parameter <em>Profil</em>.</p></div>
+<div class="option"><strong>Gesundheitsdaten der letzten N Tage exportieren</strong><p>Parameter <em>Anzahl der Tage</em> (1–366). Endet gestern. Standardwert 7. Geeignet für Automationen wie „jeden Sonntag die letzten 7 Tage exportieren“. Optionaler Parameter <em>Profil</em>.</p></div>
 <div class="option"><strong>Gesundheitszusammenfassung für ein Datum abrufen</strong><p>Gibt eine strukturierte Momentaufnahme mit Schritten, aktiven Kalorien, Schlaf und Herzfrequenz zurück, ohne etwas in den Vault zu schreiben. Verwenden Sie die Werte in Kurzbefehlen für andere Apps.</p></div>
 <div class="option"><strong>Status des letzten Exports abrufen</strong><p>Gibt Zeitstempel, Erfolgsstatus, Zahl der Tage und mögliche Fehlerursache des zuletzt aufgezeichneten Exports zurück. Eine Anfrage bei gesperrtem Gerät bleibt bis zum erneuten Versuch ausstehend und wird daher nicht als aktueller Status zurückgegeben.</p></div>
 <div class="option"><strong>Geplanten Export ein- oder ausschalten</strong><p>Boolescher Parameter. Unterbrechen Sie damit den Zeitplan, etwa während eines Urlaubsfokus, und setzen Sie ihn später fort.</p></div>
-<div class="option"><strong>Gesundheitsdaten exportieren</strong><p>Allgemeiner Export, der den zuletzt im Exportdialog der App verwendeten Datumsbereich übernimmt. Seltener benötigt; die Varianten mit Datumsbereich sind meist eindeutiger.</p></div>
+<div class="option"><strong>Gesundheitsdaten exportieren</strong><p>Allgemeiner Export, der den zuletzt im Exportdialog der App verwendeten Datumsbereich übernimmt. Seltener benötigt; die Varianten mit Datumsbereich sind meist eindeutiger. Optionaler Parameter <em>Profil</em>.</p></div>
 </div>
 
+<a id="profiles"></a>
+## Export-Profile
+<p>Alle fünf Export-Intents akzeptieren einen optionalen <em>Profil</em>-Parameter. Lassen Sie ihn leer, um mit den aktuellen In-App-Exporteinstellungen zu laufen; übergeben Sie den Namen eines gespeicherten Profils, um die eingefrorene Konfiguration dieses Profils — Metrikauswahl, Formate und Ziel — auszuführen, unabhängig davon, was die App gerade anzeigt.</p>
+<div class="callout">
+<strong>Hinweis für bestehende Shortcuts ohne Parameter.</strong>
+<p style="margin-top:6px;">Sobald Sie Ihr erstes Export-Profil in der App anlegen, exportiert ein Shortcut ohne gesetztes <em>Profil</em> mit den gespeicherten Einstellungen des <em>aktiven</em> Profils statt mit den Live-Einstellungen der App. Wenn Sie auf das alte Verhalten angewiesen sind, fixieren Sie den Shortcut auf ein konkretes Profil (oder behalten Sie null Profile), um explizit zu bleiben. Ein nicht mehr existierender Profilname schlägt mit einer klaren Fehlermeldung fehl, statt das Falsche zu exportieren.</p>
+</div>
 ## So finden Sie die Intents
 <p>Öffnen Sie Kurzbefehle unter iOS oder macOS. Tippen Sie zum Erstellen eines Kurzbefehls auf <em>+</em> und suchen Sie nach „Health.md“ oder einem der obigen Intent-Namen. Sie befinden sich in der Kategorie <em>Health</em>.</p>
 <p>Die meisten Intents verwenden <code>openAppWhenRun = false</code> und werden daher ohne App-Start oder sichtbare Oberfläche ausgeführt. Sie funktionieren in Automationen, Fokusfiltern, bei Aufrufen über Hey Siri und über die Aktionstaste.</p>

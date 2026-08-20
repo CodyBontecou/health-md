@@ -47,7 +47,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -102,7 +101,6 @@ fun ExportScreen(
     viewModel: ExportViewModel = hiltViewModel(),
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToAdvancedSettings: () -> Unit = {},
-    onNavigateToClinicianReport: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -603,36 +601,6 @@ fun ExportScreen(
                     dismissedFeatureErrorGeneration = capabilityRefreshGeneration
                     viewModel.clearHealthConnectActionError()
                 },
-            )
-        }
-
-        GeistCardClickable(
-            onClick = onNavigateToClinicianReport,
-            modifier = Modifier.testTag("clinician_report_entry"),
-        ) {
-            Icon(
-                Icons.Outlined.Description,
-                contentDescription = null,
-                tint = AppColors.accent,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.clinician_report_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = AppColors.textPrimary,
-                )
-                Text(
-                    stringResource(R.string.clinician_report_entry_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textSecondary,
-                )
-            }
-            Icon(
-                Icons.AutoMirrored.Outlined.ArrowForwardIos,
-                contentDescription = null,
-                tint = AppColors.textMuted,
             )
         }
 

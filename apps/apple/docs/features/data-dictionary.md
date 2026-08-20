@@ -9,9 +9,9 @@
 
 ## What it does
 
-When **Write Data Dictionary** is enabled, Health.md writes a data dictionary beside exports so people, scripts, Obsidian plugins, and AI tools can interpret summary/frontmatter fields without guessing. In current `schema_version: 8`, it documents canonical keys, units, HealthKit identifiers, daily aggregation, and the range summary roll-up rules. The setting defaults on; turning it off leaves ordinary Markdown and other selected exports unchanged while omitting the JSON sidecar.
+When **Write Data Dictionary** is enabled, Health.md writes a data dictionary beside exports so people, scripts, Obsidian plugins, and AI tools can interpret summary/frontmatter fields without guessing. In current `schema_version: 8`, it documents canonical keys, units, HealthKit identifiers, daily aggregation, and weekly/monthly/yearly roll-up rules. The setting defaults on; turning it off leaves ordinary Markdown and other selected exports unchanged while omitting the JSON sidecar.
 
-The dictionary describes **summary projections**, including v7 lossless diagnostics. It is not a schema for every nested canonical source payload. Source-record consumers should also parse `healthkit_record_archive` (`healthmd.healthkit_records` v1) and its tagged metadata. See the exhaustive generated [metric catalog and roll-up reference](../reference/data-dictionary-and-rollups.md).
+The dictionary describes **summary projections**, including v8 lossless diagnostics and typed WHOOP flat projections. It is not a schema for every nested canonical source payload. Source-record consumers should also parse `healthkit_record_archive` (`healthmd.healthkit_records` v1) and its tagged metadata. See the exhaustive generated [metric catalog and roll-up reference](../reference/data-dictionary-and-rollups.md).
 
 ## Location
 
@@ -53,13 +53,13 @@ Health.md does not delete an existing dictionary when the setting is turned off;
   "rollup": {
     "primary": "sum",
     "statistics": ["sum", "daily_average", "minimum_daily_value", "maximum_daily_value", "days_counted"],
-    "periods": ["range"],
+    "periods": ["weekly", "monthly", "yearly"],
     "preferredSource": "daily_frontmatter",
     "nullHandling": "ignore_missing_days_and_report_days_counted",
     "weightedBy": null,
     "notes": "Sum daily values and report days counted."
   },
-  "schemaVersion": 8
+  "schemaVersion": 6
 }
 ```
 
@@ -100,7 +100,7 @@ Missing is not zero. Tools must follow `nullHandling` and report `days_counted`.
 
 ## Lossless diagnostic fields
 
-Schema v7 frontmatter/Bases includes these compact archive fields:
+Schema v8 frontmatter/Bases includes these compact archive fields:
 
 - `raw_capture_status`;
 - `raw_record_count`;
@@ -115,7 +115,7 @@ These fields tell a summary consumer whether canonical capture was complete. The
 
 - `stand_time_minutes` is summed Apple Stand Time duration. `stand_hours` counts distinct stood-hour category records.
 - VO2 Max may be carried forward from the latest historical source measurement; its source UUID/start/end, carry-forward flag, and age fields must travel with the value.
-- Vitamin/mineral summary units follow the reviewed v7 dictionary contract. Microgram nutrients such as vitamins A/B12/D/K, folate, biotin, selenium, chromium, and molybdenum use `µg`; milligram nutrients remain `mg`. Canonical HealthKit source quantity payloads can preserve the reviewed `mcg` query-unit spelling for the same microgram scale.
+- Vitamin/mineral summary units retain the reviewed v7 dictionary contract in v8. Microgram nutrients such as vitamins A/B12/D/K, folate, biotin, selenium, chromium, and molybdenum use `µg`; milligram nutrients remain `mg`. Canonical HealthKit source quantity payloads can preserve the reviewed `mcg` query-unit spelling for the same microgram scale.
 - Blood-pressure summary averages/min/max remain projections. Actual paired correlations and component identity live in the canonical archive.
 - `raw_record_count` can roll up as a count for diagnostics, but a roll-up is not a substitute for source records.
 
@@ -135,7 +135,7 @@ For `blood_oxygen_min`, period minimum is the minimum of daily minima, not their
 
 ### Latest and provenance
 
-Inventory-like values use the latest daily value. VO2 provenance fields should be carried with the selected latest measurement; do not attach an export date to a historical measurement. Schema v7 also makes `vo2_max` itself a latest roll-up, while retaining period minimum/maximum/average statistics for context.
+Inventory-like values use the latest daily value. VO2 provenance fields should be carried with the selected latest measurement; do not attach an export date to a historical measurement. Schema v8 retains the v7 rule that makes `vo2_max` itself a latest roll-up, while retaining period minimum/maximum/average statistics for context.
 
 ### Workout weighted averages
 
@@ -161,7 +161,7 @@ Use `key` to match the file and `canonicalKey` for cross-user logic.
 
 ## Guidance for parsers and AI tools
 
-- Branch on schema v5/v6/v7 during migration; do not relabel historical files.
+- Branch on schema v5/v6/v7/v8 during migration; do not relabel historical files.
 - Read the data dictionary before interpreting summary fields.
 - Use `unit`, `dailyAggregation`, and `rollup` instead of guessing.
 - Treat missing keys as missing, not zero.
@@ -180,7 +180,7 @@ Use `key` to match the file and `canonicalKey` for cross-user logic.
 ## Implementation notes
 
 - `HealthMetricExportMapping.metricIdToFrontmatterKeys` maps metrics to summary keys.
-- `HealthMetricDataDictionary.entries(using:)` resolves actual keys and schema v7 rules.
+- `HealthMetricDataDictionary.entries(using:)` resolves actual keys and schema v8 rules, including provider entries with no period roll-ups.
 - `HealthMetricDataDictionary.unit(for:converter:)` provides canonical structured units.
 - `HealthMetricRollupRule` encodes period semantics.
 - `AdvancedExportSettings.includeDataDictionary` persists the default-on preference.

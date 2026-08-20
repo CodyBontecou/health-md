@@ -430,7 +430,7 @@ final class HealthMdQueryContextProjectorTests: XCTestCase {
         XCTAssertEqual(decoded.ownerDate, day.ownerDate)
     }
 
-    func testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsCurrent() throws {
+    func testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8() throws {
         let start = iso("2026-05-01T00:00:00Z")
         let ids = Set(HealthMetrics.all.map(\.id))
         let day = try HealthMdQueryContextProjector.project(

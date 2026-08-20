@@ -200,8 +200,8 @@ final class MacExportPerformanceLabController {
         let vault = VaultManager()
         vault.refreshVaultAccess()
         guard let root = vault.vaultURL else { return "bookmark" }
-        guard vault.startVaultAccess() else { return "access" }
-        defer { vault.stopVaultAccess() }
+        guard let accessLease = vault.beginVaultAccess() else { return "access" }
+        defer { accessLease.stop() }
         guard root.lastPathComponent == "MacVault" else { return "path" }
         let rootValues = try? root.resourceValues(
             forKeys: [.isDirectoryKey, .isSymbolicLinkKey]

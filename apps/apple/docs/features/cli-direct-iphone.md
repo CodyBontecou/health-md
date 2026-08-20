@@ -121,7 +121,7 @@ Live status authenticates the selected paired iPhone and reports direct access, 
 
 ## Strict raw export
 
-Raw mode requests the same public schema-v7 `healthmd.health_data` daily documents and strict validation used by the Mac-app backend:
+Raw mode requests the same public schema-v8 `healthmd.health_data` daily documents and strict validation used by the Mac-app backend:
 
 ```bash
 healthmd --backend direct export --yesterday --raw --output yesterday.json
@@ -134,7 +134,7 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 Direct raw mode captures one logical day at a time into protected iPhone storage. The resolved settings snapshot, source timezone, exact day labels, and request fingerprint are pinned before capture so resume cannot mix changed preferences or travel boundaries. Logical days may span multiple 32–64 MiB physical partitions. The transport uses 512 KiB binary frames, SHA-256 validation, chained partition digests, durable receiver checkpoints, and disk-backed final strict-response assembly. Before acknowledging completion, the CLI runs the existing bounded strict date/profile/schema/archive validator; the iPhone then durably records completion/quota and sends a separate confirmation. A lost final message therefore remains resumable rather than producing a false terminal state. The path does not keep a complete corpus in memory or impose a 2 GiB aggregate product cap. Available storage and one unusually dense day remain practical limits.
 
-Selection-pushed canonical extraction also works directly and emits ordinary v7 documents or honest pointer projections after validating the disk-spooled transport:
+Selection-pushed canonical extraction also works directly and emits ordinary v8 documents or honest pointer projections after validating the disk-spooled transport:
 
 ```bash
 healthmd --backend direct extract --category Sleep --last 7 --output sleep.json
@@ -168,7 +168,7 @@ The destination must already exist and be absolute. Direct mode never uses or gu
 
 Default `requested_dates_only` behavior keeps the iPhone's saved formats, Health subfolder, filenames/templates, write mode, Daily Note Injection, and Daily Notes Only, while disabling roll-ups and summary-only mode for this request. Repeatable `--metric`/`--category` or `--all-metrics` plus `--detail summary|lossless` replace saved metric/detail scope only for that job. `--use-iphone-settings` mirrors saved settings exactly, including roll-ups and summary-only mode.
 
-The iPhone generates the same JSON, CSV, Markdown, ZIP, data-dictionary, roll-up, individual-record, Daily Note, and provider sidecar outputs through `VaultManager`; direct mode does not define a second export schema. Public export schema version 7 is unchanged.
+The iPhone generates the same JSON, CSV, Markdown, ZIP, data-dictionary, roll-up, individual-record, Daily Note, and provider sidecar outputs through `VaultManager`; direct mode does not define a second export schema. Generated-file mode uses public Apple export schema version 8; strict `--raw` remains canonical Apple Health only.
 
 Before committing any received file, the CLI validates its declared path, byte count, SHA-256 digest, file manifest, and job fingerprint. It binds the destination root device/inode, rejects absolute child paths, traversal, symlink destinations/ancestors, conflicting destination mutation, and digest changes, then walks and installs relative to `O_NOFOLLOW` directory descriptors with `openat`/`renameat` so an intermediate-directory race cannot escape the approved root. Overwrite is atomic. Append and Markdown merge use a persisted digest-bound commit plan so retrying an acknowledged or interrupted partition does not append the same content twice.
 

@@ -98,6 +98,19 @@ class SchedulingManager: ObservableObject {
         }
     }
 
+    /// Phase-3 shim matching the iOS scheduling surface: macOS scheduling
+    /// remains single-schedule (per-profile scheduled entries are an iOS
+    /// runtime feature), so activity mirrors the legacy schedule. Shared UI
+    /// compiled for both platforms reads this instead of `schedule.isEnabled`.
+    var isSchedulingActive: Bool { schedule.isEnabled }
+
+    /// Phase-3 shim: re-arm macOS automation for the current state. macOS owns
+    /// a polling timer plus the worker mirror rather than BGTask wake-ups.
+    func refreshScheduledAutomation() {
+        rescheduleTimer()
+        PushRegistrationManager.shared.syncSchedule(schedule)
+    }
+
     private var exportTimer: Timer?
     private var isExporting = false
     private let pendingExportStore = PendingExportStore()
@@ -295,7 +308,7 @@ class SchedulingManager: ObservableObject {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             logger.error("Could not start vault security scope")
             await sendNotification(
                 title: String(localized: "Export Failed", comment: "Notification title"),
@@ -303,11 +316,12 @@ class SchedulingManager: ObservableObject {
             )
             return
         }
-        defer { vaultManager.stopVaultAccess() }
+        defer { accessLease.stop() }
 
         var successCount = 0
         var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
+        var partialFailures: [ExportPartialFailure] = []
         var successfulHealthData: [HealthData] = []
         var rollupFileCount = 0
         var archiveCount = 0
@@ -425,6 +439,7 @@ class SchedulingManager: ObservableObject {
                 )
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 if settings.dailyNotesOnlyModeEnabled {
                     switch writeResult.dailyNoteResult {
                     case .updated:
@@ -535,6 +550,7 @@ class SchedulingManager: ObservableObject {
             successCount: successCount,
             totalCount: dates.count,
             failedDateDetails: failedDateDetails,
+            partialFailures: partialFailures,
             formatsPerDate: settings.looseFormatsPerDate,
             rollupFileCount: rollupFileCount,
             archiveCount: archiveCount,

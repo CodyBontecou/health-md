@@ -141,7 +141,12 @@ healthmd export --iphone --last 7 --category Sleep --detail summary
 
 # Mirror saved iPhone settings, including roll-ups
 healthmd export --iphone --yesterday --use-iphone-settings
+
+# Run a saved export profile by UUID (frozen settings + destination)
+healthmd export --iphone --last 7 --profile 11111111-2222-4333-8444-555555555555
 ```
+
+`--profile PROFILE_ID`는 저장된 내보내기 프로필을 안정적인 UUID로 iPhone에서 해석합니다. 실행 시 앱의 현재 설정 대신 해당 프로필의 동결된 지표 선택, 형식, 대상이 사용됩니다. `--use-iphone-settings` 또는 지표/카테고리 선택기와 결합할 수 없고(프로필이 설정 범위를 소유합니다), 알 수 없는 UUID는 현재 설정으로 대체되지 않고 형식화된 `profile_not_found` 오류로 실패합니다. UUID는 앱의 내보내기 탭 프로필 선택기에서 확인하세요.
 
 현재 날짜 수 상한은 없습니다. `--all`은 iPhone에 선택한 소스 레코드 중 가장 이른 날짜를 찾도록 요청하고, 확인된 범위를 고정한 뒤 제한된 파티션으로 처리합니다. 사용 가능한 저장 공간과 비정상적으로 데이터가 밀집된 하루는 여전히 실질적인 제한입니다.
 

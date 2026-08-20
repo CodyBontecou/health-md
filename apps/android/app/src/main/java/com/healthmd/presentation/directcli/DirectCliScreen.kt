@@ -331,6 +331,9 @@ private fun connectionText(state: DirectCliConnectionState): String = when (stat
         DirectCliFailure.FITBIT_RANGE_REQUIRED -> stringResource(
             R.string.direct_cli_failure_fitbit_range,
         )
+        DirectCliFailure.PROFILE_NOT_FOUND -> stringResource(
+            R.string.direct_cli_failure_profile_not_found,
+        )
         DirectCliFailure.SOURCE_UNAVAILABLE -> stringResource(
             R.string.direct_cli_failure_source_unavailable,
         )

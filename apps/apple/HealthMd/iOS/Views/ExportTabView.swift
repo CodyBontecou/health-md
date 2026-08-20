@@ -55,7 +55,6 @@ struct ExportTabView: View {
     @State private var showRollupHelp = false
     @State private var showFormatHelp = false
     @State private var showAPIEndpointSettings = false
-    @State private var showClinicianReport = false
     @State private var previewSizeEstimate: ExportPreviewSizeEstimate?
     @State private var previewSizeEstimateConfiguration: ExportSizeEstimateConfiguration?
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
@@ -63,7 +62,6 @@ struct ExportTabView: View {
     @State private var resumeExportTapWhenAllTimeResolves = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.locale) private var locale
 
     private var usesAccessibilityLayout: Bool {
         dynamicTypeSize.isAccessibilitySize
@@ -88,7 +86,6 @@ struct ExportTabView: View {
                     heroHeader
                     statusBadges
                         .configurationChangesProtected()
-                    clinicianReportSection
                     exportTargetSection
                         .configurationChangesProtected()
                     dateRangeSection
@@ -215,12 +212,6 @@ struct ExportTabView: View {
             APIExportSettingsSheet(settings: apiExportSettings)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showClinicianReport) {
-            ClinicianReportView(
-                healthKitManager: healthKitManager,
-                unitPreference: advancedSettings.formatCustomization.unitPreference
-            )
         }
         .sheet(isPresented: $showPreview) {
             ExportPreviewView(
@@ -352,7 +343,10 @@ struct ExportTabView: View {
             macSubtitle: macTargetSubtitle,
             apiSubtitle: apiTargetSubtitle,
             canExportToConnectedMac: canExportToConnectedMacWithCurrentSettings,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            // Prompt on any state where the retained selection cannot be used
+            // right now (including temporary unavailability and the reselection/
+            // review states), not merely when no selection metadata is retained.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             onRequestFolderPicker: { showFolderPicker = true },
             onOpenAPISettings: { showAPIEndpointSettings = true }
         )
@@ -420,7 +414,10 @@ struct ExportTabView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -609,41 +606,6 @@ struct ExportTabView: View {
         }
     }
 
-    private var clinicianReportSection: some View {
-        let copy = ClinicianReportCopy(locale: locale)
-        return sectionCard(title: copy.string(.title)) {
-            Button {
-                showClinicianReport = true
-            } label: {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "doc.text.fill")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.accent)
-                        .frame(width: 28, height: 44)
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text(copy.string(.title))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(Color.textPrimary)
-                        Text(copy.string(.entry_subtitle))
-                            .font(.footnote)
-                            .foregroundStyle(Color.textSecondary)
-                            .multilineTextAlignment(.leading)
-                    }
-                    Spacer(minLength: Spacing.xs)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(Color.textMuted)
-                }
-                .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(AccessibilityID.ClinicianReport.entry)
-            .accessibilityLabel(copy.string(.title))
-            .accessibilityHint(copy.string(.accessibility_hint))
-        }
-    }
-
     private var losslessHealthRecordsInlineRow: some View {
         HStack(alignment: .top, spacing: Spacing.s3) {
             inlineIcon("waveform.path.ecg", isActive: advancedSettings.includeGranularData)
@@ -803,7 +765,10 @@ struct ExportTabView: View {
                 NavigationLink {
                     IndividualTrackingView(
                         settings: advancedSettings.individualTracking,
-                        metricSelection: advancedSettings.metricSelection
+                        metricSelection: advancedSettings.metricSelection,
+                        setIndividuallyTracked: { metricID, enabled in
+                            advancedSettings.setIndividuallyTracked(metricID, enabled: enabled)
+                        }
                     )
                 } label: {
                     inlineNavigationRowLabel(
@@ -849,11 +814,23 @@ struct ExportTabView: View {
             }
 
             VStack(spacing: 0) {
-                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
+                Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates one roll-up file for the selected export range for every selected export format")
+                    .accessibilityHint("Generates weekly roll-up files for every selected export format")
+
+                Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
+                    .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                    .padding(.vertical, Spacing.s1)
+                    .accessibilityHint("Generates monthly roll-up files for every selected export format")
+
+                Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
+                    .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                    .padding(.vertical, Spacing.s1)
+                    .accessibilityHint("Generates yearly roll-up files for every selected export format")
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
@@ -1295,7 +1272,7 @@ struct ExportTabView: View {
 
         return ExportRollupOutputSizeEstimator.estimate(
             selectedDates: exportDates,
-            rollupsEnabled: advancedSettings.rollupSummariesEnabled,
+            periods: advancedSettings.enabledRollupPeriods,
             formats: advancedSettings.exportFormats,
             metricSelection: advancedSettings.metricSelection,
             customization: advancedSettings.formatCustomization
@@ -1305,16 +1282,26 @@ struct ExportTabView: View {
     private var projectedRollupFileCount: Int {
         guard exportTargetSelection != .apiEndpoint,
               !advancedSettings.dailyNotesOnlyModeEnabled,
-              advancedSettings.rollupSummariesEnabled,
+              !advancedSettings.enabledRollupPeriods.isEmpty,
               !advancedSettings.exportFormats.isEmpty else { return 0 }
 
-        return advancedSettings.exportFormats.count
+        var windows = Set<HealthRollupPeriodWindow>()
+        for period in advancedSettings.enabledRollupPeriods {
+            for date in exportDates {
+                windows.insert(HealthRollupPeriodWindow.window(
+                    containing: date,
+                    period: period,
+                    calendar: .current
+                ))
+            }
+        }
+        return windows.count * advancedSettings.exportFormats.count
     }
 
     private var projectedRollupSourceDateCount: Int {
         guard exportTargetSelection != .apiEndpoint,
               !advancedSettings.dailyNotesOnlyModeEnabled,
-              advancedSettings.rollupSummariesEnabled else {
+              !advancedSettings.enabledRollupPeriods.isEmpty else {
             return exportDateCount
         }
 
@@ -1322,7 +1309,7 @@ struct ExportTabView: View {
             exportDateCount,
             ExportOrchestrator.rollupSourceDates(
                 for: exportDates,
-                settings: advancedSettings
+                periods: advancedSettings.enabledRollupPeriods
             ).count
         )
     }
@@ -1366,7 +1353,7 @@ struct ExportTabView: View {
     private var exportTargetSummary: String {
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : vaultManager.vaultName
+            return vaultManager.hasVaultSelection ? vaultManager.vaultName : "iPhone folder"
         case .connectedMac:
             return syncService.macDestinationStatus?.destinationDisplayName
                 ?? syncService.connectedPeerName
@@ -1549,7 +1536,7 @@ struct ExportTabView: View {
     private var previewDestinationLabel: String {
         switch exportTargetSelection {
         case .localIPhoneFolder:
-            return vaultManager.vaultURL == nil ? "iPhone folder" : "iPhone: \(vaultManager.vaultName)"
+            return vaultManager.hasVaultSelection ? "iPhone: \(vaultManager.vaultName)" : "iPhone folder"
         case .connectedMac:
             if let path = syncService.macDestinationStatus?.destinationPathForDisplay {
                 return "Mac: \(path)"
@@ -1784,9 +1771,9 @@ struct ExportTabView: View {
             return "Paused · Daily Notes Only skips roll-up files."
         }
         guard advancedSettings.rollupSummariesEnabled else {
-            return "Off · Enable the range summary to write summary files."
+            return "Off · Enable a period to write summary files."
         }
-        let periods = HealthRollupPeriod.range.displayName
+        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName }.joined(separator: " · ")
         let formatCount = advancedSettings.exportFormats.count
         if formatCount == 0 {
             return "\(periods) · Select an export format first."

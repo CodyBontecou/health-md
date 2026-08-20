@@ -362,11 +362,11 @@ struct ExportPreviewView: View {
                 }
                 if settings.rollupSummariesEnabled {
                     HStack {
-                        Text("Roll-up")
+                        Text("Roll-up periods")
                             .font(.footnote)
                             .foregroundStyle(Color.textSecondary)
                         Spacer()
-                        Text(localizedRollupPeriodName(.range))
+                        Text(settings.enabledRollupPeriods.map(localizedRollupPeriodName).joined(separator: ", "))
                             .font(.footnote.monospaced())
                             .foregroundStyle(Color.textPrimary)
                             .lineLimit(1)
@@ -814,9 +814,9 @@ struct ExportPreviewView: View {
         }
         let rollupProjection = ExportRollupOutputSizeEstimator.estimate(
             selectedDates: dates,
-            rollupsEnabled: settings.rollupSummariesEnabled
-                && targetType != .apiEndpoint
-                && !settings.dailyNotesOnlyModeEnabled,
+            periods: targetType == .apiEndpoint || settings.dailyNotesOnlyModeEnabled
+                ? []
+                : settings.enabledRollupPeriods,
             formats: settings.exportFormats,
             metricSelection: settings.metricSelection,
             customization: settings.formatCustomization
@@ -1024,10 +1024,10 @@ struct ExportPreviewView: View {
             return .resolved(.emptyDocument)
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             return .unreadable(ExportError.accessDenied)
         }
-        defer { vaultManager.stopVaultAccess() }
+        defer { accessLease.stop() }
 
         if FileManager.default.fileExists(atPath: localURL.path) {
             do {

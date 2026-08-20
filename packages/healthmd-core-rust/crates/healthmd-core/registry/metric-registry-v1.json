@@ -10,6 +10,7 @@
       "export.mindfulness-sessions",
       "export.completed-workouts",
       "export.mobility-and-performance",
+      "export.profiles",
       "android.activity-intensity",
       "android.planned-workouts",
       "android.menstruation-periods",
@@ -33,7 +34,9 @@
       "apple.state-of-mind",
       "apple.wrist-temperature",
       "export.mobility-and-performance",
+      "export.profiles",
       "apple.hearing-and-symptoms",
+      "apple.typed-whoop-provider-section",
       "core.shared-rust-metric-registry"
     ]
   },
@@ -251,6 +254,7 @@
     "apple.state-of-mind",
     "apple.wrist-temperature",
     "export.mobility-and-performance",
+    "export.profiles",
     "apple.hearing-and-symptoms",
     "android.activity-intensity",
     "android.planned-workouts",
@@ -259,7 +263,9 @@
     "android.nutrition-meals",
     "android.contextual-source-fields",
     "android.skin-temperature",
+    "apple.typed-whoop-provider-section",
     "source.private-platform-database",
+    "setup.share-portable-configuration",
     "core.shared-rust-metric-registry",
     "core.shared-rust-profile-engine"
   ],
@@ -10257,7 +10263,7 @@
   ],
   "profiles": [
     {
-      "id": "apple_health_data_v7",
+      "id": "apple_health_data_v8",
       "ordered_selection_ids": [
         "sleep_total",
         "sleep_bedtime",
@@ -12302,7 +12308,7 @@
       ],
       "platform": "apple",
       "profile_revision": 1,
-      "public_profile_id": "apple-v7",
+      "public_profile_id": "apple-v8",
       "public_schema": "healthmd.health_data",
       "public_schema_version": 8,
       "unavailable_selection_ids": []

@@ -111,11 +111,12 @@ private enum GeneratedRollupReferenceDocs {
         let snapshots = HealthRollupGenerator.generate(
             from: syntheticDailySummaries(),
             settings: settings,
+            periods: [.weekly],
             generatedAt: generatedAt,
             calendar: utcCalendar
         )
         guard snapshots.count == 1, let snapshot = snapshots.first else {
-            throw GenerationError.invalidFixture("Expected exactly one range summary; generated \(snapshots.count).")
+            throw GenerationError.invalidFixture("Expected exactly one weekly roll-up; generated \(snapshots.count).")
         }
 
         try validate(snapshot: snapshot, dictionaryEntries: dictionaryEntries)
@@ -125,10 +126,10 @@ private enum GeneratedRollupReferenceDocs {
                 entries: dictionaryEntries,
                 snapshot: snapshot
             ).utf8),
-            "range-bases.md": Data(snapshot.toRollupObsidianBases().utf8),
-            "range.csv": Data(snapshot.toRollupCSV().utf8),
-            "range.json": Data(snapshot.toRollupJSON().utf8),
-            "range.md": Data(snapshot.toRollupMarkdown().utf8)
+            "weekly-bases.md": Data(snapshot.toRollupObsidianBases().utf8),
+            "weekly.csv": Data(snapshot.toRollupCSV().utf8),
+            "weekly.json": Data(snapshot.toRollupJSON().utf8),
+            "weekly.md": Data(snapshot.toRollupMarkdown().utf8)
         ]
         artifacts["manifest.json"] = Data(manifest(for: artifacts, snapshot: snapshot, entryCount: dictionaryEntries.count).utf8)
         return artifacts
@@ -311,14 +312,14 @@ private enum GeneratedRollupReferenceDocs {
         snapshot: RollupDataSnapshot,
         dictionaryEntries: [HealthMetricDataDictionaryEntry]
     ) throws {
-        guard snapshot.period == .range,
-              snapshot.periodID == "2026-07-06_to_2026-07-11",
+        guard snapshot.period == .weekly,
+              snapshot.periodID == "2026-W28",
               snapshot.dayString(snapshot.window.startDate) == "2026-07-06",
-              snapshot.dayString(snapshot.window.endDate) == "2026-07-11",
-              snapshot.daysExpected == 6,
+              snapshot.dayString(snapshot.window.endDate) == "2026-07-12",
+              snapshot.daysExpected == 7,
               snapshot.daysCounted == 3,
-              abs(snapshot.coveragePercent - 50.0) < 0.000_001 else {
-            throw GenerationError.invalidFixture("Range fixture must span the six requested UTC days with three present source days and 50% coverage.")
+              abs(snapshot.coveragePercent - (300.0 / 7.0)) < 0.000_001 else {
+            throw GenerationError.invalidFixture("Weekly fixture must expose the Monday-through-Sunday ISO week with three of seven UTC source days and partial coverage.")
         }
 
         let entriesByKey = Dictionary(uniqueKeysWithValues: dictionaryEntries.map { ($0.key, $0) })
@@ -339,7 +340,11 @@ private enum GeneratedRollupReferenceDocs {
             }
         }
 
-        let dictionaryPrimaryRules = Set(dictionaryEntries.map { $0.rollup.primary })
+        let dictionaryPrimaryRules = Set(
+            dictionaryEntries
+                .filter { $0.rollup.periods.contains(HealthRollupPeriod.weekly.rawValue) }
+                .map { $0.rollup.primary }
+        )
         let fixturePrimaryRules = Set(snapshot.metrics.map(\.rule))
         let missingRules = dictionaryPrimaryRules.subtracting(fixturePrimaryRules).sorted()
         guard missingRules.isEmpty else {
@@ -373,7 +378,7 @@ private enum GeneratedRollupReferenceDocs {
             "# Health.md roll-up aggregation behavior matrix",
             "",
             "Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v\(HealthMdExportSchema.version).",
-            "The range evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.",
+            "The weekly evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.",
             "",
             "- Dictionary entries: \(entries.count)",
             "- Distinct rule groups: \(sortedGroups.count)",
@@ -397,13 +402,13 @@ private enum GeneratedRollupReferenceDocs {
                 group.weightedBy ?? "none",
                 group.nullHandling,
                 group.periods.joined(separator: "<br>"),
-                examples.isEmpty ? "none in range example" : examples.joined(separator: "<br>"),
+                examples.isEmpty ? "none in weekly example" : examples.joined(separator: "<br>"),
                 allKeys.joined(separator: "<br>")
             ].map(markdownCell).joined(separator: " | ").withTableEdges)
         }
 
         lines.append("")
-        lines.append("## Required range evidence")
+        lines.append("## Required weekly evidence")
         lines.append("")
         lines.append("| Behavior | Dictionary rule | Generated key |")
         lines.append("|---|---|---|")
@@ -456,6 +461,7 @@ private enum GeneratedRollupReferenceDocs {
         case "union": return "Union list items in sorted order and count item occurrences across source days."
         case "histogram": return "Keep the latest category and count each category value across source days."
         case "time_of_day": return "Report earliest, latest, and average clock time without combining calendar dates."
+        case "none": return "Do not generate period roll-ups; retain only the daily provider projection."
         default: return "Apply the production generator fallback for this declared primary behavior."
         }
     }

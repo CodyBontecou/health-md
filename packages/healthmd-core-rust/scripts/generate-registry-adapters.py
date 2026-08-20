@@ -112,7 +112,7 @@ def apple_region(document: dict) -> str:
 
 
 def apple_mapping_region(document: dict) -> str:
-    profile = next(profile for profile in document["profiles"] if profile["id"] == "apple_health_data_v7")
+    profile = next(profile for profile in document["profiles"] if profile["id"] == "apple_health_data_v8")
     apple_metrics = [metric["apple"] for metric in document["metrics"] if metric["apple"]["status"] == "backed"]
     apple_metrics.sort(key=lambda metric: metric["ordinal"])
     outputs_by_metric: dict[str, list[str]] = {}

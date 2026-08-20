@@ -27,6 +27,50 @@ enum ExportFixtures {
         HealthData(date: referenceDate, timeContext: timeContext)
     }
 
+    // MARK: - WHOOP Provider Day
+
+    /// Synthetic Apple-retained day with one complete typed WHOOP capture.
+    static var whoopDay: HealthData {
+        var data = HealthData(date: referenceDate, timeContext: timeContext)
+        data.activity = ActivityData(steps: 1)
+        let fetchedAt = Date(timeIntervalSince1970: 1_773_556_800)
+        let payloads = [
+            ExternalProviderPayload(name: "cycles", endpoint: "https://redacted.invalid/cycle", statusCode: 200, fetchedAt: fetchedAt, data: .object([
+                "records": .array([.object([
+                    "id": .number(101), "start": .string("2026-03-15T07:00:00Z"), "end": .string("2026-03-15T17:30:00Z"),
+                    "timezone_offset": .string("Z"), "score_state": .string("SCORED"),
+                    "score": .object(["strain": .number(12.7), "kilojoule": .number(8420), "average_heart_rate": .number(68), "max_heart_rate": .number(174)])
+                ])])
+            ])),
+            ExternalProviderPayload(name: "recovery", endpoint: "https://redacted.invalid/recovery", statusCode: 200, fetchedAt: fetchedAt, data: .object([
+                "records": .array([.object([
+                    "cycle_id": .number(101), "sleep_id": .number(202), "score_state": .string("SCORED"),
+                    "score": .object(["user_calibrating": .bool(false), "recovery_score": .number(82), "resting_heart_rate": .number(49), "hrv_rmssd_milli": .number(54.3), "spo2_percentage": .number(97.2), "skin_temp_celsius": .number(33.4)])
+                ])])
+            ])),
+            ExternalProviderPayload(name: "sleep", endpoint: "https://redacted.invalid/sleep", statusCode: 200, fetchedAt: fetchedAt, data: .object([
+                "records": .array([.object([
+                    "id": .number(202), "cycle_id": .number(101), "start": .string("2026-03-15T07:30:00Z"), "end": .string("2026-03-15T15:00:00Z"), "timezone_offset": .string("Z"), "nap": .bool(false), "score_state": .string("SCORED"),
+                    "score": .object([
+                        "stage_summary": .object(["total_in_bed_time_milli": .number(27_000_000), "total_awake_time_milli": .number(2_399_250), "total_light_sleep_time_milli": .number(12_600_125), "total_slow_wave_sleep_time_milli": .number(5_400_250), "total_rem_sleep_time_milli": .number(6_300_375), "total_no_data_time_milli": .number(300_000), "sleep_cycle_count": .number(5), "disturbance_count": .number(7)]),
+                        "sleep_needed": .object(["baseline_milli": .number(28_800_000), "need_from_sleep_debt_milli": .number(1_800_000), "need_from_recent_strain_milli": .number(900_000), "need_from_recent_nap_milli": .number(-900_000)]),
+                        "respiratory_rate": .number(14.2), "sleep_performance_percentage": .number(91), "sleep_consistency_percentage": .number(88), "sleep_efficiency_percentage": .number(90)
+                    ])
+                ])])
+            ])),
+            ExternalProviderPayload(name: "workouts", endpoint: "https://redacted.invalid/workout", statusCode: 200, fetchedAt: fetchedAt, data: .object([
+                "records": .array([.object([
+                    "id": .number(303), "start": .string("2026-03-15T16:00:00Z"), "end": .string("2026-03-15T17:00:00Z"), "timezone_offset": .string("Z"), "sport_name": .string("running"), "sport_id": .number(0), "score_state": .string("SCORED"),
+                    "score": .object(["strain": .number(10.4), "average_heart_rate": .number(146), "max_heart_rate": .number(174), "kilojoule": .number(2500), "distance_meter": .number(10_000), "altitude_gain_meter": .number(120), "altitude_change_meter": .number(15), "percent_recorded": .number(99.4), "zone_duration": .object(["zone_zero_milli": .number(120_000), "zone_one_milli": .number(480_000), "zone_two_milli": .number(900_000), "zone_three_milli": .number(1_020_000), "zone_four_milli": .number(780_000), "zone_five_milli": .number(300_000)])])
+                ])])
+            ])),
+            ExternalProviderPayload(name: "body_measurements_snapshot", endpoint: "https://redacted.invalid/body", statusCode: 200, fetchedAt: fetchedAt, data: .object(["height_meter": .number(1.82), "weight_kilogram": .number(78.4), "max_heart_rate": .number(190)]))
+        ]
+        let record = ExternalDailyRecord(provider: .whoop, date: "2026-03-15", fetchedAt: fetchedAt, payloads: payloads)
+        data.providers = HealthProviderSections.normalized(from: [record])
+        return data
+    }
+
     // MARK: - Partial Day
 
     /// A day with only sleep and activity data (common for basic Apple Watch users).

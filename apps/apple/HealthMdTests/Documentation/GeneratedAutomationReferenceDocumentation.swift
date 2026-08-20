@@ -62,7 +62,9 @@ enum GeneratedAutomationReferenceDocumentation {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = [.json]
         settings.includeGranularData = true
-        settings.generateRangeSummary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
         settings.summaryOnlyExport = false
         settings.formatCustomization.unitPreference = .metric
         return settings
@@ -89,6 +91,8 @@ enum GeneratedAutomationReferenceDocumentation {
         let completeRecord = completeHealthData()
         let partialRecord = partialHealthData()
         let sidecar = providerSidecar()
+        var providerRecord = completeRecord
+        providerRecord.providers = ExportFixtures.whoopDay.providers
         let snapshot = settingsSnapshot()
         let completeRawResult = try CanonicalRawResultEnvelope(
             createdAt: createdAt,
@@ -182,6 +186,12 @@ enum GeneratedAutomationReferenceDocumentation {
             totalFilesWritten: 2,
             externalRecordFileCount: 1,
             failedDateDetails: [failedDateDetail],
+            partialFailures: [ExportPartialFailure(
+                date: dayEnd,
+                dataType: "Individual entries",
+                dateRangeDescription: "2026-03-16",
+                errorDescription: "Lossless records produced no individual entries for tracked metrics: weight not selected for the daily export."
+            )],
             completedDates: [dayStart, dayEnd],
             destinationDisplayName: "Synthetic Export Destination",
             destinationPathForDisplay: "/Synthetic/HealthExports",
@@ -200,7 +210,7 @@ enum GeneratedAutomationReferenceDocumentation {
         )
         let agentSource = HealthMdSourceDescriptor(
             schema: "healthmd.health_data",
-            schemaVersion: 8,
+            schemaVersion: HealthMdExportSchema.version,
             digest: String(repeating: "a", count: 64)
         )
         let agentEvidence = HealthMdEvidenceReference(
@@ -309,7 +319,7 @@ enum GeneratedAutomationReferenceDocumentation {
             connectedAppsEnabled: false
         ))
         generated["api-export-v2-provider-sidecar.json"] = try canonicalJSON(APIExportClient.makePayload(
-            records: [completeRecord],
+            records: [providerRecord],
             failedDateDetails: [failedDateDetail],
             externalRecords: [sidecar],
             settings: retainedSettings,
@@ -805,7 +815,9 @@ enum GeneratedAutomationReferenceDocumentation {
         snapshot.summaryOnlyExport = false
         snapshot.writeMode = .overwrite
         snapshot.includeGranularData = true
-        snapshot.generateRangeSummary = false
+        snapshot.generateWeeklyRollups = false
+        snapshot.generateMonthlyRollups = false
+        snapshot.generateYearlyRollups = false
         snapshot.metricSelection = MetricSelectionSnapshot(
             enabledMetricIDs: ["steps"],
             enabledCategoryIDs: ["activity"]

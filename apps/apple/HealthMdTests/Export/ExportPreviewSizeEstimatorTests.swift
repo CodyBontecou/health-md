@@ -172,15 +172,15 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
         XCTAssertEqual(estimate.projectedProcessingDayCount, 365)
     }
 
-    func testRollupProjectionUsesSelectedRangeAndFormatAwareCosts() throws {
+    func testRollupProjectionUsesCompleteWindowsAndFormatAwareCosts() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
-        let rangeStart = try XCTUnwrap(calendar.date(from: DateComponents(
+        let selectedDate = try XCTUnwrap(calendar.date(from: DateComponents(
             year: 2026,
-            month: 1,
-            day: 1
+            month: 3,
+            day: 15
         )))
-        let rangeEnd = try XCTUnwrap(calendar.date(from: DateComponents(
+        let endOfYear = try XCTUnwrap(calendar.date(from: DateComponents(
             year: 2026,
             month: 12,
             day: 31
@@ -192,32 +192,29 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
             "sleep_wake", "workouts"
         ]
 
-        let selectedDates = (0..<365).compactMap {
-            calendar.date(byAdding: .day, value: $0, to: rangeStart)
-        }
         let json = ExportRollupOutputSizeEstimator.estimate(
-            selectedDates: selectedDates,
-            rollupsEnabled: true,
+            selectedDates: [selectedDate],
+            periods: [.weekly, .monthly, .yearly],
             formats: [.json],
             metricSelection: metricSelection,
             customization: FormatCustomization(),
-            latestAllowedDate: rangeEnd,
+            latestAllowedDate: endOfYear,
             calendar: calendar
         )
         let markdown = ExportRollupOutputSizeEstimator.estimate(
-            selectedDates: selectedDates,
-            rollupsEnabled: true,
+            selectedDates: [selectedDate],
+            periods: [.weekly, .monthly, .yearly],
             formats: [.markdown],
             metricSelection: metricSelection,
             customization: FormatCustomization(),
-            latestAllowedDate: rangeEnd,
+            latestAllowedDate: endOfYear,
             calendar: calendar
         )
 
-        XCTAssertEqual(json.fileCount, 1)
+        XCTAssertEqual(json.fileCount, 3)
         XCTAssertEqual(json.sourceDateCount, 365)
-        XCTAssertGreaterThan(json.byteCount, 50_000)
-        XCTAssertGreaterThan(markdown.byteCount, 20_000)
+        XCTAssertGreaterThan(json.byteCount, 100_000)
+        XCTAssertGreaterThan(markdown.byteCount, 30_000)
         XCTAssertGreaterThan(json.byteCount, markdown.byteCount)
     }
 

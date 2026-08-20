@@ -97,7 +97,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         let saved = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
         saved.includeGranularData = false
-        saved.generateRangeSummary = true
+        saved.generateWeeklyRollups = true
 
         let date = Date(timeIntervalSince1970: 1_800_000_000)
         let request = IPhoneExportRequest(
@@ -113,14 +113,14 @@ final class CLIRawControlSafetyTests: XCTestCase {
         let temporary = IPhoneExportRequestSettingsResolver.settings(for: request, savedSettings: saved)
 
         XCTAssertTrue(temporary.includeGranularData)
-        XCTAssertFalse(temporary.generateRangeSummary)
+        XCTAssertFalse(temporary.generateWeeklyRollups)
         XCTAssertFalse(temporary.summaryOnlyModeEnabled)
         XCTAssertFalse(saved.includeGranularData)
-        XCTAssertTrue(saved.generateRangeSummary)
+        XCTAssertTrue(saved.generateWeeklyRollups)
 
         let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
         XCTAssertFalse(reloaded.includeGranularData)
-        XCTAssertTrue(reloaded.generateRangeSummary)
+        XCTAssertTrue(reloaded.generateWeeklyRollups)
     }
     @MainActor
     func testCanonicalSelectionNarrowsMetricsAndDetailWithoutPersisting() throws {
@@ -130,7 +130,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         let saved = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
         saved.metricSelection.enabledMetrics = ["steps", "heart_rate_avg", "workouts"]
         saved.includeGranularData = true
-        saved.generateRangeSummary = true
+        saved.generateWeeklyRollups = true
         let date = Date(timeIntervalSince1970: 1_800_000_000)
         let selection = CanonicalHealthDataSelection(
             metricIDs: ["sleep_total", "sleep_rem"],
@@ -162,11 +162,11 @@ final class CLIRawControlSafetyTests: XCTestCase {
         XCTAssertEqual(temporary.metricSelection.enabledMetrics, ["sleep_rem", "sleep_total"])
         XCTAssertEqual(temporary.metricSelection.enabledCategories, [HealthMetricCategory.sleep.rawValue])
         XCTAssertFalse(temporary.includeGranularData)
-        XCTAssertFalse(temporary.generateRangeSummary)
+        XCTAssertFalse(temporary.generateWeeklyRollups)
         XCTAssertFalse(temporary.summaryOnlyModeEnabled)
         XCTAssertEqual(saved.metricSelection.enabledMetrics, ["steps", "heart_rate_avg", "workouts"])
         XCTAssertTrue(saved.includeGranularData)
-        XCTAssertTrue(saved.generateRangeSummary)
+        XCTAssertTrue(saved.generateWeeklyRollups)
     }
 
     @MainActor
@@ -178,7 +178,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
         saved.metricSelection.enabledMetrics = ["heart_rate"]
         saved.metricSelection.enabledCategories = [HealthMetricCategory.heart.rawValue]
         saved.includeGranularData = false
-        saved.generateRangeSummary = true
+        saved.generateMonthlyRollups = true
 
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let request = IPhoneExportRequest(
@@ -204,11 +204,11 @@ final class CLIRawControlSafetyTests: XCTestCase {
             [HealthMetricCategory.activity.rawValue]
         )
         XCTAssertTrue(temporary.includeGranularData)
-        XCTAssertFalse(temporary.generateRangeSummary)
+        XCTAssertFalse(temporary.generateMonthlyRollups)
         XCTAssertEqual(saved.metricSelection.enabledMetrics, ["heart_rate"])
         XCTAssertEqual(saved.metricSelection.enabledCategories, [HealthMetricCategory.heart.rawValue])
         XCTAssertFalse(saved.includeGranularData)
-        XCTAssertTrue(saved.generateRangeSummary)
+        XCTAssertTrue(saved.generateMonthlyRollups)
     }
     #endif
 

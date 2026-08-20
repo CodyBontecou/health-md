@@ -10,9 +10,9 @@ This group contains 6 deterministic artifacts. Checksums are SHA-256 hashes of t
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `aggregation-behavior.md` | 104834 | `22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
-| `manifest.json` | 4323 | `1d263270320da13918c27ddebd1b5fdea7ac2d6bfe00c193e28a1e114123a75c` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
-| `range-bases.md` | 11606 | `adca4f7553d70b5ce0721e242eaa32c73b162110785205492016f6fc46cb040c` | — | [Download](/docs/reference/generated/rollups/range-bases.md) |
-| `range.csv` | 31285 | `df3c231805ef1e2aa284aa35cfa9642e1e8d223a2b9f23053ce3782480e6c5e5` | — | [Download](/docs/reference/generated/rollups/range.csv) |
-| `range.json` | 39631 | `419e287832424b087412ccadce4441f424d8cb78535ac1ecace11cee3e801439` | — | [Download](/docs/reference/generated/rollups/range.json) |
-| `range.md` | 9226 | `8cde6add89b58b17e3a7432108e5435cef07d3e513139173f1b225d09012afbb` | — | [Download](/docs/reference/generated/rollups/range.md) |
+| `aggregation-behavior.md` | 104830 | `c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
+| `manifest.json` | 4348 | `27696256e8e51c92e583c79d5a6fa3d746912d379ba7dfc22d301c0e0adb8654` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
+| `weekly-bases.md` | 11564 | `fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815` | — | [Download](/docs/reference/generated/rollups/weekly-bases.md) |
+| `weekly.csv` | 29797 | `447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9` | — | [Download](/docs/reference/generated/rollups/weekly.csv) |
+| `weekly.json` | 39632 | `58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84` | — | [Download](/docs/reference/generated/rollups/weekly.json) |
+| `weekly.md` | 9203 | `c2b7fc33e559fea8f71a86a04781feeec9c63dfa21c7cffc1ec681bd79888774` | — | [Download](/docs/reference/generated/rollups/weekly.md) |

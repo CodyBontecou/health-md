@@ -3,6 +3,11 @@ package com.healthmd.direct
 import android.os.Build
 import com.healthmd.BuildConfig
 import com.healthmd.data.export.ExportAwakeCoordinator
+import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.model.ExportProfileResolution
+import com.healthmd.domain.model.ExportProfileRules
+import com.healthmd.domain.model.ExportSettings
 import com.healthmd.direct.protocol.ANDROID_APPLICATION_PROTOCOL_VERSION
 import com.healthmd.direct.protocol.ArtifactFormat
 import com.healthmd.direct.protocol.ArtifactKind
@@ -90,6 +95,7 @@ enum class DirectCliFailure {
     SESSION_TIMEOUT,
     QUOTA_EXHAUSTED,
     FITBIT_RANGE_REQUIRED,
+    PROFILE_NOT_FOUND,
     SOURCE_UNAVAILABLE,
     HEALTH_ACCESS_REQUIRED,
     DEVICE_LOCKED,
@@ -121,6 +127,8 @@ class DirectCliCoordinator @Inject constructor(
     private val billingRepository: BillingRepository,
     private val enginePinPlanner: ExportEnginePinPlanner,
     private val protocolAuthority: AndroidDirectProtocolAuthority,
+    private val exportProfileRepository: ExportProfileRepository,
+    private val snapshotFactory: ScheduledProfileSnapshotFactory,
 ) {
     private val _state = MutableStateFlow<DirectCliConnectionState>(DirectCliConnectionState.Idle)
     val state: StateFlow<DirectCliConnectionState> = _state.asStateFlow()
@@ -440,6 +448,24 @@ class DirectCliCoordinator @Inject constructor(
             )
         } catch (error: CancellationException) {
             throw error
+        } catch (_: DirectProfileNotFoundException) {
+            reject(
+                channel,
+                request.jobId,
+                ErrorCode.INVALID_REQUEST,
+                phase,
+                "Export profile not found: the referenced profile does not exist on this device.",
+                DirectCliFailure.PROFILE_NOT_FOUND,
+            )
+        } catch (_: DirectProfileSnapshotException) {
+            reject(
+                channel,
+                request.jobId,
+                ErrorCode.INVALID_REQUEST,
+                phase,
+                "The export profile's saved settings are invalid; re-save the profile on the device.",
+                DirectCliFailure.PROFILE_NOT_FOUND,
+            )
         } catch (_: DirectExportCancelledException) {
             jobStore.cancel(request.jobId)
             _state.value = DirectCliConnectionState.Completed(
@@ -492,11 +518,17 @@ class DirectCliCoordinator @Inject constructor(
         val dates = resolveDates(request.dateSelection, productId(request.product))
         val productId = productId(request.product)
         val providerId = request.product["provider_id"]?.jsonPrimitive?.contentOrNull
-        val settings = settingsRepository.getExportSettings()
+        val settings = when (productId) {
+            ProductId.GENERATED_FILES_V1 -> resolveGeneratedFilesSettingsBasis(request.product)
+            else -> settingsRepository.getExportSettings()
+        }
         val zoneId = ZoneId.systemDefault()
         val enginePin = when (productId) {
             ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1 -> null
-            ProductId.GENERATED_FILES_V1 -> enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
+            // A profile basis carries its frozen engine authority (restored with the
+            // snapshot); only the saved-device basis plans a fresh direct pin.
+            ProductId.GENERATED_FILES_V1 ->
+                settings.executionEnginePin ?: enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
             ProductId.ANDROID_DAILY_RECORDS_V1 -> enginePinPlanner.forApiV1(zoneId)
         }
         // Persist renderer authority before either producer can read non-transactional provider data.
@@ -693,7 +725,10 @@ class DirectCliCoordinator @Inject constructor(
                         ArtifactFormat.CSV,
                         ArtifactFormat.OBSIDIAN_BASES,
                     ),
-                    settingsPolicies = listOf(SettingsPolicy.SAVED_DEVICE_SETTINGS),
+                    settingsPolicies = listOf(
+                        SettingsPolicy.SAVED_DEVICE_SETTINGS,
+                        SettingsPolicy.PROFILE,
+                    ),
                 ),
             ),
             limits = ProtocolLimits(),
@@ -835,11 +870,28 @@ class DirectCliCoordinator @Inject constructor(
                     },
                 )
             }
-            ProductId.GENERATED_FILES_V1 -> require(
-                request.product.keys == setOf("product_id", "settings_policy") &&
-                    request.product.getValue("settings_policy").jsonPrimitive.content ==
-                    "saved_device_settings",
-            )
+            ProductId.GENERATED_FILES_V1 -> {
+                val policy = request.product.getValue("settings_policy").jsonPrimitive.content
+                when (policy) {
+                    "saved_device_settings" -> require(
+                        request.product.keys == setOf("product_id", "settings_policy"),
+                    )
+                    "profile" -> {
+                        require(
+                            request.product.keys.all {
+                                it in setOf("product_id", "settings_policy", "profile_reference")
+                            } && "profile_reference" in request.product.keys,
+                        )
+                        val reference = request.product.getValue("profile_reference").jsonObject
+                        require(reference.keys.all { it in setOf("profile_id", "name") })
+                        require("profile_id" in reference.keys)
+                        require(
+                            reference.getValue("profile_id").jsonPrimitive.content.isNotBlank(),
+                        )
+                    }
+                    else -> require(false) { "Unsupported generated-files settings policy." }
+                }
+            }
             ProductId.ANDROID_DAILY_RECORDS_V1 -> Unit
         }
     }
@@ -851,6 +903,34 @@ class DirectCliCoordinator @Inject constructor(
         "generated_files_v1" -> ProductId.GENERATED_FILES_V1
         "android_daily_records_v1" -> ProductId.ANDROID_DAILY_RECORDS_V1
         else -> error("Unsupported Android direct product.")
+    }
+
+    /**
+     * Settings basis for a generated-files request: saved-device policy uses live settings; the
+     * profile policy resolves the referenced export profile (id first, name fallback) and
+     * restores its frozen snapshot onto live settings, failing closed with a typed rejection
+     * when the reference is unknown or the snapshot is invalid.
+     */
+    private suspend fun resolveGeneratedFilesSettingsBasis(product: JsonObject): ExportSettings {
+        val current = settingsRepository.getExportSettings()
+        val policy = product.getValue("settings_policy").jsonPrimitive.content
+        if (policy != "profile") return current
+
+        val reference = product.getValue("profile_reference").jsonObject
+        val profileId = reference.getValue("profile_id").jsonPrimitive.content.trim()
+        val name = reference["name"]?.jsonPrimitive?.contentOrNull?.trim()
+        val resolution = ExportProfileRules.resolve(
+            profiles = exportProfileRepository.getProfiles(),
+            id = profileId.ifBlank { null },
+            name = name,
+        )
+        val profile = when (resolution) {
+            is ExportProfileResolution.Resolved -> resolution.profile
+            is ExportProfileResolution.NotFound -> throw DirectProfileNotFoundException(resolution.reference)
+            ExportProfileResolution.LegacySettings -> throw DirectProfileNotFoundException(profileId)
+        }
+        return snapshotFactory.applyForActivation(profile, current)
+            ?: throw DirectProfileSnapshotException(profile.name)
     }
 
     private fun reject(
@@ -900,6 +980,12 @@ class DirectCliCoordinator @Inject constructor(
     private class EmptyPayload
 
     private class MissingSpoolException : Exception()
+
+    /** The referenced export profile does not exist on this device (fail-closed). */
+    private class DirectProfileNotFoundException(val reference: String) : Exception(reference)
+
+    /** The referenced profile exists but its frozen snapshot failed validation (fail-closed). */
+    private class DirectProfileSnapshotException(val profileName: String) : Exception(profileName)
 
     private object UUIDs {
         fun random(): String = java.util.UUID.randomUUID().toString()

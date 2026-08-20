@@ -25,7 +25,7 @@ class ProductCapabilityManifestTest {
         val profiles = inventory.getValue("output_profiles").jsonArray
             .map { it.jsonObject.getValue("id").jsonPrimitive.content }
             .toSet()
-        assertEquals(setOf("apple-v7", "android-frozen-v4", "android-analytical-v5"), profiles)
+        assertEquals(setOf("apple-v8", "android-frozen-v4", "android-analytical-v5"), profiles)
 
         val capabilities = inventory.getValue("capabilities").jsonArray.map { it.jsonObject }
         val states = capabilities.associate { capability ->
@@ -38,7 +38,7 @@ class ProductCapabilityManifestTest {
 
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
         assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
-        assertEquals(setOf("core.shared-rust-profile-engine"), idsWithState(states, "planned"))
+        assertEquals(setOf("core.shared-rust-profile-engine", "setup.share-portable-configuration"), idsWithState(states, "planned"))
         assertEquals(allCapabilities, states.keys)
 
         capabilities.forEach { capability ->
@@ -82,6 +82,7 @@ class ProductCapabilityManifestTest {
             "export.mindfulness-sessions",
             "export.completed-workouts",
             "export.mobility-and-performance",
+            "export.profiles",
             "core.shared-rust-metric-registry",
         )
 
@@ -91,6 +92,7 @@ class ProductCapabilityManifestTest {
             "apple.state-of-mind",
             "apple.wrist-temperature",
             "apple.hearing-and-symptoms",
+            "apple.typed-whoop-provider-section",
         )
 
         val androidCapabilities = setOf(
@@ -105,6 +107,7 @@ class ProductCapabilityManifestTest {
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "source.private-platform-database",
+            "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
         )
     }

@@ -201,8 +201,11 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
-        XCTAssertEqual(scheduler.immediateRequests[request.id], request)
+        // The preserved retry is marked attempted (fireDate is the injected
+        // coordinator clock) so bulk fallback cancellation cannot destroy it.
+        let expectedRetry = request.markingAttempted(at: fireDate)
+        XCTAssertEqual(try store.loadAll(), [expectedRetry])
+        XCTAssertEqual(scheduler.immediateRequests[request.id], expectedRetry)
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
 
@@ -223,7 +226,7 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(try store.loadAll(), [request.markingAttempted(at: fireDate)])
         XCTAssertNil(scheduler.immediateRequests[request.id])
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
@@ -293,24 +296,31 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
     }
 }
 
-private final class InMemoryPendingExportStore: PendingExportStoring {
+final class InMemoryPendingExportStore: PendingExportStoring, @unchecked Sendable {
+    private let lock = NSLock()
     private var requests: [PendingExportRequest] = []
 
     func loadAll() throws -> [PendingExportRequest] {
-        requests
+        lock.withLock { requests }
     }
 
     func upsert(_ request: PendingExportRequest) throws {
-        requests.removeAll { $0.id == request.id }
-        requests.append(request)
+        lock.withLock {
+            requests.removeAll { $0.id == request.id }
+            requests.append(request)
+        }
     }
 
     func remove(id: PendingExportRequest.ID) throws {
-        requests.removeAll { $0.id == id }
+        lock.withLock {
+            requests.removeAll { $0.id == id }
+        }
     }
 
     func clearCompletedRequests(ids: Set<PendingExportRequest.ID>) throws {
-        requests.removeAll { ids.contains($0.id) }
+        lock.withLock {
+            requests.removeAll { ids.contains($0.id) }
+        }
     }
 
     func notificationIdentifier(for request: PendingExportRequest) -> String {

@@ -259,6 +259,121 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         )
     }
 
+    func testProfilePolicyMatchesSwiftReferenceFixture() throws {
+        // Export-profiles decision 10: byte-exact reference vectors for the
+        // additive settings_policy=profile request shape. Values deliberately
+        // interlock with the Rust healthmd-protocol profile_policy vectors so
+        // both suites prove the same wire bytes.
+        let request = DirectExportRequest(
+            jobID: UUID(uuidString: "00000000-0000-4000-8000-00000000000B")!,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000.987),
+            dateSelection: .exact(start: "2026-08-01", end: "2026-08-07"),
+            settingsPolicy: .profile,
+            profileReference: DirectProfileReference(
+                profileID: "11111111-2222-4333-8444-555555555555",
+                name: "Weekly Sleep"
+            ),
+            responseMode: .writeFiles
+        )
+        let unnamedReferenceRequest = DirectExportRequest(
+            jobID: request.jobID,
+            createdAt: request.createdAt,
+            dateSelection: request.dateSelection,
+            settingsPolicy: .profile,
+            profileReference: DirectProfileReference(
+                profileID: "11111111-2222-4333-8444-555555555555"
+            ),
+            responseMode: .writeFiles
+        )
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let requestBytes = try encoder.encode(request)
+        let messageBytes = try encoder.encode(DirectMessage.exportRequest(request))
+        let unnamedReferenceBytes = try encoder.encode(unnamedReferenceRequest)
+
+        // The profile policy survives a wire round trip with the reference
+        // still pinned to the profile UUID (and the name still optional).
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try decoder.decode(DirectExportRequest.self, from: requestBytes), request)
+        XCTAssertEqual(
+            try decoder.decode(DirectExportRequest.self, from: unnamedReferenceBytes),
+            unnamedReferenceRequest
+        )
+        XCTAssertEqual(request.createdAt, Date(timeIntervalSince1970: 1_700_000_000))
+
+        let fingerprint = try DirectRequestFingerprint.make(for: request)
+        let fixture: [String: Any] = [
+            "schema": "healthmd.direct_profile_policy_swift_reference",
+            "schema_version": 1,
+            "profile_request_json_base64": requestBytes.base64EncodedString(),
+            "profile_request_message_json_base64": messageBytes.base64EncodedString(),
+            "profile_request_fingerprint": fingerprint.sha256,
+            "profile_request_unnamed_reference_json_base64": unnamedReferenceBytes.base64EncodedString()
+        ]
+        let fixtureData = try JSONSerialization.data(
+            withJSONObject: fixture,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        )
+        let fixtureURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json")
+        if ProcessInfo.processInfo.environment["HEALTHMD_UPDATE_PROFILE_POLICY_FIXTURE"] == "1" {
+            try FileManager.default.createDirectory(
+                at: fixtureURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try fixtureData.write(to: fixtureURL, options: .atomic)
+        }
+        let committed = try Data(contentsOf: fixtureURL)
+        XCTAssertEqual(
+            try JSONSerialization.jsonObject(with: committed) as? NSDictionary,
+            try JSONSerialization.jsonObject(with: fixtureData) as? NSDictionary
+        )
+    }
+
+    func testLegacyPeerFailsClosedOnProfileSettingsPolicy() throws {
+        // Export-profiles decision 10, new-CLI/old-phone combination: a
+        // pre-profile Swift peer's decoder has no "profile" variant and must
+        // reject the unknown value instead of defaulting or misinterpreting
+        // the request. Mirrors the Rust old-peer combination test.
+        struct LegacyRequest: Decodable {
+            let settingsPolicy: LegacySettingsPolicy
+        }
+        enum LegacySettingsPolicy: String, Decodable {
+            case requestedDatesOnly = "requested_dates_only"
+            case currentIPhoneSettings = "current_iphone_settings"
+        }
+
+        let payload = #"{"settingsPolicy":"profile"}"#.data(using: .utf8)!
+        XCTAssertThrowsError(try JSONDecoder().decode(LegacyRequest.self, from: payload))
+    }
+
+    func testLegacyPeerIgnoresUnknownProfileReferenceField() throws {
+        // Additive struct field: a legacy decoder that knows only the old
+        // request fields skips profileReference instead of failing the whole
+        // decode. Mirrors the Rust old-peer field-ignore test.
+        struct LegacyRequest: Decodable {
+            let responseMode: String
+        }
+
+        let payload =
+            #"{"responseMode":"write_files","profileReference":{"profileID":"11111111-2222-4333-8444-555555555555"}}"#
+        let legacy = try JSONDecoder().decode(
+            LegacyRequest.self,
+            from: payload.data(using: .utf8)!
+        )
+        XCTAssertEqual(legacy.responseMode, "write_files")
+    }
+
     func testReadyPacketConnectionSurvivesItsStartupTimeout() async throws {
         let listenerReady = expectation(description: "listener ready")
         let serverReceivedPacket = expectation(description: "server received packet")

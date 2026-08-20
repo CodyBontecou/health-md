@@ -676,7 +676,9 @@ enum IPhoneExportRequestSettingsResolver {
         case .currentIPhoneSettings:
             break
         case .requestedDatesOnly:
-            settings.generateRangeSummary = false
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
             settings.summaryOnlyExport = false
         }
 
@@ -699,7 +701,9 @@ enum IPhoneExportRequestSettingsResolver {
             )
             settings.includeGranularData = selection.detailLevel == .lossless
             settings.summaryOnlyExport = false
-            settings.generateRangeSummary = false
+            settings.generateWeeklyRollups = false
+            settings.generateMonthlyRollups = false
+            settings.generateYearlyRollups = false
         }
         return settings
     }

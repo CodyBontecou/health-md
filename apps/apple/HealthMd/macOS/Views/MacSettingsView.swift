@@ -397,8 +397,8 @@ struct MacGeneralSettingsView: View {
         if syncService.isSyncing { return String(localized: "Receiving export") }
         if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
-        if vaultManager.vaultURL == nil { return String(localized: "Choose folder") }
-        if !folderAccessHealthy { return String(localized: "Re-select folder") }
+        if !vaultManager.hasVaultSelection { return String(localized: "Choose folder") }
+        if !folderAccessHealthy { return vaultManager.vaultAvailabilityText }
         return String(localized: "Ready")
     }
 
@@ -707,11 +707,21 @@ struct MacFormatSettingsTab: View {
             }
 
             Section {
-                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
+                Toggle("Weekly summaries", isOn: $advancedSettings.generateWeeklyRollups)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .accessibilityLabel("Range summary roll-up")
-                    .accessibilityValue(macEnabledState(advancedSettings.generateRangeSummary))
+                    .accessibilityLabel("Weekly roll-up summaries")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateWeeklyRollups))
+                Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
+                    .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                    .accessibilityLabel("Monthly roll-up summaries")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateMonthlyRollups))
+                Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
+                    .tint(Color.accent)
+                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                    .accessibilityLabel("Yearly roll-up summaries")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateYearlyRollups))
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
@@ -719,7 +729,7 @@ struct MacFormatSettingsTab: View {
                     .accessibilityLabel("Export roll-up summaries only")
                     .accessibilityValue(macEnabledState(advancedSettings.summaryOnlyModeEnabled))
 
-                Text("Skips daily files and side effects. Health.md still fetches the selected range to build the range summary.")
+                Text("Skips daily files and side effects. Health.md still fetches the full touched periods to build the enabled summaries.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
 
@@ -921,7 +931,7 @@ struct MacDataSettingsTab: View {
 
         guard shouldTrack else { return }
         for metric in individualTrackableMetrics {
-            advancedSettings.individualTracking.setTrackIndividually(metric.id, enabled: true)
+            advancedSettings.setIndividuallyTracked(metric.id, enabled: true)
         }
     }
 

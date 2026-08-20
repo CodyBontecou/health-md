@@ -442,7 +442,7 @@ function applyWebsiteEditorialFilters(markdown, sourcePath) {
 
   if (sourcePath !== 'generated/rollups/aggregation-behavior.md') return markdown;
 
-  const fixtureDescription = 'The range evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.\n';
+  const fixtureDescription = 'The weekly evidence is fixed synthetic UTC data, contains no PHI, and is rendered by the production roll-up generator and exporters.\n';
   if (!markdown.includes(fixtureDescription)) {
     fail(`Expected website-hidden fixture description in ${sourcePath}.`);
   }
@@ -452,8 +452,8 @@ function applyWebsiteEditorialFilters(markdown, sourcePath) {
   if (evidencePeriod === -1) fail(`Expected website-hidden evidence period in ${sourcePath}.`);
   lines.splice(evidencePeriod, 1);
 
-  const sectionStart = lines.findIndex((line) => line.trim() === '## Required range evidence');
-  if (sectionStart === -1) fail(`Expected website-hidden Required range evidence section in ${sourcePath}.`);
+  const sectionStart = lines.findIndex((line) => line.trim() === '## Required weekly evidence');
+  if (sectionStart === -1) fail(`Expected website-hidden Required weekly evidence section in ${sourcePath}.`);
   const sectionEnd = lines.findIndex((line, index) => index > sectionStart && /^##\s+/.test(line));
   lines.splice(sectionStart, (sectionEnd === -1 ? lines.length : sectionEnd) - sectionStart);
 
@@ -513,6 +513,7 @@ function assertCurrentSchemaContracts(parsedJSON) {
     ['healthmd.external_provider_daily', [1]],
     ['healthmd.health_data', [8]],
     ['healthmd.healthkit_records', [1]],
+    ['healthmd.provider.whoop_daily', [1]],
     ['healthmd.raw_result', [1]],
     ['healthmd.rollup_summary', [8]],
   ]);
@@ -529,7 +530,7 @@ function assertCurrentSchemaContracts(parsedJSON) {
   }
   const dictionaryVersions = [...new Set(dictionary.map((entry) => entry?.schemaVersion))];
   if (canonicalJSON(dictionaryVersions) !== canonicalJSON([8])) {
-    fail(`The generated data dictionary must contain schemaVersion 7 only; found ${dictionaryVersions.join(', ')}.`);
+    fail(`The generated data dictionary must contain schemaVersion 8 only; found ${dictionaryVersions.join(', ')}.`);
   }
 }
 

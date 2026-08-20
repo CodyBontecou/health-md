@@ -32,9 +32,9 @@
       "sha256" : "b19dc00b38c0abe885a94d6f8a91a2860b4ea3f7bfb929c93daab2ab5dd21e8f"
     },
     {
-      "bytes" : 3085,
+      "bytes" : 7619,
       "path" : "api-export-v2-provider-sidecar.json",
-      "sha256" : "68e3445a0cf0ddd29d11a4709223757be1ea6cd9705df432c9b1ebb8ad6ca1cc"
+      "sha256" : "60318ab4f2a3d6598b956e0b2a04f501ab15f9ef7d54ba5758849ff53d86ef15"
     },
     {
       "bytes" : 363,
@@ -97,14 +97,14 @@
       "sha256" : "db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b"
     },
     {
-      "bytes" : 27586,
+      "bytes" : 27662,
       "path" : "mac-export-job.json",
-      "sha256" : "b414fa483debfb4acbd40417bb625b8894e80c42321a9858af0968af4f7f1725"
+      "sha256" : "3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a"
     },
     {
-      "bytes" : 741,
+      "bytes" : 1034,
       "path" : "mac-export-result-partial.json",
-      "sha256" : "d210439620674c62fc1a8d117b26fa796312d77c4dbdd90340a7b0a9ef0a72bf"
+      "sha256" : "f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201"
     },
     {
       "bytes" : 585,
@@ -112,9 +112,9 @@
       "sha256" : "b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b"
     },
     {
-      "bytes" : 120609,
+      "bytes" : 127872,
       "path" : "message-fields.md",
-      "sha256" : "d4c30c9ddcd9408f329bcef0b86d3cf854f82bbd4acea6ecdd60847b3589ff6f"
+      "sha256" : "74aa2afeb7be8387258aa28712fa5e9315d1144c2e394b03610a017097ec67db"
     },
     {
       "bytes" : 1553,

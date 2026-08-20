@@ -255,12 +255,14 @@ struct MacSyncView: View {
                     GeistMetricTile(
                         icon: "folder",
                         title: String(localized: "Destination"),
-                        value: vaultManager.vaultURL == nil
-                            ? String(localized: "Choose Folder")
-                            : vaultManager.vaultName,
+                        value: vaultManager.hasVaultSelection
+                            ? vaultManager.vaultName
+                            : String(localized: "Choose Folder"),
                         detail: folderAccessHealthy
                             ? String(localized: "Ready to write")
-                            : String(localized: "Required before exports"),
+                            : (vaultManager.hasVaultSelection
+                                ? vaultManager.vaultAvailabilityText
+                                : String(localized: "Required before exports")),
                         color: folderAccessHealthy ? Color.success : Color.warning
                     )
 
@@ -404,9 +406,9 @@ struct MacSyncView: View {
                     GeistInfoChip(
                         icon: "folder",
                         title: String(localized: "Destination"),
-                        value: vaultManager.vaultURL == nil
-                            ? String(localized: "Mac folder")
-                            : vaultManager.vaultName,
+                        value: vaultManager.hasVaultSelection
+                            ? vaultManager.vaultName
+                            : String(localized: "Mac folder"),
                         color: Color.textSecondary
                     )
                 }
@@ -547,22 +549,22 @@ struct MacSyncView: View {
                     subtitle: String(localized: "Where this Mac writes files received from iPhone.")
                 ) {
                     Button(
-                        vaultManager.vaultURL == nil
-                            ? String(localized: "Choose Folder")
-                            : String(localized: "Change Folder")
+                        vaultManager.hasVaultSelection
+                            ? String(localized: "Change Folder")
+                            : String(localized: "Choose Folder")
                     ) {
                         chooseDestinationFolder()
                     }
                     .buttonStyle(GeistMacButtonStyle(kind: .secondary, size: .small))
                     .accessibilityLabel(
-                        vaultManager.vaultURL == nil
-                            ? String(localized: "Choose destination folder")
-                            : String(localized: "Change destination folder")
+                        vaultManager.hasVaultSelection
+                            ? String(localized: "Change destination folder")
+                            : String(localized: "Choose destination folder")
                     )
                 }
 
                 HStack(alignment: .center, spacing: Spacing.s4) {
-                    Image(systemName: vaultManager.vaultURL == nil ? "folder" : "folder.fill")
+                    Image(systemName: vaultManager.hasVaultSelection ? "folder.fill" : "folder")
                         .font(.title3.weight(.medium))
                         .foregroundStyle(Color.primary)
                         .frame(width: 56, height: 56)
@@ -593,12 +595,12 @@ struct MacSyncView: View {
                 ) {
                     GeistInfoChip(
                         icon: "folder",
-                        title: vaultManager.vaultURL == nil
-                            ? String(localized: "No Folder")
-                            : String(localized: "Folder Exists"),
-                        value: vaultManager.vaultURL == nil
-                            ? String(localized: "Required")
-                            : (folderExists ? String(localized: "Ready") : String(localized: "Missing")),
+                        title: vaultManager.hasVaultSelection
+                            ? String(localized: "Folder Exists")
+                            : String(localized: "No Folder"),
+                        value: vaultManager.hasVaultSelection
+                            ? (vaultManager.vaultURL == nil ? vaultManager.vaultAvailabilityText : (folderExists ? String(localized: "Ready") : String(localized: "Missing")))
+                            : String(localized: "Required"),
                         color: folderExists ? Color.textSecondary : Color.warning
                     )
 
@@ -1002,7 +1004,9 @@ struct MacSyncView: View {
         if readinessState == .active { return String(localized: "Receiving Export") }
         if readinessState == .ready { return String(localized: "Ready to Receive") }
         if displayConnectionState == .connected && !folderAccessHealthy {
-            return String(localized: "Choose Destination")
+            return vaultManager.hasVaultSelection
+                ? vaultManager.vaultAvailabilityText
+                : String(localized: "Choose Destination")
         }
         if displayConnectionState == .connecting {
             return String(localized: "Connecting to iPhone")
@@ -1015,8 +1019,8 @@ struct MacSyncView: View {
         if readinessState == .active { return String(localized: "Receiving Export") }
         if displayConnectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone App") }
-        if vaultManager.vaultURL == nil { return String(localized: "Choose Folder") }
-        if !folderAccessHealthy { return String(localized: "Re-select Folder") }
+        if !vaultManager.hasVaultSelection { return String(localized: "Choose Folder") }
+        if !folderAccessHealthy { return vaultManager.vaultAvailabilityText }
         return String(localized: "Ready")
     }
 
@@ -1076,8 +1080,11 @@ struct MacSyncView: View {
             let device = displayConnectedPeerName ?? String(localized: "iPhone")
             return String(localized: "\(device) · local network · encrypted handoff")
         }
-        return folderAccessHealthy
-            ? String(localized: "Destination validated · waiting on iPhone")
+        if folderAccessHealthy {
+            return String(localized: "Destination validated · waiting on iPhone")
+        }
+        return vaultManager.hasVaultSelection
+            ? "\(vaultManager.vaultName): \(vaultManager.vaultAvailabilityText)"
             : String(localized: "Choose a folder to start receiving")
     }
 
@@ -1091,15 +1098,15 @@ struct MacSyncView: View {
     }
 
     private var folderTitle: String {
-        guard vaultManager.vaultURL != nil else { return String(localized: "No folder selected") }
-        return folderAccessHealthy
-            ? vaultManager.vaultName
-            : String(localized: "Folder access needs attention")
+        guard vaultManager.hasVaultSelection else { return String(localized: "No folder selected") }
+        return vaultManager.vaultName
     }
 
     private var folderSubtitle: String {
         guard let url = vaultManager.vaultURL else {
-            return String(localized: "Choose where this Mac should save exports.")
+            return vaultManager.hasVaultSelection
+                ? (vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
+                : String(localized: "Choose where this Mac should save exports.")
         }
         if folderAccessHealthy {
             return vaultManager.pathForDisplay ?? url.path(percentEncoded: false)
@@ -1108,10 +1115,10 @@ struct MacSyncView: View {
     }
 
     private var folderAccessibilityValue: String {
-        if vaultManager.vaultURL == nil { return String(localized: "No folder selected") }
+        guard vaultManager.hasVaultSelection else { return String(localized: "No folder selected") }
         return folderAccessHealthy
             ? String(localized: "Selected and accessible: \(vaultManager.vaultName)")
-            : String(localized: "Selected but access denied")
+            : "\(vaultManager.vaultName): \(vaultManager.vaultAvailabilityText)"
     }
 
     private var hasActiveExport: Bool {
@@ -1228,13 +1235,19 @@ struct MacSyncView: View {
                 icon: folderAccessHealthy ? "checkmark" : "folder.badge.questionmark",
                 title: folderAccessHealthy
                     ? String(localized: "Destination Validated")
-                    : String(localized: "Destination Needed"),
+                    : (vaultManager.hasVaultSelection
+                        ? String(localized: "Folder access needs attention")
+                        : String(localized: "Destination Needed")),
                 headline: folderAccessHealthy
                     ? String(localized: "\(storageSummary.shortFree) available")
-                    : String(localized: "Choose a folder"),
+                    : (vaultManager.hasVaultSelection
+                        ? vaultManager.vaultName
+                        : String(localized: "Choose a folder")),
                 detail: folderAccessHealthy
                     ? String(localized: "Good to go")
-                    : String(localized: "Required before exports"),
+                    : (vaultManager.hasVaultSelection
+                        ? vaultManager.vaultAvailabilityText
+                        : String(localized: "Required before exports")),
                 trailing: nil,
                 color: folderAccessHealthy ? Color.success : Color.warning
             ))

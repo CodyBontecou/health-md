@@ -91,7 +91,7 @@ Generated tests assert coverage beyond snapshot comparison:
 - canonical Individual Entry filenames include metric and lowercase UUID;
 - roll-up rule families have examples;
 - generated JSON parses and CSV passes an RFC 4180 parser;
-- current v7 signature remains unchanged.
+- current v8 signature matches production while historical v5/v6/v7 signatures remain unchanged.
 
 ## Schema guardrail
 
@@ -104,7 +104,7 @@ Documentation generation must never rewrite a shipped schema signature. If produ
 5. regenerate reference artifacts;
 6. update prose and migration guidance.
 
-Do not overwrite an existing versioned signature fixture merely to make generated docs pass. If the current v7 public contract changes intentionally, bump the schema version and create a new fixture instead; historical v1–v7 fixtures remain immutable.
+Do not overwrite an existing versioned signature fixture merely to make generated docs pass. If the current v8 public contract changes intentionally, bump the schema version and create a new fixture instead; historical v1–v8 fixtures remain immutable once shipped.
 
 ## Reviewing generated diffs
 

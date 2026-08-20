@@ -33,6 +33,7 @@ import com.healthmd.data.health.providers.HealthProviderDirectExportStatus
 import com.healthmd.data.health.providers.HealthProviderId
 import com.healthmd.data.health.providers.HealthProviderState
 import com.healthmd.presentation.common.*
+import com.healthmd.presentation.export.ExportProfilesEntryCard
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import com.healthmd.widget.setup.WidgetSettingsCard
@@ -45,7 +46,10 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     protectionSettingsRequestId: Long? = null,
     onNavigateToPaywall: () -> Unit = {},
+    onNavigateToExportProfiles: () -> Unit = {},
+    onNavigateToClinicianReport: () -> Unit = {},
     onNavigateToDirectCli: () -> Unit = {},
+    onNavigateToSharedSetup: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val protectionEnabled by viewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
@@ -169,6 +173,69 @@ fun SettingsScreen(
 
         WidgetSettingsCard()
         WearSettingsCard()
+
+        // Profiles & Reports: occasional-use export configuration surfaces that
+        // moved off the Export screen so daily export controls come first.
+        ExportProfilesEntryCard(onOpen = onNavigateToExportProfiles)
+
+        GeistCardClickable(
+            onClick = onNavigateToClinicianReport,
+            modifier = Modifier.testTag("clinician_report_entry"),
+        ) {
+            Icon(
+                Icons.Outlined.Description,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.clinician_report_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    stringResource(R.string.clinician_report_entry_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+            )
+        }
+
+        GeistCardClickable(onClick = onNavigateToSharedSetup) {
+            Icon(
+                Icons.Outlined.Share,
+                contentDescription = null,
+                tint = AppColors.accent,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.shared_setup_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = AppColors.textPrimary,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    stringResource(R.string.shared_setup_settings_detail),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppColors.textMuted,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = AppColors.textMuted,
+            )
+        }
 
         // Health source configuration is intentionally hidden until the integrations are ready.
 

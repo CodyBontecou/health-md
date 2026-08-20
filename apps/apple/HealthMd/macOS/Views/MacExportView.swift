@@ -83,16 +83,16 @@ struct MacExportView: View {
                     BrandLabel("Export Folder")
 
                     HStack(spacing: 10) {
-                        if let url = vaultManager.vaultURL {
-                            Image(systemName: "folder.fill")
-                                .foregroundStyle(Color.accent)
+                        if vaultManager.hasVaultSelection {
+                            Image(systemName: vaultManager.vaultURL == nil ? "folder.badge.exclamationmark" : "folder.fill")
+                                .foregroundStyle(vaultManager.vaultURL == nil ? Color.warning : Color.accent)
                                 .font(Typography.body())
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vaultManager.vaultName)
                                     .font(BrandTypography.bodyMedium())
                                     .foregroundStyle(Color.textPrimary)
-                                Text(url.path(percentEncoded: false))
+                                Text(vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
                                     .font(BrandTypography.caption())
                                     .foregroundStyle(Color.textMuted)
                                     .lineLimit(1)
@@ -100,7 +100,7 @@ struct MacExportView: View {
                             }
                             .accessibilityElement(children: .combine)
                             .accessibilityLabel("Export folder: \(vaultManager.vaultName)")
-                            .accessibilityValue(url.path(percentEncoded: false))
+                            .accessibilityValue(vaultManager.pathForDisplay ?? vaultManager.vaultAvailabilityText)
                         } else {
                             Image(systemName: "folder")
                                 .foregroundStyle(Color.textMuted)
@@ -112,7 +112,7 @@ struct MacExportView: View {
                         }
                         Spacer()
                         Button(
-                            vaultManager.vaultURL != nil
+                            vaultManager.hasVaultSelection
                                 ? String(localized: "Change…")
                                 : String(localized: "Choose…")
                         ) {
@@ -124,7 +124,7 @@ struct MacExportView: View {
                         .tint(Color.accent)
                         .controlSize(.small)
                         .accessibilityLabel(
-                            vaultManager.vaultURL != nil
+                            vaultManager.hasVaultSelection
                                 ? String(localized: "Change export folder")
                                 : String(localized: "Choose export folder")
                         )
@@ -265,7 +265,13 @@ struct MacExportView: View {
                         Text("Roll-up summaries")
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
-                        Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
+                        Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                            .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                        Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
+                            .tint(Color.accent)
+                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
+                        Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
@@ -273,8 +279,8 @@ struct MacExportView: View {
                             .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                         Text(
                             advancedSettings.summaryOnlyModeEnabled
-                                ? String(localized: "Only the range summary file will be written for the selected export range.")
-                                : String(localized: "Generated once per export, covering the full selected date range.")
+                                ? String(localized: "Only summary files will be written for the full touched week/month/year windows.")
+                                : String(localized: "Generated for every selected format using the full touched week/month/year windows.")
                         )
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
@@ -447,9 +453,9 @@ struct MacExportView: View {
                 endDate: endDate,
                 vaultManager: vaultManager,
                 settings: advancedSettings,
-                destinationLabel: vaultManager.vaultURL == nil
-                    ? String(localized: "Mac folder")
-                    : String(localized: "Mac: \(vaultManager.vaultName)"),
+                destinationLabel: vaultManager.hasVaultSelection
+                    ? String(localized: "Mac: \(vaultManager.vaultName)")
+                    : String(localized: "Mac folder"),
                 destinationRootName: nil,
                 dateRangePreset: dateRangePreset,
                 targetType: .localFile,
@@ -480,10 +486,18 @@ struct MacExportView: View {
     }
 
     private var readinessMessage: String {
-        if healthDataStore.recordCount == 0 && vaultManager.vaultURL == nil {
+        if healthDataStore.recordCount == 0 && !vaultManager.hasVaultSelection {
             return String(localized: "Sync health data from your iPhone and choose an export folder to get started.")
         } else if healthDataStore.recordCount == 0 {
             return String(localized: "Sync health data from your iPhone to export.")
+        } else if vaultManager.isVaultDestinationUsable {
+            // Health records and an accessible folder are present, so a blocked
+            // export comes from output configuration (e.g. every file format
+            // deselected), not from folder access; do not send users to repair
+            // a healthy destination.
+            return String(localized: "Choose at least one export format to enable exporting.")
+        } else if vaultManager.hasVaultSelection {
+            return String(localized: "Reconnect or re-select \(vaultManager.vaultName) to restore export access.")
         } else {
             return String(localized: "Choose an export folder to get started.")
         }
@@ -715,6 +729,7 @@ struct MacExportView: View {
                     )
                     dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                     dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
+                    partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                     if advancedSettings.dailyNotesOnlyModeEnabled {
                         switch writeResult.dailyNoteResult {
                         case .updated:

@@ -379,9 +379,18 @@ class AdvancedExportSettings: ObservableObject {
         didSet { save() }
     }
 
-    /// Generate one range summary from the daily snapshots in the export run,
-    /// covering exactly the requested export range, first day through last day.
-    @Published var generateRangeSummary: Bool {
+    /// Generate derived weekly summaries from successful daily snapshots in the export run.
+    @Published var generateWeeklyRollups: Bool {
+        didSet { save() }
+    }
+
+    /// Generate derived monthly summaries from successful daily snapshots in the export run.
+    @Published var generateMonthlyRollups: Bool {
+        didSet { save() }
+    }
+
+    /// Generate derived yearly summaries from successful daily snapshots in the export run.
+    @Published var generateYearlyRollups: Bool {
         didSet { save() }
     }
 
@@ -412,10 +421,10 @@ class AdvancedExportSettings: ObservableObject {
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
     private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
     private let includeGranularDataKey = "advancedExportSettings.includeGranularData"
-    private let generateRangeSummaryKey = "advancedExportSettings.generateRangeSummary"
-    private let legacyGenerateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
-    private let legacyGenerateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
-    private let legacyGenerateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
+    private let generateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
+    private let generateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
+    private let generateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
+    private let sharedSetupPortableSettingsKey = "advancedExportSettings.sharedSetupPortableSettings.v1"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
     private let verifiableClinicalRecordsOptInMigrationKey =
         "advancedExportSettings.verifiableClinicalRecordsOptInMigration.v1"
@@ -561,7 +570,9 @@ class AdvancedExportSettings: ObservableObject {
         self.individualTracking = individualTracking
         self.dailyNoteInjection = dailyNoteInjection
         includeGranularData = snapshot.includeGranularData
-        generateRangeSummary = snapshot.generateRangeSummary
+        generateWeeklyRollups = snapshot.generateWeeklyRollups
+        generateMonthlyRollups = snapshot.generateMonthlyRollups
+        generateYearlyRollups = snapshot.generateYearlyRollups
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
         exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
@@ -570,6 +581,38 @@ class AdvancedExportSettings: ObservableObject {
         subscribeToIndividualTracking()
         subscribeToFormatCustomization()
         subscribeToDailyNoteInjection()
+    }
+
+    /// Loads a frozen profile snapshot into this live settings object so the
+    /// active export profile becomes the editing authority. Mirrors the
+    /// snapshot restore used by `init(snapshot:userDefaults:)` without
+    /// replacing the object identity SwiftUI and the export pipeline observe.
+    /// Each published property observer persists to this object's defaults,
+    /// which keeps the legacy backing store synchronized with the loaded
+    /// profile; the profile itself remains the durable source of truth.
+    func apply(snapshot: ExportSettingsSnapshot) {
+        snapshot.metricSelection.apply(to: metricSelection)
+        snapshot.formatCustomization.apply(to: formatCustomization)
+        snapshot.individualTracking.apply(to: individualTracking)
+        snapshot.dailyNoteInjection.apply(to: dailyNoteInjection)
+
+        exportFormats = snapshot.exportFormats
+        includeMetadata = snapshot.includeMetadata
+        groupByCategory = snapshot.groupByCategory
+        filenameFormat = snapshot.filenameFormat
+        folderStructure = snapshot.folderStructure
+        organizeFormatsIntoFolders = snapshot.organizeFormatsIntoFolders
+        archiveExportFiles = snapshot.archiveExportFiles
+        includeDataDictionary = snapshot.includeDataDictionary
+        summaryOnlyExport = snapshot.summaryOnlyExport
+        writeMode = snapshot.writeMode
+        includeGranularData = snapshot.includeGranularData
+        generateWeeklyRollups = snapshot.generateWeeklyRollups
+        generateMonthlyRollups = snapshot.generateMonthlyRollups
+        generateYearlyRollups = snapshot.generateYearlyRollups
+        executionAppleExportEnginePin = snapshot.appleExportEnginePin
+        executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
+        exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
     }
 
     init(userDefaults: UserDefaults = .standard) {
@@ -675,7 +718,7 @@ class AdvancedExportSettings: ObservableObject {
         
         // Load format customization
         if let data = userDefaults.data(forKey: formatCustomizationKey),
-           let decoded = try? JSONDecoder().decode(FormatCustomization.self, from: data) {
+           let decoded = try? Self.internalSettingsDecoder().decode(FormatCustomization.self, from: data) {
             self.formatCustomization = decoded
         } else {
             self.formatCustomization = FormatCustomization()
@@ -709,22 +752,10 @@ class AdvancedExportSettings: ObservableObject {
             self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
         }
 
-        // Load range-summary setting (default off to avoid writing derived files
-        // unexpectedly). Migrate the legacy weekly/monthly/yearly roll-up toggles
-        // once: enabling any legacy period opts in to the range summary, and the
-        // legacy keys are removed after migration.
-        if userDefaults.object(forKey: generateRangeSummaryKey) != nil {
-            self.generateRangeSummary = userDefaults.bool(forKey: generateRangeSummaryKey)
-        } else if userDefaults.object(forKey: legacyGenerateWeeklyRollupsKey) != nil
-            || userDefaults.object(forKey: legacyGenerateMonthlyRollupsKey) != nil
-            || userDefaults.object(forKey: legacyGenerateYearlyRollupsKey) != nil
-        {
-            self.generateRangeSummary = userDefaults.bool(forKey: legacyGenerateWeeklyRollupsKey)
-                || userDefaults.bool(forKey: legacyGenerateMonthlyRollupsKey)
-                || userDefaults.bool(forKey: legacyGenerateYearlyRollupsKey)
-        } else {
-            self.generateRangeSummary = false
-        }
+        // Load roll-up summary settings (default off to avoid writing derived files unexpectedly)
+        self.generateWeeklyRollups = userDefaults.bool(forKey: generateWeeklyRollupsKey)
+        self.generateMonthlyRollups = userDefaults.bool(forKey: generateMonthlyRollupsKey)
+        self.generateYearlyRollups = userDefaults.bool(forKey: generateYearlyRollupsKey)
         // Medications use a separate per-object HealthKit authorization flow.
         // If a prior build persisted medication metrics by default before that
         // flow was completed, remove them so users opt in explicitly.
@@ -760,10 +791,19 @@ class AdvancedExportSettings: ObservableObject {
         let removedMetricsUnavailableInCurrentBuild =
             metricSelection.removeMetricsUnavailableInCurrentBuild()
 
+        // Re-select metrics that are individually tracked but were left out of
+        // the export metric selection. Unselected metrics are filtered from
+        // HealthData before individual entries are extracted, so such configs
+        // can never produce files in any mode. Authorization-protective
+        // migrations above have already run; sync itself honors their
+        // authorization boundaries and never resurrects gated selections.
+        let restoredTrackedMetricSelection = syncMetricSelectionWithIndividualTracking()
+
         // Persist migrated metricSelection immediately so future launches never
         // fall back to legacy dataTypes or reopen unavailable selectors implicitly.
         if migratedMetricSelectionFromLegacyDataTypes || removedUnauthorizedMedicationMetrics ||
-            removedLegacyVerifiableClinicalRecords || removedMetricsUnavailableInCurrentBuild {
+            removedLegacyVerifiableClinicalRecords || removedMetricsUnavailableInCurrentBuild ||
+            restoredTrackedMetricSelection {
             saveMetricSelection()
         }
         if removedIndividualTrackingMetricsUnavailableInCurrentBuild {
@@ -776,7 +816,7 @@ class AdvancedExportSettings: ObservableObject {
             saveFormats()
             userDefaults.removeObject(forKey: formatKey)
         }
-        
+
         // Subscribe to nested ObservableObject changes so internal mutations
         // (e.g. toggling a metric) are persisted to UserDefaults.
         // didSet only fires when the entire object reference is reassigned,
@@ -799,6 +839,13 @@ class AdvancedExportSettings: ObservableObject {
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
                 self?.saveMetricSelection()
+                // Deselecting a metric in the Health Metrics picker must also
+                // stop its individual tracking; otherwise tracking configs keep
+                // querying a metric that daily exports no longer include until
+                // another tracking change or app reload reconciles them.
+                if self?.syncIndividualTrackingWithMetricSelection() == true {
+                    self?.saveIndividualTracking()
+                }
             }
     }
     
@@ -807,6 +854,12 @@ class AdvancedExportSettings: ObservableObject {
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.objectWillChange.send()
+                // Unselected metrics are filtered out of HealthData before
+                // individual entries are extracted, so keep the selection
+                // consistent with any tracked metric while persisting.
+                if self?.syncMetricSelectionWithIndividualTracking() == true {
+                    self?.saveMetricSelection()
+                }
                 self?.saveIndividualTracking()
             }
     }
@@ -840,7 +893,7 @@ class AdvancedExportSettings: ObservableObject {
     }
     
     private func saveFormatCustomization() {
-        if let encoded = try? JSONEncoder().encode(formatCustomization) {
+        if let encoded = try? Self.internalSettingsEncoder().encode(formatCustomization) {
             userDefaults.set(encoded, forKey: formatCustomizationKey)
         }
     }
@@ -900,11 +953,10 @@ class AdvancedExportSettings: ObservableObject {
         // Save granular data setting
         userDefaults.set(includeGranularData, forKey: includeGranularDataKey)
 
-        // Save range-summary setting and drop migrated legacy keys
-        userDefaults.set(generateRangeSummary, forKey: generateRangeSummaryKey)
-        userDefaults.removeObject(forKey: legacyGenerateWeeklyRollupsKey)
-        userDefaults.removeObject(forKey: legacyGenerateMonthlyRollupsKey)
-        userDefaults.removeObject(forKey: legacyGenerateYearlyRollupsKey)
+        // Save roll-up summary settings
+        userDefaults.set(generateWeeklyRollups, forKey: generateWeeklyRollupsKey)
+        userDefaults.set(generateMonthlyRollups, forKey: generateMonthlyRollupsKey)
+        userDefaults.set(generateYearlyRollups, forKey: generateYearlyRollupsKey)
     }
 
     func reset() {
@@ -924,7 +976,130 @@ class AdvancedExportSettings: ObservableObject {
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()
         includeGranularData = false
-        generateRangeSummary = false
+        generateWeeklyRollups = false
+        generateMonthlyRollups = false
+        generateYearlyRollups = false
+    }
+
+    /// Applies an already-validated portable settings candidate without replaying every
+    /// `@Published` observer. The complete non-secret portable envelope and the native settings
+    /// keys are persisted and read back before one parent publication. Device-bound settings are
+    /// intentionally absent.
+    func applySharedSetupBatch(
+        _ snapshot: SharedSetupPortableSnapshot,
+        verificationOverride: (() -> Bool)? = nil
+    ) throws {
+        try SharedSetupValidation.validateRelativePath(snapshot.folderStructure)
+        try SharedSetupValidation.validateFilename(snapshot.filenameFormat)
+        try SharedSetupValidation.validateRelativePath(snapshot.individualTracking.entriesFolder)
+        try SharedSetupValidation.validateFilename(snapshot.individualTracking.filenameTemplate)
+        try SharedSetupValidation.validateRelativePath(snapshot.dailyNotes.folderPath)
+        try SharedSetupValidation.validateFilename(snapshot.dailyNotes.filenamePattern)
+        guard snapshot.metricSelectionIDs.isSubset(of: HealthMetrics.availableMetricIDsInCurrentBuild) else {
+            throw SharedSetupError.invalid("The setup contains an unsupported Apple metric selection.")
+        }
+
+        let before = SharedSetupPortableSnapshot.capture(self)
+        let priorEnvelope = userDefaults.data(forKey: sharedSetupPortableSettingsKey)
+        do {
+            replacePublishedStorage(with: snapshot)
+            try persistSharedSetupSnapshot(snapshot)
+            let reloaded = AdvancedExportSettings(userDefaults: userDefaults)
+            let verified = verificationOverride?() ?? (
+                persistedSharedSetupSnapshot() == snapshot &&
+                SharedSetupPortableSnapshot.capture(reloaded) == snapshot
+            )
+            guard verified else { throw SharedSetupError.persistenceVerificationFailed }
+            subscribeToMetricSelection()
+            subscribeToIndividualTracking()
+            subscribeToFormatCustomization()
+            subscribeToDailyNoteInjection()
+            objectWillChange.send()
+        } catch {
+            replacePublishedStorage(with: before)
+            persistAllSettings()
+            if let priorEnvelope {
+                userDefaults.set(priorEnvelope, forKey: sharedSetupPortableSettingsKey)
+            } else {
+                userDefaults.removeObject(forKey: sharedSetupPortableSettingsKey)
+            }
+            subscribeToMetricSelection()
+            subscribeToIndividualTracking()
+            subscribeToFormatCustomization()
+            subscribeToDailyNoteInjection()
+            objectWillChange.send()
+            throw error
+        }
+    }
+
+    private func replacePublishedStorage(with snapshot: SharedSetupPortableSnapshot) {
+        let selection = MetricSelectionState()
+        selection.enabledMetrics = snapshot.metricSelectionIDs
+        selection.enabledCategories = [] // Categories are derived UI state, never import authority.
+        let customization = FormatCustomization()
+        customization.dateFormat = snapshot.dateFormat
+        customization.timeFormat = snapshot.timeFormat
+        customization.unitPreference = snapshot.unitPreference
+        snapshot.frontmatter.apply(to: customization.frontmatterConfig)
+        customization.frontmatterConfig.preservesExactFieldSet = snapshot.frontmatterPreservesExactFieldSet
+        customization.markdownTemplate = snapshot.markdownTemplate
+        let individual = IndividualTrackingSettings()
+        snapshot.individualTracking.apply(to: individual)
+        let dailyNotes = DailyNoteInjectionSettings()
+        snapshot.dailyNotes.apply(to: dailyNotes)
+
+        _metricSelection = Published(initialValue: selection)
+        _exportFormats = Published(initialValue: snapshot.exportFormats)
+        _includeMetadata = Published(initialValue: snapshot.includeMetadata)
+        _groupByCategory = Published(initialValue: snapshot.groupByCategory)
+        _filenameFormat = Published(initialValue: snapshot.filenameFormat)
+        _folderStructure = Published(initialValue: snapshot.folderStructure)
+        _organizeFormatsIntoFolders = Published(initialValue: snapshot.organizeFormatsIntoFolders)
+        _archiveExportFiles = Published(initialValue: snapshot.archiveExportFiles)
+        _includeDataDictionary = Published(initialValue: snapshot.includeDataDictionary)
+        _summaryOnlyExport = Published(initialValue: snapshot.summaryOnlyExport)
+        _writeMode = Published(initialValue: snapshot.writeMode)
+        _formatCustomization = Published(initialValue: customization)
+        _individualTracking = Published(initialValue: individual)
+        _dailyNoteInjection = Published(initialValue: dailyNotes)
+        _includeGranularData = Published(initialValue: snapshot.includeGranularData)
+        _generateWeeklyRollups = Published(initialValue: snapshot.generateWeeklyRollups)
+        _generateMonthlyRollups = Published(initialValue: snapshot.generateMonthlyRollups)
+        _generateYearlyRollups = Published(initialValue: snapshot.generateYearlyRollups)
+    }
+
+    private static func internalSettingsEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.userInfo[.includeSharedSetupExactFrontmatter] = true
+        return encoder
+    }
+
+    private static func internalSettingsDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.userInfo[.includeSharedSetupExactFrontmatter] = true
+        return decoder
+    }
+
+    private func persistSharedSetupSnapshot(_ snapshot: SharedSetupPortableSnapshot) throws {
+        let data = try Self.internalSettingsEncoder().encode(snapshot)
+        guard data.count <= SharedSetupV1.maximumEncodedBytes else { throw SharedSetupError.oversized }
+        userDefaults.set(data, forKey: sharedSetupPortableSettingsKey)
+        persistAllSettings()
+    }
+
+    private func persistedSharedSetupSnapshot() -> SharedSetupPortableSnapshot? {
+        guard let data = userDefaults.data(forKey: sharedSetupPortableSettingsKey),
+              data.count <= SharedSetupV1.maximumEncodedBytes else { return nil }
+        return try? Self.internalSettingsDecoder().decode(SharedSetupPortableSnapshot.self, from: data)
+    }
+
+    private func persistAllSettings() {
+        save()
+        saveFormats()
+        saveMetricSelection()
+        saveFormatCustomization()
+        saveIndividualTracking()
+        saveDailyNoteInjection()
     }
 
     /// Daily Notes Only is effective only while Daily Note Injection itself is enabled.
@@ -939,7 +1114,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     var rollupSummariesEnabled: Bool {
-        generateRangeSummary
+        generateWeeklyRollups || generateMonthlyRollups || generateYearlyRollups
     }
 
     var effectiveFileExportMode: EffectiveFileExportMode {
@@ -974,6 +1149,72 @@ class AdvancedExportSettings: ObservableObject {
         effectiveFileExportMode == .standard && individualTracking.globalEnabled
     }
 
+    // MARK: - Individual Tracking / Metric Selection Coupling
+
+    /// Sets individual tracking for one metric while keeping the export metric
+    /// selection consistent. A metric tracked individually must also be selected
+    /// for the daily export: unselected metrics are filtered out of HealthData
+    /// before individual entries are extracted, so tracking without selection
+    /// can never produce files.
+    func setIndividuallyTracked(_ metricID: String, enabled: Bool) {
+        individualTracking.setTrackIndividually(metricID, enabled: enabled)
+        if enabled {
+            metricSelection.setMetric(metricID, enabled: true)
+        }
+    }
+
+    /// Unions every individually tracked metric into the export metric
+    /// selection. Only runs while individual tracking is globally enabled;
+    /// dormant configurations while the feature is off stay untouched.
+    /// Authorization-gated metrics (medications before their per-object grant,
+    /// Verifiable Clinical Records) are never resurrected by tracking configs —
+    /// users opt into those explicitly, and export-time warnings guide them.
+    /// Returns whether any selection change was made.
+    @discardableResult
+    func syncMetricSelectionWithIndividualTracking() -> Bool {
+        guard individualTracking.globalEnabled else { return false }
+        var excludedMetricIDs = Set(["verifiable_clinical_records"])
+        for category in HealthMetricCategory.allCases where category.requiresSeparateAuthorization {
+            excludedMetricIDs.formUnion(HealthMetrics.byCategory[category]?.map(\.id) ?? [])
+        }
+        if userDefaults.bool(forKey: medicationAuthorizationRequestedKey),
+           let medicationMetricIDs = HealthMetrics.byCategory[.medications]?.map(\.id) {
+            excludedMetricIDs.subtract(medicationMetricIDs)
+        }
+        let trackedMetricIDs = Set(
+            individualTracking.metricConfigs
+                .filter { $0.value.trackIndividually }
+                .map(\.key)
+        )
+        .intersection(HealthMetrics.availableMetricIDsInCurrentBuild)
+        .subtracting(excludedMetricIDs)
+        let missingMetricIDs = trackedMetricIDs.subtracting(metricSelection.enabledMetrics)
+        guard !missingMetricIDs.isEmpty else { return false }
+        for metricID in missingMetricIDs {
+            metricSelection.setMetric(metricID, enabled: true)
+        }
+        return true
+    }
+
+    /// Reverse reconciliation: a metric deselected from the daily export must
+    /// stop being individually tracked, so persisted tracking configs never
+    /// reference metrics the export no longer queries.
+    @discardableResult
+    func syncIndividualTrackingWithMetricSelection() -> Bool {
+        guard individualTracking.globalEnabled else { return false }
+        let removedMetricIDs = Set(
+            individualTracking.metricConfigs
+                .filter { $0.value.trackIndividually }
+                .map(\.key)
+        )
+        .subtracting(metricSelection.enabledMetrics)
+        guard !removedMetricIDs.isEmpty else { return false }
+        for metricID in removedMetricIDs {
+            individualTracking.metricConfigs[metricID]?.trackIndividually = false
+        }
+        return true
+    }
+
     var writesExternalProviderSidecars: Bool {
         effectiveFileExportMode == .standard
     }
@@ -984,11 +1225,18 @@ class AdvancedExportSettings: ObservableObject {
         includeGranularData && effectiveFileExportMode == .standard
     }
 
-    /// The single roll-up period requested when the range summary is enabled.
-    /// The list is empty in Daily Notes Only mode while the configured toggle
-    /// stays preserved for when that mode is disabled.
+    var configuredRollupPeriods: [HealthRollupPeriod] {
+        var periods: [HealthRollupPeriod] = []
+        if generateWeeklyRollups { periods.append(.weekly) }
+        if generateMonthlyRollups { periods.append(.monthly) }
+        if generateYearlyRollups { periods.append(.yearly) }
+        return periods
+    }
+
+    /// Runtime periods are empty in Daily Notes Only mode while preserving the
+    /// configured period toggles for when that mode is disabled.
     var enabledRollupPeriods: [HealthRollupPeriod] {
-        dailyNotesOnlyModeEnabled || !generateRangeSummary ? [] : [.range]
+        dailyNotesOnlyModeEnabled ? [] : configuredRollupPeriods
     }
 
     var looseFormatsPerDate: Int {

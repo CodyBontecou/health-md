@@ -3821,9 +3821,9 @@ public object FfiConverterTypeCoreDirectPairingProfile: FfiConverterRustBuffer<C
 enum class CoreMetricRegistryProfile {
     
     /**
-     * Apple `healthmd.health_data` v7.
+     * Apple `healthmd.health_data` v8.
      */
-    APPLE_HEALTH_DATA_V7,
+    APPLE_HEALTH_DATA_V8,
     /**
      * Android frozen v4.
      */

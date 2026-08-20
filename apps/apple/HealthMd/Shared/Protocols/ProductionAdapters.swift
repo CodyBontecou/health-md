@@ -189,6 +189,37 @@ nonisolated final class SystemUserDefaults: UserDefaultsStoring, @unchecked Send
     }
 }
 
+// MARK: - SystemVaultFolderIdentityProbe
+
+/// Production persistent-directory-identity probe. Unsupported and non-persistent
+/// File Provider volumes intentionally return no evidence.
+final class SystemVaultFolderIdentityProbe: VaultFolderIdentityProbing, @unchecked Sendable {
+    // Keep deallocation on the releasing thread (swiftlang/swift#85663).
+    nonisolated deinit {}
+    nonisolated init() {}
+
+    func persistentIdentity(for url: URL) throws -> VaultFolderIdentity? {
+        let keys: Set<URLResourceKey> = [
+            .isDirectoryKey,
+            .volumeSupportsPersistentIDsKey,
+            .volumeUUIDStringKey,
+            .fileIdentifierKey
+        ]
+        let values = try url.resourceValues(forKeys: keys)
+        guard values.isDirectory == true,
+              values.volumeSupportsPersistentIDs == true,
+              let volumeUUIDString = values.volumeUUIDString,
+              !volumeUUIDString.isEmpty,
+              let fileIdentifier = values.fileIdentifier else {
+            return nil
+        }
+        return VaultFolderIdentity(
+            volumeUUIDString: volumeUUIDString,
+            fileIdentifier: fileIdentifier
+        )
+    }
+}
+
 // MARK: - SystemBookmarkResolver
 
 /// Production bookmark resolver wrapping URL bookmark APIs.

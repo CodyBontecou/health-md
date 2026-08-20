@@ -8,7 +8,9 @@ enum ConnectedExportGranularMode {
     }
 
     static func isEnabled(for snapshot: ExportSettingsSnapshot) -> Bool {
-        let hasRollups = snapshot.generateRangeSummary
+        let hasRollups = snapshot.generateWeeklyRollups
+            || snapshot.generateMonthlyRollups
+            || snapshot.generateYearlyRollups
         let summaryOnlyModeEnabled = snapshot.summaryOnlyExport
             && hasRollups
             && !snapshot.exportFormats.isEmpty
@@ -133,11 +135,21 @@ struct MacExportJobBuilder {
         fetchExternalDailyRecords: ExternalDailyRecordFetcher? = nil,
         onProgress: ((_ processed: Int, _ total: Int, _ date: Date) -> Void)? = nil
     ) async throws -> MacExportJob {
+        let sourceTimeZone = frozenSettingsSnapshot?.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = sourceTimeZone
         let dates = requestedDates.map {
-            Array(Set($0.map { Calendar.current.startOfDay(for: $0) })).sorted()
-        } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate)
-        let requestedDays = Set(dates.map { Calendar.current.startOfDay(for: $0) })
-        let rollupDates = ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
+            Array(Set($0.map { sourceCalendar.startOfDay(for: $0) })).sorted()
+        } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate, calendar: sourceCalendar)
+        let requestedDays = Set(dates.map { sourceCalendar.startOfDay(for: $0) })
+        let rollupDates = ExportOrchestrator.rollupSourceDates(
+            for: dates,
+            settings: settings,
+            calendar: sourceCalendar
+        )
         let transferDates = Array(Set(dates + rollupDates)).sorted()
         let settingsSnapshot = if let frozenSettingsSnapshot {
             frozenSettingsSnapshot
@@ -145,6 +157,7 @@ struct MacExportJobBuilder {
             await settingsSnapshotForNewConnectedMacOperation(
                 settings,
                 healthSubfolder: healthSubfolder,
+                calendarTimeZone: sourceTimeZone,
                 hasNativeOnlyCompanionAction: settings.writesExternalProviderSidecars
                     && fetchExternalDailyRecords != nil
             )
@@ -155,22 +168,23 @@ struct MacExportJobBuilder {
 
         for (index, date) in transferDates.enumerated() {
             try Task.checkCancellation()
-            let day = Calendar.current.startOfDay(for: date)
+            let day = sourceCalendar.startOfDay(for: date)
             let shouldIncludeGranularData = requestedDays.contains(day) && includeGranularData
             let fetchedRecord = try await fetchHealthData(date, shouldIncludeGranularData)
-            let record = ConnectedExportGranularMode.sanitized(
+            var record = ConnectedExportGranularMode.sanitized(
                 fetchedRecord,
                 includesGranularData: shouldIncludeGranularData
             )
-            records.append(record)
 
             if record.hasAnyData,
                requestedDays.contains(day),
                settings.writesExternalProviderSidecars,
                let fetchExternalDailyRecords {
                 let providerRecords = await fetchExternalDailyRecords(date)
+                record.providers = HealthProviderSections.normalized(from: providerRecords)
                 externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
             }
+            records.append(record)
             onProgress?(index + 1, transferDates.count, date)
         }
 
@@ -244,11 +258,13 @@ struct MacExportStreamingJobBuilder {
         connectedOperationSurface: AppleExportOperationSurface = .connectedReceivedFilesWithoutSideEffects,
         hasNativeOnlyCompanionAction: Bool = false
     ) async -> Metadata {
+        let calendarTimeZone = settings.exportTimeZoneOverride ?? .current
         let snapshot: ExportSettingsSnapshot
         if enforceConnectedOperationGate {
             snapshot = await MacExportJobBuilder.settingsSnapshotForNewConnectedMacOperation(
                 settings,
                 healthSubfolder: healthSubfolder,
+                calendarTimeZone: calendarTimeZone,
                 hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction,
                 operationSurface: connectedOperationSurface
             )
@@ -257,6 +273,7 @@ struct MacExportStreamingJobBuilder {
             snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,
                 healthSubfolder: healthSubfolder,
+                calendarTimeZone: calendarTimeZone,
                 surface: operationSurface,
                 hasNativeOnlyCompanionAction: hasNativeOnlyCompanionAction
             )
@@ -283,11 +300,21 @@ struct MacExportStreamingJobBuilder {
         destinationDisplayName: String?,
         frozenSettingsSnapshot: ExportSettingsSnapshot? = nil
     ) -> Metadata {
+        let sourceTimeZone = frozenSettingsSnapshot?.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = sourceTimeZone
         let requestedDates = suppliedRequestedDates.map {
-            Array(Set($0.map { Calendar.current.startOfDay(for: $0) })).sorted()
-        } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate)
-        let requestedDays = Set(requestedDates.map { Calendar.current.startOfDay(for: $0) })
-        let rollupDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
+            Array(Set($0.map { sourceCalendar.startOfDay(for: $0) })).sorted()
+        } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate, calendar: sourceCalendar)
+        let requestedDays = Set(requestedDates.map { sourceCalendar.startOfDay(for: $0) })
+        let rollupDates = ExportOrchestrator.rollupSourceDates(
+            for: requestedDates,
+            settings: settings,
+            calendar: sourceCalendar
+        )
         let transferDates = Array(Set(requestedDates + rollupDates)).sorted()
 
         return Metadata(
@@ -297,7 +324,7 @@ struct MacExportStreamingJobBuilder {
             settingsSnapshot: frozenSettingsSnapshot ?? ExportSettingsSnapshot.from(
                 settings,
                 healthSubfolder: healthSubfolder,
-                calendarTimeZoneIdentifier: (settings.exportTimeZoneOverride ?? .current).identifier
+                calendarTimeZoneIdentifier: sourceTimeZone.identifier
             ),
             requestedTarget: ExportTargetSnapshot(
                 kind: .connectedMac,
@@ -320,7 +347,13 @@ struct MacExportStreamingJobBuilder {
         metadata: Metadata,
         settings: AdvancedExportSettings
     ) -> Bool {
-        let day = Calendar.current.startOfDay(for: date)
+        let sourceTimeZone = metadata.settingsSnapshot.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = sourceTimeZone
+        let day = sourceCalendar.startOfDay(for: date)
         return metadata.requestedDays.contains(day)
             && ConnectedExportGranularMode.isEnabled(for: settings)
     }

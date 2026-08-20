@@ -1,5 +1,5 @@
 {
-  "fingerprint" : "e339181695bea0ed03e43ca777eeca54c48e95f6bcc191889299f3afdd12bf7d",
+  "fingerprint" : "f0d6aeb9729403ce8551150a44fe8d1f14cf7f5f46a12f9e52d4760a3448248d",
   "payload" : {
     "csvExtendedRowContracts" : [
       {
@@ -1567,6 +1567,294 @@
         "hasTimestamp" : true,
         "metric" : "Workout Sport",
         "unit" : ""
+      }
+    ],
+    "csvProviderRowContracts" : [
+      {
+        "category" : "Activity",
+        "hasTimestamp" : false,
+        "metric" : "Steps",
+        "unit" : "count"
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "healthmd.health_data",
+        "metric" : "schema",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metric" : "schema_version",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "UTC",
+        "metric" : "time_context.calendar_timezone",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "UTC",
+        "metric" : "time_context.timestamp_timezone",
+        "unit" : ""
+      },
+      {
+        "category" : "Metadata",
+        "hasTimestamp" : false,
+        "metadataValue" : "metric",
+        "metric" : "unit_system",
+        "unit" : ""
+      },
+      {
+        "category" : "Raw HealthKit",
+        "hasTimestamp" : false,
+        "metric" : "Raw Capture Status",
+        "unit" : "status"
+      },
+      {
+        "category" : "WHOOP Body",
+        "hasTimestamp" : false,
+        "metric" : "Body Height Snapshot",
+        "unit" : "m"
+      },
+      {
+        "category" : "WHOOP Body",
+        "hasTimestamp" : true,
+        "metric" : "Body Snapshot",
+        "unit" : "\"\"max_heart_rate_bpm\"\":190"
+      },
+      {
+        "category" : "WHOOP Body",
+        "hasTimestamp" : false,
+        "metric" : "Body Weight Snapshot",
+        "unit" : "kg"
+      },
+      {
+        "category" : "WHOOP Body",
+        "hasTimestamp" : false,
+        "metric" : "Maximum Heart Rate Snapshot",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "WHOOP Capture",
+        "hasTimestamp" : false,
+        "metric" : "Capture Status",
+        "unit" : "status"
+      },
+      {
+        "category" : "WHOOP Capture",
+        "hasTimestamp" : true,
+        "metric" : "Resource Result",
+        "unit" : "\"\"resource\"\":\"\"body\"\""
+      },
+      {
+        "category" : "WHOOP Capture",
+        "hasTimestamp" : true,
+        "metric" : "Resource Result",
+        "unit" : "\"\"resource\"\":\"\"cycles\"\""
+      },
+      {
+        "category" : "WHOOP Capture",
+        "hasTimestamp" : true,
+        "metric" : "Resource Result",
+        "unit" : "\"\"resource\"\":\"\"recovery\"\""
+      },
+      {
+        "category" : "WHOOP Capture",
+        "hasTimestamp" : true,
+        "metric" : "Resource Result",
+        "unit" : "\"\"resource\"\":\"\"sleep\"\""
+      },
+      {
+        "category" : "WHOOP Capture",
+        "hasTimestamp" : true,
+        "metric" : "Resource Result",
+        "unit" : "\"\"resource\"\":\"\"workouts\"\""
+      },
+      {
+        "category" : "WHOOP Cycle",
+        "hasTimestamp" : true,
+        "metric" : "Cycle Average Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "WHOOP Cycle",
+        "hasTimestamp" : true,
+        "metric" : "Cycle Energy",
+        "unit" : "kJ"
+      },
+      {
+        "category" : "WHOOP Cycle",
+        "hasTimestamp" : true,
+        "metric" : "Cycle Maximum Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "WHOOP Cycle",
+        "hasTimestamp" : true,
+        "metric" : "Cycle Record",
+        "unit" : "\"\"end_time\"\":\"\"2026-03-15T17:30:00.000000000Z\"\""
+      },
+      {
+        "category" : "WHOOP Cycle",
+        "hasTimestamp" : true,
+        "metric" : "Cycle Strain Score",
+        "unit" : "score"
+      },
+      {
+        "category" : "WHOOP Recovery",
+        "hasTimestamp" : false,
+        "metric" : "HRV (RMSSD)",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Recovery",
+        "hasTimestamp" : true,
+        "metric" : "Recovery Record",
+        "unit" : "\"\"hrv_rmssd_ms\"\":54.3"
+      },
+      {
+        "category" : "WHOOP Recovery",
+        "hasTimestamp" : false,
+        "metric" : "Recovery Score",
+        "unit" : "percent"
+      },
+      {
+        "category" : "WHOOP Recovery",
+        "hasTimestamp" : false,
+        "metric" : "Resting Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "WHOOP Recovery",
+        "hasTimestamp" : false,
+        "metric" : "Skin Temperature",
+        "unit" : "°C"
+      },
+      {
+        "category" : "WHOOP Recovery",
+        "hasTimestamp" : false,
+        "metric" : "SpO₂",
+        "unit" : "percent"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Awake Duration",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Light Sleep Duration",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "REM Sleep Duration",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Recent Nap Adjustment",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Respiratory Rate",
+        "unit" : "breaths/min"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Consistency",
+        "unit" : "percent"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Efficiency",
+        "unit" : "percent"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Performance",
+        "unit" : "percent"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Sleep Record",
+        "unit" : "\"\"baseline_sleep_need_milliseconds\"\":28800000"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Slow Wave Sleep Duration",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Total In Bed",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Sleep",
+        "hasTimestamp" : true,
+        "metric" : "Total Sleep",
+        "unit" : "ms"
+      },
+      {
+        "category" : "WHOOP Workout",
+        "hasTimestamp" : true,
+        "metric" : "Workout Average Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "WHOOP Workout",
+        "hasTimestamp" : true,
+        "metric" : "Workout Distance",
+        "unit" : "m"
+      },
+      {
+        "category" : "WHOOP Workout",
+        "hasTimestamp" : true,
+        "metric" : "Workout Energy",
+        "unit" : "kJ"
+      },
+      {
+        "category" : "WHOOP Workout",
+        "hasTimestamp" : true,
+        "metric" : "Workout Maximum Heart Rate",
+        "unit" : "bpm"
+      },
+      {
+        "category" : "WHOOP Workout",
+        "hasTimestamp" : true,
+        "metric" : "Workout Record",
+        "unit" : "\"\"altitude_gain_meters\"\":120"
+      },
+      {
+        "category" : "WHOOP Workout",
+        "hasTimestamp" : true,
+        "metric" : "Workout Sport",
+        "unit" : ""
+      },
+      {
+        "category" : "WHOOP Workout",
+        "hasTimestamp" : true,
+        "metric" : "Workout Strain Score",
+        "unit" : "score"
       }
     ],
     "csvRowContracts" : [
@@ -8771,6 +9059,726 @@
         "unit" : "pushes"
       },
       {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_awake_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Awake Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_awake_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_body_height_meters",
+        "category" : "WHOOP Body",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Body Height Snapshot",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_body_height_meters",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "m"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_body_max_heart_rate_bpm",
+        "category" : "WHOOP Body",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Maximum Heart Rate Snapshot",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_body_max_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_body_weight_kilograms",
+        "category" : "WHOOP Body",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Body Weight Snapshot",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_body_weight_kilograms",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "kg"
+      },
+      {
+        "aggregation" : "provider_capture_status",
+        "canonicalKey" : "whoop_capture_status",
+        "category" : "WHOOP Capture",
+        "dailyAggregation" : "provider_capture_status",
+        "displayName" : "WHOOP Capture Status",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_capture_status",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Daily WHOOP capture status only; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "status"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_average_heart_rate_bpm",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Average Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_average_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_energy_kilojoules",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Energy",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_energy_kilojoules",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "kJ"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_max_heart_rate_bpm",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Maximum Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_max_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_strain_score",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Strain Score",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_strain_score",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "score"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_hrv_rmssd_ms",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP HRV (RMSSD)",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_hrv_rmssd_ms",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_light_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Light Sleep Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_light_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_recent_nap_adjustment_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Recent Nap Adjustment",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_recent_nap_adjustment_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_recovery_score_percent",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Recovery Score",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_recovery_score_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_rem_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP REM Sleep Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_rem_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_respiratory_rate_breaths_per_minute",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Respiratory Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_respiratory_rate_breaths_per_minute",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "breaths/min"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_resting_heart_rate_bpm",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Resting Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_resting_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_skin_temperature_celsius",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Skin Temperature",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_skin_temperature_celsius",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "°C"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_sleep_consistency_percent",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Sleep Consistency",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_sleep_consistency_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_sleep_efficiency_percent",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Sleep Efficiency",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_sleep_efficiency_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_sleep_performance_percent",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Sleep Performance",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_sleep_performance_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_slow_wave_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Slow Wave Sleep Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_slow_wave_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_spo2_percent",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP SpO₂",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_spo2_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_total_in_bed_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Total In Bed",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_total_in_bed_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_total_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Total Sleep",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_total_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_average_heart_rate_bpm",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Average Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_average_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_distance_meters",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Distance",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_distance_meters",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "m"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_energy_kilojoules",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Energy",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_energy_kilojoules",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "kJ"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_max_heart_rate_bpm",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Maximum Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_max_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_sport_name",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Sport",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_sport_name",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : ""
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_strain_score",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Strain Score",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_strain_score",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "score"
+      },
+      {
         "aggregation" : "weighted_average",
         "canonicalKey" : "workout_avg_heart_rate",
         "category" : "Workouts",
@@ -15890,6 +16898,726 @@
         "unit" : "pushes"
       },
       {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_awake_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Awake Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_awake_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_body_height_meters",
+        "category" : "WHOOP Body",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Body Height Snapshot",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_body_height_meters",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "m"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_body_max_heart_rate_bpm",
+        "category" : "WHOOP Body",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Maximum Heart Rate Snapshot",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_body_max_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_body_weight_kilograms",
+        "category" : "WHOOP Body",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Body Weight Snapshot",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_body_weight_kilograms",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "kg"
+      },
+      {
+        "aggregation" : "provider_capture_status",
+        "canonicalKey" : "whoop_capture_status",
+        "category" : "WHOOP Capture",
+        "dailyAggregation" : "provider_capture_status",
+        "displayName" : "WHOOP Capture Status",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_capture_status",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Daily WHOOP capture status only; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "status"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_average_heart_rate_bpm",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Average Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_average_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_energy_kilojoules",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Energy",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_energy_kilojoules",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "kJ"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_max_heart_rate_bpm",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Maximum Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_max_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_cycle_strain_score",
+        "category" : "WHOOP Cycle",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Cycle Strain Score",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_cycle_strain_score",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "score"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_hrv_rmssd_ms",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP HRV (RMSSD)",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_hrv_rmssd_ms",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_light_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Light Sleep Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_light_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_recent_nap_adjustment_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Recent Nap Adjustment",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_recent_nap_adjustment_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_recovery_score_percent",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Recovery Score",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_recovery_score_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_rem_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP REM Sleep Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_rem_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_respiratory_rate_breaths_per_minute",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Respiratory Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_respiratory_rate_breaths_per_minute",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "breaths/min"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_resting_heart_rate_bpm",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Resting Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_resting_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_skin_temperature_celsius",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Skin Temperature",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_skin_temperature_celsius",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "°C"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_sleep_consistency_percent",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Sleep Consistency",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_sleep_consistency_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_sleep_efficiency_percent",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Sleep Efficiency",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_sleep_efficiency_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_sleep_performance_percent",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Sleep Performance",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_sleep_performance_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_slow_wave_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Slow Wave Sleep Duration",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_slow_wave_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_spo2_percent",
+        "category" : "WHOOP Recovery",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP SpO₂",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_spo2_percent",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "percent"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_total_in_bed_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Total In Bed",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_total_in_bed_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_total_sleep_milliseconds",
+        "category" : "WHOOP Sleep",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Total Sleep",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_total_sleep_milliseconds",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "ms"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_average_heart_rate_bpm",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Average Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_average_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_distance_meters",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Distance",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_distance_meters",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "m"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_energy_kilojoules",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Energy",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_energy_kilojoules",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "kJ"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_max_heart_rate_bpm",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Maximum Heart Rate",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_max_heart_rate_bpm",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "bpm"
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_sport_name",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Sport",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_sport_name",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : ""
+      },
+      {
+        "aggregation" : "single_record_projection",
+        "canonicalKey" : "whoop_workout_strain_score",
+        "category" : "WHOOP Workout",
+        "dailyAggregation" : "single_record_projection",
+        "displayName" : "WHOOP Workout Strain Score",
+        "healthKitAggregation" : "none",
+        "key" : "whoop_workout_strain_score",
+        "metricId" : "provider.whoop",
+        "metricType" : "provider",
+        "rollup" : {
+          "notes" : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8.",
+          "nullHandling" : "omit_when_missing_or_ambiguous",
+          "periods" : [
+
+          ],
+          "preferredSource" : "daily_provider_section",
+          "primary" : "none",
+          "statistics" : [
+
+          ]
+        },
+        "unit" : "score"
+      },
+      {
         "aggregation" : "weighted_average",
         "canonicalKey" : "workout_avg_heart_rate",
         "category" : "Workouts",
@@ -17235,6 +18963,111 @@
       "$.workouts[].type:string",
       "$.workouts[]:object"
     ],
+    "jsonProviderShapePaths" : [
+      "$.activity.steps:number",
+      "$.activity:object",
+      "$.date:string",
+      "$.providers.whoop.body.height_meters:number",
+      "$.providers.whoop.body.max_heart_rate_bpm:number",
+      "$.providers.whoop.body.observed_at:string",
+      "$.providers.whoop.body.source_kind:string",
+      "$.providers.whoop.body.weight_kilograms:number",
+      "$.providers.whoop.body:object",
+      "$.providers.whoop.capture_status:string",
+      "$.providers.whoop.cycles:array",
+      "$.providers.whoop.cycles[].average_heart_rate_bpm:number",
+      "$.providers.whoop.cycles[].end_time:string",
+      "$.providers.whoop.cycles[].energy_kilojoules:number",
+      "$.providers.whoop.cycles[].id:string",
+      "$.providers.whoop.cycles[].max_heart_rate_bpm:number",
+      "$.providers.whoop.cycles[].score_state:string",
+      "$.providers.whoop.cycles[].start_time:string",
+      "$.providers.whoop.cycles[].strain_score:number",
+      "$.providers.whoop.cycles[].timezone_offset:string",
+      "$.providers.whoop.cycles[]:object",
+      "$.providers.whoop.fetched_at:string",
+      "$.providers.whoop.recoveries:array",
+      "$.providers.whoop.recoveries[].cycle_id:string",
+      "$.providers.whoop.recoveries[].hrv_rmssd_ms:number",
+      "$.providers.whoop.recoveries[].recovery_score_percent:number",
+      "$.providers.whoop.recoveries[].resting_heart_rate_bpm:number",
+      "$.providers.whoop.recoveries[].score_state:string",
+      "$.providers.whoop.recoveries[].skin_temperature_celsius:number",
+      "$.providers.whoop.recoveries[].sleep_id:string",
+      "$.providers.whoop.recoveries[].spo2_percent:number",
+      "$.providers.whoop.recoveries[].user_calibrating:bool",
+      "$.providers.whoop.recoveries[]:object",
+      "$.providers.whoop.resources:array",
+      "$.providers.whoop.resources[].record_count:number",
+      "$.providers.whoop.resources[].resource:string",
+      "$.providers.whoop.resources[].status:string",
+      "$.providers.whoop.resources[]:object",
+      "$.providers.whoop.schema:string",
+      "$.providers.whoop.schema_version:number",
+      "$.providers.whoop.sleep:array",
+      "$.providers.whoop.sleep[].awake_milliseconds:number",
+      "$.providers.whoop.sleep[].baseline_sleep_need_milliseconds:number",
+      "$.providers.whoop.sleep[].cycle_id:string",
+      "$.providers.whoop.sleep[].disturbance_count:number",
+      "$.providers.whoop.sleep[].end_time:string",
+      "$.providers.whoop.sleep[].id:string",
+      "$.providers.whoop.sleep[].is_nap:bool",
+      "$.providers.whoop.sleep[].light_sleep_milliseconds:number",
+      "$.providers.whoop.sleep[].no_data_milliseconds:number",
+      "$.providers.whoop.sleep[].recent_nap_adjustment_milliseconds:number",
+      "$.providers.whoop.sleep[].recent_strain_need_milliseconds:number",
+      "$.providers.whoop.sleep[].rem_sleep_milliseconds:number",
+      "$.providers.whoop.sleep[].respiratory_rate_breaths_per_minute:number",
+      "$.providers.whoop.sleep[].score_state:string",
+      "$.providers.whoop.sleep[].sleep_consistency_percent:number",
+      "$.providers.whoop.sleep[].sleep_cycle_count:number",
+      "$.providers.whoop.sleep[].sleep_debt_need_milliseconds:number",
+      "$.providers.whoop.sleep[].sleep_efficiency_percent:number",
+      "$.providers.whoop.sleep[].sleep_performance_percent:number",
+      "$.providers.whoop.sleep[].slow_wave_sleep_milliseconds:number",
+      "$.providers.whoop.sleep[].start_time:string",
+      "$.providers.whoop.sleep[].timezone_offset:string",
+      "$.providers.whoop.sleep[].total_in_bed_milliseconds:number",
+      "$.providers.whoop.sleep[].total_sleep_milliseconds:number",
+      "$.providers.whoop.sleep[]:object",
+      "$.providers.whoop.warnings:array",
+      "$.providers.whoop.warnings[]:empty",
+      "$.providers.whoop.workouts:array",
+      "$.providers.whoop.workouts[].altitude_change_meters:number",
+      "$.providers.whoop.workouts[].altitude_gain_meters:number",
+      "$.providers.whoop.workouts[].average_heart_rate_bpm:number",
+      "$.providers.whoop.workouts[].distance_meters:number",
+      "$.providers.whoop.workouts[].end_time:string",
+      "$.providers.whoop.workouts[].energy_kilojoules:number",
+      "$.providers.whoop.workouts[].id:string",
+      "$.providers.whoop.workouts[].max_heart_rate_bpm:number",
+      "$.providers.whoop.workouts[].percent_recorded:number",
+      "$.providers.whoop.workouts[].score_state:string",
+      "$.providers.whoop.workouts[].sport_name:string",
+      "$.providers.whoop.workouts[].start_time:string",
+      "$.providers.whoop.workouts[].strain_score:number",
+      "$.providers.whoop.workouts[].timezone_offset:string",
+      "$.providers.whoop.workouts[].zone_durations.zone_five_milliseconds:number",
+      "$.providers.whoop.workouts[].zone_durations.zone_four_milliseconds:number",
+      "$.providers.whoop.workouts[].zone_durations.zone_one_milliseconds:number",
+      "$.providers.whoop.workouts[].zone_durations.zone_three_milliseconds:number",
+      "$.providers.whoop.workouts[].zone_durations.zone_two_milliseconds:number",
+      "$.providers.whoop.workouts[].zone_durations.zone_zero_milliseconds:number",
+      "$.providers.whoop.workouts[].zone_durations:object",
+      "$.providers.whoop.workouts[]:object",
+      "$.providers.whoop:object",
+      "$.providers:object",
+      "$.raw_capture_status:string",
+      "$.schema:string",
+      "$.schema_version:number",
+      "$.time_context.calendar_timezone:string",
+      "$.time_context.timestamp_timezone:string",
+      "$.time_context:object",
+      "$.type:string",
+      "$.unit_system:string",
+      "$.units.steps:string",
+      "$.units:object"
+    ],
     "jsonShapePaths" : [
       "$.activity.activeCalories:number",
       "$.activity.basalEnergyBurned:number",
@@ -17542,6 +19375,49 @@
       "workout_minutes",
       "workouts"
     ],
+    "markdownProviderFrontmatterTopLevelKeys" : [
+      "date",
+      "raw_capture_status",
+      "raw_integrity_warning_count",
+      "raw_query_failure_count",
+      "raw_record_count",
+      "schema",
+      "schema_version",
+      "steps",
+      "time_context",
+      "type",
+      "units",
+      "whoop_awake_milliseconds",
+      "whoop_body_height_meters",
+      "whoop_body_max_heart_rate_bpm",
+      "whoop_body_weight_kilograms",
+      "whoop_capture_status",
+      "whoop_cycle_average_heart_rate_bpm",
+      "whoop_cycle_energy_kilojoules",
+      "whoop_cycle_max_heart_rate_bpm",
+      "whoop_cycle_strain_score",
+      "whoop_hrv_rmssd_ms",
+      "whoop_light_sleep_milliseconds",
+      "whoop_recent_nap_adjustment_milliseconds",
+      "whoop_recovery_score_percent",
+      "whoop_rem_sleep_milliseconds",
+      "whoop_respiratory_rate_breaths_per_minute",
+      "whoop_resting_heart_rate_bpm",
+      "whoop_skin_temperature_celsius",
+      "whoop_sleep_consistency_percent",
+      "whoop_sleep_efficiency_percent",
+      "whoop_sleep_performance_percent",
+      "whoop_slow_wave_sleep_milliseconds",
+      "whoop_spo2_percent",
+      "whoop_total_in_bed_milliseconds",
+      "whoop_total_sleep_milliseconds",
+      "whoop_workout_average_heart_rate_bpm",
+      "whoop_workout_distance_meters",
+      "whoop_workout_energy_kilojoules",
+      "whoop_workout_max_heart_rate_bpm",
+      "whoop_workout_sport_name",
+      "whoop_workout_strain_score"
+    ],
     "obsidianBasesFrontmatterTopLevelKeys" : [
       "active_calories",
       "active_medication_count",
@@ -17628,6 +19504,49 @@
       "workout_distance_mi",
       "workout_minutes",
       "workouts"
+    ],
+    "obsidianBasesProviderFrontmatterTopLevelKeys" : [
+      "date",
+      "raw_capture_status",
+      "raw_integrity_warning_count",
+      "raw_query_failure_count",
+      "raw_record_count",
+      "schema",
+      "schema_version",
+      "steps",
+      "time_context",
+      "type",
+      "units",
+      "whoop_awake_milliseconds",
+      "whoop_body_height_meters",
+      "whoop_body_max_heart_rate_bpm",
+      "whoop_body_weight_kilograms",
+      "whoop_capture_status",
+      "whoop_cycle_average_heart_rate_bpm",
+      "whoop_cycle_energy_kilojoules",
+      "whoop_cycle_max_heart_rate_bpm",
+      "whoop_cycle_strain_score",
+      "whoop_hrv_rmssd_ms",
+      "whoop_light_sleep_milliseconds",
+      "whoop_recent_nap_adjustment_milliseconds",
+      "whoop_recovery_score_percent",
+      "whoop_rem_sleep_milliseconds",
+      "whoop_respiratory_rate_breaths_per_minute",
+      "whoop_resting_heart_rate_bpm",
+      "whoop_skin_temperature_celsius",
+      "whoop_sleep_consistency_percent",
+      "whoop_sleep_efficiency_percent",
+      "whoop_sleep_performance_percent",
+      "whoop_slow_wave_sleep_milliseconds",
+      "whoop_spo2_percent",
+      "whoop_total_in_bed_milliseconds",
+      "whoop_total_sleep_milliseconds",
+      "whoop_workout_average_heart_rate_bpm",
+      "whoop_workout_distance_meters",
+      "whoop_workout_energy_kilojoules",
+      "whoop_workout_max_heart_rate_bpm",
+      "whoop_workout_sport_name",
+      "whoop_workout_strain_score"
     ],
     "schema" : "healthmd.health_data"
   },

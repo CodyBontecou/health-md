@@ -18,8 +18,8 @@ use crate::{
 
 mod android_analytical_v5;
 mod android_frozen_v4;
-mod apple_rollup_v7;
-mod apple_v7;
+mod apple_rollup_v8;
+mod apple_v8;
 pub mod artifact_plan;
 mod format;
 mod markdown_merge;
@@ -798,8 +798,8 @@ fn profile_presentation_categories(
     profile: SemanticProfile,
 ) -> Result<HashMap<String, BTreeSet<String>>, RenderError> {
     let registry_profile = match profile {
-        SemanticProfile::AppleHealthDataV7 => {
-            crate::registry::MetricRegistryProfile::AppleHealthDataV7
+        SemanticProfile::AppleHealthDataV8 => {
+            crate::registry::MetricRegistryProfile::AppleHealthDataV8
         }
         SemanticProfile::AndroidFrozenV4 => crate::registry::MetricRegistryProfile::AndroidFrozenV4,
         SemanticProfile::AndroidAnalyticalV5 => {
@@ -912,7 +912,7 @@ fn validate_config(
     {
         return Err(RenderError::InvalidConfig);
     }
-    if config.profile != SemanticProfile::AppleHealthDataV7
+    if config.profile != SemanticProfile::AppleHealthDataV8
         && (!semantic.rollups.is_empty() || config.rollups.is_some())
     {
         return Err(RenderError::UnsupportedOperation);
@@ -1008,7 +1008,7 @@ fn validate_config(
                     || api.external_record_schema.is_some()
                     || api.envelope_version != 1
                     || api.source != "android"))
-            || (config.profile == SemanticProfile::AppleHealthDataV7
+            || (config.profile == SemanticProfile::AppleHealthDataV8
                 && ((api.envelope_version == 1
                     && (!api.external_records.is_empty() || api.external_record_schema.is_some()))
                     || (api.envelope_version == 2 && api.external_record_schema.is_none())
@@ -1087,7 +1087,7 @@ fn validate_day(
         return Err(RenderError::LimitExceeded);
     }
     match (config.profile, &day.archive_diagnostics) {
-        (SemanticProfile::AppleHealthDataV7, Some(diagnostics)) => {
+        (SemanticProfile::AppleHealthDataV8, Some(diagnostics)) => {
             if !matches!(
                 diagnostics.capture_status.as_str(),
                 "complete" | "partial" | "not_requested" | "legacy_unavailable"
@@ -1589,8 +1589,8 @@ fn render_plan(
             }
         }
     }
-    if config.profile == SemanticProfile::AppleHealthDataV7 {
-        apple_v7::add_rollups(&mut builder, config, semantic)?;
+    if config.profile == SemanticProfile::AppleHealthDataV8 {
+        apple_v8::add_rollups(&mut builder, config, semantic)?;
     }
     if let Some(api) = &config.api {
         if api.enabled {
@@ -1606,7 +1606,7 @@ fn render_day(
     format: RenderFormat,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
-        SemanticProfile::AppleHealthDataV7 => apple_v7::render_day(config, day, format),
+        SemanticProfile::AppleHealthDataV8 => apple_v8::render_day(config, day, format),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_day(config, day, format),
         SemanticProfile::AndroidAnalyticalV5 => {
             android_analytical_v5::render_day(config, day, format)
@@ -1617,7 +1617,7 @@ fn render_day(
 fn ordered_formats(profile: SemanticProfile, requested: &[RenderFormat]) -> Vec<RenderFormat> {
     let mut formats = requested.to_vec();
     match profile {
-        SemanticProfile::AppleHealthDataV7 => formats.sort_by_key(|format| format.id()),
+        SemanticProfile::AppleHealthDataV8 => formats.sort_by_key(|format| format.id()),
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => formats
             .sort_by_key(|format| match format {
                 RenderFormat::Markdown => 0,
@@ -1886,7 +1886,7 @@ fn render_api_record(
     day: &RenderDay,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
-        SemanticProfile::AppleHealthDataV7 => apple_v7::render_api_record(config, day),
+        SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_record(config, day),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_record(config, day),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
     }
@@ -1898,7 +1898,7 @@ fn render_api_envelope(
     records: &[(String, Vec<u8>)],
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
-        SemanticProfile::AppleHealthDataV7 => apple_v7::render_api_envelope(api, records),
+        SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_envelope(api, records),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_envelope(api, records),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
     }
@@ -1906,7 +1906,7 @@ fn render_api_envelope(
 
 pub(crate) const fn profile_id(profile: SemanticProfile) -> &'static str {
     match profile {
-        SemanticProfile::AppleHealthDataV7 => "apple_health_data_v7",
+        SemanticProfile::AppleHealthDataV8 => "apple_health_data_v8",
         SemanticProfile::AndroidFrozenV4 => "android_frozen_v4",
         SemanticProfile::AndroidAnalyticalV5 => "android_analytical_v5",
     }
@@ -1941,7 +1941,7 @@ mod tests {
             RenderFormat::ObsidianBases,
         ];
         assert_eq!(
-            ordered_formats(SemanticProfile::AppleHealthDataV7, &formats),
+            ordered_formats(SemanticProfile::AppleHealthDataV8, &formats),
             vec![
                 RenderFormat::Csv,
                 RenderFormat::Json,
@@ -1971,7 +1971,7 @@ mod tests {
     #[test]
     fn all_profiles_render_all_formats_deterministically() {
         for profile in [
-            SemanticProfile::AppleHealthDataV7,
+            SemanticProfile::AppleHealthDataV8,
             SemanticProfile::AndroidFrozenV4,
             SemanticProfile::AndroidAnalyticalV5,
         ] {
@@ -2008,7 +2008,7 @@ mod tests {
                 .unwrap();
             let text = String::from_utf8(json.content.clone()).unwrap();
             match profile {
-                SemanticProfile::AppleHealthDataV7 => {
+                SemanticProfile::AppleHealthDataV8 => {
                     assert!(text.contains("\"schema\" : \"healthmd.health_data\""));
                     assert!(text.contains("\"schema_version\" : 8"));
                 }
@@ -2023,7 +2023,7 @@ mod tests {
 
     #[test]
     fn date_templates_and_bases_collision_suffix_match_native_paths() {
-        let (config, semantic) = input_bytes(SemanticProfile::AppleHealthDataV7);
+        let (config, semantic) = input_bytes(SemanticProfile::AppleHealthDataV8);
         let mut value: Value = serde_json::from_slice(&config).unwrap();
         value["formats"] = json!(["markdown", "obsidian_bases"]);
         value["paths"]["filename_template"] =
@@ -2079,7 +2079,7 @@ mod tests {
 
     #[test]
     fn extension_payloads_require_retained_tokens_and_selection_overlap() {
-        let (mut config, mut semantic) = input_bytes(SemanticProfile::AppleHealthDataV7);
+        let (mut config, mut semantic) = input_bytes(SemanticProfile::AppleHealthDataV8);
         let mut config_value: Value = serde_json::from_slice(&config).unwrap();
         config_value["include_platform_extensions"] = Value::Bool(true);
         config = serde_json::to_vec(&config_value).unwrap();
@@ -2113,7 +2113,7 @@ mod tests {
 
     #[test]
     fn every_semantic_output_requires_one_presentation_fact() {
-        let (config, semantic) = input_bytes(SemanticProfile::AppleHealthDataV7);
+        let (config, semantic) = input_bytes(SemanticProfile::AppleHealthDataV8);
         let mut batch = render_batch();
         batch["days"][0]["metrics"] = json!([]);
         let mut session = RenderSession::from_json(&config, &semantic).unwrap();
@@ -2148,7 +2148,7 @@ mod tests {
 
     #[test]
     fn invalid_batches_are_transactional_and_cancellation_is_terminal() {
-        let (config, semantic) = input_bytes(SemanticProfile::AppleHealthDataV7);
+        let (config, semantic) = input_bytes(SemanticProfile::AppleHealthDataV8);
         let mut session = RenderSession::from_json(&config, &semantic).unwrap();
         let mut invalid = render_batch();
         invalid["days"][0]["metrics"][0]["output_key"] =

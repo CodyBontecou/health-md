@@ -56,14 +56,16 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
 
-        let noDataAlert = app.alerts["No Health Data Found"]
+        // The no-data guidance is a Geist-designed in-app dialog (not a native alert),
+        // matched by its localized title text like the other dialogs in this journey.
+        let noDataDialog = app.staticTexts["No Health Data Found"]
         XCTAssertTrue(
-            noDataAlert.waitForExistence(timeout: 30),
+            noDataDialog.waitForExistence(timeout: 30),
             "An empty Health store should produce a guided empty state, not a generic error"
         )
-        XCTAssertTrue(noDataAlert.buttons["Open Health App"].exists)
-        XCTAssertTrue(noDataAlert.buttons["Done"].exists)
-        XCTAssertFalse(app.alerts["Error"].exists)
+        XCTAssertTrue(app.buttons["Open Health App"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Done"].exists)
+        XCTAssertFalse(app.staticTexts["Export Couldn\u{2019}t Finish"].exists)
     }
 
     func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
@@ -540,8 +542,12 @@ final class ExportJourneyUITests: XCTestCase {
         let yesterdayPreset = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
         let allTimePreset = app.buttons[UITestLaunchHelper.Export.datePresetAllTimeButton]
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        XCTAssertTrue(todayPreset.exists, "Today preset should be visible")
-        XCTAssertTrue(yesterdayPreset.exists, "Yesterday preset should be visible")
+        // The export-profile picker section sits above Date Range once profiles
+        // are active, so presets render lazily below the fold; scroll to them.
+        scrollUntilExists(todayPreset, in: app)
+        XCTAssertTrue(todayPreset.exists, "Today preset should be reachable")
+        scrollUntilExists(yesterdayPreset, in: app)
+        XCTAssertTrue(yesterdayPreset.exists, "Yesterday preset should be reachable")
         scrollUntilExists(allTimePreset, in: app)
         XCTAssertTrue(allTimePreset.exists, "All Time preset should be reachable by scrolling")
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible beside All Time")

@@ -653,22 +653,45 @@ final class NewMetricsExportTests: XCTestCase {
     }
 
     func testDataDictionaryDocumentsRollupRulesForEveryExportedKey() {
-        let entries = HealthMetricDataDictionary.entries()
+        let entries = HealthMetricDataDictionary.entries(includeProviderEntries: true)
         let canonicalKeys = Set(entries.map(\.canonicalKey))
 
         let diagnosticKeys: Set<String> = [
             "raw_capture_status", "raw_record_count", "raw_query_failure_count",
             "raw_integrity_warning_count", "raw_record_schema", "raw_record_schema_version"
         ]
-        XCTAssertEqual(canonicalKeys, HealthMetricExportMapping.allKnownFrontmatterKeys.union(diagnosticKeys))
+        let providerKeys = Set(WHOOPFlatMetricDefinition.all.map(\.key))
+        XCTAssertEqual(
+            canonicalKeys,
+            HealthMetricExportMapping.allKnownFrontmatterKeys.union(diagnosticKeys).union(providerKeys)
+        )
 
         for entry in entries {
             XCTAssertFalse(entry.dailyAggregation.isEmpty, "\(entry.canonicalKey) missing daily aggregation")
             XCTAssertFalse(entry.healthKitAggregation.isEmpty, "\(entry.canonicalKey) missing source aggregation")
             XCTAssertFalse(entry.rollup.primary.isEmpty, "\(entry.canonicalKey) missing roll-up primary rule")
-            XCTAssertFalse(entry.rollup.statistics.isEmpty, "\(entry.canonicalKey) missing roll-up statistics")
-            XCTAssertEqual(entry.rollup.periods, ["weekly", "monthly", "yearly"], "\(entry.canonicalKey) has unexpected roll-up periods")
+            if entry.metricId == "provider.whoop" {
+                XCTAssertEqual(entry.rollup.primary, "none")
+                XCTAssertTrue(entry.rollup.statistics.isEmpty)
+                XCTAssertTrue(entry.rollup.periods.isEmpty)
+            } else {
+                XCTAssertFalse(entry.rollup.statistics.isEmpty, "\(entry.canonicalKey) missing roll-up statistics")
+                XCTAssertEqual(entry.rollup.periods, ["weekly", "monthly", "yearly"], "\(entry.canonicalKey) has unexpected roll-up periods")
+            }
         }
+    }
+
+    func testDataDictionaryOmitsProviderRowsWhenWHOOPRolloutIsDisabled() {
+        // A build with CONNECTED_APPS_WHOOP_ENABLED=NO ships no WHOOP
+        // integration; its exported data dictionary must not advertise
+        // provider metrics the user cannot access.
+        let entries = HealthMetricDataDictionary.entries(includeProviderEntries: false)
+        XCTAssertTrue(entries.allSatisfy { $0.metricId != "provider.whoop" })
+        let whoopKeys = Set(WHOOPFlatMetricDefinition.all.map(\.key))
+        XCTAssertTrue(
+            entries.map(\.canonicalKey).allSatisfy { !whoopKeys.contains($0) },
+            "flag-off dictionary must not contain WHOOP schema keys"
+        )
     }
 
     func testDataDictionaryUsesActualFrontmatterUnitsForLegacyAndDerivedKeys() {

@@ -2,7 +2,7 @@
 
 use std::{collections::BTreeMap, fmt::Write as _};
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use serde_json::Value;
 
 use super::{
@@ -195,7 +195,7 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             "schema".to_owned(),
             Value::String("healthmd.rollup_summary".to_owned()),
         ),
-        ("schema_version".to_owned(), Value::from(8)),
+        ("schema_version".to_owned(), Value::from(7)),
         ("type".to_owned(), Value::String("health_rollup".to_owned())),
         (
             "rollup_period".to_owned(),
@@ -226,8 +226,8 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             "source_schema".to_owned(),
             Value::String("healthmd.health_data".to_owned()),
         ),
-        ("source_schema_version".to_owned(), Value::from(8)),
-        ("rollup_rules_version".to_owned(), Value::from(8)),
+        ("source_schema_version".to_owned(), Value::from(7)),
+        ("rollup_rules_version".to_owned(), Value::from(7)),
         (
             "generated_at".to_owned(),
             Value::String(context.generated_at.to_owned()),
@@ -347,7 +347,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 8".to_owned(),
+        "schema_version: 7".to_owned(),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", context.period_id),
@@ -357,8 +357,8 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),
         "source_schema: healthmd.health_data".to_owned(),
-        "source_schema_version: 8".to_owned(),
-        "rollup_rules_version: 8".to_owned(),
+        "source_schema_version: 7".to_owned(),
+        "rollup_rules_version: 7".to_owned(),
         format!("generated_at: {}", context.generated_at),
     ];
     let dates = sorted_source_date_strings(context.rollup);
@@ -399,7 +399,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
             "- **Missing days:** {}",
             context.days_expected.saturating_sub(context.days_counted)
         ),
-        "- **Rule source:** `_healthmd_data_dictionary.json` schema v8".to_owned(),
+        "- **Rule source:** `_healthmd_data_dictionary.json` schema v7".to_owned(),
     ]);
     if !dates.is_empty() {
         lines.push(format!("- **Source dates:** {}", dates.join(", ")));
@@ -491,7 +491,7 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 8".to_owned(),
+        "schema_version: 7".to_owned(),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", yaml_quoted(&context.period_id)),
@@ -502,8 +502,8 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),
         "source_schema: healthmd.health_data".to_owned(),
-        "source_schema_version: 8".to_owned(),
-        "rollup_rules_version: 8".to_owned(),
+        "source_schema_version: 7".to_owned(),
+        "rollup_rules_version: 7".to_owned(),
         format!("generated_at: {}", context.generated_at),
     ];
     let dates = sorted_source_date_strings(context.rollup);
@@ -566,16 +566,15 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
 fn period_identifier(rollup: &SemanticRollupResult) -> Result<String, RenderError> {
     let start = NaiveDate::parse_from_str(&rollup.start_date, "%Y-%m-%d")
         .map_err(|_| RenderError::InvalidSemanticResult)?;
-    let end = NaiveDate::parse_from_str(&rollup.end_date, "%Y-%m-%d")
-        .map_err(|_| RenderError::InvalidSemanticResult)?;
-    if end < start {
-        return Err(RenderError::InvalidSemanticResult);
-    }
-    Ok(format!(
-        "{start}_to_{end}",
-        start = rollup.start_date,
-        end = rollup.end_date
-    ))
+    Ok(match rollup.period {
+        RollupPeriod::IsoWeek => format!(
+            "{:04}-W{:02}",
+            start.iso_week().year(),
+            start.iso_week().week()
+        ),
+        RollupPeriod::CalendarMonth => format!("{:04}-{:02}", start.year(), start.month()),
+        RollupPeriod::CalendarYear => format!("{:04}", start.year()),
+    })
 }
 
 fn days_expected(rollup: &SemanticRollupResult) -> Result<u32, RenderError> {
@@ -589,13 +588,17 @@ fn days_expected(rollup: &SemanticRollupResult) -> Result<u32, RenderError> {
 
 const fn period_id(period: RollupPeriod) -> &'static str {
     match period {
-        RollupPeriod::Range => "range",
+        RollupPeriod::IsoWeek => "weekly",
+        RollupPeriod::CalendarMonth => "monthly",
+        RollupPeriod::CalendarYear => "yearly",
     }
 }
 
 const fn period_display(period: RollupPeriod) -> &'static str {
     match period {
-        RollupPeriod::Range => "Range",
+        RollupPeriod::IsoWeek => "Weekly",
+        RollupPeriod::CalendarMonth => "Monthly",
+        RollupPeriod::CalendarYear => "Yearly",
     }
 }
 

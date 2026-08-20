@@ -52,6 +52,13 @@ enum AccessibilityID {
         static let exportActivity = "mac.exportActivity"
     }
 
+    // MARK: - Export Profiles Management
+    enum ExportProfiles {
+        static let entry = "export.profiles.entry"
+        static let makeActiveButton = "export.profiles.makeActive"
+        static let copyIDButton = "export.profiles.copyID"
+    }
+
     // MARK: - Clinician Report
     enum ClinicianReport {
         static let entry = "clinicianReport.entry"
@@ -142,6 +149,18 @@ enum AccessibilityID {
         static let vaultRow = "settings.vaultRow"
         static let exportSettingsRow = "settings.exportSettingsRow"
         static let macSyncRow = "settings.macSyncRow"
+    }
+
+    // MARK: - Shared Setup
+    enum SharedSetup {
+        static let configurationCard = "sharedSetup.configurationCard"
+        static let use = "sharedSetup.use"
+        static let share = "sharedSetup.share"
+        static let review = "sharedSetup.review"
+        static let apply = "sharedSetup.apply"
+        static let success = "sharedSetup.success"
+        static let undo = "sharedSetup.undo"
+        static let finish = "sharedSetup.finish"
     }
 
     // MARK: - Configuration Protection

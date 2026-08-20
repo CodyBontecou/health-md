@@ -2,12 +2,13 @@ import Foundation
 
 // MARK: - Health Roll-up Generator
 
-/// Builds the export-range summary from daily HealthData aggregate snapshots by
-/// applying the current export schema roll-up rules in HealthMetricDataDictionary.
+/// Builds period snapshots from daily HealthData aggregate snapshots by applying
+/// the current export schema roll-up rules in HealthMetricDataDictionary.
 enum HealthRollupGenerator {
     static func generate(
         from healthData: [HealthData],
         settings: AdvancedExportSettings,
+        periods: [HealthRollupPeriod],
         generatedAt: Date = Date(),
         calendar: Calendar = .current
     ) -> [RollupDataSnapshot] {
@@ -21,29 +22,42 @@ enum HealthRollupGenerator {
             .map { RollupInputDay(snapshot: $0.exportSnapshot(customization: customization)) }
             .sorted { $0.date < $1.date }
 
-        guard let firstDay = filteredInputs.first, let lastDay = filteredInputs.last else {
-            return []
+        guard !filteredInputs.isEmpty else { return [] }
+
+        var snapshots: [RollupDataSnapshot] = []
+        for period in periods {
+            let grouped = Dictionary(grouping: filteredInputs) { input in
+                HealthRollupPeriodWindow.window(containing: input.date, period: period, calendar: calendar)
+            }
+
+            for window in grouped.keys.sorted(by: { lhs, rhs in
+                if lhs.startDate == rhs.startDate { return lhs.period.rawValue < rhs.period.rawValue }
+                return lhs.startDate < rhs.startDate
+            }) {
+                let days = grouped[window] ?? []
+                let metrics = buildMetricSummaries(
+                    for: days,
+                    dictionaryEntries: dictionaryEntries
+                )
+                guard !metrics.isEmpty else { continue }
+
+                snapshots.append(
+                    RollupDataSnapshot(
+                        window: window,
+                        generatedAt: generatedAt,
+                        sourceDates: days.map(\.date),
+                        metrics: metrics
+                    )
+                )
+            }
         }
 
-        let window = HealthRollupPeriodWindow.rangeWindow(
-            from: firstDay.date,
-            to: lastDay.date,
-            calendar: calendar
-        )
-        let metrics = buildMetricSummaries(
-            for: filteredInputs,
-            dictionaryEntries: dictionaryEntries
-        )
-        guard !metrics.isEmpty else { return [] }
-
-        return [
-            RollupDataSnapshot(
-                window: window,
-                generatedAt: generatedAt,
-                sourceDates: filteredInputs.map(\.date),
-                metrics: metrics
-            )
-        ]
+        return snapshots.sorted { lhs, rhs in
+            if lhs.window.startDate == rhs.window.startDate {
+                return periodSortIndex(lhs.period) < periodSortIndex(rhs.period)
+            }
+            return lhs.window.startDate < rhs.window.startDate
+        }
     }
 
     private static func buildMetricSummaries(
@@ -338,6 +352,14 @@ enum HealthRollupGenerator {
             .filter { $0.numericValue != nil }
             .max(by: { $0.date < $1.date })?
             .numericValue
+    }
+
+    private static func periodSortIndex(_ period: HealthRollupPeriod) -> Int {
+        switch period {
+        case .weekly: return 0
+        case .monthly: return 1
+        case .yearly: return 2
+        }
     }
 }
 

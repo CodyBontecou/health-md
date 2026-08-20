@@ -4,6 +4,7 @@ import Darwin
 import Foundation
 import HealthMdConnectionCore
 import UIKit
+import os
 
 enum IPhoneDirectFileProducerError: LocalizedError {
     case invalidRequest(String)
@@ -13,10 +14,15 @@ enum IPhoneDirectFileProducerError: LocalizedError {
     case unexpectedResponse
     case healthKitNotAuthorized
     case exportLimitReached
+    /// A direct request referenced an export profile that no longer exists.
+    /// Fails closed: no fallback to live settings ever runs.
+    case profileNotFound(profileID: String, name: String?)
 
     var errorDescription: String? {
         switch self {
         case .invalidRequest(let message): return message
+        case .profileNotFound(let profileID, let name):
+            return "No export profile matches \(name ?? profileID). Open Health.md to review profiles."
         case .requestChanged: return "A durable direct file job with this ID changed."
         case .cancelled: return "The direct file export was cancelled."
         case .invalidSpool: return "The protected direct file spool failed validation."
@@ -34,6 +40,11 @@ extension IPhoneDirectFileProducerError: ExportPerformanceCancellationClassifyin
 @MainActor
 final class IPhoneDirectFileExportProducer {
     static let shared = IPhoneDirectFileExportProducer()
+
+    private static let logger = Logger(
+        subsystem: "com.codybontecou.healthmd",
+        category: "IPhoneDirectFileExportProducer"
+    )
 
     private let fileManager = FileManager.default
     private var cancelledJobIDs: Set<UUID> = []
@@ -279,9 +290,10 @@ final class IPhoneDirectFileExportProducer {
             selection: resolvedSelection,
             sourceTimeZone: sourceTimeZone
         )
+        let baseSettings = try resolveSettingsBase(for: request)
         let settings = IPhoneExportRequestSettingsResolver.settings(
             for: internalRequest,
-            savedSettings: AdvancedExportSettings()
+            savedSettings: baseSettings
         )
         settings.exportTimeZoneOverride = sourceTimeZone
         guard healthKitManager.isAuthorized else {
@@ -406,7 +418,9 @@ final class IPhoneDirectFileExportProducer {
               let timeZoneIdentifier = settingsSnapshot.calendarTimeZoneIdentifier,
               AppleExportEnginePin.isIANAIdentifier(timeZoneIdentifier),
               TimeZone(identifier: timeZoneIdentifier) != nil,
-              settings.generateRangeSummary == settingsSnapshot.generateRangeSummary,
+              settings.generateWeeklyRollups == settingsSnapshot.generateWeeklyRollups,
+              settings.generateMonthlyRollups == settingsSnapshot.generateMonthlyRollups,
+              settings.generateYearlyRollups == settingsSnapshot.generateYearlyRollups,
               settings.summaryOnlyExport == settingsSnapshot.summaryOnlyExport else {
             throw IPhoneDirectFileProducerError.invalidSpool
         }
@@ -488,7 +502,10 @@ final class IPhoneDirectFileExportProducer {
             let externalFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
             if shouldFetchExternal, let externalIntegrations {
                 externalFetcher = { date in
-                    await externalIntegrations.fetchDailyRecords(for: date)
+                    await externalIntegrations.fetchDailyRecords(
+                        for: date,
+                        calendar: sourceCalendar
+                    )
                 }
             } else {
                 externalFetcher = nil
@@ -742,7 +759,7 @@ final class IPhoneDirectFileExportProducer {
                     settings: settings
                 )
                 do {
-                    _ = try await vault.exportHealthData(
+                    let writeResult = try await vault.exportHealthData(
                         record,
                         settings: settings,
                         healthSubfolder: journal.healthSubfolder,
@@ -751,6 +768,37 @@ final class IPhoneDirectFileExportProducer {
                         frozenSettingsSnapshot: journal.settingsSnapshot,
                         preparedExport: preparedExport
                     )
+                    // Write-side coverage gaps (for example, a tracked metric
+                    // deselected from the daily export after capture) must reach
+                    // the durable journal and the terminal outcome: the receiving
+                    // CLI otherwise reports success while requested individual
+                    // entry files are missing. Public logs stay health-free:
+                    // per-day details remain in private diagnostics only.
+                    let writeSideGaps = writeResult.individualEntryCoverageGaps
+                    if !writeSideGaps.isEmpty {
+                        Self.logger.warning("direct export write-side individual-entry coverage gaps: \(writeSideGaps.count, privacy: .public)")
+                        for gap in writeSideGaps {
+                            Self.logger.warning("coverage gap detail: \(gap.summary, privacy: .private)")
+                        }
+                        journal.capturedDays[index] = IPhoneDirectCapturedDay(
+                            sourceDate: day.sourceDate,
+                            sourceDateIdentifier: day.sourceDateIdentifier,
+                            isRequestedDate: day.isRequestedDate,
+                            relativePath: day.relativePath,
+                            succeeded: day.succeeded,
+                            includedGranularData: day.includedGranularData,
+                            sampleCount: day.sampleCount,
+                            recordCount: day.recordCount,
+                            externalRecordCount: day.externalRecordCount,
+                            partialFailureCount: day.partialFailureCount,
+                            integrityWarningCount: day.integrityWarningCount,
+                            hadWarnings: true,
+                            failureReason: day.failureReason,
+                            historyFactsRecorded: day.historyFactsRecorded
+                        )
+                        journal.updatedAt = Date()
+                        try saveJournal(journal)
+                    }
                     wroteDictionary = true
                 } catch ExportError.noHealthData {
                     // A successfully captured empty day is not a failed HealthKit day.
@@ -1105,6 +1153,36 @@ final class IPhoneDirectFileExportProducer {
             objectPaths: selection.objectPaths,
             fieldPointers: selection.fieldPointers
         )
+    }
+
+    /// Settings basis for a direct file request. Profile-scoped requests use
+    /// the profile's frozen snapshot (the profile owns formats, metrics,
+    /// roll-ups, and write behavior); everything else reads live settings.
+    /// Profile references fail closed — an unknown profile never falls back.
+    private func resolveSettingsBase(for request: DirectExportRequest) throws -> AdvancedExportSettings {
+        guard request.settingsPolicy == .profile else {
+            return AdvancedExportSettings()
+        }
+        guard let reference = request.profileReference else {
+            throw IPhoneDirectFileProducerError.invalidRequest(
+                "Profile settings policy requires a profile reference."
+            )
+        }
+        let store = ExportProfileStore()
+        var profile: ExportProfile?
+        if let id = UUID(uuidString: reference.profileID) {
+            profile = store.profile(id: id)
+        }
+        if profile == nil, let name = reference.name {
+            profile = store.profile(named: name)
+        }
+        guard let profile else {
+            throw IPhoneDirectFileProducerError.profileNotFound(
+                profileID: reference.profileID,
+                name: reference.name
+            )
+        }
+        return profile.settings.makeAdvancedExportSettings()
     }
 
     private func makeInternalRequest(

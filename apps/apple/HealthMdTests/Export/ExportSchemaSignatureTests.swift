@@ -188,12 +188,16 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
     let schema: String
     let markdownFrontmatterTopLevelKeys: [String]
     let obsidianBasesFrontmatterTopLevelKeys: [String]
+    let markdownProviderFrontmatterTopLevelKeys: [String]
+    let obsidianBasesProviderFrontmatterTopLevelKeys: [String]
     let jsonShapePaths: [String]
+    let jsonProviderShapePaths: [String]
     let jsonGranularShapePaths: [String]
     let jsonLosslessShapePaths: [String]
     let csvHeader: [String]
     let csvRowContracts: [CSVRowContract]
     let csvExtendedRowContracts: [CSVRowContract]
+    let csvProviderRowContracts: [CSVRowContract]
     let csvGranularRowContracts: [CSVRowContract]
     let csvLosslessRowContracts: [CSVRowContract]
     let dataDictionaryMetric: [DataDictionaryEntrySignature]
@@ -212,8 +216,17 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
             obsidianBasesFrontmatterTopLevelKeys: Self.frontmatterTopLevelKeys(
                 ExportFixtures.fullDay.toObsidianBases(customization: metric)
             ),
+            markdownProviderFrontmatterTopLevelKeys: Self.frontmatterTopLevelKeys(
+                ExportFixtures.whoopDay.toMarkdown(customization: metric)
+            ),
+            obsidianBasesProviderFrontmatterTopLevelKeys: Self.frontmatterTopLevelKeys(
+                ExportFixtures.whoopDay.toObsidianBases(customization: metric)
+            ),
             jsonShapePaths: try Self.jsonShapePaths(
                 ExportFixtures.fullDay.toJSON(customization: metric)
+            ),
+            jsonProviderShapePaths: try Self.jsonShapePaths(
+                ExportFixtures.whoopDay.toJSON(customization: metric)
             ),
             jsonGranularShapePaths: try Self.jsonShapePaths(
                 ExportFixtures.fullDayGranular.toJSON(customization: metric)
@@ -226,6 +239,7 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
             csvExtendedRowContracts: Self.csvRowContracts(
                 ExportSchemaSignatureFixtures.extendedCSVDay.toCSV(customization: metric)
             ),
+            csvProviderRowContracts: Self.csvRowContracts(ExportFixtures.whoopDay.toCSV(customization: metric)),
             csvGranularRowContracts: Self.csvRowContracts(ExportFixtures.fullDayGranular.toCSV(customization: metric)),
             csvLosslessRowContracts: Self.csvRowContracts(ExportFixtures.losslessDay.toCSV(customization: metric)),
             dataDictionaryMetric: Self.dataDictionaryEntries(using: metric),
@@ -339,7 +353,9 @@ private struct ExportSchemaSignaturePayload: Codable, Equatable {
 
     @MainActor
     private static func dataDictionaryEntries(using customization: FormatCustomization) -> [DataDictionaryEntrySignature] {
-        HealthMetricDataDictionary.entries(using: customization)
+        // The v8 schema contract includes the optional provider dictionary
+        // rows; pin them regardless of this host build's WHOOP rollout flag.
+        HealthMetricDataDictionary.entries(using: customization, includeProviderEntries: true)
             .map(DataDictionaryEntrySignature.init)
             .sorted()
     }

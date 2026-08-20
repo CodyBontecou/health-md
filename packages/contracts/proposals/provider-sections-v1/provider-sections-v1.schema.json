@@ -1,0 +1,693 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/schemas/proposals/provider-sections-v1.schema.json",
+  "title": "Health.md typed provider sections v1",
+  "description": "Canonical value of the providers property in an Apple healthmd.health_data v8 daily record.",
+  "type": "object",
+  "minProperties": 1,
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$"
+  },
+  "properties": {
+    "whoop": {
+      "$ref": "#/$defs/whoopDaily"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "whoopDaily": {
+      "type": "object",
+      "required": [
+        "schema",
+        "schema_version",
+        "capture_status",
+        "fetched_at",
+        "resources",
+        "cycles",
+        "recoveries",
+        "sleep",
+        "workouts",
+        "warnings"
+      ],
+      "properties": {
+        "schema": {
+          "const": "healthmd.provider.whoop_daily"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "capture_status": {
+          "$ref": "#/$defs/captureStatus"
+        },
+        "fetched_at": {
+          "$ref": "#/$defs/nullableTimestamp"
+        },
+        "resources": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/resourceResult"
+          }
+        },
+        "cycles": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/cycle"
+          }
+        },
+        "recoveries": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/recovery"
+          }
+        },
+        "sleep": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/sleep"
+          }
+        },
+        "workouts": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "$ref": "#/$defs/workout"
+          }
+        },
+        "body": {
+          "$ref": "#/$defs/bodySnapshot"
+        },
+        "warnings": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/warning"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "capture_status": {
+                "const": "not_requested"
+              }
+            },
+            "required": [
+              "capture_status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fetched_at": {
+                "type": "null"
+              },
+              "resources": {
+                "maxItems": 0
+              },
+              "cycles": {
+                "maxItems": 0
+              },
+              "recoveries": {
+                "maxItems": 0
+              },
+              "sleep": {
+                "maxItems": 0
+              },
+              "workouts": {
+                "maxItems": 0
+              }
+            },
+            "not": {
+              "required": [
+                "body"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capture_status": {
+                "enum": [
+                  "complete",
+                  "partial"
+                ]
+              }
+            },
+            "required": [
+              "capture_status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "fetched_at": {
+                "$ref": "#/$defs/timestamp"
+              },
+              "resources": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capture_status": {
+                "const": "complete"
+              }
+            },
+            "required": [
+              "capture_status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "resources": {
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "const": "success"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "capture_status": {
+                "const": "partial"
+              }
+            },
+            "required": [
+              "capture_status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "resources": {
+                "contains": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "failure",
+                        "cancelled",
+                        "skipped",
+                        "unsupported"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                },
+                "minContains": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "captureStatus": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "partial",
+        "not_requested"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?Z$",
+      "minLength": 20,
+      "maxLength": 64
+    },
+    "nullableTimestamp": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "providerID": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "timezoneOffset": {
+      "type": "string",
+      "pattern": "^(?:Z|[+-](?:0[0-9]|1[0-4]):[0-5][0-9])$"
+    },
+    "resourceName": {
+      "type": "string",
+      "enum": [
+        "cycles",
+        "recovery",
+        "sleep",
+        "workouts",
+        "body"
+      ]
+    },
+    "resourceResult": {
+      "type": "object",
+      "required": [
+        "resource",
+        "status",
+        "record_count"
+      ],
+      "properties": {
+        "resource": {
+          "$ref": "#/$defs/resourceName"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "success",
+            "failure",
+            "cancelled",
+            "skipped",
+            "unsupported"
+          ]
+        },
+        "record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error": {
+          "$ref": "#/$defs/safeError"
+        }
+      },
+      "additionalProperties": false
+    },
+    "safeError": {
+      "type": "object",
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "http_status_code": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599
+        },
+        "retry_after_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 604800
+        }
+      },
+      "additionalProperties": false
+    },
+    "warning": {
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "resource": {
+          "$ref": "#/$defs/resourceName"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cycle": {
+      "type": "object",
+      "required": [
+        "id",
+        "start_time"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/providerID"
+        },
+        "start_time": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "end_time": {
+          "$ref": "#/$defs/nullableTimestamp"
+        },
+        "timezone_offset": {
+          "$ref": "#/$defs/timezoneOffset"
+        },
+        "score_state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "strain_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 21
+        },
+        "energy_kilojoules": {
+          "type": "number",
+          "minimum": 0
+        },
+        "average_heart_rate_bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        },
+        "max_heart_rate_bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        }
+      },
+      "additionalProperties": false
+    },
+    "recovery": {
+      "type": "object",
+      "required": [
+        "cycle_id"
+      ],
+      "properties": {
+        "cycle_id": {
+          "$ref": "#/$defs/providerID"
+        },
+        "sleep_id": {
+          "$ref": "#/$defs/providerID"
+        },
+        "score_state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "user_calibrating": {
+          "type": "boolean"
+        },
+        "recovery_score_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "resting_heart_rate_bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        },
+        "hrv_rmssd_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "spo2_percent": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "skin_temperature_celsius": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false
+    },
+    "sleep": {
+      "type": "object",
+      "required": [
+        "id",
+        "cycle_id",
+        "start_time",
+        "end_time",
+        "is_nap"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/providerID"
+        },
+        "cycle_id": {
+          "$ref": "#/$defs/providerID"
+        },
+        "start_time": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "end_time": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "timezone_offset": {
+          "$ref": "#/$defs/timezoneOffset"
+        },
+        "is_nap": {
+          "type": "boolean"
+        },
+        "score_state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "total_sleep_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_in_bed_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "awake_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "light_sleep_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "slow_wave_sleep_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rem_sleep_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "no_data_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sleep_cycle_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "disturbance_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "baseline_sleep_need_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sleep_debt_need_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recent_strain_need_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recent_nap_adjustment_milliseconds": {
+          "type": "integer",
+          "maximum": 0
+        },
+        "respiratory_rate_breaths_per_minute": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "sleep_performance_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "sleep_consistency_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "sleep_efficiency_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": false
+    },
+    "zoneDurations": {
+      "type": "object",
+      "properties": {
+        "zone_zero_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zone_one_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zone_two_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zone_three_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zone_four_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "zone_five_milliseconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "workout": {
+      "type": "object",
+      "required": [
+        "id",
+        "start_time",
+        "end_time",
+        "sport_name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/providerID"
+        },
+        "start_time": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "end_time": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "timezone_offset": {
+          "$ref": "#/$defs/timezoneOffset"
+        },
+        "sport_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "score_state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "strain_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 21
+        },
+        "average_heart_rate_bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        },
+        "max_heart_rate_bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        },
+        "energy_kilojoules": {
+          "type": "number",
+          "minimum": 0
+        },
+        "distance_meters": {
+          "type": "number",
+          "minimum": 0
+        },
+        "altitude_gain_meters": {
+          "type": "number"
+        },
+        "altitude_change_meters": {
+          "type": "number"
+        },
+        "percent_recorded": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "zone_durations": {
+          "$ref": "#/$defs/zoneDurations"
+        }
+      },
+      "additionalProperties": false
+    },
+    "bodySnapshot": {
+      "type": "object",
+      "required": [
+        "source_kind",
+        "observed_at"
+      ],
+      "properties": {
+        "source_kind": {
+          "const": "current_profile_snapshot"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "height_meters": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3
+        },
+        "weight_kilograms": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "max_heart_rate_bpm": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 300
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

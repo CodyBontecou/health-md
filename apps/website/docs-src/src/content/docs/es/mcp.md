@@ -236,6 +236,19 @@ Primero selecciona y conserva una carpeta de destino con permisos de escritura e
 
 Usa `date_selection: "all_available"` sin `date_range` para obtener un historial completo. Los campos opcionales `metric_ids`, `categories` o `all_metrics` acotan la adquisición del iPhone sin cambiar la configuración guardada. `detail_level` se aplica solo cuando una de esas selecciones está presente. `all_metrics` no se puede combinar con listas explícitas de métricas/categorías.
 
+Para ejecutar en su lugar un perfil de exportación guardado, establece `settings_policy` en `"profile"` y pasa `profile_reference` con el UUID estable del perfil (un `name` de visualización opcional se registra solo para errores):
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+El perfil es el dueño del alcance de ajustes: `profile_reference` no se puede combinar con `metric_ids`, `categories`, `all_metrics` ni con la política de ajustes guardados, y un UUID desconocido falla con un error tipado en lugar de recurrir a los ajustes activos.
+
 Inspeccionar:
 
 - `status` y el `state` persistente;

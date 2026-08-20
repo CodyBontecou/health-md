@@ -236,6 +236,19 @@ Select and retain a writable destination folder in Health.md for Mac first. Afte
 
 Use `date_selection: "all_available"` without `date_range` for complete history. Optional `metric_ids`, `categories`, or `all_metrics` narrow iPhone acquisition without changing saved settings. `detail_level` applies only when one of those selections is present. `all_metrics` cannot be combined with explicit metric/category lists.
 
+To run a saved export profile instead, set `settings_policy` to `"profile"` and pass `profile_reference` with the profile's stable UUID (an optional display `name` is recorded for errors only):
+
+```json
+{
+  "date_selection": "explicit_range",
+  "date_range": { "start": "2026-07-01", "end": "2026-07-07" },
+  "settings_policy": "profile",
+  "profile_reference": { "profileID": "11111111-2222-4333-8444-555555555555" }
+}
+```
+
+The profile owns the settings scope: `profile_reference` cannot be combined with `metric_ids`, `categories`, `all_metrics`, or the saved-settings policy, and an unknown UUID fails with a typed error instead of falling back to live settings.
+
 Inspect:
 
 - `status` and durable `state`;

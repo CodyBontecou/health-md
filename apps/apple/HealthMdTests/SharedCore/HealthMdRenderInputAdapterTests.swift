@@ -56,7 +56,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         }
         let plan = try renderSession.finish()
 
-        XCTAssertEqual(plan.profile, .appleHealthDataV7)
+        XCTAssertEqual(plan.profile, .appleHealthDataV8)
         XCTAssertEqual(plan.items.count, 4)
         XCTAssertEqual(
             plan.items.map(\.relativePath),
@@ -76,7 +76,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         XCTAssertEqual(plan.items.first(where: { $0.relativePath.hasSuffix(".json") })?.writeMode, .overwrite)
     }
 
-    func testAppleAllFormatsMatchLegacyRendererAcrossFrozenCases() throws {
+    func testAppleAllFormatsMatchNativeV8RendererAcrossSyntheticCases() throws {
         let imperial = FormatCustomization()
         imperial.unitPreference = .imperial
         let custom = FormatCustomization()
@@ -89,19 +89,6 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
             ("full-imperial", ExportFixtures.fullDay, imperial),
             ("lossless-custom", ExportFixtures.losslessDay, custom),
         ]
-        let fixtureURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("packages/contracts/render-input/v1/fixtures/native-apple-v7.json")
-        let fixture = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? [String: Any]
-        )
-        let frozenCases = Dictionary(uniqueKeysWithValues: try XCTUnwrap(fixture["cases"] as? [[String: Any]]).map {
-            (try XCTUnwrap($0["id"] as? String), $0)
-        })
         let service = HealthMdCoreService()
         let registry = try HealthMdCoreRegistryAdapter.appleSnapshot(service: service)
         let selection = MetricSelectionState()
@@ -158,20 +145,15 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
             for batch in encoded.batches { _ = try renderSession.process(batch: batch) }
             let plan = try renderSession.finish()
             XCTAssertEqual(plan.items.count, 4, identifier)
-            let frozenCase = try XCTUnwrap(frozenCases[identifier])
-            let frozenOutputs = try XCTUnwrap(frozenCase["outputs"] as? [[String: Any]])
-            let expectedPaths = [
-                "markdown": "Health/2026-03-15.md",
-                "obsidian_bases": "Health/2026-03-15-bases.md",
-                "json": "Health/2026-03-15.json",
-                "csv": "Health/2026-03-15.csv",
+            let expected: [String: Data] = [
+                "Health/2026-03-15.md": Data(data.toMarkdown(customization: customization).utf8),
+                "Health/2026-03-15-bases.md": Data(data.toObsidianBases(customization: customization).utf8),
+                "Health/2026-03-15.json": Data(try data.toJSONThrowing(customization: customization).utf8),
+                "Health/2026-03-15.csv": Data(try data.toCSVThrowing(customization: customization).utf8),
             ]
-            for output in frozenOutputs {
-                let format = try XCTUnwrap(output["format"] as? String)
-                let path = try XCTUnwrap(expectedPaths[format])
+            for (path, expectedBytes) in expected {
                 let item = try XCTUnwrap(plan.items.first { $0.relativePath == path })
-                let expected = try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(output["bytes_base64"] as? String)))
-                XCTAssertEqual(item.content, expected, "\(identifier)/\(format)")
+                XCTAssertEqual(item.content, expectedBytes, "\(identifier)/\(path)")
             }
         }
     }
@@ -313,7 +295,9 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
-        settings.generateRangeSummary = true
+        settings.generateWeeklyRollups = true
+        settings.generateMonthlyRollups = true
+        settings.generateYearlyRollups = true
         settings.metricSelection.enabledMetrics = Set(HealthMetrics.all.map(\.id))
         settings.formatCustomization.unitPreference = .imperial
         settings.formatCustomization.frontmatterConfig.customFields = ["reviewed": "false"]
@@ -327,10 +311,11 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         let nativeSummaries = HealthRollupExporter.makeSummaries(
             from: [data],
             settings: settings,
+            periods: [.weekly, .monthly, .yearly],
             generatedAt: generatedAt,
             calendar: calendar
         )
-        XCTAssertEqual(nativeSummaries.count, 1)
+        XCTAssertEqual(nativeSummaries.count, 3)
 
         let service = HealthMdCoreService()
         let registry = try HealthMdCoreRegistryAdapter.appleSnapshot(service: service)
@@ -344,7 +329,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
             customization: settings.formatCustomization,
             calendarTimeZoneIdentifier: "UTC",
             retainPlatformExtensions: false,
-            rollupPeriods: [.range]
+            rollupPeriods: [.weekly, .monthly, .yearly]
         )
         let semanticBatch = try HealthMdSemanticInputAdapter.batch(
             sessionID: sessionID,
@@ -377,7 +362,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         for batch in encoded.batches { _ = try renderSession.process(batch: batch) }
         let plan = try renderSession.finish()
         let rollups = plan.items.filter { $0.relativePath.contains("/Rollups/") }
-        XCTAssertEqual(rollups.count, 4)
+        XCTAssertEqual(rollups.count, 12)
         let nativeTargets = HealthRollupExporter.outputTargets(
             for: nativeSummaries,
             healthSubfolder: "Health",
@@ -399,7 +384,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
-        settings.generateRangeSummary = true
+        settings.generateWeeklyRollups = true
         settings.metricSelection.enabledMetrics = ["steps"]
         let calendarTimeZoneIdentifier = "America/New_York"
         let fixture = ExportFixtures.partialDay
@@ -429,7 +414,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
                 customization: settings.formatCustomization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 retainPlatformExtensions: false,
-                rollupPeriods: [.range]
+                rollupPeriods: [.weekly]
             )
             let semanticBatch = try HealthMdSemanticInputAdapter.batch(
                 sessionID: sessionID,
@@ -473,6 +458,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
             let nativeSummaries = HealthRollupExporter.makeSummaries(
                 from: [data],
                 settings: settings,
+                periods: [.weekly],
                 generatedAt: generatedAt,
                 calendar: calendar
             )
@@ -497,7 +483,7 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
             artifact: CoreStreamArtifactConfig(
                 requestId: "apple-lossless-test",
                 sessionId: "apple-lossless-session",
-                profile: .appleHealthDataV7,
+                profile: .appleHealthDataV8,
                 relativePath: "Health/Raw/archive.json",
                 mediaType: "application/json",
                 writeMode: .overwrite
@@ -517,13 +503,13 @@ final class HealthMdRenderInputAdapterTests: XCTestCase {
         let existing = "---\nuser: keep\ndate: old\ntags:\n  - personal\n---\n# User title\n\n## Sleep\nold\n\n## Notes\nkeep\n"
         let generated = "---\ndate: new\ntags:\n  - health\n---\n# Health Data — new\n\n## Sleep\nnew\n\n## Activity\nsteps\n"
         let merged = try service.mergeMarkdown(
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             existing: existing,
             generated: generated
         )
         XCTAssertEqual(merged, MarkdownMerger.merge(existing: existing, new: generated))
         let preserving = try service.mergeMarkdown(
-            profile: .appleHealthDataV7,
+            profile: .appleHealthDataV8,
             existing: existing,
             generated: generated,
             preservePreamble: true

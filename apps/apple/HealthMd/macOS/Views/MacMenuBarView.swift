@@ -68,10 +68,10 @@ struct MacMenuBarView: View {
 
             VStack(spacing: 2) {
                 menuAction(
-                    icon: vaultManager.vaultURL == nil ? "folder.badge.plus" : "folder",
-                    label: vaultManager.vaultURL == nil
-                        ? String(localized: "Choose Destination…")
-                        : String(localized: "Change Destination…")
+                    icon: vaultManager.hasVaultSelection ? "folder" : "folder.badge.plus",
+                    label: vaultManager.hasVaultSelection
+                        ? String(localized: "Change Destination…")
+                        : String(localized: "Choose Destination…")
                 ) {
                     chooseDestinationFolder()
                 }
@@ -212,8 +212,10 @@ struct MacMenuBarView: View {
     }
 
     private var destinationDetail: String {
-        guard vaultManager.vaultURL != nil else { return String(localized: "Choose folder") }
-        return folderAccessHealthy ? vaultManager.vaultName : String(localized: "Access denied")
+        guard vaultManager.hasVaultSelection else { return String(localized: "Choose folder") }
+        return folderAccessHealthy
+            ? vaultManager.vaultName
+            : "\(vaultManager.vaultName): \(vaultManager.vaultAvailabilityText)"
     }
 
     private var readinessIsPositive: Bool {
@@ -227,8 +229,8 @@ struct MacMenuBarView: View {
         if syncService.isSyncing { return String(localized: "Receiving export") }
         if syncService.connectionState != .connected { return String(localized: "Connect iPhone") }
         if !iPhoneSupportsMacExports { return String(localized: "Update iPhone app") }
-        if vaultManager.vaultURL == nil { return String(localized: "Choose folder") }
-        if !folderAccessHealthy { return String(localized: "Re-select folder") }
+        if !vaultManager.hasVaultSelection { return String(localized: "Choose folder") }
+        if !folderAccessHealthy { return vaultManager.vaultAvailabilityText }
         return String(localized: "Ready")
     }
 

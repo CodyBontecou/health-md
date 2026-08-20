@@ -2,29 +2,29 @@
   "artifact_set" : "healthmd.generated_rollup_reference_docs",
   "artifacts" : [
     {
-      "bytes" : 104834,
+      "bytes" : 104830,
       "path" : "aggregation-behavior.md",
-      "sha256" : "22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92"
+      "sha256" : "c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68"
     },
     {
-      "bytes" : 11606,
-      "path" : "range-bases.md",
-      "sha256" : "adca4f7553d70b5ce0721e242eaa32c73b162110785205492016f6fc46cb040c"
+      "bytes" : 11564,
+      "path" : "weekly-bases.md",
+      "sha256" : "fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815"
     },
     {
-      "bytes" : 31285,
-      "path" : "range.csv",
-      "sha256" : "df3c231805ef1e2aa284aa35cfa9642e1e8d223a2b9f23053ce3782480e6c5e5"
+      "bytes" : 29797,
+      "path" : "weekly.csv",
+      "sha256" : "447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9"
     },
     {
-      "bytes" : 39631,
-      "path" : "range.json",
-      "sha256" : "419e287832424b087412ccadce4441f424d8cb78535ac1ecace11cee3e801439"
+      "bytes" : 39632,
+      "path" : "weekly.json",
+      "sha256" : "58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84"
     },
     {
-      "bytes" : 9226,
-      "path" : "range.md",
-      "sha256" : "8cde6add89b58b17e3a7432108e5435cef07d3e513139173f1b225d09012afbb"
+      "bytes" : 9203,
+      "path" : "weekly.md",
+      "sha256" : "c2b7fc33e559fea8f71a86a04781feeec9c63dfa21c7cffc1ec681bd79888774"
     }
   ],
   "fixture" : {
@@ -115,17 +115,18 @@
       }
     ],
     "contains_phi" : false,
-    "coverage_percent" : 50,
+    "coverage_percent" : 42.857142857142854,
     "days_counted" : 3,
-    "days_expected" : 6,
-    "end_date" : "2026-07-11",
+    "days_expected" : 7,
+    "end_date" : "2026-07-12",
     "missing_dates" : [
       "2026-07-07",
       "2026-07-09",
-      "2026-07-10"
+      "2026-07-10",
+      "2026-07-12"
     ],
-    "period" : "range",
-    "period_id" : "2026-07-06_to_2026-07-11",
+    "period" : "weekly",
+    "period_id" : "2026-W28",
     "source_dates" : [
       "2026-07-06",
       "2026-07-08",

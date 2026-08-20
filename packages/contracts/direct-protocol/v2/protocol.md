@@ -78,6 +78,16 @@ The Android app never receives an absolute desktop destination path. The CLI sto
 
 `export_accepted` pins the peer binding, product, source calendar timezone/range, provider when applicable, settings snapshot hash when applicable, and request fingerprint before health bytes are produced.
 
+### Generated-files settings policies
+
+`generated_files_v1` carries a `settings_policy` naming where the request's output settings come from, advertised per capability in `source_hello.products[].settings_policies`:
+
+- `requested_scope` — request-scoped selections (reserved; not currently advertised for this product).
+- `saved_device_settings` — the device's saved export settings.
+- `profile` — an export profile on the device, referenced by the sibling `profile_reference` object (`profile_id` authoritative; optional `name` is display/resolution convenience). The profile's frozen snapshot — including its frozen engine authority — becomes the run's settings basis. Unknown references are rejected with `invalid_request` (`profile_not_found`); they never fall back to saved settings.
+
+The `profile` policy and `profile_reference` field are additive relative to older v2 peers, and v2 payloads use `deny_unknown_fields`: an older peer fails closed with a typed decode error rather than misinterpreting the request (the same fail-closed doctrine as the iOS v1 `settingsPolicy: "profile"` addition; see `fixtures/profile-policy-reference.json`).
+
 ## Artifacts
 
 Every artifact has an immutable `artifact_manifest` containing its ID, kind, schema, media type, byte count, exact-byte SHA-256, and product-specific metadata.

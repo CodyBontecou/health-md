@@ -73,7 +73,7 @@ fn canonical_cross_language_cases_match_exact_result_hashes() {
         "nullable-source-offset",
         "non-hour-offset",
         "dst-offset-transition",
-        "range-span-year-boundary",
+        "iso-week-year-boundary",
         "blood-pressure-dependency",
         "state-of-mind-independent-views",
         "sleep-stage-platform-differences",
@@ -150,10 +150,8 @@ fn canonical_cross_language_cases_match_exact_result_hashes() {
                             })
                     }));
                 }
-                assert_eq!(decoded["rollups"].as_array().map(Vec::len), Some(1));
-                assert_eq!(decoded["rollups"][0]["start_date"], "2025-12-31");
-                assert_eq!(decoded["rollups"][0]["end_date"], "2026-11-01");
-                assert_eq!(decoded["rollups"][0]["period"], "range");
+                assert_eq!(decoded["rollups"][0]["start_date"], "2025-12-29");
+                assert_eq!(decoded["rollups"][0]["end_date"], "2026-01-04");
                 assert_eq!(
                     decoded["retained_extensions"].as_array().map(Vec::len),
                     Some(1)

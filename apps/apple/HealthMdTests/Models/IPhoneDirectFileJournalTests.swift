@@ -91,7 +91,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertEqual(decoded.appleDirectProtocolPin?.engine, .rust)
         XCTAssertEqual(decoded.settingsSnapshot.appleExportEnginePin, journal.appleExportEnginePin)
         XCTAssertEqual(decoded.settingsSnapshot.calendarTimeZoneIdentifier, "America/Los_Angeles")
-        XCTAssertTrue(decoded.settingsSnapshot.generateRangeSummary)
+        XCTAssertTrue(decoded.settingsSnapshot.generateWeeklyRollups)
         XCTAssertEqual(decoded.request, journal.request)
         XCTAssertEqual(decoded.accepted, journal.accepted)
         XCTAssertEqual(decoded.session, journal.session)
@@ -240,7 +240,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = [.json]
-        settings.generateRangeSummary = true
+        settings.generateWeeklyRollups = true
         settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let snapshot = ExportSettingsSnapshot.from(
             settings,
@@ -317,7 +317,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = [.json]
-        settings.generateRangeSummary = true
+        settings.generateWeeklyRollups = true
         settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let snapshot = ExportSettingsSnapshot.from(
             settings,
@@ -469,7 +469,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         let defaults = UserDefaults(suiteName: "IPhoneDirectFileJournalTests.\(UUID().uuidString)")!
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
-        settings.generateRangeSummary = true
+        settings.generateWeeklyRollups = true
         let pin = try makeSyntheticAppleExportEnginePin()
         let snapshot = ExportSettingsSnapshot.from(
             settings,

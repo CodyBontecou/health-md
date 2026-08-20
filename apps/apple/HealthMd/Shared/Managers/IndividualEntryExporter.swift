@@ -1069,6 +1069,133 @@ final class IndividualEntryExporter {
         return samples
     }
 
+    // MARK: - Lossless Coverage Gaps
+
+    /// A metric individually tracked but structurally unable to produce entries
+    /// from the canonical archive in a given day's `HealthData`.
+    enum IndividualEntryCoverageReason: Equatable, Sendable {
+        /// The metric is enabled for individual tracking but is not part of the
+        /// export metric selection, so the archive query plan never ran for it.
+        case notSelectedForExport
+        /// The metric has no catalogued HealthKit source type, so lossless
+        /// capture can never produce source records for it.
+        case uncataloguedMetric
+        /// The archive query for this metric was unsupported or skipped on this
+        /// runtime or account (for example per-object authorization types).
+        case queryUnavailable(String?)
+        /// The archive query for this metric failed.
+        case queryFailed(String?)
+    }
+
+    struct IndividualEntryCoverageGap: Equatable, Sendable {
+        let metricID: String
+        let reason: IndividualEntryCoverageReason
+
+        var localizedDescription: String {
+            switch reason {
+            case .notSelectedForExport:
+                return "not selected for the daily export, so its source records were never queried"
+            case .uncataloguedMetric:
+                return "has no canonical HealthKit source type, so lossless exports cannot generate individual entries for it"
+            case .queryUnavailable(let detail):
+                if let detail, !detail.isEmpty {
+                    return "source record query unavailable: \(detail)"
+                }
+                return "source record query unsupported or skipped on this device"
+            case .queryFailed(let detail):
+                if let detail, !detail.isEmpty {
+                    return "source record query failed: \(detail)"
+                }
+                return "source record query failed"
+            }
+        }
+    }
+
+    /// Reports individually tracked metrics that could not produce any entry
+    /// while the canonical archive is authoritative (Lossless enabled).
+    ///
+    /// A successful query that returned zero records is *not* a gap: that is a
+    /// normal day without data for the metric. Only structural causes surface:
+    /// never-queried, uncatalogued, unsupported/skipped, or failed queries.
+    /// Aggregates with the already-extracted samples so callers never pay for a
+    /// second extraction pass.
+    func coverageGaps(
+        emittedSamples: [IndividualHealthSample],
+        from healthData: HealthData,
+        settings: IndividualTrackingSettings,
+        metricSelection: MetricSelectionState
+    ) -> [IndividualEntryCoverageGap] {
+        guard settings.globalEnabled,
+              let archive = healthData.healthKitRecordArchive else {
+            // Without an archive the compatibility path owns individual entries
+            // and daily aggregates remain the source; there is no silent loss.
+            return []
+        }
+
+        var coveredMetricIDs = Set(emittedSamples.map(\.metricId))
+        // The canonical blood-pressure correlation and the compatibility reader
+        // both emit one umbrella "blood_pressure" sample, which covers each
+        // tracked component metric.
+        if coveredMetricIDs.contains("blood_pressure") {
+            coveredMetricIDs.insert("blood_pressure_systolic")
+            coveredMetricIDs.insert("blood_pressure_diastolic")
+        }
+
+        let selectedMetricIDs = Set(metricSelection.enabledMetrics)
+        let availableMetricIDs = HealthMetrics.availableMetricIDsInCurrentBuild
+        let cataloguedMetricIDs = HealthKitRecordCatalog.cataloguedMetricIDs
+        var queryResultsByMetricID: [String: [HealthKitQueryResult]] = [:]
+        for result in archive.queryResults {
+            for metricID in result.metricIDs {
+                queryResultsByMetricID[metricID, default: []].append(result)
+            }
+        }
+
+        var gaps: [IndividualEntryCoverageGap] = []
+        for (metricID, config) in settings.metricConfigs.sorted(by: { $0.key < $1.key }) {
+            guard config.trackIndividually,
+                  availableMetricIDs.contains(metricID),
+                  !coveredMetricIDs.contains(metricID) else {
+                continue
+            }
+
+            if !cataloguedMetricIDs.contains(metricID) {
+                gaps.append(IndividualEntryCoverageGap(
+                    metricID: metricID,
+                    reason: .uncataloguedMetric
+                ))
+                continue
+            }
+
+            let results = queryResultsByMetricID[metricID] ?? []
+            if let unavailable = results.first(where: { $0.status == .unsupported || $0.status == .skipped }) {
+                gaps.append(IndividualEntryCoverageGap(
+                    metricID: metricID,
+                    reason: .queryUnavailable(unavailable.statusDescription ?? unavailable.error?.description)
+                ))
+                continue
+            }
+            if let failed = results.first(where: { $0.status == .failure }) {
+                gaps.append(IndividualEntryCoverageGap(
+                    metricID: metricID,
+                    reason: .queryFailed(failed.error?.description ?? failed.statusDescription)
+                ))
+                continue
+            }
+            if !selectedMetricIDs.contains(metricID) {
+                gaps.append(IndividualEntryCoverageGap(
+                    metricID: metricID,
+                    reason: .notSelectedForExport
+                ))
+                continue
+            }
+            // Query succeeded with no emitted sample: the day simply had no
+            // data (or emission was intentionally suppressed for this metric's
+            // view), which is not a silent capture loss.
+        }
+        return gaps
+    }
+
     // MARK: - Specific Extractors
 
     private func extractCanonicalRecordSamples(

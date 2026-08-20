@@ -6,7 +6,7 @@ editUrl: false
 
 Individual Entry Tracking creates a separate Markdown note for selected timestamped events in addition to the daily export.
 
-Under schema v7, a present canonical archive is the sole authority for entry identity. Health.md does not turn a daily aggregate into a source event merely because a canonical query returned no records or failed.
+Under schema v8, a present canonical archive is the sole authority for entry identity. Health.md does not turn a daily aggregate into a source event merely because a canonical query returned no records or failed.
 
 ## Authority rules
 

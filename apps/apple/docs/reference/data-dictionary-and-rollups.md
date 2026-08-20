@@ -63,7 +63,7 @@ Missing is not zero. Every roll-up rule also states how missing days are handled
 |---|---|
 | `primary` | Headline period calculation. |
 | `statistics` | Additional statistics emitted. |
-| `periods` | The `range` roll-up period. |
+| `periods` | Supported `weekly`, `monthly`, and `yearly` periods. |
 | `preferredSource` | Preferred daily/detail source for recomputation. |
 | `nullHandling` | Explicit missing-day behavior. |
 | `weightedBy` | Optional weighting field. |
@@ -106,7 +106,7 @@ A period minimum is the minimum of daily minima. A period maximum is the maximum
 
 ### Latest
 
-Identity/inventory-like values keep the latest observed daily value and can include value counts. Numeric latest metrics can also expose trend context. In schema v7, `vo2_max` explicitly follows this rule: the period headline is the latest daily measurement even when an earlier day has a higher value; `maximum_daily_value` remains available as context.
+Identity/inventory-like values keep the latest observed daily value and can include value counts. Numeric latest metrics can also expose trend context. In schema v8, `vo2_max` retains the v7 rule: the period headline is the latest daily measurement even when an earlier day has a higher value; `maximum_daily_value` remains available as context.
 
 ### Lists
 
@@ -122,11 +122,11 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 
 ## Coverage
 
-- The roll-up period is `range`: exactly one summary covers the requested export range, first selected day through last selected day, rendered in the calendar timezone used to build the summary.
-- `period_id` is `<start>_to_<end>`, for example `2026-07-01_to_2026-07-31`.
-- `days_expected` is the inclusive day span of the requested range.
+- Weekly `period_id` uses ISO `YYYY-Www`; its `start_date` and `end_date` are Monday and Sunday rendered in the calendar timezone used to build the period. Monthly/yearly bounds use that same timezone.
+- `days_expected` is the size of the full period.
 - `days_counted` is the number of daily snapshots retained for the roll-up.
 - Per-metric days counted can be smaller when a snapshot has no value for that metric.
+- Future dates in a current period remain expected but are not queried.
 - A failed daily fetch reduces coverage; an absent metric value does not become zero.
 
 ## Format-specific roll-ups
@@ -138,12 +138,12 @@ First/last-time metrics retain earliest, latest, and average time-of-day statist
 | Markdown | Frontmatter, category tables, and detailed statistics. |
 | Obsidian Bases | Frontmatter-focused `rollup_metrics` properties. |
 
-Complete synthetic range examples:
+Complete synthetic weekly examples:
 
-- [`generated/rollups/range.json`](./generated/rollups/range.json)
-- [`generated/rollups/range.csv`](./generated/rollups/range.csv)
-- [`generated/rollups/range.md`](./generated/rollups/range.md)
-- [`generated/rollups/range-bases.md`](./generated/rollups/range-bases.md)
+- [`generated/rollups/weekly.json`](./generated/rollups/weekly.json)
+- [`generated/rollups/weekly.csv`](./generated/rollups/weekly.csv)
+- [`generated/rollups/weekly.md`](./generated/rollups/weekly.md)
+- [`generated/rollups/weekly-bases.md`](./generated/rollups/weekly-bases.md)
 
 ## Consumer guidance
 

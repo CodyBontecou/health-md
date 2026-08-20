@@ -917,7 +917,7 @@ final class HealthMdCLITests: XCTestCase {
                     [
                         "date": "2026-07-20", "status": "complete",
                         "health_data": [
-                            "schema": "healthmd.health_data", "schema_version": 8,
+                            "schema": "healthmd.health_data", "schema_version": 7,
                             "date": "2026-07-20", "type": "health-data",
                             "raw_capture_status": "not_requested", "sleep": ["total": 480],
                             "objects": [["value": 3]]
@@ -926,7 +926,7 @@ final class HealthMdCLITests: XCTestCase {
                     [
                         "date": "2026-07-21", "status": "complete_empty",
                         "health_data": [
-                            "schema": "healthmd.health_data", "schema_version": 8,
+                            "schema": "healthmd.health_data", "schema_version": 7,
                             "date": "2026-07-21", "type": "health-data",
                             "raw_capture_status": "not_requested"
                         ]
@@ -1012,7 +1012,7 @@ final class HealthMdCLITests: XCTestCase {
         let healthData = try XCTUnwrap(fullEnvelope["health_data"] as? [[String: Any]])
         XCTAssertEqual(healthData.count, 2)
         XCTAssertEqual(healthData[0]["schema"] as? String, "healthmd.health_data")
-        XCTAssertEqual(healthData[0]["schema_version"] as? Int, 8)
+        XCTAssertEqual(healthData[0]["schema_version"] as? Int, 7)
     }
 
     func testAllAvailableHistoryUsesDynamicDateSelectionWithoutFakeRange() throws {
@@ -1148,7 +1148,7 @@ final class HealthMdCLITests: XCTestCase {
                     "status": "complete_empty",
                     "health_data": [
                         "schema": "healthmd.health_data",
-                        "schema_version": 8,
+                        "schema_version": 7,
                         "healthkit_record_archive": [
                             "schema": "healthmd.healthkit_records",
                             "schema_version": 1

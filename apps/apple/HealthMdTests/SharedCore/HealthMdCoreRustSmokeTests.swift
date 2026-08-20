@@ -36,10 +36,10 @@ final class HealthMdCoreRustSmokeTests: XCTestCase {
     }
 
     func testRegistrySnapshotLoadsThroughPackagedNativeCore() throws {
-        let snapshot = try service.metricRegistry(profile: .appleHealthDataV7)
+        let snapshot = try service.metricRegistry(profile: .appleHealthDataV8)
 
         XCTAssertEqual(snapshot.registrySha256, try service.buildInfo().registrySha256)
-        XCTAssertEqual(snapshot.profileId, "apple_health_data_v7")
+        XCTAssertEqual(snapshot.profileId, "apple_health_data_v8")
         XCTAssertEqual(snapshot.publicSchemaVersion, 8)
         XCTAssertEqual(snapshot.metrics.count, 230)
         XCTAssertEqual(snapshot.outputs.count, 226)

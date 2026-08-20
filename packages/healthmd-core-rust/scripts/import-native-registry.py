@@ -106,7 +106,14 @@ def parse_apple() -> dict[str, Any]:
     # Swift catalog now projects the Rust registry and must not become the import authority.
     if not APPLE_BASELINE.exists():
         raise FileNotFoundError("immutable pre-cutover Apple registry baseline is missing")
-    return json.loads(APPLE_BASELINE.read_text())
+    baseline = json.loads(APPLE_BASELINE.read_text())
+    baseline.update(
+        profile_id="apple_health_data_v8",
+        public_profile_id="apple-v8",
+        public_schema="healthmd.health_data",
+        public_schema_version=8,
+    )
+    return baseline
 
     # Retained below only as archaeological evidence of the one-time Markdown import.
     metrics: list[dict[str, Any]] = []
@@ -155,10 +162,10 @@ def parse_apple() -> dict[str, Any]:
     if len(metrics) != 230:
         raise ValueError(f"expected 230 Apple metrics, found {len(metrics)}")
     return {
-        "profile_id": "apple_health_data_v7",
-        "public_profile_id": "apple-v7",
+        "profile_id": "apple_health_data_v8",
+        "public_profile_id": "apple-v8",
         "public_schema": "healthmd.health_data",
-        "public_schema_version": 7,
+        "public_schema_version": 8,
         "metrics": metrics,
     }
 
@@ -515,16 +522,12 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
                 }
             )
 
-    # The native baseline pins the immutable pre-cutover evidence (v7). The live
-    # registry contract tracks the current public export schema version instead,
-    # so v8 range-summary exports stay pinned to the shipped schema.
-    apple_public_schema_version = 8
     profiles: list[dict[str, Any]] = [
         {
             "id": apple["profile_id"],
             "public_profile_id": apple["public_profile_id"],
             "public_schema": apple["public_schema"],
-            "public_schema_version": apple_public_schema_version,
+            "public_schema_version": apple["public_schema_version"],
             "profile_revision": 1,
             "platform": "apple",
             "ordered_selection_ids": [metric["selection_id"] for metric in apple["metrics"]],
@@ -616,10 +619,15 @@ def main() -> None:
     parser.add_argument("--check", action="store_true", help="check committed importer outputs")
     args = parser.parse_args()
 
+    apple_baseline = json.loads(APPLE_BASELINE.read_text())
     apple = parse_apple()
     android = parse_android()
     registry = build_registry(apple, android)
-    outputs = {APPLE_BASELINE: apple, ANDROID_BASELINE: android, REGISTRY_PATH: registry}
+    outputs = {
+        APPLE_BASELINE: apple_baseline,
+        ANDROID_BASELINE: android,
+        REGISTRY_PATH: registry,
+    }
     if args.check:
         stale = [str(path.relative_to(REPO)) for path, value in outputs.items() if not path.exists() or path.read_bytes() != canonical_bytes(value)]
         if stale:

@@ -15,7 +15,7 @@ The shared Rust registry contains deterministic contract metadata while HealthKi
 
 | Internal profile | Public profile | Schema | Ordered selections | Output descriptors |
 |---|---|---:|---:|---:|
-| `apple_health_data_v7` | `apple-v7` | 8 | 230 | 226 |
+| `apple_health_data_v8` | `apple-v8` | 8 | 230 | 226 |
 | `android_frozen_v4` | `android-frozen-v4` | 4 | 106 | 161 |
 | `android_analytical_v5` | `android-analytical-v5` | 5 | 106 | 161 |
 

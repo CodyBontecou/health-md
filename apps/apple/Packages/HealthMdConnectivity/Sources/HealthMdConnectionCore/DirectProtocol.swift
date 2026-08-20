@@ -164,6 +164,22 @@ public struct DirectPeerBinding: Codable, Equatable, Hashable, Sendable {
 public enum DirectSettingsPolicy: String, Codable, Equatable, Sendable {
     case requestedDatesOnly = "requested_dates_only"
     case currentIPhoneSettings = "current_iphone_settings"
+    /// Resolve settings from an export profile on the iPhone by stable ID
+    /// (`DirectProfileReference`). Additive on the wire: older peers fail
+    /// closed on the unknown variant instead of misinterpreting the request.
+    case profile
+}
+
+public struct DirectProfileReference: Codable, Equatable, Sendable {
+    /// Authoritative stable profile UUID.
+    public let profileID: String
+    /// Display convenience captured for errors and logs; never authoritative.
+    public let name: String?
+
+    public init(profileID: String, name: String? = nil) {
+        self.profileID = profileID
+        self.name = name
+    }
 }
 
 public enum DirectResponseMode: String, Codable, Equatable, Sendable {
@@ -230,6 +246,7 @@ public struct DirectExportRequest: Codable, Equatable, Sendable {
     public let createdAt: Date
     public let dateSelection: DirectDateSelection
     public let settingsPolicy: DirectSettingsPolicy
+    public let profileReference: DirectProfileReference?
     public let responseMode: DirectResponseMode
     public let rawProfile: DirectRawProfile?
     public let canonicalSelection: DirectCanonicalSelection?
@@ -241,6 +258,7 @@ public struct DirectExportRequest: Codable, Equatable, Sendable {
         createdAt: Date,
         dateSelection: DirectDateSelection,
         settingsPolicy: DirectSettingsPolicy = .requestedDatesOnly,
+        profileReference: DirectProfileReference? = nil,
         responseMode: DirectResponseMode,
         rawProfile: DirectRawProfile? = nil,
         canonicalSelection: DirectCanonicalSelection? = nil,
@@ -254,6 +272,7 @@ public struct DirectExportRequest: Codable, Equatable, Sendable {
         self.createdAt = Date(timeIntervalSince1970: floor(createdAt.timeIntervalSince1970))
         self.dateSelection = dateSelection
         self.settingsPolicy = settingsPolicy
+        self.profileReference = profileReference
         self.responseMode = responseMode
         self.rawProfile = rawProfile
         self.canonicalSelection = canonicalSelection

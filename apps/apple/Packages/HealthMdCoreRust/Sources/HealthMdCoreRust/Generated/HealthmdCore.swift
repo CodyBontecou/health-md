@@ -2985,9 +2985,9 @@ public func FfiConverterTypeCoreDirectPairingProfile_lower(_ value: CoreDirectPa
 public enum CoreMetricRegistryProfile: Equatable, Hashable {
     
     /**
-     * Apple `healthmd.health_data` v7.
+     * Apple `healthmd.health_data` v8.
      */
-    case appleHealthDataV7
+    case appleHealthDataV8
     /**
      * Android frozen v4.
      */
@@ -3017,7 +3017,7 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
-        case 1: return .appleHealthDataV7
+        case 1: return .appleHealthDataV8
         
         case 2: return .androidFrozenV4
         
@@ -3031,7 +3031,7 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         switch value {
         
         
-        case .appleHealthDataV7:
+        case .appleHealthDataV8:
             writeInt(&buf, Int32(1))
         
         

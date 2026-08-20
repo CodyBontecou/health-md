@@ -346,7 +346,8 @@ struct HealthMetricDataDictionaryEntry: Codable, Equatable {
 
 enum HealthMetricDataDictionary {
     static func entries(
-        using customization: FormatCustomization = FormatCustomization()
+        using customization: FormatCustomization = FormatCustomization(),
+        includeProviderEntries: Bool = ConnectedAppsFeature.isEnabled(.whoop)
     ) -> [HealthMetricDataDictionaryEntry] {
         let definitionsById = Dictionary(uniqueKeysWithValues: HealthMetrics.all.map { ($0.id, $0) })
         var entries: [HealthMetricDataDictionaryEntry] = []
@@ -380,7 +381,47 @@ enum HealthMetricDataDictionary {
         }
 
         entries.append(contentsOf: losslessArchiveDiagnosticEntries())
+        // Provider rows document optional v8 schema keys. A build with the
+        // WHOOP integration compiled out must not advertise its metrics in
+        // exported dictionaries, so they are included only when the provider
+        // rollout flag is enabled (schema tests pass true explicitly).
+        if includeProviderEntries {
+            entries.append(contentsOf: whoopProviderEntries())
+        }
         return entries.sorted { $0.key < $1.key }
+    }
+
+    private static func whoopProviderEntries() -> [HealthMetricDataDictionaryEntry] {
+        WHOOPFlatMetricDefinition.all.map { definition in
+            HealthMetricDataDictionaryEntry(
+                key: definition.key,
+                canonicalKey: definition.key,
+                metricId: "provider.whoop",
+                displayName: definition.displayName,
+                category: definition.category,
+                unit: definition.unit,
+                healthKitIdentifier: nil,
+                aggregation: definition.key == "whoop_capture_status"
+                    ? "provider_capture_status"
+                    : "single_record_projection",
+                dailyAggregation: definition.key == "whoop_capture_status"
+                    ? "provider_capture_status"
+                    : "single_record_projection",
+                healthKitAggregation: "none",
+                rollup: HealthMetricRollupRule(
+                    primary: "none",
+                    statistics: [],
+                    periods: [],
+                    preferredSource: "daily_provider_section",
+                    nullHandling: "omit_when_missing_or_ambiguous",
+                    notes: definition.key == "whoop_capture_status"
+                        ? "Daily WHOOP capture status only; provider period roll-ups are not defined in v8."
+                        : "Emit only when exactly one relevant WHOOP record supplies the value; provider period roll-ups are not defined in v8."
+                ),
+                metricType: "provider",
+                schemaVersion: HealthMdExportSchema.version
+            )
+        }
     }
 
     private static func losslessArchiveDiagnosticEntries() -> [HealthMetricDataDictionaryEntry] {

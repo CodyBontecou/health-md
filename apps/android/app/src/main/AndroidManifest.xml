@@ -90,6 +90,31 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/vnd.healthmd.configuration+json" />
+            </intent-filter>
+            <!-- Generic document providers often erase the filename from the content URI and
+                 report custom extensions as octet-stream. MainActivity re-checks the provider
+                 display name before reading, so unrelated octet-stream documents fail closed. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <!-- Some providers report .healthmdconfig files as plain application/json; the
+                 document picker itself requests that MIME type. MainActivity still validates
+                 the provider display name before reading, so generic JSON documents fail
+                 closed rather than reaching shared-setup decoding. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
@@ -208,6 +233,11 @@
             android:name=".data.scheduler.ScheduledExportAlarmReceiver"
             android:exported="false" />
 
+        <!-- Explicit-only per-profile exact alarm receiver (phase 6). -->
+        <receiver
+            android:name=".data.scheduler.ScheduledProfileAlarmReceiver"
+            android:exported="false" />
+
         <!-- Restore one-shot alarms after reboot, app update, clock changes, and access changes. -->
         <receiver
             android:name=".data.scheduler.BootReceiver"
@@ -268,6 +298,17 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/clinician_report_file_paths" />
+        </provider>
+
+        <!-- Narrow read-only URI grant for explicitly shared setup documents. -->
+        <provider
+            android:name=".sharedsetup.SharedSetupFileProvider"
+            android:authorities="${applicationId}.shared-setup"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/shared_setup_file_paths" />
         </provider>
 
         <!-- Health Connect declaration -->

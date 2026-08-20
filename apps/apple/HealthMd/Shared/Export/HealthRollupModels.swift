@@ -2,15 +2,17 @@ import Foundation
 
 // MARK: - Health Roll-up Summary Models
 
-/// The roll-up period Health.md summarizes from daily health aggregate
-/// snapshots. A single `range` reduction covers exactly the requested export
-/// range, first day through last day.
+/// Periods Health.md can summarize from daily health aggregate snapshots.
 enum HealthRollupPeriod: String, CaseIterable, Codable, Equatable {
-    case range
+    case weekly
+    case monthly
+    case yearly
 
     var displayName: String {
         switch self {
-        case .range: return "Range"
+        case .weekly: return "Weekly"
+        case .monthly: return "Monthly"
+        case .yearly: return "Yearly"
         }
     }
 
@@ -18,23 +20,28 @@ enum HealthRollupPeriod: String, CaseIterable, Codable, Equatable {
     /// participate in exported content and destination paths.
     var localizedDisplayName: String {
         switch self {
-        case .range: return String(localized: "Range")
+        case .weekly: return String(localized: "Weekly")
+        case .monthly: return String(localized: "Monthly")
+        case .yearly: return String(localized: "Yearly")
         }
     }
 
     var folderName: String {
         switch self {
-        case .range: return "Range"
+        case .weekly: return "Weekly"
+        case .monthly: return "Monthly"
+        case .yearly: return "Yearly"
         }
     }
 
     func matchesIdentifier(_ identifier: String) -> Bool {
         switch self {
-        case .range:
-            return identifier.range(
-                of: #"^\d{4}-\d{2}-\d{2}_to_\d{4}-\d{2}-\d{2}$"#,
-                options: .regularExpression
-            ) != nil
+        case .weekly:
+            return identifier.range(of: #"^\d{4}-W\d{2}$"#, options: .regularExpression) != nil
+        case .monthly:
+            return identifier.range(of: #"^\d{4}-\d{2}$"#, options: .regularExpression) != nil
+        case .yearly:
+            return identifier.range(of: #"^\d{4}$"#, options: .regularExpression) != nil
         }
     }
 }
@@ -256,34 +263,77 @@ enum HealthRollupFormatting {
 }
 
 extension HealthRollupPeriodWindow {
-    /// The range summary window covering the requested export range, first day
-    /// through last day. `daysExpected` is the inclusive day span of the range so
-    /// coverage reflects the selection instead of a calendar expectation.
-    static func rangeWindow(
-        from startDate: Date,
-        to endDate: Date,
+    static func window(
+        containing date: Date,
+        period: HealthRollupPeriod,
         calendar inputCalendar: Calendar
     ) -> HealthRollupPeriodWindow {
-        let calendar = inputCalendar
-        let start = calendar.startOfDay(for: startDate)
-        let lastDayStart = calendar.startOfDay(for: max(startDate, endDate))
-        // Inclusive end-of-day so any timestamp within the last selected day
-        // belongs to the window.
-        let end = calendar.date(
-            byAdding: DateComponents(day: 1, second: -1),
-            to: lastDayStart
-        ) ?? lastDayStart
-        let daySpan = calendar.dateComponents([.day], from: start, to: lastDayStart).day ?? 0
-        let id = "\(HealthRollupDateFormatting.dayString(start, timeZone: calendar.timeZone))"
-            + "_to_"
-            + "\(HealthRollupDateFormatting.dayString(lastDayStart, timeZone: calendar.timeZone))"
-        return HealthRollupPeriodWindow(
-            period: .range,
-            id: id,
-            startDate: start,
-            endDate: end,
-            daysExpected: daySpan + 1,
-            calendarTimeZone: calendar.timeZone
-        )
+        switch period {
+        case .weekly:
+            var calendar = Calendar(identifier: .iso8601)
+            calendar.timeZone = inputCalendar.timeZone
+            let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)
+            let start = calendar.date(from: DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                weekday: calendar.firstWeekday,
+                weekOfYear: components.weekOfYear,
+                yearForWeekOfYear: components.yearForWeekOfYear
+            )) ?? calendar.startOfDay(for: date)
+            let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+            let id = String(format: "%04d-W%02d", components.yearForWeekOfYear ?? 0, components.weekOfYear ?? 0)
+            return HealthRollupPeriodWindow(
+                period: period,
+                id: id,
+                startDate: start,
+                endDate: end,
+                daysExpected: 7,
+                calendarTimeZone: calendar.timeZone
+            )
+        case .monthly:
+            let calendar = inputCalendar
+            let components = calendar.dateComponents([.year, .month], from: date)
+            let start = calendar.date(from: DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: components.year,
+                month: components.month,
+                day: 1
+            )) ?? calendar.startOfDay(for: date)
+            let nextMonth = calendar.date(byAdding: .month, value: 1, to: start) ?? start
+            let end = calendar.date(byAdding: .day, value: -1, to: nextMonth) ?? start
+            let days = calendar.dateComponents([.day], from: start, to: nextMonth).day ?? 0
+            let id = String(format: "%04d-%02d", components.year ?? 0, components.month ?? 0)
+            return HealthRollupPeriodWindow(
+                period: period,
+                id: id,
+                startDate: start,
+                endDate: end,
+                daysExpected: days,
+                calendarTimeZone: calendar.timeZone
+            )
+        case .yearly:
+            let calendar = inputCalendar
+            let components = calendar.dateComponents([.year], from: date)
+            let start = calendar.date(from: DateComponents(
+                calendar: calendar,
+                timeZone: calendar.timeZone,
+                year: components.year,
+                month: 1,
+                day: 1
+            )) ?? calendar.startOfDay(for: date)
+            let nextYear = calendar.date(byAdding: .year, value: 1, to: start) ?? start
+            let end = calendar.date(byAdding: .day, value: -1, to: nextYear) ?? start
+            let days = calendar.dateComponents([.day], from: start, to: nextYear).day ?? 0
+            let id = String(format: "%04d", components.year ?? 0)
+            return HealthRollupPeriodWindow(
+                period: period,
+                id: id,
+                startDate: start,
+                endDate: end,
+                daysExpected: days,
+                calendarTimeZone: calendar.timeZone
+            )
+        }
     }
 }

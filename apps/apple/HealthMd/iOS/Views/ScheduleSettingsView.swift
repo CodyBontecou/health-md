@@ -93,6 +93,9 @@ struct ScheduleSettingsView: View {
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var apiExportSettings: APIExportSettings
     @Binding var showFolderPicker: Bool
+    /// Built by ContentView when the main UI appears; forwarded so
+    /// `ProfileScheduleSection` observes the shared profile stores.
+    var profileCoordinator: ExportProfileCoordinator? = nil
     @ObservedObject private var exportHistory = ExportHistoryManager.shared
     @ObservedObject private var purchaseManager = PurchaseManager.shared
 
@@ -107,27 +110,28 @@ struct ScheduleSettingsView: View {
     @State private var showRetryError = false
     @State private var retryErrorMessage = ""
 
+    /// Phase 3: the master toggle reflects any active schedule (legacy or
+    /// per-profile entries). On: enables the first profile's entry (seeded
+    /// from the legacy preferred time). Off: disables every entry and the
+    /// legacy schedule.
     private var isEnabledBinding: Binding<Bool> {
         Binding(
-            get: { schedulingManager.schedule.isEnabled },
+            get: { schedulingManager.isSchedulingActive },
             set: { newValue in
-                let wasEnabled = schedulingManager.schedule.isEnabled
+                let wasEnabled = schedulingManager.isSchedulingActive
                 if newValue && !wasEnabled {
                     trackScheduleEnableAttempt()
-                    // Request notification permissions when turning the schedule on
                     Task { @MainActor in
                         _ = await schedulingManager.requestNotificationPermissions()
                         configurationProtection.performConfigurationChange {
-                            var updated = schedulingManager.schedule
-                            updated.isEnabled = true
-                            schedulingManager.schedule = updated
+                            self.enableFirstProfileEntry()
                             UIAccessibility.post(notification: .announcement, argument: "Schedule enabled")
                         }
                     }
                 } else {
-                    var updated = schedulingManager.schedule
-                    updated.isEnabled = newValue
-                    schedulingManager.schedule = updated
+                    configurationProtection.performConfigurationChange {
+                        self.disableAllSchedules()
+                    }
                     if wasEnabled && !newValue {
                         UIAccessibility.post(notification: .announcement, argument: "Schedule disabled")
                     }
@@ -293,6 +297,15 @@ struct ScheduleSettingsView: View {
             VStack(alignment: .leading, spacing: Spacing.s4) {
                 heroHeader
                 scheduleAutomationCard
+#if os(iOS)
+                if let profileCoordinator {
+                    // Per-profile schedule toggles and cadence editors mutate
+                    // profile automation, so the whole card stays inspectable
+                    // but is intercepted by the shared lock.
+                    ProfileScheduleSection(coordinator: profileCoordinator)
+                        .configurationChangesProtected()
+                }
+#endif
                 if schedulingManager.schedule.isEnabled {
                     scheduledDestinationSection
                         .configurationChangesProtected()
@@ -345,12 +358,12 @@ struct ScheduleSettingsView: View {
         ) {
             HStack(spacing: Spacing.s2) {
                 statusPill(
-                    label: schedulingManager.schedule.isEnabled ? String(localized: "On") : String(localized: "Off"),
-                    icon: schedulingManager.schedule.isEnabled ? "checkmark" : "pause",
-                    tint: schedulingManager.schedule.isEnabled ? Color.success : Color.textMuted
+                    label: schedulingManager.isSchedulingActive ? String(localized: "On") : String(localized: "Off"),
+                    icon: schedulingManager.isSchedulingActive ? "checkmark" : "pause",
+                    tint: schedulingManager.isSchedulingActive ? Color.success : Color.textMuted
                 )
 
-                if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
+                if schedulingManager.isSchedulingActive, let nextExport = schedulingManager.getNextExportDescription() {
                     statusPill(label: String(localized: "Next"), value: nextExport, icon: "clock", tint: Color.accent)
                 }
             }
@@ -364,7 +377,7 @@ struct ScheduleSettingsView: View {
                 automaticExportRow
                     .configurationChangesProtected()
 
-                if !schedulingManager.schedule.isEnabled {
+                if !schedulingManager.isSchedulingActive {
                     rowDivider()
                     disabledScheduleRow
                 }
@@ -393,7 +406,7 @@ struct ScheduleSettingsView: View {
 
     private var automaticExportRow: some View {
         HStack(alignment: .center, spacing: Spacing.s3) {
-            inlineIcon("arrow.triangle.2.circlepath", isActive: schedulingManager.schedule.isEnabled)
+            inlineIcon("arrow.triangle.2.circlepath", isActive: schedulingManager.isSchedulingActive)
 
             VStack(alignment: .leading, spacing: Spacing.s1) {
                 Text("Automatic Export")
@@ -409,9 +422,9 @@ struct ScheduleSettingsView: View {
             Spacer(minLength: Spacing.s2)
 
             statusPill(
-                label: schedulingManager.schedule.isEnabled ? String(localized: "Enabled") : String(localized: "Disabled"),
-                icon: schedulingManager.schedule.isEnabled ? "checkmark" : "circle",
-                tint: schedulingManager.schedule.isEnabled ? Color.success : Color.textMuted
+                label: schedulingManager.isSchedulingActive ? String(localized: "Enabled") : String(localized: "Disabled"),
+                icon: schedulingManager.isSchedulingActive ? "checkmark" : "circle",
+                tint: schedulingManager.isSchedulingActive ? Color.success : Color.textMuted
             )
             .accessibilityHidden(true)
 
@@ -420,14 +433,49 @@ struct ScheduleSettingsView: View {
                 .tint(Color.accent)
                 .accessibilityIdentifier(AccessibilityID.Schedule.enableToggle)
                 .accessibilityLabel("Automatic export schedule")
-                .accessibilityValue(schedulingManager.schedule.isEnabled ? "Enabled" : "Disabled")
-                .accessibilityHint("Double tap to \(schedulingManager.schedule.isEnabled ? "disable" : "enable") scheduled exports")
+                .accessibilityValue(schedulingManager.isSchedulingActive ? "Enabled" : "Disabled")
+                .accessibilityHint("Double tap to \(schedulingManager.isSchedulingActive ? "disable" : "enable") scheduled exports")
         }
         .padding(.vertical, Spacing.s3)
     }
 
+    private func enableFirstProfileEntry() {
+        let entryStore = ScheduledExportEntryStore()
+        let profileStore = ExportProfileStore()
+        guard let profile = profileStore.profiles.first ?? profileStore.activeProfile else { return }
+        if entryStore.entry(profileID: profile.id) == nil {
+            let legacy = schedulingManager.schedule
+            _ = entryStore.upsert(
+                ScheduledExportEntry(
+                    profileID: profile.id,
+                    isEnabled: true,
+                    frequency: .daily,
+                    preferredHour: legacy.preferredHour,
+                    preferredMinute: legacy.preferredMinute,
+                    lookbackDays: 1
+                )
+            )
+        } else {
+            _ = entryStore.update(profileID: profile.id) { $0.isEnabled = true }
+        }
+        schedulingManager.refreshScheduledAutomation()
+    }
+
+    private func disableAllSchedules() {
+        let entryStore = ScheduledExportEntryStore()
+        for entry in entryStore.entries {
+            _ = entryStore.update(profileID: entry.profileID) { $0.isEnabled = false }
+        }
+        if schedulingManager.schedule.isEnabled {
+            var updated = schedulingManager.schedule
+            updated.isEnabled = false
+            schedulingManager.schedule = updated
+        }
+        schedulingManager.refreshScheduledAutomation()
+    }
+
     private var automaticExportSummary: String {
-        if schedulingManager.schedule.isEnabled, let nextExport = schedulingManager.getNextExportDescription() {
+        if schedulingManager.isSchedulingActive, let nextExport = schedulingManager.getNextExportDescription() {
             return String(localized: "Next export: \(nextExport).")
         }
         return String(localized: "Off. Turn on automation to configure timing, lookback, and reminder behavior.")
@@ -851,7 +899,9 @@ struct ScheduleSettingsView: View {
             macSubtitle: scheduledMacTargetSubtitle,
             apiSubtitle: scheduledAPITargetSubtitle,
             canExportToConnectedMac: canScheduleToConnectedMac,
-            shouldPromptForLocalFolder: vaultManager.vaultURL == nil,
+            // See the export tab: prompt from current destination usability, not
+            // retained-selection metadata, so unavailable folders still open the picker.
+            shouldPromptForLocalFolder: !vaultManager.isVaultDestinationUsable,
             localAccessibilityIdentifier: AccessibilityID.Schedule.localTargetOption,
             macAccessibilityIdentifier: AccessibilityID.Schedule.macTargetOption,
             apiAccessibilityIdentifier: AccessibilityID.Schedule.apiTargetOption,
@@ -922,7 +972,10 @@ struct ScheduleSettingsView: View {
             return "No folder selected. Choose a folder on Mac."
         }
         if !status.folderAccessHealthy {
-            return "Mac folder access denied. Re-select the folder on Mac."
+            let destination = status.destinationPathForDisplay
+                ?? status.destinationDisplayName
+                ?? "the saved Mac folder"
+            return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
     }
@@ -1226,13 +1279,14 @@ struct ScheduleSettingsView: View {
             return
         }
 
-        guard vaultManager.startVaultAccess() else {
+        guard let accessLease = vaultManager.beginVaultAccess() else {
             await MainActor.run {
                 retryErrorMessage = ExportFailureReason.accessDenied.detailedDescription
                 showRetryError = true
             }
             return
         }
+        defer { accessLease.stop() }
 
         let totalDays = datesToExport.count
         var successCount = 0
@@ -1281,6 +1335,7 @@ struct ScheduleSettingsView: View {
                     )
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
+                partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
                 looseAggregateFileCount += writeResult.aggregateFileCount
                 individualEntryFileCount += writeResult.individualEntryFileCount
                 dataDictionaryFileCount += writeResult.dataDictionaryFileCount
@@ -1302,8 +1357,6 @@ struct ScheduleSettingsView: View {
                 )
             }
         }
-
-        vaultManager.stopVaultAccess()
 
         await MainActor.run {
             retryProgress = 1.0
