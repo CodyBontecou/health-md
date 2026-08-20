@@ -114,9 +114,23 @@ try {
   const days = await Promise.all(filenames.map(async (filename) =>
     JSON.parse(await fs.readFile(path.join(tmpDir, filename), "utf8"))
   ));
-  const rollups = await Promise.all([historicalWeeklyFixture, rangeFixture].map(async (fixture) =>
-    alignRollupToSample(JSON.parse(await fs.readFile(fixture, "utf8")))
+  if (days.some((day) => day.schema !== "healthmd.health_data" || day.schema_version !== 8)) {
+    throw new Error("Plugin mock-data generator must produce only healthmd.health_data v8 daily samples");
+  }
+  const rawRollups = await Promise.all([historicalWeeklyFixture, rangeFixture].map(async (fixture) =>
+    JSON.parse(await fs.readFile(fixture, "utf8"))
   ));
+  const rangeRollup = rawRollups[1];
+  if (
+    rangeRollup.schema !== "healthmd.rollup_summary"
+    || rangeRollup.schema_version !== 9
+    || rangeRollup.rollup_period !== "range"
+    || rangeRollup.source_schema !== "healthmd.health_data"
+    || rangeRollup.source_schema_version !== 8
+  ) {
+    throw new Error("Plugin range fixture must be a healthmd.rollup_summary v9 sourced from healthmd.health_data v8");
+  }
+  const rollups = rawRollups.map(alignRollupToSample);
 
   await fs.mkdir(outputDirectory, { recursive: true });
   await Promise.all([
