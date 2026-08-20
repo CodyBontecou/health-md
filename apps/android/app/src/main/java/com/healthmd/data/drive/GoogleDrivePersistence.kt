@@ -14,16 +14,13 @@ import com.healthmd.domain.exportengine.sha256Hex
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.time.LocalDate
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -156,6 +153,13 @@ private data class ManagedObjectEnvelope(
     val records: List<JsonElement> = emptyList(),
 )
 
+sealed interface GoogleDriveManagedObjectLookup {
+    data object Missing : GoogleDriveManagedObjectLookup
+    /** Malformed, unknown-version, opaque, or duplicate state is never treated as absence. */
+    data object Corrupt : GoogleDriveManagedObjectLookup
+    data class Found(val binding: GoogleDriveManagedObject) : GoogleDriveManagedObjectLookup
+}
+
 @Singleton
 class GoogleDriveManagedObjectStore @Inject constructor(
     private val dataStore: DataStore<Preferences>,
@@ -163,45 +167,78 @@ class GoogleDriveManagedObjectStore @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
     private val key = stringPreferencesKey("google_drive_managed_objects_v1")
 
-    suspend fun get(destinationId: String, pathHash: String): GoogleDriveManagedObject? =
-        known().singleOrNull { it.destinationId == destinationId && it.relativePathHash == pathHash }
+    suspend fun lookup(destinationId: String, pathHash: String): GoogleDriveManagedObjectLookup =
+        when (val loaded = load(dataStore.data.first()[key])) {
+            ManagedObjectRecords.Corrupt -> GoogleDriveManagedObjectLookup.Corrupt
+            is ManagedObjectRecords.Valid -> loaded.bindings
+                .singleOrNull { it.destinationId == destinationId && it.relativePathHash == pathHash }
+                ?.let(GoogleDriveManagedObjectLookup::Found)
+                ?: GoogleDriveManagedObjectLookup.Missing
+        }
+
+    suspend fun isMutationSafe(): Boolean =
+        load(dataStore.data.first()[key]) is ManagedObjectRecords.Valid
 
     suspend fun put(binding: GoogleDriveManagedObject) {
         dataStore.edit { prefs ->
-            val raw = records(prefs[key]).toMutableList()
-            val index = raw.indexOfFirst {
-                val objectValue = it as? JsonObject
-                objectValue?.get("destinationId")?.jsonPrimitive?.content == binding.destinationId &&
-                    objectValue["relativePathHash"]?.jsonPrimitive?.content == binding.relativePathHash
+            val loaded = load(prefs[key])
+            check(loaded is ManagedObjectRecords.Valid) { "managed object store is corrupt" }
+            val records = loaded.bindings.toMutableList()
+            val index = records.indexOfFirst {
+                it.destinationId == binding.destinationId && it.relativePathHash == binding.relativePathHash
             }
-            val encoded = json.encodeToJsonElement(GoogleDriveManagedObject.serializer(), binding)
-            if (index >= 0) raw[index] = encoded else raw += encoded
-            prefs[key] = json.encodeToString(
-                ManagedObjectEnvelope.serializer(),
-                ManagedObjectEnvelope(records = raw),
-            )
+            if (index >= 0) records[index] = binding else records += binding
+            prefs[key] = encode(records)
         }
     }
 
     suspend fun removeDestination(destinationId: String) {
         dataStore.edit { prefs ->
-            val kept = records(prefs[key]).filterNot {
-                (it as? JsonObject)?.get("destinationId")?.jsonPrimitive?.content == destinationId
-            }
-            prefs[key] = json.encodeToString(
-                ManagedObjectEnvelope.serializer(),
-                ManagedObjectEnvelope(records = kept),
-            )
+            val loaded = load(prefs[key])
+            check(loaded is ManagedObjectRecords.Valid) { "managed object store is corrupt" }
+            prefs[key] = encode(loaded.bindings.filterNot { it.destinationId == destinationId })
         }
     }
 
-    private suspend fun known(): List<GoogleDriveManagedObject> = records(dataStore.data.first()[key])
-        .mapNotNull { runCatching { json.decodeFromJsonElement(GoogleDriveManagedObject.serializer(), it) }.getOrNull() }
+    private fun encode(bindings: List<GoogleDriveManagedObject>): String = json.encodeToString(
+        ManagedObjectEnvelope.serializer(),
+        ManagedObjectEnvelope(
+            records = bindings.map {
+                json.encodeToJsonElement(GoogleDriveManagedObject.serializer(), it)
+            },
+        ),
+    )
 
-    private fun records(raw: String?): List<JsonElement> = if (raw.isNullOrBlank()) emptyList() else runCatching {
-        val root = json.parseToJsonElement(raw).jsonObject
-        (root["records"] as? JsonArray)?.toList().orEmpty()
-    }.getOrDefault(emptyList())
+    private fun load(raw: String?): ManagedObjectRecords {
+        if (raw.isNullOrBlank()) return ManagedObjectRecords.Valid(emptyList())
+        return runCatching {
+            val root = json.parseToJsonElement(raw) as? JsonObject ?: error("invalid envelope")
+            val version = root["version"]?.jsonPrimitive?.intOrNull ?: 1
+            if (version != 1) error("unknown envelope")
+            val elements = root["records"] as? JsonArray ?: error("missing records")
+            val bindings = elements.map { element ->
+                val objectValue = element as? JsonObject ?: error("opaque record")
+                val recordVersion = objectValue["version"]?.jsonPrimitive?.intOrNull ?: 1
+                if (recordVersion != 1) error("unknown record")
+                json.decodeFromJsonElement(GoogleDriveManagedObject.serializer(), element).also {
+                    if (!it.destinationId.isSafeOpaqueId() ||
+                        !it.relativePathHash.matches(Regex("[0-9a-f]{64}")) ||
+                        it.objectId.isBlank() || it.parentId.isBlank() || it.expectedName.isBlank() ||
+                        it.mimeType.isBlank()
+                    ) error("invalid record")
+                }
+            }
+            if (bindings.distinctBy { it.destinationId to it.relativePathHash }.size != bindings.size) {
+                error("duplicate binding")
+            }
+            ManagedObjectRecords.Valid(bindings)
+        }.getOrElse { ManagedObjectRecords.Corrupt }
+    }
+
+    private sealed interface ManagedObjectRecords {
+        data object Corrupt : ManagedObjectRecords
+        data class Valid(val bindings: List<GoogleDriveManagedObject>) : ManagedObjectRecords
+    }
 }
 
 @Serializable
@@ -368,13 +405,22 @@ class GoogleDriveJournalStore @Inject constructor(
         phase: GoogleDriveArtifactPhase = GoogleDriveArtifactPhase.FINAL_BYTES_STAGED,
     ): GoogleDriveOperationJournal = withContext(Dispatchers.IO) {
         val artifact = journal.artifacts[artifactIndex]
-        writeAtomic(File(operationDirectory(journal.operationId), artifact.spoolFile), bytes)
+        val digest = sha256Hex(bytes)
+        val spoolName = "artifact-${artifactIndex.toString().padStart(4, '0')}-final-$digest.bin"
+        val directory = operationDirectory(journal.operationId)
+        // Never overwrite the currently referenced spool. A crash before save leaves it intact;
+        // save atomically switches the journal to the newly durable immutable name.
+        if (artifact.spoolFile != spoolName) writeAtomic(File(directory, spoolName), bytes)
         val updatedArtifact = artifact.copy(
+            spoolFile = spoolName,
             byteCount = bytes.size.toLong(),
-            sha256 = sha256Hex(bytes),
+            sha256 = digest,
             phase = phase,
         )
-        journal.copy(artifacts = journal.artifacts.replacing(artifactIndex, updatedArtifact)).also { save(it) }
+        journal.copy(artifacts = journal.artifacts.replacing(artifactIndex, updatedArtifact)).also {
+            save(it)
+            if (artifact.spoolFile != spoolName) File(directory, artifact.spoolFile).delete()
+        }
     }
 
     suspend fun discard(operationId: String) = withContext(Dispatchers.IO) {
@@ -382,12 +428,20 @@ class GoogleDriveJournalStore @Inject constructor(
         syncDirectory(root)
     }
 
-    suspend fun pruneCompleted(keep: Int = 20) = withContext(Dispatchers.IO) {
-        root.listFiles().orEmpty()
+    suspend fun pruneAcknowledged(keep: Int = 20) = withContext(Dispatchers.IO) {
+        val acknowledged = root.listFiles().orEmpty()
             .filter(File::isDirectory)
+            .mapNotNull { directory ->
+                val operationId = directory.name.takeIf(String::isSafeOpaqueId) ?: return@mapNotNull null
+                val found = load(operationId) as? GoogleDriveJournalLoad.Found ?: return@mapNotNull null
+                found.journal.takeIf { journal ->
+                    journal.historyAcknowledged && journal.artifacts.all {
+                        it.phase == GoogleDriveArtifactPhase.HISTORY_ACKNOWLEDGED
+                    }
+                }?.let { directory }
+            }
             .sortedByDescending(File::lastModified)
-            .drop(keep.coerceAtLeast(0))
-            .forEach(File::deleteRecursively)
+        acknowledged.drop(keep.coerceAtLeast(0)).forEach(File::deleteRecursively)
         syncDirectory(root)
     }
 
@@ -405,7 +459,9 @@ class GoogleDriveJournalStore @Inject constructor(
         return journal.artifacts.all { artifact ->
             artifact.artifactId.isSafeOpaqueId() &&
                 normalizeDriveRelativePath(artifact.relativePath) == artifact.relativePath &&
-                artifact.spoolFile.matches(Regex("artifact-[0-9]{4}\\.bin")) &&
+                artifact.spoolFile.matches(
+                    Regex("artifact-[0-9]{4}(?:-final-[0-9a-f]{64})?\\.bin"),
+                ) &&
                 artifact.byteCount >= 0 &&
                 artifact.sha256.matches(Regex("[0-9a-f]{64}")) &&
                 File(directory, artifact.spoolFile).let { it.isFile && it.length() == artifact.byteCount }

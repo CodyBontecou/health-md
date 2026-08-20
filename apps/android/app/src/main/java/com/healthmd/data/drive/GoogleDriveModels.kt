@@ -178,9 +178,11 @@ sealed interface GoogleDriveReadiness {
 sealed interface GoogleDriveRunResult {
     data class Complete(val artifactCount: Int) : GoogleDriveRunResult
     data class Stopped(
+        /** The actionable cause remains available even when earlier artifacts completed. */
         val error: GoogleDriveErrorId,
         val completedArtifactCount: Int = 0,
         val retryable: Boolean = false,
+        val partialCompletion: Boolean = false,
     ) : GoogleDriveRunResult
 }
 

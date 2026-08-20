@@ -6,6 +6,11 @@ import com.healthmd.data.export.IndividualEntryExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
+import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
+import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
+import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
+import com.healthmd.domain.exportengine.ProductionDailyAggregateNativePlanBuilder
+import com.healthmd.domain.exportengine.ShadowExportDiagnosticSink
 import com.healthmd.domain.exportengine.sha256Hex
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
@@ -20,17 +25,55 @@ import kotlinx.serialization.json.Json
 
 /** Materializes existing renderer outputs before any Drive network effect. */
 @Singleton
-class GeneratedExportBundleFactory @Inject constructor(
+class GeneratedExportBundleFactory private constructor(
     private val markdownExporter: MarkdownExporter,
     private val jsonExporter: JsonExporter,
     private val csvExporter: CsvExporter,
     private val obsidianBasesExporter: ObsidianBasesExporter,
+    private val dailyAggregatePlanner: LocalDailyAggregateExportPlanner,
 ) {
+    @Inject
+    constructor(
+        markdownExporter: MarkdownExporter,
+        jsonExporter: JsonExporter,
+        csvExporter: CsvExporter,
+        obsidianBasesExporter: ObsidianBasesExporter,
+        diagnosticSink: ShadowExportDiagnosticSink = ShadowExportDiagnosticSink { },
+    ) : this(
+        markdownExporter = markdownExporter,
+        jsonExporter = jsonExporter,
+        csvExporter = csvExporter,
+        obsidianBasesExporter = obsidianBasesExporter,
+        dailyAggregatePlanner = AndroidDailyAggregateExportPlanner(
+            nativePlanner = ProductionDailyAggregateNativePlanBuilder(
+                markdownExporter = markdownExporter,
+                jsonExporter = jsonExporter,
+                csvExporter = csvExporter,
+                obsidianBasesExporter = obsidianBasesExporter,
+            ),
+            diagnosticSink = diagnosticSink,
+        ),
+    )
+
+    internal constructor(
+        markdownExporter: MarkdownExporter,
+        jsonExporter: JsonExporter,
+        csvExporter: CsvExporter,
+        obsidianBasesExporter: ObsidianBasesExporter,
+        dailyAggregatePlanner: LocalDailyAggregateExportPlanner,
+        @Suppress("UNUSED_PARAMETER") testSeam: Unit = Unit,
+    ) : this(
+        markdownExporter,
+        jsonExporter,
+        csvExporter,
+        obsidianBasesExporter,
+        dailyAggregatePlanner,
+    )
     private val json = Json { encodeDefaults = true; explicitNulls = false }
     private val dailyNoteInjector = DailyNoteInjector()
     private val individualEntryExporter = IndividualEntryExporter()
 
-    fun daily(
+    suspend fun daily(
         operationId: String = UUID.randomUUID().toString(),
         profileId: String?,
         source: String,
@@ -41,18 +84,23 @@ class GeneratedExportBundleFactory @Inject constructor(
         require(data.isNotEmpty())
         val sorted = data.sortedBy { it.date }
         require(sorted.map { it.date }.distinct().size == sorted.size)
-        val artifacts = sorted.flatMap { healthData ->
-            aggregateArtifacts(operationId, healthData, settings) +
-                dailyNoteArtifact(operationId, healthData, settings).orEmpty() +
-                individualArtifacts(operationId, healthData, settings)
+        val artifacts = mutableListOf<GeneratedExportArtifact>()
+        val rendererAuthorities = mutableSetOf<String>()
+        sorted.forEach { healthData ->
+            val aggregate = aggregateArtifacts(operationId, healthData, settings)
+            artifacts += aggregate.artifacts
+            rendererAuthorities += aggregate.rendererAuthority
+            artifacts += dailyNoteArtifact(operationId, healthData, settings)
+            artifacts += individualArtifacts(operationId, healthData, settings)
         }
+        require(rendererAuthorities.size == 1) { "daily bundle mixed renderer authorities" }
         return GeneratedExportBundle(
             operationId = operationId,
             profileId = profileId,
             source = source,
             dates = sorted.map(HealthData::date),
             settingsSnapshotSha256 = sha256Hex(settingsSnapshotJson.encodeToByteArray()),
-            rendererPin = rendererPin(settings),
+            rendererPin = rendererPin(settings, rendererAuthorities.single()),
             artifacts = artifacts,
         )
     }
@@ -88,40 +136,70 @@ class GeneratedExportBundleFactory @Inject constructor(
         )
     }
 
-    private fun aggregateArtifacts(
+    private suspend fun aggregateArtifacts(
         operationId: String,
         data: HealthData,
         settings: ExportSettings,
-    ): List<GeneratedExportArtifact> = settings.selectedExportFormats.sortedBy(ExportFormat::ordinal).map { format ->
-        val text = when (format) {
-            ExportFormat.MARKDOWN -> markdownExporter.export(
-                data,
-                settings.includeMetadata,
-                settings.groupByCategory,
-                settings.formatCustomization,
-                settings.includeGranularData,
+    ): AggregateMaterialization {
+        val authoritySettings = settings.copy(exportTarget = com.healthmd.domain.model.ExportTarget.DEVICE_FOLDER)
+        return when (val planning = dailyAggregatePlanner.plan(data, authoritySettings)) {
+            LocalDailyAggregatePlanningResult.Legacy -> AggregateMaterialization(
+                artifacts = legacyAggregateArtifacts(operationId, data, settings),
+                rendererAuthority = "legacy",
             )
-            ExportFormat.OBSIDIAN_BASES -> obsidianBasesExporter.export(data, settings.formatCustomization)
-            ExportFormat.JSON -> jsonExporter.export(data, settings.formatCustomization, settings.includeGranularData)
-            ExportFormat.CSV -> csvExporter.export(data, settings.formatCustomization, settings.includeGranularData)
+            is LocalDailyAggregatePlanningResult.Failed ->
+                error("${planning.mode.name} aggregate planning failed")
+            is LocalDailyAggregatePlanningResult.Planned -> AggregateMaterialization(
+                artifacts = planning.plan.items.map { item ->
+                    require(sha256Hex(item.content) == item.sha256) { "planner returned invalid bytes" }
+                    artifact(
+                        operationId = operationId,
+                        path = item.relativePath,
+                        mediaType = item.mediaType,
+                        intent = GeneratedArtifactWriteIntent.OVERWRITE,
+                        bytes = item.content,
+                    )
+                },
+                rendererAuthority = planning.mode.name,
+            )
         }
-        val intent = when (settings.writeMode) {
-            WriteMode.OVERWRITE -> GeneratedArtifactWriteIntent.OVERWRITE
-            WriteMode.APPEND -> GeneratedArtifactWriteIntent.APPEND
-            WriteMode.UPDATE -> if (format.fileExtension.equals("md", ignoreCase = true)) {
-                GeneratedArtifactWriteIntent.MARKDOWN_UPDATE
-            } else {
-                GeneratedArtifactWriteIntent.OVERWRITE
-            }
-        }
-        artifact(
-            operationId,
-            settings.aggregateRelativePath(data.date, format),
-            format.mediaType(),
-            intent,
-            text.encodeToByteArray(),
-        )
     }
+
+    private fun legacyAggregateArtifacts(
+        operationId: String,
+        data: HealthData,
+        settings: ExportSettings,
+    ): List<GeneratedExportArtifact> =
+        settings.selectedExportFormats.sortedBy(ExportFormat::ordinal).map { format ->
+            val text = when (format) {
+                ExportFormat.MARKDOWN -> markdownExporter.export(
+                    data,
+                    settings.includeMetadata,
+                    settings.groupByCategory,
+                    settings.formatCustomization,
+                    settings.includeGranularData,
+                )
+                ExportFormat.OBSIDIAN_BASES -> obsidianBasesExporter.export(data, settings.formatCustomization)
+                ExportFormat.JSON -> jsonExporter.export(data, settings.formatCustomization, settings.includeGranularData)
+                ExportFormat.CSV -> csvExporter.export(data, settings.formatCustomization, settings.includeGranularData)
+            }
+            val intent = when (settings.writeMode) {
+                WriteMode.OVERWRITE -> GeneratedArtifactWriteIntent.OVERWRITE
+                WriteMode.APPEND -> GeneratedArtifactWriteIntent.APPEND
+                WriteMode.UPDATE -> if (format.fileExtension.equals("md", ignoreCase = true)) {
+                    GeneratedArtifactWriteIntent.MARKDOWN_UPDATE
+                } else {
+                    GeneratedArtifactWriteIntent.OVERWRITE
+                }
+            }
+            artifact(
+                operationId,
+                settings.aggregateRelativePath(data.date, format),
+                format.mediaType(),
+                intent,
+                text.encodeToByteArray(),
+            )
+        }
 
     private fun dailyNoteArtifact(
         operationId: String,
@@ -198,15 +276,20 @@ class GeneratedExportBundleFactory @Inject constructor(
         ExportFormat.CSV -> "text/csv; charset=utf-8"
     }
 
-    private fun rendererPin(settings: ExportSettings): String = buildString {
+    private fun rendererPin(settings: ExportSettings, authority: String): String = buildString {
         append(
             when (settings.formatCustomization.compatibilitySchemaProfile) {
                 com.healthmd.domain.model.CompatibilitySchemaProfile.IOS_V4_FROZEN -> "android-frozen-v4"
                 com.healthmd.domain.model.CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 -> "android-analytical-v5"
             },
         )
-        settings.executionEnginePin?.let { append(':').append(it.engine.name) }
+        append(':').append(authority)
     }
+
+    private data class AggregateMaterialization(
+        val artifacts: List<GeneratedExportArtifact>,
+        val rendererAuthority: String,
+    )
 
     companion object { private const val MAX_RAW_BYTES = 256L * 1024 * 1024 }
 }

@@ -6,12 +6,21 @@ import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.MarkdownMerger
 import com.healthmd.data.export.ObsidianBasesExporter
+import com.healthmd.domain.exportengine.AndroidExportProfile
+import com.healthmd.domain.exportengine.ExportArtifactPlan
+import com.healthmd.domain.exportengine.ExportArtifactPlanItem
+import com.healthmd.domain.exportengine.ExportArtifactWriteMode
+import com.healthmd.domain.exportengine.ExportEngineMode
+import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
+import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
+import com.healthmd.domain.exportengine.artifactIdHex
 import com.healthmd.domain.model.DailyNoteInjectionSettings
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.export.ExportFixtures
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class GeneratedExportBundleFactoryTest {
@@ -24,7 +33,7 @@ class GeneratedExportBundleFactoryTest {
     )
 
     @Test
-    fun `overwrite bundle preserves authoritative renderer bytes and profile identity`() {
+    fun `overwrite bundle preserves authoritative renderer bytes and profile identity`() = runTest {
         val settings = ExportSettings(
             exportFormats = setOf(ExportFormat.MARKDOWN),
             writeMode = WriteMode.OVERWRITE,
@@ -55,20 +64,42 @@ class GeneratedExportBundleFactoryTest {
     }
 
     @Test
-    fun `append and markdown update generate the same complete final bytes as existing writers`() {
+    fun `all write intents preserve existing writer semantics including missing append`() {
         val baseline = "# Existing\n\nUser content".encodeToByteArray()
         val fragment = "# New\n\n## Activity\n\nSteps: 10".encodeToByteArray()
 
+        assertThat(generateDriveFinalBytes(GeneratedArtifactWriteIntent.OVERWRITE, baseline, fragment))
+            .isEqualTo(fragment)
         assertThat(generateDriveFinalBytes(GeneratedArtifactWriteIntent.APPEND, baseline, fragment))
             .isEqualTo("# Existing\n\nUser content\n# New\n\n## Activity\n\nSteps: 10".encodeToByteArray())
+        assertThat(
+            generateDriveFinalBytes(
+                GeneratedArtifactWriteIntent.APPEND,
+                byteArrayOf(),
+                fragment,
+                baselineExists = false,
+            ),
+        ).isEqualTo(fragment)
+        assertThat(
+            generateDriveFinalBytes(
+                GeneratedArtifactWriteIntent.APPEND,
+                byteArrayOf(),
+                fragment,
+                baselineExists = true,
+            ),
+        ).isEqualTo("\n".encodeToByteArray() + fragment)
         assertThat(generateDriveFinalBytes(GeneratedArtifactWriteIntent.MARKDOWN_UPDATE, baseline, fragment))
+            .isEqualTo(
+                MarkdownMerger().merge(baseline.decodeToString(), fragment.decodeToString()).encodeToByteArray(),
+            )
+        assertThat(generateDriveFinalBytes(GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE, baseline, fragment))
             .isEqualTo(
                 MarkdownMerger().merge(baseline.decodeToString(), fragment.decodeToString()).encodeToByteArray(),
             )
     }
 
     @Test
-    fun `daily note artifact retains preamble prefix and merges fragment exactly once`() {
+    fun `daily note artifact retains preamble prefix and merges fragment exactly once`() = runTest {
         val settings = ExportSettings(
             exportFormats = emptySet(),
             dailyNoteInjection = DailyNoteInjectionSettings(
@@ -94,5 +125,66 @@ class GeneratedExportBundleFactoryTest {
             .isEqualTo(
                 MarkdownMerger().merge(prefix.decodeToString(), artifact.bytes.decodeToString()).encodeToByteArray(),
             )
+    }
+
+    @Test
+    fun `planned aggregate bytes and renderer pin come from planner authority`() = runTest {
+        val plannedBytes = "planner-authoritative-bytes".encodeToByteArray()
+        val requestId = "request-drive-test"
+        val sessionId = "session-drive-test"
+        val path = "Health/2026-03-15.md"
+        val mediaType = "text/markdown; charset=utf-8"
+        val item = ExportArtifactPlanItem(
+            artifactId = artifactIdHex(
+                requestId = requestId,
+                sessionId = sessionId,
+                profile = AndroidExportProfile.android_frozen_v4,
+                relativePath = path,
+                mediaType = mediaType,
+                writeMode = ExportArtifactWriteMode.overwrite,
+                contentSha256 = com.healthmd.domain.exportengine.sha256Hex(plannedBytes),
+            ),
+            relativePath = path,
+            mediaType = mediaType,
+            writeMode = ExportArtifactWriteMode.overwrite,
+            content = plannedBytes,
+        )
+        val planner = LocalDailyAggregateExportPlanner { _, authoritySettings ->
+            assertThat(authoritySettings.exportTarget).isEqualTo(ExportTarget.DEVICE_FOLDER)
+            LocalDailyAggregatePlanningResult.Planned(
+                mode = ExportEngineMode.shadow,
+                plan = ExportArtifactPlan(
+                    schema = ExportArtifactPlan.SCHEMA,
+                    artifactPlanVersion = ExportArtifactPlan.VERSION,
+                    requestId = requestId,
+                    sessionId = sessionId,
+                    profile = AndroidExportProfile.android_frozen_v4,
+                    items = listOf(item),
+                ),
+                formats = listOf(ExportFormat.MARKDOWN),
+            )
+        }
+        val plannedFactory = GeneratedExportBundleFactory(
+            markdownExporter = markdown,
+            jsonExporter = JsonExporter(),
+            csvExporter = CsvExporter(),
+            obsidianBasesExporter = ObsidianBasesExporter(),
+            dailyAggregatePlanner = planner,
+        )
+
+        val bundle = plannedFactory.daily(
+            operationId = "operation-planned",
+            profileId = null,
+            source = "manual",
+            data = listOf(ExportFixtures.partialDay),
+            settings = ExportSettings(
+                exportFormats = setOf(ExportFormat.MARKDOWN),
+                writeMode = WriteMode.OVERWRITE,
+                exportTarget = ExportTarget.GOOGLE_DRIVE,
+            ),
+        )
+
+        assertThat(bundle.artifacts.single().bytes).isEqualTo(plannedBytes)
+        assertThat(bundle.rendererPin).isEqualTo("android-frozen-v4:shadow")
     }
 }

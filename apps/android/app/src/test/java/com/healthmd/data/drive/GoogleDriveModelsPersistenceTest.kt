@@ -75,6 +75,60 @@ class GoogleDriveModelsPersistenceTest {
         assertThat(accounts.values).isEmpty()
     }
 
+    @Test
+    fun `managed store distinguishes missing from opaque corruption and blocks mutation`() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also(scopes::add)
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = scope,
+            produceFile = { temporaryFolder.newFile("managed.preferences_pb") },
+        )
+        val store = GoogleDriveManagedObjectStore(dataStore)
+        val pathHash = relativePathHash("destination-1", "file.md")
+
+        assertThat(store.lookup("destination-1", pathHash))
+            .isEqualTo(GoogleDriveManagedObjectLookup.Missing)
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("google_drive_managed_objects_v1")] =
+                """{"version":1,"records":[{"version":99,"destinationId":"destination-1"}]}"""
+        }
+        assertThat(store.lookup("destination-1", pathHash))
+            .isEqualTo(GoogleDriveManagedObjectLookup.Corrupt)
+        assertThat(store.isMutationSafe()).isFalse()
+        val mutation = runCatching {
+            store.put(
+                GoogleDriveManagedObject(
+                    destinationId = "destination-1",
+                    relativePathHash = pathHash,
+                    objectId = "file-1",
+                    parentId = "folder-1",
+                    expectedName = "file.md",
+                    mimeType = "text/markdown",
+                ),
+            )
+        }
+        assertThat(mutation.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
+        assertThat(store.lookup("destination-1", pathHash))
+            .isEqualTo(GoogleDriveManagedObjectLookup.Corrupt)
+    }
+
+    @Test
+    fun `duplicate managed bindings are corruption rather than absence`() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO).also(scopes::add)
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = scope,
+            produceFile = { temporaryFolder.newFile("managed-duplicates.preferences_pb") },
+        )
+        val pathHash = relativePathHash("destination-1", "file.md")
+        val record = """{"version":1,"destinationId":"destination-1","relativePathHash":"$pathHash","objectId":"file-1","parentId":"folder-1","expectedName":"file.md","mimeType":"text/markdown"}"""
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("google_drive_managed_objects_v1")] =
+                """{"version":1,"records":[$record,$record]}"""
+        }
+
+        assertThat(GoogleDriveManagedObjectStore(dataStore).lookup("destination-1", pathHash))
+            .isEqualTo(GoogleDriveManagedObjectLookup.Corrupt)
+    }
+
     private fun destination() = GoogleDriveDestination(
         id = "destination-1",
         accountReferenceId = "account-reference-1",

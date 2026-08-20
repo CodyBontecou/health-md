@@ -4,7 +4,6 @@ import com.healthmd.data.export.MarkdownMerger
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -12,9 +11,14 @@ internal fun generateDriveFinalBytes(
     intent: GeneratedArtifactWriteIntent,
     baseline: ByteArray,
     fragment: ByteArray,
+    baselineExists: Boolean = true,
 ): ByteArray = when (intent) {
     GeneratedArtifactWriteIntent.OVERWRITE -> fragment.copyOf()
-    GeneratedArtifactWriteIntent.APPEND -> baseline + "\n".encodeToByteArray() + fragment
+    GeneratedArtifactWriteIntent.APPEND -> if (baselineExists) {
+        baseline + "\n".encodeToByteArray() + fragment
+    } else {
+        fragment.copyOf()
+    }
     GeneratedArtifactWriteIntent.MARKDOWN_UPDATE,
     GeneratedArtifactWriteIntent.DAILY_NOTE_MERGE -> MarkdownMerger().merge(
         baseline.toString(StandardCharsets.UTF_8),
@@ -53,11 +57,24 @@ class GoogleDriveDestinationRunner @Inject constructor(
         return withDestinationLock(destinationId) { execute(journal, destination) }
     }
 
-    suspend fun resume(operationId: String): GoogleDriveRunResult {
+    /** Returns null only when no retained operation exists, allowing capture to begin safely. */
+    suspend fun resumeIfPresent(
+        operationId: String,
+        expectedDestinationId: String? = null,
+        expectedOwnerDates: List<java.time.LocalDate>? = null,
+        expectedSettingsSnapshotSha256: String? = null,
+    ): GoogleDriveRunResult? {
         val journal = when (val loaded = journalStore.load(operationId)) {
-            GoogleDriveJournalLoad.Missing, GoogleDriveJournalLoad.Corrupt ->
+            GoogleDriveJournalLoad.Missing -> return null
+            GoogleDriveJournalLoad.Corrupt ->
                 return GoogleDriveRunResult.Stopped(GoogleDriveErrorId.AMBIGUOUS_COMMIT)
             is GoogleDriveJournalLoad.Found -> loaded.journal
+        }
+        if ((expectedDestinationId != null && journal.destinationId != expectedDestinationId) ||
+            (expectedOwnerDates != null && journal.ownerDates != expectedOwnerDates.distinct().sorted().map(java.time.LocalDate::toString)) ||
+            (expectedSettingsSnapshotSha256 != null && journal.settingsSnapshotSha256 != expectedSettingsSnapshotSha256)
+        ) {
+            return stopped(journal, GoogleDriveErrorId.REMOTE_CONFLICT)
         }
         val destination = destinationStore.find(journal.destinationId)
             ?: return stopped(journal, GoogleDriveErrorId.FOLDER_UNAVAILABLE)
@@ -65,6 +82,40 @@ class GoogleDriveDestinationRunner @Inject constructor(
             return stopped(journal, GoogleDriveErrorId.REMOTE_CONFLICT)
         }
         return withDestinationLock(destination.id) { execute(journal, destination) }
+    }
+
+    suspend fun resume(operationId: String): GoogleDriveRunResult =
+        resumeIfPresent(operationId)
+            ?: GoogleDriveRunResult.Stopped(GoogleDriveErrorId.AMBIGUOUS_COMMIT)
+
+    /** Called only after the completed operation has been durably represented in history. */
+    suspend fun acknowledgeAfterHistory(operationId: String): Boolean {
+        val retained = when (val loaded = journalStore.load(operationId)) {
+            is GoogleDriveJournalLoad.Found -> loaded.journal
+            GoogleDriveJournalLoad.Missing, GoogleDriveJournalLoad.Corrupt -> return false
+        }
+        return withDestinationLock(retained.destinationId) {
+            val journal = when (val loaded = journalStore.load(operationId)) {
+                is GoogleDriveJournalLoad.Found -> loaded.journal
+                GoogleDriveJournalLoad.Missing, GoogleDriveJournalLoad.Corrupt -> return@withDestinationLock false
+            }
+            if (journal.artifacts.any {
+                    it.phase != GoogleDriveArtifactPhase.VERIFIED &&
+                        it.phase != GoogleDriveArtifactPhase.HISTORY_ACKNOWLEDGED
+                }
+            ) return@withDestinationLock false
+            val acknowledged = journal.copy(
+                historyAcknowledged = true,
+                artifacts = journal.artifacts.map {
+                    if (it.phase == GoogleDriveArtifactPhase.VERIFIED) {
+                        it.copy(phase = GoogleDriveArtifactPhase.HISTORY_ACKNOWLEDGED)
+                    } else it
+                },
+            )
+            journalStore.save(acknowledged)
+            journalStore.pruneAcknowledged()
+            true
+        }
     }
 
     private suspend fun execute(
@@ -83,6 +134,10 @@ class GoogleDriveDestinationRunner @Inject constructor(
         }
         if (!validDestinationFolder(destination, folder)) {
             return stopped(initialJournal, GoogleDriveErrorId.FOLDER_UNAVAILABLE)
+        }
+
+        if (!managedStore.isMutationSafe()) {
+            return stopped(initialJournal, GoogleDriveErrorId.REMOTE_CONFLICT)
         }
 
         var journal = initialJournal
@@ -106,19 +161,9 @@ class GoogleDriveDestinationRunner @Inject constructor(
                 is CommitResult.Failed -> return stopped(journal, committed.error, committed.retryable)
             }
         }
-        journal = journal.copy(
-            completedArtifactCount = journal.artifacts.count {
-                it.phase == GoogleDriveArtifactPhase.VERIFIED || it.phase == GoogleDriveArtifactPhase.HISTORY_ACKNOWLEDGED
-            },
-            historyAcknowledged = true,
-            artifacts = journal.artifacts.map {
-                if (it.phase == GoogleDriveArtifactPhase.VERIFIED) {
-                    it.copy(phase = GoogleDriveArtifactPhase.HISTORY_ACKNOWLEDGED)
-                } else it
-            },
-        )
+        journal = journal.withCompletedCount()
         journalStore.save(journal)
-        journalStore.pruneCompleted()
+        // VERIFIED remains retained until the history owner explicitly acknowledges persistence.
         return GoogleDriveRunResult.Complete(journal.completedArtifactCount)
     }
 
@@ -190,14 +235,19 @@ class GoogleDriveDestinationRunner @Inject constructor(
         } else {
             when (val result = api.download(token, existing.id, resourceKeys(destination, existing))) {
                 is DriveApiResult.Success -> result.value
-                is DriveApiResult.Failure -> return PrepareResult.Failed(result.error, result.retryable)
+                is DriveApiResult.Failure -> return PrepareResult.Failed(result.error.forKnownFile(), result.retryable)
             }.also { downloaded ->
                 if (!metadataMatchesBytes(existing, downloaded)) {
                     return PrepareResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
                 }
             }
         }
-        val finalBytes = generateDriveFinalBytes(artifact.writeIntent, baseline, fragment)
+        val finalBytes = generateDriveFinalBytes(
+            intent = artifact.writeIntent,
+            baseline = baseline,
+            fragment = fragment,
+            baselineExists = existing != null || artifact.missingPrefixFile != null,
+        )
         journal = journalStore.replaceFinalBytes(journal, index, finalBytes)
         artifact = journal.artifacts[index]
 
@@ -238,19 +288,41 @@ class GoogleDriveDestinationRunner @Inject constructor(
         val remoteBefore = when (val result = api.getMetadata(token, objectId, resources)) {
             is DriveApiResult.Success -> result.value
             is DriveApiResult.Failure -> if (
-                artifact.baselineVersion == null && result.error == GoogleDriveErrorId.FOLDER_UNAVAILABLE
-            ) null else return CommitResult.Failed(result.error, result.retryable)
+                artifact.baselineVersion == null &&
+                artifact.phase < GoogleDriveArtifactPhase.SESSION_STARTED &&
+                result.error == GoogleDriveErrorId.FOLDER_UNAVAILABLE
+            ) {
+                null
+            } else {
+                return CommitResult.Failed(result.error.forKnownFile(), result.retryable)
+            }
         }
-        if (artifact.baselineVersion != null && !sameBaseline(artifact, remoteBefore)) {
-            return CommitResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+        // The server may have committed the final chunk before the process could checkpoint it.
+        // Reconcile exact final identity and bytes before comparing against the old baseline.
+        if (artifact.phase in GoogleDriveArtifactPhase.SESSION_STARTED..GoogleDriveArtifactPhase.UPLOADING &&
+            remoteBefore != null &&
+            validManagedFile(remoteBefore, parentId, fileName, artifact.mediaType) &&
+            metadataMatchesBytes(remoteBefore, bytes)
+        ) {
+            artifact = artifact.copy(
+                phase = GoogleDriveArtifactPhase.COMMITTED,
+                acknowledgedOffset = bytes.size.toLong(),
+            )
+            journal = journal.replacing(index, artifact)
+            journalStore.save(journal)
         }
-        if (remoteBefore != null && !validManagedFile(remoteBefore, parentId, fileName, artifact.mediaType)) {
-            return CommitResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+        if (artifact.phase < GoogleDriveArtifactPhase.COMMITTED) {
+            if (artifact.baselineVersion != null && !sameBaseline(artifact, remoteBefore)) {
+                return CommitResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+            }
+            if (remoteBefore != null && !validManagedFile(remoteBefore, parentId, fileName, artifact.mediaType)) {
+                return CommitResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+            }
         }
 
         var sessionUri = artifact.resumableSessionUri
         var offset = artifact.acknowledgedOffset
-        if (sessionUri != null && artifact.phase >= GoogleDriveArtifactPhase.SESSION_STARTED) {
+        if (sessionUri != null && artifact.phase in GoogleDriveArtifactPhase.SESSION_STARTED..GoogleDriveArtifactPhase.UPLOADING) {
             when (val status = api.queryUpload(token, sessionUri, bytes.size.toLong())) {
                 is DriveApiResult.Success -> {
                     if (status.value.complete) {
@@ -262,9 +334,21 @@ class GoogleDriveDestinationRunner @Inject constructor(
                     }
                 }
                 is DriveApiResult.Failure -> {
-                    // Expired sessions restart against the same final bytes and reserved identity.
-                    sessionUri = null
-                    offset = 0
+                    val reconciled = reconcileIntended(token, destination, artifact, bytes)
+                    if (reconciled != null) {
+                        artifact = artifact.copy(
+                            phase = GoogleDriveArtifactPhase.COMMITTED,
+                            acknowledgedOffset = bytes.size.toLong(),
+                        )
+                        journal = journal.replacing(index, artifact)
+                        journalStore.save(journal)
+                    } else if (status.error == GoogleDriveErrorId.FOLDER_UNAVAILABLE) {
+                        // A missing resumable session is expired; restart against identical bytes/ID.
+                        sessionUri = null
+                        offset = 0
+                    } else {
+                        return CommitResult.Failed(status.error, status.retryable)
+                    }
                 }
             }
         }
@@ -337,7 +421,7 @@ class GoogleDriveDestinationRunner @Inject constructor(
                     }
                     is DriveApiResult.Failure -> {
                         val reconciled = reconcileIntended(token, destination, artifact, bytes)
-                        if (reconciled == null) return CommitResult.Failed(GoogleDriveErrorId.AMBIGUOUS_COMMIT, uploaded.retryable)
+                        if (reconciled == null) return CommitResult.Failed(uploaded.error, uploaded.retryable)
                         artifact = journal.artifacts[index].copy(phase = GoogleDriveArtifactPhase.COMMITTED)
                         journal = journal.replacing(index, artifact)
                         journalStore.save(journal)
@@ -348,12 +432,12 @@ class GoogleDriveDestinationRunner @Inject constructor(
 
         val postflight = when (val result = api.getMetadata(token, objectId, resources)) {
             is DriveApiResult.Success -> result.value
-            is DriveApiResult.Failure -> return CommitResult.Failed(GoogleDriveErrorId.AMBIGUOUS_COMMIT, result.retryable)
+            is DriveApiResult.Failure -> return CommitResult.Failed(result.error.forKnownFile(), result.retryable)
         }
-        if (!validManagedFile(postflight, parentId, fileName, artifact.mediaType) ||
-            !metadataMatchesBytes(postflight, bytes) ||
-            (artifact.baselineVersion != null && postflight.version == artifact.baselineVersion)
-        ) {
+        if (!validManagedFile(postflight, parentId, fileName, artifact.mediaType)) {
+            return CommitResult.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+        }
+        if (!metadataMatchesBytes(postflight, bytes)) {
             return CommitResult.Failed(GoogleDriveErrorId.CHECKSUM_MISMATCH)
         }
         managedStore.put(
@@ -400,11 +484,16 @@ class GoogleDriveDestinationRunner @Inject constructor(
         for (segment in parentPath.split('/')) {
             traversed = listOf(traversed, segment).filter(String::isNotBlank).joinToString("/")
             val hash = relativePathHash(destination.id, "$traversed/")
-            val binding = managedStore.get(destination.id, hash)
+            val binding = when (val lookup = managedStore.lookup(destination.id, hash)) {
+                GoogleDriveManagedObjectLookup.Missing -> null
+                GoogleDriveManagedObjectLookup.Corrupt ->
+                    return ResolveObject.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+                is GoogleDriveManagedObjectLookup.Found -> lookup.binding
+            }
             val resolved = if (binding != null) {
                 when (val result = api.getMetadata(token, binding.objectId, resourceKeys(destination, binding.objectId, binding.resourceKey))) {
                     is DriveApiResult.Success -> result.value
-                    is DriveApiResult.Failure -> return ResolveObject.Failed(result.error, result.retryable)
+                    is DriveApiResult.Failure -> return ResolveObject.Failed(result.error.forKnownFile(), result.retryable)
                 }.takeIf { validFolder(it, current.id, segment) }
                     ?: return ResolveObject.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
             } else {
@@ -467,11 +556,16 @@ class GoogleDriveDestinationRunner @Inject constructor(
         parentId: String,
         name: String,
     ): ResolveFile {
-        val binding = managedStore.get(destination.id, artifact.relativePathHash)
+        val binding = when (val lookup = managedStore.lookup(destination.id, artifact.relativePathHash)) {
+            GoogleDriveManagedObjectLookup.Missing -> null
+            GoogleDriveManagedObjectLookup.Corrupt ->
+                return ResolveFile.Failed(GoogleDriveErrorId.REMOTE_CONFLICT)
+            is GoogleDriveManagedObjectLookup.Found -> lookup.binding
+        }
         if (binding != null) {
             val metadata = when (val result = api.getMetadata(token, binding.objectId, resourceKeys(destination, binding.objectId, binding.resourceKey))) {
                 is DriveApiResult.Success -> result.value
-                is DriveApiResult.Failure -> return ResolveFile.Failed(result.error, result.retryable)
+                is DriveApiResult.Failure -> return ResolveFile.Failed(result.error.forKnownFile(), result.retryable)
             }
             return if (validManagedFile(metadata, parentId, name, artifact.mediaType)) {
                 ResolveFile.Success(metadata)
@@ -496,8 +590,12 @@ class GoogleDriveDestinationRunner @Inject constructor(
         bytes: ByteArray,
     ): GoogleDriveRemoteMetadata? {
         val id = artifact.objectId ?: return null
+        val parentId = artifact.parentId ?: return null
+        val fileName = artifact.relativePath.substringAfterLast('/')
         return when (val result = api.getMetadata(token, id, resourceKeys(destination, id, artifact.objectResourceKey))) {
-            is DriveApiResult.Success -> result.value.takeIf { metadataMatchesBytes(it, bytes) }
+            is DriveApiResult.Success -> result.value.takeIf {
+                validManagedFile(it, parentId, fileName, artifact.mediaType) && metadataMatchesBytes(it, bytes)
+            }
             is DriveApiResult.Failure -> null
         }
     }
@@ -526,6 +624,9 @@ class GoogleDriveDestinationRunner @Inject constructor(
             metadata.size == artifact.baselineSize && metadata.md5Checksum == artifact.baselineMd5 &&
             metadata.sha256Checksum == artifact.baselineSha256 && !metadata.trashed
 
+    private fun GoogleDriveErrorId.forKnownFile(): GoogleDriveErrorId =
+        if (this == GoogleDriveErrorId.FOLDER_UNAVAILABLE) GoogleDriveErrorId.REMOTE_CONFLICT else this
+
     private fun resourceKeys(destination: GoogleDriveDestination, metadata: GoogleDriveRemoteMetadata): Map<String, String> =
         resourceKeys(destination, metadata.id, metadata.resourceKey)
 
@@ -546,9 +647,10 @@ class GoogleDriveDestinationRunner @Inject constructor(
             it.phase == GoogleDriveArtifactPhase.VERIFIED || it.phase == GoogleDriveArtifactPhase.HISTORY_ACKNOWLEDGED
         }
         return GoogleDriveRunResult.Stopped(
-            error = if (completed > 0) GoogleDriveErrorId.PARTIAL_COMPLETION else error,
+            error = error,
             completedArtifactCount = completed,
             retryable = retryable,
+            partialCompletion = completed > 0,
         )
     }
 

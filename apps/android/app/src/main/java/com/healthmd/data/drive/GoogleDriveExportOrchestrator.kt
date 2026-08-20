@@ -9,6 +9,7 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.exportengine.sha256Hex
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.repository.HealthRepository
 import java.time.LocalDate
@@ -50,6 +51,17 @@ class GoogleDriveExportOrchestrator @Inject constructor(
     ): ExportResult {
         val normalized = dates.distinct().sorted()
         if (normalized.isEmpty()) return ExportResult(0, 0, target = ExportTarget.GOOGLE_DRIVE)
+        val frozenSettingsSnapshotJson = settingsSnapshotJson ?: kotlinx.serialization.json.Json.encodeToString(
+            ExportSettings.serializer(),
+            settings,
+        )
+        runner.resumeIfPresent(
+            operationId = operationId,
+            expectedDestinationId = destinationId,
+            expectedSettingsSnapshotSha256 = sha256Hex(frozenSettingsSnapshotJson.encodeToByteArray()),
+        )?.let { retained ->
+            return retained.toExportResult(normalized, operationId)
+        }
         val captured = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
         val selection = settings.effectiveDataTypeSelection()
@@ -90,10 +102,7 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 source = source,
                 data = captured,
                 settings = settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
-                settingsSnapshotJson = settingsSnapshotJson ?: kotlinx.serialization.json.Json.encodeToString(
-                    ExportSettings.serializer(),
-                    settings,
-                ),
+                settingsSnapshotJson = frozenSettingsSnapshotJson,
             )
         } catch (_: Exception) {
             return ExportResult(
@@ -122,6 +131,31 @@ class GoogleDriveExportOrchestrator @Inject constructor(
                 retryDriveOperationIds = normalized.associateWith { operationId },
             )
         }
+    }
+
+    suspend fun acknowledgeAfterHistory(operationId: String): Boolean =
+        runner.acknowledgeAfterHistory(operationId)
+
+    private fun GoogleDriveRunResult.toExportResult(
+        dates: List<LocalDate>,
+        operationId: String,
+    ): ExportResult = when (this) {
+        is GoogleDriveRunResult.Complete -> ExportResult(
+            successCount = dates.size,
+            totalCount = dates.size,
+            target = ExportTarget.GOOGLE_DRIVE,
+            artifactCount = artifactCount,
+        )
+        is GoogleDriveRunResult.Stopped -> ExportResult(
+            successCount = if (completedArtifactCount > 0) dates.size else 0,
+            totalCount = dates.size,
+            failedDateDetails = dates.map {
+                FailedDateDetail(it, error.toFailureReason(), error.serialId)
+            },
+            target = ExportTarget.GOOGLE_DRIVE,
+            artifactCount = completedArtifactCount,
+            retryDriveOperationIds = dates.associateWith { operationId },
+        )
     }
 }
 
