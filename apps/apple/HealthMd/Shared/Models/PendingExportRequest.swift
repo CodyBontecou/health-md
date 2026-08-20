@@ -80,13 +80,17 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     ) {
         self.id = id
         self.dates = Self.normalizedDates(dates, calendar: calendar)
-        self.originalRequestedDates = Self.normalizedDates(
-            originalRequestedDates ?? dates,
-            calendar: calendar
-        )
-        self.originalCalendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
+        let frozenOriginalTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
             ?? settingsSnapshot?.calendarTimeZoneIdentifier
             ?? calendar.timeZone.identifier
+        var originalCalendar = Calendar(identifier: .gregorian)
+        originalCalendar.timeZone = TimeZone(identifier: frozenOriginalTimeZoneIdentifier)
+            ?? calendar.timeZone
+        self.originalRequestedDates = Self.normalizedDates(
+            originalRequestedDates ?? dates,
+            calendar: originalCalendar
+        )
+        self.originalCalendarTimeZoneIdentifier = frozenOriginalTimeZoneIdentifier
         self.source = source
         self.scheduledFireDate = scheduledFireDate
         self.scheduledKind = source == .scheduled ? scheduledKind : .completedDay

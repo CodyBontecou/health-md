@@ -236,6 +236,7 @@ final class VaultManagerTests: XCTestCase {
 
     private func makeSettings() -> AdvancedExportSettings {
         let settings = AdvancedExportSettings()
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
         Self.retainedSettings.append(settings)
         return settings
     }
@@ -245,6 +246,7 @@ final class VaultManagerTests: XCTestCase {
         let userDefaults = UserDefaults(suiteName: suiteName)!
         userDefaults.removePersistentDomain(forName: suiteName)
         let settings = AdvancedExportSettings(userDefaults: userDefaults)
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
         Self.retainedSettings.append(settings)
         return settings
     }
@@ -522,6 +524,36 @@ final class VaultManagerTests: XCTestCase {
                 return XCTFail("Expected invalidExportPath, got \(error)")
             }
         }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testRangePreflightKeepsTenThousandOneDailyDestinationsWhenSummaryIsUnavailable() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2000,
+            month: 1,
+            day: 1
+        )))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2027,
+            month: 5,
+            day: 19
+        )))
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
+        XCTAssertEqual(dates.count, 10_001)
+
+        XCTAssertNoThrow(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: dates
+        ))
         XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
     }
 
@@ -1831,6 +1863,57 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertFalse(workEntries.contains {
             $0.lastPathComponent.hasPrefix(".healthmd-rollup-projections-")
         })
+    }
+
+    func testLegacyCorpusFinalizationUsesOriginalRangeIdentityAndTimezone() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.exportTimeZoneOverride = TimeZone(identifier: "Asia/Tokyo")
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let record = ExportFixtures.fullDay
+        let originalEnd = record.date
+        let originalStart = try XCTUnwrap(utc.date(byAdding: .day, value: -1, to: originalEnd))
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: originalEnd,
+            isRequestedDate: true,
+            record: record,
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let streamablePayload = try ConnectedCorpusApplicationItemCodec.encode(
+            payload,
+            kind: .macHealthDay
+        )
+        defer { streamablePayload.remove() }
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: [streamablePayload.url],
+            recordSourceDates: [originalEnd],
+            settings: settings,
+            requestedDates: [originalEnd],
+            rollupRequestedDates: [originalStart, originalEnd],
+            rollupCalendarTimeZoneIdentifier: "UTC",
+            startDate: originalEnd,
+            endDate: originalEnd,
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertEqual(result.rollupFileCount, 1)
+        let rollupURL = vaultURL
+            .appendingPathComponent("Rollups/Range/2026-03-14_to_2026-03-15.json")
+        let rollup = try String(contentsOf: rollupURL, encoding: .utf8)
+        XCTAssertTrue(rollup.contains("\"period_id\" : \"2026-03-14_to_2026-03-15\""))
+        XCTAssertTrue(rollup.contains("\"days_expected\" : 2"))
+        XCTAssertTrue(rollup.contains("\"days_counted\" : 1"))
     }
 
     #if os(macOS)

@@ -288,14 +288,16 @@ class SchedulingManager: ObservableObject {
         let settings = existingPendingRequest?.settingsSnapshot?.makeAdvancedExportSettings()
             ?? AdvancedExportSettings()
         let immutableRangeDates = existingPendingRequest?.originalRequestedDates ?? dates
-        if existingPendingRequest == nil {
-            settings.exportTimeZoneOverride = calendar.timeZone
-        }
+        let immutableRangeTimeZone = existingPendingRequest?.originalCalendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? calendar.timeZone
+        settings.exportTimeZoneOverride = immutableRangeTimeZone
         let frozenSettingsSnapshot: ExportSettingsSnapshot? = if existingPendingRequest == nil {
             await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,
                 healthSubfolder: vaultManager.healthSubfolder,
-                calendarTimeZone: .current,
+                calendarTimeZone: immutableRangeTimeZone,
                 surface: .localVaultRangeWithoutSideEffects
             )
         } else {
@@ -528,8 +530,8 @@ class SchedulingManager: ObservableObject {
                     from: successfulHealthData,
                     rollupHealthData: rollupHealthData,
                     settings: settings,
-                    startDate: dates.first ?? yesterday,
-                    endDate: dates.last ?? yesterday
+                    startDate: immutableRangeDates.first ?? dates.first ?? yesterday,
+                    endDate: immutableRangeDates.last ?? dates.last ?? yesterday
                 ) != nil {
                     archiveCount = 1
                     completedDates.append(contentsOf: successfulHealthData.map(\.date))

@@ -66,11 +66,20 @@ enum HealthRollupExportSchema {
 struct HealthRollupRangeRequest: Equatable, Hashable, Codable {
     /// Bounded cumulative scope (~27 years) while per-batch capture/render limits remain 400 days.
     static let maximumDays = 10_000
-    enum ValidationError: Error, Equatable {
+    enum ValidationError: LocalizedError, Equatable {
         case invalidTimeZone
         case invalidBounds
         case exceedsDayLimit
+
+        var errorDescription: String? {
+            self == .exceedsDayLimit
+                ? HealthRollupRangeRequest.dayLimitUnavailableMessage
+                : nil
+        }
     }
+
+    static let dayLimitUnavailableMessage =
+        "Range Summary is unavailable for ranges longer than 10,000 days. Daily files will continue to export without a Range Summary."
 
     let startDate: Date
     let endDate: Date

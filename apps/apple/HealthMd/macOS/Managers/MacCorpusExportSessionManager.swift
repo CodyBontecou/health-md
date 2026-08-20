@@ -191,6 +191,9 @@ final class MacCorpusExportSessionManager {
         /// records) collected across the session and replayed in the terminal
         /// result payload. Optional so earlier journals decode unchanged.
         var individualEntryCoverageGaps: [ExportPartialFailure]? = nil
+        /// Derived-output warnings that are not tied to individual-entry extraction. Optional so
+        /// earlier journals decode unchanged and terminal results can replay the exact warning.
+        var derivedOutputPartialFailures: [ExportPartialFailure]? = nil
         /// Canonical strict-raw retained-day result survives payload spool cleanup and restart.
         var strictRawRetainedDayCount: Int? = nil
         /// Optional so journals created before one-time dictionary tracking decode unchanged.
@@ -1147,6 +1150,48 @@ final class MacCorpusExportSessionManager {
                         archiveFileCount: 0
                     )
             } else {
+                if derivedSettings.generateRangeSummary,
+                   let originalTimeZoneIdentifier = journal.exportManifest
+                    .effectiveOriginalCalendarTimeZoneIdentifier,
+                   let originalTimeZone = TimeZone(identifier: originalTimeZoneIdentifier) {
+                    do {
+                        _ = try HealthRollupRangeRequest(
+                            ownerDateIdentifiers: Set(
+                                journal.exportManifest.effectiveOriginalRequestedDates.map {
+                                    HealthKitDailyOwnershipMetadata.ownerDate(
+                                        for: $0,
+                                        calendarTimeZoneIdentifier: originalTimeZoneIdentifier
+                                    )
+                                }
+                            ),
+                            calendarTimeZoneIdentifier: originalTimeZoneIdentifier
+                        )
+                    } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                        let originalDates = journal.exportManifest.effectiveOriginalRequestedDates
+                        let firstDate = originalDates.first
+                            ?? journal.exportManifest.dateRangeStart
+                        let lastDate = originalDates.last ?? firstDate
+                        let formatter = DateFormatter()
+                        formatter.calendar = Calendar(identifier: .gregorian)
+                        formatter.locale = Locale(identifier: "en_US_POSIX")
+                        formatter.timeZone = originalTimeZone
+                        formatter.dateFormat = "yyyy-MM-dd"
+                        let first = formatter.string(from: firstDate)
+                        let last = formatter.string(from: lastDate)
+                        let warning = ExportPartialFailure(
+                            date: firstDate,
+                            dataType: "Range Summary",
+                            dateRangeDescription: first == last ? first : "\(first) – \(last)",
+                            errorDescription: HealthRollupRangeRequest.dayLimitUnavailableMessage
+                        )
+                        if !(session.journal.derivedOutputPartialFailures ?? []).contains(warning) {
+                            session.journal.derivedOutputPartialFailures =
+                                (session.journal.derivedOutputPartialFailures ?? []) + [warning]
+                        }
+                    } catch {
+                        // Other invalid authority remains a finalization failure below.
+                    }
+                }
                 let archiveWorkDirectoryURL = vaultManager.vaultURL.map {
                     Self.archiveWorkDirectoryURL(vaultURL: $0, sessionID: journal.session.sessionID)
                 }
@@ -1157,6 +1202,9 @@ final class MacCorpusExportSessionManager {
                     recordSourceDates: derivedRecordItems.map(\.sourceDate),
                     settings: derivedSettings,
                     requestedDates: journal.exportManifest.requestedDates,
+                    rollupRequestedDates: journal.exportManifest.effectiveOriginalRequestedDates,
+                    rollupCalendarTimeZoneIdentifier: journal.exportManifest
+                        .effectiveOriginalCalendarTimeZoneIdentifier,
                     startDate: journal.exportManifest.dateRangeStart,
                     endDate: journal.exportManifest.dateRangeEnd,
                     healthSubfolder: journal.exportManifest.settingsSnapshot.healthSubfolder,
@@ -3725,7 +3773,8 @@ final class MacCorpusExportSessionManager {
             dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
             dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0,
             failedDateDetails: session.journal.failedDateDetails,
-            partialFailures: session.journal.individualEntryCoverageGaps ?? [],
+            partialFailures: (session.journal.individualEntryCoverageGaps ?? [])
+                + (session.journal.derivedOutputPartialFailures ?? []),
             completedDates: Array(Set(session.journal.completedDates)).sorted(),
             destinationDisplayName: nil,
             destinationPathForDisplay: nil,

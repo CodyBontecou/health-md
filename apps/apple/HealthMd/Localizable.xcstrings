@@ -521,67 +521,67 @@
         }
       }
     },
-    "Range summaries are off by default. Current exports write one `%@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time is supported and processes source days in bounded batches. Turn on Range summary only to skip daily files and write just the range summary.": {
+    "Range summaries are off by default. Current exports write one `%@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time daily exports are supported and process source days in bounded batches; Range Summary is available only for ranges of 10,000 days or fewer. Turn on Range summary only to skip daily files and write just the range summary.": {
       "comment": "Apple range-summary UI",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Range summaries are off by default. Current exports write one `%1$@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time is supported and processes source days in bounded batches. Turn on Range summary only to skip daily files and write just the range summary."
+            "value": "Range summaries are off by default. Current exports write one `%1$@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time daily exports are supported and process source days in bounded batches; Range Summary is available only for ranges of 10,000 days or fewer. Turn on Range summary only to skip daily files and write just the range summary."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zeitraumzusammenfassungen sind standardmäßig deaktiviert. Aktuelle Exporte schreiben ein `%1$@`-v9-Aggregat für den unveränderlichen angeforderten Zeitraum; diese Zusammenfassungen sind keine täglichen Datensätze. Historische wöchentliche, monatliche und jährliche v8-Artefakte bleiben gültig und dokumentiert. Gesamter Zeitraum wird unterstützt und verarbeitet Quelldaten in begrenzten Stapeln. Aktivieren Sie „Nur Zeitraumzusammenfassung“, um tägliche Dateien zu überspringen und nur die Zeitraumzusammenfassung zu schreiben."
+            "value": "Zeitraumzusammenfassungen sind standardmäßig deaktiviert. Aktuelle Exporte schreiben ein `%1$@`-v9-Aggregat für den unveränderlichen angeforderten Zeitraum; diese Zusammenfassungen sind keine täglichen Datensätze. Historische wöchentliche, monatliche und jährliche v8-Artefakte bleiben gültig und dokumentiert. Tägliche Exporte für den gesamten Zeitraum werden in begrenzten Stapeln verarbeitet; die Zeitraumzusammenfassung ist nur für Bereiche bis zu 10.000 Tagen verfügbar. Aktivieren Sie „Nur Zeitraumzusammenfassung“, um tägliche Dateien zu überspringen und nur die Zeitraumzusammenfassung zu schreiben."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los resúmenes del rango de fechas están desactivados de forma predeterminada. Las exportaciones actuales escriben un agregado `%1$@` v9 para el rango solicitado inmutable; estos resúmenes no son registros diarios. Los artefactos v8 semanales, mensuales y anuales históricos siguen siendo válidos y están documentados. Se admite Todo el historial y se procesan los días de origen en lotes limitados. Activa Solo resumen del rango de fechas para omitir los archivos diarios y escribir únicamente el resumen del rango."
+            "value": "Los resúmenes del rango de fechas están desactivados de forma predeterminada. Las exportaciones actuales escriben un agregado `%1$@` v9 para el rango solicitado inmutable; estos resúmenes no son registros diarios. Los artefactos v8 semanales, mensuales y anuales históricos siguen siendo válidos y están documentados. Las exportaciones diarias de Todo el historial se procesan en lotes limitados; el Resumen del rango solo está disponible para rangos de hasta 10.000 días. Activa Solo resumen del rango de fechas para omitir los archivos diarios y escribir únicamente el resumen del rango."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les résumés de plage de dates sont désactivés par défaut. Les exportations actuelles écrivent un agrégat `%1$@` v9 pour la plage demandée immuable ; ces résumés ne sont pas des enregistrements quotidiens. Les artefacts v8 hebdomadaires, mensuels et annuels historiques restent valides et documentés. Depuis toujours est pris en charge et traite les jours sources par lots limités. Activez Résumé de la plage de dates uniquement pour ignorer les fichiers quotidiens et écrire uniquement le résumé de la plage."
+            "value": "Les résumés de plage de dates sont désactivés par défaut. Les exportations actuelles écrivent un agrégat `%1$@` v9 pour la plage demandée immuable ; ces résumés ne sont pas des enregistrements quotidiens. Les artefacts v8 hebdomadaires, mensuels et annuels historiques restent valides et documentés. Les exportations quotidiennes Depuis toujours sont traitées par lots limités ; le Résumé de la plage est disponible uniquement pour les plages de 10 000 jours ou moins. Activez Résumé de la plage de dates uniquement pour ignorer les fichiers quotidiens et écrire uniquement le résumé de la plage."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "I riepiloghi dell'intervallo sono disattivati per impostazione predefinita. Le esportazioni correnti scrivono un aggregato `%1$@` v9 per l'intervallo richiesto immutabile; questi riepiloghi non sono record giornalieri. Gli artefatti v8 storici settimanali, mensili e annuali rimangono validi e documentati. Tutto il periodo è supportato ed elabora i giorni di origine in batch limitati. Attiva Solo riepilogo dell'intervallo per ignorare i file giornalieri e scrivere solo il riepilogo dell'intervallo."
+            "value": "I riepiloghi dell'intervallo sono disattivati per impostazione predefinita. Le esportazioni correnti scrivono un aggregato `%1$@` v9 per l'intervallo richiesto immutabile; questi riepiloghi non sono record giornalieri. Gli artefatti v8 storici settimanali, mensili e annuali rimangono validi e documentati. Le esportazioni giornaliere di Tutto il periodo vengono elaborate in batch limitati; il Riepilogo dell'intervallo è disponibile solo per intervalli fino a 10.000 giorni. Attiva Solo riepilogo dell'intervallo per ignorare i file giornalieri e scrivere solo il riepilogo dell'intervallo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "期間の概要はデフォルトではオフです。現在のエクスポートでは、変更されない指定期間に対して `%1$@` v9 集計を1つ書き出します。これらの概要は日次記録ではありません。過去の週次、月次、年次 v8 アーティファクトは引き続き有効で、文書化されています。全期間がサポートされ、ソース日を上限付きのバッチで処理します。日次ファイルをスキップして期間の概要のみを書き出すには、「期間の概要のみ」をオンにします。"
+            "value": "期間の概要はデフォルトではオフです。現在のエクスポートでは、変更されない指定期間に対して `%1$@` v9 集計を1つ書き出します。これらの概要は日次記録ではありません。過去の週次、月次、年次 v8 アーティファクトは引き続き有効で、文書化されています。全期間の日次エクスポートは上限付きのバッチで処理されます。期間の概要は10,000日以下の範囲でのみ利用できます。日次ファイルをスキップして期間の概要のみを書き出すには、「期間の概要のみ」をオンにします。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "날짜 범위 요약은 기본적으로 꺼져 있습니다. 현재 내보내기는 변경할 수 없는 요청 날짜 범위에 대해 `%1$@` v9 집계 하나를 작성하며, 이 요약은 일일 기록이 아닙니다. 이전의 주별, 월별 및 연별 v8 아티팩트는 계속 유효하며 문서화되어 있습니다. 전체 기간이 지원되며 원본 날짜를 제한된 배치로 처리합니다. 일일 파일을 건너뛰고 날짜 범위 요약만 작성하려면 날짜 범위 요약만을 켜세요."
+            "value": "날짜 범위 요약은 기본적으로 꺼져 있습니다. 현재 내보내기는 변경할 수 없는 요청 날짜 범위에 대해 `%1$@` v9 집계 하나를 작성하며, 이 요약은 일일 기록이 아닙니다. 이전의 주별, 월별 및 연별 v8 아티팩트는 계속 유효하며 문서화되어 있습니다. 전체 기간의 일일 내보내기는 제한된 배치로 처리되며, 날짜 범위 요약은 10,000일 이하의 범위에서만 사용할 수 있습니다. 일일 파일을 건너뛰고 날짜 범위 요약만 작성하려면 날짜 범위 요약만을 켜세요."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Samenvattingen van datumbereiken zijn standaard uitgeschakeld. Huidige exports schrijven één `%1$@` v9-aggregaat voor het onveranderlijke gevraagde datumbereik; deze samenvattingen zijn geen dagelijkse records. Historische wekelijkse, maandelijkse en jaarlijkse v8-artefacten blijven geldig en gedocumenteerd. Alle tijd wordt ondersteund en verwerkt brondagen in begrensde batches. Schakel Alleen samenvatting van het datumbereik in om dagelijkse bestanden over te slaan en alleen de samenvatting van het datumbereik te schrijven."
+            "value": "Samenvattingen van datumbereiken zijn standaard uitgeschakeld. Huidige exports schrijven één `%1$@` v9-aggregaat voor het onveranderlijke gevraagde datumbereik; deze samenvattingen zijn geen dagelijkse records. Historische wekelijkse, maandelijkse en jaarlijkse v8-artefacten blijven geldig en gedocumenteerd. Dagelijkse exports van Alle tijd worden in begrensde batches verwerkt; de samenvatting van het datumbereik is alleen beschikbaar voor bereiken van maximaal 10.000 dagen. Schakel Alleen samenvatting van het datumbereik in om dagelijkse bestanden over te slaan en alleen de samenvatting van het datumbereik te schrijven."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os resumos de intervalo estão desativados por padrão. As exportações atuais gravam um agregado `%1$@` v9 para o intervalo solicitado imutável; esses resumos não são registros diários. Os artefatos v8 históricos semanais, mensais e anuais continuam válidos e documentados. Todo o Período é compatível e processa dias de origem em lotes limitados. Ative Somente resumo do intervalo para ignorar arquivos diários e gravar apenas o resumo do intervalo."
+            "value": "Os resumos de intervalo estão desativados por padrão. As exportações atuais gravam um agregado `%1$@` v9 para o intervalo solicitado imutável; esses resumos não são registros diários. Os artefatos v8 históricos semanais, mensais e anuais continuam válidos e documentados. As exportações diárias de Todo o Período são processadas em lotes limitados; o Resumo do intervalo está disponível apenas para intervalos de até 10.000 dias. Ative Somente resumo do intervalo para ignorar arquivos diários e gravar apenas o resumo do intervalo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "默认情况下，日期范围摘要处于关闭状态。当前导出会为不可变的请求日期范围写入一个 `%1$@` v9 聚合；这些摘要不是每日记录。历史的每周、每月和每年 v8 构件仍然有效并已有文档记录。支持所有时间，并以有界批次处理源日期。启用“仅日期范围摘要”可跳过每日文件，只写入日期范围摘要。"
+            "value": "默认情况下，日期范围摘要处于关闭状态。当前导出会为不可变的请求日期范围写入一个 `%1$@` v9 聚合；这些摘要不是每日记录。历史的每周、每月和每年 v8 构件仍然有效并已有文档记录。所有时间的每日导出会以有界批次处理；日期范围摘要仅适用于不超过 10,000 天的范围。启用“仅日期范围摘要”可跳过每日文件，只写入日期范围摘要。"
           }
         }
       }

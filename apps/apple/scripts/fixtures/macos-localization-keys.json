@@ -744,7 +744,7 @@
     "Range",
     "Range Summary",
     "Range roll-up summary",
-    "Range summaries are off by default. Current exports write one `%@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time is supported and processes source days in bounded batches. Turn on Range summary only to skip daily files and write just the range summary.",
+    "Range summaries are off by default. Current exports write one `%@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time daily exports are supported and process source days in bounded batches; Range Summary is available only for ranges of 10,000 days or fewer. Turn on Range summary only to skip daily files and write just the range summary.",
     "Range summary",
     "Range summary only",
     "Rapid/Pounding Heartbeat",

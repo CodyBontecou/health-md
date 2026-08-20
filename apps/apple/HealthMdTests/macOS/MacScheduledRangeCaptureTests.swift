@@ -10,16 +10,10 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         super.tearDown()
     }
 
-    func testRollupCaptureIncludesSourceRecordsButOnlySelectedDailyOutput() throws {
+    func testRangeV9CaptureUsesOnlyImmutableRequestedSourceDates() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, timeZone: timeZone)
-        let sourceDate = try date(2026, 3, 9, timeZone: timeZone)
         let selected = record(on: selectedDate)
-        let source = record(on: sourceDate)
-        let recordsByOwnerDate = [
-            "2026-03-09": source,
-            "2026-03-15": selected,
-        ]
         let settings = makeSettings(summaryOnly: false)
 
         let captured = MacScheduledRangeCapture.capture(
@@ -28,11 +22,10 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
             timeZone: timeZone,
             latestAllowedDate: selectedDate
         ) { requestedDate in
-            recordsByOwnerDate[ownerDate(requestedDate, timeZone: timeZone)]
+            ownerDate(requestedDate, timeZone: timeZone) == "2026-03-15" ? selected : nil
         }
 
         XCTAssertEqual(captured.records.map { ownerDate($0.date, timeZone: timeZone) }, [
-            "2026-03-09",
             "2026-03-15",
         ])
         XCTAssertEqual(captured.dailyOutputOwnerDates, ["2026-03-15"])
@@ -40,66 +33,45 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         XCTAssertTrue(captured.failures.isEmpty)
     }
 
-    func testEmptySupportingCacheRecordRemainsInRollupCoverage() throws {
+    func testSuccessfulEmptyRequestedRecordRemainsInRangeCoverage() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, timeZone: timeZone)
-        let sourceDate = try date(2026, 3, 9, timeZone: timeZone)
-        let selected = record(on: selectedDate)
-        let emptySource = HealthData(
-            date: sourceDate,
-            timeContext: ExportFixtures.timeContext
-        )
-        let recordsByOwnerDate = [
-            "2026-03-09": emptySource,
-            "2026-03-15": selected,
-        ]
         let settings = makeSettings(summaryOnly: false)
+        let empty = HealthData(date: selectedDate, timeContext: ExportFixtures.timeContext)
 
         let captured = MacScheduledRangeCapture.capture(
             selectedDates: [selectedDate],
             settings: settings,
             timeZone: timeZone,
             latestAllowedDate: selectedDate
-        ) { requestedDate in
-            recordsByOwnerDate[ownerDate(requestedDate, timeZone: timeZone)]
-        }
-
-        XCTAssertEqual(captured.records.map { ownerDate($0.date, timeZone: timeZone) }, [
-            "2026-03-09",
-            "2026-03-15",
-        ])
-        XCTAssertEqual(captured.dailyOutputOwnerDates, ["2026-03-15"])
-        XCTAssertTrue(captured.failures.isEmpty)
-    }
-
-    func testSelectedCacheMissRemainsRetryableWhileUnselectedMissesAreSilent() throws {
-        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
-        let selectedDate = try date(2026, 3, 15, timeZone: timeZone)
-        let sourceDate = try date(2026, 3, 9, timeZone: timeZone)
-        let source = record(on: sourceDate)
-        let settings = makeSettings(summaryOnly: false)
-
-        let captured = MacScheduledRangeCapture.capture(
-            selectedDates: [selectedDate],
-            settings: settings,
-            timeZone: timeZone,
-            latestAllowedDate: selectedDate
-        ) { requestedDate in
-            ownerDate(requestedDate, timeZone: timeZone) == "2026-03-09" ? source : nil
-        }
+        ) { _ in empty }
 
         XCTAssertEqual(captured.records.count, 1)
         XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
         XCTAssertTrue(captured.selectedRecordDates.isEmpty)
-        XCTAssertEqual(captured.failures.count, 1)
-        XCTAssertEqual(captured.failures.first?.reason, .noHealthData)
-        XCTAssertEqual(
-            captured.failures.first.map { ownerDate($0.date, timeZone: timeZone) },
-            "2026-03-15"
-        )
+        XCTAssertEqual(captured.failures.map(\.reason), [.noHealthData])
     }
 
-    func testSummaryOnlyCaptureNeverSelectsDailyArtifacts() throws {
+    func testSelectedCacheMissRemainsRetryable() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let selectedDate = try date(2026, 3, 15, timeZone: timeZone)
+        let settings = makeSettings(summaryOnly: false)
+
+        let captured = MacScheduledRangeCapture.capture(
+            selectedDates: [selectedDate],
+            settings: settings,
+            timeZone: timeZone,
+            latestAllowedDate: selectedDate
+        ) { _ in nil }
+
+        XCTAssertTrue(captured.records.isEmpty)
+        XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
+        XCTAssertTrue(captured.selectedRecordDates.isEmpty)
+        XCTAssertEqual(captured.failures.count, 1)
+        XCTAssertEqual(captured.failures.first?.reason, .noHealthData)
+    }
+
+    func testSummaryOnlyRangeCaptureNeverSelectsDailyArtifacts() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, timeZone: timeZone)
         let selected = record(on: selectedDate)
@@ -110,9 +82,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
             settings: settings,
             timeZone: timeZone,
             latestAllowedDate: selectedDate
-        ) { requestedDate in
-            ownerDate(requestedDate, timeZone: timeZone) == "2026-03-15" ? selected : nil
-        }
+        ) { _ in selected }
 
         XCTAssertEqual(captured.records.count, 1)
         XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
@@ -126,9 +96,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.exportFormats = [.json]
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = summaryOnly
         settings.includeGranularData = false
         retainedSettings.append(settings)

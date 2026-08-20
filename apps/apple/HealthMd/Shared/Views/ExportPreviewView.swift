@@ -805,10 +805,28 @@ struct ExportPreviewView: View {
                 calendarTimeZoneIdentifier: frozenTimeZone.identifier
             )
         })
-        let requestedRange = try? HealthRollupRangeRequest(
-            ownerDateIdentifiers: requestedIdentifiers,
-            calendarTimeZoneIdentifier: frozenTimeZone.identifier
-        )
+        let requestedRange: HealthRollupRangeRequest?
+        do {
+            requestedRange = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: requestedIdentifiers,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+        } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+            requestedRange = nil
+            if settings.generateRangeSummary {
+                warnings.append(ExportPartialFailure(
+                    date: dates.first ?? startDate,
+                    dataType: "Range Summary",
+                    dateRangeDescription: rangeDescription(
+                        dates: dates,
+                        timeZone: frozenTimeZone
+                    ),
+                    errorDescription: HealthRollupRangeRequest.dayLimitUnavailableMessage
+                ))
+            }
+        } catch {
+            requestedRange = nil
+        }
         let rollupSection = targetType == .apiEndpoint
             ? nil
             : requestedRange.flatMap { rollupSummaryPreviewSection(for: rollupInputs, requestedRange: $0) }
@@ -889,6 +907,20 @@ struct ExportPreviewView: View {
     private var fixedExportByteCount: Int {
         guard targetType != .apiEndpoint, settings.writesDataDictionary else { return 0 }
         return ExportDataDictionarySizeEstimator.byteCount(using: settings.formatCustomization)
+    }
+
+    private func rangeDescription(dates: [Date], timeZone: TimeZone) -> String {
+        let sorted = dates.sorted()
+        let firstDate = sorted.first ?? startDate
+        let lastDate = sorted.last ?? firstDate
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let first = formatter.string(from: firstDate)
+        let last = formatter.string(from: lastDate)
+        return first == last ? first : "\(first) – \(last)"
     }
 
     private func rollupSummaryPreviewSection(

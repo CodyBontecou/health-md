@@ -3181,16 +3181,22 @@ final class VaultManager: ObservableObject {
             guard let frozenTimeZone = settings.exportTimeZoneOverride else {
                 throw ExportError.invalidExportPath(path: "missing calendar timezone")
             }
-            let requestedRange = try HealthRollupRangeRequest(
-                startDate: startDate,
-                endDate: endDate,
-                calendarTimeZoneIdentifier: frozenTimeZone.identifier
-            )
-            rollupEntries = rollupArchiveEntries(
-                from: rollupHealthData,
-                requestedRange: requestedRange,
-                settings: settings
-            )
+            do {
+                let requestedRange = try HealthRollupRangeRequest(
+                    startDate: startDate,
+                    endDate: endDate,
+                    calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                )
+                rollupEntries = rollupArchiveEntries(
+                    from: rollupHealthData,
+                    requestedRange: requestedRange,
+                    settings: settings
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // Range v9 is independently bounded. Preserve the daily archive instead of
+                // turning an unavailable supplemental summary into a total export failure.
+                rollupEntries = []
+            }
         } else {
             rollupEntries = []
         }
@@ -3581,6 +3587,8 @@ final class VaultManager: ObservableObject {
         recordSourceDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         requestedDates: [Date],
+        rollupRequestedDates: [Date]? = nil,
+        rollupCalendarTimeZoneIdentifier: String? = nil,
         startDate: Date,
         endDate: Date,
         healthSubfolder: String? = nil,
@@ -3615,15 +3623,19 @@ final class VaultManager: ObservableObject {
         let destinationBinding = try productionDestinationBinding(for: vaultURL)
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
+        let immutableRollupDates = rollupRequestedDates ?? requestedDates
         try preflightExportDestinations(
             settings: settings,
             healthSubfolder: healthSubfolder,
             dates: requestedDates,
-            rollupDates: requestedDates
+            rollupDates: immutableRollupDates
         )
 
         var sourceCalendar = Calendar.current
-        sourceCalendar.timeZone = settings.exportTimeZoneOverride ?? .current
+        sourceCalendar.timeZone = rollupCalendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
         var datedFiles: [(date: Date, url: URL)] = []
         datedFiles.reserveCapacity(recordPayloadFiles.count)
         if let recordSourceDates,
@@ -3681,32 +3693,38 @@ final class VaultManager: ObservableObject {
 
         var summaries: [HealthRollupSummary] = []
         var finalizedUnits = 0
-        let estimatedUnits = max(datedFiles.count + requestedDates.count, 1)
+        let estimatedUnits = max(datedFiles.count + immutableRollupDates.count, 1)
         if HealthRollupExporter.isEnabled(settings: settings) {
             try checkCancellation()
-            let identifiers = Set(requestedDates.map {
+            let identifiers = Set(immutableRollupDates.map {
                 HealthKitDailyOwnershipMetadata.ownerDate(
                     for: $0,
                     calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
                 )
             })
-            let requestedRange = try HealthRollupRangeRequest(
-                ownerDateIdentifiers: identifiers,
-                calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
-            )
-            var records: [HealthData] = []
-            for item in rollupProjectionFiles
-                where item.date >= requestedRange.startDate && item.date <= requestedRange.endDate {
-                records.append(try await Self.decodeHealthData(from: item.url))
+            do {
+                let requestedRange = try HealthRollupRangeRequest(
+                    ownerDateIdentifiers: identifiers,
+                    calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
+                )
+                var records: [HealthData] = []
+                for item in rollupProjectionFiles
+                    where item.date >= requestedRange.startDate && item.date <= requestedRange.endDate {
+                    records.append(try await Self.decodeHealthData(from: item.url))
+                }
+                summaries = HealthRollupExporter.makeSummaries(
+                    from: records,
+                    requestedRange: requestedRange,
+                    settings: settings
+                )
+                finalizedUnits += 1
+                progress?(finalizedUnits, estimatedUnits, requestedRange.endDate)
+                await Task.yield()
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // Daily files may already be committed by the legacy receiver. Treat the bounded
+                // supplemental summary as unavailable without invalidating those daily outputs.
+                summaries = []
             }
-            summaries = HealthRollupExporter.makeSummaries(
-                from: records,
-                requestedRange: requestedRange,
-                settings: settings
-            )
-            finalizedUnits += 1
-            progress?(finalizedUnits, estimatedUnits, requestedRange.endDate)
-            await Task.yield()
         }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
@@ -3722,9 +3740,9 @@ final class VaultManager: ObservableObject {
                 try ensureCoordinatedDirectoryExists(at: healthFolderURL)
             }
             let archiveName = archiveFilename(
-                startDate: startDate,
-                endDate: endDate,
-                timeZone: settings.exportTimeZoneOverride
+                startDate: immutableRollupDates.first ?? startDate,
+                endDate: immutableRollupDates.last ?? endDate,
+                timeZone: sourceCalendar.timeZone
             )
             let archiveURL = healthFolderURL.appendingPathComponent(
                 archiveName,
@@ -4000,7 +4018,8 @@ final class VaultManager: ObservableObject {
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
         let requestedRollupDates = rollupDates ?? dates
         let rollupPaths: [String]
-        if HealthRollupExporter.isEnabled(settings: settings) {
+        if HealthRollupExporter.isEnabled(settings: settings),
+           !requestedRollupDates.isEmpty {
             guard let frozenTimeZone = settings.exportTimeZoneOverride else {
                 throw ExportError.invalidExportPath(path: "missing calendar timezone")
             }
@@ -4010,15 +4029,21 @@ final class VaultManager: ObservableObject {
                     calendarTimeZoneIdentifier: frozenTimeZone.identifier
                 )
             })
-            let request = try HealthRollupRangeRequest(
-                ownerDateIdentifiers: identifiers,
-                calendarTimeZoneIdentifier: frozenTimeZone.identifier
-            )
-            rollupPaths = HealthRollupExporter.outputRelativePaths(
-                for: request,
-                healthSubfolder: settings.archiveModeEnabled ? "" : effectiveHealthSubfolder,
-                settings: settings
-            )
+            do {
+                let request = try HealthRollupRangeRequest(
+                    ownerDateIdentifiers: identifiers,
+                    calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                )
+                rollupPaths = HealthRollupExporter.outputRelativePaths(
+                    for: request,
+                    healthSubfolder: settings.archiveModeEnabled ? "" : effectiveHealthSubfolder,
+                    settings: settings
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // The supplemental range artifact is unavailable, but daily destination
+                // collision checks must still run so the daily export can proceed safely.
+                rollupPaths = []
+            }
         } else {
             rollupPaths = []
         }

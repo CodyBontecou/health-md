@@ -1098,6 +1098,7 @@ class SchedulingManager: ObservableObject {
                     dates: dates,
                     settingsSnapshot: settingsSnapshot,
                     originalRequestedDates: originalRequestedDates,
+                    originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                     notificationOperationID: notificationOperationID
                 )
             case .apiEndpoint:
@@ -2535,6 +2536,7 @@ class SchedulingManager: ObservableObject {
         dates: [Date],
         settingsSnapshot: ExportSettingsSnapshot?,
         originalRequestedDates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?,
         notificationOperationID: UUID?
     ) async -> ExportOrchestrator.ExportResult {
         logger.info("Starting background export")
@@ -2553,6 +2555,10 @@ class SchedulingManager: ObservableObject {
         let vaultManager = VaultManager()
         let advancedSettings = settingsSnapshot?.makeAdvancedExportSettings()
             ?? AdvancedExportSettings()
+        if let originalCalendarTimeZoneIdentifier,
+           let originalCalendarTimeZone = TimeZone(identifier: originalCalendarTimeZoneIdentifier) {
+            advancedSettings.exportTimeZoneOverride = originalCalendarTimeZone
+        }
 
         // Check if vault is configured and currently accessible.
         vaultManager.refreshVaultAccess()
