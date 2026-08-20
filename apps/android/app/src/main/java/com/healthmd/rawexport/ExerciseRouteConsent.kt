@@ -51,14 +51,36 @@ class InteractiveRouteConsent internal constructor(
     private val maximumPrompts: Int = ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT,
 ) : AbstractCoroutineContextElement(Key) {
     private val promptedSessionIds = linkedSetOf<String>()
+    private val grantedRoutes = linkedMapOf<String, ExerciseRoute>()
+    private var promptSelectionSealed = false
 
     /** Atomically reserves one of this export run's globally shared prompt slots. */
     @Synchronized
     internal fun reservePrompt(sessionId: String): Boolean {
-        if (sessionId in promptedSessionIds || promptedSessionIds.size >= maximumPrompts) return false
+        if (promptSelectionSealed || sessionId in promptedSessionIds || promptedSessionIds.size >= maximumPrompts) {
+            return false
+        }
         promptedSessionIds += sessionId
         return true
     }
+
+    @Synchronized
+    internal fun hasPromptCapacity(): Boolean =
+        !promptSelectionSealed && promptedSessionIds.size < maximumPrompts
+
+    /** Prevents canonical capture passes from changing the candidate set selected by preflight. */
+    @Synchronized
+    internal fun sealPromptSelection() {
+        promptSelectionSealed = true
+    }
+
+    @Synchronized
+    internal fun recordGrantedRoute(sessionId: String, route: ExerciseRoute) {
+        grantedRoutes[sessionId] = route
+    }
+
+    @Synchronized
+    internal fun grantedRoute(sessionId: String): ExerciseRoute? = grantedRoutes[sessionId]
 
     companion object Key : CoroutineContext.Key<InteractiveRouteConsent>
 }

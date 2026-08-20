@@ -11,6 +11,7 @@ import io.mockk.mockk
 import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -325,6 +326,24 @@ class ExerciseRouteConsentCoordinatorTest {
         assertThat(surface.prompted.first().sessionId).isEqualTo("session-25")
         assertThat(surface.prompted.last().sessionId).isEqualTo("session-16")
         assertThat(granted).hasSize(ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT)
+    }
+
+    @Test
+    fun grantedRouteIsReusedAfterCandidateSelectionIsSealed() = runTest {
+        val coordinator = ExerciseRouteConsentCoordinator()
+        val surface = RecordingSurface(coordinator) { route(2) }
+        coordinator.attach(surface)
+
+        val results = withInteractiveRouteConsent {
+            val first = coordinator.requestRoutes(listOf(pending("a", 100)))
+            currentCoroutineContext()[InteractiveRouteConsent]!!.sealPromptSelection()
+            val cached = coordinator.requestRoutes(listOf(pending("a", 100), pending("older", 50)))
+            first to cached
+        }
+
+        assertThat(results.first.keys).containsExactly("a")
+        assertThat(results.second.keys).containsExactly("a")
+        assertThat(surface.prompted.map { it.sessionId }).containsExactly("a")
     }
 
     @Test

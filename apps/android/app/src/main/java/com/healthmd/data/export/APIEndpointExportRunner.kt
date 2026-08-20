@@ -43,6 +43,7 @@ import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -62,6 +63,8 @@ import kotlinx.serialization.json.jsonPrimitive
 interface APIExportCaptureSource {
     fun isBeforeFirstUnlock(): Boolean
 
+    suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) = Unit
+
     suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData
 }
 
@@ -69,6 +72,18 @@ private class HealthRepositoryAPIExportCaptureSource(
     private val healthRepository: HealthRepository,
 ) : APIExportCaptureSource {
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
+
+    override suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) {
+        val effectiveSelection = settings.effectiveDataTypeSelection()
+        if (effectiveSelection.workouts) {
+            healthRepository.authorizeExerciseRouteConsent(
+                dates = dates,
+                dataTypes = effectiveSelection,
+                includeGranularData = settings.shouldFetchGranularData(),
+                zoneId = settings.executionEnginePin?.ianaTimeZone?.let(ZoneId::of) ?: ZoneId.systemDefault(),
+            )
+        }
+    }
 
     override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
         val effectiveSelection = settings.effectiveDataTypeSelection()
@@ -263,6 +278,17 @@ class APIEndpointExportRunner private constructor(
             exportedAt = clock(),
             ids = idSource.next(),
         )
+        if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
+            try {
+                // Authorization sees the complete scope before owner dates are captured in their
+                // canonical ascending order. Noninteractive capture sources intentionally no-op.
+                captureSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings)
+            } catch (_: CancellationException) {
+                return cancelledResult(normalizedDates, emptyList())
+            } catch (_: Exception) {
+                // Consent is optional; preserve the established capture and failure behavior.
+            }
+        }
         val capture = captureDates(normalizedDates, snapshot.settings, onProgress)
         if (capture.wasCancelled) {
             return cancelledResult(normalizedDates, capture.failedDateDetails)

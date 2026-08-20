@@ -189,6 +189,44 @@ class HealthConnectWorkoutRouteConsentTest {
     }
 
     @Test
+    fun consentPreflightStopsAfterGloballyNewestTenAcrossBoundedWindows() = runTest {
+        val dates = (0L..44L).map { date.minusDays(44L - it) }
+        val allSessions = dates.mapIndexed { index, sessionDate ->
+            thirdPartySession(sessionDate, "session-${index + 1}")
+        }
+        val exercisePages = ArrayDeque(allSessions.chunked(7).asReversed())
+        val client = mockk<HealthConnectClient>()
+        val features = mockk<HealthConnectFeatures>()
+        every { features.getFeatureStatus(any()) } returns HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
+        every { client.features } returns features
+        coEvery { client.readRecords(any<ReadRecordsRequest<ExerciseSessionRecord>>()) } answers {
+            ReadRecordsResponse(exercisePages.removeFirst(), null)
+        }
+        val coordinator = ExerciseRouteConsentCoordinator()
+        val prompted = mutableListOf<PendingExerciseRouteConsent>()
+        coordinator.attach(object : ExerciseRouteConsentCoordinator.Surface {
+            override fun launchRouteRequest(session: PendingExerciseRouteConsent): Boolean {
+                prompted += session
+                coordinator.onRouteResult(null)
+                return true
+            }
+        })
+
+        withInteractiveRouteConsent {
+            manager(client, coordinator).authorizeExerciseRouteConsent(
+                dates = dates,
+                includeGranularData = true,
+                zoneId = ZoneId.of("UTC"),
+            )
+        }
+
+        assertThat(prompted.map { it.sessionId }).containsExactlyElementsIn(
+            allSessions.takeLast(10).asReversed().map { it.metadata.id },
+        ).inOrder()
+        assertThat(exercisePages).hasSize(5)
+    }
+
+    @Test
     fun nonWorkoutSelectionNeverRequestsPersistentRouteGrant() = runTest {
         val session = thirdPartySession()
         val gateway = ExerciseRouteConsentGateway { sessions ->

@@ -82,10 +82,18 @@ class ExerciseRouteConsentCoordinator @Inject constructor() : ExerciseRouteConse
             val granted = linkedMapOf<String, ExerciseRoute>()
             for (candidate in candidates) {
                 currentCoroutineContext().ensureActive()
+                val cached = run.grantedRoute(candidate.sessionId)
+                if (cached != null) {
+                    granted[candidate.sessionId] = cached
+                    continue
+                }
                 if (!canLaunchPrompt() || !run.reservePrompt(candidate.sessionId)) continue
                 when (val outcome = prompt(candidate)) {
                     PromptOutcome.NotLaunched -> Unit
-                    is PromptOutcome.Completed -> outcome.route?.let { granted[candidate.sessionId] = it }
+                    is PromptOutcome.Completed -> outcome.route?.let { route ->
+                        run.recordGrantedRoute(candidate.sessionId, route)
+                        granted[candidate.sessionId] = route
+                    }
                 }
             }
             granted
