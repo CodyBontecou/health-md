@@ -11,8 +11,15 @@ final class MacExportResultIngressTests: XCTestCase {
         var resultMutationCount = 0
         var laterRouteCount = 0
 
+        let input = MacExportResultIngress.validate(payload)
+        guard case .rejected(let rejectedJobID, let ingressFailure) = input else {
+            return XCTFail("Invalid accounting must be rejected at app ingress")
+        }
+        XCTAssertEqual(rejectedJobID, payload.jobID)
+        XCTAssertEqual(ingressFailure.jobID, payload.jobID)
+
         let outcome = await MacExportResultIngress.handle(
-            payload,
+            input,
             cancelWaiters: { cancelledJobIDs.append($0) },
             completeScheduledResult: { _ in resultMutationCount += 1; return true },
             completeRequestResult: { _ in resultMutationCount += 1; return true },
@@ -46,8 +53,14 @@ final class MacExportResultIngressTests: XCTestCase {
         var publishedCount = 0
         var failureCount = 0
 
+        let input = MacExportResultIngress.validate(payload)
+        guard case .validated(let validatedPayload) = input else {
+            return XCTFail("Consistent accounting must pass app ingress")
+        }
+        XCTAssertEqual(validatedPayload.jobID, payload.jobID)
+
         let outcome = await MacExportResultIngress.handle(
-            payload,
+            input,
             cancelWaiters: { _ in },
             completeScheduledResult: { _ in scheduledCount += 1; return true },
             completeRequestResult: { _ in requestCount += 1; return true },
@@ -75,7 +88,7 @@ final class MacExportResultIngressTests: XCTestCase {
         var publishedFailures: [MacExportFailure] = []
 
         let outcome = await MacExportResultIngress.handle(
-            payload,
+            MacExportResultIngress.validate(payload),
             cancelWaiters: { _ in },
             completeScheduledResult: { _ in false },
             completeRequestResult: { _ in false },
@@ -93,6 +106,32 @@ final class MacExportResultIngressTests: XCTestCase {
         XCTAssertEqual(publishedResults, 0)
         XCTAssertEqual(publishedFailures.count, 1)
         XCTAssertEqual(publishedFailures.first?.jobID, payload.jobID)
+    }
+
+    func testUnmatchedValidatedCompletionPublishesOnlyValidatedResult() async {
+        let payload = makePayload()
+        var publishedResults: [MacExportResultPayload] = []
+        var publishedFailureCount = 0
+
+        let outcome = await MacExportResultIngress.handle(
+            MacExportResultIngress.validate(payload),
+            cancelWaiters: { _ in },
+            completeScheduledResult: { _ in false },
+            completeRequestResult: { _ in false },
+            completeRecoveredScheduledResult: { _ in false },
+            completeRecoveredRequestResult: { _ in false },
+            publishResult: { publishedResults.append($0) },
+            completeScheduledFailure: { _ in false },
+            completeRequestFailure: { _ in false },
+            completeRecoveredScheduledFailure: { _ in false },
+            completeRecoveredRequestFailure: { _ in false },
+            publishFailure: { _ in publishedFailureCount += 1 }
+        )
+
+        XCTAssertEqual(outcome, .init(route: .published, rejected: false))
+        XCTAssertEqual(publishedResults.map(\.jobID), [payload.jobID])
+        XCTAssertTrue(publishedResults.allSatisfy(\.hasConsistentFileAccounting))
+        XCTAssertEqual(publishedFailureCount, 0)
     }
 
     private func makePayload(

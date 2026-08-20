@@ -6,6 +6,11 @@ import Foundation
 /// terminal failures before any result consumer or waiter sees them.
 @MainActor
 enum MacExportResultIngress {
+    enum Input {
+        case validated(MacExportResultPayload)
+        case rejected(jobID: UUID, failure: MacExportFailure)
+    }
+
     enum Route: Equatable {
         case scheduled
         case request
@@ -19,8 +24,24 @@ enum MacExportResultIngress {
         let rejected: Bool
     }
 
+    /// Validate synchronously at the app callback boundary, before the result is
+    /// captured by asynchronous routing or exposed to any result subscriber.
+    static func validate(_ payload: MacExportResultPayload) -> Input {
+        guard payload.hasConsistentFileAccounting else {
+            return .rejected(
+                jobID: payload.jobID,
+                failure: MacExportFailure(
+                    jobID: payload.jobID,
+                    reason: .payloadDecodeFailure,
+                    message: "The Mac returned invalid export accounting. The completion was rejected."
+                )
+            )
+        }
+        return .validated(payload)
+    }
+
     static func handle(
-        _ payload: MacExportResultPayload,
+        _ input: Input,
         cancelWaiters: (UUID) -> Void,
         completeScheduledResult: (MacExportResultPayload) -> Bool,
         completeRequestResult: (MacExportResultPayload) -> Bool,
@@ -33,13 +54,9 @@ enum MacExportResultIngress {
         completeRecoveredRequestFailure: (MacExportFailure) -> Bool,
         publishFailure: (MacExportFailure) -> Void
     ) async -> Outcome {
-        guard payload.hasConsistentFileAccounting else {
-            let failure = MacExportFailure(
-                jobID: payload.jobID,
-                reason: .payloadDecodeFailure,
-                message: "The Mac returned invalid export accounting. The completion was rejected."
-            )
-            cancelWaiters(payload.jobID)
+        switch input {
+        case .rejected(let jobID, let failure):
+            cancelWaiters(jobID)
             if completeScheduledFailure(failure) {
                 return Outcome(route: .scheduled, rejected: true)
             }
@@ -54,9 +71,27 @@ enum MacExportResultIngress {
             }
             publishFailure(failure)
             return Outcome(route: .published, rejected: true)
+        case .validated(let payload):
+            cancelWaiters(payload.jobID)
+            return await routeValidated(
+                payload,
+                completeScheduledResult: completeScheduledResult,
+                completeRequestResult: completeRequestResult,
+                completeRecoveredScheduledResult: completeRecoveredScheduledResult,
+                completeRecoveredRequestResult: completeRecoveredRequestResult,
+                publishResult: publishResult
+            )
         }
+    }
 
-        cancelWaiters(payload.jobID)
+    private static func routeValidated(
+        _ payload: MacExportResultPayload,
+        completeScheduledResult: (MacExportResultPayload) -> Bool,
+        completeRequestResult: (MacExportResultPayload) -> Bool,
+        completeRecoveredScheduledResult: (MacExportResultPayload) async -> Bool,
+        completeRecoveredRequestResult: (MacExportResultPayload) -> Bool,
+        publishResult: (MacExportResultPayload) -> Void
+    ) async -> Outcome {
         if completeScheduledResult(payload) {
             return Outcome(route: .scheduled, rejected: false)
         }
@@ -69,6 +104,8 @@ enum MacExportResultIngress {
         if completeRecoveredRequestResult(payload) {
             return Outcome(route: .recoveredRequest, rejected: false)
         }
+        // Only unmatched validated results reach the observer stream. This is
+        // the path used by interactive UI and the physical performance lab.
         publishResult(payload)
         return Outcome(route: .published, rejected: false)
     }

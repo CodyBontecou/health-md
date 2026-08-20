@@ -1687,7 +1687,11 @@ class SchedulingManager: ObservableObject {
         _ payload: MacExportResultPayload,
         requestedDates: [Date]
     ) -> Bool {
+        let dailyNoteActions = payload.dailyNoteUpdateCount.addingReportingOverflow(
+            payload.dailyNoteSkipCount
+        )
         guard payload.hasConsistentFileAccounting,
+              !dailyNoteActions.overflow,
               payload.totalCount == requestedDates.count,
               payload.successCount >= 0,
               payload.successCount <= payload.totalCount,
@@ -1698,14 +1702,14 @@ class SchedulingManager: ObservableObject {
               payload.dailyNoteUpdateCount <= payload.totalCount,
               payload.dailyNoteSkipCount >= 0,
               payload.dailyNoteSkipCount <= payload.totalCount,
-              payload.dailyNoteUpdateCount + payload.dailyNoteSkipCount <= payload.totalCount,
+              dailyNoteActions.partialValue <= payload.totalCount,
               let completedDates = payload.completedDates,
               Set(completedDates).count == completedDates.count else {
             return false
         }
         let requested = Set(requestedDates)
         guard completedDates.allSatisfy(requested.contains),
-              payload.dailyNoteUpdateCount + payload.dailyNoteSkipCount <= completedDates.count else {
+              dailyNoteActions.partialValue <= completedDates.count else {
             return false
         }
         if payload.status == .success && completedDates.count != requested.count {

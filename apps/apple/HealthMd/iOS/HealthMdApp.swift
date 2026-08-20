@@ -553,6 +553,15 @@ struct HealthMdApp: App {
 
     private func setupSyncMessageHandler() {
         syncService.onMessageReceived = { message in
+            // Validate Mac accounting synchronously at the app ingress. The
+            // asynchronous router receives a typed validated/rejected input, so
+            // no raw result can cancel waiters or reach event subscribers first.
+            let macExportResultIngress: MacExportResultIngress.Input?
+            if case .macExportResult(let payload) = message {
+                macExportResultIngress = MacExportResultIngress.validate(payload)
+            } else {
+                macExportResultIngress = nil
+            }
             Task { @MainActor in
                 switch message {
                 case .requestData(let dates):
@@ -587,9 +596,10 @@ struct HealthMdApp: App {
                     SchedulingManager.shared.handleScheduledMacExportProgress(progress)
                     CLIExportActivityTracker.shared.updateMac(progress)
                     self.syncService.publishMacExportMessage(message)
-                case .macExportResult(let payload):
+                case .macExportResult:
+                    guard let macExportResultIngress else { return }
                     _ = await MacExportResultIngress.handle(
-                        payload,
+                        macExportResultIngress,
                         cancelWaiters: { jobID in
                             self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
                         },
@@ -646,9 +656,10 @@ struct HealthMdApp: App {
                             return handled
                         },
                         completeRecoveredRequestFailure: { failure in
+                            guard let jobID = failure.jobID else { return false }
                             let handled = self.corpusRecoveryManager
                                 .rejectRecoveredMacRequestCompletion(
-                                    jobID: payload.jobID,
+                                    jobID: jobID,
                                     message: failure.message
                                 )
                             if handled { self.syncService.isSyncing = false }

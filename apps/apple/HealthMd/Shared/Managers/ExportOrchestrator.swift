@@ -189,6 +189,17 @@ struct ExportOrchestrator {
         init(macExportPayload payload: MacExportResultPayload) {
             let breakdown = payload.outputBreakdown
             let classified = breakdown?.generatedFileCount ?? 0
+            let unclassifiedGap: Int
+            if breakdown?.wasTruncated == true {
+                unclassifiedGap = 0
+            } else {
+                let difference = payload.totalFilesWritten.subtractingReportingOverflow(classified)
+                unclassifiedGap = difference.overflow ? 0 : max(difference.partialValue, 0)
+            }
+            let unclassified = Self.saturatingAdd(
+                breakdown?.unclassifiedFileCount ?? 0,
+                unclassifiedGap
+            )
             self.init(
                 successCount: payload.successCount,
                 totalCount: payload.totalCount,
@@ -206,10 +217,9 @@ struct ExportOrchestrator {
                     ?? payload.externalRecordFileCount,
                 // A truncated breakdown's gap is budget loss, not evidence that the
                 // producer emitted unclassified files. Keep those concepts distinct.
-                unclassifiedFileCount: (breakdown?.unclassifiedFileCount ?? 0)
-                    + (breakdown?.wasTruncated == true
-                        ? 0
-                        : max(payload.totalFilesWritten - classified, 0)),
+                // Saturation also keeps malformed direct construction non-trapping;
+                // app ingress separately rejects inconsistent wire payloads.
+                unclassifiedFileCount: unclassified,
                 fileCountLowerBound: payload.totalFilesWritten,
                 authoritativeFileCount: payload.isTotalFilesWrittenAuthoritative
                     ? payload.totalFilesWritten : nil,

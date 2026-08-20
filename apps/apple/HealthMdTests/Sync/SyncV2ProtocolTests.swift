@@ -1221,6 +1221,40 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(noteSumOverflow.hasConsistentFileAccounting)
     }
 
+    func testMaximumNonoverflowingAccountingRemainsSafeAcrossResultOperations() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: Int.max,
+            totalCount: Int.max,
+            formatsPerDate: 1,
+            totalFilesWritten: Int.max,
+            failedDateDetails: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertEqual(result.knownFileCount, Int.max)
+        XCTAssertEqual(result.totalFilesWritten, Int.max)
+        XCTAssertFalse(result.hasAuthoritativeFileCount)
+        XCTAssertTrue(result.outputBreakdown.wasTruncated)
+
+        let saturated = ExportOrchestrator.ExportResult(
+            successCount: 1,
+            totalCount: 1,
+            failedDateDetails: [],
+            looseAggregateFileCount: Int.max,
+            individualEntryFileCount: Int.max,
+            unclassifiedFileCount: Int.max
+        )
+        XCTAssertEqual(saturated.categorizedFileCount, Int.max)
+        XCTAssertEqual(saturated.knownFileCount, Int.max)
+        XCTAssertEqual(saturated.totalFilesWritten, Int.max)
+    }
+
     func testTruncatedPayloadRejectsProviderSidecarCountAboveWireTotal() {
         let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
         let breakdown = ExportHistoryOutputBreakdown(
