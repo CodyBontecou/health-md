@@ -195,7 +195,8 @@
         },
         "days_counted": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 10000
         },
         "statistics": {
           "type": "object",
@@ -359,10 +360,14 @@
             "format": "date"
           },
           "calendar_time_zone": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           },
           "source_dates": {
             "type": "array",
+            "uniqueItems": true,
+            "maxItems": 10000,
             "items": {
               "type": "string",
               "format": "date"
@@ -370,6 +375,7 @@
           },
           "values": {
             "type": "array",
+            "minItems": 1,
             "items": {
               "$ref": "#/$defs/rollupValue"
             }
@@ -428,6 +434,34 @@
           },
           "profile_revision": {
             "const": 2
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile_revision": {
+            "const": 2
+          }
+        },
+        "required": [
+          "profile_revision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "profile": {
+            "const": "apple_health_data_v8"
+          },
+          "rollups": {
+            "items": {
+              "properties": {
+                "period": {
+                  "const": "range"
+                }
+              }
+            }
           }
         }
       }

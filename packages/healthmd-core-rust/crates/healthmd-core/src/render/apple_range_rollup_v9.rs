@@ -236,6 +236,10 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             Value::String(context.rollup.end_date.clone()),
         ),
         (
+            "calendar_timezone".to_owned(),
+            Value::String(context.rollup.calendar_time_zone.clone()),
+        ),
+        (
             "days_expected".to_owned(),
             Value::from(context.days_expected),
         ),
@@ -320,7 +324,7 @@ fn metric_json(metric: &Metric<'_>) -> Value {
 
 fn render_csv(context: &Context<'_>) -> Vec<u8> {
     let mut output = String::from(
-        "Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version,Period,Period ID,Start Date,End Date,Days Expected,Days Counted,Coverage Percent,Category,Metric,Key,Canonical Key,Primary Value,Unit,Metric Days Counted,Rule,Statistic,Statistic Value,Notes\n",
+        "Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version,Calendar Timezone,Period,Period ID,Start Date,End Date,Days Expected,Days Counted,Coverage Percent,Category,Metric,Key,Canonical Key,Primary Value,Unit,Metric Days Counted,Rule,Statistic,Statistic Value,Notes\n",
     );
     for metric in &context.metrics {
         let common = [
@@ -329,6 +333,7 @@ fn render_csv(context: &Context<'_>) -> Vec<u8> {
             "healthmd.health_data".to_owned(),
             "8".to_owned(),
             "8".to_owned(),
+            context.rollup.calendar_time_zone.clone(),
             period_id(context.rollup.period).to_owned(),
             context.period_id.clone(),
             context.rollup.start_date.clone(),
@@ -380,6 +385,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
         format!("period_id: {}", context.period_id),
         format!("start_date: {}", context.rollup.start_date),
         format!("end_date: {}", context.rollup.end_date),
+        format!("calendar_timezone: {}", context.rollup.calendar_time_zone),
         format!("days_expected: {}", context.days_expected),
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),
@@ -525,6 +531,7 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
         format!("title: {}", yaml_quoted(&title)),
         format!("start_date: {}", context.rollup.start_date),
         format!("end_date: {}", context.rollup.end_date),
+        format!("calendar_timezone: {}", context.rollup.calendar_time_zone),
         format!("days_expected: {}", context.days_expected),
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),

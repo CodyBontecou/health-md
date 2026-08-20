@@ -7,24 +7,24 @@
       "sha256" : "22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92"
     },
     {
-      "bytes" : 11606,
+      "bytes" : 11629,
       "path" : "range-bases.md",
-      "sha256" : "49793b79b87f95a841046acaff138cf076dac9822a4a7536af48cb9981469e25"
+      "sha256" : "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec"
     },
     {
-      "bytes" : 37688,
+      "bytes" : 38202,
       "path" : "range.csv",
-      "sha256" : "5da1b3619abbf522cc49749b672297f881e4468a35edc9f22e4435bef64f808a"
+      "sha256" : "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7"
     },
     {
-      "bytes" : 39631,
+      "bytes" : 39662,
       "path" : "range.json",
-      "sha256" : "0b53aa6a2902562fa98ef68e15305d41a3c150f471d626f844a5a6c4f9c35892"
+      "sha256" : "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b"
     },
     {
-      "bytes" : 9226,
+      "bytes" : 9249,
       "path" : "range.md",
-      "sha256" : "47745047ccc4053ab049fe114fe75ee4319b26486207a651e155b4fb1ee8d1f8"
+      "sha256" : "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4"
     },
     {
       "bytes" : 11564,

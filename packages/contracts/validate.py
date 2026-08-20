@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import csv
 import hashlib
 import json
 import math
@@ -2348,8 +2349,18 @@ def validate_semantic_range_capability_fixture(path: Path) -> None:
             "start_date": range_v2["rollup_range"]["start_date"],
             "end_date": range_v2["rollup_range"]["end_date"],
             "calendar_time_zone": "UTC",
-            "source_dates": [],
-            "values": [],
+            "source_dates": [range_v2["rollup_range"]["start_date"]],
+            "values": [{
+                "output_key": "steps",
+                "rule": "sum",
+                "primary_value": {
+                    "value_type": "number",
+                    "number": {"representation": "unsigned_integer", "decimal": "1"},
+                    "unit": {"id": "steps"},
+                },
+                "days_counted": 1,
+                "statistics": {},
+            }],
         }],
         "retained_extensions": [],
     }
@@ -2362,8 +2373,17 @@ def validate_semantic_range_capability_fixture(path: Path) -> None:
     else:
         fail(f"{context}: semantic-result schema must reject range at profile revision 1")
 
+    synthetic_result["profile_revision"] = 2
+    synthetic_result["rollups"][0]["period"] = "iso_week"
+    try:
+        validate_json_schema_subset(synthetic_result, result_schema, f"{context}.calendar_result_v2")
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: semantic-result schema must reject calendar roll-ups at profile revision 2")
 
-def validate_rollup_summary_fixture(path: Path) -> None:
+
+def validate_rollup_summary_fixture(root: Path, path: Path) -> None:
     context = f"rollup fixture {path}"
     payload = load_json(path, context)
     if not isinstance(payload, dict):
@@ -2376,6 +2396,10 @@ def validate_rollup_summary_fixture(path: Path) -> None:
     start_text = payload.get("start_date")
     end_text = payload.get("end_date")
     source_dates = payload.get("source_dates")
+    try:
+        ZoneInfo(payload.get("calendar_timezone"))
+    except (TypeError, ZoneInfoNotFoundError):
+        fail(f"{context}.calendar_timezone: must be a valid IANA timezone identifier")
     try:
         start = datetime.strptime(start_text, "%Y-%m-%d").date()
         end = datetime.strptime(end_text, "%Y-%m-%d").date()
@@ -2421,6 +2445,40 @@ def validate_rollup_summary_fixture(path: Path) -> None:
             expected_categories.setdefault(metric.get("category"), []).append(metric)
     if categories != expected_categories:
         fail(f"{context}.categories: must match the production metric category projection")
+
+
+def validate_rollup_production_fixture(root: Path, path: Path) -> None:
+    context = f"rollup production fixture {path}"
+    production_names = {
+        "range-v9.json": "range.json",
+        "range-v9.csv": "range.csv",
+        "range-v9.md": "range.md",
+        "range-v9-bases.md": "range-bases.md",
+    }
+    production_name = production_names.get(path.name)
+    if production_name is None:
+        fail(f"{context}: unknown canonical range-v9 fixture")
+    generated = root / "apps/apple/docs/reference/generated/rollups" / production_name
+    if generated.read_bytes() != path.read_bytes():
+        fail(f"{context}: fixture must be copied byte-for-byte from the production Swift renderer")
+
+    content = path.read_text()
+    if path.suffix == ".csv":
+        rows = list(csv.reader(content.splitlines()))
+        if not rows or rows[0][:6] != [
+            "Schema", "Schema Version", "Source Schema", "Source Schema Version",
+            "Rollup Rules Version", "Calendar Timezone",
+        ]:
+            fail(f"{context}: range-v9 CSV leading contract columns are incomplete")
+        if len(rows) < 2 or any(len(row) != len(rows[0]) or row[5] != "UTC" for row in rows[1:]):
+            fail(f"{context}: every production CSV row must carry the frozen calendar timezone")
+    elif path.suffix == ".md":
+        if "\ncalendar_timezone: UTC\n" not in content:
+            fail(f"{context}: Markdown/Bases frontmatter must carry calendar_timezone")
+        if path.name == "range-v9.md" and "## Roll-up notes" not in content:
+            fail(f"{context}: canonical Markdown fixture must include the production body")
+        if path.name == "range-v9-bases.md" and "rollup_metrics:" not in content:
+            fail(f"{context}: canonical Bases fixture must include all metric projections")
 
 
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
@@ -2554,8 +2612,10 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 validate_shared_setup_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
-            elif identifier == "healthmd.rollup_summary" and fixture_path.suffix == ".json":
-                validate_rollup_summary_fixture(fixture_path)
+            elif identifier == "healthmd.rollup_summary":
+                validate_rollup_production_fixture(root, fixture_path)
+                if fixture_path.suffix == ".json":
+                    validate_rollup_summary_fixture(root, fixture_path)
 
     inventories = manifest.get("inventories")
     if not isinstance(inventories, list) or not inventories:

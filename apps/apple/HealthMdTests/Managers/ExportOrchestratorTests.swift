@@ -756,6 +756,8 @@ final class ExportOrchestratorTests: XCTestCase {
             "Health/Health.md Export 2026-03-14_to_2026-03-15.zip"
         )
         let archiveData = try Data(contentsOf: archiveURL)
+        XCTAssertNotNil(archiveData.range(of: Data("2026-03-14.json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("2026-03-15.json".utf8)))
         XCTAssertNotNil(archiveData.range(of: Data(
             "Rollups/Range/2026-03-14_to_2026-03-15.json".utf8
         )))

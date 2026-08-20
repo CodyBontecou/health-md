@@ -326,6 +326,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsManualIPSync` | boolean |
 | `$.hello._0.supportsPartitionedConnectedExports` | boolean |
 | `$.hello._0.supportsPerDateExportCompletion` | boolean |
+| `$.hello._0.supportsRangeV9Summaries` | boolean |
 | `$.hello._0.supportsRequestScopedContextAcquisition` | boolean |
 | `$.hello._0.supportsRollupSummaries` | boolean |
 | `$.hello._0.supportsSizeBoundedConnectedTransfers` | boolean |
@@ -1089,6 +1090,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
 | `$.macStatus._0.capabilities.supportsPartitionedConnectedExports` | boolean |
 | `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
+| `$.macStatus._0.capabilities.supportsRangeV9Summaries` | boolean |
 | `$.macStatus._0.capabilities.supportsRequestScopedContextAcquisition` | boolean |
 | `$.macStatus._0.capabilities.supportsRollupSummaries` | boolean |
 | `$.macStatus._0.capabilities.supportsSizeBoundedConnectedTransfers` | boolean |
@@ -2131,6 +2133,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsManualIPSync` | boolean |
 | `$.supportsPartitionedConnectedExports` | boolean |
 | `$.supportsPerDateExportCompletion` | boolean |
+| `$.supportsRangeV9Summaries` | boolean |
 | `$.supportsRequestScopedContextAcquisition` | boolean |
 | `$.supportsRollupSummaries` | boolean |
 | `$.supportsSizeBoundedConnectedTransfers` | boolean |

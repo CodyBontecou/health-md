@@ -71,6 +71,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.isCompatibleWithMacExportJobs)
         XCTAssertFalse(decoded.supportsAuthoritativeMacExportFileAccounting)
         XCTAssertFalse(decoded.supportsRollupSummaries)
+        XCTAssertFalse(decoded.supportsRangeV9Summaries)
         XCTAssertFalse(decoded.supportsSummaryOnlyExports)
         XCTAssertFalse(decoded.supportsAllAvailableHistoryExportRequests)
         XCTAssertFalse(decoded.supportsChunkedMacExportJobs)
@@ -99,6 +100,29 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(decoded.supportsRequestedMacExportFeatures(
             rollupSummariesEnabled: false,
             dataDictionarySuppressionRequested: true
+        ))
+    }
+
+    func testPeerCapabilities_mixedPeerWithHistoricalRollupsRejectsRangeV9() {
+        let mixed = SyncPeerCapabilities(
+            protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
+            appVersion: "mixed",
+            buildNumber: "1",
+            platform: .macOS,
+            supportsMacExportJobs: true,
+            supportsMacDestinationStatus: true,
+            supportsJobCancellation: true,
+            supportsGranularPayloads: true,
+            supportsRollupSummaries: true,
+            supportsRangeV9Summaries: false
+        )
+
+        XCTAssertTrue(mixed.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: true
+        ))
+        XCTAssertFalse(mixed.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            rangeV9SummaryEnabled: true
         ))
     }
 
@@ -175,6 +199,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(currentMac.supportsPerDateExportCompletion)
         XCTAssertTrue(currentMac.supportsDailyNoteOnlyExports)
         XCTAssertTrue(currentMac.supportsDataDictionaryExportPreference)
+        XCTAssertTrue(currentMac.supportsRangeV9Summaries)
         XCTAssertEqual(currentIOS.installationID, iosInstallationID)
         XCTAssertEqual(currentMac.installationID, macInstallationID)
         XCTAssertTrue(currentIOS.supportsDurableConnectedExportRecovery)
@@ -348,7 +373,7 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertFalse(service.canExportToConnectedMac(requiring: settings))
         XCTAssertEqual(
             service.macExportReadinessMessage(requiring: settings),
-            "Update Health.md on Mac to export roll-up summaries"
+            "Update Health.md on Mac to export range summaries"
         )
 
         service.remoteCapabilities = .current(platform: .macOS)
@@ -528,6 +553,62 @@ final class SyncV2ProtocolTests: XCTestCase {
         XCTAssertTrue(service.canExportToConnectedMac(requiring: settings))
     }
 
+    func testLegacyMacJobAndStreamDecodeWithoutOriginalRangeAuthority() throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        let snapshot = makeSnapshot()
+        let job = MacExportJob(
+            jobID: UUID(),
+            createdAt: date,
+            sourceDeviceName: "Legacy iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
+            records: [makeMedicationHealthData(date: date)],
+            settingsSnapshot: snapshot,
+            requestedTarget: nil
+        )
+        var jobObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(job)) as? [String: Any]
+        )
+        jobObject.removeValue(forKey: "originalRequestedDates")
+        jobObject.removeValue(forKey: "originalCalendarTimeZoneIdentifier")
+        let legacyJob = try JSONDecoder().decode(
+            MacExportJob.self,
+            from: JSONSerialization.data(withJSONObject: jobObject)
+        )
+        XCTAssertNil(legacyJob.originalRequestedDates)
+        XCTAssertNil(legacyJob.originalCalendarTimeZoneIdentifier)
+
+        let stream = MacExportStreamStart(
+            jobID: UUID(),
+            createdAt: date,
+            sourceDeviceName: "Legacy iPhone",
+            dateRangeStart: date,
+            dateRangeEnd: date,
+            requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
+            totalRequestedDays: 1,
+            totalTransferDays: 1,
+            settingsSnapshot: snapshot,
+            requestedTarget: nil,
+            chunkStrategyVersion: 1
+        )
+        var streamObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(stream)) as? [String: Any]
+        )
+        streamObject.removeValue(forKey: "originalRequestedDates")
+        streamObject.removeValue(forKey: "originalCalendarTimeZoneIdentifier")
+        let legacyStream = try JSONDecoder().decode(
+            MacExportStreamStart.self,
+            from: JSONSerialization.data(withJSONObject: streamObject)
+        )
+        XCTAssertNil(legacyStream.originalRequestedDates)
+        XCTAssertNil(legacyStream.originalCalendarTimeZoneIdentifier)
+    }
+
     func testSyncMessageV2Cases_codable() throws {
         let jobID = UUID()
         let date = Date(timeIntervalSince1970: 1_800_000_000)
@@ -551,6 +632,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             dateRangeStart: date,
             dateRangeEnd: date,
             requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
             records: [healthData],
             externalDailyRecords: [externalRecord],
             settingsSnapshot: snapshot,
@@ -589,6 +672,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(decodedJob.sourceDeviceName, "Cody's iPhone")
             XCTAssertEqual(decodedJob.records.count, 1)
             XCTAssertEqual(decodedJob.requestedDates, [date])
+            XCTAssertEqual(decodedJob.originalRequestedDates, [date])
+            XCTAssertEqual(decodedJob.originalCalendarTimeZoneIdentifier, snapshot.calendarTimeZoneIdentifier)
             XCTAssertEqual(decodedJob.records.first?.medications?.medications.first?.exportName, "D3")
             XCTAssertEqual(decodedJob.records.first?.medications?.doseEvents.first?.logStatus, .taken)
             XCTAssertEqual(decodedJob.externalDailyRecords.count, 1)
@@ -605,6 +690,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             dateRangeStart: date,
             dateRangeEnd: date,
             requestedDates: [date],
+            originalRequestedDates: [date],
+            originalCalendarTimeZoneIdentifier: snapshot.calendarTimeZoneIdentifier,
             totalRequestedDays: 193,
             totalTransferDays: 193,
             settingsSnapshot: snapshot,
@@ -615,6 +702,8 @@ final class SyncV2ProtocolTests: XCTestCase {
             XCTAssertEqual(start.jobID, jobID)
             XCTAssertEqual(start.sourceDeviceName, "Cody's iPhone")
             XCTAssertEqual(start.requestedDates, [date])
+            XCTAssertEqual(start.originalRequestedDates, [date])
+            XCTAssertEqual(start.originalCalendarTimeZoneIdentifier, snapshot.calendarTimeZoneIdentifier)
             XCTAssertEqual(start.totalRequestedDays, 193)
             XCTAssertEqual(start.totalTransferDays, 193)
             XCTAssertEqual(start.settingsSnapshot, snapshot)

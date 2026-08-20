@@ -26,7 +26,7 @@ extension RollupDataSnapshot {
             metric["category"] as? String ?? "Other"
         }
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "schema": HealthRollupExportSchema.identifier,
             "schema_version": period == .range
                 ? HealthRollupExportSchema.currentVersion : HealthMdExportSchema.version,
@@ -47,6 +47,9 @@ extension RollupDataSnapshot {
             "metrics": metricsPayload,
             "categories": categoriesPayload
         ]
+        if period == .range {
+            payload["calendar_timezone"] = window.calendarTimeZoneIdentifier
+        }
 
         if let jsonData = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]),
            let jsonString = String(data: jsonData, encoding: .utf8) {

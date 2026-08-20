@@ -6,6 +6,7 @@ rollup_period: range
 period_id: 2026-07-06_to_2026-07-11
 start_date: 2026-07-06
 end_date: 2026-07-11
+calendar_timezone: UTC
 days_expected: 6
 days_counted: 3
 coverage_percent: 50

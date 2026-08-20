@@ -15,6 +15,9 @@ extension RollupDataSnapshot {
         lines.append("period_id: \(periodID)")
         lines.append("start_date: \(dayString(window.startDate))")
         lines.append("end_date: \(dayString(window.endDate))")
+        if period == .range {
+            lines.append("calendar_timezone: \(window.calendarTimeZoneIdentifier)")
+        }
         lines.append("days_expected: \(daysExpected)")
         lines.append("days_counted: \(daysCounted)")
         lines.append("coverage_percent: \(HealthRollupFormatting.number(coveragePercent))")

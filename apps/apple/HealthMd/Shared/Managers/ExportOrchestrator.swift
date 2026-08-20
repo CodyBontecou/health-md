@@ -8,6 +8,7 @@ final class LocalArchiveSpool {
     )
     private var nextIndex = 0
     private(set) var files: [RenderedHealthDataArchiveEntryFile] = []
+    private(set) var capturedDates: Set<Date> = []
 
     func append(
         _ healthData: HealthData,
@@ -60,12 +61,18 @@ final class LocalArchiveSpool {
             throw error
         }
         files.append(contentsOf: stagedFiles)
+        capturedDates.insert(healthData.date)
         nextIndex += stagedFiles.count
+    }
+
+    func markCapturedWithoutOutput(_ date: Date) {
+        capturedDates.insert(date)
     }
 
     func cleanup() {
         try? FileManager.default.removeItem(at: directoryURL)
         files.removeAll(keepingCapacity: false)
+        capturedDates.removeAll(keepingCapacity: false)
     }
 
     private static func archiveEntryPath(
@@ -1369,6 +1376,58 @@ struct ExportOrchestrator {
         }
 
         let immutableRollupDates = requestedRollupDates ?? dates
+        var archiveHasCompleteOriginalSources = true
+        if let archiveSpool, requestedRollupDates != nil {
+            var archiveCalendar = Calendar(identifier: .gregorian)
+            archiveCalendar.timeZone = frozenOperationSettings.exportTimeZoneOverride ?? .current
+            let capturedDays = Set(archiveSpool.capturedDates.map { archiveCalendar.startOfDay(for: $0) })
+            for originalDate in immutableRollupDates where !capturedDays.contains(
+                archiveCalendar.startOfDay(for: originalDate)
+            ) {
+                do {
+                    var healthData = try await healthKitManager.fetchHealthData(
+                        for: originalDate,
+                        includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                        metricSelection: frozenOperationSettings.metricSelection,
+                        timeZone: frozenOperationSettings.exportTimeZoneOverride
+                    )
+                    if healthData.hasAnyData,
+                       settings.writesExternalProviderSidecars,
+                       ConnectedAppsFeature.isEnabled,
+                       let externalIntegrations,
+                       externalIntegrations.connectedProviderCount > 0 {
+                        let providerRecords = await externalIntegrations.fetchDailyRecords(
+                            for: originalDate,
+                            calendar: archiveCalendar
+                        )
+                        healthData.providers = HealthProviderSections.normalized(from: providerRecords)
+                    }
+                    let prepared = autoreleasepool {
+                        healthData.preparedExportAssumingSelectionApplied(
+                            settings: frozenOperationSettings
+                        )
+                    }
+                    if prepared.hasAnyData {
+                        try await archiveSpool.append(
+                            healthData,
+                            settings: frozenOperationSettings,
+                            preparedExport: prepared
+                        )
+                    } else {
+                        archiveSpool.markCapturedWithoutOutput(healthData.date)
+                    }
+                } catch {
+                    archiveHasCompleteOriginalSources = false
+                    partialFailures.append(ExportPartialFailure(
+                        date: originalDate,
+                        dataType: "ZIP archive",
+                        dateRangeDescription: progressFormatter.string(from: originalDate),
+                        errorDescription: "The original range could not be recaptured; the existing archive was preserved."
+                    ))
+                    break
+                }
+            }
+        }
         let rollupHealthData = await fetchRollupHealthData(
             selectedDates: immutableRollupDates,
             seedData: successfulHealthData,
@@ -1384,7 +1443,7 @@ struct ExportOrchestrator {
             writeDataDictionary: shouldWriteDataDictionary,
             partialFailures: &partialFailures
         )
-        let archiveResult = await writeArchive(
+        let archiveResult = archiveHasCompleteOriginalSources ? await writeArchive(
             from: successfulHealthData,
             archiveEntryFiles: archiveSpool?.files ?? [],
             rollupHealthData: rollupHealthData,
@@ -1392,7 +1451,7 @@ struct ExportOrchestrator {
             vaultManager: vaultManager,
             settings: settings,
             partialFailures: &partialFailures
-        )
+        ) : .noOutput
         let archiveCount = archiveResult.archiveCount
 
         let durableCompletedDates = settings.archiveModeEnabled && archiveCount == 0

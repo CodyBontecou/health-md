@@ -156,6 +156,8 @@ struct HealthRollupPeriodWindow: Hashable {
     let endDate: Date
     let daysExpected: Int
     let calendarTimeZone: TimeZone
+    /// Preserves the exact captured IANA spelling (`UTC` must not normalize to `GMT`).
+    let calendarTimeZoneIdentifier: String
 
     var title: String { "\(period.displayName) Health Summary — \(id)" }
 }
@@ -387,7 +389,8 @@ extension HealthRollupPeriodWindow {
                 startDate: start,
                 endDate: end,
                 daysExpected: 7,
-                calendarTimeZone: calendar.timeZone
+                calendarTimeZone: calendar.timeZone,
+                calendarTimeZoneIdentifier: calendar.timeZone.identifier
             )
         case .monthly:
             let calendar = inputCalendar
@@ -409,7 +412,8 @@ extension HealthRollupPeriodWindow {
                 startDate: start,
                 endDate: end,
                 daysExpected: days,
-                calendarTimeZone: calendar.timeZone
+                calendarTimeZone: calendar.timeZone,
+                calendarTimeZoneIdentifier: calendar.timeZone.identifier
             )
         case .yearly:
             let calendar = inputCalendar
@@ -431,7 +435,8 @@ extension HealthRollupPeriodWindow {
                 startDate: start,
                 endDate: end,
                 daysExpected: days,
-                calendarTimeZone: calendar.timeZone
+                calendarTimeZone: calendar.timeZone,
+                calendarTimeZoneIdentifier: calendar.timeZone.identifier
             )
         case .range:
             preconditionFailure("Range windows require an explicit HealthRollupRangeRequest")
@@ -445,7 +450,8 @@ extension HealthRollupPeriodWindow {
             startDate: request.startDate,
             endDate: request.endDate,
             daysExpected: request.daysExpected,
-            calendarTimeZone: request.calendarTimeZone
+            calendarTimeZone: request.calendarTimeZone,
+            calendarTimeZoneIdentifier: request.calendarTimeZoneIdentifier
         )
     }
 }

@@ -1,4 +1,5 @@
 {
+  "calendar_timezone" : "UTC",
   "categories" : {
     "Activity" : [
       {

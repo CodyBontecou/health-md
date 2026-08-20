@@ -199,26 +199,26 @@
       "fixtures": [
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.json",
-          "sha256": "70ad121e1bd5cb1de03415792eed863e2060c5e20b266a67b4ef8d5edd7f40f3",
-          "provenance": "Reviewed synthetic partial range with immutable requested bounds.",
+          "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+          "provenance": "Generated directly by the production Swift range generator and JSON renderer from the canonical synthetic partial-range corpus; Rust reconstructs and verifies the same public contract semantics.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv",
-          "sha256": "05a49bae67ef5e5eccec43262ce556d23fc57ecc91a5cc04f3940bb54da27809",
-          "provenance": "Reviewed CSV v9 metadata-column fixture.",
+          "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+          "provenance": "Generated directly by the production Swift range generator and CSV renderer from the canonical synthetic partial-range corpus.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.md",
-          "sha256": "0ff95a7c634f63f79e5e82f1652202ac159bf8fe158a7494a27daef68a06af31",
-          "provenance": "Reviewed Markdown v9 fixture.",
+          "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+          "provenance": "Generated directly by the production Swift range generator and Markdown renderer from the canonical synthetic partial-range corpus.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md",
-          "sha256": "7e33a665d18f0b671dea1548e7e11d5c03d420ae0ad308857754256a378eee78",
-          "provenance": "Reviewed Obsidian Bases v9 fixture.",
+          "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+          "provenance": "Generated directly by the production Swift range generator and Obsidian Bases renderer from the canonical synthetic partial-range corpus.",
           "mirrors": []
         }
       ]

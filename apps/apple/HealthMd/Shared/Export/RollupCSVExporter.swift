@@ -9,7 +9,8 @@ extension RollupDataSnapshot {
             "Schema Version",
             "Source Schema",
             "Source Schema Version",
-            "Rollup Rules Version"
+            "Rollup Rules Version",
+            "Calendar Timezone"
         ] : []
         var rows: [[String]] = [contractColumns + [
             "Period",
@@ -51,7 +52,8 @@ extension RollupDataSnapshot {
             "\(HealthRollupExportSchema.currentVersion)",
             HealthMdExportSchema.identifier,
             "\(HealthRollupExportSchema.sourceDailyVersion)",
-            "\(HealthRollupExportSchema.rulesVersion)"
+            "\(HealthRollupExportSchema.rulesVersion)",
+            window.calendarTimeZoneIdentifier
         ] : []
         return contractValues + [
             period.rawValue,

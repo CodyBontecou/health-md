@@ -17,7 +17,7 @@ Health/
 
 With **Organize by File Type**, the format folder precedes `Range`. Range files are derived from Apple-v8 daily aggregate facts and do not embed the canonical HealthKit archive.
 
-The requested IANA calendar timezone and inclusive start/end dates are frozen before capture. `period_id`, `start_date`, `end_date`, and `days_expected` never shrink when the first or last query fails. `source_dates` contains distinct successfully captured owner dates, including successful empty days; `days_counted` and coverage therefore expose missing captures rather than changing artifact identity. Missing edge days never suppress the artifact when captured metrics remain. A range is limited to 10,000 cumulative owner dates (about 27 years), while capture and render batches retain their smaller bounded limits.
+The requested IANA calendar timezone and inclusive start/end dates are frozen before capture. `period_id`, `start_date`, `end_date`, `calendar_timezone`, and `days_expected` never shrink when the first or last query fails. `source_dates` contains distinct successfully captured owner dates, including successful empty days; `days_counted` and coverage therefore expose missing captures rather than changing artifact identity. Missing edge days never suppress the artifact when captured metrics remain. A range is limited to 10,000 cumulative owner dates (about 27 years), while capture and render batches retain their smaller bounded limits.
 
 ## Contract identity
 
@@ -28,15 +28,16 @@ Every new JSON, CSV, Markdown, and Obsidian Bases range artifact identifies:
 - `source_schema: healthmd.health_data`
 - `source_schema_version: 8`
 - `rollup_rules_version: 8`
+- `calendar_timezone: <captured IANA identifier>`
 - `rollup_period: range`
 
-CSV carries these values in stable leading columns on every row. Daily JSON, CSV, Markdown, and Bases outputs remain Apple v8 and are not altered by enabling a range summary. Provider-native WHOOP facts remain available in daily v8 records but have no roll-up rule and are excluded from range v9.
+JSON carries `calendar_timezone` as a required top-level member, Markdown and Bases carry it in frontmatter, and CSV carries it in the stable leading columns on every row. Daily JSON, CSV, Markdown, and Bases outputs remain Apple v8 and are not altered by enabling a range summary. Provider-native WHOOP facts remain available in daily v8 records but have no roll-up rule and are excluded from range v9.
 
-The normative contract and reviewed synthetic fixtures are under `packages/contracts/rollup-summary/v9`.
+The normative contract and canonical synthetic fixtures are under `packages/contracts/rollup-summary/v9`. All four fixtures are copied byte-for-byte from the production Swift generator/renderers, pinned by SHA-256, schema/shape validated, and reproduced byte-for-byte by the Rust production range renderer.
 
 ## Settings and migration
 
-Range summary is opt-in. **Range summary only** skips daily files and daily side effects while still capturing the requested dates needed for the summary.
+Range summary is opt-in. **Range summary only** skips daily files and daily side effects while still capturing the requested dates needed for the summary. Ranges longer than 10,000 days disable only the range summary and surface an explicit warning; existing daily export behavior and limits are unchanged.
 
 On settings migration, a previously enabled weekly, monthly, or yearly preference opts into the new range-summary setting using OR semantics. An explicitly stored new `false` value remains authoritative, and migrated legacy keys are removed. New durable settings snapshots encode only `generateRangeSummary`.
 

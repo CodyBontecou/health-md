@@ -1911,7 +1911,12 @@ final class MacExportJobExecutorTests: XCTestCase {
         file: StaticString = #filePath,
         line: UInt = #line
     ) async throws {
-        let vaultPath = "/tmp/ParityVault"
+        let vaultPath = "/tmp/ParityVault-\(UUID().uuidString)"
+        try FileManager.default.createDirectory(
+            at: URL(fileURLWithPath: vaultPath, isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        defer { try? FileManager.default.removeItem(atPath: vaultPath) }
         let localFileSystem = FakeFileSystem()
         let macFileSystem = FakeFileSystem()
         let localResolver = makeAccessGrantedBookmarkResolver()
@@ -1931,6 +1936,9 @@ final class MacExportJobExecutorTests: XCTestCase {
         )
         localManager.healthSubfolder = "Health"
         macManager.healthSubfolder = "Health"
+        settings.exportTimeZoneOverride = records.first?.timeContext.calendarTimeZone
+            ?? settings.exportTimeZoneOverride
+            ?? .current
 
         for record in records {
             try await localManager.exportHealthData(record, settings: settings)
@@ -1947,17 +1955,22 @@ final class MacExportJobExecutorTests: XCTestCase {
             settings: settings
         )
 
-        let sortedDates = records.map(\.date).sorted()
+        let snapshot = makeSnapshot(from: settings, healthSubfolder: "Health")
+        var sourceCalendar = Calendar(identifier: .gregorian)
+        sourceCalendar.timeZone = snapshot.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:)) ?? .current
+        let sortedDates = records.map { sourceCalendar.startOfDay(for: $0.date) }.sorted()
         let job = makeJob(
             records: records,
             start: sortedDates.first ?? Date(),
             end: sortedDates.last ?? Date(),
-            snapshot: makeSnapshot(from: settings, healthSubfolder: "Health")
+            requestedDates: sortedDates,
+            snapshot: snapshot
         )
 
         let result = await MacExportJobExecutor().execute(job, vaultManager: macManager)
         guard case .success(let payload) = result else {
-            return XCTFail("Expected successful Mac export result", file: file, line: line)
+            return XCTFail("Expected successful Mac export result: \(result)", file: file, line: line)
         }
         XCTAssertEqual(payload.status, .success, file: file, line: line)
 

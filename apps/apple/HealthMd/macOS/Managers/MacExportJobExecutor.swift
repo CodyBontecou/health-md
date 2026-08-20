@@ -126,6 +126,7 @@ final class MacExportJobExecutor {
         let generation: UInt64
         let start: MacExportStreamStart
         let requestedDates: [Date]
+        let originalRequestedDates: [Date]
         let formatsPerDate: Int
         let dailyExportOperation: ConnectedMacDailyExportOperation
         var expectedSequence: Int = 1
@@ -274,6 +275,17 @@ final class MacExportJobExecutor {
         }
 
         let settings = dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        guard let originalRequestedDates = Self.validatedOriginalRangeDates(
+            job.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: job.originalCalendarTimeZoneIdentifier,
+            settingsSnapshot: dailyExportOperation.settingsSnapshot
+        ) ?? (job.originalRequestedDates == nil ? requestedDates : nil) else {
+            return .failure(MacExportFailure(
+                jobID: job.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export original range authority is missing or inconsistent. No files were written."
+            ))
+        }
         do {
             try vaultManager.preflightExportDestinations(
                 settings: settings,
@@ -492,7 +504,7 @@ final class MacExportJobExecutor {
         }
 
         let rollupRecords = Self.rollupRecords(
-            for: requestedDates,
+            for: originalRequestedDates,
             recordsByDate: recordsByDate,
             settings: settings
         )
@@ -511,7 +523,7 @@ final class MacExportJobExecutor {
             )
 
             do {
-                let requestedRange = try Self.requestedRange(for: requestedDates, settings: settings)
+                let requestedRange = try Self.requestedRange(for: originalRequestedDates, settings: settings)
                 let rollupResults = try vaultManager.exportRollupSummaries(
                     from: rollupRecords,
                     requestedRange: requestedRange,
@@ -533,7 +545,10 @@ final class MacExportJobExecutor {
         }
 
         var archiveFileCount = 0
-        if settings.archiveModeEnabled && !successfulRecords.isEmpty {
+        let archiveSourceRecords = originalRequestedDates.compactMap {
+            recordsByDate[operationCalendar.startOfDay(for: $0)]
+        }
+        if settings.archiveModeEnabled && !archiveSourceRecords.isEmpty {
             sendProgress(
                 jobID: job.jobID,
                 phase: .writing,
@@ -544,10 +559,34 @@ final class MacExportJobExecutor {
                 message: "Writing ZIP archive…",
                 progress: progress
             )
+            guard archiveSourceRecords.count == originalRequestedDates.count else {
+                failedDateDetails.append(FailedDateDetail(
+                    date: originalRequestedDates.first ?? Date(),
+                    reason: .fileWriteError,
+                    errorDetails: "ZIP archive retry did not recapture every original source day; the existing archive was preserved."
+                ))
+                hadTerminalRangeFailure = true
+                isFileAccountingComplete = false
+                return .success(MacExportResultPayload(
+                    jobID: job.jobID,
+                    status: successCount > 0 ? .partialSuccess : .failure,
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    formatsPerDate: formatsPerDate,
+                    totalFilesWritten: totalFilesWritten,
+                    externalRecordFileCount: externalRecordFileCount,
+                    hadTerminalRangeFailure: true,
+                    failedDateDetails: failedDateDetails,
+                    completedDates: [],
+                    destinationDisplayName: vaultManager.vaultName,
+                    destinationPathForDisplay: vaultManager.vaultURL?.path,
+                    completedAt: Date()
+                ))
+            }
             let archiveOutcome = await Self.writeArchive(
-                from: successfulRecords,
+                from: archiveSourceRecords,
                 rollupHealthData: rollupRecords,
-                selectedDates: requestedDates,
+                selectedDates: originalRequestedDates,
                 vaultManager: vaultManager,
                 settings: settings,
                 healthSubfolder: job.settingsSnapshot.healthSubfolder,
@@ -693,6 +732,18 @@ final class MacExportJobExecutor {
             activeJobID = nil
             return .failure(Self.engineResolutionFailure(jobID: start.jobID, error: error))
         }
+        guard let originalRequestedDates = Self.validatedOriginalRangeDates(
+            start.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: start.originalCalendarTimeZoneIdentifier,
+            settingsSnapshot: dailyExportOperation.settingsSnapshot
+        ) ?? (start.originalRequestedDates == nil ? requestedDates : nil) else {
+            activeJobID = nil
+            return .failure(MacExportFailure(
+                jobID: start.jobID,
+                reason: .payloadDecodeFailure,
+                message: "Mac export stream original range authority is missing or inconsistent. No files were written."
+            ))
+        }
         do {
             try vaultManager.preflightExportDestinations(
                 settings: dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings(),
@@ -712,6 +763,7 @@ final class MacExportJobExecutor {
             generation: nextStreamGeneration,
             start: start,
             requestedDates: requestedDates,
+            originalRequestedDates: originalRequestedDates,
             formatsPerDate: Self.looseFormatsPerDate(
                 for: dailyExportOperation.settingsSnapshot
             ),
@@ -1160,7 +1212,7 @@ final class MacExportJobExecutor {
         }
 
         let rollupRecords = Self.rollupRecords(
-            for: session.requestedDates,
+            for: session.originalRequestedDates,
             recordsByDate: session.receivedRecordsByDate,
             settings: settings
         )
@@ -1169,7 +1221,7 @@ final class MacExportJobExecutor {
            HealthRollupExporter.isEnabled(settings: settings) {
             do {
                 let requestedRange = try Self.requestedRange(
-                    for: session.requestedDates,
+                    for: session.originalRequestedDates,
                     settings: settings
                 )
                 let rollupResults = try vaultManager.exportRollupSummaries(
@@ -1193,7 +1245,10 @@ final class MacExportJobExecutor {
         }
 
         var archiveFileCount = 0
-        if settings.archiveModeEnabled && !session.successfulRecords.isEmpty {
+        let archiveSourceRecords = session.originalRequestedDates.compactMap {
+            session.receivedRecordsByDate[operationCalendar.startOfDay(for: $0)]
+        }
+        if settings.archiveModeEnabled && !archiveSourceRecords.isEmpty {
             if streamWasInterrupted(jobID: complete.jobID, generation: generation) {
                 return finishInterruptedCompletion(
                     session,
@@ -1202,10 +1257,17 @@ final class MacExportJobExecutor {
                     progress: progress
                 )
             }
+            guard archiveSourceRecords.count == session.originalRequestedDates.count else {
+                return .failure(MacExportFailure(
+                    jobID: complete.jobID,
+                    reason: .exportWriteFailure,
+                    message: "ZIP archive retry did not recapture every original source day; the existing archive was preserved."
+                ))
+            }
             let archiveOutcome = await Self.writeArchive(
-                from: session.successfulRecords,
+                from: archiveSourceRecords,
                 rollupHealthData: rollupRecords,
-                selectedDates: session.requestedDates,
+                selectedDates: session.originalRequestedDates,
                 vaultManager: vaultManager,
                 settings: settings,
                 healthSubfolder: session.start.settingsSnapshot.healthSubfolder,
@@ -1553,6 +1615,23 @@ final class MacExportJobExecutor {
 
         guard !dates.isEmpty else { return nil }
         if let expectedCount, expectedCount != dates.count { return nil }
+        return dates
+    }
+
+    private static func validatedOriginalRangeDates(
+        _ dates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?,
+        settingsSnapshot: ExportSettingsSnapshot
+    ) -> [Date]? {
+        guard let dates else { return nil }
+        guard !dates.isEmpty,
+              dates == dates.sorted(),
+              Set(dates).count == dates.count,
+              let identifier = originalCalendarTimeZoneIdentifier,
+              TimeZone(identifier: identifier) != nil,
+              settingsSnapshot.calendarTimeZoneIdentifier == identifier else {
+            return nil
+        }
         return dates
     }
 

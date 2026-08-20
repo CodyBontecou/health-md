@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "a19feb77ff13505dff4eda3a5ab38298d43dc57f",
+  "docs_reference_git_tree": "6188191038293a1478cbea271631ab51495275aa",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "b3cf4b67526f14ba1fb74e39397d81e9a7a8dc227ae080483512e146fdb41748",
+    "digest": "bf486f1273d6585d76cc4c02019065bad8f36d23327e5a357d87e377bddd8899",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -396,7 +396,7 @@
     {
       "path": "generated/automation/manifest.json",
       "bytes": 5848,
-      "sha256": "e7fc1183b146baafda366b94e34e3df9d62ad22d3d5a6125ae91b3a7350998f8",
+      "sha256": "44adced6aef0744408907f4a6e6276630164bda907119c09b9ede09e2b9c66eb",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -405,8 +405,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 127274,
-      "sha256": "e7f5756f49c2b7e89646fb7b4be71d5029c6ccb2e06695084dae131cbd24064b",
+      "bytes": 127438,
+      "sha256": "2912dbe35119ac61c998e781c66922e9a5f6575f123d5ab26826caba09933a2a",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -415,8 +415,8 @@
     },
     {
       "path": "generated/automation/peer-capabilities.json",
-      "bytes": 1553,
-      "sha256": "5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023",
+      "bytes": 1591,
+      "sha256": "15111cc0d942012cb4a7cc1c8c1d51bfcde36fbaebe458abbfd419339bf6e492",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1036,7 +1036,7 @@
     {
       "path": "generated/rollups/manifest.json",
       "bytes": 5365,
-      "sha256": "84de0cac0cc95aafd023a0d1591415a9239860c779508d5062539d0684dc94c1",
+      "sha256": "e1e4882b33d8b0c30b5d54d73471f36f7a382b9a07cfcd13471ef396840d1906",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1045,8 +1045,8 @@
     },
     {
       "path": "generated/rollups/range-bases.md",
-      "bytes": 11606,
-      "sha256": "49793b79b87f95a841046acaff138cf076dac9822a4a7536af48cb9981469e25",
+      "bytes": 11629,
+      "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
       "classification": "generated-raw-markdown-fixture",
       "routes": {
         "rendered": null,
@@ -1055,8 +1055,8 @@
     },
     {
       "path": "generated/rollups/range.csv",
-      "bytes": 37688,
-      "sha256": "5da1b3619abbf522cc49749b672297f881e4468a35edc9f22e4435bef64f808a",
+      "bytes": 38202,
+      "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
       "classification": "generated-csv",
       "routes": {
         "rendered": null,
@@ -1065,8 +1065,8 @@
     },
     {
       "path": "generated/rollups/range.json",
-      "bytes": 39631,
-      "sha256": "0b53aa6a2902562fa98ef68e15305d41a3c150f471d626f844a5a6c4f9c35892",
+      "bytes": 39662,
+      "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1075,8 +1075,8 @@
     },
     {
       "path": "generated/rollups/range.md",
-      "bytes": 9226,
-      "sha256": "47745047ccc4053ab049fe114fe75ee4319b26486207a651e155b4fb1ee8d1f8",
+      "bytes": 9249,
+      "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
       "classification": "generated-raw-markdown-fixture",
       "routes": {
         "rendered": null,
@@ -1349,21 +1349,21 @@
     {
       "path": "public/reference/generated/automation/manifest.json",
       "bytes": 5848,
-      "sha256": "e7fc1183b146baafda366b94e34e3df9d62ad22d3d5a6125ae91b3a7350998f8",
+      "sha256": "44adced6aef0744408907f4a6e6276630164bda907119c09b9ede09e2b9c66eb",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 127274,
-      "sha256": "e7f5756f49c2b7e89646fb7b4be71d5029c6ccb2e06695084dae131cbd24064b",
+      "bytes": 127438,
+      "sha256": "2912dbe35119ac61c998e781c66922e9a5f6575f123d5ab26826caba09933a2a",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
     {
       "path": "public/reference/generated/automation/peer-capabilities.json",
-      "bytes": 1553,
-      "sha256": "5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023",
+      "bytes": 1591,
+      "sha256": "15111cc0d942012cb4a7cc1c8c1d51bfcde36fbaebe458abbfd419339bf6e492",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/peer-capabilities.json"
     },
@@ -1797,35 +1797,35 @@
     {
       "path": "public/reference/generated/rollups/manifest.json",
       "bytes": 5365,
-      "sha256": "84de0cac0cc95aafd023a0d1591415a9239860c779508d5062539d0684dc94c1",
+      "sha256": "e1e4882b33d8b0c30b5d54d73471f36f7a382b9a07cfcd13471ef396840d1906",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/manifest.json"
     },
     {
       "path": "public/reference/generated/rollups/range-bases.md",
-      "bytes": 11606,
-      "sha256": "49793b79b87f95a841046acaff138cf076dac9822a4a7536af48cb9981469e25",
+      "bytes": 11629,
+      "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/range-bases.md"
     },
     {
       "path": "public/reference/generated/rollups/range.csv",
-      "bytes": 37688,
-      "sha256": "5da1b3619abbf522cc49749b672297f881e4468a35edc9f22e4435bef64f808a",
+      "bytes": 38202,
+      "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/range.csv"
     },
     {
       "path": "public/reference/generated/rollups/range.json",
-      "bytes": 39631,
-      "sha256": "0b53aa6a2902562fa98ef68e15305d41a3c150f471d626f844a5a6c4f9c35892",
+      "bytes": 39662,
+      "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/range.json"
     },
     {
       "path": "public/reference/generated/rollups/range.md",
-      "bytes": 9226,
-      "sha256": "47745047ccc4053ab049fe114fe75ee4319b26486207a651e155b4fb1ee8d1f8",
+      "bytes": 9249,
+      "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/range.md"
     },
@@ -1909,14 +1909,14 @@
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
       "bytes": 6752,
-      "sha256": "bac98683df6e736b5adab930155582b901643127d8623eeee930d6626368d235",
+      "sha256": "8416b06dd9b0d301ac1821411584aff839d188eb4d299aa675dac5b22cd42f0e",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 127477,
-      "sha256": "268c58fa2740d346fdb8e4fbd033527c15a574e81c4a25aa907836e5232ecd38",
+      "bytes": 127641,
+      "sha256": "747f731dca5a88e8ca6994bc20406a89cb0ac21b6ac6ba0896be0484c0692932",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1986,7 +1986,7 @@
     {
       "path": "src/content/docs/reference/generated/index.md",
       "bytes": 20997,
-      "sha256": "e9a04bc93b4e4fcfe6c73a41ebcddf2482c82e8e94b879ff4e6c0903496b1117",
+      "sha256": "924093de652d7b4b021396350a03d8c90c4e7ae8882d97f7c4959e48aa0ea0db",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
@@ -2035,7 +2035,7 @@
     {
       "path": "src/content/docs/reference/generated/rollups/index.md",
       "bytes": 2107,
-      "sha256": "a466dab4440d6c3992b84ec0d944f466f6315948af3972c80d9e1808b50462a5",
+      "sha256": "864cfc6140b568ffa56222935104427ba2de4abcbcf4fc1f42b4371f48c76701",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/rollups/"
     },

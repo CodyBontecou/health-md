@@ -43,6 +43,7 @@
   "supportsManualIPSync" : true,
   "supportsPartitionedConnectedExports" : true,
   "supportsPerDateExportCompletion" : true,
+  "supportsRangeV9Summaries" : false,
   "supportsRequestScopedContextAcquisition" : true,
   "supportsRollupSummaries" : true,
   "supportsSizeBoundedConnectedTransfers" : true,

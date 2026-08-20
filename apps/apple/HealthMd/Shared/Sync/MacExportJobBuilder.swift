@@ -167,13 +167,16 @@ struct MacExportJobBuilder {
             )
         }
         let includeGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
+        let dailySourceDays = settings.archiveModeEnabled
+            ? Set(immutableRollupDates.map { sourceCalendar.startOfDay(for: $0) })
+            : requestedDays
         var records: [HealthData] = []
         var externalDailyRecords: [ExternalDailyRecord] = []
 
         for (index, date) in transferDates.enumerated() {
             try Task.checkCancellation()
             let day = sourceCalendar.startOfDay(for: date)
-            let shouldIncludeGranularData = requestedDays.contains(day) && includeGranularData
+            let shouldIncludeGranularData = dailySourceDays.contains(day) && includeGranularData
             let fetchedRecord = try await fetchHealthData(date, shouldIncludeGranularData)
             var record = ConnectedExportGranularMode.sanitized(
                 fetchedRecord,
@@ -199,6 +202,8 @@ struct MacExportJobBuilder {
             dateRangeStart: dates.first ?? Calendar.current.startOfDay(for: startDate),
             dateRangeEnd: dates.last ?? Calendar.current.startOfDay(for: endDate),
             requestedDates: dates,
+            originalRequestedDates: immutableRollupDates,
+            originalCalendarTimeZoneIdentifier: sourceTimeZone.identifier,
             records: records,
             externalDailyRecords: externalDailyRecords,
             settingsSnapshot: settingsSnapshot,
@@ -227,6 +232,9 @@ struct MacExportStreamingJobBuilder {
     struct Metadata {
         let requestedDates: [Date]
         let requestedDays: Set<Date>
+        let originalRequestedDates: [Date]
+        let originalRequestedDays: Set<Date>
+        let originalCalendarTimeZoneIdentifier: String
         let transferDates: [Date]
         let settingsSnapshot: ExportSettingsSnapshot
         let requestedTarget: ExportTargetSnapshot
@@ -330,6 +338,9 @@ struct MacExportStreamingJobBuilder {
         return Metadata(
             requestedDates: requestedDates,
             requestedDays: requestedDays,
+            originalRequestedDates: immutableRollupDates,
+            originalRequestedDays: Set(immutableRollupDates),
+            originalCalendarTimeZoneIdentifier: sourceTimeZone.identifier,
             transferDates: transferDates,
             settingsSnapshot: frozenSettingsSnapshot ?? ExportSettingsSnapshot.from(
                 settings,
@@ -364,7 +375,10 @@ struct MacExportStreamingJobBuilder {
         var sourceCalendar = Calendar(identifier: .gregorian)
         sourceCalendar.timeZone = sourceTimeZone
         let day = sourceCalendar.startOfDay(for: date)
-        return metadata.requestedDays.contains(day)
+        let dailySourceDays = settings.archiveModeEnabled
+            ? metadata.originalRequestedDays
+            : metadata.requestedDays
+        return dailySourceDays.contains(day)
             && ConnectedExportGranularMode.isEnabled(for: settings)
     }
 }

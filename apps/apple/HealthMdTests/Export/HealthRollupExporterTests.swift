@@ -71,7 +71,11 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(summary.daysCounted, 3)
         XCTAssertEqual(summary.coveragePercent, 50, accuracy: 0.001)
         XCTAssertTrue(summary.toRollupJSON().contains("\"schema_version\" : 9"))
-        XCTAssertTrue(summary.toRollupCSV().hasPrefix("Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version"))
+        XCTAssertTrue(summary.toRollupJSON().contains("\"calendar_timezone\" : \"UTC\""))
+        XCTAssertTrue(summary.toRollupMarkdown().contains("calendar_timezone: UTC"))
+        XCTAssertTrue(summary.toRollupObsidianBases().contains("calendar_timezone: UTC"))
+        XCTAssertTrue(summary.toRollupCSV().hasPrefix("Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version,Calendar Timezone"))
+        XCTAssertTrue(summary.toRollupCSV().contains("healthmd.rollup_summary,9,healthmd.health_data,8,8,UTC,range,"))
     }
 
     func testRangeRequestSupportsAllTimeBeyondFourHundredDays() throws {
@@ -178,9 +182,13 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(summary.periodID, "2026-W28")
         XCTAssertEqual(payload["start_date"] as? String, "2026-07-06")
         XCTAssertEqual(payload["end_date"] as? String, "2026-07-12")
+        XCTAssertNil(payload["calendar_timezone"], "Historical v8 JSON bytes must not gain v9 fields")
         XCTAssertTrue(summary.toRollupMarkdown().contains("start_date: 2026-07-06"))
+        XCTAssertFalse(summary.toRollupMarkdown().contains("calendar_timezone:"))
         XCTAssertTrue(summary.toRollupObsidianBases().contains("end_date: 2026-07-12"))
+        XCTAssertFalse(summary.toRollupObsidianBases().contains("calendar_timezone:"))
         XCTAssertTrue(summary.toRollupCSV().contains("weekly,2026-W28,2026-07-06,2026-07-12"))
+        XCTAssertFalse(summary.toRollupCSV().contains("Calendar Timezone"))
     }
 
     func testWeeklyRollupCountsFetchedSourceDaysEvenWhenMetricsAreEmpty() throws {
