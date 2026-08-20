@@ -194,6 +194,36 @@ final class MacExportViewLocalPathTests: XCTestCase {
         XCTAssertNil(manager.lastExportPresentationTarget)
     }
 
+    func testManualDailyCancellationAfterPublicationRetainsCommittedAccounting() async throws {
+        let vaultURL = try temporaryVault()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeVaultManager(vaultURL: vaultURL)
+        let settings = makeSettings()
+        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let selectedDate = try date(2026, 3, 15, calendar: utcCalendar())
+        let record = record(on: selectedDate)
+        var exportTask: Task<MacManualDailyOutputCommitter.Result, Error>?
+        manager.dailyExportDidCommitForTesting = { exportTask?.cancel() }
+
+        let task = Task { @MainActor in
+            try await MacManualDailyOutputCommitter.commit(
+                record,
+                settings: settings,
+                vaultManager: manager
+            )
+        }
+        exportTask = task
+        let committed = try await task.value
+
+        XCTAssertTrue(task.isCancelled, "Cancellation must arrive after the daily commit")
+        XCTAssertTrue(committed.didSucceed)
+        XCTAssertNil(committed.failedDateDetail)
+        XCTAssertEqual(committed.writeResult.totalGeneratedFileCount, 2)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("2026-03-15.json").path
+        ))
+    }
+
     func testArchiveCancellationDuringAssemblyDoesNotPublishDerivedArtifact() async throws {
         let vaultURL = try temporaryVault()
         defer { try? FileManager.default.removeItem(at: vaultURL) }

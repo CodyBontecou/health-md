@@ -1501,6 +1501,9 @@ final class VaultManager: ObservableObject {
 
     #if DEBUG
     var archiveEntryWillAppendForTesting: (() -> Void)?
+    /// Runs after a daily export has returned its committed output result, allowing
+    /// callers to prove that later cancellation cannot erase that accounting.
+    var dailyExportDidCommitForTesting: (() -> Void)?
     /// Runs after the ZIP's atomic rename has committed but before presentation
     /// state is recorded, allowing tests to prove committed success wins over a
     /// cancellation delivered after publication.
@@ -2245,9 +2248,10 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        let result: DailyExportWriteResult
         switch planResolution {
         case .legacy:
-            return try await writeHealthDataOutputsOffMain(
+            result = try await writeHealthDataOutputsOffMain(
                 healthData,
                 date: healthData.date,
                 vaultURL: vaultURL,
@@ -2257,7 +2261,7 @@ final class VaultManager: ObservableObject {
                 preparedExport: preparedExport
             )
         case .planned(let operation):
-            return try await writePlannedLooseDailyOutputsOffMain(
+            result = try await writePlannedLooseDailyOutputsOffMain(
                 healthData,
                 date: healthData.date,
                 vaultURL: vaultURL,
@@ -2267,6 +2271,10 @@ final class VaultManager: ObservableObject {
                 operation: operation
             )
         }
+        #if DEBUG
+        dailyExportDidCommitForTesting?()
+        #endif
+        return result
     }
 
     /// Materializes a complete simple-summary range without opening or mutating the selected
@@ -3117,7 +3125,8 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
             sources: healthData.map(HealthDataArchiveSource.inMemory),
@@ -3125,7 +3134,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             startDate: startDate,
             endDate: endDate,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder,
+            cancellationCheck: cancellationCheck
         )
     }
 
@@ -3136,7 +3146,8 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
             sources: files.map(HealthDataArchiveSource.file),
@@ -3144,7 +3155,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             startDate: startDate,
             endDate: endDate,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder,
+            cancellationCheck: cancellationCheck
         )
     }
 
@@ -3154,8 +3166,12 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String?
+        healthSubfolder: String?,
+        cancellationCheck: @escaping @Sendable () -> Bool
     ) async throws -> URL? {
+        func checkCancellation() throws {
+            if Task.isCancelled || cancellationCheck() { throw CancellationError() }
+        }
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         defer {
@@ -3168,6 +3184,7 @@ final class VaultManager: ObservableObject {
         }
         #endif
         guard settings.archiveModeEnabled else { return nil }
+        try checkCancellation()
         let archivedFormats = settings.exportFormats
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
@@ -3180,6 +3197,7 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        try checkCancellation()
         let rollupEntries: [ZipArchiveWriter.Entry]
         if HealthRollupExporter.isEnabled(settings: settings) {
             guard let frozenTimeZone = settings.exportTimeZoneOverride else {
@@ -3204,6 +3222,7 @@ final class VaultManager: ObservableObject {
         } else {
             rollupEntries = []
         }
+        try checkCancellation()
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
@@ -3292,10 +3311,10 @@ final class VaultManager: ObservableObject {
                 try await Self.performArchiveIO {
                     try writer.append(
                         dictionaryEntry,
-                        cancellationCheck: { Task.isCancelled }
+                        cancellationCheck: { Task.isCancelled || cancellationCheck() }
                     )
                 }
-                try Task.checkCancellation()
+                try checkCancellation()
             }
             if !settings.summaryOnlyModeEnabled {
                 let orderedSources = sources.sorted {
@@ -3303,12 +3322,12 @@ final class VaultManager: ObservableObject {
                     return $0.order < $1.order
                 }
                 for source in orderedSources {
-                    try Task.checkCancellation()
+                    try checkCancellation()
                     switch source {
                     case .inMemory(let data):
                         let preparedExport = data.preparedExport(settings: settings)
                         for format in archivedFormats {
-                            try Task.checkCancellation()
+                            try checkCancellation()
                             let content = try preparedExport.content(format: format, settings: settings)
                             guard let bytes = content.data(using: .utf8) else {
                                 throw CocoaError(.fileWriteInapplicableStringEncoding)
@@ -3322,11 +3341,14 @@ final class VaultManager: ObservableObject {
                                 data: bytes
                             )
                             try await Self.performArchiveIO {
-                                try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                                try writer.append(
+                                    entry,
+                                    cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                                )
                             }
-                            try Task.checkCancellation()
+                            try checkCancellation()
                             await Task.yield()
-                            try Task.checkCancellation()
+                            try checkCancellation()
                         }
                     case .file(let file):
                         try await Self.performArchiveIO {
@@ -3335,27 +3357,30 @@ final class VaultManager: ObservableObject {
                                     path: file.archivePath,
                                     sourceURL: file.url
                                 ),
-                                cancellationCheck: { Task.isCancelled }
+                                cancellationCheck: { Task.isCancelled || cancellationCheck() }
                             )
                         }
-                        try Task.checkCancellation()
+                        try checkCancellation()
                         await Task.yield()
-                        try Task.checkCancellation()
+                        try checkCancellation()
                     }
                 }
             }
             for entry in rollupEntries {
-                try Task.checkCancellation()
+                try checkCancellation()
                 try await Self.performArchiveIO {
-                    try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                    try writer.append(
+                        entry,
+                        cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                    )
                 }
-                try Task.checkCancellation()
+                try checkCancellation()
                 await Task.yield()
-                try Task.checkCancellation()
+                try checkCancellation()
             }
-            try Task.checkCancellation()
+            try checkCancellation()
             try await Self.performArchiveIO {
-                try writer.finish(cancellationCheck: { Task.isCancelled })
+                try writer.finish(cancellationCheck: { Task.isCancelled || cancellationCheck() })
             }
             // `finish` atomically publishes the destination. Cancellation is a
             // pre-commit concern; once it returns, committed success owns the

@@ -2,6 +2,23 @@ import Foundation
 
 #if os(macOS)
 
+nonisolated private final class MacExportJobCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        lock.unlock()
+    }
+
+    var isCancelled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return cancelled
+    }
+}
+
 /// One immutable authority decision for all daily files in a received connected-Mac operation.
 /// Missing pins remain legacy even if the Mac's current rollout default changed after capture.
 struct ConnectedMacDailyExportOperation {
@@ -105,6 +122,7 @@ final class MacExportJobExecutor {
 
     private var activeJobID: UUID?
     private var cancelledJobIDs: Set<UUID> = []
+    private var jobCancellations: [UUID: MacExportJobCancellation] = [:]
     private var streamSession: StreamSession?
     private var nextStreamGeneration: UInt64 = 0
     private var streamChunkInFlightGeneration: UInt64?
@@ -165,6 +183,7 @@ final class MacExportJobExecutor {
         progress: ProgressHandler? = nil
     ) -> MacExportFailure? {
         cancelledJobIDs.insert(jobID)
+        jobCancellations[jobID]?.cancel()
 
         // A non-streamed job observes the marker at its next checkpoint. A streamed
         // job can be cleared synchronously only while no chunk is suspended in a
@@ -212,9 +231,13 @@ final class MacExportJobExecutor {
         }
 
         activeJobID = job.jobID
+        let jobCancellation = MacExportJobCancellation()
+        if cancelledJobIDs.contains(job.jobID) { jobCancellation.cancel() }
+        jobCancellations[job.jobID] = jobCancellation
         defer {
             activeJobID = nil
             cancelledJobIDs.remove(job.jobID)
+            jobCancellations.removeValue(forKey: job.jobID)
         }
 
         guard let requestedDates = Self.validatedRequestedDates(
@@ -647,8 +670,43 @@ final class MacExportJobExecutor {
                 vaultManager: vaultManager,
                 settings: settings,
                 healthSubfolder: job.settingsSnapshot.healthSubfolder,
+                cancellationCheck: { jobCancellation.isCancelled },
                 failedDateDetails: &failedDateDetails
             )
+            if archiveOutcome.wasCancelled {
+                let result = MacExportResultPayload(
+                    jobID: job.jobID,
+                    status: .cancelled,
+                    successCount: successCount,
+                    totalCount: totalDays,
+                    formatsPerDate: formatsPerDate,
+                    totalFilesWritten: totalFilesWritten,
+                    externalRecordFileCount: externalRecordFileCount,
+                    dailyNoteUpdateCount: dailyNoteUpdateCount,
+                    dailyNoteSkipCount: dailyNoteSkipCount,
+                    failedDateDetails: failedDateDetails,
+                    completedDates: Self.completedDates(
+                        successfulRecords: successfulRecords,
+                        failedDateDetails: failedDateDetails,
+                        requestedDates: requestedDates,
+                        includeSuccessfulRecords: false
+                    ),
+                    destinationDisplayName: vaultManager.vaultName,
+                    destinationPathForDisplay: vaultManager.vaultURL?.path,
+                    completedAt: Date()
+                )
+                sendProgress(
+                    jobID: job.jobID,
+                    phase: .cancelled,
+                    processedDays: processedDays,
+                    totalDays: totalDays,
+                    currentDate: nil,
+                    filesWritten: totalFilesWritten,
+                    message: "Mac export cancelled.",
+                    progress: progress
+                )
+                return .success(result)
+            }
             archiveFileCount = archiveOutcome.fileCount
             hadTerminalRangeFailure = hadTerminalRangeFailure || archiveOutcome.hadTerminalFailure
             if archiveOutcome.hadTerminalFailure { isFileAccountingComplete = false }
@@ -1775,6 +1833,7 @@ final class MacExportJobExecutor {
     private struct ArchiveWriteOutcome {
         let fileCount: Int
         let hadTerminalFailure: Bool
+        let wasCancelled: Bool
     }
 
     private static func writeArchive(
@@ -1784,13 +1843,14 @@ final class MacExportJobExecutor {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         healthSubfolder: String?,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false },
         failedDateDetails: inout [FailedDateDetail]
     ) async -> ArchiveWriteOutcome {
         guard settings.archiveModeEnabled else {
-            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false)
+            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false, wasCancelled: false)
         }
         guard !successfulRecords.isEmpty || (settings.summaryOnlyModeEnabled && !rollupHealthData.isEmpty) else {
-            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false)
+            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: false, wasCancelled: false)
         }
 
         let sortedDates = selectedDates.sorted()
@@ -1804,11 +1864,19 @@ final class MacExportJobExecutor {
                 settings: settings,
                 startDate: startDate,
                 endDate: endDate,
-                healthSubfolder: healthSubfolder
+                healthSubfolder: healthSubfolder,
+                cancellationCheck: cancellationCheck
             ) == nil ? 0 : 1
             return ArchiveWriteOutcome(
                 fileCount: fileCount,
-                hadTerminalFailure: fileCount == 0
+                hadTerminalFailure: fileCount == 0,
+                wasCancelled: false
+            )
+        } catch is CancellationError {
+            return ArchiveWriteOutcome(
+                fileCount: 0,
+                hadTerminalFailure: false,
+                wasCancelled: true
             )
         } catch {
             failedDateDetails.append(FailedDateDetail(
@@ -1816,7 +1884,11 @@ final class MacExportJobExecutor {
                 reason: .fileWriteError,
                 errorDetails: "ZIP archive export failed: \(error.localizedDescription)"
             ))
-            return ArchiveWriteOutcome(fileCount: 0, hadTerminalFailure: true)
+            return ArchiveWriteOutcome(
+                fileCount: 0,
+                hadTerminalFailure: true,
+                wasCancelled: false
+            )
         }
     }
 

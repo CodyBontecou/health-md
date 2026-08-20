@@ -1784,6 +1784,92 @@ final class MacExportJobExecutorTests: XCTestCase {
         ))
     }
 
+    func testExecute_archiveJobCancellationDuringAssemblyIsCancellationWithoutPublication() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExportArchiveCancelAssembly-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeManagerWithVault(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: vaultURL.path
+        )
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.archiveExportFiles = true
+            settings.generateRangeSummary = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: makeSnapshot(from: settings)
+        )
+        manager.archiveEntryWillAppendForTesting = {
+            _ = executor.cancel(jobID: job.jobID)
+        }
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("Expected a terminal cancellation payload")
+        }
+
+        XCTAssertEqual(payload.status, .cancelled)
+        XCTAssertTrue(payload.failedDateDetails.isEmpty)
+        XCTAssertEqual(payload.completedDates, [])
+        XCTAssertEqual(payload.totalFilesWritten, 0)
+        XCTAssertFalse(payload.hadTerminalRangeFailure)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health.md Export 2026-05-12.zip").path
+        ))
+        XCTAssertNil(manager.lastExportPresentationTarget)
+    }
+
+    func testExecute_archiveCancellationAfterPublicationKeepsCommittedSuccess() async throws {
+        let vaultURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacExportArchiveCancelPublished-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+
+        let manager = makeManagerWithVault(
+            defaults: FakeUserDefaults(),
+            fileSystem: SystemFileSystem(),
+            bookmarkResolver: makeAccessGrantedBookmarkResolver(),
+            vaultPath: vaultURL.path
+        )
+        let executor = MacExportJobExecutor()
+        let date = Self.day(2026, 5, 12)
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.archiveExportFiles = true
+            settings.generateRangeSummary = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: date)],
+            start: date,
+            end: date,
+            snapshot: makeSnapshot(from: settings)
+        )
+        manager.archiveDidPublishForTesting = {
+            _ = executor.cancel(jobID: job.jobID)
+        }
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("Expected committed archive success")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertEqual(payload.completedDates?.count, 1)
+        XCTAssertEqual(payload.totalFilesWritten, 1)
+        XCTAssertEqual(payload.outputBreakdown?.zipArchiveFileCount, 1)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent("Health.md Export 2026-05-12.zip").path
+        ))
+        XCTAssertNotNil(manager.lastExportPresentationTarget)
+    }
+
     func testExecute_folderAccessDenied_returnsStructuredPreflightFailure() async {
         let manager = makeManagerWithVault()
         bookmarkResolver.accessGranted = false

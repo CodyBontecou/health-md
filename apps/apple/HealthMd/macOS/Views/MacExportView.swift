@@ -2,6 +2,79 @@
 import SwiftUI
 
 @MainActor
+struct MacManualDailyOutputCommitter {
+    struct Result {
+        let writeResult: DailyExportWriteResult
+        let didSucceed: Bool
+        let failedDateDetail: FailedDateDetail?
+        let completedWithoutSuccess: Bool
+    }
+
+    static func commit(
+        _ healthData: HealthData,
+        settings: AdvancedExportSettings,
+        vaultManager: VaultManager
+    ) async throws -> Result {
+        let writeResult = try await vaultManager.exportHealthData(
+            healthData,
+            settings: settings,
+            operationSurface: .localVaultRangeWithoutSideEffects
+        )
+        guard settings.dailyNotesOnlyModeEnabled else {
+            return Result(
+                writeResult: writeResult,
+                didSucceed: true,
+                failedDateDetail: nil,
+                completedWithoutSuccess: false
+            )
+        }
+
+        switch writeResult.dailyNoteResult {
+        case .updated:
+            return Result(
+                writeResult: writeResult,
+                didSucceed: true,
+                failedDateDetail: nil,
+                completedWithoutSuccess: false
+            )
+        case .skipped(let reason):
+            return Result(
+                writeResult: writeResult,
+                didSucceed: false,
+                failedDateDetail: FailedDateDetail(
+                    date: healthData.date,
+                    reason: .noHealthData,
+                    errorDetails: reason
+                ),
+                completedWithoutSuccess: true
+            )
+        case .failed(let error):
+            return Result(
+                writeResult: writeResult,
+                didSucceed: false,
+                failedDateDetail: FailedDateDetail(
+                    date: healthData.date,
+                    reason: .fileWriteError,
+                    errorDetails: error.localizedDescription
+                ),
+                completedWithoutSuccess: false
+            )
+        case .none:
+            return Result(
+                writeResult: writeResult,
+                didSucceed: false,
+                failedDateDetail: FailedDateDetail(
+                    date: healthData.date,
+                    reason: .fileWriteError,
+                    errorDetails: "Daily note update was not performed."
+                ),
+                completedWithoutSuccess: false
+            )
+        }
+    }
+}
+
+@MainActor
 struct MacManualRangeDerivedOutputCommitter {
     struct Result: Equatable {
         let rollupFileCount: Int
@@ -813,49 +886,35 @@ struct MacExportView: View {
                 }
 
                 do {
-                    let writeResult = try await vaultManager.exportHealthData(
+                    let committed = try await MacManualDailyOutputCommitter.commit(
                         healthData,
                         settings: exportSettings,
-                        operationSurface: .localVaultRangeWithoutSideEffects
+                        vaultManager: vaultManager
                     )
+                    // `commit` returns only after the daily destination output is
+                    // authoritative. Record it before acknowledging cancellation
+                    // that may have arrived after that publication boundary.
+                    dailyNoteUpdateCount += committed.writeResult.dailyNoteUpdatedCount
+                    dailyNoteSkipCount += committed.writeResult.dailyNoteSkippedCount
+                    partialFailures.append(
+                        contentsOf: committed.writeResult.individualEntryCoverageGaps
+                    )
+                    if let failure = committed.failedDateDetail {
+                        failedDateDetails.append(failure)
+                    }
+                    if committed.completedWithoutSuccess {
+                        completedDates.append(date)
+                    }
+                    if committed.didSucceed {
+                        successfulHealthData.append(healthData)
+                        successCount += 1
+                        completedDates.append(date)
+                    }
                     if Task.isCancelled {
                         wasCancelled = true
                         break
                     }
-                    dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
-                    dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
-                    partialFailures.append(contentsOf: writeResult.individualEntryCoverageGaps)
-                    if exportSettings.dailyNotesOnlyModeEnabled {
-                        switch writeResult.dailyNoteResult {
-                        case .updated:
-                            break
-                        case .skipped(let reason):
-                            failedDateDetails.append(FailedDateDetail(
-                                date: date,
-                                reason: .noHealthData,
-                                errorDetails: reason
-                            ))
-                            completedDates.append(date)
-                            continue
-                        case .failed(let error):
-                            failedDateDetails.append(FailedDateDetail(
-                                date: date,
-                                reason: .fileWriteError,
-                                errorDetails: error.localizedDescription
-                            ))
-                            continue
-                        case .none:
-                            failedDateDetails.append(FailedDateDetail(
-                                date: date,
-                                reason: .fileWriteError,
-                                errorDetails: "Daily note update was not performed."
-                            ))
-                            continue
-                        }
-                    }
-                    successfulHealthData.append(healthData)
-                    successCount += 1
-                    completedDates.append(date)
+                    if !committed.didSucceed { continue }
                 } catch is CancellationError {
                     wasCancelled = true
                     break
