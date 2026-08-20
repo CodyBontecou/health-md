@@ -378,6 +378,8 @@ final class IPhoneDirectFileExportProducer {
             appleDirectProtocolPin: protocolPin,
             healthSubfolder: healthSubfolder,
             requestedDates: metadata.requestedDates,
+            originalRequestedDates: metadata.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: metadata.originalCalendarTimeZoneIdentifier,
             transferDates: metadata.transferDates,
             capturedDays: [],
             generatedFiles: [],
@@ -727,10 +729,13 @@ final class IPhoneDirectFileExportProducer {
             staging,
             healthSubfolder: journal.healthSubfolder
         )
-        let sourceTimeZone = TimeZone(
-            identifier: journal.originalCalendarTimeZoneIdentifier
-                ?? journal.accepted.sourceTimeZoneIdentifier
-        ) ?? .current
+        guard let originalCalendarTimeZoneIdentifier = journal.originalCalendarTimeZoneIdentifier,
+              AppleExportEnginePin.isIANAIdentifier(originalCalendarTimeZoneIdentifier),
+              let sourceTimeZone = TimeZone(identifier: originalCalendarTimeZoneIdentifier),
+              let immutableRangeStart = journal.originalRequestedDates.min(),
+              let immutableRangeEnd = journal.originalRequestedDates.max() else {
+            throw IPhoneDirectFileProducerError.invalidSpool
+        }
         let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
             journal.settingsSnapshot,
             requestedDates: journal.originalRequestedDates,
@@ -746,7 +751,9 @@ final class IPhoneDirectFileExportProducer {
         try vault.preflightExportDestinations(
             settings: settings,
             healthSubfolder: journal.healthSubfolder,
-            dates: journal.requestedDates
+            dates: journal.requestedDates,
+            rollupDates: journal.originalRequestedDates,
+            archiveDates: journal.originalRequestedDates
         )
         let payloadURLs = try journal.capturedDays.map {
             try jobDirectory(journal.request.jobID).appendingPathComponent($0.relativePath)
@@ -790,9 +797,7 @@ final class IPhoneDirectFileExportProducer {
             hasAnyRequestedData = rangeInput.hasAnyData
             if !rangeInput.records.isEmpty && rangeInput.hasAnyData {
                 try checkCancellation(journal.request.jobID)
-                let calendarTimeZoneIdentifier = journal.originalCalendarTimeZoneIdentifier
-                    ?? journal.settingsSnapshot.calendarTimeZoneIdentifier
-                    ?? ""
+                let calendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
                 let requestedRange = try effectiveSettingsSnapshot.generateRangeSummary
                     ? HealthRollupRangeRequest(
                         ownerDateIdentifiers: Set(journal.originalRequestedDates.map {
@@ -915,8 +920,10 @@ final class IPhoneDirectFileExportProducer {
                 recordSourceDates: journal.capturedDays.map(\.sourceDate),
                 settings: settings,
                 requestedDates: journal.requestedDates,
-                startDate: journal.requestedDates.first ?? journal.request.createdAt,
-                endDate: journal.requestedDates.last ?? journal.request.createdAt,
+                rollupRequestedDates: journal.originalRequestedDates,
+                rollupCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
+                startDate: immutableRangeStart,
+                endDate: immutableRangeEnd,
                 healthSubfolder: journal.healthSubfolder,
                 archiveWorkDirectoryURL: try jobDirectory(journal.request.jobID)
                     .appendingPathComponent("archive-work", isDirectory: true),

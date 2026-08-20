@@ -3510,7 +3510,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             healthSubfolder: effectiveHealthSubfolder,
             dates: [],
-            rollupDates: healthData.map(\.date)
+            rollupDates: healthData.map(\.date),
+            authoritativeRollupRange: requestedRange
         )
         if shouldWriteDataDictionary {
             try Task.checkCancellation()
@@ -3689,8 +3690,9 @@ final class VaultManager: ObservableObject {
         try preflightExportDestinations(
             settings: settings,
             healthSubfolder: healthSubfolder,
-            dates: immutableArchiveDates,
-            rollupDates: immutableRollupDates
+            dates: requestedDates,
+            rollupDates: immutableRollupDates,
+            archiveDates: immutableArchiveDates
         )
         var datedFiles: [(date: Date, url: URL)] = []
         datedFiles.reserveCapacity(recordPayloadFiles.count)
@@ -4078,7 +4080,9 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         dates: [Date],
-        rollupDates: [Date]? = nil
+        rollupDates: [Date]? = nil,
+        archiveDates: [Date]? = nil,
+        authoritativeRollupRange: HealthRollupRangeRequest? = nil
     ) throws {
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
@@ -4094,21 +4098,26 @@ final class VaultManager: ObservableObject {
         let requestedRollupDates = rollupDates ?? dates
         let rollupPaths: [String]
         if HealthRollupExporter.isEnabled(settings: settings),
-           !requestedRollupDates.isEmpty {
-            guard let frozenTimeZone = settings.exportTimeZoneOverride else {
-                throw ExportError.invalidExportPath(path: "missing calendar timezone")
-            }
-            let identifiers = Set(requestedRollupDates.map {
-                HealthKitDailyOwnershipMetadata.ownerDate(
-                    for: $0,
-                    calendarTimeZoneIdentifier: frozenTimeZone.identifier
-                )
-            })
+           authoritativeRollupRange != nil || !requestedRollupDates.isEmpty {
             do {
-                let request = try HealthRollupRangeRequest(
-                    ownerDateIdentifiers: identifiers,
-                    calendarTimeZoneIdentifier: frozenTimeZone.identifier
-                )
+                let request: HealthRollupRangeRequest
+                if let authoritativeRollupRange {
+                    request = authoritativeRollupRange
+                } else {
+                    guard let frozenTimeZone = settings.exportTimeZoneOverride else {
+                        throw ExportError.invalidExportPath(path: "missing calendar timezone")
+                    }
+                    let identifiers = Set(requestedRollupDates.map {
+                        HealthKitDailyOwnershipMetadata.ownerDate(
+                            for: $0,
+                            calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                        )
+                    })
+                    request = try HealthRollupRangeRequest(
+                        ownerDateIdentifiers: identifiers,
+                        calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                    )
+                }
                 rollupPaths = HealthRollupExporter.outputRelativePaths(
                     for: request,
                     healthSubfolder: settings.archiveModeEnabled ? "" : effectiveHealthSubfolder,
@@ -4158,7 +4167,8 @@ final class VaultManager: ObservableObject {
         }
 
         if settings.archiveModeEnabled {
-            var entryPaths = settings.summaryOnlyModeEnabled ? [] : dates.flatMap { date in
+            let requestedArchiveDates = archiveDates ?? dates
+            var entryPaths = settings.summaryOnlyModeEnabled ? [] : requestedArchiveDates.flatMap { date in
                 settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map {
                     archiveEntryPath(for: date, format: $0, settings: settings)
                 }
@@ -4173,8 +4183,12 @@ final class VaultManager: ObservableObject {
                 throw invalidExportPathError(error)
             }
 
-            let startDate = dates.min() ?? rollupDates?.min() ?? Date()
-            let endDate = dates.max() ?? rollupDates?.max() ?? startDate
+            let startDate = authoritativeRollupRange?.startDate
+                ?? requestedArchiveDates.min()
+                ?? Date()
+            let endDate = authoritativeRollupRange?.endDate
+                ?? requestedArchiveDates.max()
+                ?? startDate
             let archivePath = [
                 effectiveHealthSubfolder,
                 archiveFilename(

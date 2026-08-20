@@ -1922,6 +1922,54 @@ final class VaultManagerTests: XCTestCase {
         })
     }
 
+    func testRollupSummaryPreflightUsesAuthoritativeRangeWhenBoundaryRecordIsUnavailable() throws {
+        let vaultURL = makeTempDir()
+        let outsideURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: outsideURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.includeDataDictionary = true
+        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let endDate = ExportFixtures.referenceDate
+        let startDate = endDate.addingTimeInterval(-86_400)
+        let requestedRange = try HealthRollupRangeRequest(
+            startDate: startDate,
+            endDate: endDate,
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        let rollupFolder = vaultURL.appendingPathComponent(
+            "Health/Rollups/Range",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: rollupFolder, withIntermediateDirectories: true)
+        let outsideFile = outsideURL.appendingPathComponent("escaped.json")
+        let originalOutsideData = Data("must remain unchanged".utf8)
+        try originalOutsideData.write(to: outsideFile)
+        try FileManager.default.createSymbolicLink(
+            at: rollupFolder.appendingPathComponent("2026-03-14_to_2026-03-15.json"),
+            withDestinationURL: outsideFile
+        )
+
+        XCTAssertThrowsError(try manager.exportRollupSummaries(
+            from: [ExportFixtures.fullDay],
+            requestedRange: requestedRange,
+            settings: settings
+        ))
+
+        XCTAssertEqual(try Data(contentsOf: outsideFile), originalOutsideData)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent(
+                "Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+            ).path
+        ), "authoritative range admission must fail before the first export write")
+    }
+
     func testLegacyCorpusFinalizationUsesOriginalRangeIdentityAndTimezone() async throws {
         let vaultURL = makeTempDir()
         let workURL = makeTempDir()
@@ -1971,6 +2019,179 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(rollup.contains("\"period_id\" : \"2026-03-14_to_2026-03-15\""))
         XCTAssertTrue(rollup.contains("\"days_expected\" : 2"))
         XCTAssertTrue(rollup.contains("\"days_counted\" : 1"))
+    }
+
+    func testDirectResidualRetryUsesOriginalRangeZipNameAndCompleteArchiveScopeInFrozenTimezone() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
+        let frozenIdentifier = TimeZone.current.identifier == "America/Los_Angeles"
+            ? "Asia/Tokyo"
+            : "America/Los_Angeles"
+        let frozenTimeZone = try XCTUnwrap(TimeZone(identifier: frozenIdentifier))
+        settings.exportTimeZoneOverride = frozenTimeZone
+        var frozenCalendar = Calendar(identifier: .gregorian)
+        frozenCalendar.timeZone = frozenTimeZone
+        let originalEnd = try XCTUnwrap(frozenCalendar.date(from: DateComponents(
+            timeZone: frozenTimeZone,
+            year: 2026,
+            month: 3,
+            day: 15
+        )))
+        let originalStart = try XCTUnwrap(
+            frozenCalendar.date(byAdding: .day, value: -1, to: originalEnd)
+        )
+        let firstRecord = HealthData(
+            date: originalStart,
+            timeContext: ExportFixtures.fullDay.timeContext
+        )
+        var residualRecord = HealthData(
+            date: originalEnd,
+            timeContext: ExportFixtures.fullDay.timeContext
+        )
+        residualRecord.activity = ActivityData(steps: 1_234)
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalStart,
+                isRequestedDate: false,
+                record: firstRecord,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalEnd,
+                isRequestedDate: true,
+                record: residualRecord,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+        ]
+        let payloadURLs = try payloads.enumerated().map { index, payload in
+            let url = workURL.appendingPathComponent("direct-\(index).json")
+            try JSONEncoder().encode(payload).write(to: url)
+            return url
+        }
+        let startIdentifier = HealthRollupDateFormatting.dayString(
+            originalStart,
+            timeZone: frozenTimeZone
+        )
+        let endIdentifier = HealthRollupDateFormatting.dayString(
+            originalEnd,
+            timeZone: frozenTimeZone
+        )
+        let periodID = "\(startIdentifier)_to_\(endIdentifier)"
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: payloadURLs,
+            recordSourceDates: [originalStart, originalEnd],
+            settings: settings,
+            requestedDates: [originalEnd],
+            rollupRequestedDates: [originalStart, originalEnd],
+            rollupCalendarTimeZoneIdentifier: frozenIdentifier,
+            startDate: originalStart,
+            endDate: originalEnd,
+            healthSubfolder: "Health",
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertEqual(result.archiveFileCount, 1)
+        let archiveURL = vaultURL.appendingPathComponent(
+            "Health/Health.md Export \(periodID).zip"
+        )
+        XCTAssertEqual(manager.lastExportPresentationTarget?.fileURL, archiveURL)
+        let archiveData = try Data(contentsOf: archiveURL)
+        XCTAssertNotNil(archiveData.range(of: Data("\(startIdentifier).json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("\(endIdentifier).json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data(
+            "Rollups/Range/\(periodID).json".utf8
+        )))
+    }
+
+    func testDirectResidualArchiveCollisionFailsBeforeAnyWrite() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.filenameFormat = "health"
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+        let frozenTimeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        settings.exportTimeZoneOverride = frozenTimeZone
+        var frozenCalendar = Calendar(identifier: .gregorian)
+        frozenCalendar.timeZone = frozenTimeZone
+        let originalEnd = ExportFixtures.referenceDate
+        let originalStart = try XCTUnwrap(
+            frozenCalendar.date(byAdding: .day, value: -1, to: originalEnd)
+        )
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalStart,
+                isRequestedDate: false,
+                record: HealthData(
+                    date: originalStart,
+                    timeContext: ExportFixtures.fullDay.timeContext
+                ),
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalEnd,
+                isRequestedDate: true,
+                record: ExportFixtures.fullDay,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+        ]
+        let payloadURLs = try payloads.enumerated().map { index, payload in
+            let url = workURL.appendingPathComponent("collision-\(index).json")
+            try JSONEncoder().encode(payload).write(to: url)
+            return url
+        }
+
+        do {
+            _ = try await manager.finalizeCorpusDerivedOutputs(
+                recordPayloadFiles: payloadURLs,
+                recordSourceDates: [originalStart, originalEnd],
+                settings: settings,
+                requestedDates: [originalEnd],
+                rollupRequestedDates: [originalStart, originalEnd],
+                rollupCalendarTimeZoneIdentifier: frozenTimeZone.identifier,
+                startDate: originalStart,
+                endDate: originalEnd,
+                healthSubfolder: "Health",
+                archiveWorkDirectoryURL: workURL
+            )
+            XCTFail("Original archive entry collisions must fail preflight")
+        } catch let error as ExportError {
+            guard case .invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+        XCTAssertNil(manager.lastExportPresentationTarget)
     }
 
     #if os(macOS)
