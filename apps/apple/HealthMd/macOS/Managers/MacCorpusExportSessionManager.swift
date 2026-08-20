@@ -1091,11 +1091,23 @@ final class MacCorpusExportSessionManager {
                                 rollupFileCount: 0
                             )
                         } else {
+                            let requestedRange = try journal.exportManifest.settingsSnapshot.generateRangeSummary
+                                ? HealthRollupRangeRequest(
+                                    ownerDateIdentifiers: Set(journal.exportManifest.requestedDates.map {
+                                        HealthKitDailyOwnershipMetadata.ownerDate(
+                                            for: $0,
+                                            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                                        )
+                                    }),
+                                    calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                                )
+                                : nil
                             guard let materialized = try await vaultManager.materializeHealthDataRange(
                                 rangeInput.records,
                                 settingsSnapshot: journal.exportManifest.settingsSnapshot,
                                 operationSurface: .connectedReceivedRangeWithoutSideEffects,
                                 dailyOutputOwnerDates: rangeInput.dailyOutputOwnerDates,
+                                requestedRange: requestedRange,
                                 operationIdentity: AppleExportOperationIdentity(
                                     requestID: journal.session.jobID.uuidString.lowercased(),
                                     sessionID: journal.session.sessionID.uuidString.lowercased(),

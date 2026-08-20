@@ -1,15 +1,15 @@
 ---
 schema: healthmd.rollup_summary
-schema_version: 8
+schema_version: 9
 type: health_rollup
-rollup_period: weekly
-period_id: "2026-W28"
-title: "Weekly Health Summary — 2026-W28"
+rollup_period: range
+period_id: "2026-07-06_to_2026-07-11"
+title: "Range Health Summary — 2026-07-06_to_2026-07-11"
 start_date: 2026-07-06
-end_date: 2026-07-12
-days_expected: 7
+end_date: 2026-07-11
+days_expected: 6
 days_counted: 3
-coverage_percent: 42.86
+coverage_percent: 50
 source_schema: healthmd.health_data
 source_schema_version: 8
 rollup_rules_version: 8
@@ -384,6 +384,6 @@ rollup_metrics:
     notes: "Merge list values across days and keep occurrence counts for each value."
 ---
 
-# Weekly Health Summary — 2026-W28
+# Range Health Summary — 2026-07-06_to_2026-07-11
 
 Structured roll-up summary for Obsidian Bases. Query `rollup_metrics` and top-level period fields from the YAML frontmatter.

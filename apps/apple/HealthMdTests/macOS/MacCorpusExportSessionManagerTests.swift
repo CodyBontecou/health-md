@@ -3317,6 +3317,7 @@ private final class RejectingConnectedRangePlanner: AppleLooseDailyRangeExportPl
     func planRange(
         healthData: [HealthData],
         dailyOutputOwnerDates: Set<String>,
+        requestedRange: HealthRollupRangeRequest?,
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface,
         operationIdentity: AppleExportOperationIdentity?

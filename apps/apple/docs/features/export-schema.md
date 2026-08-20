@@ -193,6 +193,10 @@ Structured summary data uses stable canonical units regardless of Metric/Imperia
 
 See [Date, Time, and Units](./date-time-units.md) and [Data Dictionary and Roll-up Rules](./data-dictionary.md).
 
+## Range-summary contract
+
+New range summaries are not daily-v8 documents. They use the independent public identity `healthmd.rollup_summary` v9 while declaring `healthmd.health_data` v8 as their source schema and roll-up rules version 8. Requested civil bounds and the IANA calendar timezone are frozen before capture, so failed edge-day queries reduce coverage without changing the period ID or bounds. Historical weekly/monthly/yearly roll-up v8 artifacts remain valid and are not relabeled. See [Range summary and historical roll-ups](./rollup-summaries.md) and `packages/contracts/rollup-summary/v9`.
+
 ## API Endpoint envelope
 
 API Endpoint export wraps ordinary v8 daily records in `healthmd.api_export`. The daily record version is declared by `daily_record_schema_version`; each `records` item still contains its own schema/version, optional typed provider section, and archive. API v2 retains provider-native sidecars under `external_records` in addition to the typed daily provider data.

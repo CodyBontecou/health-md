@@ -4,7 +4,14 @@ import Foundation
 
 extension RollupDataSnapshot {
     func toRollupCSV() -> String {
-        var rows: [[String]] = [[
+        let contractColumns = period == .range ? [
+            "Schema",
+            "Schema Version",
+            "Source Schema",
+            "Source Schema Version",
+            "Rollup Rules Version"
+        ] : []
+        var rows: [[String]] = [contractColumns + [
             "Period",
             "Period ID",
             "Start Date",
@@ -39,7 +46,14 @@ extension RollupDataSnapshot {
     }
 
     private func commonCSVColumns(for metric: HealthRollupMetricSummary) -> [String] {
-        [
+        let contractValues = period == .range ? [
+            HealthRollupExportSchema.identifier,
+            "\(HealthRollupExportSchema.currentVersion)",
+            HealthMdExportSchema.identifier,
+            "\(HealthRollupExportSchema.sourceDailyVersion)",
+            "\(HealthRollupExportSchema.rulesVersion)"
+        ] : []
+        return contractValues + [
             period.rawValue,
             periodID,
             dayString(window.startDate),

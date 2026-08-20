@@ -265,13 +265,7 @@ struct MacExportView: View {
                         Text("Roll-up summaries")
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
-                        Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
-                            .tint(Color.accent)
-                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                        Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
-                            .tint(Color.accent)
-                            .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                        Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
+                        Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                         Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
@@ -279,8 +273,8 @@ struct MacExportView: View {
                             .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                         Text(
                             advancedSettings.summaryOnlyModeEnabled
-                                ? String(localized: "Only summary files will be written for the full touched week/month/year windows.")
-                                : String(localized: "Generated for every selected format using the full touched week/month/year windows.")
+                                ? String(localized: "Only the range summary will be written for the requested dates.")
+                                : String(localized: "Generated once per selected format for the requested date range.")
                         )
                             .font(BrandTypography.caption())
                             .foregroundStyle(Color.textMuted)
@@ -590,12 +584,17 @@ struct MacExportView: View {
 
     private func rollupHealthData(for selectedDates: [Date], seedData: [HealthData]) -> [HealthData] {
         guard HealthRollupExporter.isEnabled(settings: advancedSettings) else { return seedData }
-        let calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .gmt
         var dataByDay = Dictionary(uniqueKeysWithValues: seedData.map { data in
             (calendar.startOfDay(for: data.date), data)
         })
 
-        let sourceDates = ExportOrchestrator.rollupSourceDates(for: selectedDates, settings: advancedSettings)
+        let sourceDates = ExportOrchestrator.rollupSourceDates(
+            for: selectedDates,
+            settings: advancedSettings,
+            calendar: calendar
+        )
         for date in sourceDates {
             let day = calendar.startOfDay(for: date)
             guard dataByDay[day] == nil else { continue }
@@ -621,7 +620,15 @@ struct MacExportView: View {
                 exportTask = nil
             }
 
-            let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: startDate,
+                to: endDate,
+                calendar: calendar
+            )
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
 
@@ -772,7 +779,21 @@ struct MacExportView: View {
             let rollupHealthData = rollupHealthData(for: dates, seedData: successfulHealthData)
             if !rollupHealthData.isEmpty && HealthRollupExporter.isEnabled(settings: advancedSettings) {
                 do {
-                    rollupFileCount = try vaultManager.exportRollupSummaries(from: rollupHealthData, settings: advancedSettings).count
+                    let identifiers = Set(dates.map {
+                        HealthKitDailyOwnershipMetadata.ownerDate(
+                            for: $0,
+                            calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                        )
+                    })
+                    let requestedRange = try HealthRollupRangeRequest(
+                        ownerDateIdentifiers: identifiers,
+                        calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                    )
+                    rollupFileCount = try vaultManager.exportRollupSummaries(
+                        from: rollupHealthData,
+                        requestedRange: requestedRange,
+                        settings: advancedSettings
+                    ).count
                 } catch {
                     let firstDate = rollupHealthData.map(\.date).sorted().first ?? Date()
                     partialFailures.append(ExportPartialFailure(

@@ -339,6 +339,10 @@ struct ExportOrchestrator {
 
         for selectedDate in selectedDates {
             for period in periods {
+                if period == .range {
+                    expandedDates.insert(calendar.startOfDay(for: selectedDate))
+                    continue
+                }
                 let window = HealthRollupPeriodWindow.window(
                     containing: calendar.startOfDay(for: selectedDate),
                     period: period,
@@ -705,6 +709,7 @@ struct ExportOrchestrator {
         )
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
+            requestedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
             writeDataDictionary: shouldWriteDataDictionary,
@@ -900,11 +905,23 @@ struct ExportOrchestrator {
         }
 
         do {
+            let requestedRange = try settingsSnapshot.generateRangeSummary
+                ? HealthRollupRangeRequest(
+                    ownerDateIdentifiers: Set(dates.map {
+                        HealthKitDailyOwnershipMetadata.ownerDate(
+                            for: $0,
+                            calendarTimeZoneIdentifier: calendar.timeZone.identifier
+                        )
+                    }),
+                    calendarTimeZoneIdentifier: calendar.timeZone.identifier
+                )
+                : nil
             guard let writeResult = try await vaultManager.exportHealthDataRange(
                 records,
                 settingsSnapshot: settingsSnapshot,
                 operationSurface: operationSurface,
-                dailyOutputOwnerDates: dailyOutputOwnerDates
+                dailyOutputOwnerDates: dailyOutputOwnerDates,
+                requestedRange: requestedRange
             ) else {
                 // A persisted nonlegacy pin may never be delivered through per-day legacy writes.
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
@@ -1317,6 +1334,7 @@ struct ExportOrchestrator {
         )
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
+            requestedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
             writeDataDictionary: shouldWriteDataDictionary,
@@ -1462,7 +1480,13 @@ struct ExportOrchestrator {
         var partialFailures: [ExportPartialFailure] = []
         var failedDateDetails: [FailedDateDetail] = []
 
-        let sourceDateCount = rollupSourceDates(for: dates, settings: settings).count
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let sourceDateCount = rollupSourceDates(
+            for: dates,
+            settings: settings,
+            calendar: calendar
+        ).count
         let progressFormatter = DateFormatter()
         progressFormatter.dateFormat = "yyyy-MM-dd"
         progressFormatter.timeZone = settings.exportTimeZoneOverride ?? .current
@@ -1492,6 +1516,7 @@ struct ExportOrchestrator {
 
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
+            requestedDates: dates,
             vaultManager: vaultManager,
             settings: settings,
             partialFailures: &partialFailures
@@ -1548,10 +1573,15 @@ struct ExportOrchestrator {
     ) async -> [HealthData] {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return seedData }
 
-        let sourceDates = rollupSourceDates(for: selectedDates, settings: settings)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let sourceDates = rollupSourceDates(
+            for: selectedDates,
+            settings: settings,
+            calendar: calendar
+        )
         guard !sourceDates.isEmpty else { return seedData }
 
-        let calendar = Calendar.current
         var dataByDay = Dictionary(uniqueKeysWithValues: seedData.map { data in
             (calendar.startOfDay(for: data.date), data)
         })
@@ -1603,6 +1633,7 @@ struct ExportOrchestrator {
 
     private static func writeRollupSummaries(
         from rollupHealthData: [HealthData],
+        requestedDates: [Date],
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         writeDataDictionary: Bool = true,
@@ -1612,8 +1643,22 @@ struct ExportOrchestrator {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return 0 }
 
         do {
+            guard let timeZone = settings.exportTimeZoneOverride else {
+                throw ExportError.invalidExportPath(path: "missing calendar timezone")
+            }
+            let requestedIdentifiers = Set(requestedDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(
+                    for: $0,
+                    calendarTimeZoneIdentifier: timeZone.identifier
+                )
+            })
+            let requestedRange = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: requestedIdentifiers,
+                calendarTimeZoneIdentifier: timeZone.identifier
+            )
             return try vaultManager.exportRollupSummaries(
                 from: rollupHealthData,
+                requestedRange: requestedRange,
                 settings: settings,
                 writeDataDictionary: writeDataDictionary
             ).count

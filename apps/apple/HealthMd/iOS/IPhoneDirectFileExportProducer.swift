@@ -719,16 +719,29 @@ final class IPhoneDirectFileExportProducer {
             )
             if !rangeInput.records.isEmpty && rangeInput.hasAnyData {
                 try checkCancellation(journal.request.jobID)
+                let calendarTimeZoneIdentifier = journal.settingsSnapshot.calendarTimeZoneIdentifier ?? ""
+                let requestedRange = try journal.settingsSnapshot.generateRangeSummary
+                    ? HealthRollupRangeRequest(
+                        ownerDateIdentifiers: Set(journal.requestedDates.map {
+                            HealthKitDailyOwnershipMetadata.ownerDate(
+                                for: $0,
+                                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                            )
+                        }),
+                        calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                    )
+                    : nil
                 guard try await vault.exportHealthDataRange(
                     rangeInput.records,
                     settingsSnapshot: journal.settingsSnapshot,
                     operationSurface: operationSurface,
                     dailyOutputOwnerDates: rangeInput.dailyOutputOwnerDates,
+                    requestedRange: requestedRange,
                     operationIdentity: AppleExportOperationIdentity(
                         requestID: journal.request.jobID.uuidString.lowercased(),
                         sessionID: journal.session.sessionID.uuidString.lowercased(),
                         capturedAt: journal.session.createdAt,
-                        calendarTimeZoneIdentifier: journal.settingsSnapshot.calendarTimeZoneIdentifier ?? ""
+                        calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
                     ),
                     writeDataDictionary: true
                 ) != nil else {

@@ -26,9 +26,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.includeDataDictionary)
         XCTAssertEqual(snapshot.writeMode, .update)
         XCTAssertTrue(snapshot.includeGranularData)
-        XCTAssertTrue(snapshot.generateWeeklyRollups)
-        XCTAssertTrue(snapshot.generateMonthlyRollups)
-        XCTAssertFalse(snapshot.generateYearlyRollups)
+        XCTAssertTrue(snapshot.generateRangeSummary)
         XCTAssertTrue(snapshot.summaryOnlyExport)
         XCTAssertTrue(snapshot.appleExportEngineAuthorityIsFrozen)
 
@@ -150,9 +148,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         object.removeValue(forKey: "organizeFormatsIntoFolders")
         object.removeValue(forKey: "healthSubfolder")
         object.removeValue(forKey: "includeDataDictionary")
-        object.removeValue(forKey: "generateWeeklyRollups")
-        object.removeValue(forKey: "generateMonthlyRollups")
-        object.removeValue(forKey: "generateYearlyRollups")
+        object.removeValue(forKey: "generateRangeSummary")
         object.removeValue(forKey: "summaryOnlyExport")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
@@ -160,9 +156,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
 
         XCTAssertFalse(decoded.organizeFormatsIntoFolders)
         XCTAssertTrue(decoded.includeDataDictionary)
-        XCTAssertFalse(decoded.generateWeeklyRollups)
-        XCTAssertFalse(decoded.generateMonthlyRollups)
-        XCTAssertFalse(decoded.generateYearlyRollups)
+        XCTAssertFalse(decoded.generateRangeSummary)
         XCTAssertFalse(decoded.summaryOnlyExport)
         XCTAssertNil(decoded.healthSubfolder)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
@@ -193,7 +187,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     @MainActor
     func testNewSupportedSummaryRollupOperationCapturesRustPinAfterCapabilityGate() async throws {
         let settings = makeSimpleEngineSettings()
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
             settings,
@@ -241,7 +235,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     @MainActor
     func testNewRollupOperationCapturesPinForLocalAndDirectRangeSurfaces() async throws {
         let settings = makeSimpleEngineSettings()
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let resolver = AppleExportEnginePolicyResolver(
@@ -433,9 +427,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(reconstructed.organizeFormatsIntoFolders)
         XCTAssertEqual(reconstructed.writeMode, .update)
         XCTAssertTrue(reconstructed.includeGranularData)
-        XCTAssertTrue(reconstructed.generateWeeklyRollups)
-        XCTAssertTrue(reconstructed.generateMonthlyRollups)
-        XCTAssertFalse(reconstructed.generateYearlyRollups)
+        XCTAssertTrue(reconstructed.generateRangeSummary)
         XCTAssertTrue(reconstructed.summaryOnlyExport)
         XCTAssertFalse(reconstructed.summaryOnlyModeEnabled)
         XCTAssertEqual(reconstructed.effectiveFileExportMode, .dailyNotesOnly)
@@ -482,9 +474,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.archiveExportFiles = false
         settings.summaryOnlyExport = false
         settings.includeGranularData = false
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         settings.dailyNoteInjection.enabled = false
         settings.individualTracking.globalEnabled = false
         return settings
@@ -506,9 +496,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.organizeFormatsIntoFolders = true
         settings.writeMode = .update
         settings.includeGranularData = true
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = true
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
 
         settings.formatCustomization.dateFormat = .usLong

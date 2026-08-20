@@ -814,23 +814,11 @@ struct ExportTabView: View {
             }
 
             VStack(spacing: 0) {
-                Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates weekly roll-up files for every selected export format")
-
-                Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates monthly roll-up files for every selected export format")
-
-                Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates yearly roll-up files for every selected export format")
+                    .accessibilityHint("Generates one range summary for every selected export format")
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
@@ -838,7 +826,7 @@ struct ExportTabView: View {
                     .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityHint("Skips daily export files and writes only the enabled roll-up summaries")
 
-                Text("When enabled, Health.md fetches the full touched periods but skips daily files, daily-note injection, and individual entries.")
+                Text("When enabled, Health.md summarizes the full requested range but skips daily files, daily-note injection, and individual entries.")
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1139,9 +1127,12 @@ struct ExportTabView: View {
     }
 
     private var exportDates: [Date] {
-        ExportOrchestrator.dateRange(
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
+        return ExportOrchestrator.dateRange(
             from: min(startDate, endDate),
-            to: max(startDate, endDate)
+            to: max(startDate, endDate),
+            calendar: calendar
         )
     }
 
@@ -1305,11 +1296,14 @@ struct ExportTabView: View {
             return exportDateCount
         }
 
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return max(
             exportDateCount,
             ExportOrchestrator.rollupSourceDates(
                 for: exportDates,
-                periods: advancedSettings.enabledRollupPeriods
+                periods: advancedSettings.enabledRollupPeriods,
+                calendar: calendar
             ).count
         )
     }

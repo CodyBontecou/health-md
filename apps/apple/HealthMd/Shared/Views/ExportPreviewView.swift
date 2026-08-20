@@ -606,7 +606,14 @@ struct ExportPreviewView: View {
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
 
-        let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let frozenTimeZone = settings.exportTimeZoneOverride ?? .current
+        var frozenCalendar = Calendar(identifier: .gregorian)
+        frozenCalendar.timeZone = frozenTimeZone
+        let dates = ExportOrchestrator.dateRange(
+            from: startDate,
+            to: endDate,
+            calendar: frozenCalendar
+        )
         totalDateCount = dates.count
 
         guard settings.hasFileDestinationOutput,
@@ -770,7 +777,7 @@ struct ExportPreviewView: View {
                     records: rollupInputs,
                     settings: settings,
                     destination: apiDestination,
-                    calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+                    calendarTimeZone: frozenTimeZone,
                     connectedAppsEnabled: connectedAppsEnabled,
                     fetchExternalDailyRecords: fetchExternalDailyRecords
                 ) {
@@ -792,9 +799,19 @@ struct ExportPreviewView: View {
         }
 
         renderedDayPreviewCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
+        let requestedIdentifiers = Set(dates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+        })
+        let requestedRange = try? HealthRollupRangeRequest(
+            ownerDateIdentifiers: requestedIdentifiers,
+            calendarTimeZoneIdentifier: frozenTimeZone.identifier
+        )
         let rollupSection = targetType == .apiEndpoint
             ? nil
-            : rollupSummaryPreviewSection(for: rollupInputs)
+            : requestedRange.flatMap { rollupSummaryPreviewSection(for: rollupInputs, requestedRange: $0) }
         if scope.includesSupplementalFiles, let rollupSection {
             built.insert(rollupSection, at: 0)
         }
@@ -874,11 +891,15 @@ struct ExportPreviewView: View {
         return ExportDataDictionarySizeEstimator.byteCount(using: settings.formatCustomization)
     }
 
-    private func rollupSummaryPreviewSection(for healthData: [HealthData]) -> DatePreview? {
+    private func rollupSummaryPreviewSection(
+        for healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest
+    ) -> DatePreview? {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return nil }
 
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
+            requestedRange: requestedRange,
             settings: settings
         )
         guard !summaries.isEmpty else { return nil }

@@ -190,10 +190,30 @@ protocol AppleLooseDailyRangeExportPlanning: AppleLooseDailyExportPlanning {
     func planRange(
         healthData: [HealthData],
         dailyOutputOwnerDates: Set<String>,
+        requestedRange: HealthRollupRangeRequest?,
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface,
         operationIdentity: AppleExportOperationIdentity?
     ) async throws -> AppleLooseDailyPlanResolution
+}
+
+extension AppleLooseDailyRangeExportPlanning {
+    func planRange(
+        healthData: [HealthData],
+        dailyOutputOwnerDates: Set<String>,
+        settingsSnapshot: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface,
+        operationIdentity: AppleExportOperationIdentity?
+    ) async throws -> AppleLooseDailyPlanResolution {
+        try await planRange(
+            healthData: healthData,
+            dailyOutputOwnerDates: dailyOutputOwnerDates,
+            requestedRange: nil,
+            settingsSnapshot: settingsSnapshot,
+            surface: surface,
+            operationIdentity: operationIdentity
+        )
+    }
 }
 
 /// Capture-once application planner for one bounded loose-file operation. Shadow supports the
@@ -251,9 +271,16 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
             )
         })
+        let requestedRange = settingsSnapshot.generateRangeSummary
+            ? try HealthRollupRangeRequest(
+                ownerDateIdentifiers: outputDates,
+                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+            )
+            : nil
         return try await planRange(
             healthData: records,
             dailyOutputOwnerDates: outputDates,
+            requestedRange: requestedRange,
             settingsSnapshot: settingsSnapshot,
             surface: surface,
             operationIdentity: nil
@@ -263,6 +290,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
     func planRange(
         healthData records: [HealthData],
         dailyOutputOwnerDates: Set<String>,
+        requestedRange suppliedRequestedRange: HealthRollupRangeRequest? = nil,
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface,
         operationIdentity suppliedOperationIdentity: AppleExportOperationIdentity? = nil
@@ -284,12 +312,20 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
             )
         }
+        let requestedRange: HealthRollupRangeRequest?
+        if settingsSnapshot.generateRangeSummary {
+            requestedRange = try suppliedRequestedRange ?? HealthRollupRangeRequest(
+                ownerDateIdentifiers: Set(ownerDates),
+                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+            )
+        } else {
+            requestedRange = nil
+        }
         guard Set(ownerDates).count == ownerDates.count,
-              (!dailyOutputOwnerDates.isEmpty ||
-                  settingsSnapshot.generateWeeklyRollups ||
-                  settingsSnapshot.generateMonthlyRollups ||
-                  settingsSnapshot.generateYearlyRollups),
-              dailyOutputOwnerDates.isSubset(of: Set(ownerDates)) else {
+              (!dailyOutputOwnerDates.isEmpty || requestedRange != nil),
+              dailyOutputOwnerDates.isSubset(of: Set(ownerDates)),
+              requestedRange?.calendarTimeZoneIdentifier == nil
+                || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         let suppliedPin = settingsSnapshot.appleExportEnginePin
@@ -412,7 +448,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 settings: frozenSettings,
                 healthSubfolder: settingsSnapshot.healthSubfolder ?? "",
                 generatedAt: identity.capturedAt,
-                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
+                requestedRange: requestedRange
             )
             guard let planned = try? Self.makeNativePlan(
                 outputs: expectedOutputs,
@@ -438,7 +475,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 customization: frozenSettings.formatCustomization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 retainPlatformExtensions: false,
-                rollupPeriods: frozenSettings.enabledRollupPeriods
+                rollupPeriods: frozenSettings.enabledRollupPeriods,
+                requestedRange: requestedRange
             )
             let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
                 sessionID: identity.sessionID,
@@ -632,9 +670,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
-        let hasConfiguredRollups = settingsSnapshot.generateWeeklyRollups
-            || settingsSnapshot.generateMonthlyRollups
-            || settingsSnapshot.generateYearlyRollups
+        let hasConfiguredRollups = settingsSnapshot.generateRangeSummary
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
             || surface == .directGeneratedFilesWithoutSideEffects
             || surface == .connectedReceivedRangeWithoutSideEffects
@@ -699,7 +735,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         settings: AdvancedExportSettings,
         healthSubfolder: String,
         generatedAt: Date,
-        calendarTimeZoneIdentifier: String
+        calendarTimeZoneIdentifier: String,
+        requestedRange: HealthRollupRangeRequest?
     ) throws -> [ExpectedOutput] {
         let root = URL(fileURLWithPath: "/__HealthMdPlanningRoot__", isDirectory: true)
         let daily = try preparedExports.flatMap { preparedExport -> [ExpectedOutput] in
@@ -725,15 +762,13 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 )
             }
         }
-        guard !settings.enabledRollupPeriods.isEmpty else { return daily }
-        var calendar = Calendar.current
-        calendar.timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) ?? .gmt
+        guard !settings.enabledRollupPeriods.isEmpty,
+              let requestedRange else { return daily }
         let summaries = HealthRollupExporter.makeSummaries(
             from: sourceHealthData,
+            requestedRange: requestedRange,
             settings: settings,
-            periods: settings.enabledRollupPeriods,
-            generatedAt: generatedAt,
-            calendar: calendar
+            generatedAt: generatedAt
         )
         let rollups = HealthRollupExporter.outputTargets(
             for: summaries,
@@ -848,12 +883,14 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         var expectedFormatsByPath: [String: ExportFormat] = [:]
         for rollup in rollups {
             guard let period = rollup["period"] as? String,
-                  let startDate = rollup["start_date"] as? String else {
+                  let startDate = rollup["start_date"] as? String,
+                  let endDate = rollup["end_date"] as? String else {
                 throw AppleLooseDailyExportPlannerError.rustPlanningFailed
             }
             let (periodFolder, periodIdentifier) = try pureRustPeriodPath(
                 period: period,
                 startDate: startDate,
+                endDate: endDate,
                 settings: settings
             )
             for format in formats {
@@ -891,6 +928,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
     private static func pureRustPeriodPath(
         period: String,
         startDate: String,
+        endDate: String,
         settings: ExportSettingsSnapshot
     ) throws -> (folder: String, identifier: String) {
         let pieces = startDate.split(separator: "-", omittingEmptySubsequences: false)
@@ -918,6 +956,16 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         switch period {
+        case "range":
+            guard settings.generateRangeSummary,
+                  let requestedRange = try? HealthRollupRangeRequest(
+                    ownerDateIdentifiers: [startDate, endDate],
+                    calendarTimeZoneIdentifier: settings.calendarTimeZoneIdentifier ?? ""
+                  ),
+                  requestedRange.periodID == "\(startDate)_to_\(endDate)" else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+            return ("Range", requestedRange.periodID)
         case "iso_week":
             guard settings.generateWeeklyRollups,
                   calendar.component(.weekday, from: date) == 2 else {

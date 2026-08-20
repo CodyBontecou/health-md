@@ -22,28 +22,28 @@ final class ExportOrchestratorTests: XCTestCase {
 
     func testDateRange_singleDay() {
         let date = makeDate(2026, 3, 15)
-        let range = ExportOrchestrator.dateRange(from: date, to: date)
+        let range = ExportOrchestrator.dateRange(from: date, to: date, calendar: Calendar.current)
         XCTAssertEqual(range.count, 1)
     }
 
     func testDateRange_threeDays() {
         let start = makeDate(2026, 3, 15)
         let end = makeDate(2026, 3, 17)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertEqual(range.count, 3)
     }
 
     func testDateRange_crossesMonthBoundary() {
         let start = makeDate(2026, 3, 30)
         let end = makeDate(2026, 4, 2)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertEqual(range.count, 4) // Mar 30, 31, Apr 1, 2
     }
 
     func testDateRange_endBeforeStart_returnsEmpty() {
         let start = makeDate(2026, 3, 15)
         let end = makeDate(2026, 3, 14)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertTrue(range.isEmpty)
     }
 
@@ -55,7 +55,7 @@ final class ExportOrchestratorTests: XCTestCase {
         comps.hour = 14; comps.minute = 30
         let midDay = calendar.date(from: comps)!
 
-        let range = ExportOrchestrator.dateRange(from: midDay, to: midDay)
+        let range = ExportOrchestrator.dateRange(from: midDay, to: midDay, calendar: Calendar.current)
         XCTAssertEqual(range.count, 1)
         let resultComps = calendar.dateComponents([.hour, .minute], from: range[0])
         XCTAssertEqual(resultComps.hour, 0)
@@ -65,7 +65,7 @@ final class ExportOrchestratorTests: XCTestCase {
     func testDateRange_fullWeek() {
         let start = makeDate(2026, 3, 1)
         let end = makeDate(2026, 3, 7)
-        let range = ExportOrchestrator.dateRange(from: start, to: end)
+        let range = ExportOrchestrator.dateRange(from: start, to: end, calendar: Calendar.current)
         XCTAssertEqual(range.count, 7)
     }
 
@@ -74,6 +74,7 @@ final class ExportOrchestratorTests: XCTestCase {
         let dates = ExportOrchestrator.rollupSourceDates(
             for: [selectedDate],
             periods: [.weekly],
+            calendar: Calendar.current,
             latestAllowedDate: makeDate(2026, 12, 31)
         )
 
@@ -87,6 +88,7 @@ final class ExportOrchestratorTests: XCTestCase {
         let dates = ExportOrchestrator.rollupSourceDates(
             for: [selectedDate],
             periods: [.monthly],
+            calendar: Calendar.current,
             latestAllowedDate: makeDate(2026, 12, 31)
         )
 

@@ -1407,7 +1407,14 @@ struct HealthMdApp: App {
             reason: exportFailureReason(for: failure.reason),
             errorDetails: failure.underlyingError ?? failure.message
         )
-        let totalCount = max(ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd).count, 1)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = job.settingsSnapshot.calendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:)) ?? .gmt
+        let totalCount = max(ExportOrchestrator.dateRange(
+            from: job.dateRangeStart,
+            to: job.dateRangeEnd,
+            calendar: calendar
+        ).count, 1)
         let exportResult = ExportOrchestrator.ExportResult(
             successCount: 0,
             totalCount: totalCount,

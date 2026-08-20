@@ -2,27 +2,29 @@ import Foundation
 
 // MARK: - Health Roll-up Summary Models
 
-/// Periods Health.md can summarize from daily health aggregate snapshots.
+/// Roll-up windows understood by Apple. Calendar periods remain decodable for
+/// historical v8 artifacts; newly planned summaries use only `range`.
 enum HealthRollupPeriod: String, CaseIterable, Codable, Equatable {
     case weekly
     case monthly
     case yearly
+    case range
 
     var displayName: String {
         switch self {
         case .weekly: return "Weekly"
         case .monthly: return "Monthly"
         case .yearly: return "Yearly"
+        case .range: return "Range"
         }
     }
 
-    /// Localized UI label. Keep `displayName` and `folderName` stable because they
-    /// participate in exported content and destination paths.
     var localizedDisplayName: String {
         switch self {
         case .weekly: return String(localized: "Weekly")
         case .monthly: return String(localized: "Monthly")
         case .yearly: return String(localized: "Yearly")
+        case .range: return String(localized: "Range")
         }
     }
 
@@ -31,6 +33,7 @@ enum HealthRollupPeriod: String, CaseIterable, Codable, Equatable {
         case .weekly: return "Weekly"
         case .monthly: return "Monthly"
         case .yearly: return "Yearly"
+        case .range: return "Range"
         }
     }
 
@@ -42,12 +45,97 @@ enum HealthRollupPeriod: String, CaseIterable, Codable, Equatable {
             return identifier.range(of: #"^\d{4}-\d{2}$"#, options: .regularExpression) != nil
         case .yearly:
             return identifier.range(of: #"^\d{4}$"#, options: .regularExpression) != nil
+        case .range:
+            return identifier.range(
+                of: #"^\d{4}-\d{2}-\d{2}_to_\d{4}-\d{2}-\d{2}$"#,
+                options: .regularExpression
+            ) != nil
         }
     }
 }
 
 enum HealthRollupExportSchema {
     static let identifier = "healthmd.rollup_summary"
+    static let currentVersion = 9
+    static let sourceDailyVersion = 8
+    static let rulesVersion = 8
+}
+
+/// Immutable authority for a newly requested range summary. Its civil bounds
+/// and timezone are chosen before capture and never inferred from successful days.
+struct HealthRollupRangeRequest: Equatable, Hashable, Codable {
+    enum ValidationError: Error, Equatable {
+        case invalidTimeZone
+        case invalidBounds
+        case exceedsDayLimit
+    }
+
+    let startDate: Date
+    let endDate: Date
+    let daysExpected: Int
+    let calendarTimeZoneIdentifier: String
+
+    var calendarTimeZone: TimeZone {
+        // The initializer proves this identifier is valid.
+        TimeZone(identifier: calendarTimeZoneIdentifier)!
+    }
+
+    var periodID: String {
+        let start = HealthRollupDateFormatting.dayString(startDate, timeZone: calendarTimeZone)
+        let end = HealthRollupDateFormatting.dayString(endDate, timeZone: calendarTimeZone)
+        return "\(start)_to_\(end)"
+    }
+
+    init(
+        ownerDateIdentifiers: Set<String>,
+        calendarTimeZoneIdentifier: String
+    ) throws {
+        guard let first = ownerDateIdentifiers.min(), let last = ownerDateIdentifiers.max(),
+              let timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) else {
+            throw ValidationError.invalidBounds
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        func civilDate(_ value: String) -> Date? {
+            let parts = value.split(separator: "-").compactMap { Int($0) }
+            guard parts.count == 3 else { return nil }
+            return calendar.date(from: DateComponents(
+                timeZone: timeZone,
+                year: parts[0],
+                month: parts[1],
+                day: parts[2]
+            ))
+        }
+        guard ownerDateIdentifiers.allSatisfy({ civilDate($0) != nil }),
+              let start = civilDate(first), let end = civilDate(last) else {
+            throw ValidationError.invalidBounds
+        }
+        try self.init(
+            startDate: start,
+            endDate: end,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+        )
+    }
+
+    init(startDate: Date, endDate: Date, calendarTimeZoneIdentifier: String) throws {
+        guard (calendarTimeZoneIdentifier == "UTC"
+                || TimeZone.knownTimeZoneIdentifiers.contains(calendarTimeZoneIdentifier)),
+              let timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) else {
+            throw ValidationError.invalidTimeZone
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let normalizedStart = calendar.startOfDay(for: startDate)
+        let normalizedEnd = calendar.startOfDay(for: endDate)
+        guard normalizedStart <= normalizedEnd else { throw ValidationError.invalidBounds }
+        let days = (calendar.dateComponents([.day], from: normalizedStart, to: normalizedEnd).day ?? -1) + 1
+        guard days > 0 else { throw ValidationError.invalidBounds }
+        guard days <= 400 else { throw ValidationError.exceedsDayLimit }
+        self.startDate = normalizedStart
+        self.endDate = normalizedEnd
+        self.daysExpected = days
+        self.calendarTimeZoneIdentifier = calendarTimeZoneIdentifier
+    }
 }
 
 struct HealthRollupPeriodWindow: Hashable {
@@ -130,7 +218,7 @@ struct HealthRollupWriteResult: Equatable {
 }
 
 enum HealthRollupDateFormatting {
-    static func dayString(_ date: Date, timeZone: TimeZone = Calendar.current.timeZone) -> String {
+    static func dayString(_ date: Date, timeZone: TimeZone) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.timeZone = timeZone
@@ -334,6 +422,19 @@ extension HealthRollupPeriodWindow {
                 daysExpected: days,
                 calendarTimeZone: calendar.timeZone
             )
+        case .range:
+            preconditionFailure("Range windows require an explicit HealthRollupRangeRequest")
         }
+    }
+
+    static func range(_ request: HealthRollupRangeRequest) -> HealthRollupPeriodWindow {
+        HealthRollupPeriodWindow(
+            period: .range,
+            id: request.periodID,
+            startDate: request.startDate,
+            endDate: request.endDate,
+            daysExpected: request.daysExpected,
+            calendarTimeZone: request.calendarTimeZone
+        )
     }
 }

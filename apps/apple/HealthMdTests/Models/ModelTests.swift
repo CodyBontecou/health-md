@@ -793,6 +793,35 @@ final class AdvancedExportSettingsMigrationTests: XCTestCase {
         XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.includeGranularData"))
     }
 
+    func testRangeSummaryMigrationUsesLegacyORAndRemovesOldKeysOnce() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        defaults.set(false, forKey: "advancedExportSettings.generateWeeklyRollups")
+        defaults.set(true, forKey: "advancedExportSettings.generateMonthlyRollups")
+        defaults.set(false, forKey: "advancedExportSettings.generateYearlyRollups")
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertTrue(settings.generateRangeSummary)
+        XCTAssertTrue(defaults.bool(forKey: "advancedExportSettings.generateRangeSummary"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateWeeklyRollups"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateMonthlyRollups"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateYearlyRollups"))
+    }
+
+    func testExplicitFalseRangeSummaryOverridesLegacyTrue() {
+        let (defaults, suiteName) = makeIsolatedDefaults()
+        defer { cleanup(defaults, suiteName: suiteName) }
+        defaults.set(false, forKey: "advancedExportSettings.generateRangeSummary")
+        defaults.set(true, forKey: "advancedExportSettings.generateWeeklyRollups")
+
+        let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
+
+        XCTAssertFalse(settings.generateRangeSummary)
+        XCTAssertFalse(defaults.bool(forKey: "advancedExportSettings.generateRangeSummary"))
+        XCTAssertNil(defaults.object(forKey: "advancedExportSettings.generateWeeklyRollups"))
+    }
+
     func testMigration_legacyDataTypes_populatesAndPersistsMetricSelection() throws {
         let (defaults, suiteName) = makeIsolatedDefaults()
         defer { cleanup(defaults, suiteName: suiteName) }

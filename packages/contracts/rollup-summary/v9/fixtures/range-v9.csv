@@ -1,0 +1,2 @@
+Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version,Period,Period ID,Start Date,End Date,Days Expected,Days Counted,Coverage Percent,Category,Metric,Key,Canonical Key,Primary Value,Unit,Metric Days Counted,Rule,Statistic,Statistic Value,Notes
+healthmd.rollup_summary,9,healthmd.health_data,8,8,range,2026-07-06_to_2026-07-11,2026-07-06,2026-07-11,6,3,50,Activity,Steps,steps,steps,3000,count,2,sum,primary,3000,

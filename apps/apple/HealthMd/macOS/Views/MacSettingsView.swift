@@ -707,21 +707,11 @@ struct MacFormatSettingsTab: View {
             }
 
             Section {
-                Toggle("Weekly summaries", isOn: $advancedSettings.generateWeeklyRollups)
+                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .accessibilityLabel("Weekly roll-up summaries")
-                    .accessibilityValue(macEnabledState(advancedSettings.generateWeeklyRollups))
-                Toggle("Monthly summaries", isOn: $advancedSettings.generateMonthlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .accessibilityLabel("Monthly roll-up summaries")
-                    .accessibilityValue(macEnabledState(advancedSettings.generateMonthlyRollups))
-                Toggle("Yearly summaries", isOn: $advancedSettings.generateYearlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .accessibilityLabel("Yearly roll-up summaries")
-                    .accessibilityValue(macEnabledState(advancedSettings.generateYearlyRollups))
+                    .accessibilityLabel("Range roll-up summary")
+                    .accessibilityValue(macEnabledState(advancedSettings.generateRangeSummary))
 
                 Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
@@ -729,7 +719,7 @@ struct MacFormatSettingsTab: View {
                     .accessibilityLabel("Export roll-up summaries only")
                     .accessibilityValue(macEnabledState(advancedSettings.summaryOnlyModeEnabled))
 
-                Text("Skips daily files and side effects. Health.md still fetches the full touched periods to build the enabled summaries.")
+                Text("Skips daily files and side effects. Health.md still fetches the requested range to build the summary.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
 

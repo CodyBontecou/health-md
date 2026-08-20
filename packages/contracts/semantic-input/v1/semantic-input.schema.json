@@ -76,8 +76,13 @@
         "selected_selection_ids":{"type":"array","maxItems":512,"uniqueItems":true,"items":{"$ref":"#/$defs/identifier"}},
         "disabled_output_keys":{"type":"array","maxItems":512,"uniqueItems":true,"items":{"$ref":"#/$defs/identifier"}},
         "retain_platform_extensions":{"type":"boolean"},
-        "rollup_periods":{"type":"array","uniqueItems":true,"items":{"enum":["iso_week","calendar_month","calendar_year"]}}
-      }
+        "rollup_periods":{"type":"array","uniqueItems":true,"items":{"enum":["iso_week","calendar_month","calendar_year","range"]}},
+        "rollup_range":{"type":"object","additionalProperties":false,"required":["start_date","end_date"],"properties":{"start_date":{"type":"string","format":"date"},"end_date":{"type":"string","format":"date"}}}
+      },
+      "allOf":[
+        {"if":{"properties":{"rollup_periods":{"contains":{"const":"range"}}}},"then":{"required":["rollup_range"],"properties":{"semantic_input_version":{"const":1},"profile":{"const":"apple_health_data_v8"},"profile_revision":{"const":1},"rollup_periods":{"maxItems":1}}},"else":{"not":{"required":["rollup_range"]}}},
+        {"if":{"properties":{"profile":{"enum":["android_frozen_v4","android_analytical_v5"]}}},"then":{"properties":{"rollup_periods":{"maxItems":0}}}}
+      ]
     },
     {
       "type":"object","additionalProperties":false,

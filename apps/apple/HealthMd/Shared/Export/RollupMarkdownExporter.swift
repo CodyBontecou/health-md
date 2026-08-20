@@ -7,7 +7,9 @@ extension RollupDataSnapshot {
         var lines: [String] = []
         lines.append("---")
         lines.append("schema: \(HealthRollupExportSchema.identifier)")
-        lines.append("schema_version: \(HealthMdExportSchema.version)")
+        let schemaVersion = period == .range
+            ? HealthRollupExportSchema.currentVersion : HealthMdExportSchema.version
+        lines.append("schema_version: \(schemaVersion)")
         lines.append("type: health_rollup")
         lines.append("rollup_period: \(period.rawValue)")
         lines.append("period_id: \(periodID)")
@@ -17,8 +19,8 @@ extension RollupDataSnapshot {
         lines.append("days_counted: \(daysCounted)")
         lines.append("coverage_percent: \(HealthRollupFormatting.number(coveragePercent))")
         lines.append("source_schema: \(HealthMdExportSchema.identifier)")
-        lines.append("source_schema_version: \(HealthMdExportSchema.version)")
-        lines.append("rollup_rules_version: \(HealthMdExportSchema.version)")
+        lines.append("source_schema_version: \(HealthRollupExportSchema.sourceDailyVersion)")
+        lines.append("rollup_rules_version: \(HealthRollupExportSchema.rulesVersion)")
         lines.append("generated_at: \(HealthRollupDateFormatting.timestampString(generatedAt))")
 
         if !sourceDates.isEmpty {
@@ -46,7 +48,7 @@ extension RollupDataSnapshot {
         lines.append("- **Period:** \(dayString(window.startDate)) → \(dayString(window.endDate))")
         lines.append("- **Days counted:** \(daysCounted) / \(daysExpected) (\(HealthRollupFormatting.number(coveragePercent))%)")
         lines.append("- **Missing days:** \(max(0, daysExpected - daysCounted))")
-        lines.append("- **Rule source:** `_healthmd_data_dictionary.json` schema v\(HealthMdExportSchema.version)")
+        lines.append("- **Rule source:** `_healthmd_data_dictionary.json` schema v\(HealthRollupExportSchema.rulesVersion)")
 
         if !sourceDates.isEmpty {
             lines.append("- **Source dates:** \(sourceDates.sorted().map(dayString).joined(separator: ", "))")

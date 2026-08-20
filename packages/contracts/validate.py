@@ -2367,7 +2367,13 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     f"{fixture_context}: SHA-256 mismatch for {raw_path}; "
                     f"declared {declared_hash}, actual {actual_hash}"
                 )
-            load_json(fixture_path, fixture_context)
+            if fixture_path.suffix == ".json":
+                load_json(fixture_path, fixture_context)
+            else:
+                try:
+                    fixture_bytes.decode("utf-8")
+                except UnicodeDecodeError as error:
+                    fail(f"{fixture_context}: fixture is not UTF-8: {error}")
             provenance = fixture.get("provenance")
             if not isinstance(provenance, str) or not provenance:
                 fail(f"{fixture_context}: provenance must be a non-empty string")

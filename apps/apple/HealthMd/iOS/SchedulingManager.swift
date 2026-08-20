@@ -1435,7 +1435,16 @@ class SchedulingManager: ObservableObject {
                 dateRangeStart: job.dateRangeStart,
                 dateRangeEnd: job.dateRangeEnd,
                 requestedDates: job.requestedDates
-                    ?? ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd),
+                    ?? {
+                        var calendar = Calendar(identifier: .gregorian)
+                        calendar.timeZone = job.settingsSnapshot.calendarTimeZoneIdentifier
+                            .flatMap(TimeZone.init(identifier:)) ?? .gmt
+                        return ExportOrchestrator.dateRange(
+                            from: job.dateRangeStart,
+                            to: job.dateRangeEnd,
+                            calendar: calendar
+                        )
+                    }(),
                 settings: settings,
                 notificationOperationID: notificationOperationID,
                 continuation: continuation
@@ -1686,7 +1695,13 @@ class SchedulingManager: ObservableObject {
         dateRangeEnd: Date,
         settings: AdvancedExportSettings
     ) -> ExportOrchestrator.ExportResult {
-        let dates = ExportOrchestrator.dateRange(from: dateRangeStart, to: dateRangeEnd)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let dates = ExportOrchestrator.dateRange(
+            from: dateRangeStart,
+            to: dateRangeEnd,
+            calendar: calendar
+        )
         let fallbackDates = dates.isEmpty ? [dateRangeStart] : dates
         let reason = scheduledFailureReason(for: failure.reason)
         return ExportOrchestrator.ExportResult(

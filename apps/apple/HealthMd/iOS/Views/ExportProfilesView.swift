@@ -1302,16 +1302,8 @@ struct ExportProfileEditorSheet: View {
     private var rollupSection: some View {
         Section {
             Toggle(
-                String(localized: "Weekly roll-ups", comment: "Profile editor weekly rollup toggle"),
-                isOn: $draft.generateWeeklyRollups
-            )
-            Toggle(
-                String(localized: "Monthly roll-ups", comment: "Profile editor monthly rollup toggle"),
-                isOn: $draft.generateMonthlyRollups
-            )
-            Toggle(
-                String(localized: "Yearly roll-ups", comment: "Profile editor yearly rollup toggle"),
-                isOn: $draft.generateYearlyRollups
+                String(localized: "Range summary", comment: "Profile editor range-summary toggle"),
+                isOn: $draft.generateRangeSummary
             )
         } header: {
             Text("Roll-Ups")

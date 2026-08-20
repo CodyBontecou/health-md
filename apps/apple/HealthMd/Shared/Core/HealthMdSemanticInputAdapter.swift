@@ -50,7 +50,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
         retainPlatformExtensions: Bool,
-        rollupPeriods: [HealthRollupPeriod]
+        rollupPeriods: [HealthRollupPeriod],
+        requestedRange: HealthRollupRangeRequest? = nil
     ) throws -> Data {
         guard registry.profileId == "apple_health_data_v8",
               registry.publicProfileId == "apple-v8",
@@ -76,9 +77,17 @@ nonisolated enum HealthMdSemanticInputAdapter {
             case .weekly: "iso_week"
             case .monthly: "calendar_month"
             case .yearly: "calendar_year"
+            case .range: "range"
             }
         }
-        return try canonicalJSON([
+        let containsRange = rollupPeriods.contains(.range)
+        guard containsRange == (requestedRange != nil),
+              !containsRange || rollupPeriods == [.range],
+              requestedRange?.calendarTimeZoneIdentifier == nil
+                || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
+            throw AdapterError.invalidSessionResult
+        }
+        var payload: [String: Any] = [
             "schema": "healthmd.semantic_session_config",
             "semantic_input_version": semanticInputVersion,
             "canonical_model_version": canonicalModelVersion,
@@ -92,7 +101,20 @@ nonisolated enum HealthMdSemanticInputAdapter {
             "disabled_output_keys": disabledOutputKeys,
             "retain_platform_extensions": retainPlatformExtensions,
             "rollup_periods": periods,
-        ])
+        ]
+        if let requestedRange {
+            payload["rollup_range"] = [
+                "start_date": HealthRollupDateFormatting.dayString(
+                    requestedRange.startDate,
+                    timeZone: requestedRange.calendarTimeZone
+                ),
+                "end_date": HealthRollupDateFormatting.dayString(
+                    requestedRange.endDate,
+                    timeZone: requestedRange.calendarTimeZone
+                ),
+            ]
+        }
+        return try canonicalJSON(payload)
     }
 
     /// Encodes complete daily snapshots without applying `MetricSelectionState` natively.

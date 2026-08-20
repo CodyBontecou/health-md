@@ -1,118 +1,64 @@
-# Roll-up summaries
+# Range summary and historical roll-ups
 
-Health.md can generate weekly, monthly, and yearly summary files for the full roll-up periods touched by the user's selected export dates. The [data dictionary and roll-up reference](../reference/data-dictionary-and-rollups.md) includes every rule family and complete generated JSON, CSV, Markdown, and Bases examples.
+Health.md can generate one range summary covering exactly the requested civil dates. The range grammar is the independently versioned public contract `healthmd.rollup_summary` v9; daily Apple exports remain `healthmd.health_data` v8.
 
 ## User promise
 
-When one or more roll-up periods are enabled, Health.md writes period-level derived files for every selected export format:
+When **Range summary** is enabled, Health.md writes one derived file per selected export format:
 
 ```text
 Health/
   Rollups/
-    Weekly/2026-W11.md
-    Weekly/2026-W11.json
-    Weekly/2026-W11.csv
-    Weekly/2026-W11-bases.md
-    Monthly/2026-03.md
-    Yearly/2026.md
+    Range/2026-03-10_to_2026-03-15.md
+    Range/2026-03-10_to_2026-03-15.json
+    Range/2026-03-10_to_2026-03-15.csv
+    Range/2026-03-10_to_2026-03-15-bases.md
 ```
 
-If **Organize by File Type** is enabled, roll-ups are grouped before the period folder:
+With **Organize by File Type**, the format folder precedes `Range`. Range files are derived from Apple-v8 daily aggregate facts and do not embed the canonical HealthKit archive.
 
-```text
-Health/
-  Rollups/
-    Markdown/Weekly/2026-W11.md
-    Bases/Weekly/2026-W11.md
-    JSON/Weekly/2026-W11.json
-    CSV/Weekly/2026-W11.csv
-```
+The requested IANA calendar timezone and inclusive start/end dates are frozen before capture. `period_id`, `start_date`, `end_date`, and `days_expected` never shrink when the first or last query fails. `source_dates` contains distinct successfully captured owner dates, including successful empty days; `days_counted` and coverage therefore expose missing captures rather than changing artifact identity. A range is limited to 400 days and an artifact is emitted only when at least one selected metric can be summarized.
 
-These files are derived artifacts generated from HealthKit daily summary snapshots using the same rules documented in `_healthmd_data_dictionary.json`. They do not require the sidecar file to be written and do not embed canonical `healthkit_record_archive` records; lossless source data remains in daily JSON/CSV exports.
+## Contract identity
 
-## Settings
+Every new JSON, CSV, Markdown, and Obsidian Bases range artifact identifies:
 
-Roll-ups are explicit opt-in settings and default to off for existing and new users:
+- `schema: healthmd.rollup_summary`
+- `schema_version: 9`
+- `source_schema: healthmd.health_data`
+- `source_schema_version: 8`
+- `rollup_rules_version: 8`
+- `rollup_period: range`
 
-- Weekly summaries
-- Monthly summaries
-- Yearly summaries
-- Summary files only
+CSV carries these values in stable leading columns on every row. Daily JSON, CSV, Markdown, and Bases outputs remain Apple v8 and are not altered by enabling a range summary. Provider-native WHOOP facts remain available in daily v8 records but have no roll-up rule and are excluded from range v9.
 
-Roll-up files are aggregate derived artifacts, not daily records. Daily Markdown/Bases/JSON/CSV files continue to use `healthmd.health_data`; roll-up summary files identify themselves separately as `healthmd.rollup_summary`.
+The normative contract and reviewed synthetic fixtures are under `packages/contracts/rollup-summary/v9`.
 
-When **Summary files only** is enabled with at least one roll-up period, Health.md skips per-day aggregate files and export side effects such as Daily Note Injection and Individual Entry Tracking. It still fetches HealthKit daily aggregate snapshots for the full touched week/month/year windows so the summary files are complete.
+## Settings and migration
 
-## What gets generated
+Range summary is opt-in. **Summary files only** skips daily files and daily side effects while still capturing the requested dates needed for the summary.
 
-For each selected export range, Health.md expands the enabled roll-up windows and groups daily snapshots into:
+On settings migration, a previously enabled weekly, monthly, or yearly preference opts into the new range-summary setting using OR semantics. An explicitly stored new `false` value remains authoritative, and migrated legacy keys are removed. New durable settings snapshots encode only `generateRangeSummary`.
 
-- weekly summaries using ISO week IDs like `2026-W11`, with Monday-through-Sunday bounds rendered in the same calendar timezone used to form the window
-- monthly summaries like `2026-03`
-- yearly summaries like `2026`
-
-Each Markdown roll-up includes:
-
-- schema/frontmatter identifying the file as `healthmd.rollup_summary`
-- `schema_version: 8`
-- `rollup_period`, `period_id`, `start_date`, and `end_date`
-- `days_expected`, `days_counted`, and `coverage_percent`
-- `source_dates`
-- a `units:` map for all summarized keys
-- category tables for every metric that had data in that period
-- per-metric statistics in collapsible details sections
-
-JSON exports expose the same metadata plus structured `metrics` and `categories` objects. CSV exports write one primary row and statistic rows for each metric. Obsidian Bases exports write a Markdown file focused on YAML frontmatter under `rollup_metrics`.
+Historical weekly, monthly, and yearly `healthmd.rollup_summary` v8 artifacts remain valid and readable. Their calendar identifiers and bytes are not relabeled or regenerated as range v9. Semantic-input v1 calendar-period fixtures likewise remain compatibility fixtures; a range operation is explicitly gated to semantic-input v1, Apple-v8 profile revision 1, one `range` period, and immutable `rollup_range` bounds.
 
 ## Aggregation rules
 
-Roll-ups use the rules that `_healthmd_data_dictionary.json` documents when **Write Data Dictionary** is enabled:
+Range v9 changes only the window grammar. Metric rules stay at Apple roll-up rules version 8:
 
-| Daily rule | Period behavior |
+| Daily rule | Range behavior |
 |---|---|
-| `sum`, `duration_sum`, `count` | Sum daily values, also report daily average/min/max. |
+| `sum`, `duration_sum`, `count` | Sum daily values and retain daily statistics. |
 | `average` | Average exported daily aggregate values. |
-| `weighted_average` | Use workout duration when available, otherwise fall back to daily averages. |
-| `minimum` | Period minimum of daily minima. |
-| `maximum` | Period maximum of daily maxima. |
-| `latest` | Latest daily value with trend context when numeric. Schema v8 retains the v7 rule for `vo2_max`, even when the latest value is below an earlier value. |
+| `weighted_average` | Use workout duration when available, otherwise use daily averages. |
+| `minimum` / `maximum` | Reduce daily minima or maxima. |
+| `latest` | Select the latest daily value, including a lower later VO2 Max. |
 | `list` | Union values and count occurrences. |
-| `category_latest` | Latest value plus value counts. |
-| `first_time` / `last_time` | Earliest, latest, and average clock time. |
+| `category_latest` | Retain the latest value and value counts. |
+| `first_time` / `last_time` | Reduce civil clock-time values. |
 
-`days_counted` and `source_dates` reflect the daily aggregate snapshots Health.md fetched for the roll-up window, even when a day has no value for a selected metric. Missing metric values are ignored for that metric's calculation and surfaced through the per-metric days-counted column. Coverage drops below 100% only when a daily snapshot could not be fetched or the window includes future dates. For current week/month/year windows, future dates are not queried, but they still remain part of the period's `days_expected` count.
+Missing metric values are ignored for that metric and are never converted to zero. Per-metric `days_counted` reports only dates containing that metric.
 
-## Preview support
+## Preview and references
 
-Export Preview shows a **Roll-up summaries** section before the daily files when roll-up periods are enabled. It renders one preview row per selected period and export format.
-
-## Limitations
-
-- Roll-ups query HealthKit for the full weekly/monthly/yearly windows touched by selected dates; they do not depend on existing vault files.
-- Roll-ups summarize compatibility projections and compact lossless diagnostics, not source objects. Record counts do not prove every query was complete; preserve capture-status/warning provenance.
-- Summary-only changes which files are written, not the roll-up schema. Daily `healthmd.health_data` files are skipped.
-- Weighted workout roll-ups use exported daily workout duration as the weight. Deeper recomputation from canonical records is outside the current roll-up contract.
-- Keep schema-v5 and schema-v6 roll-ups as historical files; regenerate under v8 rather than relabeling them. V6 `vo2_max` period headlines used the maximum, and roll-up day labels could use the process timezone instead of the period's calendar timezone; v7 introduced, and v8 retains, the latest daily measurement and timezone-consistent labels.
-
-## Implementation notes
-
-Primary source files:
-
-- `HealthMd/Shared/Export/HealthRollupModels.swift`
-- `HealthMd/Shared/Export/HealthRollupGenerator.swift`
-- `HealthMd/Shared/Export/HealthRollupExporter.swift`
-- `HealthMd/Shared/Export/RollupMarkdownExporter.swift`
-- `HealthMd/Shared/Export/RollupObsidianBasesExporter.swift`
-- `HealthMd/Shared/Export/RollupJSONExporter.swift`
-- `HealthMd/Shared/Export/RollupCSVExporter.swift`
-- `HealthMd/Shared/Managers/ExportOrchestrator.swift`
-- `HealthMd/Shared/Managers/VaultManager.swift`
-- `HealthMd/Shared/Views/ExportPreviewView.swift`
-- `HealthMd/Shared/Export/HealthMetricsDictionary.swift`
-
-Tests:
-
-- `HealthMdTests/Export/HealthRollupExporterTests.swift`
-- `HealthMdTests/Managers/ExportOrchestratorTests.swift`
-- `HealthMdTests/macOS/MacExportJobExecutorTests.swift`
-- `HealthMdUITests/ExportJourneyUITests.swift`
+Export Preview shows one **Range summary** section per selected format. The generated data-dictionary and roll-up reference includes complete production JSON, CSV, Markdown, and Bases examples and is checked by `make check-export-docs`.

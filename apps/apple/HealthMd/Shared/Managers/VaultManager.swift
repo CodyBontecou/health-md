@@ -2273,6 +2273,7 @@ final class VaultManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot,
         operationSurface: AppleExportOperationSurface,
         dailyOutputOwnerDates: Set<String>? = nil,
+        requestedRange: HealthRollupRangeRequest? = nil,
         operationIdentity: AppleExportOperationIdentity? = nil,
         includeDataDictionary: Bool = true
     ) async throws -> AppleLooseDailyRangeMaterialization? {
@@ -2292,6 +2293,7 @@ final class VaultManager: ObservableObject {
         let resolution = try await rangePlanner.planRange(
             healthData: healthData,
             dailyOutputOwnerDates: outputDates,
+            requestedRange: requestedRange,
             settingsSnapshot: settingsSnapshot,
             surface: operationSurface,
             operationIdentity: operationIdentity
@@ -2353,6 +2355,7 @@ final class VaultManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot,
         operationSurface: AppleExportOperationSurface,
         dailyOutputOwnerDates: Set<String>? = nil,
+        requestedRange: HealthRollupRangeRequest? = nil,
         operationIdentity: AppleExportOperationIdentity? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true
     ) async throws -> AppleLooseDailyRangeWriteResult? {
@@ -2367,6 +2370,7 @@ final class VaultManager: ObservableObject {
             settingsSnapshot: settingsSnapshot,
             operationSurface: operationSurface,
             dailyOutputOwnerDates: dailyOutputOwnerDates,
+            requestedRange: requestedRange,
             operationIdentity: operationIdentity,
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
@@ -3172,7 +3176,24 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        let rollupEntries = rollupArchiveEntries(from: rollupHealthData, settings: settings)
+        let rollupEntries: [ZipArchiveWriter.Entry]
+        if HealthRollupExporter.isEnabled(settings: settings) {
+            guard let frozenTimeZone = settings.exportTimeZoneOverride else {
+                throw ExportError.invalidExportPath(path: "missing calendar timezone")
+            }
+            let requestedRange = try HealthRollupRangeRequest(
+                startDate: startDate,
+                endDate: endDate,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+            rollupEntries = rollupArchiveEntries(
+                from: rollupHealthData,
+                requestedRange: requestedRange,
+                settings: settings
+            )
+        } else {
+            rollupEntries = []
+        }
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
@@ -3343,9 +3364,17 @@ final class VaultManager: ObservableObject {
         return components.joined(separator: "/")
     }
 
-    private func rollupArchiveEntries(from healthData: [HealthData], settings: AdvancedExportSettings) -> [ZipArchiveWriter.Entry] {
+    private func rollupArchiveEntries(
+        from healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest,
+        settings: AdvancedExportSettings
+    ) -> [ZipArchiveWriter.Entry] {
         guard HealthRollupExporter.isEnabled(settings: settings), !healthData.isEmpty else { return [] }
-        let summaries = HealthRollupExporter.makeSummaries(from: healthData, settings: settings)
+        let summaries = HealthRollupExporter.makeSummaries(
+            from: healthData,
+            requestedRange: requestedRange,
+            settings: settings
+        )
         return HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: "",
@@ -3393,6 +3422,7 @@ final class VaultManager: ObservableObject {
     @discardableResult
     func exportRollupSummaries(
         from healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest,
         settings: AdvancedExportSettings,
         generatedAt: Date = Date(),
         healthSubfolder: String? = nil,
@@ -3411,6 +3441,7 @@ final class VaultManager: ObservableObject {
 
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
+            requestedRange: requestedRange,
             settings: settings,
             generatedAt: generatedAt
         )
@@ -3652,37 +3683,30 @@ final class VaultManager: ObservableObject {
         var finalizedUnits = 0
         let estimatedUnits = max(datedFiles.count + requestedDates.count, 1)
         if HealthRollupExporter.isEnabled(settings: settings) {
-            for period in settings.enabledRollupPeriods {
-                let windows = Set(requestedDates.map {
-                    HealthRollupPeriodWindow.window(containing: $0, period: period, calendar: sourceCalendar)
-                }).sorted { $0.startDate < $1.startDate }
-                for window in windows {
-                    try checkCancellation()
-                    if unavailableRollupDates.contains(where: {
-                        $0 >= window.startDate && $0 <= window.endDate
-                    }) {
-                        finalizedUnits += 1
-                        progress?(finalizedUnits, estimatedUnits, window.endDate)
-                        await Task.yield()
-                        continue
-                    }
-                    var records: [HealthData] = []
-                    for item in rollupProjectionFiles
-                        where item.date >= window.startDate && item.date <= window.endDate {
-                        records.append(try await Self.decodeHealthData(from: item.url))
-                    }
-                    let windowSummaries = HealthRollupExporter.makeSummaries(
-                        from: records,
-                        settings: settings,
-                        periods: [period],
-                        calendar: sourceCalendar
-                    ).filter { $0.window == window }
-                    summaries.append(contentsOf: windowSummaries)
-                    finalizedUnits += 1
-                    progress?(finalizedUnits, estimatedUnits, window.endDate)
-                    await Task.yield()
-                }
+            try checkCancellation()
+            let identifiers = Set(requestedDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(
+                    for: $0,
+                    calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
+                )
+            })
+            let requestedRange = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: identifiers,
+                calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
+            )
+            var records: [HealthData] = []
+            for item in rollupProjectionFiles
+                where item.date >= requestedRange.startDate && item.date <= requestedRange.endDate {
+                records.append(try await Self.decodeHealthData(from: item.url))
             }
+            summaries = HealthRollupExporter.makeSummaries(
+                from: records,
+                requestedRange: requestedRange,
+                settings: settings
+            )
+            finalizedUnits += 1
+            progress?(finalizedUnits, estimatedUnits, requestedRange.endDate)
+            await Task.yield()
         }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
@@ -3974,8 +3998,30 @@ final class VaultManager: ObservableObject {
             if requiresSecurityScope { bookmarkResolver.stopAccessing(vaultURL) }
         }
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        var calendar = Calendar.current
-        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+        let requestedRollupDates = rollupDates ?? dates
+        let rollupPaths: [String]
+        if HealthRollupExporter.isEnabled(settings: settings) {
+            guard let frozenTimeZone = settings.exportTimeZoneOverride else {
+                throw ExportError.invalidExportPath(path: "missing calendar timezone")
+            }
+            let identifiers = Set(requestedRollupDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(
+                    for: $0,
+                    calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                )
+            })
+            let request = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: identifiers,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+            rollupPaths = HealthRollupExporter.outputRelativePaths(
+                for: request,
+                healthSubfolder: settings.archiveModeEnabled ? "" : effectiveHealthSubfolder,
+                settings: settings
+            )
+        } else {
+            rollupPaths = []
+        }
 
         if !settings.archiveModeEnabled,
            settings.dailyNoteInjection.enabled,
@@ -4016,12 +4062,7 @@ final class VaultManager: ObservableObject {
                     archiveEntryPath(for: date, format: $0, settings: settings)
                 }
             }
-            entryPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
-                for: rollupDates ?? dates,
-                healthSubfolder: "",
-                settings: settings,
-                calendar: calendar
-            ))
+            entryPaths.append(contentsOf: rollupPaths)
             if settings.writesDataDictionary {
                 entryPaths.append(HealthMdExportSchema.dataDictionaryFilename)
             }
@@ -4075,12 +4116,7 @@ final class VaultManager: ObservableObject {
                 )
             })
         }
-        artifactPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
-            for: rollupDates ?? dates,
-            healthSubfolder: effectiveHealthSubfolder,
-            settings: settings,
-            calendar: calendar
-        ))
+        artifactPaths.append(contentsOf: rollupPaths)
         if settings.writesDataDictionary && !settings.dailyNotesOnlyModeEnabled {
             artifactPaths.append(
                 ExportPathPlanner.dataDictionaryRelativePath(

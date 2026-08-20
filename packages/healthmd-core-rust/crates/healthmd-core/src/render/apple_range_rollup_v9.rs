@@ -1,8 +1,8 @@
-//! Exact Apple v8 roll-up bytes and paths.
+//! Exact Apple v9 range-roll-up bytes and paths.
 
 use std::{collections::BTreeMap, fmt::Write as _};
 
-use chrono::{Datelike, NaiveDate};
+use chrono::NaiveDate;
 use serde_json::Value;
 
 use super::{
@@ -40,7 +40,7 @@ pub(crate) fn add_rollups(
     });
     let formats = super::ordered_formats(config.profile, &config.formats);
     for rollup in rollups {
-        if rollup.period == RollupPeriod::Range {
+        if rollup.period != RollupPeriod::Range {
             continue;
         }
         let period_id = period_identifier(rollup)?;
@@ -89,6 +89,17 @@ fn render(
     let settings = config.rollups.as_ref().ok_or(RenderError::InvalidConfig)?;
     let period_id = period_identifier(rollup)?;
     let days_expected = days_expected(rollup)?;
+    if days_expected == 0
+        || days_expected > 400
+        || rollup.calendar_time_zone != config.calendar_time_zone
+        || rollup.source_dates.iter().any(|date| {
+            NaiveDate::parse_from_str(date, "%Y-%m-%d").is_err_and(|_| true)
+                || date < &rollup.start_date
+                || date > &rollup.end_date
+        })
+    {
+        return Err(RenderError::InvalidSemanticResult);
+    }
     let days_counted = u32::try_from(
         rollup
             .source_dates
@@ -97,6 +108,9 @@ fn render(
             .len(),
     )
     .map_err(|_| RenderError::LimitExceeded)?;
+    if days_counted > days_expected {
+        return Err(RenderError::InvalidSemanticResult);
+    }
     let coverage = if days_expected == 0 {
         0.0
     } else {
@@ -198,7 +212,7 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             "schema".to_owned(),
             Value::String("healthmd.rollup_summary".to_owned()),
         ),
-        ("schema_version".to_owned(), Value::from(8)),
+        ("schema_version".to_owned(), Value::from(9)),
         ("type".to_owned(), Value::String("health_rollup".to_owned())),
         (
             "rollup_period".to_owned(),
@@ -301,10 +315,15 @@ fn metric_json(metric: &Metric<'_>) -> Value {
 
 fn render_csv(context: &Context<'_>) -> Vec<u8> {
     let mut output = String::from(
-        "Period,Period ID,Start Date,End Date,Days Expected,Days Counted,Coverage Percent,Category,Metric,Key,Canonical Key,Primary Value,Unit,Metric Days Counted,Rule,Statistic,Statistic Value,Notes\n",
+        "Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version,Period,Period ID,Start Date,End Date,Days Expected,Days Counted,Coverage Percent,Category,Metric,Key,Canonical Key,Primary Value,Unit,Metric Days Counted,Rule,Statistic,Statistic Value,Notes\n",
     );
     for metric in &context.metrics {
         let common = [
+            "healthmd.rollup_summary".to_owned(),
+            "9".to_owned(),
+            "healthmd.health_data".to_owned(),
+            "8".to_owned(),
+            "8".to_owned(),
             period_id(context.rollup.period).to_owned(),
             context.period_id.clone(),
             context.rollup.start_date.clone(),
@@ -350,7 +369,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 8".to_owned(),
+        "schema_version: 9".to_owned(),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", context.period_id),
@@ -494,7 +513,7 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 8".to_owned(),
+        "schema_version: 9".to_owned(),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", yaml_quoted(&context.period_id)),
@@ -569,16 +588,12 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
 fn period_identifier(rollup: &SemanticRollupResult) -> Result<String, RenderError> {
     let start = NaiveDate::parse_from_str(&rollup.start_date, "%Y-%m-%d")
         .map_err(|_| RenderError::InvalidSemanticResult)?;
-    Ok(match rollup.period {
-        RollupPeriod::IsoWeek => format!(
-            "{:04}-W{:02}",
-            start.iso_week().year(),
-            start.iso_week().week()
-        ),
-        RollupPeriod::CalendarMonth => format!("{:04}-{:02}", start.year(), start.month()),
-        RollupPeriod::CalendarYear => format!("{:04}", start.year()),
-        RollupPeriod::Range => return Err(RenderError::InvalidSemanticResult),
-    })
+    let end = NaiveDate::parse_from_str(&rollup.end_date, "%Y-%m-%d")
+        .map_err(|_| RenderError::InvalidSemanticResult)?;
+    if rollup.period != RollupPeriod::Range || end < start {
+        return Err(RenderError::InvalidSemanticResult);
+    }
+    Ok(format!("{}_to_{}", rollup.start_date, rollup.end_date))
 }
 
 fn days_expected(rollup: &SemanticRollupResult) -> Result<u32, RenderError> {
@@ -592,19 +607,19 @@ fn days_expected(rollup: &SemanticRollupResult) -> Result<u32, RenderError> {
 
 fn period_id(period: RollupPeriod) -> &'static str {
     match period {
-        RollupPeriod::IsoWeek => "weekly",
-        RollupPeriod::CalendarMonth => "monthly",
-        RollupPeriod::CalendarYear => "yearly",
-        RollupPeriod::Range => unreachable!("range roll-ups use the v9 renderer"),
+        RollupPeriod::Range => "range",
+        RollupPeriod::IsoWeek | RollupPeriod::CalendarMonth | RollupPeriod::CalendarYear => {
+            unreachable!("calendar roll-ups use the v8 renderer")
+        }
     }
 }
 
 fn period_display(period: RollupPeriod) -> &'static str {
     match period {
-        RollupPeriod::IsoWeek => "Weekly",
-        RollupPeriod::CalendarMonth => "Monthly",
-        RollupPeriod::CalendarYear => "Yearly",
-        RollupPeriod::Range => unreachable!("range roll-ups use the v9 renderer"),
+        RollupPeriod::Range => "Range",
+        RollupPeriod::IsoWeek | RollupPeriod::CalendarMonth | RollupPeriod::CalendarYear => {
+            unreachable!("calendar roll-ups use the v8 renderer")
+        }
     }
 }
 

@@ -725,10 +725,10 @@
       }
     ]
   },
-  "coverage_percent" : 42.857142857142854,
+  "coverage_percent" : 50,
   "days_counted" : 3,
-  "days_expected" : 7,
-  "end_date" : "2026-07-12",
+  "days_expected" : 6,
+  "end_date" : "2026-07-11",
   "generated_at" : "2026-07-13T12:00:00Z",
   "metrics" : [
     {
@@ -1444,11 +1444,11 @@
       "unit" : ""
     }
   ],
-  "period_id" : "2026-W28",
-  "rollup_period" : "weekly",
+  "period_id" : "2026-07-06_to_2026-07-11",
+  "rollup_period" : "range",
   "rollup_rules_version" : 8,
   "schema" : "healthmd.rollup_summary",
-  "schema_version" : 8,
+  "schema_version" : 9,
   "source_dates" : [
     "2026-07-06",
     "2026-07-08",

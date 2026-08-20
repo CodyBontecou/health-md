@@ -265,7 +265,8 @@ class SchedulingManager: ObservableObject {
             let dayAfterLastExport = calendar.date(byAdding: .day, value: 1, to: lastExportedDataDay)!
             newlyDueDates = ExportOrchestrator.dateRange(
                 from: max(dayAfterLastExport, oldestDateToExport),
-                to: yesterday
+                to: yesterday,
+                calendar: calendar
             )
         } else {
             newlyDueDates = []
@@ -284,6 +285,9 @@ class SchedulingManager: ObservableObject {
         let vaultManager = VaultManager()
         let settings = existingPendingRequest?.settingsSnapshot?.makeAdvancedExportSettings()
             ?? AdvancedExportSettings()
+        if existingPendingRequest == nil {
+            settings.exportTimeZoneOverride = calendar.timeZone
+        }
         let frozenSettingsSnapshot: ExportSettingsSnapshot? = if existingPendingRequest == nil {
             await ExportSettingsSnapshot.forNewAppleOperation(
                 settings,
@@ -366,11 +370,21 @@ class SchedulingManager: ObservableObject {
             if !captured.records.isEmpty
                 && (!settings.summaryOnlyModeEnabled || !captured.selectedRecordDates.isEmpty) {
                 do {
+                    let requestedRange = try HealthRollupRangeRequest(
+                        ownerDateIdentifiers: Set(dates.map {
+                            HealthKitDailyOwnershipMetadata.ownerDate(
+                                for: $0,
+                                calendarTimeZoneIdentifier: timeZone.identifier
+                            )
+                        }),
+                        calendarTimeZoneIdentifier: timeZone.identifier
+                    )
                     guard let writeResult = try await vaultManager.exportHealthDataRange(
                         captured.records,
                         settingsSnapshot: frozenSettingsSnapshot,
                         operationSurface: .localVaultRangeWithoutSideEffects,
-                        dailyOutputOwnerDates: captured.dailyOutputOwnerDates
+                        dailyOutputOwnerDates: captured.dailyOutputOwnerDates,
+                        requestedRange: requestedRange
                     ) else {
                         throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                     }
@@ -492,7 +506,11 @@ class SchedulingManager: ObservableObject {
         var rollupHealthData = successfulHealthData
         if !wasCancelled {
             let retainedRollupDays = Set(rollupHealthData.map { calendar.startOfDay(for: $0.date) })
-            for rollupDate in ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
+            for rollupDate in ExportOrchestrator.rollupSourceDates(
+                for: dates,
+                settings: settings,
+                calendar: calendar
+            )
                 where !retainedRollupDays.contains(calendar.startOfDay(for: rollupDate)) {
                 if let data = healthDataStore.fetchHealthData(for: rollupDate), data.hasAnyData {
                     rollupHealthData.append(data)
@@ -524,8 +542,22 @@ class SchedulingManager: ObservableObject {
             }
         } else if !wasCancelled && settings.summaryOnlyModeEnabled && !successfulHealthData.isEmpty {
             do {
+                guard let timeZone = settings.exportTimeZoneOverride else {
+                    throw ExportError.invalidExportPath(path: "missing calendar timezone")
+                }
+                let identifiers = Set(dates.map {
+                    HealthKitDailyOwnershipMetadata.ownerDate(
+                        for: $0,
+                        calendarTimeZoneIdentifier: timeZone.identifier
+                    )
+                })
+                let requestedRange = try HealthRollupRangeRequest(
+                    ownerDateIdentifiers: identifiers,
+                    calendarTimeZoneIdentifier: timeZone.identifier
+                )
                 let results = try vaultManager.exportRollupSummaries(
                     from: rollupHealthData,
+                    requestedRange: requestedRange,
                     settings: settings
                 )
                 if results.isEmpty {

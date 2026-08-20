@@ -219,7 +219,8 @@ final class MacExportJobExecutor {
         guard let requestedDates = Self.validatedRequestedDates(
             explicitDates: job.requestedDates,
             dateRangeStart: job.dateRangeStart,
-            dateRangeEnd: job.dateRangeEnd
+            dateRangeEnd: job.dateRangeEnd,
+            calendarTimeZoneIdentifier: job.settingsSnapshot.calendarTimeZoneIdentifier
         ) else {
             return .failure(MacExportFailure(
                 jobID: job.jobID,
@@ -286,7 +287,8 @@ final class MacExportJobExecutor {
                 message: error.localizedDescription
             ))
         }
-        let recordsByDate = Self.recordsByStartOfDay(job.records)
+        let operationCalendar = Self.sourceCalendar(for: settings)
+        let recordsByDate = Self.recordsByStartOfDay(job.records, settings: settings)
         let externalRecordsByDate = Self.externalRecordsByDate(job.externalDailyRecords)
         var successCount = 0
         var failedDateDetails: [FailedDateDetail] = []
@@ -343,7 +345,7 @@ final class MacExportJobExecutor {
             }
 
             processedDays += 1
-            guard let record = recordsByDate[Calendar.current.startOfDay(for: date)] else {
+            guard let record = recordsByDate[operationCalendar.startOfDay(for: date)] else {
                 failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
                 sendProgress(
                     jobID: job.jobID,
@@ -509,8 +511,10 @@ final class MacExportJobExecutor {
             )
 
             do {
+                let requestedRange = try Self.requestedRange(for: requestedDates, settings: settings)
                 let rollupResults = try vaultManager.exportRollupSummaries(
                     from: rollupRecords,
+                    requestedRange: requestedRange,
                     settings: settings,
                     healthSubfolder: job.settingsSnapshot.healthSubfolder
                 )
@@ -669,7 +673,8 @@ final class MacExportJobExecutor {
                 explicitDates: start.requestedDates,
                 dateRangeStart: start.dateRangeStart,
                 dateRangeEnd: start.dateRangeEnd,
-                expectedCount: start.totalRequestedDays
+                expectedCount: start.totalRequestedDays,
+                calendarTimeZoneIdentifier: start.settingsSnapshot.calendarTimeZoneIdentifier
               ) else {
             activeJobID = nil
             return .failure(MacExportFailure(
@@ -825,7 +830,10 @@ final class MacExportJobExecutor {
             session.retainedExternalDailyRecords.append(contentsOf: chunk.externalDailyRecords)
         }
 
-        let requestedDays = Set(session.requestedDates.map { Calendar.current.startOfDay(for: $0) })
+        let operationCalendar = Self.sourceCalendar(
+            for: session.dailyExportOperation.settingsSnapshot.makeAdvancedExportSettings()
+        )
+        let requestedDays = Set(session.requestedDates.map { operationCalendar.startOfDay(for: $0) })
         for record in chunk.records {
             if streamWasInterrupted(jobID: chunk.jobID, generation: generation) {
                 return finishInterruptedStream(
@@ -835,7 +843,7 @@ final class MacExportJobExecutor {
                     progress: progress
                 )
             }
-            let dateKey = Calendar.current.startOfDay(for: record.date)
+            let dateKey = operationCalendar.startOfDay(for: record.date)
             let isRequestedDay = requestedDays.contains(dateKey)
             session.receivedRecordsByDate[dateKey] = record
             session.processedDays += 1
@@ -1053,10 +1061,11 @@ final class MacExportJobExecutor {
             return .failure(Self.engineResolutionFailure(jobID: complete.jobID, error: error))
         }
         session.failedDateDetails.append(contentsOf: complete.iphoneFailedDateDetails)
+        let operationCalendar = Self.sourceCalendar(for: settings)
 
         for date in session.requestedDates {
-            if session.receivedRecordsByDate[Calendar.current.startOfDay(for: date)] == nil,
-               !complete.iphoneFailedDateDetails.contains(where: { Calendar.current.isDate($0.date, inSameDayAs: date) }) {
+            if session.receivedRecordsByDate[operationCalendar.startOfDay(for: date)] == nil,
+               !complete.iphoneFailedDateDetails.contains(where: { operationCalendar.isDate($0.date, inSameDayAs: date) }) {
                 session.failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
             }
         }
@@ -1076,7 +1085,7 @@ final class MacExportJobExecutor {
                         progress: progress
                     )
                 }
-                guard let record = recordsByDate[Calendar.current.startOfDay(for: date)] else { continue }
+                guard let record = recordsByDate[operationCalendar.startOfDay(for: date)] else { continue }
                 if settings.summaryOnlyModeEnabled {
                     session.successCount += 1
                     session.successfulRecords.append(record)
@@ -1159,8 +1168,13 @@ final class MacExportJobExecutor {
            !rollupRecords.isEmpty,
            HealthRollupExporter.isEnabled(settings: settings) {
             do {
+                let requestedRange = try Self.requestedRange(
+                    for: session.requestedDates,
+                    settings: settings
+                )
                 let rollupResults = try vaultManager.exportRollupSummaries(
                     from: rollupRecords,
+                    requestedRange: requestedRange,
                     settings: settings,
                     healthSubfolder: session.start.settingsSnapshot.healthSubfolder
                 )
@@ -1212,7 +1226,7 @@ final class MacExportJobExecutor {
                 )
             }
             session.successCount = session.requestedDates.filter {
-                session.receivedRecordsByDate[Calendar.current.startOfDay(for: $0)] != nil
+                session.receivedRecordsByDate[operationCalendar.startOfDay(for: $0)] != nil
             }.count
         }
 
@@ -1505,22 +1519,36 @@ final class MacExportJobExecutor {
         explicitDates: [Date]?,
         dateRangeStart: Date,
         dateRangeEnd: Date,
-        expectedCount: Int? = nil
+        expectedCount: Int? = nil,
+        calendarTimeZoneIdentifier: String?
     ) -> [Date]? {
         guard dateRangeStart <= dateRangeEnd else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        if let identifier = calendarTimeZoneIdentifier {
+            guard let timeZone = TimeZone(identifier: identifier) else { return nil }
+            calendar.timeZone = timeZone
+        } else {
+            // Historical jobs predate frozen calendar identifiers and retain the
+            // process-calendar behavior under which they were created.
+            calendar = .current
+        }
 
         let dates: [Date]
         if let explicitDates {
             guard !explicitDates.isEmpty,
                   explicitDates == explicitDates.sorted(),
                   Set(explicitDates).count == explicitDates.count,
-                  explicitDates.first.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeStart) }) == true,
-                  explicitDates.last.map({ Calendar.current.isDate($0, inSameDayAs: dateRangeEnd) }) == true else {
+                  explicitDates.first.map({ calendar.isDate($0, inSameDayAs: dateRangeStart) }) == true,
+                  explicitDates.last.map({ calendar.isDate($0, inSameDayAs: dateRangeEnd) }) == true else {
                 return nil
             }
             dates = explicitDates
         } else {
-            dates = ExportOrchestrator.dateRange(from: dateRangeStart, to: dateRangeEnd)
+            dates = ExportOrchestrator.dateRange(
+                from: dateRangeStart,
+                to: dateRangeEnd,
+                calendar: calendar
+            )
         }
 
         guard !dates.isEmpty else { return nil }
@@ -1532,10 +1560,20 @@ final class MacExportJobExecutor {
         snapshot.makeAdvancedExportSettings().looseFormatsPerDate
     }
 
-    private static func recordsByStartOfDay(_ records: [HealthData]) -> [Date: HealthData] {
+    private static func sourceCalendar(for settings: AdvancedExportSettings) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+        return calendar
+    }
+
+    private static func recordsByStartOfDay(
+        _ records: [HealthData],
+        settings: AdvancedExportSettings
+    ) -> [Date: HealthData] {
+        let calendar = sourceCalendar(for: settings)
         var result: [Date: HealthData] = [:]
         for record in records {
-            result[Calendar.current.startOfDay(for: record.date)] = record
+            result[calendar.startOfDay(for: record.date)] = record
         }
         return result
     }
@@ -1550,10 +1588,35 @@ final class MacExportJobExecutor {
         settings: AdvancedExportSettings
     ) -> [HealthData] {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return [] }
-        let sourceDates = ExportOrchestrator.rollupSourceDates(for: requestedDates, settings: settings)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let sourceDates = ExportOrchestrator.rollupSourceDates(
+            for: requestedDates,
+            settings: settings,
+            calendar: calendar
+        )
         return sourceDates.compactMap { date in
-            recordsByDate[Calendar.current.startOfDay(for: date)]
+            recordsByDate[calendar.startOfDay(for: date)]
         }
+    }
+
+    private static func requestedRange(
+        for dates: [Date],
+        settings: AdvancedExportSettings
+    ) throws -> HealthRollupRangeRequest {
+        guard let timeZone = settings.exportTimeZoneOverride else {
+            throw ExportError.invalidExportPath(path: "missing calendar timezone")
+        }
+        let identifiers = Set(dates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: timeZone.identifier
+            )
+        })
+        return try HealthRollupRangeRequest(
+            ownerDateIdentifiers: identifiers,
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
     }
 
     private struct ArchiveWriteOutcome {

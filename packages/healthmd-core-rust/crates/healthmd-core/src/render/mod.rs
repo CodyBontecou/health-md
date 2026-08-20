@@ -18,6 +18,7 @@ use crate::{
 
 mod android_analytical_v5;
 mod android_frozen_v4;
+mod apple_range_rollup_v9;
 mod apple_rollup_v8;
 mod apple_v8;
 pub mod artifact_plan;

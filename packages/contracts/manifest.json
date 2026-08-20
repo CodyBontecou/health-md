@@ -172,6 +172,32 @@
       ]
     },
     {
+      "id": "healthmd.rollup_summary",
+      "version": 9,
+      "status": "canonical",
+      "summary": "Public Apple range-summary grammar independently versioned from daily health data v8.",
+      "specification": "packages/contracts/rollup-summary/v9/contract.md",
+      "authorities": [
+        "packages/contracts/rollup-summary/v9/contract.md",
+        "packages/contracts/rollup-summary/v9/rollup-summary.schema.json"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/Shared/Export/HealthRollupModels.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthRollupGenerator.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/HealthRollupExporterTests.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs"
+      ],
+      "fixtures": [
+        {"path":"packages/contracts/rollup-summary/v9/fixtures/range-v9.json","sha256":"8efdbb90936085add36db515a9f1a66c1bf611941fc8ab5d3ef022b6dc499438","provenance":"Reviewed synthetic partial range with immutable requested bounds.","mirrors":[]},
+        {"path":"packages/contracts/rollup-summary/v9/fixtures/range-v9.csv","sha256":"05a49bae67ef5e5eccec43262ce556d23fc57ecc91a5cc04f3940bb54da27809","provenance":"Reviewed CSV v9 metadata-column fixture.","mirrors":[]},
+        {"path":"packages/contracts/rollup-summary/v9/fixtures/range-v9.md","sha256":"0ff95a7c634f63f79e5e82f1652202ac159bf8fe158a7494a27daef68a06af31","provenance":"Reviewed Markdown v9 fixture.","mirrors":[]},
+        {"path":"packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md","sha256":"7e33a665d18f0b671dea1548e7e11d5c03d420ae0ad308857754256a378eee78","provenance":"Reviewed Obsidian Bases v9 fixture.","mirrors":[]}
+      ]
+    },
+    {
       "id": "healthmd.render_input",
       "version": 1,
       "status": "canonical",

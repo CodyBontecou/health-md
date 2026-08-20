@@ -388,7 +388,13 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             return .unavailable("Another iPhone export request is already active.", reason: "export_in_progress")
         }
         if exportRequest.dateSelection == .explicitRange {
-            let dates = ExportOrchestrator.dateRange(from: exportRequest.startDate, to: exportRequest.endDate)
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            let dates = ExportOrchestrator.dateRange(
+                from: exportRequest.startDate,
+                to: exportRequest.endDate,
+                calendar: calendar
+            )
             guard !dates.isEmpty else {
                 return .unavailable("Choose a valid date range.", reason: "invalid_date_range")
             }
@@ -2123,10 +2129,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         if let identifiers = record.request.requestedDateIdentifiers {
             return identifiers
         }
-        return ExportOrchestrator.dateRange(
-            from: record.request.dateRangeStart,
-            to: record.request.dateRangeEnd
-        ).map(Self.dateFormatter.string(from:))
+        // Durable legacy requests without frozen owner-date identifiers are not
+        // reinterpreted in the receiver's process timezone.
+        return []
     }
 
     private func completionMessage(for payload: MacExportResultPayload) -> String {

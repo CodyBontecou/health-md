@@ -507,9 +507,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRawData._0.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.iphoneExportRawData._0.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.iphoneExportRawData._0.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.iphoneExportRawData._0.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.iphoneExportRawData._0.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.groupByCategory` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.healthSubfolder` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.includeDataDictionary` | boolean |
@@ -769,9 +767,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.macExportRequest._0.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.macExportRequest._0.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.macExportRequest._0.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.macExportRequest._0.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.macExportRequest._0.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.groupByCategory` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.healthSubfolder` | string |
 | `$.macExportRequest._0.settingsSnapshot.includeDataDictionary` | boolean |
@@ -1025,9 +1021,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.macExportStreamStart._0.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.macExportStreamStart._0.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.macExportStreamStart._0.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.macExportStreamStart._0.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.groupByCategory` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.healthSubfolder` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.includeDataDictionary` | boolean |
@@ -2019,9 +2013,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.settingsSnapshot.groupByCategory` | boolean |
 | `$.settingsSnapshot.healthSubfolder` | string |
 | `$.settingsSnapshot.includeDataDictionary` | boolean |

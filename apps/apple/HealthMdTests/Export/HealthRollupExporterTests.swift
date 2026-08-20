@@ -43,6 +43,60 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(try metric("workout_avg_heart_rate", in: summary).rule, "weighted_average")
     }
 
+    func testRangeV9KeepsRequestedBoundsWhenEndpointsFail() throws {
+        let settings = HealthRollupTestSettings.make()
+        settings.generateRangeSummary = true
+        settings.exportFormats = [.json, .csv]
+        let requestedRange = try HealthRollupRangeRequest(
+            startDate: makeUTCDate(2026, 7, 6),
+            endDate: makeUTCDate(2026, 7, 11),
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        let successfulDays = [
+            makeDay(2026, 7, 7, steps: 1_000),
+            HealthData(date: makeUTCDate(2026, 7, 8)),
+            makeDay(2026, 7, 10, steps: 2_000),
+        ]
+
+        let summary = try XCTUnwrap(HealthRollupExporter.makeSummaries(
+            from: successfulDays,
+            requestedRange: requestedRange,
+            settings: settings,
+            generatedAt: makeUTCDate(2026, 7, 12)
+        ).first)
+
+        XCTAssertEqual(summary.period, .range)
+        XCTAssertEqual(summary.periodID, "2026-07-06_to_2026-07-11")
+        XCTAssertEqual(summary.daysExpected, 6)
+        XCTAssertEqual(summary.daysCounted, 3)
+        XCTAssertEqual(summary.coveragePercent, 50, accuracy: 0.001)
+        XCTAssertTrue(summary.toRollupJSON().contains("\"schema_version\" : 9"))
+        XCTAssertTrue(summary.toRollupCSV().hasPrefix("Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version"))
+    }
+
+    func testWHOOPRemainsInDailyV8ButIsExcludedFromRangeV9() throws {
+        let settings = HealthRollupTestSettings.make()
+        settings.generateRangeSummary = true
+        let day = ExportFixtures.whoopDay
+        let daily = day.export(format: .json, settings: settings)
+        XCTAssertTrue(daily.contains("\"schema_version\" : 8"))
+        XCTAssertTrue(daily.contains("\"whoop\""))
+
+        let request = try HealthRollupRangeRequest(
+            startDate: day.date,
+            endDate: day.date,
+            calendarTimeZoneIdentifier: day.timeContext.calendarTimeZoneIdentifier
+        )
+        let summary = try XCTUnwrap(HealthRollupExporter.makeSummaries(
+            from: [day],
+            requestedRange: request,
+            settings: settings
+        ).first)
+        let whoopKeys = Set(WHOOPFlatMetricDefinition.all.map(\.key))
+        XCTAssertTrue(summary.metrics.allSatisfy { !whoopKeys.contains($0.canonicalKey) })
+        XCTAssertFalse(summary.toRollupJSON().contains("whoop_"))
+    }
+
     func testWeeklyRollupRendersISOWeekBoundsInSuppliedCalendarTimeZone() throws {
         let settings = HealthRollupTestSettings.make()
         var utcCalendar = Calendar(identifier: .iso8601)
@@ -237,6 +291,18 @@ final class HealthRollupExporterTests: XCTestCase {
             ]
         }
         return data
+    }
+
+    private func makeUTCDate(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar.date(from: DateComponents(
+            timeZone: calendar.timeZone,
+            year: year,
+            month: month,
+            day: day,
+            hour: 12
+        ))!
     }
 
     private func makeDate(_ year: Int, _ month: Int, _ day: Int) -> Date {
