@@ -188,12 +188,21 @@ struct ExportOrchestrator {
 
         init(macExportPayload payload: MacExportResultPayload) {
             let breakdown = payload.outputBreakdown
-            let classified = breakdown?.generatedFileCount ?? 0
+            let impliedLooseFiles = payload.successCount.multipliedReportingOverflow(
+                by: payload.formatsPerDate
+            )
+            let legacyLooseFileCount = impliedLooseFiles.overflow
+                ? 0 : max(impliedLooseFiles.partialValue, 0)
+            let legacyCategorizedFileCount = Self.saturatingAdd(
+                legacyLooseFileCount,
+                payload.externalRecordFileCount
+            )
+            let knownFiles = breakdown?.generatedFileCount ?? legacyCategorizedFileCount
             let unclassifiedGap: Int
             if breakdown?.wasTruncated == true {
                 unclassifiedGap = 0
             } else {
-                let difference = payload.totalFilesWritten.subtractingReportingOverflow(classified)
+                let difference = payload.totalFilesWritten.subtractingReportingOverflow(knownFiles)
                 unclassifiedGap = difference.overflow ? 0 : max(difference.partialValue, 0)
             }
             let unclassified = Self.saturatingAdd(
@@ -206,17 +215,19 @@ struct ExportOrchestrator {
                 failedDateDetails: payload.failedDateDetails,
                 partialFailures: payload.partialFailures ?? [],
                 formatsPerDate: payload.formatsPerDate,
-                // Supplying explicit zero avoids also applying the legacy formats-per-day
-                // estimate when the payload has no category breakdown.
-                looseAggregateFileCount: breakdown?.looseAggregateFileCount ?? 0,
+                // Legacy payloads identify successful per-format outputs as loose
+                // files even though they predate the full category breakdown.
+                looseAggregateFileCount: breakdown?.looseAggregateFileCount
+                    ?? legacyLooseFileCount,
                 individualEntryFileCount: breakdown?.individualEntryFileCount ?? 0,
                 dataDictionaryFileCount: breakdown?.dataDictionaryFileCount ?? 0,
                 rollupFileCount: breakdown?.rollupFileCount ?? 0,
                 archiveCount: breakdown?.zipArchiveFileCount ?? 0,
                 externalRecordFileCount: breakdown?.providerSidecarFileCount
                     ?? payload.externalRecordFileCount,
-                // A truncated breakdown's gap is budget loss, not evidence that the
-                // producer emitted unclassified files. Keep those concepts distinct.
+                // Only the remainder after every known category (including provider
+                // sidecars) is unclassified. A truncated breakdown's gap is budget
+                // loss, not evidence that the producer emitted unclassified files.
                 // Saturation also keeps malformed direct construction non-trapping;
                 // app ingress separately rejects inconsistent wire payloads.
                 unclassifiedFileCount: unclassified,

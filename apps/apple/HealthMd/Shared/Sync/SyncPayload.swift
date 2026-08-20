@@ -1105,7 +1105,13 @@ struct MacExportResultPayload: Codable {
         guard !knownFiles.overflow else { return false }
         let dailyNoteActions = dailyNoteUpdateCount.addingReportingOverflow(dailyNoteSkipCount)
         guard !dailyNoteActions.overflow else { return false }
-        guard let outputBreakdown else { return true }
+        // Before category breakdowns were added, successful days and formats were
+        // the authoritative loose-file category. Provider sidecars were reported
+        // separately but included in the wire total, so their sum must fit even
+        // when totalFilesWritten itself is only advertised as a lower bound.
+        guard let outputBreakdown else {
+            return knownFiles.partialValue <= totalFilesWritten
+        }
         guard outputBreakdown.requestedDataDayCount == totalCount,
               outputBreakdown.successfulDataDayCount == successCount,
               outputBreakdown.providerSidecarFileCount <= externalRecordFileCount,

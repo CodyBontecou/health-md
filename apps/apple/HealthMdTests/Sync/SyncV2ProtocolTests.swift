@@ -1063,6 +1063,86 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(decoded.hadTerminalRangeFailure)
     }
 
+    func testLegacyPayloadWithoutBreakdownRejectsImpliedFilesAboveWireTotal() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 2,
+            totalCount: 2,
+            formatsPerDate: 2,
+            totalFilesWritten: 4,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            completedDates: [
+                Date(timeIntervalSince1970: 1_700_000_000),
+                Date(timeIntervalSince1970: 1_700_086_400)
+            ],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertNil(payload.outputBreakdown)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+    }
+
+    func testLegacyPayloadWithoutBreakdownSeparatesSidecarsAndRemainder() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 2,
+            totalFilesWritten: 5,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertEqual(result.looseAggregateFileCount, 2)
+        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.unclassifiedFileCount, 2)
+        XCTAssertEqual(result.categorizedFileCount, 3)
+        XCTAssertEqual(result.knownFileCount, 5)
+        XCTAssertEqual(result.totalFilesWritten, 5)
+        XCTAssertEqual(result.outputBreakdown.generatedFileCount, 5)
+    }
+
+    func testCancelledPayloadWithoutBreakdownDoesNotDoubleCountSidecars() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .cancelled,
+            successCount: 1,
+            totalCount: 3,
+            formatsPerDate: 2,
+            totalFilesWritten: 4,
+            externalRecordFileCount: 1,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertTrue(result.wasCancelled)
+        XCTAssertEqual(result.looseAggregateFileCount, 2)
+        XCTAssertEqual(result.externalRecordFileCount, 1)
+        XCTAssertEqual(result.unclassifiedFileCount, 1)
+        XCTAssertEqual(result.knownFileCount, 4)
+        XCTAssertEqual(result.totalFilesWritten, 4)
+        XCTAssertFalse(result.hasAuthoritativeFileCount)
+    }
+
     func testAuthoritativeTotalAboveCapReconstructsPayloadWithConservativeAuthority() throws {
         let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
         let breakdown = ExportHistoryOutputBreakdown(
