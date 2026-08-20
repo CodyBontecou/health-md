@@ -855,7 +855,6 @@ fn validate_complete_corpus(
         .corpus_sessions_dir()
         .join(journal.request.job_id.0.to_string().to_lowercase());
     let mut logical_day: Option<NamedTempFile> = None;
-    let mut source_schema_version: Option<i64> = None;
     for partition in &journal.committed_partitions {
         let segment = partition
             .item_segment
@@ -941,12 +940,6 @@ fn validate_complete_corpus(
         {
             return Err(invalid("logical day identity does not match its manifest"));
         }
-        if source_schema_version.is_some_and(|version| version != identity.schema_version) {
-            return Err(invalid(
-                "logical days use mixed health data schema versions",
-            ));
-        }
-        source_schema_version = Some(identity.schema_version);
         let expects_archive = journal.request.raw_profile
             == Some(RawProfile::CanonicalSourceRecordsV1)
             || journal
@@ -1200,35 +1193,6 @@ fn extraction_to_jsonl(
     Ok((output_path, receipt_path))
 }
 
-fn validated_source_schema_version(
-    layout: &StorageLayout,
-    journal: &RawJournal,
-    manifests: &[&RawDayManifest],
-) -> Result<i64, ClientError> {
-    let mut version = None;
-    for manifest in manifests {
-        if manifest.health_data_byte_count == 0 {
-            continue;
-        }
-        let day = read_day(layout, journal, &manifest.date)?;
-        let identity: HealthDataIdentity =
-            serde_json::from_slice(&day).map_err(|_| invalid("canonical day is invalid JSON"))?;
-        if identity.schema != "healthmd.health_data" || !matches!(identity.schema_version, 7 | 8) {
-            return Err(invalid("canonical day schema version is unsupported"));
-        }
-        if version.is_some_and(|value| value != identity.schema_version) {
-            return Err(invalid(
-                "logical days use mixed health data schema versions",
-            ));
-        }
-        version = Some(identity.schema_version);
-    }
-    // An all-missing extraction contains no daily document from which to derive
-    // a version. Current Apple peers advertise v8; retained documents never use
-    // this fallback because their exact version is read above.
-    Ok(version.unwrap_or(8))
-}
-
 #[allow(clippy::too_many_lines)]
 fn assemble_extraction(
     layout: &StorageLayout,
@@ -1251,7 +1215,6 @@ fn assemble_extraction(
         .map(|date| journal.manifests.get(date).expect("corpus was validated"))
         .collect();
     let status = response_status(journal);
-    let source_schema_version = validated_source_schema_version(layout, journal, &manifests)?;
     let directory = layout
         .response_spools_dir()
         .join(journal.request.job_id.0.to_string().to_lowercase());
