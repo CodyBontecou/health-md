@@ -32,27 +32,36 @@ final class GoogleDriveFoundationTests: XCTestCase {
         XCTAssertEqual(values["include_granted_scopes"], "false")
         XCTAssertEqual(values["trigger_onepick"], "true")
         XCTAssertEqual(values["allow_folder_selection"], "true")
-        XCTAssertEqual(values["mimetype"], GoogleDriveFileMetadata.folderMIMEType)
+        XCTAssertEqual(values["mimetypes"], GoogleDriveFileMetadata.folderMIMEType)
+        XCTAssertNil(values["mimetype"])
         XCTAssertEqual(values["code_challenge_method"], "S256")
         XCTAssertFalse(pkce.verifier.contains("="))
     }
 
     func testPickerCallbackRequiresStateCodeAndImmutableFolderID() throws {
         let callback = try GoogleDriveAuthorizationCallback.parse(
-            url: URL(string: "com.example:/oauth?state=s&code=c&folder_id=f&drive_id=d&resource_key=r")!,
+            url: URL(string: "com.example:/oauth?state=s&code=c&picked_file_ids=f")!,
             expectedState: "s"
         )
         XCTAssertEqual(callback.code, "c")
         XCTAssertEqual(callback.selection.folderID, "f")
-        XCTAssertEqual(callback.selection.sharedDriveID, "d")
-        XCTAssertEqual(callback.selection.resourceKey, "r")
+        XCTAssertNil(callback.selection.sharedDriveID)
+        XCTAssertNil(callback.selection.resourceKey)
 
         XCTAssertThrowsError(try GoogleDriveAuthorizationCallback.parse(
-            url: URL(string: "com.example:/oauth?state=other&code=c&folder_id=f")!,
+            url: URL(string: "com.example:/oauth?state=other&code=c&picked_file_ids=f")!,
             expectedState: "s"
         ))
         XCTAssertThrowsError(try GoogleDriveAuthorizationCallback.parse(
             url: URL(string: "com.example:/oauth?state=s&code=c")!,
+            expectedState: "s"
+        ))
+        XCTAssertThrowsError(try GoogleDriveAuthorizationCallback.parse(
+            url: URL(string: "com.example:/oauth?state=s&code=c&picked_file_ids=f1,f2")!,
+            expectedState: "s"
+        ))
+        XCTAssertThrowsError(try GoogleDriveAuthorizationCallback.parse(
+            url: URL(string: "com.example:/oauth?state=s&code=c&picked_file_ids=f&error=access_denied")!,
             expectedState: "s"
         ))
     }

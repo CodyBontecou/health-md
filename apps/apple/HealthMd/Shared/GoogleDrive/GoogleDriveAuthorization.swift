@@ -66,7 +66,7 @@ nonisolated struct GoogleDriveAuthorizationRequest: Equatable, Sendable {
             // callback supplies an immutable folder ID and Drive metadata later validates it.
             URLQueryItem(name: "trigger_onepick", value: "true"),
             URLQueryItem(name: "allow_folder_selection", value: "true"),
-            URLQueryItem(name: "mimetype", value: GoogleDriveFileMetadata.folderMIMEType)
+            URLQueryItem(name: "mimetypes", value: GoogleDriveFileMetadata.folderMIMEType)
         ]
         guard let url = components.url, let scheme = configuration.redirectURI.scheme else {
             throw GoogleDriveError(.configurationMissing)
@@ -96,12 +96,20 @@ nonisolated struct GoogleDriveAuthorizationCallback: Equatable, Sendable {
             throw GoogleDriveError(.reauthorizationRequired)
         }
         let values = Dictionary(query.map { ($0.name, $0.value ?? "") }, uniquingKeysWith: { first, _ in first })
-        guard values["state"] == expectedState,
+        guard values["error"].nilIfEmpty == nil,
+              values["state"] == expectedState,
               let code = values["code"], !code.isEmpty else {
             throw GoogleDriveError(.reauthorizationRequired)
         }
-        let folderID = values["folder_id"] ?? values["id"]
-        guard let folderID, !folderID.isEmpty else {
+        // Google's mobile Picker returns one comma-separated `picked_file_ids` value.
+        // Legacy aliases remain parseable for already-issued test/development callbacks, but
+        // multiple selections always fail closed because a destination has one folder authority.
+        let rawFolderIDs = values["picked_file_ids"] ?? values["folder_id"] ?? values["id"]
+        let folderIDs = rawFolderIDs?
+            .split(separator: ",", omittingEmptySubsequences: true)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty } ?? []
+        guard folderIDs.count == 1, let folderID = folderIDs.first else {
             throw GoogleDriveError(.folderUnavailable)
         }
         return GoogleDriveAuthorizationCallback(

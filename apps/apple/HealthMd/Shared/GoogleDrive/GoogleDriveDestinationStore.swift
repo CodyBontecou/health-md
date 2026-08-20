@@ -235,7 +235,7 @@ final class GoogleDriveConnectionManager: ObservableObject {
             sharedDriveID: folder.driveID,
             resourceKey: callback.selection.resourceKey ?? folder.resourceKey,
             accountLabel: nil,
-            folderLabel: callback.selection.folderLabel,
+            folderLabel: callback.selection.folderLabel ?? folder.name,
             canAddChildren: true,
             lastValidatedAt: now()
         )
