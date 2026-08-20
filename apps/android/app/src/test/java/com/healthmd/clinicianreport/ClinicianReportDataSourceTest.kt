@@ -64,9 +64,10 @@ class ClinicianReportDataSourceTest {
         val registry = mockk<HealthProviderRegistry>()
         val settings = mockk<SettingsRepository>()
         coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.DEFAULT
         every { registry.providerFor("health_connect") } returns provider
         coEvery {
-            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true)
+            manager.fetchHealthDataRange(any(), any(), true, pinnedZone, true, any())
         } answers {
             firstArg<List<LocalDate>>().map { date -> HealthData(date) }
         }
@@ -78,7 +79,7 @@ class ClinicianReportDataSourceTest {
         )
 
         coVerify(exactly = 1) {
-            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true)
+            manager.fetchHealthDataRange(listOf(day), any(), true, pinnedZone, true, SleepDayAttribution.DEFAULT)
         }
     }
 
@@ -201,6 +202,7 @@ class ClinicianReportDataSourceTest {
             includeGranularData: Boolean,
             zoneId: ZoneId,
             pinnedCalendarDays: Boolean,
+            sleepDayAttribution: SleepDayAttribution,
         ): List<HealthData> {
             requestedTypes = dataTypes
             requestedDates = dates

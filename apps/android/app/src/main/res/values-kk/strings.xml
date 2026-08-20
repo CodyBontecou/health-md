@@ -271,6 +271,12 @@
     </plurals>
     <string name="granular_data_title">Егжей-тегжейлі уақыт қатарларын қосу</string>
     <string name="granular_data_description">Үйлесімділік экспорттарына жүрек соғу жиілігі мен ұйқы кезеңдері сияқты уақыт белгісі бар үлгілерді қосады. API деректерінің толық көшірмесі үшін «Өңделмеген API снапшоты» пішімін пайдаланыңыз.</string>
+    <string name="sleep_attribution_title">Ұйықтау күнін белгілеу</string>
+    <string name="sleep_attribution_night_begins">Түн басталады</string>
+    <string name="sleep_attribution_morning_ends">Таң аяқталады</string>
+    <string name="sleep_attribution_night_begins_description">Әр ұйықтау сессиясы басталған түннің күндік жазбасына жатады. Бұл әдепкі параметр және алдыңғы экспорттарға сәйкес.</string>
+    <string name="sleep_attribution_morning_ends_description">Әр ұйықтау сессиясы аяқталған таңның күндік жазбасына жатады, бұл Health Connect қолданбасымен бірдей. Түнгі 23:45-тен таңертең 7:30-ға дейінгі сессия оянған күннің жазбасында көрінеді.</string>
+
     <string name="metric_selection_title">Денсаулық көрсеткіштері</string>
     <string name="search_metrics_hint">Көрсеткіштерді іздеу…</string>
     <string name="select_all">Барлығын таңдау</string>

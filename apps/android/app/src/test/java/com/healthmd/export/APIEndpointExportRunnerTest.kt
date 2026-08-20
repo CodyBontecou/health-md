@@ -12,6 +12,7 @@ import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.IndividualTrackingSettings
@@ -216,6 +217,7 @@ class APIEndpointExportRunnerTest {
                 includeGranularData: Boolean,
                 zoneId: ZoneId,
                 pinnedCalendarDays: Boolean,
+                sleepDayAttribution: SleepDayAttribution,
             ): List<HealthData> {
                 rangeFlags?.add(includeGranularData)
                 return dates.map { rangeDataByDate.getValue(it).filtered(dataTypes) }

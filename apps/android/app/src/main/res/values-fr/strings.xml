@@ -547,6 +547,12 @@
     <string name="feedback_no_app_available">Aucune application disponible pour ouvrir ce lien</string>
     <string name="granular_data_title">Inclure des séries chronologiques détaillées</string>
     <string name="granular_data_description">Ajoutez aux exportations de compatibilité des échantillons horodatés, comme la fréquence cardiaque et les phases de sommeil. Pour obtenir une copie complète de l’API, utilisez un instantané brut de l’API.</string>
+    <string name="sleep_attribution_title">Attribution du jour de sommeil</string>
+    <string name="sleep_attribution_night_begins">Début de nuit</string>
+    <string name="sleep_attribution_morning_ends">Fin au matin</string>
+    <string name="sleep_attribution_night_begins_description">Chaque session de sommeil appartient à la note du jour où la nuit commence. Il s\'agit du réglage par défaut, identique aux exportations précédentes.</string>
+    <string name="sleep_attribution_morning_ends_description">Chaque session de sommeil appartient à la note du jour où elle se termine le matin, comme dans l\'application Health Connect. Une session de 23 h 45 à 7 h 30 apparaît dans la note du jour du réveil.</string>
+
     <string name="metric_category_cycling">Vélo</string>
     <string name="metric_category_medications">Médicaments</string>
     <string name="metric_category_other">Autre</string>

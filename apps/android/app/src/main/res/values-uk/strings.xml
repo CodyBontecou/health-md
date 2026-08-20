@@ -557,6 +557,12 @@
     <string name="feedback_no_app_available">Немає доступної програми для відкриття цього посилання</string>
     <string name="granular_data_title">Додайте детальний часовий ряд</string>
     <string name="granular_data_description">Додайте зразки з часовими мітками, як-от частоту серцевих скорочень і стадії сну, до експорту сумісності. Для повної копії API використовуйте необроблений знімок API.</string>
+    <string name="sleep_attribution_title">Належність сну до дня</string>
+    <string name="sleep_attribution_night_begins">Ніч початку</string>
+    <string name="sleep_attribution_morning_ends">Ранок завершення</string>
+    <string name="sleep_attribution_night_begins_description">Кожен сон належить до щоденної нотатки тієї ночі, коли він розпочинається. Це стандартне значення, яке збігається з попередніми експортами.</string>
+    <string name="sleep_attribution_morning_ends_description">Кожен сон належить до щоденної нотатки того ранку, коли він завершується, як у застосунку Health Connect. Сон із 23:45 до 7:30 з\'являється в нотатці дня пробудження.</string>
+
     <string name="metric_category_cycling">Велоспорт</string>
     <string name="metric_category_medications">Ліки</string>
     <string name="metric_category_other">Інше</string>

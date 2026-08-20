@@ -6,6 +6,7 @@ import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportSettings
@@ -218,6 +219,7 @@ class ExportOrchestratorRangeTest {
             includeGranularData: Boolean,
             zoneId: ZoneId,
             pinnedCalendarDays: Boolean,
+            sleepDayAttribution: SleepDayAttribution,
         ): List<HealthData> {
             rangeCalls++
             rangeCallSizes += dates.size

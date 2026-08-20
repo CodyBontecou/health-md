@@ -1,6 +1,7 @@
 package com.healthmd.data.health
 
 import com.healthmd.domain.model.SleepData
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.SleepSessionEntry
 import com.healthmd.domain.model.SleepStageEntry
 import java.time.Duration
@@ -14,17 +15,28 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * Pure compatibility projection for Health Connect sleep sessions.
  *
- * The exported journal date owns the half-open local interval from noon on that date to noon on
- * the following date. Summary intervals are clipped to that window, while detailed source entries
- * retain their original timestamps and offsets.
+ * With the default night-begins attribution ([SleepDayAttribution.NIGHT_BEGINS], rule
+ * `noon-to-noon-sleep-window-v1`), the exported journal date owns the half-open local
+ * interval from noon on that date to noon on the following date. Summary intervals are
+ * clipped to that window, while detailed source entries retain their original timestamps
+ * and offsets.
  *
- * Frozen Android v4/v5 aggregation remains additive: every valid source session and stage that
- * overlaps the journal window contributes independently. This object deliberately does not choose
- * a principal cluster or de-duplicate provider records because doing so would change the meaning
- * of shipped summary fields and require a new public schema profile.
+ * With wake-up-date attribution ([SleepDayAttribution.MORNING_ENDS], rule
+ * `wake-date-sleep-window-v1`, issue #104), the journal date owns every source session
+ * that ENDS on that date, matching the Health Connect UI. Owned sessions are kept whole:
+ * they are never clipped at a noon boundary or split between two journal days, and
+ * afternoon naps stay on the day they end. The read interval in [queryInterval] is
+ * unchanged because Health Connect interval reads are overlap-based; its prior-day
+ * noon start already covers overnight sessions ending on the first requested date.
+ *
+ * Frozen Android v4/v5 aggregation remains additive in both modes: every valid owned
+ * source session and stage contributes independently. This object deliberately does not
+ * choose a principal cluster or de-duplicate provider records because doing so would
+ * change the meaning of shipped summary fields and require a new public schema profile.
  */
 internal object SleepJournalSummary {
     const val WINDOW_RULE_ID = "noon-to-noon-sleep-window-v1"
+    const val WAKE_DATE_WINDOW_RULE_ID = "wake-date-sleep-window-v1"
 
     data class QueryInterval(
         val start: Instant,
@@ -51,11 +63,12 @@ internal object SleepJournalSummary {
         requestedDates: Collection<LocalDate>,
         zone: ZoneId,
         includeGranularData: Boolean,
+        attribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): Map<LocalDate, SleepData> = requestedDates
         .distinct()
         .sorted()
         .associateWith { date ->
-            summarizeDay(sourceSessions, date, zone, includeGranularData)
+            summarizeDay(sourceSessions, date, zone, includeGranularData, attribution)
         }
 
     private fun summarizeDay(
@@ -63,10 +76,11 @@ internal object SleepJournalSummary {
         date: LocalDate,
         zone: ZoneId,
         includeGranularData: Boolean,
+        attribution: SleepDayAttribution,
     ): SleepData {
         val window = journalWindow(date, zone)
         val rawSessions = sourceSessions
-            .filter { it.belongsToDetailedDay(window, date, zone) }
+            .filter { it.belongsToDay(attribution, window, date, zone) }
             .sortedWith(SOURCE_SESSION_ORDER)
         if (rawSessions.isEmpty()) return SleepData()
 
@@ -79,7 +93,11 @@ internal object SleepJournalSummary {
             emptyList()
         }
         val detailedSessions = rawSessions.map { it.entry }
-        val slices = rawSessions.mapNotNull { source -> source.clippedTo(window) }
+        val slices = when (attribution) {
+            SleepDayAttribution.NIGHT_BEGINS -> rawSessions.mapNotNull { it.clippedTo(window) }
+            // Wake-up-date ownership keeps each session whole; no noon clipping.
+            SleepDayAttribution.MORNING_ENDS -> rawSessions.mapNotNull { it.wholeSessionSlice() }
+        }
         if (slices.isEmpty()) {
             return SleepData(stages = rawStages, sessions = detailedSessions)
         }
@@ -87,7 +105,17 @@ internal object SleepJournalSummary {
         val totalMilliseconds = slices.sumOf { slice ->
             Duration.between(slice.start, slice.end).toMillis()
         }
-        val stageDurations = additiveStageDurations(slices, window)
+        // Night-begins keeps clipping stages to the journal window. Wake-up-date
+        // mode clips only to the owned sessions' own span, which is a no-op guard
+        // because stages already sit inside their parent session.
+        val stageClipWindow = when (attribution) {
+            SleepDayAttribution.NIGHT_BEGINS -> window
+            SleepDayAttribution.MORNING_ENDS -> InstantInterval(
+                start = slices.minOf { it.start },
+                end = slices.maxOf { it.end },
+            )
+        }
+        val stageDurations = additiveStageDurations(slices, stageClipWindow)
 
         return SleepData(
             totalDuration = totalMilliseconds.milliseconds,
@@ -128,6 +156,18 @@ internal object SleepJournalSummary {
         end = date.plusDays(1).atTime(JOURNAL_BOUNDARY).atZone(zone).toInstant(),
     )
 
+    private fun SourceSession.belongsToDay(
+        attribution: SleepDayAttribution,
+        window: InstantInterval,
+        date: LocalDate,
+        zone: ZoneId,
+    ): Boolean = when (attribution) {
+        SleepDayAttribution.NIGHT_BEGINS -> belongsToDetailedDay(window, date, zone)
+        // Wake-up-date ownership: the calendar date of the session end decides the
+        // note. Malformed zero/negative-length records also land on their end date.
+        SleepDayAttribution.MORNING_ENDS -> end.atZone(zone).toLocalDate() == date
+    }
+
     private fun SourceSession.belongsToDetailedDay(
         window: InstantInterval,
         date: LocalDate,
@@ -151,6 +191,12 @@ internal object SleepJournalSummary {
         val clippedEnd = minOf(end, window.end)
         if (!clippedStart.isBefore(clippedEnd)) return null
         return SessionSlice(this, clippedStart, clippedEnd)
+    }
+
+    /** Wake-up-date attribution keeps the session whole; the session is the ownership unit. */
+    private fun SourceSession.wholeSessionSlice(): SessionSlice? {
+        if (!start.isBefore(end)) return null
+        return SessionSlice(this, start, end)
     }
 
     private fun stageBucket(stageName: String): StageBucket? = when (stageName.lowercase()) {

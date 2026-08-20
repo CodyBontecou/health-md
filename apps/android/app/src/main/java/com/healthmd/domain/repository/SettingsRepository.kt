@@ -1,6 +1,7 @@
 package com.healthmd.domain.repository
 
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.SleepDayAttribution
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import java.time.LocalDate
@@ -37,6 +38,15 @@ interface SettingsRepository {
     val preventAccidentalChanges: Flow<Boolean>
         get() = flowOf(false)
     suspend fun setPreventAccidentalChanges(enabled: Boolean) = Unit
+
+    // Device-local capture preference (issue #104): which daily note owns a
+    // midnight-spanning sleep session. Read live on every Health Connect capture;
+    // deliberately excluded from portable setup sharing. Default implementations
+    // keep existing test fakes source-compatible.
+    val sleepDayAttribution: Flow<SleepDayAttribution>
+        get() = flowOf(SleepDayAttribution.DEFAULT)
+    suspend fun getSleepDayAttribution(): SleepDayAttribution = SleepDayAttribution.DEFAULT
+    suspend fun setSleepDayAttribution(mode: SleepDayAttribution) = Unit
 
     // Export folder URI (persisted separately for SAF)
     val exportFolderUri: Flow<String?>

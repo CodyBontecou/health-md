@@ -3,6 +3,7 @@ package com.healthmd.data.health
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.util.runCatchingCancellable
@@ -96,7 +97,16 @@ class HealthRepositoryImpl(
         includeGranularData: Boolean,
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
+        sleepDayAttribution: SleepDayAttribution,
     ): List<HealthData> {
+        // The attribution preference is read live at capture time (issue #104),
+        // mirroring Apple's capture-side UserDefaults read, so durable retries
+        // re-capture with the device's current setting.
+        val attribution = if (sleepDayAttribution == SleepDayAttribution.DEFAULT) {
+            settingsRepository.getSleepDayAttribution()
+        } else {
+            sleepDayAttribution
+        }
         if (!shouldUseAllConnected()) {
             return activeProvider().fetchHealthDataRange(
                 dates,
@@ -104,6 +114,7 @@ class HealthRepositoryImpl(
                 includeGranularData,
                 zoneId,
                 pinnedCalendarDays,
+                attribution,
             )
         }
         if (dates.isEmpty()) return emptyList()
@@ -120,6 +131,7 @@ class HealthRepositoryImpl(
                     includeGranularData,
                     zoneId,
                     pinnedCalendarDays,
+                    attribution,
                 )
             }
                 .onSuccess { records ->

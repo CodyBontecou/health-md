@@ -16,6 +16,7 @@ import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FormatCustomization
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -50,6 +51,7 @@ class SettingsRepositoryImpl(
         val SHARED_SETUP_PRESERVED_APPLE_EXTENSION = stringPreferencesKey("shared_setup_preserved_apple_extension_v1")
 
         val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
+        val SLEEP_DAY_ATTRIBUTION = stringPreferencesKey("sleep_day_attribution")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
@@ -218,6 +220,19 @@ class SettingsRepositoryImpl(
     override suspend fun setPreventAccidentalChanges(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] = enabled
+        }
+    }
+
+    override val sleepDayAttribution: Flow<SleepDayAttribution> = dataStore.data.map { prefs ->
+        SleepDayAttribution.fromWireValue(prefs[Keys.SLEEP_DAY_ATTRIBUTION])
+    }
+
+    override suspend fun getSleepDayAttribution(): SleepDayAttribution =
+        sleepDayAttribution.first()
+
+    override suspend fun setSleepDayAttribution(mode: SleepDayAttribution) {
+        dataStore.edit { prefs ->
+            prefs[Keys.SLEEP_DAY_ATTRIBUTION] = mode.wireValue
         }
     }
     override val exportFolderUri: Flow<String?> = dataStore.data.map { prefs ->

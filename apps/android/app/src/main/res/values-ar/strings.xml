@@ -577,6 +577,12 @@
     <string name="feedback_no_app_available">لا يوجد تطبيق متاح لفتح هذا الرابط</string>
     <string name="granular_data_title">تضمين سلاسل زمنية مفصّلة</string>
     <string name="granular_data_description">أضف عينات مؤرخة زمنيًا، مثل معدل ضربات القلب ومراحل النوم، إلى عمليات تصدير التوافق. وللحصول على نسخة مكتملة عبر API، استخدم لقطة API خام.</string>
+    <string name="sleep_attribution_title">إسناد نوم اليوم</string>
+    <string name="sleep_attribution_night_begins">تبدأ في الليل</string>
+    <string name="sleep_attribution_morning_ends">تنتهي في الصباح</string>
+    <string name="sleep_attribution_night_begins_description">تنتمي كل جلسة نوم إلى الملاحظة اليومية لليلة التي تبدأ فيها. هذا هو الخيار الافتراضي ويطابق عمليات التصدير السابقة.</string>
+    <string name="sleep_attribution_morning_ends_description">تنتمي كل جلسة نوم إلى الملاحظة اليومية لصباحها الذي تنتهي فيه، بما يطابق تطبيق Health Connect. جلسة من 11:45 مساءً إلى 7:30 صباحًا تظهر في ملاحظة يوم الاستيقاظ.</string>
+
     <string name="metric_category_cycling">ركوب الدراجات</string>
     <string name="metric_category_medications">الأدوية</string>
     <string name="metric_category_other">أخرى</string>

@@ -2,6 +2,7 @@ package com.healthmd.data.health
 
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -17,12 +18,18 @@ interface HealthDataProvider {
 
     suspend fun fetchHealthData(date: LocalDate): HealthData
 
+    /**
+     * [sleepDayAttribution] selects which daily note owns a midnight-spanning sleep
+     * session (issue #104). Providers that do not implement Health Connect's
+     * wake-up-date grouping keep their provider-native windows via the default.
+     */
     suspend fun fetchHealthDataRange(
         dates: List<LocalDate>,
         dataTypes: DataTypeSelection = DataTypeSelection(),
         includeGranularData: Boolean = false,
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }
