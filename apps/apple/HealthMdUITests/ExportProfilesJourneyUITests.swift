@@ -257,7 +257,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let copy = app.buttons["export.profiles.copyID"]
         XCTAssertTrue(copy.waitForExistence(timeout: 5))
         let copied = expectation(
-            for: NSPredicate(format: "label == 'Copied'"),
+            for: NSPredicate(format: "value == 'Copied'"),
             evaluatedWith: copy
         )
         copy.tap()
