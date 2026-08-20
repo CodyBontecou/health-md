@@ -130,6 +130,7 @@ struct ExportProfilesView: View {
     @ObservedObject private var destinationStore: ProfileDestinationStore
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     @EnvironmentObject private var schedulingManager: SchedulingManager
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
 
     @State private var showCreationSheet = false
 
@@ -170,7 +171,12 @@ struct ExportProfilesView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showCreationSheet = true
+                    // Creating a profile is a configuration mutation, so the
+                    // shared lock rejects it with the explanatory toast while
+                    // Prevent Accidental Changes is on.
+                    configurationProtection.performConfigurationChange {
+                        showCreationSheet = true
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -363,6 +369,7 @@ struct ExportProfileDetailView: View {
     @ObservedObject private var destinationStore: ProfileDestinationStore
     @ObservedObject private var entryStore: ScheduledExportEntryStore
     @EnvironmentObject private var schedulingManager: SchedulingManager
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.dismiss) private var dismiss
 
     let profileID: UUID
@@ -430,7 +437,9 @@ struct ExportProfileDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    showSettingsEditor = true
+                    configurationProtection.performConfigurationChange {
+                        showSettingsEditor = true
+                    }
                 } label: {
                     Image(systemName: "square.and.pencil")
                 }
@@ -698,7 +707,9 @@ struct ExportProfileDetailView: View {
                 }
 
                 Button {
-                    showScheduleEditor = true
+                    configurationProtection.performConfigurationChange {
+                        showScheduleEditor = true
+                    }
                 } label: {
                     Label(
                         String(localized: "Edit Schedule…", comment: "Action opening the profile schedule editor"),
@@ -779,8 +790,10 @@ struct ExportProfileDetailView: View {
             VStack(spacing: 0) {
                 if profile.id != profileStore.activeProfileID {
                     Button {
-                        coordinator.activate(profileID: profile.id)
-                        dismiss()
+                        configurationProtection.performConfigurationChange {
+                            coordinator.activate(profileID: profile.id)
+                            dismiss()
+                        }
                     } label: {
                         actionRowLabel(
                             icon: "checkmark.circle.fill",
@@ -795,8 +808,10 @@ struct ExportProfileDetailView: View {
                 }
 
                 Button {
-                    renameText = profile.name
-                    showRenameAlert = true
+                    configurationProtection.performConfigurationChange {
+                        renameText = profile.name
+                        showRenameAlert = true
+                    }
                 } label: {
                     actionRowLabel(
                         icon: "pencil",
@@ -809,7 +824,9 @@ struct ExportProfileDetailView: View {
                 rowDivider()
 
                 Button {
-                    duplicateAndWarn(profile)
+                    configurationProtection.performConfigurationChange {
+                        duplicateAndWarn(profile)
+                    }
                 } label: {
                     actionRowLabel(
                         icon: "plus.square.on.square",
@@ -822,7 +839,9 @@ struct ExportProfileDetailView: View {
                 rowDivider()
 
                 Button(role: .destructive) {
-                    showDeleteConfirmation = true
+                    configurationProtection.performConfigurationChange {
+                        showDeleteConfirmation = true
+                    }
                 } label: {
                     actionRowLabel(
                         icon: "trash",
@@ -938,6 +957,7 @@ struct ExportProfileEditorSheet: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var profileStore: ExportProfileStore
     @ObservedObject private var destinationStore: ProfileDestinationStore
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.dismiss) private var dismiss
 
     /// Nil = creation mode; the profile being edited otherwise.
@@ -1035,8 +1055,14 @@ struct ExportProfileEditorSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(editingProfile == nil ? "Create" : "Save") {
-                        save()
-                        dismiss()
+                        // The draft stays inspectable, but persisting a profile
+                        // is a configuration mutation, so the shared lock can
+                        // reject an editor that was already open when
+                        // protection was turned on.
+                        configurationProtection.performConfigurationChange {
+                            save()
+                            dismiss()
+                        }
                     }
                     .disabled(!canSave)
                     .accessibilityIdentifier("export.profiles.editor.confirm")
@@ -1045,8 +1071,12 @@ struct ExportProfileEditorSheet: View {
         }
         .sheet(isPresented: $showFolderImporter) {
             FolderPicker { url in
-                if let destinationID = coordinator.importFolderSelection(url) {
-                    folderVaultID = destinationID
+                // Picking a folder persists a destination binding immediately,
+                // so the shared lock still guards this completion.
+                configurationProtection.performConfigurationChange {
+                    if let destinationID = coordinator.importFolderSelection(url) {
+                        folderVaultID = destinationID
+                    }
                 }
             }
             .presentationDetents([.large])
@@ -1059,16 +1089,33 @@ struct ExportProfileEditorSheet: View {
         // after it appeared.
         .sheet(isPresented: $showEndpointForm) {
             ExportProfileEndpointFormSheet { name, url, token in
-                if let endpointID = coordinator.importAPIEndpointSelection(
-                    name: name,
-                    endpointURLString: url,
-                    bearerToken: token
-                ) {
-                    apiEndpointID = endpointID
+                // Adding an endpoint persists it (and its Keychain token)
+                // immediately, so the shared lock still guards this completion.
+                configurationProtection.performConfigurationChange {
+                    if let endpointID = coordinator.importAPIEndpointSelection(
+                        name: name,
+                        endpointURLString: url,
+                        bearerToken: token
+                    ) {
+                        apiEndpointID = endpointID
+                    }
                 }
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+        // The sheet covers the app-level toast, so blocked changes surface a
+        // sheet-local one (also covering the pushed metric picker), and the
+        // toast's settings shortcut dismisses the editor.
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
+            }
         }
     }
 
@@ -1138,7 +1185,9 @@ struct ExportProfileEditorSheet: View {
                     }
                 }
                 Button {
-                    showFolderImporter = true
+                    configurationProtection.performConfigurationChange {
+                        showFolderImporter = true
+                    }
                 } label: {
                     Label(
                         String(localized: "Choose New Folder…", comment: "Profile editor action opening the system folder picker"),
@@ -1161,7 +1210,9 @@ struct ExportProfileEditorSheet: View {
                     }
                 }
                 Button {
-                    showEndpointForm = true
+                    configurationProtection.performConfigurationChange {
+                        showEndpointForm = true
+                    }
                 } label: {
                     Label(
                         String(localized: "Add Endpoint…", comment: "Profile editor action adding a new API endpoint"),
