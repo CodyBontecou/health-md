@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_START_ROUTE = "com.healthmd.START_ROUTE"
         const val EXTRA_PROMPT_SCHEDULED_RECOVERY = "com.healthmd.PROMPT_SCHEDULED_RECOVERY"
+        const val EXTRA_GOOGLE_DRIVE_OPERATION_ID = "com.healthmd.GOOGLE_DRIVE_OPERATION_ID"
         private const val STATE_HANDLED_EXTERNAL_INTENT = "sharedSetup.handledExternalIntent"
         private const val STATE_SHARED_SETUP_PROCESS_ID = "sharedSetup.processInstanceID"
         private const val STATE_EXTERNAL_DOCUMENT_BYTES = "sharedSetup.externalDocumentBytes"

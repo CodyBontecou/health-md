@@ -2,6 +2,7 @@ package com.healthmd.data.settings
 
 import androidx.annotation.VisibleForTesting
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.repository.SettingsRepository
@@ -42,6 +43,7 @@ class ExportProfileCoordinator @Inject constructor(
     private val profileRepository: ExportProfileRepository,
     private val settingsRepository: SettingsRepository,
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
 ) {
     /** Owns the app-lifetime edit observer; overridable in tests before [ensureStarted]. */
     @VisibleForTesting
@@ -94,7 +96,7 @@ class ExportProfileCoordinator @Inject constructor(
             // snapshot refreshes live settings and the binding follows so manual exports
             // immediately write to the profile's destination.
             val applied = applyProfile(profile, settingsRepository.getExportSettings())
-            if (applied) adoptFolderBinding(profile)
+            if (applied) adoptDestinationBinding(profile)
             return applied
         }
 
@@ -107,17 +109,19 @@ class ExportProfileCoordinator @Inject constructor(
         flushEditsLocked()
         if (!profileRepository.activate(profileId)) return false
         settingsRepository.updateExportSettings(staged)
-        adoptFolderBinding(profile)
+        adoptDestinationBinding(profile)
         return true
     }
 
     /** Adopts the profile's bound folder as the live device folder (nil binding keeps the
      * current selection, matching the iOS unbound-vault rule). */
-    private suspend fun adoptFolderBinding(profile: ExportProfile) {
-        val folderUri = profile.folderUri?.takeIf { it.isNotBlank() } ?: return
-        val current = settingsRepository.getExportFolderUri()
-        if (current != folderUri) {
-            settingsRepository.saveExportFolderUri(folderUri)
+    private suspend fun adoptDestinationBinding(profile: ExportProfile) {
+        profile.folderUri?.takeIf { it.isNotBlank() }?.let { folderUri ->
+            val current = settingsRepository.getExportFolderUri()
+            if (current != folderUri) settingsRepository.saveExportFolderUri(folderUri)
+        }
+        if (profile.target == com.healthmd.domain.model.ExportTarget.GOOGLE_DRIVE) {
+            googleDriveSelectionStore.select(profile.destinationId)
         }
     }
 

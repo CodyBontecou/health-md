@@ -7,6 +7,12 @@ import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.drive.GoogleDriveDestinationRunner
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveRunResult
+import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.drive.toFailureReason
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportEnginePin
@@ -44,6 +50,10 @@ class ScheduledExportRecoveryManager @Inject constructor(
     private val rawSnapshotService: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val googleDriveDestinationRunner: GoogleDriveDestinationRunner,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
 ) {
 
     suspend fun inspectPendingRecovery(): ScheduledExportRecoveryStatus {
@@ -127,6 +137,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                         settingsSnapshotJson = request.settingsSnapshotJson,
                         apiOperationId = request.apiOperationId,
                         folderOperationId = request.folderOperationId,
+                        driveOperationId = request.driveOperationId,
                     )
                 }
 
@@ -217,7 +228,26 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 ) {
                     snapshotFailure(targetDates, target)
                 } else try {
-                    if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                    if (target == ExportTarget.GOOGLE_DRIVE && operation.driveOperationId != null) {
+                        when (val resumed = googleDriveDestinationRunner.resume(operation.driveOperationId)) {
+                            is GoogleDriveRunResult.Complete -> ExportResult(
+                                targetDates.size,
+                                targetDates.size,
+                                target = ExportTarget.GOOGLE_DRIVE,
+                                artifactCount = resumed.artifactCount,
+                                exportMode = targetSettings.exportMode,
+                            )
+                            is GoogleDriveRunResult.Stopped -> ExportResult(
+                                0,
+                                targetDates.size,
+                                targetDates.map { FailedDateDetail(it, resumed.error.toFailureReason()) },
+                                target = ExportTarget.GOOGLE_DRIVE,
+                                artifactCount = resumed.completedArtifactCount,
+                                retryDriveOperationIds = targetDates.associateWith { operation.driveOperationId },
+                                exportMode = targetSettings.exportMode,
+                            )
+                        }
+                    } else if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT) {
                         rawSnapshotService?.exportRange(
                             startDate = targetDates.first(),
                             endDate = targetDates.last(),
@@ -256,17 +286,38 @@ class ScheduledExportRecoveryManager @Inject constructor(
                             expectedDestinationFingerprint = destinationFingerprint,
                             durableOperationId = durableApiOperationId,
                             durableSettingsSnapshotJson = settingsSnapshotJson,
+                        ) ?: ExportResult(
+                            successCount = 0,
+                            totalCount = targetDates.size,
+                            failedDateDetails = targetDates.map {
+                                FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
+                            },
+                            target = ExportTarget.API_ENDPOINT,
+                        ).also {
+                            Timber.w("API export service unavailable during scheduled recovery")
+                        }
+                        ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()?.let { destinationId ->
+                            googleDriveExportOrchestrator.exportDates(
+                                targetDates,
+                                targetSettings,
+                                destinationId,
+                                source = "retry",
+                                operationId = deterministicRecoveryOperationId(
+                                    targetDates,
+                                    destinationFingerprint,
+                                    enginePin,
+                                    settingsSnapshotJson,
+                                ),
+                                settingsSnapshotJson = settingsSnapshotJson,
+                            )
+                        } ?: ExportResult(
+                            successCount = 0,
+                            totalCount = targetDates.size,
+                            failedDateDetails = targetDates.map {
+                                FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED)
+                            },
+                            target = ExportTarget.GOOGLE_DRIVE,
                         )
-                            ?: ExportResult(
-                                successCount = 0,
-                                totalCount = targetDates.size,
-                                failedDateDetails = targetDates.map {
-                                    FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR)
-                                },
-                                target = ExportTarget.API_ENDPOINT,
-                            ).also {
-                                Timber.w("API export service unavailable during scheduled recovery")
-                            }
                     }
                 } catch (error: Exception) {
                     Timber.e(error, "Scheduled export recovery failed")
@@ -318,6 +369,7 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     settingsSnapshotJson = settingsSnapshotJson,
                     apiOperationIds = targetResult.retryOperationIds,
                     folderOperationIds = targetResult.retryFolderOperationIds,
+                    driveOperationIds = targetResult.retryDriveOperationIds,
                     freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
                 )
                 settingsRepository.updateExportSettings(latestSettings)
@@ -507,6 +559,9 @@ class ScheduledExportRecoveryManager @Inject constructor(
             return ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER
         }
 
+        val driveGroups = groups.filter { it.first == ExportTarget.GOOGLE_DRIVE }
+        if (driveGroups.isNotEmpty()) return ScheduledExportRecoveryBlocker.NO_EXPORT_FOLDER
+
         val apiGroups = groups.filter { it.first == ExportTarget.API_ENDPOINT }
         if (apiGroups.isNotEmpty() && !APIExportEndpoint.isConfigured(settings.apiEndpointUrl)) {
             return ScheduledExportRecoveryBlocker.API_ENDPOINT_NOT_CONFIGURED
@@ -526,6 +581,9 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 apiCredentialStore?.destinationFingerprint(settings.apiEndpointUrl)
                     ?: APIExportEndpoint.fingerprint(settings.apiEndpointUrl)
                 )
+        ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()
+            ?.let { googleDriveDestinationStore.find(it) }
+            ?.fingerprint == destinationFingerprint
     }
 
     private fun historyEntry(
@@ -598,6 +656,7 @@ private data class PendingRecoveryOperation(
     val settingsSnapshotJson: String?,
     val apiOperationId: String?,
     val folderOperationId: String?,
+    val driveOperationId: String?,
 )
 
 data class ScheduledExportRecoveryStatus(

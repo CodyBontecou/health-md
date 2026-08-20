@@ -14,6 +14,8 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.await
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.ExportSettings
@@ -40,6 +42,8 @@ class ExportScheduler @Inject constructor(
     private val generationFactory: ScheduledExportGeneration,
     private val runCoordinator: ScheduledExportRunCoordinator,
     private val transitionObserver: ScheduledExportTransitionObserver,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
 ) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
     private val mutex = Mutex()
@@ -626,11 +630,14 @@ class ExportScheduler @Inject constructor(
     private suspend fun destinationFingerprint(
         settings: ExportSettings,
         target: ExportTarget,
-    ): String? = if (target == ExportTarget.API_ENDPOINT) {
-        apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
+    ): String? = when (target) {
+        ExportTarget.API_ENDPOINT -> apiCredentialStore.destinationFingerprint(settings.apiEndpointUrl)
             ?: throw IllegalStateException("Scheduled API destination is not configured")
-    } else {
-        null
+        ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()
+            ?.let { googleDriveDestinationStore.find(it) }
+            ?.fingerprint
+            ?: throw IllegalStateException("Scheduled Google Drive destination is not configured")
+        ExportTarget.DEVICE_FOLDER -> null
     }
 
     private suspend fun armOccurrence(occurrence: ScheduledExportOccurrence) {

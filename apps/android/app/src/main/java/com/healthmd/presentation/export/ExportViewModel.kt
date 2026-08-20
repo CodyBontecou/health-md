@@ -10,6 +10,9 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
@@ -85,6 +88,8 @@ data class ExportUiState(
     val apiRequestHeadersConfigured: Boolean = false,
     val apiConfigurationError: APIConfigurationIssue? = null,
     val selectedHealthProviderId: String = "health_connect",
+    val googleDriveDestinationId: String? = null,
+    val googleDriveDestinationLabel: String? = null,
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -127,12 +132,14 @@ data class ExportUiState(
         get() = when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName != null
             ExportTarget.API_ENDPOINT -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) rawApiEndpointConfigured else apiEndpointConfigured
+            ExportTarget.GOOGLE_DRIVE -> googleDriveDestinationId != null
         }
 
     val destinationLabel: String?
         get() = when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName
             ExportTarget.API_ENDPOINT -> APIExportEndpoint.displayName(settings.apiEndpointUrl)
+            ExportTarget.GOOGLE_DRIVE -> googleDriveDestinationLabel
         }
 }
 
@@ -148,6 +155,9 @@ class ExportViewModel @Inject constructor(
     private val rawSnapshotExportRunner: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val exportScheduler: ExportScheduler? = null,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportUiState())
@@ -197,6 +207,17 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.selectedHealthProviderId.collect { providerId ->
                 _uiState.update { it.copy(selectedHealthProviderId = providerId) }
+            }
+        }
+        viewModelScope.launch {
+            googleDriveSelectionStore.destinationId.collect { id ->
+                val destination = id?.let { googleDriveDestinationStore.find(it) }
+                _uiState.update {
+                    it.copy(
+                        googleDriveDestinationId = destination?.id,
+                        googleDriveDestinationLabel = destination?.folderLabel,
+                    )
+                }
             }
         }
 
@@ -458,6 +479,20 @@ class ExportViewModel @Inject constructor(
                         },
                         target = ExportTarget.API_ENDPOINT,
                     )
+                ExportTarget.GOOGLE_DRIVE -> _uiState.value.googleDriveDestinationId?.let { destinationId ->
+                    googleDriveExportOrchestrator.exportDates(
+                        dates = dates,
+                        settings = settings,
+                        destinationId = destinationId,
+                        source = "manual",
+                        onProgress = progress,
+                    )
+                } ?: ExportResult(
+                    0,
+                    dates.size,
+                    dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                    target = ExportTarget.GOOGLE_DRIVE,
+                )
             }
 
             // UI and local history consume typed failure reasons, never arbitrary producer text.
@@ -479,6 +514,7 @@ class ExportViewModel @Inject constructor(
                     targetLabel = when (settings.exportTarget) {
                         ExportTarget.DEVICE_FOLDER -> _uiState.value.folderName
                         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                        ExportTarget.GOOGLE_DRIVE -> _uiState.value.googleDriveDestinationLabel
                     },
                     fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
                         if (settings.exportMode == ExportMode.RAW_SNAPSHOT) presentationResult.artifactCount else estimatedFileCount(presentationResult.successCount, settings)
@@ -622,6 +658,9 @@ class ExportViewModel @Inject constructor(
                         isTruncated = false,
                         days = emptyList(),
                     )
+                    // Renderer preview is destination-neutral and performs no Drive request.
+                    ExportTarget.GOOGLE_DRIVE -> ExportOrchestrator(healthRepository, exportRepository)
+                        .previewDates(dates, settings, onProgress = progress)
                 }
 
                 _uiState.update { it.copy(preview = preview) }

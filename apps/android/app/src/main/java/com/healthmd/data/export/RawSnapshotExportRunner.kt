@@ -13,6 +13,11 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.data.drive.GeneratedExportBundleFactory
+import com.healthmd.data.drive.GoogleDriveDestinationRunner
+import com.healthmd.data.drive.GoogleDriveRunResult
+import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.drive.toFailureReason
 import com.healthmd.rawexport.CompletedRawSnapshot
 import com.healthmd.rawexport.ExportMode
 import com.healthmd.rawexport.NoBackupRawExportStorage
@@ -73,6 +78,9 @@ class RawSnapshotExportRunner @Inject constructor(
     private val apiClient: RawSnapshotApiClient,
     private val credentialStore: APIExportCredentialStore,
     private val settingsRepository: SettingsRepository,
+    private val driveBundleFactory: GeneratedExportBundleFactory,
+    private val driveRunner: GoogleDriveDestinationRunner,
+    private val driveSelectionStore: GoogleDriveSelectionStore,
     private val rawRepositoryRegistry: RawHealthRepositoryRegistry = RawHealthRepositoryRegistry.healthConnectOnly(rawRepository),
 ) : RawSnapshotService {
 
@@ -281,6 +289,7 @@ class RawSnapshotExportRunner @Inject constructor(
         when (target) {
             ExportTarget.DEVICE_FOLDER -> exportToFolder(providerId, repository, startDate, endDate, request, settings)
             ExportTarget.API_ENDPOINT -> exportToApi(providerId, repository, startDate, request, requireNotNull(apiConfiguration))
+            ExportTarget.GOOGLE_DRIVE -> exportToDrive(providerId, repository, startDate, endDate, request, settings)
         }
     } catch (_: CancellationException) {
         failure(startDate, target, ExportFailureReason.RAW_CANCELLED, cancelled = true)
@@ -371,6 +380,55 @@ class RawSnapshotExportRunner @Inject constructor(
             // Raw API artifacts are transient no-backup files. Retain neither uploaded health data
             // nor failed-upload content; retry creates a fresh explicitly non-transactional snapshot.
             raw?.finalLocation?.let { location -> cleanupPrivateArtifact(File(location)) }
+        }
+    }
+
+    private suspend fun exportToDrive(
+        providerId: String,
+        repository: RawHealthRepository,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        request: RawSnapshotRequest,
+        settings: ExportSettings,
+    ): ExportResult {
+        val destinationId = driveSelectionStore.get()
+            ?: return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.NO_FOLDER_SELECTED)
+        val storage = NoBackupRawExportStorage(context)
+        val raw = RawSnapshotExportOrchestrator(context, repository, storage).export(request)
+        if (raw.manifest.status != RawSnapshotStatus.COMPLETE) {
+            return raw.toProductResult(startDate, ExportTarget.GOOGLE_DRIVE)
+        }
+        val artifactFile = File(raw.finalLocation)
+        val extension = artifactFile.extension.ifBlank { if (raw.format.name == "JSON") "json" else "ndjson" }
+        val relativePath = listOf(
+            settings.subfolder.trim('/').takeIf(String::isNotBlank),
+            RAW_DIRECTORY,
+            artifactFile.name.ifBlank { "healthmd-raw-$providerId-${startDate}_to_${endDate}.$extension" },
+        ).filterNotNull().joinToString("/")
+        return try {
+            val bundle = driveBundleFactory.rawSnapshot(
+                operationId = raw.snapshotId,
+                profileId = null,
+                startDate = startDate,
+                endDate = endDate,
+                settingsSnapshotJson = kotlinx.serialization.json.Json.encodeToString(ExportSettings.serializer(), settings),
+                relativePath = relativePath,
+                mediaType = if (extension == "json") "application/json" else "application/x-ndjson",
+                exactFile = artifactFile,
+            )
+            when (val result = driveRunner.run(bundle, destinationId)) {
+                is GoogleDriveRunResult.Complete -> ExportResult(
+                    1, 1, target = ExportTarget.GOOGLE_DRIVE,
+                    exportMode = ExportMode.RAW_SNAPSHOT, artifactCount = result.artifactCount,
+                )
+                is GoogleDriveRunResult.Stopped -> failure(
+                    startDate, ExportTarget.GOOGLE_DRIVE, result.error.toFailureReason(),
+                    artifactCount = result.completedArtifactCount,
+                )
+            }
+        } finally {
+            // The Drive journal owns an immutable copy before any remote mutation or retry.
+            cleanupPrivateArtifact(artifactFile)
         }
     }
 

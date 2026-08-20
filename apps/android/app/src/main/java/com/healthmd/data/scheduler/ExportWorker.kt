@@ -21,6 +21,9 @@ import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
@@ -67,6 +70,9 @@ class ExportWorker @AssistedInject constructor(
     private val timeCalculator: ScheduledExportTimeCalculator,
     private val stateStore: ScheduledExportStateStore,
     private val exportScheduler: Lazy<ExportScheduler>,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -225,12 +231,16 @@ class ExportWorker @AssistedInject constructor(
         if (persistedSettings.scheduledExportTarget != capturedTarget) return Result.success()
 
         // Validate current credential/destination plumbing before restoring frozen output choices.
-        val currentFingerprint = if (capturedTarget == ExportTarget.API_ENDPOINT) {
-            apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
-        } else null
+        val currentFingerprint = when (capturedTarget) {
+            ExportTarget.API_ENDPOINT -> apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
+            ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()
+                ?.let { googleDriveDestinationStore.find(it) }
+                ?.fingerprint
+            ExportTarget.DEVICE_FOLDER -> null
+        }
         val capturedFingerprint = capturedOccurrence.configuration.destinationFingerprint
         if (
-            capturedTarget == ExportTarget.API_ENDPOINT &&
+            capturedTarget != ExportTarget.DEVICE_FOLDER &&
             (capturedFingerprint == null || capturedFingerprint != currentFingerprint)
         ) {
             // A newer schedule points at a different endpoint. Never let this stale worker send to it.
@@ -486,6 +496,21 @@ class ExportWorker @AssistedInject constructor(
                     durableOperationId = durableApiOperationId,
                     durableSettingsSnapshotJson = capturedSnapshotJson,
                 )
+                ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()?.let { destinationId ->
+                    googleDriveExportOrchestrator.exportDates(
+                        dates = dates,
+                        settings = settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
+                        destinationId = destinationId,
+                        source = "scheduled",
+                        operationId = "drive-$admissionOperationId",
+                        settingsSnapshotJson = capturedSnapshotJson,
+                    )
+                } ?: ExportResult(
+                    0,
+                    dates.size,
+                    dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                    target = ExportTarget.GOOGLE_DRIVE,
+                )
             }
 
             exportHistoryRepository.insertEntry(
@@ -523,6 +548,7 @@ class ExportWorker @AssistedInject constructor(
                 capturedSnapshotJson,
                 result.retryOperationIds,
                 result.retryFolderOperationIds,
+                result.retryDriveOperationIds,
                 result.freshCaptureRetryDates,
             )
             val allFailuresDetachedForFreshCapture = result.failedDateDetails.all { failure ->
@@ -636,6 +662,7 @@ class ExportWorker @AssistedInject constructor(
         settingsSnapshotJson: String?,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ) {
         val latestSettings = settingsRepository.getExportSettings()
@@ -650,6 +677,7 @@ class ExportWorker @AssistedInject constructor(
                 settingsSnapshotJson = settingsSnapshotJson,
                 apiOperationIds = apiOperationIds,
                 folderOperationIds = folderOperationIds,
+                driveOperationIds = driveOperationIds,
                 freshCaptureRetryDates = freshCaptureRetryDates,
             )
         )

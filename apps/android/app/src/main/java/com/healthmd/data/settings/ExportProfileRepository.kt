@@ -70,6 +70,7 @@ class ExportProfileRepository @Inject constructor(
         apiEndpointUrl: String? = null,
         folderUri: String? = null,
         folderDisplayName: String? = null,
+        destinationId: String? = null,
     ): ExportProfile {
         require(ExportProfileRules.isValidName(name)) { "Profile name must not be blank." }
         val existing = getProfiles()
@@ -83,6 +84,7 @@ class ExportProfileRepository @Inject constructor(
             apiEndpointUrl = apiEndpointUrl?.takeIf { it.isNotBlank() },
             folderUri = folderUri?.takeIf { it.isNotBlank() },
             folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
+            destinationId = destinationId?.takeIf { it.isNotBlank() },
             createdAtEpochMillis = now,
             updatedAtEpochMillis = now,
         )
@@ -166,6 +168,7 @@ class ExportProfileRepository @Inject constructor(
         apiEndpointUrl: String?,
         folderUri: String?,
         folderDisplayName: String?,
+        destinationId: String? = null,
     ): String? {
         if (!ExportProfileRules.isValidName(rawName)) return null
         var storedName: String? = null
@@ -180,15 +183,19 @@ class ExportProfileRepository @Inject constructor(
                     target = target,
                     apiEndpointUrl = when (target) {
                         ExportTarget.API_ENDPOINT -> apiEndpointUrl?.takeIf { it.isNotBlank() }
-                        ExportTarget.DEVICE_FOLDER -> null
+                        ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE -> null
                     },
                     folderUri = when (target) {
                         ExportTarget.DEVICE_FOLDER -> folderUri?.takeIf { it.isNotBlank() }
-                        ExportTarget.API_ENDPOINT -> null
+                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
                     },
                     folderDisplayName = when (target) {
                         ExportTarget.DEVICE_FOLDER -> folderDisplayName?.takeIf { it.isNotBlank() }
-                        ExportTarget.API_ENDPOINT -> null
+                        ExportTarget.API_ENDPOINT, ExportTarget.GOOGLE_DRIVE -> null
+                    },
+                    destinationId = when (target) {
+                        ExportTarget.GOOGLE_DRIVE -> destinationId?.takeIf { it.isNotBlank() }
+                        ExportTarget.DEVICE_FOLDER, ExportTarget.API_ENDPOINT -> null
                     },
                     updatedAtEpochMillis = System.currentTimeMillis(),
                 )

@@ -17,6 +17,7 @@ import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -60,6 +61,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
     private val folderAdoption: ProfileFolderAdoptionScope,
     private val profileScheduler: dagger.Lazy<ScheduledProfileScheduler>,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -226,6 +228,23 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         durableOperationId = "profile-api-$operationId",
                         durableSettingsSnapshotJson = snapshotJson,
                     )
+
+                ExportTarget.GOOGLE_DRIVE -> profile.destinationId?.let { destinationId ->
+                    googleDriveExportOrchestrator.exportDates(
+                        dates = dates,
+                        settings = settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
+                        destinationId = destinationId,
+                        profileId = profile.id,
+                        source = "scheduled",
+                        operationId = "profile-drive-$operationId",
+                        settingsSnapshotJson = snapshotJson,
+                    )
+                } ?: ExportResult(
+                    0,
+                    dates.size,
+                    dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                    target = ExportTarget.GOOGLE_DRIVE,
+                )
             }
         } catch (error: kotlinx.coroutines.CancellationException) {
             throw error

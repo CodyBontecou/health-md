@@ -112,7 +112,7 @@ data class ScheduledExportConfiguration(
             lookbackDays = settings.scheduleLookbackDays.coerceAtLeast(1),
             dateWindow = settings.scheduleDateWindow,
             target = settings.scheduledExportTarget,
-            destinationFingerprint = if (settings.scheduledExportTarget == ExportTarget.API_ENDPOINT) {
+            destinationFingerprint = if (settings.scheduledExportTarget != ExportTarget.DEVICE_FOLDER) {
                 destinationFingerprint
             } else null,
             zoneId = zoneId.id,

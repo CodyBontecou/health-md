@@ -9,6 +9,8 @@ import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
@@ -42,6 +44,8 @@ class HistoryViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
     private val rawSnapshotService: RawSnapshotService? = null,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
 ) : ViewModel() {
 
     val entries: StateFlow<List<ExportHistoryEntry>> = exportHistoryRepository.getAllEntries()
@@ -139,6 +143,19 @@ class HistoryViewModel @Inject constructor(
                     ).also {
                         Timber.w("API export service unavailable while retrying export history")
                     }
+                    ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()?.let { destinationId ->
+                        googleDriveExportOrchestrator.exportDates(
+                            retryDates,
+                            settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
+                            destinationId,
+                            source = "retry",
+                        )
+                    } ?: ExportResult(
+                        0,
+                        retryDates.size,
+                        retryDates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                        target = ExportTarget.GOOGLE_DRIVE,
+                    )
                 }
 
                 exportHistoryRepository.insertEntry(
