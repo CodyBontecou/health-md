@@ -1089,6 +1089,33 @@ struct MacExportResultPayload: Codable {
         return "at least \(totalFilesWritten) file(s)"
     }
 
+    /// Whether the terminal status agrees with the producer counters and the
+    /// output/effect evidence used by `ExportResult` to distinguish partials.
+    /// Cancellation can interrupt at any coherent accounting point, including
+    /// before the first requested day, but still refers to a nonempty request.
+    var hasCoherentStatus: Bool {
+        guard totalCount > 0 else { return false }
+
+        let isProducerSuccess = successCount == totalCount
+            && failedDateDetails.isEmpty
+            && !hadTerminalRangeFailure
+        let hasConfirmedPartialResult = successCount > 0
+            || dailyNoteUpdateCount > 0
+            || dailyNoteSkipCount > 0
+            || totalFilesWritten > 0
+
+        switch status {
+        case .success:
+            return isProducerSuccess
+        case .partialSuccess:
+            return !isProducerSuccess && hasConfirmedPartialResult
+        case .failure:
+            return !hasConfirmedPartialResult
+        case .cancelled:
+            return true
+        }
+    }
+
     var hasConsistentFileAccounting: Bool {
         guard totalCount >= 0,
               successCount >= 0,

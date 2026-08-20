@@ -1355,6 +1355,133 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(payload.hasConsistentFileAccounting)
     }
 
+    func testPayloadStatusAcceptsFullSuccessAndRejectsContradictorySuccess() {
+        let fullSuccess = makeStatusPayload(
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            dailyNoteUpdateCount: 1
+        )
+        let zeroOfRequested = makeStatusPayload(
+            status: .success,
+            successCount: 0,
+            totalCount: 2
+        )
+        let failedFullCount = makeStatusPayload(
+            status: .success,
+            successCount: 2,
+            totalCount: 2,
+            failedDateDetails: [FailedDateDetail(date: Date(), reason: .fileWriteError)]
+        )
+        let emptyRequest = makeStatusPayload(
+            status: .success,
+            successCount: 0,
+            totalCount: 0
+        )
+
+        XCTAssertTrue(fullSuccess.hasCoherentStatus, "Daily-note success can be fileless")
+        XCTAssertFalse(zeroOfRequested.hasCoherentStatus)
+        XCTAssertFalse(failedFullCount.hasCoherentStatus)
+        XCTAssertFalse(emptyRequest.hasCoherentStatus)
+    }
+
+    func testPayloadStatusRequiresEvidenceForPartialSuccess() {
+        let successfulDay = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 1,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 1
+        )
+        let skippedDailyNote = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 2,
+            dailyNoteSkipCount: 1
+        )
+        let terminalFile = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 2,
+            totalFilesWritten: 1,
+            hadTerminalRangeFailure: true
+        )
+        let noEvidence = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 2
+        )
+        let mislabeledFullSuccess = makeStatusPayload(
+            status: .partialSuccess,
+            successCount: 2,
+            totalCount: 2
+        )
+
+        XCTAssertTrue(successfulDay.hasCoherentStatus)
+        XCTAssertTrue(skippedDailyNote.hasCoherentStatus)
+        XCTAssertTrue(terminalFile.hasCoherentStatus)
+        XCTAssertFalse(noEvidence.hasCoherentStatus)
+        XCTAssertFalse(mislabeledFullSuccess.hasCoherentStatus)
+    }
+
+    func testPayloadStatusFailureCannotClaimSuccessfulEffects() {
+        let terminalNoData = makeStatusPayload(
+            status: .failure,
+            successCount: 0,
+            totalCount: 2,
+            hadTerminalRangeFailure: true,
+            failedDateDetails: [FailedDateDetail(date: Date(), reason: .noHealthData)]
+        )
+        let successfulDay = makeStatusPayload(
+            status: .failure,
+            successCount: 1,
+            totalCount: 2
+        )
+        let generatedFile = makeStatusPayload(
+            status: .failure,
+            successCount: 0,
+            totalCount: 2,
+            totalFilesWritten: 1
+        )
+        let dailyNoteEffect = makeStatusPayload(
+            status: .failure,
+            successCount: 0,
+            totalCount: 2,
+            dailyNoteUpdateCount: 1
+        )
+
+        XCTAssertTrue(terminalNoData.hasCoherentStatus)
+        XCTAssertFalse(successfulDay.hasCoherentStatus)
+        XCTAssertFalse(generatedFile.hasCoherentStatus)
+        XCTAssertFalse(dailyNoteEffect.hasCoherentStatus)
+    }
+
+    func testPayloadStatusAllowsCancellationBeforeOrAfterOutput() {
+        let beforeOutput = makeStatusPayload(
+            status: .cancelled,
+            successCount: 0,
+            totalCount: 2
+        )
+        let afterOutput = makeStatusPayload(
+            status: .cancelled,
+            successCount: 1,
+            totalCount: 2,
+            formatsPerDate: 1,
+            totalFilesWritten: 1
+        )
+        let emptyRequest = makeStatusPayload(
+            status: .cancelled,
+            successCount: 0,
+            totalCount: 0
+        )
+
+        XCTAssertTrue(beforeOutput.hasCoherentStatus)
+        XCTAssertTrue(afterOutput.hasCoherentStatus)
+        XCTAssertFalse(emptyRequest.hasCoherentStatus)
+    }
+
     func testPayloadRejectsOverflowingTopLevelAccounting() {
         let multiplicationOverflow = MacExportResultPayload(
             jobID: UUID(),
@@ -1639,6 +1766,35 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertNil(
             ExportOrchestrator.ExportResult(macExportPayload: rangeFailure)
                 .remainingDates(from: [first, second])
+        )
+    }
+
+    private func makeStatusPayload(
+        status: MacExportResultStatus,
+        successCount: Int,
+        totalCount: Int,
+        formatsPerDate: Int = 0,
+        totalFilesWritten: Int = 0,
+        hadTerminalRangeFailure: Bool = false,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0,
+        failedDateDetails: [FailedDateDetail] = []
+    ) -> MacExportResultPayload {
+        MacExportResultPayload(
+            jobID: UUID(),
+            status: status,
+            successCount: successCount,
+            totalCount: totalCount,
+            formatsPerDate: formatsPerDate,
+            totalFilesWritten: totalFilesWritten,
+            hadTerminalRangeFailure: hadTerminalRangeFailure,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
+            failedDateDetails: failedDateDetails,
+            completedDates: [],
+            destinationDisplayName: nil,
+            destinationPathForDisplay: nil,
+            completedAt: Date()
         )
     }
 

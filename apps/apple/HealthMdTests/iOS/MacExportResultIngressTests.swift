@@ -75,6 +75,59 @@ final class MacExportResultIngressTests: XCTestCase {
         XCTAssertEqual(failure.reason, .payloadDecodeFailure)
     }
 
+    func testRejectsContradictoryFailureBeforeUIPublication() async {
+        let payload = makePayload(status: .failure)
+        var resultMutationCount = 0
+        var publishedFailures: [MacExportFailure] = []
+
+        let outcome = await MacExportResultIngress.handle(
+            MacExportResultIngress.validate(payload),
+            cancelWaiters: { _ in },
+            completeScheduledResult: { _ in resultMutationCount += 1; return false },
+            completeRequestResult: { _ in resultMutationCount += 1; return false },
+            completeRecoveredScheduledResult: { _ in resultMutationCount += 1; return false },
+            completeRecoveredRequestResult: { _ in resultMutationCount += 1; return false },
+            publishResult: { _ in resultMutationCount += 1 },
+            completeScheduledFailure: { _ in false },
+            completeRequestFailure: { _ in false },
+            completeRecoveredScheduledFailure: { _ in false },
+            completeRecoveredRequestFailure: { _ in false },
+            publishFailure: { publishedFailures.append($0) }
+        )
+
+        XCTAssertEqual(outcome, .init(route: .published, rejected: true))
+        XCTAssertEqual(resultMutationCount, 0, "Invalid status counters must not mutate operation or UI result state")
+        XCTAssertEqual(publishedFailures.count, 1)
+        XCTAssertEqual(publishedFailures.first?.jobID, payload.jobID)
+        XCTAssertEqual(publishedFailures.first?.reason, .payloadDecodeFailure)
+    }
+
+    func testAcceptsCancellationAndTerminalNoDataAtIngress() {
+        let cancelled = makePayload(
+            status: .cancelled,
+            successCount: 0,
+            totalCount: 2,
+            formatsPerDate: 0,
+            totalFilesWritten: 0
+        )
+        let terminalNoData = makePayload(
+            status: .failure,
+            successCount: 0,
+            totalCount: 2,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            hadTerminalRangeFailure: true,
+            failedDateDetails: [FailedDateDetail(date: Date(), reason: .noHealthData)]
+        )
+
+        for payload in [cancelled, terminalNoData] {
+            guard case .validated(let validated) = MacExportResultIngress.validate(payload) else {
+                return XCTFail("Valid cancellation and terminal no-data results must reach consumers")
+            }
+            XCTAssertEqual(validated.jobID, payload.jobID)
+        }
+    }
+
     func testValidCompletionUsesOnlyFirstMatchingRouteForCollidingJobID() async {
         let payload = makePayload()
         var scheduledCount = 0
@@ -161,23 +214,31 @@ final class MacExportResultIngressTests: XCTestCase {
         XCTAssertEqual(outcome, .init(route: .published, rejected: false))
         XCTAssertEqual(publishedResults.map(\.jobID), [payload.jobID])
         XCTAssertTrue(publishedResults.allSatisfy(\.hasConsistentFileAccounting))
+        XCTAssertTrue(publishedResults.allSatisfy(\.hasCoherentStatus))
         XCTAssertEqual(publishedFailureCount, 0)
     }
 
     private func makePayload(
+        status: MacExportResultStatus = .success,
+        successCount: Int = 1,
+        totalCount: Int = 1,
+        formatsPerDate: Int = 1,
         totalFilesWritten: Int = 1,
-        externalRecordFileCount: Int = 0
+        externalRecordFileCount: Int = 0,
+        hadTerminalRangeFailure: Bool = false,
+        failedDateDetails: [FailedDateDetail] = []
     ) -> MacExportResultPayload {
         MacExportResultPayload(
             jobID: UUID(),
-            status: .success,
-            successCount: 1,
-            totalCount: 1,
-            formatsPerDate: 1,
+            status: status,
+            successCount: successCount,
+            totalCount: totalCount,
+            formatsPerDate: formatsPerDate,
             totalFilesWritten: totalFilesWritten,
             isTotalFilesWrittenAuthoritative: true,
             externalRecordFileCount: externalRecordFileCount,
-            failedDateDetails: [],
+            hadTerminalRangeFailure: hadTerminalRangeFailure,
+            failedDateDetails: failedDateDetails,
             completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
             destinationDisplayName: "Mac",
             destinationPathForDisplay: nil,

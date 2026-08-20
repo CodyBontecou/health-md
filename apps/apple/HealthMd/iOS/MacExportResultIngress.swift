@@ -27,7 +27,8 @@ enum MacExportResultIngress {
     /// Validate synchronously at the app callback boundary, before the result is
     /// captured by asynchronous routing or exposed to any result subscriber.
     static func validate(_ payload: MacExportResultPayload) -> Input {
-        guard payload.hasConsistentFileAccounting else {
+        guard payload.hasConsistentFileAccounting,
+              payload.hasCoherentStatus else {
             return .rejected(
                 jobID: payload.jobID,
                 failure: MacExportFailure(
