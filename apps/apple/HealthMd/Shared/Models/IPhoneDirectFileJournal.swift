@@ -85,7 +85,8 @@ struct IPhoneDirectFileJournal: Codable {
     static let exportEnginePinVersion = 2
     static let directProtocolPinVersion = 3
     static let fileBackedCaptureVersion = 4
-    static let currentVersion = fileBackedCaptureVersion
+    static let immutableRangeRequestVersion = 5
+    static let currentVersion = immutableRangeRequestVersion
 
     let version: Int
     let request: DirectExportRequest
@@ -96,6 +97,10 @@ struct IPhoneDirectFileJournal: Codable {
     let appleDirectProtocolPin: AppleDirectProtocolPin?
     let healthSubfolder: String
     let requestedDates: [Date]
+    /// Original requested owner dates remain stable while capture resumes residual transfer work.
+    let originalRequestedDates: [Date]
+    /// Original timezone authority used to regenerate/overwrite the same range path.
+    let originalCalendarTimeZoneIdentifier: String?
     let transferDates: [Date]
     var capturedDays: [IPhoneDirectCapturedDay]
     var generatedFiles: [IPhoneDirectGeneratedFile]
@@ -120,6 +125,8 @@ struct IPhoneDirectFileJournal: Codable {
         appleDirectProtocolPin: AppleDirectProtocolPin? = nil,
         healthSubfolder: String,
         requestedDates: [Date],
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         transferDates: [Date],
         capturedDays: [IPhoneDirectCapturedDay],
         generatedFiles: [IPhoneDirectGeneratedFile],
@@ -143,6 +150,10 @@ struct IPhoneDirectFileJournal: Codable {
             : nil
         self.healthSubfolder = healthSubfolder
         self.requestedDates = requestedDates
+        self.originalRequestedDates = originalRequestedDates ?? requestedDates
+        self.originalCalendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
+            ?? settingsSnapshot.calendarTimeZoneIdentifier
+            ?? accepted.sourceTimeZoneIdentifier
         self.transferDates = transferDates
         self.capturedDays = capturedDays
         self.generatedFiles = generatedFiles
@@ -174,6 +185,14 @@ struct IPhoneDirectFileJournal: Codable {
             : nil
         healthSubfolder = try container.decode(String.self, forKey: .healthSubfolder)
         requestedDates = try container.decode([Date].self, forKey: .requestedDates)
+        originalRequestedDates = try container.decodeIfPresent(
+            [Date].self,
+            forKey: .originalRequestedDates
+        ) ?? requestedDates
+        originalCalendarTimeZoneIdentifier = try container.decodeIfPresent(
+            String.self,
+            forKey: .originalCalendarTimeZoneIdentifier
+        ) ?? settingsSnapshot.calendarTimeZoneIdentifier ?? accepted.sourceTimeZoneIdentifier
         transferDates = try container.decode([Date].self, forKey: .transferDates)
         capturedDays = try container.decode([IPhoneDirectCapturedDay].self, forKey: .capturedDays)
         generatedFiles = try container.decode([IPhoneDirectGeneratedFile].self, forKey: .generatedFiles)

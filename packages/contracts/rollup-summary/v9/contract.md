@@ -8,7 +8,7 @@ Version 9 replaces the window grammar for newly generated Apple roll-ups without
 
 ## Window authority
 
-A v9 artifact has `rollup_period: range`. `start_date`, `end_date`, `period_id`, and `days_expected` come from the immutable requested civil range in the configured IANA timezone, never from successful captures. `period_id` is `<start_date>_to_<end_date>` and the inclusive range may contain at most 400 days.
+A v9 artifact has `rollup_period: range`. `start_date`, `end_date`, `period_id`, and `days_expected` come from the immutable requested civil range in the configured IANA timezone, never from successful captures. `period_id` is `<start_date>_to_<end_date>` and the inclusive range may contain at most 10,000 days.
 
 `source_dates` lists distinct successfully captured owner dates, including successful empty snapshots. Query failures are absent. `days_counted` is the count of those source dates and `coverage_percent` is `days_counted / days_expected * 100`. Failed first or last days do not change the artifact identity. At least one summarized metric is required to emit an artifact.
 

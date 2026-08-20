@@ -64,6 +64,8 @@ enum HealthRollupExportSchema {
 /// Immutable authority for a newly requested range summary. Its civil bounds
 /// and timezone are chosen before capture and never inferred from successful days.
 struct HealthRollupRangeRequest: Equatable, Hashable, Codable {
+    /// Bounded cumulative scope (~27 years) while per-batch capture/render limits remain 400 days.
+    static let maximumDays = 10_000
     enum ValidationError: Error, Equatable {
         case invalidTimeZone
         case invalidBounds
@@ -130,7 +132,7 @@ struct HealthRollupRangeRequest: Equatable, Hashable, Codable {
         guard normalizedStart <= normalizedEnd else { throw ValidationError.invalidBounds }
         let days = (calendar.dateComponents([.day], from: normalizedStart, to: normalizedEnd).day ?? -1) + 1
         guard days > 0 else { throw ValidationError.invalidBounds }
-        guard days <= 400 else { throw ValidationError.exceedsDayLimit }
+        guard days <= Self.maximumDays else { throw ValidationError.exceedsDayLimit }
         self.startDate = normalizedStart
         self.endDate = normalizedEnd
         self.daysExpected = days

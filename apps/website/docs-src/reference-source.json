@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "839aa8e3ec9c25a0834a647a2bad7bc4f36e1fcb",
+  "docs_reference_git_tree": "dfa291e12ed4c13eecb1318a6ed7889e27d394a0",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "03ef44432a59b4ae207615eab4edbf4c85512763590f404b09a9c5416e1b66cf",
+    "digest": "322fa38b6b1d4db06376156eb9d89b35b958972e914410b0632562911d36bdf4",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -75,21 +75,22 @@
     {
       "identifier": "healthmd.rollup_summary",
       "versions": [
+        8,
         9
       ]
     }
   ],
   "counts": {
-    "source_files": 105,
+    "source_files": 109,
     "handwritten_markdown_pages": 13,
-    "generated_artifacts": 92,
-    "generated_json_artifacts": 53,
-    "generated_markdown_artifacts": 35,
-    "generated_csv_artifacts": 4,
+    "generated_artifacts": 96,
+    "generated_json_artifacts": 54,
+    "generated_markdown_artifacts": 37,
+    "generated_csv_artifacts": 5,
     "rendered_source_pages": 26,
     "generated_landing_pages": 6,
     "rendered_pages": 32,
-    "raw_artifacts": 92
+    "raw_artifacts": 96
   },
   "files": [
     {
@@ -1034,8 +1035,8 @@
     },
     {
       "path": "generated/rollups/manifest.json",
-      "bytes": 4381,
-      "sha256": "d32d1053f6b074fabe290647e04d9a28d77b6acd533fda2ee4dc4d3873fa790d",
+      "bytes": 5365,
+      "sha256": "84de0cac0cc95aafd023a0d1591415a9239860c779508d5062539d0684dc94c1",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1080,6 +1081,46 @@
       "routes": {
         "rendered": null,
         "raw": "/docs/reference/generated/rollups/range.md"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly-bases.md",
+      "bytes": 11564,
+      "sha256": "fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly-bases.md"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly.csv",
+      "bytes": 29797,
+      "sha256": "447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9",
+      "classification": "generated-csv",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly.csv"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly.json",
+      "bytes": 39632,
+      "sha256": "58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly.json"
+      }
+    },
+    {
+      "path": "generated/rollups/weekly.md",
+      "bytes": 9203,
+      "sha256": "c2b7fc33e559fea8f71a86a04781feeec9c63dfa21c7cffc1ec681bd79888774",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/weekly.md"
       }
     },
     {
@@ -1755,8 +1796,8 @@
     },
     {
       "path": "public/reference/generated/rollups/manifest.json",
-      "bytes": 4381,
-      "sha256": "d32d1053f6b074fabe290647e04d9a28d77b6acd533fda2ee4dc4d3873fa790d",
+      "bytes": 5365,
+      "sha256": "84de0cac0cc95aafd023a0d1591415a9239860c779508d5062539d0684dc94c1",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/manifest.json"
     },
@@ -1787,6 +1828,34 @@
       "sha256": "47745047ccc4053ab049fe114fe75ee4319b26486207a651e155b4fb1ee8d1f8",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/range.md"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly-bases.md",
+      "bytes": 11564,
+      "sha256": "fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly-bases.md"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly.csv",
+      "bytes": 29797,
+      "sha256": "447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly.csv"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly.json",
+      "bytes": 39632,
+      "sha256": "58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly.json"
+    },
+    {
+      "path": "public/reference/generated/rollups/weekly.md",
+      "bytes": 9203,
+      "sha256": "c2b7fc33e559fea8f71a86a04781feeec9c63dfa21c7cffc1ec681bd79888774",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/weekly.md"
     },
     {
       "path": "src/content/docs/reference/api-and-cli.md",
@@ -1916,8 +1985,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/index.md",
-      "bytes": 20320,
-      "sha256": "dcb1469662df4ee4780ae3ca1a23f6419257b5f8cac03f1876092c88ee4725a6",
+      "bytes": 20997,
+      "sha256": "16589d912cb475a83fd274d15ce4df35f78b8585af90c3010c2b7c1f837d262a",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
@@ -1965,8 +2034,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/rollups/index.md",
-      "bytes": 1460,
-      "sha256": "6738149241a8c7a1eeaa5600eb4d888917e7c2465a6e48d4fc728b1c1266a827",
+      "bytes": 2107,
+      "sha256": "a466dab4440d6c3992b84ec0d944f466f6315948af3972c80d9e1808b50462a5",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/rollups/"
     },

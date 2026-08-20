@@ -25,8 +25,38 @@
       "bytes" : 9226,
       "path" : "range.md",
       "sha256" : "47745047ccc4053ab049fe114fe75ee4319b26486207a651e155b4fb1ee8d1f8"
+    },
+    {
+      "bytes" : 11564,
+      "path" : "weekly-bases.md",
+      "sha256" : "fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815"
+    },
+    {
+      "bytes" : 29797,
+      "path" : "weekly.csv",
+      "sha256" : "447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9"
+    },
+    {
+      "bytes" : 39632,
+      "path" : "weekly.json",
+      "sha256" : "58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84"
+    },
+    {
+      "bytes" : 9203,
+      "path" : "weekly.md",
+      "sha256" : "c2b7fc33e559fea8f71a86a04781feeec9c63dfa21c7cffc1ec681bd79888774"
     }
   ],
+  "current_artifacts" : {
+    "paths" : [
+      "range-bases.md",
+      "range.csv",
+      "range.json",
+      "range.md"
+    ],
+    "rollup_period" : "range",
+    "schema_version" : 9
+  },
   "fixture" : {
     "behavior_evidence" : [
       {
@@ -148,6 +178,16 @@
     ],
     "script" : "scripts/generated-rollup-reference-docs.sh",
     "test" : "HealthMdTests/Export/GeneratedRollupReferenceDocsTests.swift"
+  },
+  "historical_artifacts" : {
+    "paths" : [
+      "weekly-bases.md",
+      "weekly.csv",
+      "weekly.json",
+      "weekly.md"
+    ],
+    "schema_version" : 8,
+    "status" : "immutable"
   },
   "manifest_version" : 1,
   "schema" : {

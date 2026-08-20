@@ -90,7 +90,7 @@ fn render(
     let period_id = period_identifier(rollup)?;
     let days_expected = days_expected(rollup)?;
     if days_expected == 0
-        || days_expected > 400
+        || days_expected > u32::try_from(super::MAX_RENDER_DATES).unwrap_or(u32::MAX)
         || rollup.calendar_time_zone != config.calendar_time_zone
         || rollup.source_dates.iter().any(|date| {
             NaiveDate::parse_from_str(date, "%Y-%m-%d").is_err_and(|_| true)

@@ -73,6 +73,8 @@ final class PendingExportRequestTests: XCTestCase {
         let decoded = try JSONDecoder().decode(PendingExportRequest.self, from: data)
 
         XCTAssertEqual(decoded.dates, [persistedDate])
+        XCTAssertEqual(decoded.originalRequestedDates, [persistedDate])
+        XCTAssertNil(decoded.originalCalendarTimeZoneIdentifier)
         XCTAssertNil(decoded.exportTarget)
         XCTAssertNil(decoded.settingsSnapshot)
         XCTAssertTrue(decoded.usesLegacyMutableSettings)
@@ -101,6 +103,8 @@ final class PendingExportRequestTests: XCTestCase {
 
         XCTAssertEqual(decoded.settingsSnapshot, snapshot)
         XCTAssertEqual(decoded.settingsSnapshot?.appleExportEnginePin, pin)
+        XCTAssertEqual(decoded.originalRequestedDates, request.dates)
+        XCTAssertEqual(decoded.originalCalendarTimeZoneIdentifier, "America/Los_Angeles")
         XCTAssertFalse(decoded.usesLegacyMutableSettings)
     }
 

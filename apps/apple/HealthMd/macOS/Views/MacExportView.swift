@@ -262,13 +262,13 @@ struct MacExportView: View {
                     Divider().background(Color.borderSubtle)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Roll-up summaries")
+                        Text("Range summary")
                             .font(BrandTypography.body())
                             .foregroundStyle(Color.textSecondary)
                         Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                        Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                        Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                             .tint(Color.accent)
                             .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                         Text(

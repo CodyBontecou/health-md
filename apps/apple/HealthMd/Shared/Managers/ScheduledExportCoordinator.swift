@@ -69,6 +69,8 @@ final class ScheduledExportCoordinator {
             retryRequest = PendingExportRequest(
                 id: request.id,
                 dates: remainingDates,
+                originalRequestedDates: request.originalRequestedDates,
+                originalCalendarTimeZoneIdentifier: request.originalCalendarTimeZoneIdentifier,
                 source: request.source,
                 scheduledFireDate: request.scheduledFireDate,
                 scheduledKind: request.scheduledKind,

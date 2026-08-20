@@ -515,7 +515,7 @@ function assertCurrentSchemaContracts(parsedJSON) {
     ['healthmd.healthkit_records', [1]],
     ['healthmd.provider.whoop_daily', [1]],
     ['healthmd.raw_result', [1]],
-    ['healthmd.rollup_summary', [9]],
+    ['healthmd.rollup_summary', [8, 9]],
   ]);
   for (const [identifier, expectedVersions] of required) {
     const actualVersions = versionsByIdentifier.get(identifier);

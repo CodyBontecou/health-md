@@ -719,10 +719,12 @@ final class IPhoneDirectFileExportProducer {
             )
             if !rangeInput.records.isEmpty && rangeInput.hasAnyData {
                 try checkCancellation(journal.request.jobID)
-                let calendarTimeZoneIdentifier = journal.settingsSnapshot.calendarTimeZoneIdentifier ?? ""
+                let calendarTimeZoneIdentifier = journal.originalCalendarTimeZoneIdentifier
+                    ?? journal.settingsSnapshot.calendarTimeZoneIdentifier
+                    ?? ""
                 let requestedRange = try journal.settingsSnapshot.generateRangeSummary
                     ? HealthRollupRangeRequest(
-                        ownerDateIdentifiers: Set(journal.requestedDates.map {
+                        ownerDateIdentifiers: Set(journal.originalRequestedDates.map {
                             HealthKitDailyOwnershipMetadata.ownerDate(
                                 for: $0,
                                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier

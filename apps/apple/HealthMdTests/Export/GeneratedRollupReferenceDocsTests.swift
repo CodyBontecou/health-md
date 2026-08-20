@@ -135,6 +135,16 @@ private enum GeneratedRollupReferenceDocs {
             "range.json": Data(snapshot.toRollupJSON().utf8),
             "range.md": Data(snapshot.toRollupMarkdown().utf8)
         ]
+        // Shipped v8 calendar artifacts are immutable compatibility references. The
+        // generator carries them forward byte-for-byte beside current range-v9 output.
+        let historicalDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("docs/reference/generated/rollups", isDirectory: true)
+        for name in ["weekly-bases.md", "weekly.csv", "weekly.json", "weekly.md"] {
+            artifacts[name] = try Data(contentsOf: historicalDirectory.appendingPathComponent(name))
+        }
         artifacts["manifest.json"] = Data(manifest(for: artifacts, snapshot: snapshot, entryCount: dictionaryEntries.count).utf8)
         return artifacts
     }
@@ -498,6 +508,16 @@ private enum GeneratedRollupReferenceDocs {
                     "RollupObsidianBasesExporter",
                     "HealthMetricDataDictionary.entries(using:)"
                 ]
+            ],
+            "current_artifacts": [
+                "schema_version": 9,
+                "rollup_period": "range",
+                "paths": ["range-bases.md", "range.csv", "range.json", "range.md"]
+            ],
+            "historical_artifacts": [
+                "schema_version": 8,
+                "status": "immutable",
+                "paths": ["weekly-bases.md", "weekly.csv", "weekly.json", "weekly.md"]
             ],
             "schema": [
                 "rollup": HealthRollupExportSchema.identifier,

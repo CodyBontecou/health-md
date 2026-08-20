@@ -19,6 +19,6 @@ enum ExportRolloutCopy {
 
     static let formatFoldersHelp = String(localized: "Organize by File Type is off by default. Turn it on only when you want Markdown/, Bases/, JSON/, and CSV/ folders; update plugins, shortcuts, or scripts that expect flat paths first.")
 
-    static let rollupSummariesHelp = String(localized: "Roll-up summaries are off by default. They are aggregate weekly/monthly/yearly files (`\(HealthRollupExportSchema.identifier)`) generated from HealthKit daily snapshots and are not daily records. Each enabled period processes its complete touched calendar windows, so a yearly summary can read hundreds of source days even when the final files are small. Turn on Summary files only to skip daily files and write just the enabled summaries.")
+    static let rollupSummariesHelp = String(localized: "Range summaries are off by default. Current exports write one `\(HealthRollupExportSchema.identifier)` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time is supported and processes source days in bounded batches. Turn on Range summary only to skip daily files and write just the range summary.")
 
 }

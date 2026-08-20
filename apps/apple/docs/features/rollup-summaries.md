@@ -17,7 +17,7 @@ Health/
 
 With **Organize by File Type**, the format folder precedes `Range`. Range files are derived from Apple-v8 daily aggregate facts and do not embed the canonical HealthKit archive.
 
-The requested IANA calendar timezone and inclusive start/end dates are frozen before capture. `period_id`, `start_date`, `end_date`, and `days_expected` never shrink when the first or last query fails. `source_dates` contains distinct successfully captured owner dates, including successful empty days; `days_counted` and coverage therefore expose missing captures rather than changing artifact identity. A range is limited to 400 days and an artifact is emitted only when at least one selected metric can be summarized.
+The requested IANA calendar timezone and inclusive start/end dates are frozen before capture. `period_id`, `start_date`, `end_date`, and `days_expected` never shrink when the first or last query fails. `source_dates` contains distinct successfully captured owner dates, including successful empty days; `days_counted` and coverage therefore expose missing captures rather than changing artifact identity. Missing edge days never suppress the artifact when captured metrics remain. A range is limited to 10,000 cumulative owner dates (about 27 years), while capture and render batches retain their smaller bounded limits.
 
 ## Contract identity
 
@@ -36,11 +36,11 @@ The normative contract and reviewed synthetic fixtures are under `packages/contr
 
 ## Settings and migration
 
-Range summary is opt-in. **Summary files only** skips daily files and daily side effects while still capturing the requested dates needed for the summary.
+Range summary is opt-in. **Range summary only** skips daily files and daily side effects while still capturing the requested dates needed for the summary.
 
 On settings migration, a previously enabled weekly, monthly, or yearly preference opts into the new range-summary setting using OR semantics. An explicitly stored new `false` value remains authoritative, and migrated legacy keys are removed. New durable settings snapshots encode only `generateRangeSummary`.
 
-Historical weekly, monthly, and yearly `healthmd.rollup_summary` v8 artifacts remain valid and readable. Their calendar identifiers and bytes are not relabeled or regenerated as range v9. Semantic-input v1 calendar-period fixtures likewise remain compatibility fixtures; a range operation is explicitly gated to semantic-input v1, Apple-v8 profile revision 1, one `range` period, and immutable `rollup_range` bounds.
+Historical weekly, monthly, and yearly `healthmd.rollup_summary` v8 artifacts remain valid and readable. Their calendar identifiers and bytes are not relabeled or regenerated as range v9. Semantic-input v1 calendar-period fixtures likewise remain byte-compatible revision-1 fixtures; a range operation is explicitly gated to semantic-input v1, Apple-v8 semantic profile revision 2, one `range` period, and immutable `rollup_range` bounds. Apple range planning rejects a packaged core without the range capability.
 
 ## Aggregation rules
 

@@ -2282,6 +2282,66 @@ def validate_metric_registry(
         fail(f"{context}: missing required registry profiles")
 
 
+def validate_semantic_range_capability_fixture(path: Path) -> None:
+    context = f"semantic range capability fixture {path}"
+    payload = load_json(path, context)
+    payload = require_exact_keys(
+        payload,
+        {"schema", "schema_version", "calendar_v1", "range_v2", "revision_one_range_rejected"},
+        context,
+    )
+    if payload["schema"] != "healthmd.semantic_profile_capability_fixture" or payload["schema_version"] != 1:
+        fail(f"{context}: invalid fixture identity")
+    calendar = payload["calendar_v1"]
+    range_v2 = payload["range_v2"]
+    if calendar.get("profile_revision") != 1 or calendar.get("rollup_periods") != ["iso_week"] or calendar.get("rollup_range") is not None:
+        fail(f"{context}.calendar_v1: calendar grammar must remain revision 1")
+    if range_v2.get("profile_revision") != 2 or range_v2.get("rollup_periods") != ["range"] or not isinstance(range_v2.get("rollup_range"), dict):
+        fail(f"{context}.range_v2: range grammar must require revision 2 and explicit bounds")
+    if payload["revision_one_range_rejected"] is not True:
+        fail(f"{context}: revision-one range rejection must be explicit")
+
+
+def validate_rollup_summary_fixture(path: Path) -> None:
+    context = f"rollup fixture {path}"
+    payload = load_json(path, context)
+    if not isinstance(payload, dict):
+        fail(f"{context}: root must be an object")
+    start_text = payload.get("start_date")
+    end_text = payload.get("end_date")
+    source_dates = payload.get("source_dates")
+    try:
+        start = datetime.strptime(start_text, "%Y-%m-%d").date()
+        end = datetime.strptime(end_text, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        fail(f"{context}: start_date and end_date must be canonical civil dates")
+    days_expected = (end - start).days + 1
+    if start > end or days_expected > 10_000:
+        fail(f"{context}: invalid or unbounded requested range")
+    if payload.get("period_id") != f"{start_text}_to_{end_text}":
+        fail(f"{context}.period_id: must equal the immutable requested bounds")
+    if payload.get("days_expected") != days_expected:
+        fail(f"{context}.days_expected: must equal the inclusive requested bounds")
+    if not isinstance(source_dates, list) or source_dates != sorted(set(source_dates)):
+        fail(f"{context}.source_dates: must be unique and sorted")
+    if any(not isinstance(value, str) or value < start_text or value > end_text for value in source_dates):
+        fail(f"{context}.source_dates: every date must be within requested bounds")
+    days_counted = payload.get("days_counted")
+    if days_counted != len(source_dates) or days_counted > days_expected:
+        fail(f"{context}.days_counted: must equal unique source_dates and not exceed days_expected")
+    coverage = payload.get("coverage_percent")
+    expected_coverage = days_counted * 100.0 / days_expected
+    if not isinstance(coverage, (int, float)) or not math.isclose(coverage, expected_coverage, abs_tol=1e-9):
+        fail(f"{context}.coverage_percent: must equal days_counted / days_expected * 100")
+    metrics = payload.get("metrics")
+    if not isinstance(metrics, list) or not metrics:
+        fail(f"{context}.metrics: must be a non-empty array")
+    for index, metric in enumerate(metrics):
+        counted = metric.get("days_counted") if isinstance(metric, dict) else None
+        if type(counted) is not int or counted < 1 or counted > days_counted:
+            fail(f"{context}.metrics[{index}].days_counted: must be within artifact coverage")
+
+
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
     manifest_path = root / "packages/contracts/manifest.json"
     manifest = require_exact_keys(
@@ -2401,7 +2461,10 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             elif identifier == "healthmd.direct.android":
                 validate_v2_fixture(fixture_path)
             elif identifier == "healthmd.semantic_input":
-                validate_semantic_fixture(root, fixture_path)
+                if fixture_path.name == "range-profile-revision-v2.json":
+                    validate_semantic_range_capability_fixture(fixture_path)
+                else:
+                    validate_semantic_fixture(root, fixture_path)
             elif identifier == "healthmd.render_input":
                 validate_render_fixture(root, fixture_path)
             elif identifier == "healthmd.provider_sections":
@@ -2410,6 +2473,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 validate_shared_setup_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
+            elif identifier == "healthmd.rollup_summary" and fixture_path.suffix == ".json":
+                validate_rollup_summary_fixture(fixture_path)
 
     inventories = manifest.get("inventories")
     if not isinstance(inventories, list) or not inventories:

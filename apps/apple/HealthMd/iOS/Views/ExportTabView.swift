@@ -791,7 +791,7 @@ struct ExportTabView: View {
                 inlineIcon("calendar.badge.clock", isActive: advancedSettings.rollupSummariesEnabled)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Roll-Up Summaries")
+                    Text("Range Summary")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
@@ -820,7 +820,7 @@ struct ExportTabView: View {
                     .padding(.vertical, Spacing.s1)
                     .accessibilityHint("Generates one range summary for every selected export format")
 
-                Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
                     .padding(.vertical, Spacing.s1)
                     .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
@@ -1271,22 +1271,7 @@ struct ExportTabView: View {
     }
 
     private var projectedRollupFileCount: Int {
-        guard exportTargetSelection != .apiEndpoint,
-              !advancedSettings.dailyNotesOnlyModeEnabled,
-              !advancedSettings.enabledRollupPeriods.isEmpty,
-              !advancedSettings.exportFormats.isEmpty else { return 0 }
-
-        var windows = Set<HealthRollupPeriodWindow>()
-        for period in advancedSettings.enabledRollupPeriods {
-            for date in exportDates {
-                windows.insert(HealthRollupPeriodWindow.window(
-                    containing: date,
-                    period: period,
-                    calendar: .current
-                ))
-            }
-        }
-        return windows.count * advancedSettings.exportFormats.count
+        projectedRollupOutputProjection.fileCount
     }
 
     private var projectedRollupSourceDateCount: Int {
@@ -1765,7 +1750,7 @@ struct ExportTabView: View {
             return "Paused · Daily Notes Only skips roll-up files."
         }
         guard advancedSettings.rollupSummariesEnabled else {
-            return "Off · Enable a period to write summary files."
+            return "Off · Enable the range summary to write one summary per format."
         }
         let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName }.joined(separator: " · ")
         let formatCount = advancedSettings.exportFormats.count

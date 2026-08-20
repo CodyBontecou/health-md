@@ -354,7 +354,7 @@ struct iPadExportView: View {
                     iPadBrandLabel("Automation")
 
                     VStack(alignment: .leading, spacing: Spacing.s2) {
-                        Text("Roll-Up Summaries")
+                        Text("Range Summary")
                             .font(Typography.bodyEmphasis())
                             .foregroundStyle(Color.textPrimary)
                         Text("Generate one summary for the requested date range in every selected export format.")
@@ -364,7 +364,7 @@ struct iPadExportView: View {
                         Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                             .tint(Color.accent)
                             .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                        Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                        Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                             .tint(Color.accent)
                             .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                         Text("Skips daily files when the range summary is enabled.")

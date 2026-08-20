@@ -48,8 +48,10 @@ pub const MAX_SEMANTIC_RESULT_BYTES: usize = 32 * 1024 * 1024;
 pub const MAX_RENDER_BATCH_BYTES: usize = 2 * 1024 * 1024;
 /// Maximum facts and extension payloads in one batch.
 pub const MAX_RENDER_FACTS_PER_BATCH: usize = 4_096;
-/// Maximum owner dates.
-pub const MAX_RENDER_DATES: usize = 400;
+/// Maximum owner dates accumulated by one render session (~27 years).
+pub const MAX_RENDER_DATES: usize = 10_000;
+/// Maximum owner dates in one bounded render batch.
+pub const MAX_RENDER_BATCH_DATES: usize = 400;
 /// Maximum inline artifacts in a plan.
 pub const MAX_ARTIFACTS: usize = 4_096;
 /// Maximum bytes in one inline artifact.
@@ -696,7 +698,7 @@ impl RenderSession {
             || batch.session_id != self.config.session_id
             || batch.batch_index != self.next_batch_index
             || self.final_batch_seen
-            || batch.days.len() > MAX_RENDER_DATES
+            || batch.days.len() > MAX_RENDER_BATCH_DATES
         {
             return Err(RenderError::SequenceInvalid);
         }
@@ -871,7 +873,9 @@ fn validate_config(
     if config.artifact_plan_version != ARTIFACT_PLAN_VERSION {
         return Err(RenderError::UnsupportedArtifactPlanVersion);
     }
-    if config.render_profile_revision != RENDER_PROFILE_REVISION || config.profile_revision != 1 {
+    if config.render_profile_revision != RENDER_PROFILE_REVISION
+        || !matches!(config.profile_revision, 1 | 2)
+    {
         return Err(RenderError::UnsupportedProfileRevision);
     }
     if config.schema != "healthmd.render_session_config"

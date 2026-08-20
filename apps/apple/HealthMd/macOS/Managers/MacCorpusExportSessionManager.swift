@@ -459,7 +459,8 @@ final class MacCorpusExportSessionManager {
                     supportsRangePlan: open.session.protocolVersion
                         >= ConnectedCorpusTransferCapabilities.rangePlanProtocolVersion
                 )
-                guard !operation.usesRangePlan || exportManifest.transferDates.count <= 400 else {
+                guard !operation.usesRangePlan
+                        || exportManifest.transferDates.count <= HealthRollupRangeRequest.maximumDays else {
                     return rejected("Received-range authority exceeds the bounded semantic owner-date limit.")
                 }
             }
@@ -984,6 +985,9 @@ final class MacCorpusExportSessionManager {
             if !unavailableRollupDates.isEmpty && derivedSettings.rollupSummariesEnabled {
                 for requestedDate in journal.exportManifest.requestedDates {
                     let affectsRequestedDate = derivedSettings.enabledRollupPeriods.contains { period in
+                        // Range v9 reports partial coverage from the immutable request. Missing
+                        // source days must not suppress or fail the range artifact.
+                        guard period != .range else { return false }
                         let window = HealthRollupPeriodWindow.window(
                             containing: requestedDate,
                             period: period,
@@ -1017,28 +1021,6 @@ final class MacCorpusExportSessionManager {
             let usesRangePlan = session.dailyExportOperation?.usesRangePlan == true
             let derived: MacCorpusDerivedOutputResult
             if usesRangePlan {
-                if !unavailableRollupDates.isEmpty {
-                    // Native finalization suppresses every window with a missing source day. A
-                    // pinned operation cannot safely produce only a subset of its immutable plan,
-                    // so withhold the complete range before any destination write.
-                    let sourceDays = unavailableRollupDates
-                        .map { Self.sourceDateString($0, timeZone: sourceCalendar.timeZone) }
-                        .sorted()
-                        .joined(separator: ", ")
-                    for requestedDate in journal.exportManifest.requestedDates {
-                        if !session.journal.failedDateDetails.contains(where: { $0.date == requestedDate }) {
-                            session.journal.failedDateDetails.append(FailedDateDetail(
-                                date: requestedDate,
-                                reason: .healthKitError,
-                                errorDetails: "Pinned range withheld because roll-up source capture failed for: \(sourceDays)."
-                            ))
-                        }
-                    }
-                    session.journal.successfulRequestedDates.removeAll()
-                    session.journal.completedDates.removeAll { requestedDates.contains($0) }
-                    rollupBlockedRequestedDates = requestedDates
-                    derived = MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
-                } else {
                     guard let calendarTimeZoneIdentifier = journal.exportManifest
                         .settingsSnapshot.calendarTimeZoneIdentifier else {
                         throw ConnectedMacDailyExportOperation.ResolutionError.unsupportedPinnedOperation
@@ -1093,13 +1075,17 @@ final class MacCorpusExportSessionManager {
                         } else {
                             let requestedRange = try journal.exportManifest.settingsSnapshot.generateRangeSummary
                                 ? HealthRollupRangeRequest(
-                                    ownerDateIdentifiers: Set(journal.exportManifest.requestedDates.map {
+                                    ownerDateIdentifiers: Set(journal.exportManifest.effectiveOriginalRequestedDates.map {
                                         HealthKitDailyOwnershipMetadata.ownerDate(
                                             for: $0,
-                                            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                                            calendarTimeZoneIdentifier: journal.exportManifest
+                                                .effectiveOriginalCalendarTimeZoneIdentifier
+                                                ?? calendarTimeZoneIdentifier
                                         )
                                     }),
-                                    calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                                    calendarTimeZoneIdentifier: journal.exportManifest
+                                        .effectiveOriginalCalendarTimeZoneIdentifier
+                                        ?? calendarTimeZoneIdentifier
                                 )
                                 : nil
                             guard let materialized = try await vaultManager.materializeHealthDataRange(
@@ -1160,7 +1146,6 @@ final class MacCorpusExportSessionManager {
                         rollupFileCount: rangeResult.rollupFileCount,
                         archiveFileCount: 0
                     )
-                }
             } else {
                 let archiveWorkDirectoryURL = vaultManager.vaultURL.map {
                     Self.archiveWorkDirectoryURL(vaultURL: $0, sessionID: journal.session.sessionID)
@@ -4278,7 +4263,7 @@ final class MacCorpusExportSessionManager {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         if usesRangePlan,
-           journal.exportManifest.transferDates.count > 400 {
+           journal.exportManifest.transferDates.count > HealthRollupRangeRequest.maximumDays {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         if journal.state == .open,

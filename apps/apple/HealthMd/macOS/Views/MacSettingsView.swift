@@ -713,7 +713,7 @@ struct MacFormatSettingsTab: View {
                     .accessibilityLabel("Range roll-up summary")
                     .accessibilityValue(macEnabledState(advancedSettings.generateRangeSummary))
 
-                Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
                     .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityLabel("Export roll-up summaries only")
@@ -727,7 +727,7 @@ struct MacFormatSettingsTab: View {
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
             } header: {
-                BrandLabel("Roll-up Summaries")
+                BrandLabel("Range Summary")
             }
 
             Section {

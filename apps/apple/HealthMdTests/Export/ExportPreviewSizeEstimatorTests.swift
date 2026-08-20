@@ -218,6 +218,28 @@ final class ExportPreviewSizeEstimatorTests: XCTestCase {
         XCTAssertGreaterThan(json.byteCount, markdown.byteCount)
     }
 
+    func testRangeSummaryPreviewCountsOneFilePerFormatAndFullImmutableScope() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2025, month: 1, day: 1)))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 1)))
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
+        let projection = ExportRollupOutputSizeEstimator.estimate(
+            selectedDates: dates,
+            periods: [.range],
+            formats: [.json, .markdown],
+            metricSelection: MetricSelectionState(),
+            customization: FormatCustomization(),
+            latestAllowedDate: end,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(projection.fileCount, 2)
+        XCTAssertEqual(projection.sourceDateCount, dates.count)
+        XCTAssertGreaterThan(projection.sourceDateCount, 400)
+        XCTAssertGreaterThan(projection.byteCount, 0)
+    }
+
     func testCurrentDataDictionaryIsNotEstimatedAsLegacySixtyFourKilobytes() {
         XCTAssertGreaterThan(
             ExportDataDictionarySizeEstimator.byteCount(using: FormatCustomization()),

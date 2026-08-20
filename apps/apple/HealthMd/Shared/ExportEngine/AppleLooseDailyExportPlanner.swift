@@ -413,6 +413,10 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             }
         }
 
+        if requestedRange != nil, !pin.isRangeCompatible(buildInfo: context.buildInfo) {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+
         let identity = suppliedOperationIdentity ?? identitySource.capture(
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
         )

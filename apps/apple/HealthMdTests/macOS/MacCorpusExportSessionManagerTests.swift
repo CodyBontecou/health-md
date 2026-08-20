@@ -855,7 +855,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             record: record
         )
         let context = try makeContext(
-            requestedDates: [requestedDate],
+            requestedDates: [requestedDate, supportingDate],
             settings: settings,
             settingsSnapshot: snapshot,
             sourceTimeZoneIdentifier: record.timeContext.calendarTimeZoneIdentifier,
@@ -867,7 +867,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             targetBytes: context.session.partitionTargetBytes
         )
         assembler.append(try healthItem(date: requestedDate))
-        assembler.append(try healthItem(date: supportingDate, isRequestedDate: false))
+        assembler.append(try failedHealthItem(date: supportingDate, isRequestedDate: true))
         let partition = try XCTUnwrap(assembler.makeNextPartition(force: true))
         defer { partition.remove() }
         let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
@@ -898,16 +898,21 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         guard case .files(let result, _) = outcome else {
             return XCTFail("Expected summary-only connected range result")
         }
-        XCTAssertEqual(result.status, .success)
+        XCTAssertEqual(result.status, .partialSuccess)
         XCTAssertEqual(result.totalFilesWritten, 1)
         XCTAssertEqual(result.completedDates, [requestedDate])
         XCTAssertNil(fileSystem.files[
             vaultRoot.appendingPathComponent("Health/2026-02-10.json").path
         ])
         XCTAssertEqual(
-            fileSystem.files.keys.filter { $0.contains("/Rollups/Monthly/") }.count,
+            fileSystem.files.keys.filter { $0.contains("/Rollups/Range/") }.count,
             1
         )
+        let rangeContent = try XCTUnwrap(fileSystem.files.first {
+            $0.key.contains("/Rollups/Range/")
+        }?.value)
+        XCTAssertTrue(rangeContent.contains("\"days_expected\" : 2"))
+        XCTAssertTrue(rangeContent.contains("\"days_counted\" : 1"))
     }
 
     func testPinnedConnectedRangeRetainsPublishedPlanAfterPostRenameSyncFailure() async throws {
@@ -1085,7 +1090,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         }
     }
 
-    func testPinnedConnectedRangeRejectsMoreThanFourHundredSemanticOwnerDatesAtOpen() async throws {
+    func testPinnedConnectedRangeAcceptsAllTimeBeyondFourHundredOwnerDatesAtOpen() async throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
         let start = Self.day(2025, 1, 1)
@@ -1127,8 +1132,8 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             ),
             vaultManager: vaultManager
         )
-        XCTAssertEqual(disposition.disposition, .reject)
-        XCTAssertTrue(try XCTUnwrap(disposition.message).contains("owner-date"))
+        XCTAssertEqual(disposition.disposition, .accept)
+        XCTAssertNil(disposition.message)
     }
 
     func testPinnedConnectedRangeRejectsCorruptProtectedBytesBeforeResumeWrites() async throws {

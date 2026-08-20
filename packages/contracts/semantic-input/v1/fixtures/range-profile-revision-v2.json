@@ -1,0 +1,20 @@
+{
+  "schema": "healthmd.semantic_profile_capability_fixture",
+  "schema_version": 1,
+  "calendar_v1": {
+    "profile": "apple_health_data_v8",
+    "profile_revision": 1,
+    "rollup_periods": ["iso_week"],
+    "rollup_range": null
+  },
+  "range_v2": {
+    "profile": "apple_health_data_v8",
+    "profile_revision": 2,
+    "rollup_periods": ["range"],
+    "rollup_range": {
+      "start_date": "2026-07-06",
+      "end_date": "2026-07-11"
+    }
+  },
+  "revision_one_range_rejected": true
+}

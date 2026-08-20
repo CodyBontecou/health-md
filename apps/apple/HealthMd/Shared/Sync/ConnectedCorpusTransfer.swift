@@ -537,6 +537,10 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
     let dateRangeStart: Date
     let dateRangeEnd: Date
     let requestedDates: [Date]
+    /// Immutable original request, separate from any residual retry transfer dates.
+    let originalRequestedDates: [Date]?
+    /// Frozen timezone authority for the original requested range.
+    let originalCalendarTimeZoneIdentifier: String?
     /// Source-device owner-date strings paired one-to-one with requestedDates.
     let requestedDateIdentifiers: [String]?
     let transferDates: [Date]
@@ -560,6 +564,8 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         requestedDates: [Date],
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         requestedDateIdentifiers: [String]? = nil,
         transferDates: [Date],
         settingsSnapshot: ExportSettingsSnapshot,
@@ -576,6 +582,10 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
         self.requestedDates = requestedDates
+        self.originalRequestedDates = originalRequestedDates ?? requestedDates
+        self.originalCalendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
+            ?? settingsSnapshot.calendarTimeZoneIdentifier
+            ?? sourceTimeZoneIdentifier
         self.requestedDateIdentifiers = requestedDateIdentifiers
         self.transferDates = transferDates
         self.settingsSnapshot = settingsSnapshot
@@ -584,6 +594,16 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
         self.canonicalSelection = canonicalSelection
         self.selectedSourceIDs = selectedSourceIDs.map { Array(Set($0)).sorted() }
         self.requestedTarget = requestedTarget
+    }
+
+    var effectiveOriginalRequestedDates: [Date] {
+        originalRequestedDates ?? requestedDates
+    }
+
+    var effectiveOriginalCalendarTimeZoneIdentifier: String? {
+        originalCalendarTimeZoneIdentifier
+            ?? settingsSnapshot.calendarTimeZoneIdentifier
+            ?? sourceTimeZoneIdentifier
     }
 
     var effectiveAppleExportEnginePin: AppleExportEnginePin? {
@@ -599,6 +619,12 @@ struct ConnectedCorpusExportManifest: Codable, Equatable, @unchecked Sendable {
               transferDates == transferDates.sorted(),
               Set(transferDates).count == transferDates.count,
               Set(requestedDates).isSubset(of: Set(transferDates)),
+              !effectiveOriginalRequestedDates.isEmpty,
+              effectiveOriginalRequestedDates == effectiveOriginalRequestedDates.sorted(),
+              Set(effectiveOriginalRequestedDates).count == effectiveOriginalRequestedDates.count,
+              (!settingsSnapshot.generateRangeSummary
+                  || Set(effectiveOriginalRequestedDates).isSubset(of: Set(transferDates))),
+              effectiveOriginalCalendarTimeZoneIdentifier.map({ TimeZone(identifier: $0) != nil }) ?? true,
               requestedDateIdentifiers.map({
                   $0.count == requestedDates.count
                       && Set($0).count == $0.count

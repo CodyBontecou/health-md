@@ -29,8 +29,8 @@ pub const MAX_SELECTION_IDS: usize = 512;
 pub const MAX_SESSION_RECORDS: usize = 100_000;
 /// Maximum input bytes accepted over one bounded session.
 pub const MAX_SESSION_BYTES: usize = 32 * 1024 * 1024;
-/// Maximum distinct owner dates in one session.
-pub const MAX_OWNER_DATES: usize = 400;
+/// Maximum distinct owner dates accumulated by one session. Individual batches remain bounded.
+pub const MAX_OWNER_DATES: usize = 10_000;
 /// Maximum extension references on one record.
 pub const MAX_EXTENSIONS_PER_RECORD: usize = 32;
 /// Maximum UTF-8 bytes in one opaque extension retention token.
@@ -1048,7 +1048,7 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
         || config.canonical_model_version != CANONICAL_MODEL_VERSION
         || config.registry_version != REGISTRY_VERSION
         || config.registry_sha256 != REGISTRY_SHA256
-        || config.profile_revision != 1
+        || !matches!(config.profile_revision, 1 | 2)
         || !valid_identifier(&config.session_id, 128)
         || config.calendar_time_zone.len() > 64
         || config.calendar_time_zone.parse::<chrono_tz::Tz>().is_err()
@@ -1084,16 +1084,19 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
         || (contains_range
             && (config.rollup_periods.len() != 1
                 || config.semantic_input_version != SEMANTIC_INPUT_VERSION
-                || config.profile_revision != 1
+                || config.profile_revision != 2
                 || config.profile != SemanticProfile::AppleHealthDataV8))
     {
+        return Err(CoreError::InvalidSemanticConfig);
+    }
+    if !contains_range && config.profile_revision != 1 {
         return Err(CoreError::InvalidSemanticConfig);
     }
     if let Some(range) = &config.rollup_range {
         let start = parse_date(&range.start_date)?;
         let end = parse_date(&range.end_date)?;
         let days = (end - start).num_days() + 1;
-        if start > end || days <= 0 || days > 400 {
+        if start > end || days <= 0 || days > MAX_OWNER_DATES as i64 {
             return Err(CoreError::InvalidSemanticConfig);
         }
     }
@@ -2805,6 +2808,7 @@ mod tests {
     #[test]
     fn range_rollup_preserves_requested_bounds_and_successful_empty_days() {
         let mut session_config = config(&["steps"], vec![RollupPeriod::Range]);
+        session_config.profile_revision = 2;
         session_config.rollup_range = Some(RollupRange {
             start_date: "2026-07-06".to_owned(),
             end_date: "2026-07-11".to_owned(),
@@ -2858,6 +2862,37 @@ mod tests {
             rollup.source_dates,
             ["2026-07-07", "2026-07-08", "2026-07-10"]
         );
+    }
+
+    #[test]
+    fn range_rejects_revision_one_while_calendar_revision_one_remains_valid() {
+        let calendar = config(&["steps"], vec![RollupPeriod::IsoWeek]);
+        assert!(
+            SemanticSession::from_json(&serde_json::to_vec(&calendar).expect("calendar")).is_ok()
+        );
+
+        let mut range = config(&["steps"], vec![RollupPeriod::Range]);
+        range.rollup_range = Some(RollupRange {
+            start_date: "2026-07-06".to_owned(),
+            end_date: "2026-07-11".to_owned(),
+        });
+        assert!(matches!(
+            SemanticSession::from_json(&serde_json::to_vec(&range).expect("range")),
+            Err(CoreError::InvalidSemanticConfig)
+        ));
+        range.profile_revision = 2;
+        assert!(SemanticSession::from_json(&serde_json::to_vec(&range).expect("range-v2")).is_ok());
+    }
+
+    #[test]
+    fn range_accepts_all_time_scope_beyond_legacy_four_hundred_days() {
+        let mut range = config(&["steps"], vec![RollupPeriod::Range]);
+        range.profile_revision = 2;
+        range.rollup_range = Some(RollupRange {
+            start_date: "2020-01-01".to_owned(),
+            end_date: "2022-12-31".to_owned(),
+        });
+        assert!(SemanticSession::from_json(&serde_json::to_vec(&range).expect("range")).is_ok());
     }
 
     #[test]

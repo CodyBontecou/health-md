@@ -747,6 +747,7 @@ struct ExportOrchestrator {
 
     private static func exportForegroundPinnedSimpleRange(
         _ dates: [Date],
+        requestedRollupDates: [Date]? = nil,
         healthKitManager: HealthKitManager,
         vaultManager: VaultManager,
         settingsSnapshot: ExportSettingsSnapshot,
@@ -761,8 +762,9 @@ struct ExportOrchestrator {
         var calendar = Calendar.current
         calendar.timeZone = sourceTimeZone
         let selectedDays = Set(dates.map { calendar.startOfDay(for: $0) })
+        let immutableRollupDates = requestedRollupDates ?? dates
         let sourceDates = rollupSourceDates(
-            for: dates,
+            for: immutableRollupDates,
             periods: frozenSettings.enabledRollupPeriods,
             calendar: calendar,
             latestAllowedDate: max(Date(), dates.max() ?? Date())
@@ -907,7 +909,7 @@ struct ExportOrchestrator {
         do {
             let requestedRange = try settingsSnapshot.generateRangeSummary
                 ? HealthRollupRangeRequest(
-                    ownerDateIdentifiers: Set(dates.map {
+                    ownerDateIdentifiers: Set(immutableRollupDates.map {
                         HealthKitDailyOwnershipMetadata.ownerDate(
                             for: $0,
                             calendarTimeZoneIdentifier: calendar.timeZone.identifier
@@ -1017,6 +1019,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         frozenSettingsSnapshot: ExportSettingsSnapshot? = nil,
+        requestedRollupDates: [Date]? = nil,
         operationSurface: AppleExportOperationSurface = .legacyOnly,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
@@ -1028,6 +1031,7 @@ struct ExportOrchestrator {
                 vaultManager: vaultManager,
                 settings: settings,
                 frozenSettingsSnapshot: frozenSettingsSnapshot,
+                requestedRollupDates: requestedRollupDates,
                 operationSurface: operationSurface,
                 externalIntegrations: externalIntegrations,
                 onProgress: onProgress
@@ -1041,6 +1045,7 @@ struct ExportOrchestrator {
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
         frozenSettingsSnapshot: ExportSettingsSnapshot?,
+        requestedRollupDates: [Date]?,
         operationSurface: AppleExportOperationSurface,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
         onProgress: ((Int, Int, String) -> Void)?
@@ -1120,6 +1125,7 @@ struct ExportOrchestrator {
             }
             return await exportForegroundPinnedSimpleRange(
                 dates,
+                requestedRollupDates: requestedRollupDates,
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
                 settingsSnapshot: frozenSettingsSnapshot,
@@ -1132,6 +1138,7 @@ struct ExportOrchestrator {
         if settings.summaryOnlyModeEnabled {
             return await exportSummaryOnlyDates(
                 dates,
+                requestedRollupDates: requestedRollupDates,
                 healthKitManager: healthKitManager,
                 vaultManager: vaultManager,
                 settings: settings,
@@ -1325,8 +1332,9 @@ struct ExportOrchestrator {
             onProgress?(dates.count, dates.count, progressFormatter.string(from: lastDate))
         }
 
+        let immutableRollupDates = requestedRollupDates ?? dates
         let rollupHealthData = await fetchRollupHealthData(
-            selectedDates: dates,
+            selectedDates: immutableRollupDates,
             seedData: successfulHealthData,
             healthKitManager: healthKitManager,
             settings: settings,
@@ -1334,7 +1342,7 @@ struct ExportOrchestrator {
         )
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
-            requestedDates: dates,
+            requestedDates: immutableRollupDates,
             vaultManager: vaultManager,
             settings: settings,
             writeDataDictionary: shouldWriteDataDictionary,
@@ -1471,6 +1479,7 @@ struct ExportOrchestrator {
 
     private static func exportSummaryOnlyDates(
         _ dates: [Date],
+        requestedRollupDates: [Date]? = nil,
         healthKitManager: HealthKitManager,
         vaultManager: VaultManager,
         settings: AdvancedExportSettings,
@@ -1482,8 +1491,9 @@ struct ExportOrchestrator {
 
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let immutableRollupDates = requestedRollupDates ?? dates
         let sourceDateCount = rollupSourceDates(
-            for: dates,
+            for: immutableRollupDates,
             settings: settings,
             calendar: calendar
         ).count
@@ -1492,7 +1502,7 @@ struct ExportOrchestrator {
         progressFormatter.timeZone = settings.exportTimeZoneOverride ?? .current
 
         let rollupHealthData = await fetchRollupHealthData(
-            selectedDates: dates,
+            selectedDates: immutableRollupDates,
             seedData: [],
             healthKitManager: healthKitManager,
             settings: settings,
@@ -1516,7 +1526,7 @@ struct ExportOrchestrator {
 
         let rollupFileCount = settings.archiveModeEnabled ? 0 : writeRollupSummaries(
             from: rollupHealthData,
-            requestedDates: dates,
+            requestedDates: immutableRollupDates,
             vaultManager: vaultManager,
             settings: settings,
             partialFailures: &partialFailures
@@ -1609,7 +1619,8 @@ struct ExportOrchestrator {
                 let healthData = try await healthKitManager.fetchHealthData(
                     for: date,
                     includeGranularData: false,
-                    metricSelection: settings.metricSelection
+                    metricSelection: settings.metricSelection,
+                    timeZone: calendar.timeZone
                 )
                 partialFailures.append(contentsOf: healthData.partialFailures)
                 dataByDay[day] = healthData

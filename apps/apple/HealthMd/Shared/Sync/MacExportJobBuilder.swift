@@ -127,6 +127,7 @@ struct MacExportJobBuilder {
         startDate: Date,
         endDate: Date,
         requestedDates: [Date]? = nil,
+        rollupRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         destinationDisplayName: String?,
@@ -145,8 +146,11 @@ struct MacExportJobBuilder {
             Array(Set($0.map { sourceCalendar.startOfDay(for: $0) })).sorted()
         } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate, calendar: sourceCalendar)
         let requestedDays = Set(dates.map { sourceCalendar.startOfDay(for: $0) })
+        let immutableRollupDates = rollupRequestedDates.map {
+            Array(Set($0.map { sourceCalendar.startOfDay(for: $0) })).sorted()
+        } ?? dates
         let rollupDates = ExportOrchestrator.rollupSourceDates(
-            for: dates,
+            for: immutableRollupDates,
             settings: settings,
             calendar: sourceCalendar
         )
@@ -250,6 +254,7 @@ struct MacExportStreamingJobBuilder {
         startDate: Date,
         endDate: Date,
         requestedDates: [Date]? = nil,
+        rollupRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         destinationDisplayName: String?,
@@ -282,6 +287,7 @@ struct MacExportStreamingJobBuilder {
             startDate: startDate,
             endDate: endDate,
             requestedDates: requestedDates,
+            rollupRequestedDates: rollupRequestedDates,
             settings: settings,
             healthSubfolder: healthSubfolder,
             destinationDisplayName: destinationDisplayName,
@@ -295,6 +301,7 @@ struct MacExportStreamingJobBuilder {
         startDate: Date,
         endDate: Date,
         requestedDates suppliedRequestedDates: [Date]? = nil,
+        rollupRequestedDates suppliedRollupRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         destinationDisplayName: String?,
@@ -310,8 +317,11 @@ struct MacExportStreamingJobBuilder {
             Array(Set($0.map { sourceCalendar.startOfDay(for: $0) })).sorted()
         } ?? ExportOrchestrator.dateRange(from: startDate, to: endDate, calendar: sourceCalendar)
         let requestedDays = Set(requestedDates.map { sourceCalendar.startOfDay(for: $0) })
+        let immutableRollupDates = suppliedRollupRequestedDates.map {
+            Array(Set($0.map { sourceCalendar.startOfDay(for: $0) })).sorted()
+        } ?? requestedDates
         let rollupDates = ExportOrchestrator.rollupSourceDates(
-            for: requestedDates,
+            for: immutableRollupDates,
             settings: settings,
             calendar: sourceCalendar
         )

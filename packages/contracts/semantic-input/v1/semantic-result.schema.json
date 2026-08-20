@@ -1,31 +1,405 @@
 {
-  "$schema":"https://json-schema.org/draft/2020-12/schema",
-  "$id":"https://health.md/contracts/semantic-input/v1/semantic-result.schema.json",
-  "title":"Health.md semantic result v1",
-  "$defs":{
-    "number":{"oneOf":[
-      {"type":"object","additionalProperties":false,"required":["representation","bits"],"properties":{"representation":{"const":"binary64"},"bits":{"type":"string","pattern":"^[0-9a-f]{16}$"}}},
-      {"type":"object","additionalProperties":false,"required":["representation","decimal"],"properties":{"representation":{"const":"signed_integer"},"decimal":{"type":"string","pattern":"^(0|-?[1-9][0-9]*)$"}}},
-      {"type":"object","additionalProperties":false,"required":["representation","decimal"],"properties":{"representation":{"const":"unsigned_integer"},"decimal":{"type":"string","pattern":"^(0|[1-9][0-9]*)$"}}}
-    ]},
-    "value":{"oneOf":[
-      {"type":"object","additionalProperties":false,"required":["value_type","number","unit"],"properties":{"value_type":{"const":"number"},"number":{"$ref":"#/$defs/number"},"unit":{"type":"object","additionalProperties":false,"required":["id"],"properties":{"id":{"type":"string"}}}}},
-      {"type":"object","additionalProperties":false,"required":["value_type","text"],"properties":{"value_type":{"const":"text"},"text":{"type":"string"}}},
-      {"type":"object","additionalProperties":false,"required":["value_type","boolean"],"properties":{"value_type":{"const":"boolean"},"boolean":{"type":"boolean"}}},
-      {"type":"object","additionalProperties":false,"required":["value_type","items"],"properties":{"value_type":{"const":"text_list"},"items":{"type":"array","items":{"type":"string"}}}}
-    ]},
-    "dailyValue":{"type":"object","additionalProperties":false,"required":["output_key","semantic_id","aggregation","value","source_record_ids"],"properties":{"output_key":{"type":"string"},"semantic_id":{"type":"string"},"aggregation":{"type":"string"},"value":{"$ref":"#/$defs/value"},"source_record_ids":{"type":"array","items":{"type":"string"}}}},
-    "rollupValue":{"type":"object","additionalProperties":false,"required":["output_key","rule","primary_value","days_counted","statistics"],"properties":{"output_key":{"type":"string"},"rule":{"type":"string"},"primary_value":{"$ref":"#/$defs/value"},"days_counted":{"type":"integer","minimum":1},"statistics":{"type":"object","additionalProperties":{"$ref":"#/$defs/value"}}}},
-    "extension":{"type":"object","additionalProperties":false,"required":["namespace","version","retention_token","selection_ids"],"properties":{"namespace":{"type":"string"},"version":{"type":"integer","minimum":1},"retention_token":{"type":"string"},"selection_ids":{"type":"array","items":{"type":"string"}}}}
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://health.md/contracts/semantic-input/v1/semantic-result.schema.json",
+  "title": "Health.md semantic result v1",
+  "$defs": {
+    "number": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "representation",
+            "bits"
+          ],
+          "properties": {
+            "representation": {
+              "const": "binary64"
+            },
+            "bits": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{16}$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "representation",
+            "decimal"
+          ],
+          "properties": {
+            "representation": {
+              "const": "signed_integer"
+            },
+            "decimal": {
+              "type": "string",
+              "pattern": "^(0|-?[1-9][0-9]*)$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "representation",
+            "decimal"
+          ],
+          "properties": {
+            "representation": {
+              "const": "unsigned_integer"
+            },
+            "decimal": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]*)$"
+            }
+          }
+        }
+      ]
+    },
+    "value": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value_type",
+            "number",
+            "unit"
+          ],
+          "properties": {
+            "value_type": {
+              "const": "number"
+            },
+            "number": {
+              "$ref": "#/$defs/number"
+            },
+            "unit": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value_type",
+            "text"
+          ],
+          "properties": {
+            "value_type": {
+              "const": "text"
+            },
+            "text": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value_type",
+            "boolean"
+          ],
+          "properties": {
+            "value_type": {
+              "const": "boolean"
+            },
+            "boolean": {
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value_type",
+            "items"
+          ],
+          "properties": {
+            "value_type": {
+              "const": "text_list"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "dailyValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "output_key",
+        "semantic_id",
+        "aggregation",
+        "value",
+        "source_record_ids"
+      ],
+      "properties": {
+        "output_key": {
+          "type": "string"
+        },
+        "semantic_id": {
+          "type": "string"
+        },
+        "aggregation": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        },
+        "source_record_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rollupValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "output_key",
+        "rule",
+        "primary_value",
+        "days_counted",
+        "statistics"
+      ],
+      "properties": {
+        "output_key": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string"
+        },
+        "primary_value": {
+          "$ref": "#/$defs/value"
+        },
+        "days_counted": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "statistics": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/value"
+          }
+        }
+      }
+    },
+    "extension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "version",
+        "retention_token",
+        "selection_ids"
+      ],
+      "properties": {
+        "namespace": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "retention_token": {
+          "type": "string"
+        },
+        "selection_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
-  "type":"object","additionalProperties":false,
-  "required":["schema","semantic_input_version","canonical_model_version","core_api_version","registry_sha256","profile_revision","session_id","profile","state","next_batch_index","records_accepted","records_filtered","days","rollups","retained_extensions"],
-  "properties":{
-    "schema":{"const":"healthmd.semantic_result"},"semantic_input_version":{"const":1},"canonical_model_version":{"const":1},"core_api_version":{"const":3},"registry_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},"profile_revision":{"const":1},
-    "session_id":{"type":"string"},"profile":{"enum":["apple_health_data_v8","android_frozen_v4","android_analytical_v5"]},"state":{"enum":["processing","completed","cancelled"]},
-    "next_batch_index":{"type":"integer","minimum":0},"records_accepted":{"type":"integer","minimum":0},"records_filtered":{"type":"integer","minimum":0},
-    "days":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["owner_date","values"],"properties":{"owner_date":{"type":"string","format":"date"},"values":{"type":"array","items":{"$ref":"#/$defs/dailyValue"}}}}},
-    "rollups":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["period","start_date","end_date","calendar_time_zone","source_dates","values"],"properties":{"period":{"enum":["iso_week","calendar_month","calendar_year","range"]},"start_date":{"type":"string","format":"date"},"end_date":{"type":"string","format":"date"},"calendar_time_zone":{"type":"string"},"source_dates":{"type":"array","items":{"type":"string","format":"date"}},"values":{"type":"array","items":{"$ref":"#/$defs/rollupValue"}}}}},
-    "retained_extensions":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["owner_date","record_id","extension"],"properties":{"owner_date":{"type":"string","format":"date"},"record_id":{"type":"string"},"extension":{"$ref":"#/$defs/extension"}}}}
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "semantic_input_version",
+    "canonical_model_version",
+    "core_api_version",
+    "registry_sha256",
+    "profile_revision",
+    "session_id",
+    "profile",
+    "state",
+    "next_batch_index",
+    "records_accepted",
+    "records_filtered",
+    "days",
+    "rollups",
+    "retained_extensions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "healthmd.semantic_result"
+    },
+    "semantic_input_version": {
+      "const": 1
+    },
+    "canonical_model_version": {
+      "const": 1
+    },
+    "core_api_version": {
+      "const": 3
+    },
+    "registry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "profile_revision": {
+      "enum": [
+        1,
+        2
+      ]
+    },
+    "session_id": {
+      "type": "string"
+    },
+    "profile": {
+      "enum": [
+        "apple_health_data_v8",
+        "android_frozen_v4",
+        "android_analytical_v5"
+      ]
+    },
+    "state": {
+      "enum": [
+        "processing",
+        "completed",
+        "cancelled"
+      ]
+    },
+    "next_batch_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "records_accepted": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "records_filtered": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner_date",
+          "values"
+        ],
+        "properties": {
+          "owner_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/dailyValue"
+            }
+          }
+        }
+      }
+    },
+    "rollups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "period",
+          "start_date",
+          "end_date",
+          "calendar_time_zone",
+          "source_dates",
+          "values"
+        ],
+        "properties": {
+          "period": {
+            "enum": [
+              "iso_week",
+              "calendar_month",
+              "calendar_year",
+              "range"
+            ]
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "calendar_time_zone": {
+            "type": "string"
+          },
+          "source_dates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/rollupValue"
+            }
+          }
+        }
+      }
+    },
+    "retained_extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner_date",
+          "record_id",
+          "extension"
+        ],
+        "properties": {
+          "owner_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "record_id": {
+            "type": "string"
+          },
+          "extension": {
+            "$ref": "#/$defs/extension"
+          }
+        }
+      }
+    }
   }
 }

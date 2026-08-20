@@ -74,6 +74,35 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertTrue(summary.toRollupCSV().hasPrefix("Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version"))
     }
 
+    func testRangeRequestSupportsAllTimeBeyondFourHundredDays() throws {
+        let request = try HealthRollupRangeRequest(
+            startDate: makeUTCDate(2020, 1, 1),
+            endDate: makeUTCDate(2022, 12, 31),
+            calendarTimeZoneIdentifier: "UTC"
+        )
+
+        XCTAssertEqual(request.daysExpected, 1_096)
+        XCTAssertEqual(request.periodID, "2020-01-01_to_2022-12-31")
+    }
+
+    func testRangeRequestFreezesTimezoneAcrossDSTAndDefaultTimezoneMutation() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let request = try HealthRollupRangeRequest(
+            startDate: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 7, hour: 12))),
+            endDate: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 10, hour: 12))),
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
+        let originalDefault = NSTimeZone.default
+        NSTimeZone.default = TimeZone(identifier: "Asia/Tokyo")!
+        defer { NSTimeZone.default = originalDefault }
+
+        XCTAssertEqual(request.daysExpected, 4)
+        XCTAssertEqual(request.periodID, "2026-03-07_to_2026-03-10")
+        XCTAssertEqual(request.calendarTimeZoneIdentifier, "America/Los_Angeles")
+    }
+
     func testWHOOPRemainsInDailyV8ButIsExcludedFromRangeV9() throws {
         let settings = HealthRollupTestSettings.make()
         settings.generateRangeSummary = true

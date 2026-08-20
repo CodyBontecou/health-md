@@ -95,6 +95,26 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         XCTAssertEqual(decoded.request, journal.request)
         XCTAssertEqual(decoded.accepted, journal.accepted)
         XCTAssertEqual(decoded.session, journal.session)
+        XCTAssertEqual(decoded.originalRequestedDates, journal.requestedDates)
+        XCTAssertEqual(decoded.originalCalendarTimeZoneIdentifier, "America/Los_Angeles")
+    }
+
+    func testVersionFourMigratesImmutableOriginalRangeFromExistingFields() throws {
+        let journal = try makeJournal()
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(journal)) as? [String: Any]
+        )
+        object["version"] = IPhoneDirectFileJournal.fileBackedCaptureVersion
+        object.removeValue(forKey: "originalRequestedDates")
+        object.removeValue(forKey: "originalCalendarTimeZoneIdentifier")
+
+        let decoded = try JSONDecoder().decode(
+            IPhoneDirectFileJournal.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+
+        XCTAssertEqual(decoded.originalRequestedDates, decoded.requestedDates)
+        XCTAssertEqual(decoded.originalCalendarTimeZoneIdentifier, "America/Los_Angeles")
     }
 
     func testPresentVersionFourEnginePinsRejectUnknownOrExplicitLegacyAuthority() throws {

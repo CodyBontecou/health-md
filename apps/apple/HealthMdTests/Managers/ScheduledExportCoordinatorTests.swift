@@ -137,6 +137,11 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(completion, .preservedPartialSuccess)
         XCTAssertEqual(retryRequest.id, request.id)
         XCTAssertEqual(retryRequest.dates, [request.dates[1]])
+        XCTAssertEqual(retryRequest.originalRequestedDates, request.dates)
+        XCTAssertEqual(
+            retryRequest.originalCalendarTimeZoneIdentifier,
+            request.originalCalendarTimeZoneIdentifier
+        )
         XCTAssertEqual(retryRequest.exportTarget, request.exportTarget)
         XCTAssertEqual(retryRequest.settingsSnapshot, frozenSnapshot)
         XCTAssertEqual(retryRequest.settingsSnapshot?.appleExportEnginePin, pin)

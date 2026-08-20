@@ -21,9 +21,9 @@ An OS aggregate is represented as `kind: "sdk_aggregate"`; Rust must not reconst
 
 The caller supplies exact registry/version and profile-revision pins, an IANA calendar timezone, native persisted selection IDs, disabled profile output keys, an explicit platform-extension retention policy, and optional Apple roll-up periods. Profiles are never inferred. Android period requests fail with `unsupported_semantic_operation`.
 
-Calendar periods (`iso_week`, `calendar_month`, and `calendar_year`) retain their semantic-input v1 shape and fixtures. A `range` request is gated to semantic-input v1, `apple_health_data_v8` profile revision 1, exactly one roll-up period, and a required `rollup_range` containing immutable inclusive civil bounds. Range bounds may cover at most 400 days. Native code freezes the IANA timezone and requested bounds before capture; neither is inferred from successfully returned owner dates.
+Calendar periods (`iso_week`, `calendar_month`, and `calendar_year`) retain their semantic-input v1 shape and fixtures. A `range` request is gated to semantic-input v1, `apple_health_data_v8` profile revision 2, exactly one roll-up period, and a required `rollup_range` containing immutable inclusive civil bounds. Range bounds may cover at most 10,000 days; revision-1 calendar requests remain byte-compatible. Native code freezes the IANA timezone and requested bounds before capture; neither is inferred from successfully returned owner dates.
 
-Limits are core-owned: 256 KiB configuration, 1 MiB per batch, 4,096 records per batch, 64 KiB per record, 512 selected IDs, 100,000 records/32 MiB per session, 400 owner dates, 32 extension references per record, and 128 UTF-8 bytes per retention token.
+Limits are core-owned: 256 KiB configuration, 1 MiB per batch, 4,096 records per batch, 64 KiB per record, 512 selected IDs, 100,000 records/32 MiB per session, 10,000 cumulative owner dates, 32 extension references per record, and 128 UTF-8 bytes per retention token.
 
 ## Exact time
 

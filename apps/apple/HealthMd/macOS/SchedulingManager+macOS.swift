@@ -13,6 +13,7 @@ struct MacScheduledRangeCapture {
 
     static func capture(
         selectedDates: [Date],
+        rollupRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         timeZone: TimeZone,
         latestAllowedDate: Date = Date(),
@@ -26,11 +27,12 @@ struct MacScheduledRangeCapture {
                 calendarTimeZoneIdentifier: timeZone.identifier
             )
         })
+        let immutableRollupDates = rollupRequestedDates ?? selectedDates
         let rollupDates = ExportOrchestrator.rollupSourceDates(
-            for: selectedDates,
+            for: immutableRollupDates,
             settings: settings,
             calendar: calendar,
-            latestAllowedDate: max(latestAllowedDate, selectedDates.max() ?? latestAllowedDate)
+            latestAllowedDate: max(latestAllowedDate, immutableRollupDates.max() ?? latestAllowedDate)
         )
         let captureDates = rollupDates.isEmpty ? selectedDates : rollupDates
         var records: [HealthData] = []
@@ -285,6 +287,7 @@ class SchedulingManager: ObservableObject {
         let vaultManager = VaultManager()
         let settings = existingPendingRequest?.settingsSnapshot?.makeAdvancedExportSettings()
             ?? AdvancedExportSettings()
+        let immutableRangeDates = existingPendingRequest?.originalRequestedDates ?? dates
         if existingPendingRequest == nil {
             settings.exportTimeZoneOverride = calendar.timeZone
         }
@@ -361,6 +364,7 @@ class SchedulingManager: ObservableObject {
            let timeZone = TimeZone(identifier: timeZoneIdentifier) {
             let captured = MacScheduledRangeCapture.capture(
                 selectedDates: dates,
+                rollupRequestedDates: immutableRangeDates,
                 settings: settings,
                 timeZone: timeZone,
                 fetch: healthDataStore.fetchHealthData(for:)
@@ -371,7 +375,7 @@ class SchedulingManager: ObservableObject {
                 && (!settings.summaryOnlyModeEnabled || !captured.selectedRecordDates.isEmpty) {
                 do {
                     let requestedRange = try HealthRollupRangeRequest(
-                        ownerDateIdentifiers: Set(dates.map {
+                        ownerDateIdentifiers: Set(immutableRangeDates.map {
                             HealthKitDailyOwnershipMetadata.ownerDate(
                                 for: $0,
                                 calendarTimeZoneIdentifier: timeZone.identifier
@@ -507,7 +511,7 @@ class SchedulingManager: ObservableObject {
         if !wasCancelled {
             let retainedRollupDays = Set(rollupHealthData.map { calendar.startOfDay(for: $0.date) })
             for rollupDate in ExportOrchestrator.rollupSourceDates(
-                for: dates,
+                for: immutableRangeDates,
                 settings: settings,
                 calendar: calendar
             )
@@ -545,7 +549,7 @@ class SchedulingManager: ObservableObject {
                 guard let timeZone = settings.exportTimeZoneOverride else {
                     throw ExportError.invalidExportPath(path: "missing calendar timezone")
                 }
-                let identifiers = Set(dates.map {
+                let identifiers = Set(immutableRangeDates.map {
                     HealthKitDailyOwnershipMetadata.ownerDate(
                         for: $0,
                         calendarTimeZoneIdentifier: timeZone.identifier
@@ -596,6 +600,8 @@ class SchedulingManager: ObservableObject {
             originalRequest = PendingExportRequest(
                 id: existingPendingRequest.id,
                 dates: dates,
+                originalRequestedDates: existingPendingRequest.originalRequestedDates,
+                originalCalendarTimeZoneIdentifier: existingPendingRequest.originalCalendarTimeZoneIdentifier,
                 source: existingPendingRequest.source,
                 scheduledFireDate: existingPendingRequest.scheduledFireDate,
                 scheduledKind: existingPendingRequest.scheduledKind,
@@ -631,6 +637,8 @@ class SchedulingManager: ObservableObject {
             let retryRequest = PendingExportRequest(
                 id: originalRequest.id,
                 dates: remainingDates,
+                originalRequestedDates: originalRequest.originalRequestedDates,
+                originalCalendarTimeZoneIdentifier: originalRequest.originalCalendarTimeZoneIdentifier,
                 source: originalRequest.source,
                 scheduledFireDate: originalRequest.scheduledFireDate,
                 scheduledKind: originalRequest.scheduledKind,
