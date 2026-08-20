@@ -36,6 +36,7 @@ final class ExportProfileCoordinator: ObservableObject {
 
     let profileStore: ExportProfileStore
     let destinationStore: ProfileDestinationStore
+    let googleDriveDestinationStore: GoogleDriveDestinationStore
     /// Phase 3: scheduled entries bound to profiles. Owned here so bootstrap
     /// migration (legacy schedule → Default profile entry) and profile
     /// deletion (entry cleanup) stay coupled.
@@ -62,6 +63,7 @@ final class ExportProfileCoordinator: ObservableObject {
     init(
         profileStore: ExportProfileStore,
         destinationStore: ProfileDestinationStore,
+        googleDriveDestinationStore: GoogleDriveDestinationStore? = nil,
         scheduledEntryStore: ScheduledExportEntryStore,
         settings: AdvancedExportSettings,
         vaultManager: VaultManager,
@@ -71,6 +73,7 @@ final class ExportProfileCoordinator: ObservableObject {
     ) {
         self.profileStore = profileStore
         self.destinationStore = destinationStore
+        self.googleDriveDestinationStore = googleDriveDestinationStore ?? GoogleDriveDestinationStore()
         self.scheduledEntryStore = scheduledEntryStore
         self.settings = settings
         self.vaultManager = vaultManager
@@ -301,6 +304,18 @@ final class ExportProfileCoordinator: ObservableObject {
         profileStore.setAPIEndpointBinding(profileID: activeID, endpointID: endpoint.id)
     }
 
+    /// Revokes/removes one local Drive authority without deleting remote files. Every profile
+    /// referencing it becomes explicitly unbound and its schedule is paused; no fallback target
+    /// is selected.
+    func disconnectGoogleDrive(destinationID: UUID) async {
+        let manager = GoogleDriveConnectionManager(destinationStore: googleDriveDestinationStore)
+        await manager.disconnect(destinationID: destinationID)
+        for profile in profileStore.profiles where profile.googleDriveDestinationID == destinationID {
+            _ = profileStore.setGoogleDriveBinding(profileID: profile.id, destinationID: nil)
+            _ = scheduledEntryStore.update(profileID: profile.id) { $0.isEnabled = false }
+        }
+    }
+
     // MARK: - Profile management
 
     /// Creates a new profile from the flushed live settings with an explicit
@@ -312,6 +327,7 @@ final class ExportProfileCoordinator: ObservableObject {
         name: String,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot? = nil
     ) -> ExportProfile? {
         flushEdits()
@@ -321,7 +337,8 @@ final class ExportProfileCoordinator: ObservableObject {
             settings: newSettings ?? ExportSettingsSnapshot.from(settings),
             target: target,
             folderVaultID: folderVaultID,
-            apiEndpointID: source.apiEndpointID
+            apiEndpointID: source.apiEndpointID,
+            googleDriveDestinationID: googleDriveDestinationID
         )
         activate(profileID: created.id, adoptVault: folderVaultID != nil)
         return created
@@ -345,10 +362,15 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Live creation-form overlap preview: names of existing profiles whose
     /// exports would write the same files as a candidate with this target,
     /// folder binding, and the flushed live settings the form will save.
-    func overlapPreviewNames(target: ExportTargetSelection, folderVaultID: UUID?) -> [String] {
+    func overlapPreviewNames(
+        target: ExportTargetSelection,
+        folderVaultID: UUID?,
+        googleDriveDestinationID: UUID? = nil
+    ) -> [String] {
         overlapPreviewNames(
             target: target,
             folderVaultID: folderVaultID,
+            googleDriveDestinationID: googleDriveDestinationID,
             settings: ExportSettingsSnapshot.from(settings)
         )
     }
@@ -358,6 +380,7 @@ final class ExportProfileCoordinator: ObservableObject {
     func overlapPreviewNames(
         target: ExportTargetSelection,
         folderVaultID: UUID?,
+        googleDriveDestinationID: UUID? = nil,
         settings: ExportSettingsSnapshot
     ) -> [String] {
         let candidateID = UUID()
@@ -369,7 +392,8 @@ final class ExportProfileCoordinator: ObservableObject {
                 settings: settings,
                 destinationRootKey: destinationRootKey(
                     target: target,
-                    folderVaultID: folderVaultID
+                    folderVaultID: folderVaultID,
+                    googleDriveDestinationID: googleDriveDestinationID
                 )
             )
         ]
@@ -389,7 +413,8 @@ final class ExportProfileCoordinator: ObservableObject {
             settings: ExportSettingsSnapshot.from(settings),
             target: source.target,
             folderVaultID: source.folderVaultID,
-            apiEndpointID: source.apiEndpointID
+            apiEndpointID: source.apiEndpointID,
+            googleDriveDestinationID: source.googleDriveDestinationID
         )
         activate(profileID: copy.id, adoptVault: false)
         return copy
@@ -437,6 +462,7 @@ final class ExportProfileCoordinator: ObservableObject {
         target: ExportTargetSelection,
         folderVaultID: UUID?,
         apiEndpointID: UUID?,
+        googleDriveDestinationID: UUID? = nil,
         settings newSettings: ExportSettingsSnapshot
     ) -> ExportProfile? {
         guard profileStore.profile(id: id) != nil else { return nil }
@@ -451,6 +477,10 @@ final class ExportProfileCoordinator: ObservableObject {
             profileID: id,
             endpointID: target == .apiEndpoint ? apiEndpointID : nil
         )
+        _ = profileStore.setGoogleDriveBinding(
+            profileID: id,
+            destinationID: target == .googleDrive ? googleDriveDestinationID : nil
+        )
         _ = profileStore.updateSettings(id: id, settings: newSettings)
 
         guard let updated = profileStore.profile(id: id) else { return nil }
@@ -463,10 +493,10 @@ final class ExportProfileCoordinator: ObservableObject {
         settings.apply(snapshot: newSettings)
         activeProfileName = updated.name
         activeTarget = updated.target
-        if let folderVaultID {
+        if folderVaultID != nil {
             adoptVaultDestination(for: updated)
         }
-        if let apiEndpointID {
+        if apiEndpointID != nil {
             adoptAPIEndpoint(for: updated)
         }
         return updated
@@ -492,6 +522,7 @@ final class ExportProfileCoordinator: ObservableObject {
                 destinationRootKey: destinationRootKey(
                     target: profile.target,
                     folderVaultID: profile.folderVaultID,
+                    googleDriveDestinationID: profile.googleDriveDestinationID,
                     liveVaultRoot: liveVaultRoot
                 )
             )
@@ -513,6 +544,7 @@ final class ExportProfileCoordinator: ObservableObject {
     private func destinationRootKey(
         target: ExportTargetSelection,
         folderVaultID: UUID?,
+        googleDriveDestinationID: UUID? = nil,
         liveVaultRoot: String? = nil
     ) -> String? {
         switch target {
@@ -527,6 +559,10 @@ final class ExportProfileCoordinator: ObservableObject {
             return ExportProfileOverlapDetector.connectedMacRootKey
         case .apiEndpoint:
             return nil
+        case .googleDrive:
+            guard googleDriveDestinationStore.destination(id: googleDriveDestinationID) != nil,
+                  let googleDriveDestinationID else { return nil }
+            return "google-drive:\(googleDriveDestinationID.uuidString.lowercased())"
         }
     }
 }

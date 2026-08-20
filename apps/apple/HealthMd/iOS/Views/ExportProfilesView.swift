@@ -11,11 +11,13 @@ enum ExportProfileDestinationSummary: Equatable {
     case localFolder(vaultName: String?)
     case connectedMac
     case apiEndpoint(url: String?)
+    case googleDrive(folderLabel: String?)
 
     static func from(
         profile: ExportProfile,
         vault: SavedVaultDestination?,
-        endpoint: SavedAPIEndpoint?
+        endpoint: SavedAPIEndpoint?,
+        googleDriveDestination: GoogleDriveDestination? = nil
     ) -> ExportProfileDestinationSummary {
         switch profile.target {
         case .localIPhoneFolder:
@@ -24,6 +26,8 @@ enum ExportProfileDestinationSummary: Equatable {
             return .connectedMac
         case .apiEndpoint:
             return .apiEndpoint(url: endpoint?.endpointURLString)
+        case .googleDrive:
+            return .googleDrive(folderLabel: googleDriveDestination?.folderLabel)
         }
     }
 }
@@ -227,11 +231,17 @@ struct ExportProfilesView: View {
     private func summary(for profile: ExportProfile) -> ExportProfileCardSummary {
         let vault = destinationStore.vault(id: profile.folderVaultID)
         let endpoint = destinationStore.apiEndpoint(id: profile.apiEndpointID)
+        let drive = coordinator.googleDriveDestinationStore.destination(id: profile.googleDriveDestinationID)
         let entry = entryStore.entry(profileID: profile.id)
         return ExportProfileCardSummary(
             profile: profile,
             isActive: profile.id == profileStore.activeProfileID,
-            destination: .from(profile: profile, vault: vault, endpoint: endpoint),
+            destination: .from(
+                profile: profile,
+                vault: vault,
+                endpoint: endpoint,
+                googleDriveDestination: drive
+            ),
             scheduleStatus: .from(entry),
             cadence: entry.map { ExportProfileCadenceSummary.from($0) },
             formats: ExportProfileCardSummary.sortedFormats(profile.settings.exportFormats),
@@ -313,6 +323,8 @@ struct ExportProfilesView: View {
                 localized: "API: \(url ?? "not configured")",
                 comment: "Profile row destination line for an API endpoint target"
             )
+        case .googleDrive(let folderLabel):
+            return String(localized: "Google Drive: \(folderLabel ?? "folder selected")")
         }
     }
 
@@ -552,13 +564,19 @@ struct ExportProfileDetailView: View {
     private func destinationCard(for profile: ExportProfile) -> some View {
         let vault = destinationStore.vault(id: profile.folderVaultID)
         let endpoint = destinationStore.apiEndpoint(id: profile.apiEndpointID)
+        let drive = coordinator.googleDriveDestinationStore.destination(id: profile.googleDriveDestinationID)
         return sectionCard(title: String(localized: "Destination", comment: "Profile detail card title")) {
             VStack(alignment: .leading, spacing: Spacing.s3) {
                 factRow(
                     title: String(localized: "Target", comment: "Profile detail target row"),
                     value: profile.target.title
                 )
-                switch ExportProfileDestinationSummary.from(profile: profile, vault: vault, endpoint: endpoint) {
+                switch ExportProfileDestinationSummary.from(
+                    profile: profile,
+                    vault: vault,
+                    endpoint: endpoint,
+                    googleDriveDestination: drive
+                ) {
                 case .localFolder(let vaultName):
                     factRow(
                         title: String(localized: "Folder", comment: "Profile detail folder row"),
@@ -570,6 +588,11 @@ struct ExportProfileDetailView: View {
                     factRow(
                         title: String(localized: "Endpoint", comment: "Profile detail endpoint row"),
                         value: url ?? String(localized: "Not configured", comment: "Missing endpoint fallback")
+                    )
+                case .googleDrive(let folderLabel):
+                    factRow(
+                        title: String(localized: "Folder", comment: "Profile detail Drive folder row"),
+                        value: folderLabel ?? String(localized: "Google Drive folder", comment: "Private Drive folder label fallback")
                     )
                 }
             }
@@ -957,6 +980,8 @@ struct ExportProfileEditorSheet: View {
     @ObservedObject var coordinator: ExportProfileCoordinator
     @ObservedObject private var profileStore: ExportProfileStore
     @ObservedObject private var destinationStore: ProfileDestinationStore
+    @ObservedObject private var googleDriveDestinationStore: GoogleDriveDestinationStore
+    @StateObject private var googleDriveConnectionManager: GoogleDriveConnectionManager
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.dismiss) private var dismiss
 
@@ -967,6 +992,8 @@ struct ExportProfileEditorSheet: View {
     @State private var target: ExportTargetSelection
     @State private var folderVaultID: UUID?
     @State private var apiEndpointID: UUID?
+    @State private var googleDriveDestinationID: UUID?
+    @State private var driveConnectionError: String?
     @State private var draft: ExportSettingsSnapshot
     @StateObject private var metricState: MetricSelectionState
     /// Presents the system folder picker for a new destination binding.
@@ -981,6 +1008,10 @@ struct ExportProfileEditorSheet: View {
         self.coordinator = coordinator
         _profileStore = ObservedObject(wrappedValue: coordinator.profileStore)
         _destinationStore = ObservedObject(wrappedValue: coordinator.destinationStore)
+        _googleDriveDestinationStore = ObservedObject(wrappedValue: coordinator.googleDriveDestinationStore)
+        _googleDriveConnectionManager = StateObject(wrappedValue: GoogleDriveConnectionManager(
+            destinationStore: coordinator.googleDriveDestinationStore
+        ))
         editingProfileID = profile?.id
 
         if let profile {
@@ -988,6 +1019,8 @@ struct ExportProfileEditorSheet: View {
             _target = State(initialValue: profile.target)
             _folderVaultID = State(initialValue: profile.folderVaultID)
             _apiEndpointID = State(initialValue: profile.apiEndpointID)
+            _googleDriveDestinationID = State(initialValue: profile.googleDriveDestinationID)
+            _driveConnectionError = State(initialValue: nil)
             _draft = State(initialValue: profile.settings)
         } else {
             // Creation defaults mirror what a plain duplicate would produce,
@@ -997,6 +1030,8 @@ struct ExportProfileEditorSheet: View {
             let active = coordinator.profileStore.activeProfile
             _folderVaultID = State(initialValue: active?.folderVaultID)
             _apiEndpointID = State(initialValue: active?.apiEndpointID)
+            _googleDriveDestinationID = State(initialValue: active?.googleDriveDestinationID)
+            _driveConnectionError = State(initialValue: nil)
             _draft = State(initialValue: ExportSettingsSnapshot.from(coordinator.liveSettings))
         }
 
@@ -1015,14 +1050,18 @@ struct ExportProfileEditorSheet: View {
     }
 
     private var canSave: Bool {
-        !trimmedName.isEmpty
-            && (draft.dailyNoteInjection.dailyNotesOnly || !draft.exportFormats.isEmpty)
+        let outputReady = draft.dailyNoteInjection.dailyNotesOnly || !draft.exportFormats.isEmpty
+        let destinationReady = target != .googleDrive || (
+            googleDriveDestinationID != nil && googleDriveConnectionManager.readiness != .configurationMissing
+        )
+        return !trimmedName.isEmpty && outputReady && destinationReady
     }
 
     private var overlappingNames: [String] {
         coordinator.overlapPreviewNames(
             target: target,
             folderVaultID: folderVaultID,
+            googleDriveDestinationID: googleDriveDestinationID,
             settings: savedSnapshot()
         )
     }
@@ -1128,6 +1167,7 @@ struct ExportProfileEditorSheet: View {
                 target: target,
                 folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
                 apiEndpointID: target == .apiEndpoint ? apiEndpointID : nil,
+                googleDriveDestinationID: target == .googleDrive ? googleDriveDestinationID : nil,
                 settings: snapshot
             )
         } else {
@@ -1135,6 +1175,7 @@ struct ExportProfileEditorSheet: View {
                 name: trimmedName,
                 target: target,
                 folderVaultID: target == .localIPhoneFolder ? folderVaultID : nil,
+                googleDriveDestinationID: target == .googleDrive ? googleDriveDestinationID : nil,
                 settings: snapshot
             )
         }
@@ -1166,8 +1207,9 @@ struct ExportProfileEditorSheet: View {
                 Text("Local Folder").tag(ExportTargetSelection.localIPhoneFolder)
                 Text("Connected Mac").tag(ExportTargetSelection.connectedMac)
                 Text("API Endpoint").tag(ExportTargetSelection.apiEndpoint)
+                Text("Google Drive").tag(ExportTargetSelection.googleDrive)
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
 
             switch target {
             case .localIPhoneFolder:
@@ -1222,6 +1264,58 @@ struct ExportProfileEditorSheet: View {
                 .accessibilityIdentifier("export.profiles.editor.addEndpoint")
             case .connectedMac:
                 EmptyView()
+            case .googleDrive:
+                Picker("Drive folder", selection: $googleDriveDestinationID) {
+                    Text("Select a Google Drive folder").tag(UUID?.none)
+                    ForEach(googleDriveDestinationStore.destinations) { destination in
+                        Text(destination.folderLabel ?? "Google Drive folder")
+                            .tag(UUID?.some(destination.id))
+                    }
+                }
+                Button {
+                    configurationProtection.performConfigurationChange {
+                        Task {
+                            do {
+                                let destination = try await googleDriveConnectionManager.connect(
+                                    replacing: googleDriveDestinationID
+                                )
+                                googleDriveDestinationID = destination.id
+                                driveConnectionError = nil
+                            } catch is CancellationError {
+                                driveConnectionError = nil
+                            } catch {
+                                driveConnectionError = (error as? GoogleDriveError)?.errorDescription
+                                    ?? GoogleDriveError(.reauthorizationRequired).errorDescription
+                            }
+                        }
+                    }
+                } label: {
+                    Label(
+                        googleDriveDestinationID == nil ? "Connect & Choose Folder…" : "Reconnect or Change Folder…",
+                        systemImage: "externaldrive.connected.to.line.below"
+                    )
+                }
+                if let destinationID = googleDriveDestinationID {
+                    Button(role: .destructive) {
+                        configurationProtection.performConfigurationChange {
+                            Task {
+                                await coordinator.disconnectGoogleDrive(destinationID: destinationID)
+                                googleDriveDestinationID = nil
+                            }
+                        }
+                    } label: {
+                        Label("Disconnect Google Drive", systemImage: "link.badge.minus")
+                    }
+                }
+                if let driveConnectionError {
+                    Text(driveConnectionError)
+                        .font(.caption)
+                        .foregroundStyle(Color.error)
+                } else if googleDriveConnectionManager.readiness == .configurationMissing {
+                    Text("Google Drive is unavailable in this build (configuration_missing).")
+                        .font(.caption)
+                        .foregroundStyle(Color.warning)
+                }
             }
         } header: {
             Text("Destination")

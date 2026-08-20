@@ -571,6 +571,9 @@ class SchedulingManager: ObservableObject {
                 notificationMetadata: existingPendingRequest.notificationMetadata,
                 exportTarget: existingPendingRequest.exportTarget,
                 settingsSnapshot: existingPendingRequest.settingsSnapshot,
+                profileID: existingPendingRequest.profileID,
+                profileName: existingPendingRequest.profileName,
+                googleDriveDestinationSnapshot: existingPendingRequest.googleDriveDestinationSnapshot,
                 calendar: calendar
             )
         } else {
@@ -606,6 +609,9 @@ class SchedulingManager: ObservableObject {
                 notificationMetadata: originalRequest.notificationMetadata,
                 exportTarget: originalRequest.exportTarget,
                 settingsSnapshot: originalRequest.settingsSnapshot,
+                profileID: originalRequest.profileID,
+                profileName: originalRequest.profileName,
+                googleDriveDestinationSnapshot: originalRequest.googleDriveDestinationSnapshot,
                 calendar: calendar
             )
             do {

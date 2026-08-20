@@ -135,6 +135,8 @@ struct ManualExportActivityBanner: View {
             return String(localized: "Connected Mac")
         case .apiEndpoint:
             return String(localized: "API Endpoint")
+        case .googleDrive:
+            return String(localized: "Google Drive")
         }
     }
 
@@ -143,6 +145,7 @@ struct ManualExportActivityBanner: View {
         case .localIPhoneFolder: return "folder.fill"
         case .connectedMac: return "desktopcomputer"
         case .apiEndpoint: return "network"
+        case .googleDrive: return "externaldrive.connected.to.line.below"
         }
     }
 }

@@ -28,6 +28,8 @@ struct ExportProfile: Codable, Identifiable, Equatable {
     /// Bound API endpoint in `ProfileDestinationStore` when
     /// `target == .apiEndpoint`. Nil keeps the current single-endpoint state.
     var apiEndpointID: UUID?
+    /// Local non-secret Drive destination ID. Google authority never enters profile JSON.
+    var googleDriveDestinationID: UUID?
     var createdAt: Date
     var updatedAt: Date
     /// True only for the profile synthesized from legacy live settings during
@@ -42,6 +44,7 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
         apiEndpointID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         isMigrationDefault: Bool = false
@@ -52,9 +55,29 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         self.target = target
         self.folderVaultID = folderVaultID
         self.apiEndpointID = apiEndpointID
+        self.googleDriveDestinationID = googleDriveDestinationID
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isMigrationDefault = isMigrationDefault
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, settings, target, folderVaultID, apiEndpointID
+        case googleDriveDestinationID, createdAt, updatedAt, isMigrationDefault
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        settings = try container.decode(ExportSettingsSnapshot.self, forKey: .settings)
+        target = try container.decode(ExportTargetSelection.self, forKey: .target)
+        folderVaultID = try container.decodeIfPresent(UUID.self, forKey: .folderVaultID)
+        apiEndpointID = try container.decodeIfPresent(UUID.self, forKey: .apiEndpointID)
+        googleDriveDestinationID = try container.decodeIfPresent(UUID.self, forKey: .googleDriveDestinationID)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        isMigrationDefault = try container.decodeIfPresent(Bool.self, forKey: .isMigrationDefault) ?? false
     }
 }
 
@@ -172,7 +195,8 @@ final class ExportProfileStore: ObservableObject {
         settings: ExportSettingsSnapshot,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
-        apiEndpointID: UUID? = nil
+        apiEndpointID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil
     ) -> Bool {
         guard profiles.isEmpty else { return false }
 
@@ -182,6 +206,7 @@ final class ExportProfileStore: ObservableObject {
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID,
+            googleDriveDestinationID: googleDriveDestinationID,
             createdAt: now(),
             updatedAt: now(),
             isMigrationDefault: true
@@ -200,7 +225,8 @@ final class ExportProfileStore: ObservableObject {
         settings: ExportSettingsSnapshot,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
-        apiEndpointID: UUID? = nil
+        apiEndpointID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil
     ) -> ExportProfile {
         let profile = ExportProfile(
             name: uniquifiedName(name),
@@ -208,6 +234,7 @@ final class ExportProfileStore: ObservableObject {
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID,
+            googleDriveDestinationID: googleDriveDestinationID,
             createdAt: now(),
             updatedAt: now()
         )
@@ -254,6 +281,17 @@ final class ExportProfileStore: ObservableObject {
         return true
     }
 
+    /// Binds a profile to a local non-secret Google Drive destination record.
+    @discardableResult
+    func setGoogleDriveBinding(profileID: UUID, destinationID: UUID?) -> Bool {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
+        guard profiles[index].googleDriveDestinationID != destinationID else { return true }
+        profiles[index].googleDriveDestinationID = destinationID
+        profiles[index].updatedAt = now()
+        persist()
+        return true
+    }
+
     /// Replaces the export target binding and touches `updatedAt`.
     /// Returns false when the id is unknown.
     @discardableResult
@@ -293,7 +331,8 @@ final class ExportProfileStore: ObservableObject {
             settings: source.settings,
             target: source.target,
             folderVaultID: source.folderVaultID,
-            apiEndpointID: source.apiEndpointID
+            apiEndpointID: source.apiEndpointID,
+            googleDriveDestinationID: source.googleDriveDestinationID
         )
     }
 
