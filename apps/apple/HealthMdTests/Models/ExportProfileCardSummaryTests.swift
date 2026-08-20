@@ -1,6 +1,7 @@
 import XCTest
 @testable import HealthMd
 
+#if os(iOS)
 final class ExportProfileCardSummaryTests: XCTestCase {
     private var defaults: UserDefaults!
     private var defaultsSuiteName: String!
@@ -240,3 +241,4 @@ final class ExportProfileCardSummaryTests: XCTestCase {
         XCTAssertEqual(summary.cadence?.weekdayIndex, 5)
     }
 }
+#endif

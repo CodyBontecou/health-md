@@ -222,9 +222,15 @@ final class CIQualityGateTests: XCTestCase {
             smokeStep.contains("continue-on-error: true"),
             "Selected PR UI smoke failures must remain blocking"
         )
+        let smokeInvocations = smokeStep.components(separatedBy: "xcodebuild test").dropFirst()
+        XCTAssertEqual(smokeInvocations.count, 2, "PR smoke must use two deterministic test invocations")
+        for invocation in smokeInvocations {
+            let selectionCount = invocation.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
+            XCTAssertGreaterThan(selectionCount, 0, "Each PR smoke invocation must select tests explicitly")
+            XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
+        }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertGreaterThan(smokeSelectionCount, 0, "PR smoke must select tests explicitly")
-        XCTAssertLessThanOrEqual(smokeSelectionCount, 10, "PR smoke must not expand into the full UI suite")
+        XCTAssertEqual(smokeSelectionCount, 16, "PR smoke must preserve all selected UI regressions")
         XCTAssertTrue(
             smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
             "PR smoke must cover deterministic returning-user release notes"
