@@ -3291,6 +3291,7 @@ final class VaultManager: ObservableObject {
                         cancellationCheck: { Task.isCancelled }
                     )
                 }
+                try Task.checkCancellation()
             }
             if !settings.summaryOnlyModeEnabled {
                 let orderedSources = sources.sorted {
@@ -3319,7 +3320,9 @@ final class VaultManager: ObservableObject {
                             try await Self.performArchiveIO {
                                 try writer.append(entry, cancellationCheck: { Task.isCancelled })
                             }
+                            try Task.checkCancellation()
                             await Task.yield()
+                            try Task.checkCancellation()
                         }
                     case .file(let file):
                         try await Self.performArchiveIO {
@@ -3331,7 +3334,9 @@ final class VaultManager: ObservableObject {
                                 cancellationCheck: { Task.isCancelled }
                             )
                         }
+                        try Task.checkCancellation()
                         await Task.yield()
+                        try Task.checkCancellation()
                     }
                 }
             }
@@ -3340,11 +3345,15 @@ final class VaultManager: ObservableObject {
                 try await Self.performArchiveIO {
                     try writer.append(entry, cancellationCheck: { Task.isCancelled })
                 }
+                try Task.checkCancellation()
                 await Task.yield()
+                try Task.checkCancellation()
             }
+            try Task.checkCancellation()
             try await Self.performArchiveIO {
                 try writer.finish(cancellationCheck: { Task.isCancelled })
             }
+            try Task.checkCancellation()
         } catch {
             try? await Self.performArchiveIO { writer.abandon() }
             if error as? FileCoordinationError == .destinationChanged
@@ -3445,6 +3454,7 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        try Task.checkCancellation()
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
             requestedRange: requestedRange,
@@ -3462,6 +3472,7 @@ final class VaultManager: ObservableObject {
             rollupDates: healthData.map(\.date)
         )
         if shouldWriteDataDictionary {
+            try Task.checkCancellation()
             try writeDataDictionary(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3476,6 +3487,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         ) {
+            try Task.checkCancellation()
             let folderURL = HealthRollupExporter.folderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3484,6 +3496,7 @@ final class VaultManager: ObservableObject {
                 settings: settings
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
+            try Task.checkCancellation()
             _ = try aggregateFileWriter.writeSynchronously(secureRequest(
                 AggregateFileWriteRequest(
                     fileURL: fileURL,
