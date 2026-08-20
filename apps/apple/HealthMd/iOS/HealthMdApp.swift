@@ -129,7 +129,7 @@ struct HealthMdApp: App {
     @StateObject private var cliExportActivity = CLIExportActivityTracker.shared
     @StateObject private var notificationExportActivity = NotificationExportActivityTracker.shared
     @StateObject private var externalIntegrationManager = ExternalIntegrationManager()
-    @StateObject private var configurationProtection = ConfigurationProtectionManager()
+    @StateObject private var configurationProtection: ConfigurationProtectionManager
     @StateObject private var iPhoneExportRequestHandler = IPhoneExportRequestHandler()
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
     @StateObject private var sharedSetupCoordinator: SharedSetupCoordinator
@@ -140,10 +140,20 @@ struct HealthMdApp: App {
     private let pricingAnalyticsClient = PricingAnalyticsClient.shared
 
     init() {
+        // UI-test methods reuse the installed app. Seed this UserDefaults-backed value before
+        // constructing its StateObject so a prior protected journey cannot leak into the next one.
+        if TestMode.isUITesting {
+            UserDefaults.standard.set(
+                TestMode.configurationProtectionEnabled,
+                forKey: ConfigurationProtectionManager.storageKey
+            )
+        }
+
         let advancedSettings = AdvancedExportSettings()
         let apiExportSettings = APIExportSettings()
         _advancedSettings = StateObject(wrappedValue: advancedSettings)
         _apiExportSettings = StateObject(wrappedValue: apiExportSettings)
+        _configurationProtection = StateObject(wrappedValue: ConfigurationProtectionManager())
         _sharedSetupCoordinator = StateObject(wrappedValue: SharedSetupCoordinator(
             settings: advancedSettings,
             apiExportSettings: apiExportSettings
