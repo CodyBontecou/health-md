@@ -45,6 +45,36 @@ final class MacExportResultIngressTests: XCTestCase {
         XCTAssertEqual(laterRouteCount, 0, "Terminal failure routing must be exclusive")
     }
 
+    func testRejectsMismatchedBreakdownDailyNoteCountsAtIngress() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 1,
+                dailyNoteUpdateCount: 1
+            ),
+            dailyNoteUpdateCount: 2,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date(timeIntervalSince1970: 1_700_000_100)
+        )
+
+        guard case .rejected(let jobID, let failure) = MacExportResultIngress.validate(payload) else {
+            return XCTFail("Duplicated producer counts must agree before ingress routing")
+        }
+        XCTAssertEqual(jobID, payload.jobID)
+        XCTAssertEqual(failure.reason, .payloadDecodeFailure)
+    }
+
     func testValidCompletionUsesOnlyFirstMatchingRouteForCollidingJobID() async {
         let payload = makePayload()
         var scheduledCount = 0

@@ -1254,6 +1254,60 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(decoded.hasAuthoritativeFileCount)
     }
 
+    func testPayloadRejectsDailyNoteUpdateMismatchBetweenBreakdownAndTopLevel() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 1,
+                dailyNoteUpdateCount: 1
+            ),
+            dailyNoteUpdateCount: 2,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
+    func testPayloadRejectsDailyNoteSkipMismatchBetweenBreakdownAndTopLevel() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 0,
+                dailyNoteSkipCount: 1
+            ),
+            dailyNoteSkipCount: 2,
+            failedDateDetails: [
+                FailedDateDetail(
+                    date: Date(timeIntervalSince1970: 1_700_000_000),
+                    reason: .noHealthData
+                )
+            ],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
     func testPayloadRejectsOverflowingTopLevelAccounting() {
         let multiplicationOverflow = MacExportResultPayload(
             jobID: UUID(),

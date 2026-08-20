@@ -2990,6 +2990,30 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         XCTAssertEqual(result?.completedDates, [firstDate])
     }
 
+    func testPinnedRangePlanCancellationDoesNotCountCapturedDateBeforeDestinationWrite() async throws {
+        let interrupted = try await prepareInterruptedPinnedRange(failAfterDictionaryWrite: false)
+        let manager = MacCorpusExportSessionManager(rootURL: sessionRoot)
+
+        let (acknowledgement, result) = manager.cancel(
+            sessionID: interrupted.sessionID,
+            jobID: interrupted.finalize.jobID,
+            vaultManager: vaultManager
+        )
+
+        XCTAssertTrue(acknowledgement.accepted)
+        XCTAssertEqual(result?.status, .cancelled)
+        XCTAssertEqual(result?.successCount, 0)
+        XCTAssertEqual(result?.completedDates, [])
+        XCTAssertEqual(result?.formatsPerDate, 1)
+        XCTAssertEqual(result?.totalFilesWritten, 0)
+        XCTAssertEqual(result?.hasConsistentFileAccounting, true)
+        XCTAssertNil(
+            fileSystem.writeCounts[
+                vaultRoot.appendingPathComponent("Health/2026-03-02.json").path
+            ]
+        )
+    }
+
     func testCancellationReturnsExactDurablyCompletedDates() async throws {
         let firstDate = Self.day(2026, 1, 2)
         let secondDate = Self.day(2026, 1, 3)

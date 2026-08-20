@@ -1114,6 +1114,8 @@ struct MacExportResultPayload: Codable {
         }
         guard outputBreakdown.requestedDataDayCount == totalCount,
               outputBreakdown.successfulDataDayCount == successCount,
+              outputBreakdown.dailyNoteUpdateCount == dailyNoteUpdateCount,
+              outputBreakdown.dailyNoteSkipCount == dailyNoteSkipCount,
               outputBreakdown.providerSidecarFileCount <= externalRecordFileCount,
               outputBreakdown.generatedFileCount <= totalFilesWritten else { return false }
         // Budget truncation can reduce the provider category and the generated
