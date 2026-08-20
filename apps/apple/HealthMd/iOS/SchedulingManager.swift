@@ -130,6 +130,8 @@ class SchedulingManager: ObservableObject {
     /// profiles firing at the same minute never deduplicate each other
     /// (decision 6), while a duplicate trigger for the same profile does.
     @MainActor private var inFlightProfileOccurrenceKeys: Set<String> = []
+    /// Drive journals stay unacknowledged when durable quota accounting fails.
+    @MainActor private var scheduledQuotaAccountingFailures: Set<UUID> = []
     @MainActor private var scheduledExportDependenciesConfigured = false
     @MainActor private var scheduledExportDependencyWaiters: [CheckedContinuation<Void, Never>] = []
 
@@ -514,7 +516,7 @@ class SchedulingManager: ObservableObject {
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
             )
-        case .noVault, .destinationChanged, .paywall, .failure, .profileNotFound:
+        case .noVault, .destinationChanged, .foregroundRequired, .paywall, .failure, .profileNotFound:
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: ExportIntentRunner.dialog(for: outcome)),
                 timestamp: now()
@@ -919,12 +921,14 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: range.end,
                 targetLabel: targetLabel,
                 exportTarget: target,
+                idempotencyKey: target == .googleDrive ? request.id : nil,
                 appleExportEnginePin: request.settingsSnapshot?.appleExportEnginePin,
                 profileName: request.profileName
             )
         }
 
-        if target == .googleDrive, didCompleteRequest {
+        if target == .googleDrive, didCompleteRequest,
+           !scheduledQuotaAccountingFailures.contains(request.id) {
             Task {
                 await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(request.id)
             }
@@ -1147,10 +1151,15 @@ class SchedulingManager: ObservableObject {
         for result: ExportOrchestrator.ExportResult,
         jobID: UUID?
     ) {
-        guard result.successCount > 0 else { return }
+        guard result.successCount > 0 else {
+            if let jobID { scheduledQuotaAccountingFailures.remove(jobID) }
+            return
+        }
         do {
             try scheduledExportQuotaRecorder(jobID)
+            if let jobID { scheduledQuotaAccountingFailures.remove(jobID) }
         } catch {
+            if let jobID { scheduledQuotaAccountingFailures.insert(jobID) }
             logger.error("Could not record scheduled export quota use: \(error.localizedDescription)")
         }
     }
@@ -1900,6 +1909,7 @@ class SchedulingManager: ObservableObject {
                     dateRangeStart: startDate, dateRangeEnd: endDate,
                     targetLabel: targetLabel,
                     exportTarget: target,
+                    idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                     appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
                 )
             }
@@ -2319,6 +2329,7 @@ class SchedulingManager: ObservableObject {
             Task { @MainActor in
                 await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)
                 ExportHistoryManager.shared.recordFailure(
+                    id: target == .googleDrive ? (pendingRequest?.id ?? UUID()) : UUID(),
                     source: .scheduled,
                     dateRangeStart: range.start,
                     dateRangeEnd: range.end,
@@ -2515,6 +2526,7 @@ class SchedulingManager: ObservableObject {
                     dateRangeEnd: rangeEnd,
                     targetLabel: scheduledTargetLabel(for: target),
                     exportTarget: target,
+                    idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                     appleExportEnginePin: context.settings.appleExportEnginePin,
                     profileName: profile.name
                 )
@@ -2527,13 +2539,15 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: rangeEnd,
                 targetLabel: scheduledTargetLabel(for: target),
                 exportTarget: target,
+                idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                 appleExportEnginePin: context.settings.appleExportEnginePin,
                 profileName: profile.name
             )
         }
         if target == .googleDrive,
            result.didCompleteAllRequestedDates,
-           let operationID = pendingRequest?.id {
+           let operationID = pendingRequest?.id,
+           !scheduledQuotaAccountingFailures.contains(operationID) {
             await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(operationID)
         }
     }
@@ -2881,6 +2895,7 @@ class SchedulingManager: ObservableObject {
                 dateRangeEnd: dateRangeEnd,
                 targetLabel: targetLabel,
                 exportTarget: target,
+                idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                 appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
             )
         } else if result.totalCount > 0 {
@@ -2904,6 +2919,7 @@ class SchedulingManager: ObservableObject {
                     dateRangeEnd: dateRangeEnd,
                     targetLabel: targetLabel,
                     exportTarget: target,
+                    idempotencyKey: target == .googleDrive ? pendingRequest?.id : nil,
                     appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
                 )
             }
@@ -2911,7 +2927,8 @@ class SchedulingManager: ObservableObject {
 
         if target == .googleDrive,
            didCompleteRequest,
-           let operationID = pendingRequest?.id {
+           let operationID = pendingRequest?.id,
+           !scheduledQuotaAccountingFailures.contains(operationID) {
             await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(operationID)
         }
     }

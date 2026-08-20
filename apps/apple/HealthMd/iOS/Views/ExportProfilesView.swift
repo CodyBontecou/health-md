@@ -996,6 +996,7 @@ struct ExportProfileEditorSheet: View {
     @State private var apiEndpointID: UUID?
     @State private var googleDriveDestinationID: UUID?
     @State private var driveConnectionError: String?
+    @State private var showGoogleDrivePrivacyDisclosure = false
     @State private var draft: ExportSettingsSnapshot
     @StateObject private var metricState: MetricSelectionState
     /// Presents the system folder picker for a new destination binding.
@@ -1145,6 +1146,18 @@ struct ExportProfileEditorSheet: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        .confirmationDialog(
+            GoogleDrivePrivacyDisclosure.title,
+            isPresented: $showGoogleDrivePrivacyDisclosure,
+            titleVisibility: .visible
+        ) {
+            Button(GoogleDrivePrivacyDisclosure.confirm) {
+                beginGoogleDriveAuthorization()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text(GoogleDrivePrivacyDisclosure.message)
+        }
         // The sheet covers the app-level toast, so blocked changes surface a
         // sheet-local one (also covering the pushed metric picker), and the
         // toast's settings shortcut dismisses the editor.
@@ -1276,20 +1289,7 @@ struct ExportProfileEditorSheet: View {
                 }
                 Button {
                     configurationProtection.performConfigurationChange {
-                        Task {
-                            do {
-                                let destination = try await googleDriveConnectionManager.connect(
-                                    replacing: googleDriveDestinationID
-                                )
-                                googleDriveDestinationID = destination.id
-                                driveConnectionError = nil
-                            } catch is CancellationError {
-                                driveConnectionError = nil
-                            } catch {
-                                driveConnectionError = (error as? GoogleDriveError)?.errorDescription
-                                    ?? GoogleDriveError(.reauthorizationRequired).errorDescription
-                            }
-                        }
+                        showGoogleDrivePrivacyDisclosure = true
                     }
                 } label: {
                     Label(
@@ -1301,8 +1301,13 @@ struct ExportProfileEditorSheet: View {
                     Button(role: .destructive) {
                         configurationProtection.performConfigurationChange {
                             Task {
-                                await coordinator.disconnectGoogleDrive(destinationID: destinationID)
-                                googleDriveDestinationID = nil
+                                do {
+                                    try await coordinator.disconnectGoogleDrive(destinationID: destinationID)
+                                    googleDriveDestinationID = nil
+                                    driveConnectionError = nil
+                                } catch {
+                                    driveConnectionError = "Finish or recover pending Google Drive exports before disconnecting (partial_completion)."
+                                }
                             }
                         }
                     } label: {
@@ -1321,6 +1326,23 @@ struct ExportProfileEditorSheet: View {
             }
         } header: {
             Text("Destination")
+        }
+    }
+
+    private func beginGoogleDriveAuthorization() {
+        Task {
+            do {
+                let destination = try await googleDriveConnectionManager.connect(
+                    replacing: googleDriveDestinationID
+                )
+                googleDriveDestinationID = destination.id
+                driveConnectionError = nil
+            } catch is CancellationError {
+                driveConnectionError = nil
+            } catch {
+                driveConnectionError = (error as? GoogleDriveError)?.errorDescription
+                    ?? GoogleDriveError(.reauthorizationRequired).errorDescription
+            }
         }
     }
 

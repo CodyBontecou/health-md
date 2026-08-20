@@ -41,7 +41,10 @@ final class GoogleDriveDestinationStore: ObservableObject {
         persist()
     }
 
-    private func reload() {
+    /// Refreshes records written by another application-scoped store instance (for example the
+    /// profile coordinator). Drive execution calls this immediately before resolving authority so
+    /// it never runs against a stale in-memory snapshot or falls back to another destination.
+    func reload() {
         guard let data = userDefaults.data(forKey: Self.storageKey),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let records = root["records"] as? [Any] else {
@@ -225,10 +228,19 @@ final class GoogleDriveConnectionManager: ObservableObject {
             throw GoogleDriveError(.folderUnavailable)
         }
 
+        destinationStore.reload()
         let old = destinationID.flatMap(destinationStore.destination(id:))
-        let credentialReferenceID = old?.credentialReferenceID ?? UUID()
+        // Reauthorization may refresh only the exact existing account/folder authority. Choosing
+        // another account or folder creates a new binding; the editor applies that new UUID only
+        // to the profile being edited when Save is tapped, leaving every other profile untouched.
+        let isExactReauthorization = Self.isExactReauthorization(
+            old,
+            permissionID: permissionID,
+            folder: folder
+        )
+        let credentialReferenceID = isExactReauthorization ? old!.credentialReferenceID : UUID()
         let destination = GoogleDriveDestination(
-            id: old?.id ?? UUID(),
+            id: isExactReauthorization ? old!.id : UUID(),
             credentialReferenceID: credentialReferenceID,
             accountPermissionID: permissionID,
             folderID: folder.id,
@@ -244,6 +256,16 @@ final class GoogleDriveConnectionManager: ObservableObject {
         readiness = .ready
         lastErrorID = nil
         return destination
+    }
+
+    static func isExactReauthorization(
+        _ existing: GoogleDriveDestination?,
+        permissionID: String,
+        folder: GoogleDriveFileMetadata
+    ) -> Bool {
+        guard let existing else { return false }
+        return existing.accountPermissionID == permissionID && existing.folderID == folder.id &&
+            existing.sharedDriveID == folder.driveID
     }
 
     /// Silent refresh used by foreground and scheduled execution. It never opens UI or changes
@@ -262,10 +284,15 @@ final class GoogleDriveConnectionManager: ObservableObject {
                     configuration: configuration
                 )
                 try credentialStore.save(credential, referenceID: destination.credentialReferenceID)
+            } catch let error as GoogleDriveError {
+                lastErrorID = error.id
+                if error.id == .reauthorizationRequired {
+                    readiness = .reauthorizationRequired
+                }
+                throw error
             } catch {
-                readiness = .reauthorizationRequired
-                lastErrorID = .reauthorizationRequired
-                throw GoogleDriveError(.reauthorizationRequired)
+                lastErrorID = .ambiguousCommit
+                throw GoogleDriveError(.ambiguousCommit, isRetryable: true)
             }
         }
         do {
@@ -292,14 +319,19 @@ final class GoogleDriveConnectionManager: ObservableObject {
     }
 
     /// Removes local authority regardless of revocation network outcome. Remote files are untouched.
-    func disconnect(destinationID: UUID) async {
+    func disconnect(destinationID: UUID) async throws {
+        destinationStore.reload()
         guard let destination = destinationStore.destination(id: destinationID) else { return }
+        // Refuse to destroy the only credential capable of reconciling an ambiguous/partial
+        // operation. Completed acknowledged journals and their protected spools are removed.
+        let journalStore = try GoogleDriveJournalStore()
+        try await journalStore.cleanupForDisconnect(destinationID: destinationID)
         if let credential = try? credentialStore.credential(referenceID: destination.credentialReferenceID) {
             try? await tokenEndpoint.revoke(token: credential.refreshToken)
         }
-        try? credentialStore.remove(referenceID: destination.credentialReferenceID)
+        try credentialStore.remove(referenceID: destination.credentialReferenceID)
         destinationStore.remove(id: destinationID)
-        GoogleDriveManagedObjectStore().removeAll(destinationID: destinationID)
+        try GoogleDriveManagedObjectStore().removeAll(destinationID: destinationID)
         refreshReadiness()
     }
 }

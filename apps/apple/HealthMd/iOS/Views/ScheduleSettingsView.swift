@@ -1216,6 +1216,13 @@ struct ScheduleSettingsView: View {
     }
 
     private func performRetryExport(_ entry: ExportHistoryEntry) async {
+        guard !entry.isGoogleDriveDelivery else {
+            await MainActor.run {
+                retryErrorMessage = "Google Drive retries must resume the exact protected upload journal. Open the profile's Google Drive destination to reconnect or recover it; no local-folder fallback was used."
+                showRetryError = true
+            }
+            return
+        }
         defer {
             Task { @MainActor in
                 isRetrying = false
@@ -1623,7 +1630,8 @@ struct ExportHistoryDetailView: View {
     }
 
     private var canRetry: Bool {
-        !entry.isFullSuccess && entry.source != .macAgent && entry.operationDetails == nil
+        !entry.isFullSuccess && entry.source != .macAgent && entry.operationDetails == nil &&
+            !entry.isGoogleDriveDelivery
     }
 
     private var statusColor: Color {
@@ -1915,6 +1923,23 @@ struct ExportHistoryDetailView: View {
                         }
                     } header: {
                         Text("Failed Dates")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textSecondary)
+                    }
+                }
+
+                if entry.isGoogleDriveDelivery, !entry.isFullSuccess {
+                    Section {
+                        Label {
+                            Text("Open the export profile to reconnect Google Drive or resume its exact protected upload journal. Generic Retry Export is disabled because it must never write Drive history to the local vault.")
+                                .font(Typography.body())
+                                .foregroundStyle(Color.textPrimary)
+                        } icon: {
+                            Image(systemName: "externaldrive.badge.exclamationmark")
+                                .foregroundStyle(Color.warning)
+                        }
+                    } header: {
+                        Text("Google Drive recovery")
                             .font(Typography.caption())
                             .foregroundStyle(Color.textSecondary)
                     }

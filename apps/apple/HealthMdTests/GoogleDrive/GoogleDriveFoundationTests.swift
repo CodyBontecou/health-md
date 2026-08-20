@@ -90,6 +90,97 @@ final class GoogleDriveFoundationTests: XCTestCase {
     }
 
     @MainActor
+    func testApplicationScopedDestinationStoreReloadObservesCoordinatorWrites() throws {
+        let suiteName = "GoogleDriveFoundationTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let serviceStore = GoogleDriveDestinationStore(userDefaults: defaults)
+        let coordinatorStore = GoogleDriveDestinationStore(userDefaults: defaults)
+        let destination = makeDestination()
+
+        coordinatorStore.upsert(destination)
+        XCTAssertNil(serviceStore.destination(id: destination.id))
+        serviceStore.reload()
+        XCTAssertEqual(serviceStore.destination(id: destination.id), destination)
+    }
+
+    @MainActor
+    func testManagedObjectStoreCorruptionAndTornJSONBlockReadsAndCreates() throws {
+        for bytes in [Data("not-json".utf8), Data("[{\"version\":1".utf8)] {
+            let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+            defer { try? FileManager.default.removeItem(at: root) }
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            try bytes.write(to: root.appendingPathComponent("managed-objects.json"))
+            let store = GoogleDriveManagedObjectStore(rootURL: root)
+            XCTAssertThrowsError(try store.binding(destinationID: UUID(), relativePathHash: "path"))
+            XCTAssertThrowsError(try store.upsert(GoogleDriveManagedObjectBinding(
+                destinationID: UUID(),
+                relativePathHash: "path",
+                objectID: "object",
+                parentID: "parent",
+                expectedName: "name",
+                mimeType: "text/plain"
+            )))
+        }
+    }
+
+    func testPrivacyDisclosureNamesSensitiveHealthGoogleAndRetention() {
+        XCTAssertTrue(GoogleDrivePrivacyDisclosure.title.localizedCaseInsensitiveContains("health"))
+        XCTAssertTrue(GoogleDrivePrivacyDisclosure.message.localizedCaseInsensitiveContains("Google"))
+        XCTAssertTrue(GoogleDrivePrivacyDisclosure.message.localizedCaseInsensitiveContains("retain"))
+        XCTAssertTrue(GoogleDrivePrivacyDisclosure.message.localizedCaseInsensitiveContains("servers"))
+    }
+
+    func testOAuthAndTransientHTTPFailuresHaveDistinctTaxonomy() {
+        let invalidGrant = #"{"error":"invalid_grant"}"#.data(using: .utf8)!
+        XCTAssertEqual(GoogleDriveHTTPErrorMapper.error(statusCode: 400, responseData: invalidGrant).id, .reauthorizationRequired)
+        let rateLimited = GoogleDriveHTTPErrorMapper.error(statusCode: 429)
+        XCTAssertEqual(rateLimited.id, .rateLimited)
+        XCTAssertTrue(rateLimited.isRetryable)
+        let serverFailure = GoogleDriveHTTPErrorMapper.error(statusCode: 503)
+        XCTAssertEqual(serverFailure.id, .ambiguousCommit)
+        XCTAssertTrue(serverFailure.isRetryable)
+    }
+
+    @MainActor
+    func testReauthorizationReusesBindingOnlyForSameAccountAndFolder() {
+        let destination = makeDestination()
+        let sameFolder = GoogleDriveFileMetadata(
+            id: destination.folderID,
+            name: "Selected",
+            mimeType: GoogleDriveFileMetadata.folderMIMEType,
+            parents: [],
+            driveID: destination.sharedDriveID,
+            trashed: false,
+            canAddChildren: true
+        )
+        XCTAssertTrue(GoogleDriveConnectionManager.isExactReauthorization(
+            destination,
+            permissionID: destination.accountPermissionID,
+            folder: sameFolder
+        ))
+        XCTAssertFalse(GoogleDriveConnectionManager.isExactReauthorization(
+            destination,
+            permissionID: "another-account",
+            folder: sameFolder
+        ))
+        let anotherFolder = GoogleDriveFileMetadata(
+            id: "another-folder",
+            name: "Another",
+            mimeType: GoogleDriveFileMetadata.folderMIMEType,
+            parents: [],
+            driveID: destination.sharedDriveID,
+            trashed: false,
+            canAddChildren: true
+        )
+        XCTAssertFalse(GoogleDriveConnectionManager.isExactReauthorization(
+            destination,
+            permissionID: destination.accountPermissionID,
+            folder: anotherFolder
+        ))
+    }
+
+    @MainActor
     func testMissingBuildConfigurationIsVisibleButNotRunnable() {
         let manager = GoogleDriveConnectionManager(configuration: nil)
         XCTAssertEqual(manager.readiness, .configurationMissing)
@@ -225,6 +316,51 @@ final class GoogleDriveFoundationTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: journalURL), Data("corrupt".utf8))
     }
 
+    func testUnresolvedJournalBlocksDisconnectAndAgesToExplicitAbandonedNotice() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let journalStore = try GoogleDriveJournalStore(
+            rootURL: root,
+            now: { Date(timeIntervalSince1970: 1_000) },
+            unresolvedRetention: -1
+        )
+        let bytes = Data("sensitive-staged-bytes".utf8)
+        let artifact = try GoogleDriveGeneratedArtifact(
+            id: GoogleDriveDigest.sha256(bytes),
+            relativePath: "Health/day.json",
+            mediaType: "application/json",
+            writeIntent: .overwrite,
+            fragmentBytes: bytes
+        )
+        let destination = makeDestination()
+        let bundle = try GoogleDriveGeneratedArtifactBundle(
+            operationID: UUID(),
+            profileID: nil,
+            sourceDates: [Date(timeIntervalSince1970: 100)],
+            settingsDigest: "settings",
+            rendererIdentity: "renderer",
+            artifacts: [artifact]
+        )
+        _ = try await journalStore.create(bundle: bundle, destination: destination)
+        do {
+            try await journalStore.cleanupForDisconnect(destinationID: destination.id)
+            XCTFail("Unresolved journal must block credential destruction")
+        } catch let error as GoogleDriveError {
+            XCTAssertEqual(error.id, .partialCompletion)
+        }
+
+        try await journalStore.prune()
+        let journalRemains = await journalStore.contains(operationID: bundle.operationID)
+        XCTAssertFalse(journalRemains)
+        let isAbandoned = await journalStore.isAbandoned(operationID: bundle.operationID)
+        XCTAssertTrue(isAbandoned)
+        let notices = try JSONSerialization.jsonObject(
+            with: Data(contentsOf: root.appendingPathComponent("abandoned-operations.json"))
+        ) as? [[String: Any]]
+        XCTAssertEqual(notices?.first?["operation_id"] as? String, bundle.operationID.uuidString.lowercased())
+        XCTAssertNil(notices?.first?["relative_path"])
+    }
+
     func testAcknowledgedJournalRetentionActuallyPrunesExpiredBytes() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -257,6 +393,73 @@ final class GoogleDriveFoundationTests: XCTestCase {
         XCTAssertFalse(remains)
     }
 
+    @MainActor
+    func testRunnerUsesExactIDPostflightInsteadOfTrustingUploadResponseMetadata() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let bytes = Data("immutable-final".utf8)
+        let destination = makeDestination()
+        let api = ExactPostflightDriveAPI(bytes: bytes, destination: destination)
+        let runner = try GoogleDriveDestinationRunner(
+            api: api,
+            managedStore: GoogleDriveManagedObjectStore(rootURL: root),
+            journalStore: GoogleDriveJournalStore(rootURL: root)
+        )
+        let artifact = try GoogleDriveGeneratedArtifact(
+            id: GoogleDriveDigest.sha256(bytes),
+            relativePath: "day.json",
+            mediaType: "application/json",
+            writeIntent: .overwrite,
+            fragmentBytes: bytes
+        )
+        let bundle = try GoogleDriveGeneratedArtifactBundle(
+            operationID: UUID(),
+            profileID: nil,
+            sourceDates: [Date(timeIntervalSince1970: 0)],
+            settingsDigest: "settings",
+            rendererIdentity: "renderer",
+            artifacts: [artifact]
+        )
+
+        let result = await runner.run(bundle: bundle, destination: destination, accessToken: "token")
+
+        XCTAssertTrue(result.isComplete)
+        let metadataRequestCount = await api.exactMetadataRequestCount()
+        XCTAssertEqual(metadataRequestCount, 1)
+    }
+
+    func testResumableCreatePersistsOperationIDAsIdempotencyMarker() async throws {
+        let operationID = UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!
+        let transport = RecordingDriveTransport { request in
+            (Data(), HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Location": "https://www.googleapis.com/upload/session"]
+            )!)
+        }
+        let client = GoogleDriveAPIClient(transport: transport)
+        _ = try await client.startResumableCreate(
+            id: "reserved",
+            name: "day.json",
+            parentID: "folder",
+            mediaType: "application/json",
+            byteCount: 10,
+            sha256: String(repeating: "a", count: 64),
+            pathHash: String(repeating: "b", count: 64),
+            operationID: operationID,
+            resourceKeys: [:],
+            accessToken: "secret"
+        )
+        let recordedRequest = await transport.lastRequest()
+        let request = try XCTUnwrap(recordedRequest)
+        let body = try XCTUnwrap(request.httpBody)
+        let root = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let properties = try XCTUnwrap(root["appProperties"] as? [String: String])
+        XCTAssertEqual(properties["healthmd_operation_id"], operationID.uuidString.lowercased())
+        XCTAssertEqual(properties["healthmd_path_hash"], String(repeating: "b", count: 64))
+    }
+
     func testAPIClientSetsSharedDriveFlagsAndResourceKey() async throws {
         let transport = RecordingDriveTransport { request in
             let body = #"{"id":"folder","name":"Selected","mimeType":"application/vnd.google-apps.folder","parents":[],"driveId":"shared","resourceKey":"rk","version":"1","trashed":false,"capabilities":{"canAddChildren":true}}"#.data(using: .utf8)!
@@ -285,6 +488,126 @@ final class GoogleDriveFoundationTests: XCTestCase {
         )
     }
 
+}
+
+private actor ExactPostflightDriveAPI: GoogleDriveAPIClientProtocol {
+    private let bytes: Data
+    private let destination: GoogleDriveDestination
+    private var metadataRequests = 0
+
+    init(bytes: Data, destination: GoogleDriveDestination) {
+        self.bytes = bytes
+        self.destination = destination
+    }
+
+    func exactMetadataRequestCount() -> Int { metadataRequests }
+
+    func about(accessToken: String) async throws -> String { destination.accountPermissionID }
+
+    func metadata(id: String, resourceKey: String?, accessToken: String) async throws -> GoogleDriveFileMetadata {
+        metadataRequests += 1
+        return fileMetadata(sha256: GoogleDriveDigest.sha256(bytes))
+    }
+
+    func validateFolder(_ destination: GoogleDriveDestination, accessToken: String) async throws -> GoogleDriveFileMetadata {
+        GoogleDriveFileMetadata(
+            id: destination.folderID,
+            name: "Selected",
+            mimeType: GoogleDriveFileMetadata.folderMIMEType,
+            parents: [],
+            driveID: destination.sharedDriveID,
+            trashed: false,
+            canAddChildren: true
+        )
+    }
+
+    func generateIDs(count: Int, accessToken: String) async throws -> [String] { ["reserved-file"] }
+
+    func createFolder(
+        id: String,
+        name: String,
+        parentID: String,
+        pathHash: String,
+        operationID: UUID,
+        resourceKeys: [String: String],
+        accessToken: String
+    ) async throws -> GoogleDriveFileMetadata {
+        throw GoogleDriveError(.remoteConflict)
+    }
+
+    func findManagedObjects(
+        parentID: String,
+        name: String,
+        pathHash: String,
+        resourceKeys: [String: String],
+        accessToken: String
+    ) async throws -> [GoogleDriveFileMetadata] { [] }
+
+    func startResumableCreate(
+        id: String,
+        name: String,
+        parentID: String,
+        mediaType: String,
+        byteCount: UInt64,
+        sha256: String,
+        pathHash: String,
+        operationID: UUID,
+        resourceKeys: [String: String],
+        accessToken: String
+    ) async throws -> URL {
+        URL(string: "https://www.googleapis.com/upload/session")!
+    }
+
+    func startResumableUpdate(
+        id: String,
+        mediaType: String,
+        byteCount: UInt64,
+        sha256: String,
+        pathHash: String,
+        operationID: UUID,
+        resourceKeys: [String: String],
+        accessToken: String
+    ) async throws -> URL {
+        throw GoogleDriveError(.remoteConflict)
+    }
+
+    func upload(
+        sessionURL: URL,
+        data: Data,
+        offset: UInt64,
+        totalByteCount: UInt64,
+        accessToken: String
+    ) async throws -> GoogleDriveUploadResponse {
+        // Deliberately wrong response checksum: runner must ignore it and exact-ID GET postflight.
+        .completed(fileMetadata(sha256: String(repeating: "0", count: 64)))
+    }
+
+    func uploadStatus(
+        sessionURL: URL,
+        totalByteCount: UInt64,
+        accessToken: String
+    ) async throws -> GoogleDriveUploadResponse {
+        throw GoogleDriveError(.ambiguousCommit)
+    }
+
+    func download(id: String, resourceKey: String?, accessToken: String) async throws -> Data { bytes }
+
+    private func fileMetadata(sha256: String) -> GoogleDriveFileMetadata {
+        GoogleDriveFileMetadata(
+            id: "reserved-file",
+            name: "day.json",
+            mimeType: "application/json",
+            parents: [destination.folderID],
+            version: "1",
+            size: UInt64(bytes.count),
+            sha256Checksum: sha256,
+            trashed: false,
+            appProperties: [
+                "healthmd_owner": "healthmd",
+                "healthmd_path_hash": GoogleDrivePath.hash("day.json")
+            ]
+        )
+    }
 }
 
 private actor RecordingDriveTransport: GoogleDriveHTTPTransport {

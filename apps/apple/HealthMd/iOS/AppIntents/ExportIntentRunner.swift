@@ -4,6 +4,14 @@ import os.log
 /// Shared runner for export-style App Intents. Centralizes the paywall gate,
 /// vault scope handling, orchestrator call, history recording, free-export
 /// accounting, and schedule bookkeeping so each intent can stay short.
+struct ExportIntentForegroundRequiredError: LocalizedError, Equatable {
+    let destination: ExportTargetSelection
+
+    var errorDescription: String? {
+        "\(destination.title) exports require Health.md in the foreground. Open the app to upload or recover this profile; no local-vault fallback was used."
+    }
+}
+
 @MainActor
 enum ExportIntentRunner {
     enum Outcome {
@@ -12,6 +20,9 @@ enum ExportIntentRunner {
         case pending(reason: String)
         case noVault
         case destinationChanged
+        /// Drive authorization and journal recovery are foreground-only. This typed outcome is
+        /// returned before any vault access so Shortcuts can never fall through to local files.
+        case foregroundRequired(destination: ExportTargetSelection)
         case paywall
         case failure(reason: String)
         /// A profile parameter referenced a name that no longer exists.
@@ -242,6 +253,10 @@ enum ExportIntentRunner {
         }
         let profileNameForHistory = runProfile?.name
 
+        guard runProfile?.target != .googleDrive else {
+            return .foregroundRequired(destination: .googleDrive)
+        }
+
         dependencies.refreshVaultAccess()
         guard !dependencies.requiresVaultReselection() else {
             return .destinationChanged
@@ -396,6 +411,14 @@ enum ExportIntentRunner {
         return true
     }
 
+    /// Converts the typed runner outcome into a typed thrown App Intent failure. Export intents
+    /// call this before returning a success result, so automation cannot mistake a blocked Drive
+    /// profile for a completed local export.
+    static func requireNoForegroundTransition(_ outcome: Outcome) throws {
+        guard case .foregroundRequired(let destination) = outcome else { return }
+        throw ExportIntentForegroundRequiredError(destination: destination)
+    }
+
     /// Builds a localized dialog string for the outcome. Keeps user-facing
     /// copy consistent across export intents.
     static func dialog(for outcome: Outcome) -> String {
@@ -435,6 +458,8 @@ enum ExportIntentRunner {
             return "No vault selected. Open Health.md and choose a vault first."
         case .destinationChanged:
             return "The saved export folder changed. Open Health.md and re-select the intended folder before exporting."
+        case .foregroundRequired(let destination):
+            return "\(destination.title) profiles require Health.md in the foreground. Open Health.md to upload or recover this export; no local-vault fallback was used."
         case .paywall:
             return "Free export limit reached. Unlock Health.md in the app to keep exporting."
         case .failure(let reason):

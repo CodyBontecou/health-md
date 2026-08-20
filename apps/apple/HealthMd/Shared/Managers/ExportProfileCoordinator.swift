@@ -307,9 +307,9 @@ final class ExportProfileCoordinator: ObservableObject {
     /// Revokes/removes one local Drive authority without deleting remote files. Every profile
     /// referencing it becomes explicitly unbound and its schedule is paused; no fallback target
     /// is selected.
-    func disconnectGoogleDrive(destinationID: UUID) async {
+    func disconnectGoogleDrive(destinationID: UUID) async throws {
         let manager = GoogleDriveConnectionManager(destinationStore: googleDriveDestinationStore)
-        await manager.disconnect(destinationID: destinationID)
+        try await manager.disconnect(destinationID: destinationID)
         for profile in profileStore.profiles where profile.googleDriveDestinationID == destinationID {
             _ = profileStore.setGoogleDriveBinding(profileID: profile.id, destinationID: nil)
             _ = scheduledEntryStore.update(profileID: profile.id) { $0.isEnabled = false }

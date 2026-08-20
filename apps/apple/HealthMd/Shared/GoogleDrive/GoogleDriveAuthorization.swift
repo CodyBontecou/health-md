@@ -14,11 +14,19 @@ nonisolated protocol GoogleDriveHTTPTransport: Sendable {
 
 nonisolated struct SystemGoogleDriveHTTPTransport: GoogleDriveHTTPTransport, Sendable {
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let response = response as? HTTPURLResponse else {
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let response = response as? HTTPURLResponse else {
+                throw GoogleDriveError(.ambiguousCommit, isRetryable: true)
+            }
+            return (data, response)
+        } catch let error as GoogleDriveError {
+            throw error
+        } catch {
+            // Offline/DNS/TLS/timeout failures are transient transport failures, never proof that
+            // the refresh grant was revoked.
             throw GoogleDriveError(.ambiguousCommit, isRetryable: true)
         }
-        return (data, response)
     }
 }
 
@@ -253,7 +261,7 @@ nonisolated struct GoogleDriveTokenEndpoint: Sendable {
         request.httpBody = body
         let (data, response) = try await transport.data(for: request)
         guard (200..<300).contains(response.statusCode) else {
-            throw GoogleDriveHTTPErrorMapper.error(statusCode: response.statusCode)
+            throw GoogleDriveHTTPErrorMapper.error(statusCode: response.statusCode, responseData: data)
         }
         do {
             return try JSONDecoder().decode(Response.self, from: data)
@@ -288,6 +296,12 @@ nonisolated struct GoogleDriveTokenEndpoint: Sendable {
 
 nonisolated enum GoogleDriveHTTPErrorMapper {
     static func error(statusCode: Int, responseData: Data? = nil) -> GoogleDriveError {
+        let oauthError = responseData.flatMap { data -> String? in
+            (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+        }
+        if oauthError == "invalid_grant" {
+            return GoogleDriveError(.reauthorizationRequired)
+        }
         let reason = responseData.flatMap { data -> String? in
             guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let error = root["error"] as? [String: Any],

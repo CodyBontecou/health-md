@@ -78,6 +78,10 @@ final class GoogleDriveDestinationRunner {
         defer { Task { await GoogleDriveDestinationRunGate.shared.release(destination.id) } }
 
         do {
+            try await journalStore.prune()
+            guard !(await journalStore.isAbandoned(operationID: bundle.operationID)) else {
+                throw GoogleDriveError(.ambiguousCommit)
+            }
             var journal: GoogleDriveOperationJournal
             if await journalStore.contains(operationID: bundle.operationID) {
                 let existing = try await journalStore.load(operationID: bundle.operationID)
@@ -123,6 +127,14 @@ final class GoogleDriveDestinationRunner {
 
     func hasJournal(operationID: UUID) async -> Bool {
         await journalStore.contains(operationID: operationID)
+    }
+
+    func hasRecoverableJournal(operationID: UUID) async throws -> Bool {
+        try await journalStore.prune()
+        guard !(await journalStore.isAbandoned(operationID: operationID)) else {
+            throw GoogleDriveError(.ambiguousCommit)
+        }
+        return await journalStore.contains(operationID: operationID)
     }
 
     func acknowledge(operationID: UUID) async throws {
@@ -215,6 +227,7 @@ final class GoogleDriveDestinationRunner {
                         name: folder.name,
                         parentID: folder.parentID,
                         pathHash: folder.pathHash,
+                        operationID: journal.id,
                         resourceKeys: resourceKeys(destination: destination, journal: journal),
                         accessToken: accessToken
                     )
@@ -335,7 +348,10 @@ final class GoogleDriveDestinationRunner {
                 resourceKeys: resourceKeys(destination: destination, journal: journal),
                 accessToken: accessToken
             )
-            guard matches.count <= 1 else { throw GoogleDriveError(.remoteConflict) }
+            guard matches.count <= 1,
+                  matches.allSatisfy({ $0.isOwned(relativePathHash: pathHash) }) else {
+                throw GoogleDriveError(.remoteConflict)
+            }
             if let metadata = matches.first {
                 guard metadata.mimeType == GoogleDriveFileMetadata.folderMIMEType,
                       metadata.parents == [parentID], !metadata.trashed else {
@@ -415,7 +431,10 @@ final class GoogleDriveDestinationRunner {
                         resourceKeys: resourceKeys(destination: destination, journal: journal),
                         accessToken: accessToken
                     )
-                    guard matches.count <= 1 else { throw GoogleDriveError(.remoteConflict) }
+                    guard matches.count <= 1,
+                          matches.allSatisfy({ $0.isOwned(relativePathHash: artifact.relativePathHash) }) else {
+                        throw GoogleDriveError(.remoteConflict)
+                    }
                     if let metadata = matches.first {
                         guard metadata.name == name, metadata.parents == [parentID], !metadata.trashed else {
                             throw GoogleDriveError(.remoteConflict)
@@ -552,9 +571,13 @@ final class GoogleDriveDestinationRunner {
                 artifact.acknowledgedByteOffset = 0
                 journal.artifacts[index] = artifact
                 try await journalStore.save(journal)
+                try await recheckBaseline(artifact, accessToken: accessToken)
                 sessionURL = try await startSession(artifact: artifact, finalByteCount: finalByteCount, finalSHA256: finalSHA256, accessToken: accessToken, destination: destination, journal: journal)
             }
         } else {
+            // Recheck this exact baseline immediately before initializing its update. The earlier
+            // bundle-wide preflight is not sufficient when prior artifacts/folders took time.
+            try await recheckBaseline(artifact, accessToken: accessToken)
             sessionURL = try await startSession(artifact: artifact, finalByteCount: finalByteCount, finalSHA256: finalSHA256, accessToken: accessToken, destination: destination, journal: journal)
         }
         artifact.uploadSessionURL = sessionURL
@@ -614,6 +637,8 @@ final class GoogleDriveDestinationRunner {
                 mediaType: artifact.mediaType,
                 byteCount: finalByteCount,
                 sha256: finalSHA256,
+                pathHash: artifact.relativePathHash,
+                operationID: journal.id,
                 resourceKeys: keys,
                 accessToken: accessToken
             )
@@ -627,18 +652,42 @@ final class GoogleDriveDestinationRunner {
             byteCount: finalByteCount,
             sha256: finalSHA256,
             pathHash: artifact.relativePathHash,
+            operationID: journal.id,
             resourceKeys: keys,
             accessToken: accessToken
         )
     }
 
+    private func recheckBaseline(
+        _ artifact: GoogleDriveJournalArtifact,
+        accessToken: String
+    ) async throws {
+        guard let baseline = artifact.baselineMetadata else { return }
+        let current = try await api.metadata(
+            id: baseline.id,
+            resourceKey: artifact.objectResourceKey,
+            accessToken: accessToken
+        )
+        guard sameRevision(baseline, current) else { throw GoogleDriveError(.remoteConflict) }
+    }
+
     private func verifyAndBind(
-        metadata: GoogleDriveFileMetadata,
+        metadata responseMetadata: GoogleDriveFileMetadata,
         artifact: GoogleDriveJournalArtifact,
         destination: GoogleDriveDestination,
         finalBytes: Data,
         accessToken: String
     ) async throws {
+        guard responseMetadata.id == artifact.objectID, let objectID = artifact.objectID else {
+            throw GoogleDriveError(.remoteConflict)
+        }
+        // Never treat response metadata as postflight authority. Fetch the exact reserved/mapped ID
+        // after the upload response and verify its current checksum or bytes.
+        let metadata = try await api.metadata(
+            id: objectID,
+            resourceKey: artifact.objectResourceKey ?? responseMetadata.resourceKey,
+            accessToken: accessToken
+        )
         let expectedName = artifact.relativePath.split(separator: "/").last.map(String.init)
         let expectedParents = artifact.parentID.map { [$0] } ?? []
         guard metadata.id == artifact.objectID,

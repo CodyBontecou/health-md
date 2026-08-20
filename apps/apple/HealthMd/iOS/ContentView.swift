@@ -1320,14 +1320,23 @@ struct ContentView: View {
                 dateRangeEnd: rangeEnd,
                 targetLabel: "Google Drive",
                 exportTarget: .googleDrive,
+                idempotencyKey: operationID,
                 profileName: profile.name
             )
-            if result.didCompleteAllRequestedDates {
-                await service.acknowledgeCompletedOperation(operationID)
-            }
+            var quotaAcknowledged = result.successCount == 0
             if result.successCount > 0 {
-                purchaseManager.recordExportUse()
-                trackSuccessfulExport(targetType: .googleDrive, startDate: rangeStart, endDate: rangeEnd)
+                // The operation ID is the durable accounting key, matching scheduled Drive jobs.
+                // A journal is acknowledged only after both history and quota are durable.
+                do {
+                    try purchaseManager.recordExportUse(jobID: operationID)
+                    quotaAcknowledged = true
+                    trackSuccessfulExport(targetType: .googleDrive, startDate: rangeStart, endDate: rangeEnd)
+                } catch {
+                    exportStatusMessage = "Google Drive upload completed, but local accounting is pending. Reopen Health.md to reconcile it."
+                }
+            }
+            if result.didCompleteAllRequestedDates, quotaAcknowledged {
+                await service.acknowledgeCompletedOperation(operationID)
             }
             if result.wasCancelled {
                 exportStatusMessage = "Google Drive export cancelled"

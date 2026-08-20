@@ -169,6 +169,7 @@ final class GoogleDriveExportService {
     }
 
     func readiness(destinationID: UUID?) -> GoogleDriveReadiness {
+        destinationStore.reload()
         guard GoogleDriveConfiguration.from() != nil else { return .configurationMissing }
         guard let destination = destinationStore.destination(id: destinationID) else {
             return .destinationMissing
@@ -194,6 +195,9 @@ final class GoogleDriveExportService {
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil,
         onProgress: ((Int, Int, String) -> Void)? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        // Profile/coordinator UI and this application service can own distinct store objects over
+        // the same app-scoped persistence. Reload at the authority boundary before every run.
+        destinationStore.reload()
         guard let destination = destinationStore.destination(id: destinationSnapshot.destinationID),
               destination.fingerprint == destinationSnapshot.fingerprint else {
             return Self.failure(dates: dates, error: GoogleDriveError(.folderUnavailable))
@@ -205,7 +209,7 @@ final class GoogleDriveExportService {
             // staged final bytes before asking HealthKit or the renderer for mutable source data.
             // A corrupt existing journal fails closed in `resume`; it is never overwritten by a
             // newly rendered bundle.
-            if await runner.hasJournal(operationID: operationID) {
+            if try await runner.hasRecoverableJournal(operationID: operationID) {
                 let resumed = await runner.resume(
                     operationID: operationID,
                     destination: destination,

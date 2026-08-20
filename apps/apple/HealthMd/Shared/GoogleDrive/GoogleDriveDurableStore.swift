@@ -68,16 +68,23 @@ nonisolated enum GoogleDriveProtectedFileStore {
 @MainActor
 final class GoogleDriveManagedObjectStore {
     private let fileURL: URL
+    private var loadError: GoogleDriveError?
     private(set) var bindings: [GoogleDriveManagedObjectBinding] = []
 
     init(rootURL: URL? = nil) {
-        let root = rootURL ?? (try? GoogleDriveProtectedFileStore.defaultRoot())
-        fileURL = (root ?? FileManager.default.temporaryDirectory)
-            .appendingPathComponent("managed-objects.json")
+        do {
+            let root = try rootURL ?? GoogleDriveProtectedFileStore.defaultRoot()
+            fileURL = root.appendingPathComponent("managed-objects.json")
+        } catch {
+            fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("unavailable-managed-objects.json")
+            loadError = GoogleDriveError(.folderUnavailable)
+            return
+        }
         load()
     }
 
     func binding(destinationID: UUID, relativePathHash: String) throws -> GoogleDriveManagedObjectBinding? {
+        if let loadError { throw loadError }
         let matches = bindings.filter {
             $0.destinationID == destinationID && $0.relativePathHash == relativePathHash
         }
@@ -86,6 +93,7 @@ final class GoogleDriveManagedObjectStore {
     }
 
     func upsert(_ binding: GoogleDriveManagedObjectBinding) throws {
+        if let loadError { throw loadError }
         bindings.removeAll {
             $0.destinationID == binding.destinationID && $0.relativePathHash == binding.relativePathHash
         }
@@ -97,23 +105,42 @@ final class GoogleDriveManagedObjectStore {
         try persist()
     }
 
-    func removeAll(destinationID: UUID) {
+    func removeAll(destinationID: UUID) throws {
+        if let loadError { throw loadError }
         bindings.removeAll { $0.destinationID == destinationID }
-        try? persist()
+        try persist()
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL),
-              let values = try? JSONSerialization.jsonObject(with: data) as? [Any] else {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
             bindings = []
             return
         }
-        bindings = values.compactMap { value in
-            guard JSONSerialization.isValidJSONObject(value),
-                  let data = try? JSONSerialization.data(withJSONObject: value),
-                  let binding = try? JSONDecoder().decode(GoogleDriveManagedObjectBinding.self, from: data),
-                  binding.version == GoogleDriveManagedObjectBinding.currentVersion else { return nil }
-            return binding
+        do {
+            let data = try Data(contentsOf: fileURL)
+            guard let values = try JSONSerialization.jsonObject(with: data) as? [Any] else {
+                throw GoogleDriveError(.remoteConflict)
+            }
+            let decoded = try values.map { value -> GoogleDriveManagedObjectBinding in
+                guard JSONSerialization.isValidJSONObject(value) else {
+                    throw GoogleDriveError(.remoteConflict)
+                }
+                let recordData = try JSONSerialization.data(withJSONObject: value)
+                let binding = try JSONDecoder().decode(GoogleDriveManagedObjectBinding.self, from: recordData)
+                guard binding.version == GoogleDriveManagedObjectBinding.currentVersion else {
+                    throw GoogleDriveError(.remoteConflict)
+                }
+                return binding
+            }
+            let keys = decoded.map { "\($0.destinationID.uuidString):\($0.relativePathHash)" }
+            guard Set(keys).count == keys.count else { throw GoogleDriveError(.remoteConflict) }
+            bindings = decoded
+        } catch let error as GoogleDriveError {
+            loadError = error
+            bindings = []
+        } catch {
+            loadError = GoogleDriveError(.remoteConflict)
+            bindings = []
         }
     }
 
@@ -213,18 +240,23 @@ actor GoogleDriveJournalStore {
     private let spoolURL: URL
     private let now: @Sendable () -> Date
     private let retention: TimeInterval
+    private let unresolvedRetention: TimeInterval
+    private let abandonedURL: URL
 
     init(
         rootURL: URL? = nil,
         now: @escaping @Sendable () -> Date = Date.init,
-        retention: TimeInterval = 14 * 24 * 60 * 60
+        retention: TimeInterval = 14 * 24 * 60 * 60,
+        unresolvedRetention: TimeInterval = 90 * 24 * 60 * 60
     ) throws {
         let root = try rootURL ?? GoogleDriveProtectedFileStore.defaultRoot()
         self.rootURL = root
         journalsURL = root.appendingPathComponent("journals", isDirectory: true)
         spoolURL = root.appendingPathComponent("spool", isDirectory: true)
+        abandonedURL = root.appendingPathComponent("abandoned-operations.json")
         self.now = now
         self.retention = retention
+        self.unresolvedRetention = unresolvedRetention
         try GoogleDriveProtectedFileStore.prepareDirectory(journalsURL)
         try GoogleDriveProtectedFileStore.prepareDirectory(spoolURL)
     }
@@ -295,6 +327,16 @@ actor GoogleDriveJournalStore {
         FileManager.default.fileExists(atPath: journalURL(operationID: operationID).path)
     }
 
+    func isAbandoned(operationID: UUID) -> Bool {
+        guard let data = try? Data(contentsOf: abandonedURL),
+              let notices = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return false
+        }
+        return notices.contains {
+            ($0["operation_id"] as? String) == operationID.uuidString.lowercased()
+        }
+    }
+
     func load(operationID: UUID) throws -> GoogleDriveOperationJournal {
         do {
             let journal = try JSONDecoder().decode(
@@ -360,8 +402,46 @@ actor GoogleDriveJournalStore {
         try GoogleDriveProtectedFileStore.synchronizeDirectory(spoolURL)
     }
 
+    /// Disconnect is fail-closed while any operation still needs this credential for exact-ID
+    /// reconciliation. Once every operation is history-acknowledged, protected journals/spools are
+    /// removed together with the local authority.
+    func cleanupForDisconnect(destinationID: UUID) throws {
+        let urls = try FileManager.default.contentsOfDirectory(
+            at: journalsURL,
+            includingPropertiesForKeys: nil
+        )
+        let journals = try urls.map { url -> GoogleDriveOperationJournal in
+            do {
+                let journal = try JSONDecoder().decode(
+                    GoogleDriveOperationJournal.self,
+                    from: Data(contentsOf: url)
+                )
+                guard journal.version == GoogleDriveOperationJournal.currentVersion else {
+                    throw GoogleDriveError(.remoteConflict)
+                }
+                return journal
+            } catch let error as GoogleDriveError {
+                throw error
+            } catch {
+                // A torn journal may belong to this authority; never erase credentials while its
+                // destination cannot be proven.
+                throw GoogleDriveError(.remoteConflict)
+            }
+        }.filter {
+            $0.destinationSnapshot.destinationID == destinationID
+        }
+        guard journals.allSatisfy(\.historyAcknowledged) else {
+            throw GoogleDriveError(.partialCompletion)
+        }
+        for journal in journals {
+            try remove(operationID: journal.id)
+        }
+    }
+
     func prune() throws {
-        let cutoff = now().addingTimeInterval(-retention)
+        let current = now()
+        let cutoff = current.addingTimeInterval(-retention)
+        let unresolvedCutoff = current.addingTimeInterval(-unresolvedRetention)
         guard let urls = try? FileManager.default.contentsOfDirectory(
             at: journalsURL,
             includingPropertiesForKeys: nil
@@ -369,11 +449,33 @@ actor GoogleDriveJournalStore {
         for url in urls {
             guard let data = try? Data(contentsOf: url),
                   let journal = try? JSONDecoder().decode(GoogleDriveOperationJournal.self, from: data),
-                  journal.version == GoogleDriveOperationJournal.currentVersion,
-                  journal.historyAcknowledged,
-                  journal.createdAt < cutoff else { continue }
-            try remove(operationID: journal.id)
+                  journal.version == GoogleDriveOperationJournal.currentVersion else { continue }
+            if journal.historyAcknowledged, journal.createdAt < cutoff {
+                try remove(operationID: journal.id)
+            } else if !journal.historyAcknowledged, journal.createdAt < unresolvedCutoff {
+                // Bound protected health-byte retention while preserving a durable, privacy-safe
+                // notice that an unresolved operation was abandoned rather than silently erased.
+                try appendAbandonedNotice(journal)
+                try remove(operationID: journal.id)
+            }
         }
+    }
+
+    private func appendAbandonedNotice(_ journal: GoogleDriveOperationJournal) throws {
+        var notices = (try? JSONSerialization.jsonObject(with: Data(contentsOf: abandonedURL)) as? [[String: Any]]) ?? []
+        notices.removeAll { ($0["operation_id"] as? String) == journal.id.uuidString.lowercased() }
+        notices.append([
+            "operation_id": journal.id.uuidString.lowercased(),
+            "destination_id": journal.destinationSnapshot.destinationID.uuidString.lowercased(),
+            "created_at": journal.createdAt.timeIntervalSince1970,
+            "terminal_error": journal.terminalErrorID?.rawValue ?? GoogleDriveErrorID.ambiguousCommit.rawValue,
+            "abandoned_at": now().timeIntervalSince1970
+        ])
+        if notices.count > 256 { notices.removeFirst(notices.count - 256) }
+        try GoogleDriveProtectedFileStore.write(
+            JSONSerialization.data(withJSONObject: notices, options: [.sortedKeys]),
+            to: abandonedURL
+        )
     }
 
     private func journalURL(operationID: UUID) -> URL {

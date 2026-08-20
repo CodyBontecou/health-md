@@ -75,6 +75,14 @@ nonisolated struct GoogleDriveConfiguration: Equatable, Sendable {
     }
 }
 
+/// Copy shown before the first network authorization surface. Keeping it in a testable model
+/// ensures OAuth cannot be launched without an explicit sensitive-health disclosure.
+nonisolated enum GoogleDrivePrivacyDisclosure {
+    static let title = "Send sensitive health data to Google Drive?"
+    static let message = "Health.md will upload the health files produced by this profile directly to the Google account and Drive folder you choose. Google may store, process, share, and retain those files under your Google account and Workspace policies. Health.md does not send these files through its servers."
+    static let confirm = "Continue to Google"
+}
+
 nonisolated enum GoogleDriveReadiness: Equatable, Sendable {
     case ready
     case configurationMissing
@@ -180,8 +188,46 @@ nonisolated struct GoogleDriveFileMetadata: Codable, Equatable, Sendable {
     let sha256Checksum: String?
     let trashed: Bool
     let canAddChildren: Bool?
+    let appProperties: [String: String]?
+
+    init(
+        id: String,
+        name: String,
+        mimeType: String,
+        parents: [String],
+        driveID: String? = nil,
+        resourceKey: String? = nil,
+        version: String? = nil,
+        size: UInt64? = nil,
+        md5Checksum: String? = nil,
+        sha1Checksum: String? = nil,
+        sha256Checksum: String? = nil,
+        trashed: Bool,
+        canAddChildren: Bool? = nil,
+        appProperties: [String: String]? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.mimeType = mimeType
+        self.parents = parents
+        self.driveID = driveID
+        self.resourceKey = resourceKey
+        self.version = version
+        self.size = size
+        self.md5Checksum = md5Checksum
+        self.sha1Checksum = sha1Checksum
+        self.sha256Checksum = sha256Checksum
+        self.trashed = trashed
+        self.canAddChildren = canAddChildren
+        self.appProperties = appProperties
+    }
 
     var strongestChecksum: String? { sha256Checksum ?? sha1Checksum ?? md5Checksum }
+
+    func isOwned(relativePathHash: String) -> Bool {
+        appProperties?["healthmd_owner"] == "healthmd" &&
+            appProperties?["healthmd_path_hash"] == relativePathHash
+    }
 }
 
 nonisolated struct GoogleDriveManagedObjectBinding: Codable, Equatable, Sendable {

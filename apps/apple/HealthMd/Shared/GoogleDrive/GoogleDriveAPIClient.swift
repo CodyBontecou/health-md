@@ -5,10 +5,10 @@ nonisolated protocol GoogleDriveAPIClientProtocol: Sendable {
     func metadata(id: String, resourceKey: String?, accessToken: String) async throws -> GoogleDriveFileMetadata
     func validateFolder(_ destination: GoogleDriveDestination, accessToken: String) async throws -> GoogleDriveFileMetadata
     func generateIDs(count: Int, accessToken: String) async throws -> [String]
-    func createFolder(id: String, name: String, parentID: String, pathHash: String, resourceKeys: [String: String], accessToken: String) async throws -> GoogleDriveFileMetadata
+    func createFolder(id: String, name: String, parentID: String, pathHash: String, operationID: UUID, resourceKeys: [String: String], accessToken: String) async throws -> GoogleDriveFileMetadata
     func findManagedObjects(parentID: String, name: String, pathHash: String, resourceKeys: [String: String], accessToken: String) async throws -> [GoogleDriveFileMetadata]
-    func startResumableCreate(id: String, name: String, parentID: String, mediaType: String, byteCount: UInt64, sha256: String, pathHash: String, resourceKeys: [String: String], accessToken: String) async throws -> URL
-    func startResumableUpdate(id: String, mediaType: String, byteCount: UInt64, sha256: String, resourceKeys: [String: String], accessToken: String) async throws -> URL
+    func startResumableCreate(id: String, name: String, parentID: String, mediaType: String, byteCount: UInt64, sha256: String, pathHash: String, operationID: UUID, resourceKeys: [String: String], accessToken: String) async throws -> URL
+    func startResumableUpdate(id: String, mediaType: String, byteCount: UInt64, sha256: String, pathHash: String, operationID: UUID, resourceKeys: [String: String], accessToken: String) async throws -> URL
     func upload(sessionURL: URL, data: Data, offset: UInt64, totalByteCount: UInt64, accessToken: String) async throws -> GoogleDriveUploadResponse
     func uploadStatus(sessionURL: URL, totalByteCount: UInt64, accessToken: String) async throws -> GoogleDriveUploadResponse
     func download(id: String, resourceKey: String?, accessToken: String) async throws -> Data
@@ -37,6 +37,7 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
         let sha256Checksum: String?
         let trashed: Bool?
         let capabilities: Capabilities?
+        let appProperties: [String: String]?
         struct Capabilities: Decodable { let canAddChildren: Bool? }
 
         var value: GoogleDriveFileMetadata {
@@ -53,12 +54,13 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
                 sha1Checksum: sha1Checksum,
                 sha256Checksum: sha256Checksum,
                 trashed: trashed ?? false,
-                canAddChildren: capabilities?.canAddChildren
+                canAddChildren: capabilities?.canAddChildren,
+                appProperties: appProperties
             )
         }
     }
 
-    private static let metadataFields = "id,name,mimeType,parents,driveId,resourceKey,version,size,md5Checksum,sha1Checksum,sha256Checksum,trashed,capabilities(canAddChildren)"
+    private static let metadataFields = "id,name,mimeType,parents,driveId,resourceKey,version,size,md5Checksum,sha1Checksum,sha256Checksum,trashed,capabilities(canAddChildren),appProperties"
     private let transport: any GoogleDriveHTTPTransport
 
     init(transport: any GoogleDriveHTTPTransport = SystemGoogleDriveHTTPTransport()) {
@@ -124,6 +126,7 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
         name: String,
         parentID: String,
         pathHash: String,
+        operationID: UUID,
         resourceKeys: [String: String],
         accessToken: String
     ) async throws -> GoogleDriveFileMetadata {
@@ -136,7 +139,7 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
             "name": name,
             "mimeType": GoogleDriveFileMetadata.folderMIMEType,
             "parents": [parentID],
-            "appProperties": Self.appProperties(pathHash: pathHash, sha256: nil)
+            "appProperties": Self.appProperties(pathHash: pathHash, sha256: nil, operationID: operationID)
         ]
         var request = Self.request(url: url, token: accessToken, method: "POST")
         request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
@@ -155,8 +158,10 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
     ) async throws -> [GoogleDriveFileMetadata] {
         let escapedName = name.replacingOccurrences(of: "'", with: "\\'")
         let escapedParent = parentID.replacingOccurrences(of: "'", with: "\\'")
-        let escapedHash = pathHash.replacingOccurrences(of: "'", with: "\\'")
-        let query = "'\(escapedParent)' in parents and name = '\(escapedName)' and trashed = false and appProperties has { key='healthmd_path_hash' and value='\(escapedHash)' }"
+        // Search every same-name object visible under drive.file. The runner accepts only exact
+        // Health.md ownership/path markers and fails on accessible unowned collisions.
+        _ = pathHash
+        let query = "'\(escapedParent)' in parents and name = '\(escapedName)' and trashed = false"
         let url = Self.url(path: "/drive/v3/files", query: [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "spaces", value: "drive"),
@@ -180,6 +185,7 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
         byteCount: UInt64,
         sha256: String,
         pathHash: String,
+        operationID: UUID,
         resourceKeys: [String: String],
         accessToken: String
     ) async throws -> URL {
@@ -188,7 +194,7 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
             "name": name,
             "parents": [parentID],
             "mimeType": mediaType,
-            "appProperties": Self.appProperties(pathHash: pathHash, sha256: sha256)
+            "appProperties": Self.appProperties(pathHash: pathHash, sha256: sha256, operationID: operationID)
         ]
         return try await startResumable(
             path: "/upload/drive/v3/files",
@@ -206,13 +212,15 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
         mediaType: String,
         byteCount: UInt64,
         sha256: String,
+        pathHash: String,
+        operationID: UUID,
         resourceKeys: [String: String],
         accessToken: String
     ) async throws -> URL {
         try await startResumable(
             path: "/upload/drive/v3/files/\(Self.pathComponent(id))",
             method: "PATCH",
-            metadata: ["appProperties": Self.appProperties(pathHash: nil, sha256: sha256)],
+            metadata: ["appProperties": Self.appProperties(pathHash: pathHash, sha256: sha256, operationID: operationID)],
             mediaType: mediaType,
             byteCount: byteCount,
             resourceKeys: resourceKeys,
@@ -351,10 +359,11 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
         value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))) ?? value
     }
 
-    private static func appProperties(pathHash: String?, sha256: String?) -> [String: String] {
+    private static func appProperties(pathHash: String?, sha256: String?, operationID: UUID) -> [String: String] {
         var result = [
             "healthmd_owner": "healthmd",
-            "healthmd_version": "1"
+            "healthmd_version": "1",
+            "healthmd_operation_id": operationID.uuidString.lowercased()
         ]
         if let pathHash { result["healthmd_path_hash"] = pathHash }
         if let sha256 { result["healthmd_sha256"] = sha256 }

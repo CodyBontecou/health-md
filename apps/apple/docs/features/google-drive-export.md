@@ -14,7 +14,9 @@ Production and test builds must use separate Google Cloud projects. In each proj
 
 A build with absent or placeholder values remains compilable and shows `configuration_missing`; it never falls back to Files, an API endpoint, a connected Mac, or another Google account.
 
-Health.md requests only `https://www.googleapis.com/auth/drive.file`. Authorization uses `ASWebAuthenticationSession`, authorization-code PKCE S256, offline access, explicit consent, and Google's mobile folder Picker controls. Refresh tokens are stored in Keychain with after-first-unlock accessibility so scheduled work can refresh silently.
+Health.md requests only `https://www.googleapis.com/auth/drive.file`. Before OAuth opens, the profile editor discloses that sensitive health exports will go directly to Google and be governed by the selected Google account/Workspace policies. Authorization uses `ASWebAuthenticationSession`, authorization-code PKCE S256, offline access, explicit consent, and Google's mobile folder Picker controls. Refresh tokens are stored in Keychain with after-first-unlock accessibility so scheduled work can refresh silently.
+
+The `drive.file` scope does **not** provide arbitrary access to every pre-existing file in a selected folder. Health.md manages exact files it created or that Google made accessible to this app. If an accessible same-name item lacks the expected Health.md ownership/path marker, export stops with `remote_conflict`; Health.md never claims support for, adopts, or overwrites arbitrary inaccessible pre-existing files.
 
 ## Execution and recovery
 
@@ -23,8 +25,9 @@ Health.md requests only `https://www.googleapis.com/auth/drive.file`. Authorizat
 - Pending scheduled work freezes the local destination UUID and fingerprint. Reauthorization refreshes the same binding; another account fails with `account_mismatch`.
 - Append, Markdown Update, and Daily Note injection operate only on exact files previously created and bound by this Google OAuth application. Existing Files-provider notes and other unowned same-name files are never adopted automatically. The runner downloads one managed baseline, persists it, runs the existing merger once, and persists the complete final bytes before upload. A changed version/checksum, rename, move, trash, duplicate binding, accessible unowned same-name object, or capability loss stops rather than force-replacing. Because `drive.file` can hide unauthorized children and Drive allows duplicate names, users should choose a new or otherwise empty folder.
 - Drive v3 has no documented compare-and-swap for `files.update`. Health.md performs complete-bundle preflight and exact-ID/version/checksum postflight, but a non-Health.md editor can still race the upload.
-- Protected journals record generated IDs, final-byte hashes, resumable session state, and per-artifact checkpoints. Retry resumes the exact staged frontier. A partial multi-file commit is reported as `partial_completion`.
-- Disconnect revokes when possible and always removes local credentials/authority. It does not delete remote files.
+- Protected journals record generated IDs, final-byte hashes, resumable session state, operation-ID idempotency markers, and per-artifact checkpoints. Recovery resumes the exact staged frontier. Generic history Retry Export is disabled for Drive entries so it can never redirect them to the local vault.
+- A partial multi-file commit is reported as `partial_completion`; failed details and terminal destination errors cannot appear as full success. Journals are acknowledged only after durable history and quota accounting.
+- Disconnect removes acknowledged protected state and revokes/removes local credentials/authority, but is blocked while an unresolved journal still requires that credential for exact-ID reconciliation. It does not delete remote files. Unresolved protected byte spools have a bounded retention window; expiry leaves a bounded privacy-safe abandoned-operation notice rather than silently erasing all evidence.
 
 Scheduled authorization is silent only. If refresh is revoked, the journal remains and the operation reports `reauthorization_required`; foreground reconnect is required. There is no fallback destination.
 
