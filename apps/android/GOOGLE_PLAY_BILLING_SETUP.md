@@ -28,7 +28,7 @@ Google Play Billing Client
    - `startConnection()`: Idempotently connects the application-scoped billing client
 
 2. **BillingRepositoryImpl** (`data/billing/BillingRepositoryImpl.kt`)
-   - Concrete implementation using Google Play Billing Client v7.1+
+   - Concrete implementation using Google Play Billing Client v8.3+
    - Handles product queries, purchase flow, and acknowledgment
    - Automatically acknowledges purchases (required for security)
 
