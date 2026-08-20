@@ -12,6 +12,7 @@ import androidx.work.WorkManager
 import androidx.work.await
 import androidx.work.workDataOf
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ScheduleCadenceUnit
 import com.healthmd.domain.model.ScheduleDateWindow
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,6 +26,46 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
+
+/**
+ * Pure migration decision for the legacy single schedule → Default-profile entry move:
+ * returns the entry to arm, or null when migration does not apply (entries already exist,
+ * the legacy schedule is disabled, or no active profile resolves). The scheduler applies
+ * the returned entry and then disables the legacy schedule (see
+ * [ScheduledProfileScheduler.migrateLegacyScheduleIfNeeded]); exactly one runtime may own
+ * scheduling afterward.
+ */
+internal fun legacyMigrationEntry(
+    settings: ExportSettings,
+    existingEntries: List<ScheduledProfileEntry>,
+    defaultProfileId: String?,
+    zone: ZoneId,
+    today: LocalDate,
+): ScheduledProfileEntry? {
+    if (existingEntries.isNotEmpty()) return null
+    if (!settings.scheduleEnabled) return null
+    val profileId = defaultProfileId ?: return null
+
+    return ScheduledProfileEntry(
+        profileId = profileId,
+        isEnabled = true,
+        anchorEpochDay = today.toEpochDay(),
+        weekdayIso = 1,
+        hour = settings.scheduleHour.coerceIn(0, 23),
+        minute = settings.scheduleMinute.coerceIn(0, 59),
+        cadenceValue = settings.scheduleCadenceValue.coerceAtLeast(1),
+        cadenceUnit = when (settings.scheduleCadenceUnit) {
+            // The legacy single schedule supports minute/hour/day/week cadences only;
+            // sub-day cadences map to daily because profile entries are day-granular.
+            ScheduleCadenceUnit.MINUTES, ScheduleCadenceUnit.HOURS, ScheduleCadenceUnit.DAYS ->
+                ScheduledProfileCadenceUnit.DAY
+            ScheduleCadenceUnit.WEEKS -> ScheduledProfileCadenceUnit.WEEK
+        },
+        dateWindow = ScheduledProfileDateWindow.PAST_COMPLETE_DAYS,
+        lookbackDays = settings.scheduleLookbackDays.coerceIn(1, 30),
+        zoneId = zone.id,
+    )
+}
 
 /**
  * Arms and re-arms one exact alarm per enabled scheduled-profile entry (Android phase-6 runtime).
@@ -189,38 +230,31 @@ class ScheduledProfileScheduler @Inject constructor(
             alarmManager.canScheduleExactAlarms()
 
     /**
-     * One-time migration: an enabled legacy single schedule becomes the Default profile's entry,
-     * then the legacy schedule is disabled so exactly one runtime path owns scheduling.
+     * One-time migration: an enabled legacy single schedule becomes the Default profile's
+     * entry, then the legacy schedule is disabled and its armed work cancelled so exactly one
+     * runtime path owns scheduling. iOS applies the same rule in
+     * `ExportProfileCoordinator.bootstrapIfNeeded`.
      */
     private suspend fun migrateLegacyScheduleIfNeeded() {
-        val entries = entryStore.getEntries()
-        if (entries.isNotEmpty()) return
         val settings = legacySettings.getExportSettings()
-        if (!settings.scheduleEnabled) return
-        val defaultProfile = profileRepository.getActiveProfile() ?: return
-
         val zone = ZoneId.systemDefault()
-        val entry = ScheduledProfileEntry(
-            profileId = defaultProfile.id,
-            isEnabled = true,
-            anchorEpochDay = LocalDate.now(zone).toEpochDay(),
-            weekdayIso = 1,
-            hour = settings.scheduleHour.coerceIn(0, 23),
-            minute = settings.scheduleMinute.coerceIn(0, 59),
-            cadenceValue = settings.scheduleCadenceValue.coerceAtLeast(1),
-            cadenceUnit = when (settings.scheduleCadenceUnit) {
-                // The legacy single schedule supports minute/hour/day/week cadences only;
-                // sub-day cadences map to daily because profile entries are day-granular.
-                ScheduleCadenceUnit.MINUTES, ScheduleCadenceUnit.HOURS, ScheduleCadenceUnit.DAYS ->
-                    ScheduledProfileCadenceUnit.DAY
-                ScheduleCadenceUnit.WEEKS -> ScheduledProfileCadenceUnit.WEEK
-            },
-            dateWindow = ScheduledProfileDateWindow.PAST_COMPLETE_DAYS,
-            lookbackDays = settings.scheduleLookbackDays.coerceIn(1, 30),
-            zoneId = zone.id,
-        )
+        val entry = legacyMigrationEntry(
+            settings = settings,
+            existingEntries = entryStore.getEntries(),
+            defaultProfileId = profileRepository.getActiveProfile()?.id,
+            zone = zone,
+            today = LocalDate.now(zone),
+        ) ?: return
         entryStore.upsert(entry)
-        Timber.i("Migrated legacy schedule into Default profile entry")
+
+        // The migration is only complete once the legacy schedule cannot also fire:
+        // disable the persisted setting and cancel any already-armed legacy work
+        // (alarm + WorkManager). Without this, both runtimes exported independently
+        // after migration — the legacy path via live settings instead of the profile's
+        // destinations.
+        legacySettings.updateExportSettings(settings.copy(scheduleEnabled = false))
+        runCatching { workManager.cancelUniqueWork(ExportWorker.WORK_NAME).await() }
+        Timber.i("Migrated legacy schedule into Default profile entry and disabled the legacy schedule")
     }
 
     companion object {
