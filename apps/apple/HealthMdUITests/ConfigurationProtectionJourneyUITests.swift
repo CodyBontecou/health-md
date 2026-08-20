@@ -80,10 +80,19 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         let protectedControl = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
         scrollUntilExists(protectedControl, in: app)
         XCTAssertTrue(protectedControl.waitForExistence(timeout: 5))
+        // The preset row can be only partially exposed above the tab bar while XCUITest still
+        // reports the button as hittable. Move it a bounded distance before tapping.
+        let scrollView = app.scrollViews.firstMatch
+        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
+            forDuration: 0.05,
+            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        )
+        XCTAssertTrue(waitHittable(protectedControl))
         protectedControl.tap()
 
-        let toast = app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
+        let toast = firstHittableToast(in: app)
         XCTAssertTrue(toast.waitForExistence(timeout: 3))
+        XCTAssertTrue(waitHittable(toast))
         toast.tap()
 
         let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
