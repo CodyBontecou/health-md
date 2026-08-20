@@ -779,7 +779,11 @@ struct ExportProfileDetailView: View {
                     }
                     .buttonStyle(.borderless)
                     .accessibilityIdentifier(AccessibilityID.ExportProfiles.copyIDButton)
-                    .accessibilityLabel(String(localized: "Copy profile ID", comment: "Accessibility label for the copy ID button"))
+                    .accessibilityLabel(
+                        idCopied
+                            ? String(localized: "Copied", comment: "Accessibility label after copying the profile ID")
+                            : String(localized: "Copy profile ID", comment: "Accessibility label for the copy ID button")
+                    )
                 }
             }
         }
