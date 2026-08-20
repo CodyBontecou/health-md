@@ -176,6 +176,21 @@ final class ScheduledExportEntryStore: ObservableObject {
 
     // MARK: - Lookup
 
+    /// All entries re-read from storage. Scheduling decisions made by store
+    /// instances owned by other subsystems (SchedulingManager observes the UI
+    /// coordinator's mutations) must read through this so a just-saved edit is
+    /// visible immediately instead of serving the cached `entries` snapshot.
+    func allEntries() -> [ScheduledExportEntry] {
+        reloadFromDefaults()
+        return entries
+    }
+
+    /// Enabled entries re-read from storage; see `allEntries()`.
+    func enabledEntries() -> [ScheduledExportEntry] {
+        reloadFromDefaults()
+        return entries.filter(\.isEnabled)
+    }
+
     func entry(profileID: UUID) -> ScheduledExportEntry? {
         reloadFromDefaults()
         return entries.first { $0.profileID == profileID }

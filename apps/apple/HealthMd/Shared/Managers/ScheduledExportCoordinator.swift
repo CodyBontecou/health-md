@@ -78,6 +78,7 @@ final class ScheduledExportCoordinator {
                 settingsSnapshot: request.settingsSnapshot,
                 profileID: request.profileID,
                 profileName: request.profileName,
+                attemptedAt: now(),
                 calendar: calendar
             )
         } else if result.didCompleteAllRequestedDates {
@@ -86,8 +87,9 @@ final class ScheduledExportCoordinator {
             return .clearedAfterSuccess
         } else {
             // Legacy aggregate-only partial results cannot identify which days
-            // remain, so conservatively retain the original request.
-            retryRequest = request
+            // remain, so conservatively retain the original request — marked
+            // attempted so bulk fallback cancellation cannot destroy it.
+            retryRequest = request.markingAttempted(at: now())
         }
 
         try pendingExportStore.upsert(retryRequest)

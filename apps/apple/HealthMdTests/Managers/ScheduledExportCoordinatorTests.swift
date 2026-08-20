@@ -201,8 +201,11 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
-        XCTAssertEqual(scheduler.immediateRequests[request.id], request)
+        // The preserved retry is marked attempted (fireDate is the injected
+        // coordinator clock) so bulk fallback cancellation cannot destroy it.
+        let expectedRetry = request.markingAttempted(at: fireDate)
+        XCTAssertEqual(try store.loadAll(), [expectedRetry])
+        XCTAssertEqual(scheduler.immediateRequests[request.id], expectedRetry)
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }
 
@@ -223,7 +226,7 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
 
         try await coordinator.completePendingScheduledExport(request, result: result)
 
-        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(try store.loadAll(), [request.markingAttempted(at: fireDate)])
         XCTAssertNil(scheduler.immediateRequests[request.id])
         XCTAssertFalse(scheduler.canceledRequestIDs.contains(request.id))
     }

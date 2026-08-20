@@ -99,13 +99,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
                 completionHandler()
             }
-        } else if request.identifier.contains("export.reminder") {
-            Task { @MainActor in
-                await SchedulingManager.shared.waitForScheduledExportDependencies()
-                await SchedulingManager.shared.performNotificationTriggeredExport()
-                completionHandler()
-            }
         } else {
+            // Recovery notifications all carry a pending-export payload with a
+            // stable request ID; anything else (result banners from older
+            // builds included) has no retry semantics to honor on tap.
             completionHandler()
         }
     }

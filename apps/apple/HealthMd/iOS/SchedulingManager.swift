@@ -125,7 +125,6 @@ class SchedulingManager: ObservableObject {
     @MainActor private var scheduledMacExportTimeoutTasks: [UUID: Task<Void, Never>] = [:]
     @MainActor private var scheduledMacExportTransferTasks: [UUID: Task<Void, Never>] = [:]
     @MainActor private var inFlightPendingExportIDs: Set<PendingExportRequest.ID> = []
-    @MainActor private var notificationTappedPendingExportIDs: Set<PendingExportRequest.ID> = []
     @MainActor private var inFlightScheduledOccurrenceKeys: Set<Date> = []
     /// Phase-3 per-profile occurrence keys: "profileID|kind|fireMinute". Two
     /// profiles firing at the same minute never deduplicate each other
@@ -190,8 +189,10 @@ class SchedulingManager: ObservableObject {
         // Mirror the coalesced state to the worker so server-side cron can
         // deliver silent push at the earliest preferred minute. Disabling
         // everything sends isEnabled:false so the worker drops the row.
+        // Fresh read: the UI mutates entries through the coordinator's store
+        // instance, so the manager must re-read before syncing.
         PushRegistrationManager.shared.syncSchedules(
-            scheduledEntryStore.entries,
+            scheduledEntryStore.allEntries(),
             legacy: schedule
         )
     }
@@ -316,76 +317,12 @@ class SchedulingManager: ObservableObject {
         logger.info("HealthKit background delivery received")
         WidgetCenter.shared.reloadAllTimelines()
 
-        // Phase 3: entries own due evaluation when any are enabled.
+        // Phase 3 dual-mode: entries first when enabled, then the legacy
+        // schedule's due occurrence, so both run when both are enabled.
         if hasEnabledProfileEntries {
             await runDueProfileOccurrences()
-            return
         }
-
-        guard schedule.isEnabled else {
-            logger.info("Schedule disabled, ignoring background delivery")
-            return
-        }
-
-        let currentDate = now()
-        guard let occurrence = ScheduleDateMath.dueScheduledOccurrences(
-            schedule: schedule,
-            now: currentDate
-        ).first else {
-            logger.info("HealthKit background delivery skipped: no scheduled occurrence is due")
-            return
-        }
-
-        let fireDate = occurrence.fireDate
-        let kind = occurrence.kind
-        let calendar = Calendar.current
-
-        if kind == .completedDay {
-            let eligibleDates = ScheduleDateMath.scheduledExportDates(
-                schedule: schedule,
-                fireDate: fireDate,
-                calendar: calendar
-            )
-            guard let eligibleEndDate = eligibleDates.last else {
-                logger.info("HealthKit background delivery skipped: no eligible export dates")
-                return
-            }
-
-            if let lastExport = schedule.lastExportDate {
-                let lastExportDay = calendar.startOfDay(for: lastExport)
-                let lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: lastExportDay) ?? lastExportDay
-                if lastExportedDataDay >= eligibleEndDate {
-                    logger.info("Scheduled occurrence already exported, skipping")
-                    return
-                }
-            }
-        }
-
-        guard beginScheduledOccurrenceExport(fireDate: fireDate) else { return }
-        defer { finishScheduledOccurrenceExport(fireDate: fireDate) }
-
-        logger.info("Triggering export from HealthKit background delivery")
-        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate, kind: kind)
-        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
-        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
-        let target = scheduledTarget(for: pendingRequest)
-        cancelPendingExportFallbackNotification(for: pendingRequest)
-        let result = await runScheduledExport(
-            dates: dates,
-            target: target,
-            settingsSnapshot: pendingRequest?.settingsSnapshot,
-            quotaJobID: pendingRequest?.id
-        )
-
-        await processAutomaticScheduledExportResult(
-            result,
-            pendingRequest: pendingRequest,
-            target: target,
-            dateRangeStart: range.start,
-            dateRangeEnd: range.end,
-            fallbackDaysToExport: range.totalCount,
-            scheduledFireDate: fireDate
-        )
+        _ = await runDueLegacyOccurrence()
     }
 
     // MARK: - Background Task Registration
@@ -435,26 +372,36 @@ class SchedulingManager: ObservableObject {
         let request = BGProcessingTaskRequest(identifier: Self.backgroundTaskIdentifier)
 
         // Calculate next execution time
-        let nextRunOccurrence = calculateNextRunOccurrence()
-        let nextRunDate = nextRunOccurrence?.fireDate ?? now().addingTimeInterval(3600)
+        let nextRunPlan = calculateNextRunPlan()
+        let nextRunDate = nextRunPlan?.occurrence.fireDate ?? now().addingTimeInterval(3600)
         request.earliestBeginDate = nextRunDate
 
         // Prefer running when connected to power for better reliability.
         // API Endpoint and Connected Mac scheduled targets need networking.
         request.requiresExternalPower = false  // Don't require, but prefer
         request.requiresNetworkConnectivity = schedule.target.requiresNetworkForScheduledExport
-            || scheduledEntryStore.entries
-                .filter(\.isEnabled)
+            || scheduledEntryStore.enabledEntries()
                 .contains { $0.dateMathProjection.target.requiresNetworkForScheduledExport }
 
-        do {
-            try BGTaskScheduler.shared.submit(request)
-            logger.info("Background processing task scheduled for \(nextRunDate)")
-        } catch {
-            logger.error("Failed to schedule background task: \(error.localizedDescription)")
+        if TestMode.isUnitTesting {
+            // Submitting an unregistered identifier aborts the unit-test host
+            // process (BGTaskScheduler assertion). The fallback arming below
+            // is what unit tests verify; the OS task is meaningless there.
+            logger.info("Skipping BGTaskScheduler submission in unit tests")
+        } else {
+            do {
+                try BGTaskScheduler.shared.submit(request)
+                logger.info("Background processing task scheduled for \(nextRunDate)")
+            } catch {
+                logger.error("Failed to schedule background task: \(error.localizedDescription)")
+            }
         }
 
-        schedulePendingExportFallbackNotification(for: nextRunDate, kind: nextRunOccurrence?.kind ?? .completedDay)
+        schedulePendingExportFallbackNotification(
+            for: nextRunDate,
+            kind: nextRunPlan?.occurrence.kind ?? .completedDay,
+            entry: nextRunPlan?.entry
+        )
     }
 
     /// Cancels all pending background tasks
@@ -477,7 +424,6 @@ class SchedulingManager: ObservableObject {
             return
         }
 
-        notificationTappedPendingExportIDs.insert(request.id)
         await runPendingExport(request, trigger: .notificationTap)
     }
 
@@ -521,34 +467,22 @@ class SchedulingManager: ObservableObject {
         case .scheduled:
             await runPendingScheduledExport(request, trigger: trigger)
         case .shortcut:
-            await runPendingShortcutExport(request, trigger: trigger)
+            await runPendingShortcutExport(request)
         }
     }
 
-    @MainActor private func runPendingShortcutExport(
-        _ request: PendingExportRequest,
-        trigger: PendingExportDrainTrigger
-    ) async {
-        guard beginPendingExport(request) else {
-            notificationTappedPendingExportIDs.remove(request.id)
-            return
-        }
+    @MainActor private func runPendingShortcutExport(_ request: PendingExportRequest) async {
+        guard beginPendingExport(request) else { return }
         defer { finishPendingExport(request) }
 
-        guard isPendingExportRequestStillStored(request) else {
-            notificationTappedPendingExportIDs.remove(request.id)
-            return
-        }
+        guard isPendingExportRequestStillStored(request) else { return }
 
-        let wasNotificationTapDeferred = notificationTappedPendingExportIDs.remove(request.id) != nil
-        if trigger == .notificationTap || wasNotificationTapDeferred {
-            beginNotificationExportActivity(
-                operationID: request.id,
-                source: .shortcut,
-                dates: request.dates,
-                target: .localIPhoneFolder
-            )
-        }
+        beginNotificationExportActivity(
+            operationID: request.id,
+            source: .shortcut,
+            dates: request.dates,
+            target: .localIPhoneFolder
+        )
 
         let outcome = await shortcutExportRunner(request.dates)
 
@@ -589,23 +523,29 @@ class SchedulingManager: ObservableObject {
         _ request: PendingExportRequest,
         trigger: PendingExportDrainTrigger
     ) async {
-        guard shouldAttemptPendingScheduledExport(request, trigger: trigger) else { return }
+        guard await shouldAttemptPendingScheduledExport(request, trigger: trigger) else { return }
         guard shouldAttemptPendingScheduledExportTarget(request) else { return }
-        guard beginScheduledOccurrenceExport(fireDate: request.scheduledFireDate) else {
-            notificationTappedPendingExportIDs.remove(request.id)
-            return
-        }
-        defer { finishScheduledOccurrenceExport(fireDate: request.scheduledFireDate) }
-        guard beginPendingExport(request) else {
-            notificationTappedPendingExportIDs.remove(request.id)
-            return
-        }
+        // Dedupe gate: profile requests use the per-profile occurrence key so
+        // a retry never collides with another profile's run at the same fire
+        // minute; legacy requests keep the shared fire-minute key.
+        guard beginOccurrenceExport(for: request) else { return }
+        defer { finishOccurrenceExport(for: request) }
+        guard beginPendingExport(request) else { return }
         defer { finishPendingExport(request) }
 
-        guard isPendingExportRequestStillStored(request) else {
-            notificationTappedPendingExportIDs.remove(request.id)
-            return
-        }
+        guard isPendingExportRequestStillStored(request) else { return }
+
+        // Mark the request attempted before the run: if the process dies
+        // mid-run, bulk fallback cancellation must still classify the stored
+        // request as a preserved retry rather than an armed fallback.
+        markPendingExportRequestAttempted(request)
+
+        // The armed +60s fallback for this request is superseded the moment
+        // the run starts: defuse it so it cannot fire mid-run. Delivered
+        // copies stay visible — a run that ends without progress or a
+        // re-armed retry (see completePendingScheduledExport) must not leave
+        // the user without a recovery notification.
+        exportNotificationScheduler.cancelArmedPendingExportNotification(id: request.id)
 
         logger.info("Draining pending scheduled export request \(request.id.uuidString)")
         let target = scheduledTarget(for: request)
@@ -617,19 +557,18 @@ class SchedulingManager: ObservableObject {
         } else {
             profileForRun = nil
         }
-        let wasNotificationTapDeferred = notificationTappedPendingExportIDs.remove(request.id) != nil
-        let notificationOperationID: UUID?
-        if trigger == .notificationTap || wasNotificationTapDeferred {
-            notificationOperationID = request.id
-            beginNotificationExportActivity(
-                operationID: request.id,
-                source: .scheduled,
-                dates: request.dates,
-                target: target
-            )
-        } else {
-            notificationOperationID = nil
-        }
+        // Every executed pending run owns the notification activity banner,
+        // including plain app-active drains: a cold-launch drain can outrun
+        // the notification tap handler, and without banner ownership its
+        // result would surface as an unexpected bare alert instead of the
+        // in-app activity banner the tap path presents.
+        let notificationOperationID = request.id
+        beginNotificationExportActivity(
+            operationID: request.id,
+            source: .scheduled,
+            dates: request.dates,
+            target: target
+        )
         let result: ExportOrchestrator.ExportResult
         if let profileForRun {
             result = await runProfileScopedExport(
@@ -663,32 +602,66 @@ class SchedulingManager: ObservableObject {
     @MainActor private func shouldAttemptPendingScheduledExport(
         _ request: PendingExportRequest,
         trigger: PendingExportDrainTrigger
-    ) -> Bool {
+    ) async -> Bool {
         // Phase 3: profile requests gate on their entry's enabled state, not
         // the legacy schedule.
         if let profileID = request.profileID {
             let entry = scheduledEntryStore.entry(profileID: profileID)
             guard entry?.isEnabled == true else {
                 logger.info("Profile schedule disabled, skipping pending request \(request.id.uuidString)")
-                notificationTappedPendingExportIDs.remove(request.id)
+                if trigger == .notificationTap {
+                    // Mirror the legacy-disabled tap surface: a tap on a
+                    // recovery notification whose schedule was turned off
+                    // must tell the user, not return silently.
+                    notificationExportResult = NotificationExportResult(
+                        status: .failure(reason: String(
+                            localized: "Scheduling is disabled for \(request.profileName ?? "this profile")",
+                            comment: "Error message when a tapped recovery notification's profile schedule is disabled"
+                        )),
+                        timestamp: now()
+                    )
+                }
                 return false
             }
             if let fireDate = request.scheduledFireDate, fireDate > now() {
                 logger.info("Skipping future profile pending request \(request.id.uuidString)")
-                notificationTappedPendingExportIDs.remove(request.id)
+                return false
+            }
+            // Mirror the legacy enabled-period discard: a retry preserved
+            // before the entry was disabled predates the current opt-in, so
+            // re-enabling days later must not drain a stale window (and burn
+            // quota on dates the user no longer expects).
+            if let enabledAt = entry?.enabledAt,
+               let fireDate = request.scheduledFireDate,
+               fireDate <= enabledAt {
+                logger.info("Discarding profile pending request from before the entry's current enabled period: \(request.id.uuidString)")
+                discardPendingScheduledExportRequest(request)
                 return false
             }
             return true
         }
 
-        guard schedule.isEnabled else {
+        guard schedule.isEnabled || hasEnabledProfileEntries else {
             logger.info("Schedule disabled, skipping pending scheduled export request \(request.id.uuidString)")
-            notificationTappedPendingExportIDs.remove(request.id)
             if trigger == .notificationTap {
                 notificationExportResult = NotificationExportResult(
                     status: .failure(reason: String(localized: "Scheduling is disabled", comment: "Error message when scheduling is disabled")),
                     timestamp: now()
                 )
+            }
+            return false
+        }
+
+        guard schedule.isEnabled else {
+            // Profile entries own scheduling; a legacy-shaped pending request
+            // (pre-profile build or legacy fallback) is obsolete. Discard it
+            // and honor a notification tap by running due profile work — the
+            // notification promised a retry, so it must not dead-end with
+            // "Scheduling is disabled" while entries are actively scheduled.
+            logger.info("Discarding legacy pending request superseded by profile scheduling: \(request.id.uuidString)")
+            discardPendingScheduledExportRequest(request)
+            if trigger == .notificationTap {
+                await runDueProfileOccurrences()
             }
             return false
         }
@@ -700,13 +673,11 @@ class SchedulingManager: ObservableObject {
         let currentDate = now()
         if fireDate > currentDate {
             logger.info("Skipping future pending scheduled export request \(request.id.uuidString)")
-            notificationTappedPendingExportIDs.remove(request.id)
             return false
         }
 
         if let enabledAt = schedule.enabledAt, fireDate <= enabledAt {
             logger.info("Discarding pending scheduled export request from before scheduling was enabled: \(request.id.uuidString)")
-            notificationTappedPendingExportIDs.remove(request.id)
             discardPendingScheduledExportRequest(request)
             return false
         }
@@ -807,6 +778,55 @@ class SchedulingManager: ObservableObject {
 
     @MainActor private func isPendingExportRequestStillStored(_ request: PendingExportRequest) -> Bool {
         loadPendingExportRequest(id: request.id, source: request.source) != nil
+    }
+
+    @MainActor private func beginOccurrenceExport(for request: PendingExportRequest) -> Bool {
+        guard let fireDate = request.scheduledFireDate else { return true }
+        guard let profileID = request.profileID else {
+            return beginScheduledOccurrenceExport(fireDate: fireDate)
+        }
+        return beginProfileOccurrenceExport(
+            profileID: profileID,
+            kind: request.scheduledKind,
+            fireDate: fireDate
+        )
+    }
+
+    @MainActor private func finishOccurrenceExport(for request: PendingExportRequest) {
+        guard let fireDate = request.scheduledFireDate else { return }
+        guard let profileID = request.profileID else {
+            finishScheduledOccurrenceExport(fireDate: fireDate)
+            return
+        }
+        finishProfileOccurrenceExport(
+            profileID: profileID,
+            kind: request.scheduledKind,
+            fireDate: fireDate
+        )
+    }
+
+    @MainActor private func beginProfileOccurrenceExport(
+        profileID: UUID,
+        kind: ScheduledExportKind,
+        fireDate: Date
+    ) -> Bool {
+        let key = profileOccurrenceKey(profileID: profileID, kind: kind, fireDate: fireDate)
+        guard !inFlightProfileOccurrenceKeys.contains(key) else {
+            logger.info("Profile occurrence already in flight, skipping duplicate: \(key)")
+            return false
+        }
+        inFlightProfileOccurrenceKeys.insert(key)
+        return true
+    }
+
+    @MainActor private func finishProfileOccurrenceExport(
+        profileID: UUID,
+        kind: ScheduledExportKind,
+        fireDate: Date
+    ) {
+        inFlightProfileOccurrenceKeys.remove(
+            profileOccurrenceKey(profileID: profileID, kind: kind, fireDate: fireDate)
+        )
     }
 
     @MainActor private func beginPendingExport(_ request: PendingExportRequest) -> Bool {
@@ -1746,12 +1766,19 @@ class SchedulingManager: ObservableObject {
     /// rather than short-circuiting on `lastExportDate` — the user explicitly
     /// asked for an export, so honor that intent.
     @MainActor private func performScheduledNotificationTriggeredExport(pendingRequestID: PendingExportRequest.ID? = nil) async {
-        guard schedule.isEnabled else {
+        guard schedule.isEnabled || hasEnabledProfileEntries else {
             logger.info("Schedule disabled, skipping notification-triggered export")
             notificationExportResult = NotificationExportResult(
                 status: .failure(reason: String(localized: "Scheduling is disabled", comment: "Error message when scheduling is disabled")),
                 timestamp: now()
             )
+            return
+        }
+        guard schedule.isEnabled else {
+            // Profile entries own scheduling: honor the tap with due profile
+            // work instead of the legacy window math.
+            logger.info("Notification-triggered export running due profile occurrences (legacy schedule off)")
+            await runDueProfileOccurrences()
             return
         }
 
@@ -1820,10 +1847,17 @@ class SchedulingManager: ObservableObject {
     /// alert is invisible at that moment, so we mirror the BG-task path's
     /// notification posting behavior here instead.
     @MainActor func performSilentPushExport(fireDate: Date? = nil, kind: ScheduledExportKind = .completedDay) async {
-        guard schedule.isEnabled else {
-            logger.info("Silent push received but schedule is disabled")
+        guard schedule.isEnabled || hasEnabledProfileEntries else {
+            logger.info("Silent push received but scheduling is disabled")
             return
         }
+        // Dual-mode: wake entry evaluation first so an enabled legacy schedule
+        // does not starve profile occurrences (and vice versa), then fall
+        // through to the legacy occurrence handling below.
+        if hasEnabledProfileEntries {
+            await runDueProfileOccurrences()
+        }
+        guard schedule.isEnabled else { return }
         if schedule.frequency == .custom, kind == .completedDay, fireDate == nil {
             logger.info("Custom schedule push skipped: missing fire date")
             return
@@ -2070,7 +2104,7 @@ class SchedulingManager: ObservableObject {
     /// True when any scheduled entry is enabled; background triggers use the
     /// per-profile evaluator instead of the legacy single schedule.
     @MainActor var hasEnabledProfileEntries: Bool {
-        scheduledEntryStore.entries.contains(where: \.isEnabled)
+        !scheduledEntryStore.enabledEntries().isEmpty
     }
 
     /// Production destination adoption: writes the profile's folder binding
@@ -2128,9 +2162,122 @@ class SchedulingManager: ObservableObject {
         }
 
         // Re-arm the wake-up for the next occurrence across all entries.
+        // cancelPendingFallbacks:false mirrors the legacy run body: the runs
+        // above may have just preserved retry requests (device-locked or
+        // partial outcomes) whose fallback windows are still open, and the
+        // bulk cancel would delete the recovery surface milliseconds after
+        // it was advertised.
         if systemSideEffectsEnabled, !TestMode.isUITesting {
-            scheduleBackgroundTask()
+            scheduleBackgroundTask(cancelPendingFallbacks: false)
         }
+    }
+
+    /// Legacy-path companion for wake-ups (phase 3 dual-mode): runs the legacy
+    /// schedule's single due occurrence when one is due. Wake-ups run entries
+    /// first (`runDueProfileOccurrences`) and then this, so an enabled legacy
+    /// schedule keeps auto-running beside enabled profile entries instead of
+    /// arming fallback notifications only a manual tap could satisfy.
+    ///
+    /// Consolidates the former `handleBackgroundTask` and
+    /// `handleHealthKitBackgroundDelivery` bodies (including the delivery
+    /// path's already-exported guard, which is a safe no-op for the BG-task
+    /// path). `onExpirationArmed` receives the expiration closure right before
+    /// the export starts so the BG-task wrapper can install it on its task.
+    enum LegacyOccurrenceOutcome {
+        /// Nothing was due, already exported, or deduped against an in-flight run.
+        case skipped
+        /// The export ran; carries `didCompleteAllRequestedDates`.
+        case ran(completed: Bool)
+    }
+
+    @MainActor private func runDueLegacyOccurrence(
+        onExpirationArmed: (@escaping () -> Void) -> Void = { _ in }
+    ) async -> LegacyOccurrenceOutcome {
+        guard schedule.isEnabled else { return .skipped }
+
+        let currentDate = now()
+        guard let occurrence = ScheduleDateMath.dueScheduledOccurrences(
+            schedule: schedule,
+            now: currentDate
+        ).first else {
+            logger.info("Wake-up skipped: no scheduled occurrence is due")
+            scheduleBackgroundTask()
+            return .skipped
+        }
+
+        let fireDate = occurrence.fireDate
+        let kind = occurrence.kind
+        let calendar = Calendar.current
+
+        if kind == .completedDay {
+            let eligibleDates = ScheduleDateMath.scheduledExportDates(
+                schedule: schedule,
+                fireDate: fireDate,
+                calendar: calendar
+            )
+            guard let eligibleEndDate = eligibleDates.last else {
+                logger.info("Wake-up skipped: no eligible export dates")
+                return .skipped
+            }
+
+            if let lastExport = schedule.lastExportDate {
+                let lastExportDay = calendar.startOfDay(for: lastExport)
+                let lastExportedDataDay = calendar.date(byAdding: .day, value: -1, to: lastExportDay) ?? lastExportDay
+                if lastExportedDataDay >= eligibleEndDate {
+                    logger.info("Scheduled occurrence already exported, skipping")
+                    return .skipped
+                }
+            }
+        }
+
+        guard beginScheduledOccurrenceExport(fireDate: fireDate) else { return .skipped }
+        defer { finishScheduledOccurrenceExport(fireDate: fireDate) }
+
+        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate, kind: kind)
+        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
+        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
+        let target = scheduledTarget(for: pendingRequest)
+        cancelPendingExportFallbackNotification(for: pendingRequest)
+
+        // Schedule the next task without clearing the pending occurrence this
+        // run is about to fulfill (preserved retries keep their fallbacks).
+        scheduleBackgroundTask(cancelPendingFallbacks: false)
+
+        onExpirationArmed({ [weak self] in
+            guard let self else { return }
+            self.logger.warning("Background task expired")
+            Task { @MainActor in
+                await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)
+                ExportHistoryManager.shared.recordFailure(
+                    source: .scheduled,
+                    dateRangeStart: range.start,
+                    dateRangeEnd: range.end,
+                    reason: .backgroundTaskExpired,
+                    totalCount: range.totalCount,
+                    exportTarget: target,
+                    appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
+                )
+            }
+        })
+
+        let result = await runScheduledExport(
+            dates: dates,
+            target: target,
+            settingsSnapshot: pendingRequest?.settingsSnapshot,
+            quotaJobID: pendingRequest?.id
+        )
+
+        await processAutomaticScheduledExportResult(
+            result,
+            pendingRequest: pendingRequest,
+            target: target,
+            dateRangeStart: range.start,
+            dateRangeEnd: range.end,
+            fallbackDaysToExport: range.totalCount,
+            scheduledFireDate: fireDate
+        )
+
+        return .ran(completed: result.didCompleteAllRequestedDates)
     }
 
     /// MainActor body executed under the folder gate: adopt destinations,
@@ -2196,17 +2343,18 @@ class SchedulingManager: ObservableObject {
     @MainActor private func runProfileOccurrence(
         _ due: ScheduledExportEntryStore.DueEntryOccurrence
     ) async {
-        let key = profileOccurrenceKey(
+        guard beginProfileOccurrenceExport(
             profileID: due.profileID,
             kind: due.kind,
             fireDate: due.fireDate
-        )
-        guard !inFlightProfileOccurrenceKeys.contains(key) else {
-            logger.info("Profile occurrence already in flight, skipping duplicate: \(key)")
-            return
+        ) else { return }
+        defer {
+            finishProfileOccurrenceExport(
+                profileID: due.profileID,
+                kind: due.kind,
+                fireDate: due.fireDate
+            )
         }
-        inFlightProfileOccurrenceKeys.insert(key)
-        defer { inFlightProfileOccurrenceKeys.remove(key) }
 
         guard let entry = scheduledEntryStore.entry(id: due.entryID) else { return }
         guard let profile = scheduledProfileStore.profile(id: due.profileID) else {
@@ -2308,80 +2456,39 @@ class SchedulingManager: ObservableObject {
     @MainActor private func handleBackgroundTask(_ task: BGProcessingTask) async {
         logger.info("Background processing task started")
 
-        // Phase 3: scheduled entries own the wake-up when any are enabled.
+        // Phase 3 dual-mode: entries first when enabled, then the legacy
+        // schedule's due occurrence, so both run when both are enabled.
         if hasEnabledProfileEntries {
-            // runDueProfileOccurrences re-arms the next wake-up itself.
-            await runDueProfileOccurrences()
-            task.setTaskCompleted(success: true)
-            return
-        }
-
-        let currentDate = now()
-        guard let occurrence = ScheduleDateMath.dueScheduledOccurrences(
-            schedule: schedule,
-            now: currentDate
-        ).first else {
-            logger.info("Background task skipped: no scheduled occurrence is due")
-            scheduleBackgroundTask()
-            task.setTaskCompleted(success: true)
-            return
-        }
-
-        let fireDate = occurrence.fireDate
-        let kind = occurrence.kind
-
-        guard beginScheduledOccurrenceExport(fireDate: fireDate) else {
-            task.setTaskCompleted(success: true)
-            return
-        }
-        defer { finishScheduledOccurrenceExport(fireDate: fireDate) }
-
-        let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate, kind: kind)
-        let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
-        let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
-        let target = scheduledTarget(for: pendingRequest)
-        cancelPendingExportFallbackNotification(for: pendingRequest)
-
-        // Schedule the next task without clearing the pending occurrence this
-        // task is about to fulfill.
-        scheduleBackgroundTask(cancelPendingFallbacks: false)
-
-        // Set expiration handler
-        task.expirationHandler = {
-            self.logger.warning("Background task expired")
-            Task {
-                await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)
-                // Record task expiration in history
-                ExportHistoryManager.shared.recordFailure(
-                    source: .scheduled,
-                    dateRangeStart: range.start,
-                    dateRangeEnd: range.end,
-                    reason: .backgroundTaskExpired,
-                    totalCount: range.totalCount,
-                    exportTarget: target,
-                    appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
-                )
+            // Profile legs get a minimal expiration record so an expiry while
+            // they run still logs and history-records the interruption (the
+            // legacy leg installs its richer handler via onExpirationArmed).
+            task.expirationHandler = { [weak self] in
+                guard let self else { return }
+                self.logger.warning("Background task expired during profile occurrences")
+                Task { @MainActor in
+                    ExportHistoryManager.shared.recordFailure(
+                        source: .scheduled,
+                        dateRangeStart: Date(),
+                        dateRangeEnd: Date(),
+                        reason: .backgroundTaskExpired,
+                        totalCount: 0,
+                        exportTarget: nil
+                    )
+                }
             }
+            await runDueProfileOccurrences()
         }
 
-        // Perform the export
-        let result = await runScheduledExport(
-            dates: dates,
-            target: target,
-            settingsSnapshot: pendingRequest?.settingsSnapshot,
-            quotaJobID: pendingRequest?.id
-        )
-        task.setTaskCompleted(success: result.didCompleteAllRequestedDates)
+        let outcome = await runDueLegacyOccurrence { expirationHandler in
+            task.expirationHandler = expirationHandler
+        }
 
-        await processAutomaticScheduledExportResult(
-            result,
-            pendingRequest: pendingRequest,
-            target: target,
-            dateRangeStart: range.start,
-            dateRangeEnd: range.end,
-            fallbackDaysToExport: range.totalCount,
-            scheduledFireDate: fireDate
-        )
+        switch outcome {
+        case .skipped:
+            task.setTaskCompleted(success: true)
+        case .ran(let completed):
+            task.setTaskCompleted(success: completed)
+        }
     }
 
     /// Performs the actual health data export in the background using shared ExportOrchestrator
@@ -2471,19 +2578,44 @@ class SchedulingManager: ObservableObject {
     @MainActor
     private func preparePendingScheduledExport(
         fireDate: Date? = nil,
-        kind: ScheduledExportKind = .completedDay
+        kind: ScheduledExportKind = .completedDay,
+        entry: ScheduledExportEntry? = nil
     ) async -> PendingExportRequest? {
         let resolvedFireDate = fireDate
             ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, kind: kind, now: now())
             ?? now()
 
+        // Profile entries arm their fallback request with the profile's own
+        // context so a notification tap retries the profile's exact dates
+        // against its destinations. A legacy-shaped request could never run
+        // from a tap while the legacy schedule is off ("Scheduling is
+        // disabled"), even though the armed occurrence belonged to the entry.
+        let profileContext: ScheduledExportCoordinator.ScheduledProfileRequestContext?
+        if let entry {
+            guard let profile = scheduledProfileStore.profile(id: entry.profileID) else {
+                logger.error("Cannot arm profile fallback: entry \(entry.profileID.uuidString) references a missing profile")
+                return nil
+            }
+            profileContext = ScheduledExportCoordinator.ScheduledProfileRequestContext(
+                profileID: profile.id,
+                profileName: profile.name,
+                target: profile.target,
+                settings: profile.settings
+            )
+        } else {
+            profileContext = nil
+        }
+
         do {
             return try await scheduledExportCoordinator.preparePendingScheduledExport(
-                schedule: schedule,
+                schedule: entry?.dateMathProjection ?? schedule,
                 fireDate: resolvedFireDate,
                 kind: kind,
+                profile: profileContext,
                 makeSettingsSnapshot: {
-                    await makeSettingsSnapshotForNewScheduledOperation(target: schedule.target)
+                    await makeSettingsSnapshotForNewScheduledOperation(
+                        target: profileContext?.target ?? schedule.target
+                    )
                 }
             )
         } catch {
@@ -2534,7 +2666,24 @@ class SchedulingManager: ObservableObject {
             if result.primaryFailureReason == .deviceLocked {
                 await sendExportReminderNotification()
             }
+            // The stored request stays as this run's preserved retry; mark it
+            // attempted so a later bulk fallback cancel cannot destroy it.
+            markPendingExportRequestAttempted(request)
             return nil
+        }
+    }
+
+    /// Re-persists a pending request with `attemptedAt` set so bulk fallback
+    /// cancellation classifies it as a preserved retry rather than an armed
+    /// fallback. Used on paths that preserve the request without going
+    /// through `ScheduledExportCoordinator`'s retry creation.
+    @MainActor private func markPendingExportRequestAttempted(_ request: PendingExportRequest) {
+        guard request.attemptedAt == nil else { return }
+        let attempted = request.markingAttempted(at: now())
+        do {
+            try pendingExportStore.upsert(attempted)
+        } catch {
+            logger.error("Failed to mark pending export attempted: \(error.localizedDescription)")
         }
     }
 
@@ -2761,9 +2910,13 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    private func schedulePendingExportFallbackNotification(for nextRunDate: Date, kind: ScheduledExportKind = .completedDay) {
+    private func schedulePendingExportFallbackNotification(
+        for nextRunDate: Date,
+        kind: ScheduledExportKind = .completedDay,
+        entry: ScheduledExportEntry? = nil
+    ) {
         Task {
-            if await preparePendingScheduledExport(fireDate: nextRunDate, kind: kind) != nil {
+            if await preparePendingScheduledExport(fireDate: nextRunDate, kind: kind, entry: entry) != nil {
                 logger.info("Pending export fallback notification scheduled for \(nextRunDate)")
             } else {
                 logger.error("Failed to schedule pending export fallback notification")
@@ -2771,11 +2924,23 @@ class SchedulingManager: ObservableObject {
         }
     }
 
-    private func cancelScheduledPendingExportFallbackNotifications() {
-        cancelScheduledPendingExportFallbackNotifications(matching: { $0.scheduledFireDate != nil })
+    @MainActor private func cancelScheduledPendingExportFallbackNotifications() {
+        // Only still-armed fallbacks are stale when automation is re-armed or
+        // disabled: their occurrence has not fired yet, so the request will be
+        // re-armed for whatever occurrence comes next. A request that a run
+        // attempted is a preserved retry — deleting it would destroy the
+        // recovery surface the run just advertised, regardless of how recently
+        // it was preserved. The fallback-window check only classifies
+        // pre-marker requests persisted by older builds.
+        let fallbackWindow = exportNotificationScheduler.fallbackDelay
+        cancelScheduledPendingExportFallbackNotifications(matching: { request in
+            guard request.attemptedAt == nil,
+                  let fireDate = request.scheduledFireDate else { return false }
+            return fireDate.addingTimeInterval(fallbackWindow) > now()
+        })
     }
 
-    private func cancelScheduledPendingExportFallbackNotifications(matching shouldCancel: (PendingExportRequest) -> Bool) {
+    @MainActor private func cancelScheduledPendingExportFallbackNotifications(matching shouldCancel: (PendingExportRequest) -> Bool) {
         do {
             let scheduledRequestIDs = Set(try pendingExportStore.loadAll()
                 .filter { $0.source == .scheduled && shouldCancel($0) }
@@ -2817,25 +2982,42 @@ class SchedulingManager: ObservableObject {
     // MARK: - Helper Methods
 
     /// Calculates the next scheduled run date based on current settings.
-    private func calculateNextRunOccurrence() -> ScheduleDateMath.DueScheduledOccurrence? {
+    /// The next plan pairs the winning occurrence with its owning scheduled
+    /// entry so the fallback notification armed for it is profile-scoped
+    /// (phase 3): a legacy-shaped fallback request can never run from a
+    /// notification tap while the legacy schedule is off.
+    private struct NextRunPlan {
+        let occurrence: ScheduleDateMath.DueScheduledOccurrence
+        /// Owning enabled entry when the next occurrence belongs to a
+        /// profile; nil for the legacy schedule.
+        let entry: ScheduledExportEntry?
+    }
+
+    private func calculateNextRunPlan() -> NextRunPlan? {
         // Phase 3: the coalesced wake-up arms for the earliest next occurrence
         // across every enabled entry, falling back to the legacy schedule.
-        let entryOccurrences = scheduledEntryStore.entries
-            .filter(\.isEnabled)
-            .flatMap {
-                ScheduleDateMath.nextScheduledOccurrences(schedule: $0.dateMathProjection, now: now())
+        // Fresh read: the UI saves schedule edits through its own store
+        // instance, and the next-occurrence projection must observe them
+        // immediately (next-export status, BGTask begin date, worker sync).
+        let entryPlans: [NextRunPlan] = scheduledEntryStore.enabledEntries()
+            .flatMap { entry in
+                ScheduleDateMath.nextScheduledOccurrences(schedule: entry.dateMathProjection, now: now())
+                    .map { NextRunPlan(occurrence: $0, entry: entry) }
             }
         if hasEnabledProfileEntries {
-            let legacy = schedule.isEnabled
+            let legacy: [NextRunPlan] = schedule.isEnabled
                 ? ScheduleDateMath.nextScheduledOccurrences(schedule: schedule, now: now())
+                    .map { NextRunPlan(occurrence: $0, entry: nil) }
                 : []
-            return (entryOccurrences + legacy).min { $0.fireDate < $1.fireDate }
+            return (entryPlans + legacy).min { $0.occurrence.fireDate < $1.occurrence.fireDate }
         }
-        return ScheduleDateMath.nextScheduledOccurrences(schedule: schedule, now: now()).first
+        return ScheduleDateMath.nextScheduledOccurrences(schedule: schedule, now: now())
+            .map { NextRunPlan(occurrence: $0, entry: nil) }
+            .first
     }
 
     private func calculateNextRunDate() -> Date {
-        calculateNextRunOccurrence()?.fireDate
+        calculateNextRunPlan()?.occurrence.fireDate
             ?? now().addingTimeInterval(3600)
     }
 
