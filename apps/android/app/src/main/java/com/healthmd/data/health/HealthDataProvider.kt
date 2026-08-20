@@ -19,9 +19,8 @@ interface HealthDataProvider {
     suspend fun fetchHealthData(date: LocalDate): HealthData
 
     /**
-     * [sleepDayAttribution] selects which daily note owns a midnight-spanning sleep
-     * session (issue #104). Providers that do not implement Health Connect's
-     * wake-up-date grouping keep their provider-native windows via the default.
+     * [sleepDayAttribution] is the capture-entry value already resolved by the
+     * repository. Providers must not reinterpret NIGHT_BEGINS as a settings sentinel.
      */
     suspend fun fetchHealthDataRange(
         dates: List<LocalDate>,
@@ -29,7 +28,7 @@ interface HealthDataProvider {
         includeGranularData: Boolean = false,
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
-        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
+        sleepDayAttribution: SleepDayAttribution,
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }

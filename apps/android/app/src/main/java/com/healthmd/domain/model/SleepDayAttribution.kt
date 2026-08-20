@@ -4,12 +4,11 @@ package com.healthmd.domain.model
  * Which daily note owns a sleep session (issue #104).
  *
  * Shared cross-platform setting. Apple and Android persist the same [wireValue]
- * strings, default to [NIGHT_BEGINS], and keep the whole session in a single
- * note; only the owning calendar date differs.
+ * strings and default to [NIGHT_BEGINS].
  *
- * @property NIGHT_BEGINS the note for the calendar date the session starts owns
- *   it. Shipped noon-to-noon journaling behavior; the default so existing
- *   exports never change silently.
+ * @property NIGHT_BEGINS shipped noon-to-noon journaling behavior. Summary
+ *   intervals are clipped at the window boundaries; this remains the default
+ *   so existing exports never change silently.
  * @property MORNING_ENDS the note for the wake-up date (the calendar date of
  *   the session end) owns the whole session, matching the Health Connect UI.
  */
@@ -24,4 +23,15 @@ enum class SleepDayAttribution(val wireValue: String) {
         fun fromWireValue(raw: String?): SleepDayAttribution =
             entries.firstOrNull { it.wireValue == raw } ?: DEFAULT
     }
+}
+
+/**
+ * Capture-entry choice for sleep attribution.
+ *
+ * This shape keeps an explicit NIGHT_BEGINS override distinct from "read the
+ * stored preference"; the shipped default enum value is never used as a sentinel.
+ */
+sealed interface SleepDayAttributionOverride {
+    data object StoredPreference : SleepDayAttributionOverride
+    data class Value(val attribution: SleepDayAttribution) : SleepDayAttributionOverride
 }

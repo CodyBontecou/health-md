@@ -87,7 +87,7 @@
       "id": "settings.sleep-attribution",
       "name": "Sleep day attribution",
       "classification": "shared",
-      "summary": "Choose whether a midnight-spanning sleep session belongs to the daily note for the night it starts (default) or the morning it ends; the whole session always stays in one note.",
+      "summary": "Choose between the shipped default noon-to-noon sleep-summary window and wake-up-date ownership. Morning ends keeps each captured source session with its end date; the default retains existing noon-boundary clipping.",
       "profiles": [],
       "platforms": {
         "apple": {

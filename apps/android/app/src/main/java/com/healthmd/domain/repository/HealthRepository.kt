@@ -2,7 +2,7 @@ package com.healthmd.domain.repository
 
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
-import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -10,9 +10,9 @@ interface HealthRepository {
     suspend fun fetchHealthData(date: LocalDate): HealthData
 
     /**
-     * [sleepDayAttribution] selects which daily note owns a midnight-spanning sleep
-     * session (issue #104). [HealthRepositoryImpl] reads the persisted device
-     * preference when the caller keeps the default.
+     * [sleepDayAttributionOverride] selects whether capture reads the persisted
+     * device preference or uses an explicit value. NIGHT_BEGINS is a real value,
+     * never a sentinel for reading settings (issue #104).
      */
     suspend fun fetchHealthDataRange(
         dates: List<LocalDate>,
@@ -20,7 +20,7 @@ interface HealthRepository {
         includeGranularData: Boolean = false,
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
-        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
+        sleepDayAttributionOverride: SleepDayAttributionOverride = SleepDayAttributionOverride.StoredPreference,
     ): List<HealthData> = dates.map { date ->
         fetchHealthData(date).filtered(dataTypes)
     }

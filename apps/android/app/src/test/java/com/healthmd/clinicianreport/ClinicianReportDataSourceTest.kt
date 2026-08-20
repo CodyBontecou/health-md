@@ -83,6 +83,68 @@ class ClinicianReportDataSourceTest {
         }
     }
 
+    @Test fun explicitNightBeginsOverrideIsNotRepopulatedFromStoredMorningEnds() = runTest {
+        val manager = mockk<HealthConnectManager>()
+        val provider = HealthConnectDataProvider(manager)
+        val registry = mockk<HealthProviderRegistry>()
+        val settings = mockk<SettingsRepository>()
+        coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+        coEvery { settings.getSleepDayAttribution() } returns SleepDayAttribution.MORNING_ENDS
+        every { registry.providerFor("health_connect") } returns provider
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            firstArg<List<LocalDate>>().map(::HealthData)
+        }
+        val repository = HealthRepositoryImpl(registry, settings)
+
+        repository.fetchHealthDataRange(
+            dates = listOf(day),
+            sleepDayAttributionOverride = SleepDayAttributionOverride.Value(SleepDayAttribution.NIGHT_BEGINS),
+        )
+
+        coVerify(exactly = 0) { settings.getSleepDayAttribution() }
+        coVerify(exactly = 1) {
+            manager.fetchHealthDataRange(
+                listOf(day),
+                any(),
+                false,
+                any(),
+                false,
+                SleepDayAttribution.NIGHT_BEGINS,
+            )
+        }
+    }
+
+    @Test fun singleDateCapturePinsZoneBeforeStoredAttributionRead() = runTest {
+        val previous = TimeZone.getDefault()
+        val capturedZone = ZoneId.of("America/Los_Angeles")
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(capturedZone))
+            val manager = mockk<HealthConnectManager>()
+            val provider = HealthConnectDataProvider(manager)
+            val registry = mockk<HealthProviderRegistry>()
+            val settings = mockk<SettingsRepository>()
+            coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
+            coEvery { settings.getSleepDayAttribution() } answers {
+                TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
+                SleepDayAttribution.MORNING_ENDS
+            }
+            every { registry.providerFor("health_connect") } returns provider
+            coEvery {
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.MORNING_ENDS)
+            } returns listOf(HealthData(day, sleep = SleepData(totalDuration = 1.minutes)))
+            val repository = HealthRepositoryImpl(registry, settings)
+
+            val captured = repository.fetchHealthData(day)
+
+            assertThat(captured.sleep.totalDuration).isEqualTo(1.minutes)
+            coVerify(exactly = 1) {
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.MORNING_ENDS)
+            }
+        } finally {
+            TimeZone.setDefault(previous)
+        }
+    }
+
     @Test fun systemDateProviderUsesPinnedZoneWhenAmbientDateDiffers() {
         val previous = TimeZone.getDefault()
         try {
@@ -202,7 +264,7 @@ class ClinicianReportDataSourceTest {
             includeGranularData: Boolean,
             zoneId: ZoneId,
             pinnedCalendarDays: Boolean,
-            sleepDayAttribution: SleepDayAttribution,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
         ): List<HealthData> {
             requestedTypes = dataTypes
             requestedDates = dates

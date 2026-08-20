@@ -71,9 +71,14 @@ final class HealthKitManager: ObservableObject {
     static let shared = HealthKitManager()
 
     nonisolated static let pinnedFetchTimeZone = TaskLocal<TimeZone?>(wrappedValue: nil)
+    nonisolated static let pinnedSleepDayAttribution = TaskLocal<SleepDayAttribution?>(wrappedValue: nil)
 
     nonisolated private static var effectiveFetchTimeZone: TimeZone {
         pinnedFetchTimeZone.wrappedValue ?? .current
+    }
+
+    nonisolated private static var effectiveSleepDayAttribution: SleepDayAttribution {
+        pinnedSleepDayAttribution.wrappedValue ?? .nightBegins
     }
 
     nonisolated private static var effectiveFetchCalendar: Calendar {
@@ -917,26 +922,33 @@ final class HealthKitManager: ObservableObject {
         metricSelection: MetricSelectionState? = nil,
         timeZone: TimeZone? = nil
     ) async throws -> HealthData {
-        try await Self.pinnedFetchTimeZone.withValue(timeZone) {
-            try await HealthKitQueryExecutionController.withController {
-                #if DEBUG
-                return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
-                    phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
-                    itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
-                ) {
-                    try await fetchHealthDataCore(
+        // Snapshot both mutable capture preferences before the first suspension.
+        // Task locals keep every concurrent query and projection on this exact
+        // context even if the device timezone or setting changes mid-capture.
+        let capturedTimeZone = timeZone ?? .current
+        let capturedAttribution = sleepDayAttribution
+        return try await Self.pinnedFetchTimeZone.withValue(capturedTimeZone) {
+            try await Self.pinnedSleepDayAttribution.withValue(capturedAttribution) {
+                try await HealthKitQueryExecutionController.withController {
+                    #if DEBUG
+                    return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
+                        phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
+                        itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
+                    ) {
+                        try await fetchHealthDataCore(
+                            for: date,
+                            includeGranularData: includeGranularData,
+                            metricSelection: metricSelection
+                        )
+                    }
+                    #else
+                    return try await fetchHealthDataCore(
                         for: date,
                         includeGranularData: includeGranularData,
                         metricSelection: metricSelection
                     )
+                    #endif
                 }
-                #else
-                return try await fetchHealthDataCore(
-                    for: date,
-                    includeGranularData: includeGranularData,
-                    metricSelection: metricSelection
-                )
-                #endif
             }
         }
     }
@@ -951,7 +963,7 @@ final class HealthKitManager: ObservableObject {
         // Mac or serialized later in a different timezone. The sleep attribution
         // mode is recorded too (nil = shipped default) so later projections can
         // interpret captured sleep sessions with the semantics used at capture.
-        let attribution = sleepDayAttribution
+        let attribution = Self.effectiveSleepDayAttribution
         let timeContext = ExportTimeContext(
             timeZone: Self.effectiveFetchTimeZone,
             sleepDayAttribution: attribution == .nightBegins ? nil : attribution
@@ -2572,7 +2584,7 @@ final class HealthKitManager: ObservableObject {
         // window reaches back one further noon so the wake-up-date session is
         // available whole, and sessions are attributed by their end date below.
         let calendar = Self.effectiveFetchCalendar
-        let attribution = sleepDayAttribution
+        let attribution = Self.effectiveSleepDayAttribution
         let sleepWindow = Self.sleepWindow(for: date, attribution: attribution, calendar: calendar)
 
         // Sleep is the deliberate compatibility exception to calendar-day
@@ -2709,11 +2721,13 @@ final class HealthKitManager: ObservableObject {
 
     /// Merges samples into sleep sessions and returns those ending on `date`.
     ///
-    /// Sessions are defined the same way session boundaries are elsewhere: the
-    /// union of InBed intervals when any exist, otherwise the union of asleep
-    /// stage intervals. Only sessions whose merged end falls on the exported
-    /// calendar date are returned; sessions ending on another date stay with
-    /// that date's note.
+    /// InBed intervals are authoritative for the sessions they overlap, while
+    /// stage-only sessions remain independent evidence. Awake stages participate
+    /// in stage-derived boundaries so an awake interval (including one spanning
+    /// midnight) cannot split or reassign one otherwise-contiguous night.
+    ///
+    /// Only sessions whose merged end falls on the exported calendar date are
+    /// returned; sessions ending on another date stay with that date's note.
     static func sleepSessionsEnding(
         on date: Date,
         samples: [CategorySampleValue],
@@ -2721,6 +2735,7 @@ final class HealthKitManager: ObservableObject {
     ) -> [(start: Date, end: Date)] {
         var inBedIntervals: [(start: Date, end: Date)] = []
         var asleepIntervals: [(start: Date, end: Date)] = []
+        var stageIntervals: [(start: Date, end: Date)] = []
         for sample in samples {
             let interval = (start: sample.startDate, end: sample.endDate)
             guard interval.start < interval.end else { continue }
@@ -2732,13 +2747,28 @@ final class HealthKitManager: ObservableObject {
                  HKCategoryValueSleepAnalysis.asleepCore.rawValue,
                  HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue:
                 asleepIntervals.append(interval)
+                stageIntervals.append(interval)
+            case HKCategoryValueSleepAnalysis.awake.rawValue:
+                stageIntervals.append(interval)
             default:
                 break
             }
         }
-        let candidateSessions = inBedIntervals.isEmpty
-            ? mergeIntervals(asleepIntervals)
-            : mergeIntervals(inBedIntervals)
+
+        let inBedSessions = mergeIntervals(inBedIntervals)
+        // Awake intervals can bridge adjacent asleep stages into one session, but
+        // an awake-only record is not evidence of a sleep session by itself.
+        let stageSessions = mergeIntervals(stageIntervals).filter { stageSession in
+            asleepIntervals.contains { asleep in
+                asleep.start < stageSession.end && asleep.end > stageSession.start
+            }
+        }
+        let stageOnlySessions = stageSessions.filter { stageSession in
+            !inBedSessions.contains { inBed in
+                stageSession.start < inBed.end && stageSession.end > inBed.start
+            }
+        }
+        let candidateSessions = mergeIntervals(inBedSessions + stageOnlySessions)
         return candidateSessions.filter { calendar.isDate($0.end, inSameDayAs: date) }
     }
 

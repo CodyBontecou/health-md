@@ -2,11 +2,16 @@ package com.healthmd.export
 
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.health.HealthConnectDataProvider
+import com.healthmd.data.health.HealthConnectManager
+import com.healthmd.data.health.HealthProviderRegistry
+import com.healthmd.data.health.HealthRepositoryImpl
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.model.ExportPreviewDay
 import com.healthmd.domain.model.ExportPreviewFile
 import com.healthmd.domain.model.ExportSettings
@@ -14,6 +19,10 @@ import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepData
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.SettingsRepository
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -161,6 +170,46 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
+    fun `range export fallback preserves stored morning ends attribution`() = runTest {
+        val date = LocalDate.of(2026, 5, 4)
+        val manager = mockk<HealthConnectManager>()
+        val provider = HealthConnectDataProvider(manager)
+        val registry = mockk<HealthProviderRegistry>()
+        val settingsRepository = mockk<SettingsRepository>()
+        val observedAttributions = mutableListOf<SleepDayAttribution>()
+        coEvery { settingsRepository.getSelectedHealthProviderId() } returns "health_connect"
+        coEvery { settingsRepository.getSleepDayAttribution() } returns SleepDayAttribution.MORNING_ENDS
+        every { registry.providerFor("health_connect") } returns provider
+        every { registry.primaryExportProvider() } returns provider
+        every { manager.isBeforeFirstUnlock() } returns false
+        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+            observedAttributions += arg<SleepDayAttribution>(5)
+            if (observedAttributions.size == 1) {
+                listOf(HealthData(date))
+            } else {
+                listOf(HealthData(date, sleep = SleepData(totalDuration = 8.hours)))
+            }
+        }
+        val exportRepository = RecordingExportRepository()
+        val orchestrator = ExportOrchestrator(
+            HealthRepositoryImpl(registry, settingsRepository),
+            exportRepository,
+        )
+
+        val result = orchestrator.exportDates(
+            listOf(date),
+            ExportSettings(exportFormat = ExportFormat.JSON),
+        )
+
+        assertThat(result.successCount).isEqualTo(1)
+        assertThat(observedAttributions).containsExactly(
+            SleepDayAttribution.MORNING_ENDS,
+            SleepDayAttribution.MORNING_ENDS,
+        ).inOrder()
+        assertThat(exportRepository.exported.single().sleep.totalDuration).isEqualTo(8.hours)
+    }
+
+    @Test
     fun `range export retries empty range days with single day reads before skipping`() = runTest {
         val dates = listOf(
             LocalDate.of(2026, 5, 4),
@@ -219,7 +268,7 @@ class ExportOrchestratorRangeTest {
             includeGranularData: Boolean,
             zoneId: ZoneId,
             pinnedCalendarDays: Boolean,
-            sleepDayAttribution: SleepDayAttribution,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
         ): List<HealthData> {
             rangeCalls++
             rangeCallSizes += dates.size

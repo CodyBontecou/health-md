@@ -1186,6 +1186,23 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func test_sleepWindow_morningEnds_usesCalendarNoonsAcrossSpringDST() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let springForwardDay = calendar.date(from: DateComponents(year: 2026, month: 3, day: 8))!
+
+        let window = HealthKitManager.sleepWindow(
+            for: springForwardDay,
+            attribution: .morningEnds,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(calendar.component(.hour, from: window.start), 12)
+        XCTAssertEqual(calendar.component(.hour, from: window.end), 12)
+        XCTAssertEqual(window.end.timeIntervalSince(window.start), 47 * 3_600, accuracy: 1)
+    }
+
     /// Session 23:45 on D → 07:30 on D+1 (the late-night edge from issue #104).
     private func lateNightSessionSamples(for date: Date, calendar: Calendar) -> [CategorySampleValue] {
         let start = calendar.date(bySettingHour: 23, minute: 45, second: 0, of: date)!
@@ -1317,6 +1334,122 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         sut.setSleepDayAttribution(.morningEnds)
         let morningEnds = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
         XCTAssertEqual(morningEnds.timeContext.sleepDayAttribution, .morningEnds)
+    }
+
+    @MainActor
+    func test_sleepSessionsEnding_keepsStageOnlySessionAlongsideUnrelatedInBedSession() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        let wakeDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 2))!
+        let priorDay = calendar.date(byAdding: .day, value: -1, to: wakeDay)!
+        let overnightStart = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: priorDay)!
+        let overnightEnd = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: wakeDay)!
+        let napStart = calendar.date(bySettingHour: 14, minute: 0, second: 0, of: wakeDay)!
+        let napEnd = napStart.addingTimeInterval(45 * 60)
+
+        let sessions = HealthKitManager.sleepSessionsEnding(on: wakeDay, samples: [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: overnightStart, endDate: overnightEnd),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: napStart, endDate: napEnd),
+        ], calendar: calendar)
+
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertEqual(sessions[0].start, overnightStart)
+        XCTAssertEqual(sessions[0].end, overnightEnd)
+        XCTAssertEqual(sessions[1].start, napStart)
+        XCTAssertEqual(sessions[1].end, napEnd)
+    }
+
+    @MainActor
+    func test_sleepSessionsEnding_awakeAcrossMidnightKeepsOneStageOnlyNight() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Kathmandu")!
+        let wakeDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 2))!
+        let priorDay = calendar.date(byAdding: .day, value: -1, to: wakeDay)!
+        let start = calendar.date(bySettingHour: 22, minute: 30, second: 0, of: priorDay)!
+        let awakeStart = calendar.date(bySettingHour: 23, minute: 50, second: 0, of: priorDay)!
+        let awakeEnd = calendar.date(bySettingHour: 0, minute: 20, second: 0, of: wakeDay)!
+        let end = calendar.date(bySettingHour: 6, minute: 45, second: 0, of: wakeDay)!
+
+        let sessions = HealthKitManager.sleepSessionsEnding(on: wakeDay, samples: [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: awakeStart),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.awake.rawValue, startDate: awakeStart, endDate: awakeEnd),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepREM.rawValue, startDate: awakeEnd, endDate: end),
+        ], calendar: calendar)
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].start, start)
+        XCTAssertEqual(sessions[0].end, end)
+    }
+
+    @MainActor
+    func test_sleepSessionsEnding_inBedBoundsWinAndAwakeOnlyIsNotASession() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Pacific/Auckland")!
+        let wakeDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 2))!
+        let priorDay = calendar.date(byAdding: .day, value: -1, to: wakeDay)!
+        let stageStart = calendar.date(bySettingHour: 22, minute: 30, second: 0, of: priorDay)!
+        let inBedStart = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: priorDay)!
+        let inBedEnd = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: wakeDay)!
+        let stageEnd = calendar.date(bySettingHour: 7, minute: 30, second: 0, of: wakeDay)!
+        let awakeStart = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: wakeDay)!
+        let awakeEnd = awakeStart.addingTimeInterval(15 * 60)
+
+        let sessions = HealthKitManager.sleepSessionsEnding(on: wakeDay, samples: [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: stageStart, endDate: stageEnd),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.inBed.rawValue, startDate: inBedStart, endDate: inBedEnd),
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.awake.rawValue, startDate: awakeStart, endDate: awakeEnd),
+        ], calendar: calendar)
+
+        XCTAssertEqual(sessions.count, 1)
+        XCTAssertEqual(sessions[0].start, inBedStart)
+        XCTAssertEqual(sessions[0].end, inBedEnd)
+    }
+
+    @MainActor
+    func test_fetchHealthData_pinsTimeZoneAndAttributionBeforeAsyncQueries() async throws {
+        let originalTimeZone = NSTimeZone.default
+        defer { NSTimeZone.default = originalTimeZone }
+        let capturedZone = TimeZone(identifier: "America/Los_Angeles")!
+        let changedZone = TimeZone(identifier: "Europe/Berlin")!
+        NSTimeZone.default = capturedZone
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = capturedZone
+        let wakeDay = calendar.date(from: DateComponents(year: 2026, month: 7, day: 2))!
+        let priorDay = calendar.date(byAdding: .day, value: -1, to: wakeDay)!
+        let start = calendar.date(bySettingHour: 23, minute: 30, second: 0, of: priorDay)!
+        let end = calendar.date(bySettingHour: 6, minute: 30, second: 0, of: wakeDay)!
+
+        let store = FakeHealthStore()
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end),
+        ]
+        let sut = makeSUT(store: store)
+        sut.setSleepDayAttribution(.morningEnds)
+        store.beforeQueryCategorySamples = { identifier in
+            guard identifier == .sleepAnalysis else { return }
+            await MainActor.run {
+                NSTimeZone.default = changedZone
+                sut.setSleepDayAttribution(.nightBegins)
+            }
+        }
+
+        let sleepSelection = MetricSelectionState()
+        sleepSelection.deselectAll()
+        sleepSelection.enabledMetrics = [
+            "sleep_total", "sleep_bedtime", "sleep_wake", "sleep_core", "sleep_awake",
+        ]
+        let captured = try await sut.fetchHealthData(
+            for: wakeDay,
+            includeGranularData: true,
+            metricSelection: sleepSelection,
+            timeZone: capturedZone
+        )
+
+        XCTAssertEqual(captured.timeContext.calendarTimeZoneIdentifier, capturedZone.identifier)
+        XCTAssertEqual(captured.timeContext.sleepDayAttribution, SleepDayAttribution.morningEnds)
+        XCTAssertEqual(captured.sleep.sessionStart, start)
+        XCTAssertEqual(captured.sleep.sessionEnd, end)
     }
 
     // MARK: - Body Aggregation

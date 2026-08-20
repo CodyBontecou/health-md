@@ -3,7 +3,7 @@ package com.healthmd.data.health
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
-import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.util.runCatchingCancellable
@@ -74,22 +74,8 @@ class HealthRepositoryImpl(
         return ready to failures
     }
 
-    override suspend fun fetchHealthData(date: LocalDate): HealthData {
-        if (!shouldUseAllConnected()) return activeProvider().fetchHealthData(date)
-        val attemptedIds = configuredProviderIds()
-        val (providers, failures) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
-        val successful = providers.mapNotNull { provider ->
-            runCatchingCancellable { provider.fetchHealthData(date) }
-                .fold(
-                    onSuccess = { HealthDataMerger.ProviderData(provider.providerId, it) },
-                    onFailure = {
-                        failures += it.toFailure(provider.providerId, "fetchHealthData")
-                        null
-                    },
-                )
-        }
-        return HealthDataMerger.mergeAllConnected(date, attemptedIds, successful, failures)
-    }
+    override suspend fun fetchHealthData(date: LocalDate): HealthData =
+        fetchHealthDataRange(dates = listOf(date)).firstOrNull() ?: HealthData(date)
 
     override suspend fun fetchHealthDataRange(
         dates: List<LocalDate>,
@@ -97,27 +83,27 @@ class HealthRepositoryImpl(
         includeGranularData: Boolean,
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
-        sleepDayAttribution: SleepDayAttribution,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
     ): List<HealthData> {
-        // The attribution preference is read live at capture time (issue #104),
-        // mirroring Apple's capture-side UserDefaults read, so durable retries
-        // re-capture with the device's current setting.
-        val attribution = if (sleepDayAttribution == SleepDayAttribution.DEFAULT) {
-            settingsRepository.getSleepDayAttribution()
-        } else {
-            sleepDayAttribution
+        if (dates.isEmpty()) return emptyList()
+        // Snapshot the operation's timezone argument and attribution together at
+        // capture entry. Every provider query and projection receives these exact
+        // values even if settings or the system timezone change while suspended.
+        val captureZoneId = zoneId
+        val attribution = when (sleepDayAttributionOverride) {
+            SleepDayAttributionOverride.StoredPreference -> settingsRepository.getSleepDayAttribution()
+            is SleepDayAttributionOverride.Value -> sleepDayAttributionOverride.attribution
         }
         if (!shouldUseAllConnected()) {
             return activeProvider().fetchHealthDataRange(
                 dates,
                 dataTypes,
                 includeGranularData,
-                zoneId,
+                captureZoneId,
                 pinnedCalendarDays,
                 attribution,
             )
         }
-        if (dates.isEmpty()) return emptyList()
         val attemptedIds = configuredProviderIds()
         val (providers, readinessFailures) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
         val failuresByDate = dates.associateWith { readinessFailures.toMutableList() }.toMutableMap()
@@ -129,7 +115,7 @@ class HealthRepositoryImpl(
                     dates,
                     dataTypes,
                     includeGranularData,
-                    zoneId,
+                    captureZoneId,
                     pinnedCalendarDays,
                     attribution,
                 )

@@ -26,13 +26,16 @@ day owns a sleep session:
   and afternoon naps stay on the day they end. Malformed zero/negative-length records land on
   their end date instead of the start-date noon fallback.
 
-The setting is a device-local capture preference (DataStore key `sleep_day_attribution`) read live
-on every Health Connect capture: manual, scheduled, direct file, and widget reads. Apple persists
-the identical raw values and default (`healthKit.sleepDayAttribution`, UserDefaults). The setting
-is deliberately excluded from portable Share My Setup envelopes and durable retry snapshots on
-both platforms, and it changes only owner-date assignment — never values, units, reducers, stage
-identities, or the frozen v4 / analytical v5 export shapes. Cloud provider sidecars keep their
-provider-native attribution; the setting governs the primary Health Connect read path.
+The setting is a device-local capture preference (DataStore key `sleep_day_attribution`) snapshotted
+with the operation timezone at the entry to every Health Connect capture: manual, scheduled, API,
+direct file, report, fallback, and widget reads. An explicit override distinguishes a real
+`night_begins` choice from “read the stored preference,” so fallback capture cannot silently replace
+a pinned `morning_ends` result with default-mode data. Apple persists the identical raw values and
+default (`healthKit.sleepDayAttribution`, UserDefaults). The setting is deliberately excluded from
+portable Share My Setup envelopes and durable retry snapshots on both platforms, and it changes
+only owner-date assignment — never values, units, reducers, stage identities, or the frozen v4 /
+analytical v5 export shapes. Cloud provider sidecars keep their provider-native attribution; the
+setting governs the primary Health Connect read path.
 
 The read interval in the next section is unchanged for both modes: its prior-day noon start
 already covers overnight sessions ending on the first requested date because Health Connect
@@ -91,7 +94,8 @@ preserving the aggregation meaning of the frozen `ios-v4` and shipped `android-a
 profiles. It changes no public key, JSON type, unit, label, aggregation rule or frontmatter key, so
 those profile versions and signature fixtures do not change. The wake-up-date mode is a new,
 explicitly versioned window rule (`wake-date-sleep-window-v1`) selected by an opt-in user setting;
-the default mode keeps byte-identical output for every existing install.
+the default mode retains the shipped noon-to-noon boundary and clipping behavior for existing
+installs; it does not promise that an arbitrarily long session crossing noon remains whole.
 
 A principal-session rule, overlap de-duplication, continuity threshold, stage-authority rule or
 other public semantic change must use a new explicit profile/version under the existing guardrail.

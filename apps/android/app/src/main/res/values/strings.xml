@@ -333,7 +333,7 @@
     <string name="sleep_attribution_title">Sleep Day Attribution</string>
     <string name="sleep_attribution_night_begins">Night begins</string>
     <string name="sleep_attribution_morning_ends">Morning ends</string>
-    <string name="sleep_attribution_night_begins_description">Each sleep session belongs to the daily note for the night it starts. This is the default and matches previous exports.</string>
+    <string name="sleep_attribution_night_begins_description">Sleep uses the daily note’s noon-to-noon window. This is the default and matches previous exports.</string>
     <string name="sleep_attribution_morning_ends_description">Each sleep session belongs to the daily note for the morning it ends, matching the Health Connect app. A session from 11:45 PM to 7:30 AM appears in the wake-up day’s note.</string>
 
     <!-- Metric selection screen -->
