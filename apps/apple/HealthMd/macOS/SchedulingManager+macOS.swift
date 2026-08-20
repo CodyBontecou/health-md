@@ -71,6 +71,40 @@ struct MacScheduledRangeCapture {
             failures: failures
         )
     }
+
+    /// Rebuilds the complete immutable daily source set before an archive overwrite. A residual
+    /// retry may reuse records captured in this run, but every other original day must still be
+    /// available from the local cache or the existing ZIP remains authoritative.
+    static func archiveSources(
+        originalRequestedDates: [Date],
+        reusing records: [HealthData],
+        timeZone: TimeZone,
+        fetch: (Date) -> HealthData?
+    ) -> [HealthData]? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        var recordsByDay: [Date: HealthData] = [:]
+        for record in records {
+            recordsByDay[calendar.startOfDay(for: record.date)] = record
+        }
+        var result: [HealthData] = []
+        result.reserveCapacity(originalRequestedDates.count)
+
+        for requestedDate in originalRequestedDates {
+            let day = calendar.startOfDay(for: requestedDate)
+            if let reused = recordsByDay[day] {
+                result.append(reused)
+                continue
+            }
+            guard let recaptured = fetch(requestedDate),
+                  calendar.startOfDay(for: recaptured.date) == day else {
+                return nil
+            }
+            recordsByDay[day] = recaptured
+            result.append(recaptured)
+        }
+        return result
+    }
 }
 
 /// macOS SchedulingManager — uses in-app Timer + Login Item instead of BGTaskScheduler.
@@ -509,8 +543,18 @@ class SchedulingManager: ObservableObject {
         // output begins. Recheck at that exact boundary so no archive/roll-up starts afterward.
         if Task.isCancelled { wasCancelled = true }
 
-        var rollupHealthData = successfulHealthData
-        if !wasCancelled {
+        let archiveSourceHealthData: [HealthData]? = if settings.archiveModeEnabled && !wasCancelled {
+            MacScheduledRangeCapture.archiveSources(
+                originalRequestedDates: immutableRangeDates,
+                reusing: successfulHealthData,
+                timeZone: immutableRangeTimeZone,
+                fetch: healthDataStore.fetchHealthData(for:)
+            )
+        } else {
+            nil
+        }
+        var rollupHealthData = archiveSourceHealthData ?? successfulHealthData
+        if !wasCancelled && (!settings.archiveModeEnabled || archiveSourceHealthData != nil) {
             let retainedRollupDays = Set(rollupHealthData.map { calendar.startOfDay(for: $0.date) })
             for rollupDate in ExportOrchestrator.rollupSourceDates(
                 for: immutableRangeDates,
@@ -526,8 +570,13 @@ class SchedulingManager: ObservableObject {
 
         if !wasCancelled && settings.archiveModeEnabled && !successfulHealthData.isEmpty {
             do {
+                guard let archiveSourceHealthData else {
+                    throw ExportError.invalidExportPath(
+                        path: "original archive source days are unavailable; existing ZIP preserved"
+                    )
+                }
                 if try await vaultManager.exportArchive(
-                    from: successfulHealthData,
+                    from: archiveSourceHealthData,
                     rollupHealthData: rollupHealthData,
                     settings: settings,
                     startDate: immutableRangeDates.first ?? dates.first ?? yesterday,

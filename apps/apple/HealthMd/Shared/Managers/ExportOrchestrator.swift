@@ -866,8 +866,13 @@ struct ExportOrchestrator {
                 let hasRenderableData = autoreleasepool {
                     record.preparedExport(settings: frozenSettings).hasAnyData
                 }
-                if hasRenderableData {
+                // A successful capture is range provenance even when the selected metrics are
+                // empty. Keep it for range-v9 source_dates/days_counted, while selecting daily
+                // output only when the prepared daily artifact has renderable data.
+                if hasRenderableData || (!isSummaryOnly && requestedRange != nil) {
                     records.append(record)
+                }
+                if hasRenderableData {
                     if isSelected && !isSummaryOnly {
                         selectedRecordDates.append(record.date)
                         dailyOutputOwnerDates.insert(
@@ -1812,7 +1817,7 @@ struct ExportOrchestrator {
         }
     }
 
-    private static func rangeSummaryUnavailableFailure(
+    static func rangeSummaryUnavailableFailure(
         requestedDates: [Date],
         calendarTimeZone: TimeZone
     ) -> ExportPartialFailure {

@@ -509,8 +509,8 @@ final class MacExportJobExecutor {
             settings: settings
         )
         if !settings.archiveModeEnabled,
-           !rollupRecords.isEmpty,
-           HealthRollupExporter.isEnabled(settings: settings) {
+           HealthRollupExporter.isEnabled(settings: settings),
+           (!rollupRecords.isEmpty || settings.generateRangeSummary) {
             sendProgress(
                 jobID: job.jobID,
                 phase: .writing,
@@ -532,6 +532,13 @@ final class MacExportJobExecutor {
                 )
                 rollupFileCount += rollupResults.count
                 totalFilesWritten += rollupResults.count
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                individualEntryCoverageGaps.append(
+                    ExportOrchestrator.rangeSummaryUnavailableFailure(
+                        requestedDates: originalRequestedDates,
+                        calendarTimeZone: operationCalendar.timeZone
+                    )
+                )
             } catch {
                 isFileAccountingComplete = false
                 hadTerminalRangeFailure = true
@@ -1217,8 +1224,8 @@ final class MacExportJobExecutor {
             settings: settings
         )
         if !settings.archiveModeEnabled,
-           !rollupRecords.isEmpty,
-           HealthRollupExporter.isEnabled(settings: settings) {
+           HealthRollupExporter.isEnabled(settings: settings),
+           (!rollupRecords.isEmpty || settings.generateRangeSummary) {
             do {
                 let requestedRange = try Self.requestedRange(
                     for: session.originalRequestedDates,
@@ -1232,6 +1239,13 @@ final class MacExportJobExecutor {
                 )
                 session.rollupFileCount += rollupResults.count
                 session.totalFilesWritten += rollupResults.count
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                session.individualEntryCoverageGaps.append(
+                    ExportOrchestrator.rangeSummaryUnavailableFailure(
+                        requestedDates: session.originalRequestedDates,
+                        calendarTimeZone: operationCalendar.timeZone
+                    )
+                )
             } catch {
                 session.isFileAccountingComplete = false
                 session.hadTerminalRangeFailure = true

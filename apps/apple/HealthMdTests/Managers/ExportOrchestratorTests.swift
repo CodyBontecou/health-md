@@ -329,6 +329,59 @@ final class ExportOrchestratorTests: XCTestCase {
     }
 
     @MainActor
+    func testPinnedForegroundRangeRetainsSuccessfulEmptyCaptureWithoutDailyArtifact() async throws {
+        UserDefaults.standard.set(
+            "shadow",
+            forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+        )
+        defer {
+            UserDefaults.standard.removeObject(
+                forKey: AppleExportEnginePolicyResolver.userDefaultsKey
+            )
+        }
+        let populatedDate = HealthKitFixtures.referenceDate
+        let emptyDate = Calendar.current.date(byAdding: .day, value: 1, to: populatedDate)!
+        let store = FakeHealthStore()
+        store.querySumResult = { identifier, _ in
+            guard identifier == .stepCount else { return nil }
+            return store.queriedSumIdentifiers.count == 1 ? 8_642 : nil
+        }
+        let healthKitManager = HealthKitManager(
+            store: store,
+            userDefaults: makeIsolatedDefaults()
+        )
+        let (vaultManager, fileSystem) = makeVaultManager(
+            vaultPath: "/tmp/ExportOrchestratorPinnedEmptyRangeVault"
+        )
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [.range])
+        settings.includeGranularData = false
+        settings.metricSelection.deselectAll()
+        settings.metricSelection.enabledMetrics = ["steps"]
+        let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        settings.exportTimeZoneOverride = timezone
+        let result = await ExportOrchestrator.exportDates(
+            [populatedDate, emptyDate],
+            healthKitManager: healthKitManager,
+            vaultManager: vaultManager,
+            settings: settings
+        )
+
+        XCTAssertEqual(result.successCount, 1)
+        XCTAssertEqual(result.rollupFileCount, 1)
+        XCTAssertEqual(result.failedDateDetails.map(\.reason), [.noHealthData])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.hasSuffix("/2026-03-15.json") })
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.hasSuffix("/2026-03-16.json") })
+        let rangeJSON = try XCTUnwrap(fileSystem.files.first { path, _ in
+            path.contains("/Rollups/Range/") && path.hasSuffix(".json")
+        }?.value)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: Data(rangeJSON.utf8)) as? [String: Any]
+        )
+        XCTAssertEqual(object["days_counted"] as? Int, 2)
+        XCTAssertEqual(object["source_dates"] as? [String], ["2026-03-15", "2026-03-16"])
+    }
+
+    @MainActor
     func testPinnedBackgroundDailyExportContinuesWhenRangeSummaryExceedsTenThousandDays() async throws {
         UserDefaults.standard.set(
             "shadow",

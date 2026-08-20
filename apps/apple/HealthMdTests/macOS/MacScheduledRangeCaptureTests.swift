@@ -71,6 +71,51 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         XCTAssertEqual(captured.failures.first?.reason, .noHealthData)
     }
 
+    func testArchiveResidualRetryReusesCurrentDayAndRecapturesEveryOriginalSource() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let firstDate = try date(2026, 3, 13, timeZone: timeZone)
+        let secondDate = try date(2026, 3, 14, timeZone: timeZone)
+        let residualDate = try date(2026, 3, 15, timeZone: timeZone)
+        let first = record(on: firstDate)
+        let second = record(on: secondDate)
+        let residual = record(on: residualDate)
+        var fetchedOwnerDates: [String] = []
+
+        let sources = MacScheduledRangeCapture.archiveSources(
+            originalRequestedDates: [firstDate, secondDate, residualDate],
+            reusing: [residual],
+            timeZone: timeZone
+        ) { requestedDate in
+            let requestedOwnerDate = ownerDate(requestedDate, timeZone: timeZone)
+            fetchedOwnerDates.append(requestedOwnerDate)
+            switch requestedOwnerDate {
+            case "2026-03-13": return first
+            case "2026-03-14": return second
+            default: return nil
+            }
+        }
+
+        XCTAssertEqual(fetchedOwnerDates, ["2026-03-13", "2026-03-14"])
+        XCTAssertEqual(sources?.map { ownerDate($0.date, timeZone: timeZone) }, [
+            "2026-03-13", "2026-03-14", "2026-03-15",
+        ])
+    }
+
+    func testArchiveResidualRetryRequiresEveryOriginalSourceBeforeReplacement() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let firstDate = try date(2026, 3, 14, timeZone: timeZone)
+        let residualDate = try date(2026, 3, 15, timeZone: timeZone)
+
+        let sources = MacScheduledRangeCapture.archiveSources(
+            originalRequestedDates: [firstDate, residualDate],
+            reusing: [record(on: residualDate)],
+            timeZone: timeZone,
+            fetch: { _ in nil }
+        )
+
+        XCTAssertNil(sources)
+    }
+
     func testSummaryOnlyRangeCaptureNeverSelectsDailyArtifacts() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, timeZone: timeZone)

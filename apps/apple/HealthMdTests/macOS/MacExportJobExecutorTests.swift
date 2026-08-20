@@ -718,6 +718,60 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertNil(executor.currentJobID)
     }
 
+    func testLegacyStream_rangeOverTenThousandDaysWarnsAndKeepsSuccessfulDailyReconciliation() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let residualDate = Self.day(2026, 5, 12)
+        let originalStart = Self.day(2000, 1, 1)
+        let originalEnd = Self.day(2027, 5, 20)
+        let jobID = UUID()
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.generateRangeSummary = true
+            settings.includeGranularData = false
+        }
+        let start = makeStreamStart(
+            jobID: jobID,
+            start: residualDate,
+            end: residualDate,
+            totalTransferDays: 1,
+            originalRequestedDates: [originalStart, originalEnd],
+            snapshot: makeSnapshot(from: settings)
+        )
+        guard case .success = executor.startStream(start, vaultManager: manager) else {
+            return XCTFail("Expected legacy stream start")
+        }
+        guard case .success = await executor.receiveChunk(
+            MacExportStreamChunk(
+                jobID: jobID,
+                sequence: 1,
+                records: [Self.healthData(on: residualDate)],
+                externalDailyRecords: [],
+                processedTransferDays: 1,
+                totalTransferDays: 1
+            ),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected legacy stream chunk")
+        }
+
+        guard case .success(let payload) = await executor.completeStream(
+            MacExportStreamComplete(jobID: jobID, totalChunks: 1, iphoneFailedDateDetails: []),
+            vaultManager: manager
+        ) else {
+            return XCTFail("Expected nonterminal range-limit warning")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertTrue(payload.failedDateDetails.isEmpty)
+        XCTAssertFalse(payload.hadTerminalRangeFailure)
+        XCTAssertEqual(payload.partialFailures?.map(\.dataType), ["Range Summary"])
+        XCTAssertTrue(payload.partialFailures?.first?.errorDescription.contains("10,000 days") == true)
+        XCTAssertEqual(payload.completedDates?.count, 1)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2026-05-12.json"])
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
     func testStream_cancelDuringSuspendedWriteWaitsForExactArtifactBoundary() async throws {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()
@@ -1518,6 +1572,39 @@ final class MacExportJobExecutorTests: XCTestCase {
         XCTAssertTrue(rangeRollup.contains("| Steps | `steps` | 8,642 | steps | 2/2 | sum |"))
     }
 
+    func testExecute_rangeOverTenThousandDaysWarnsAndKeepsSuccessfulDailyReconciliation() async throws {
+        let manager = makeManagerWithVault()
+        let executor = MacExportJobExecutor()
+        let residualDate = Self.day(2026, 5, 12)
+        let originalStart = Self.day(2000, 1, 1)
+        let originalEnd = Self.day(2027, 5, 20)
+        let settings = makeSettings(formats: [.json]) { settings in
+            settings.generateRangeSummary = true
+            settings.includeGranularData = false
+        }
+        let job = makeJob(
+            records: [Self.healthData(on: residualDate)],
+            start: residualDate,
+            end: residualDate,
+            originalRequestedDates: [originalStart, originalEnd],
+            snapshot: makeSnapshot(from: settings)
+        )
+
+        guard case .success(let payload) = await executor.execute(job, vaultManager: manager) else {
+            return XCTFail("Expected nonterminal range-limit warning")
+        }
+
+        XCTAssertEqual(payload.status, .success)
+        XCTAssertEqual(payload.successCount, 1)
+        XCTAssertTrue(payload.failedDateDetails.isEmpty)
+        XCTAssertFalse(payload.hadTerminalRangeFailure)
+        XCTAssertEqual(payload.partialFailures?.map(\.dataType), ["Range Summary"])
+        XCTAssertTrue(payload.partialFailures?.first?.errorDescription.contains("10,000 days") == true)
+        XCTAssertEqual(payload.completedDates?.count, 1)
+        XCTAssertNotNil(fileSystem.files["/tmp/MacVault/2026-05-12.json"])
+        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+    }
+
     func testExecute_summaryOnlyWritesRollupsWithoutDailyRecords() async throws {
         let manager = makeManagerWithVault()
         let executor = MacExportJobExecutor()
@@ -1791,6 +1878,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         start: Date,
         end: Date,
         requestedDates: [Date]? = nil,
+        originalRequestedDates: [Date]? = nil,
         snapshot: ExportSettingsSnapshot? = nil
     ) -> MacExportJob {
         MacExportJob(
@@ -1800,6 +1888,10 @@ final class MacExportJobExecutorTests: XCTestCase {
             dateRangeStart: start,
             dateRangeEnd: end,
             requestedDates: requestedDates ?? ExportOrchestrator.dateRange(from: start, to: end),
+            originalRequestedDates: originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: originalRequestedDates == nil
+                ? nil
+                : (snapshot ?? makeSnapshot()).calendarTimeZoneIdentifier,
             records: records,
             externalDailyRecords: externalDailyRecords,
             settingsSnapshot: snapshot ?? makeSnapshot(),
@@ -1835,6 +1927,7 @@ final class MacExportJobExecutorTests: XCTestCase {
         start: Date,
         end: Date,
         totalTransferDays: Int,
+        originalRequestedDates: [Date]? = nil,
         snapshot: ExportSettingsSnapshot? = nil
     ) -> MacExportStreamStart {
         MacExportStreamStart(
@@ -1844,6 +1937,10 @@ final class MacExportJobExecutorTests: XCTestCase {
             dateRangeStart: start,
             dateRangeEnd: end,
             requestedDates: ExportOrchestrator.dateRange(from: start, to: end),
+            originalRequestedDates: originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: originalRequestedDates == nil
+                ? nil
+                : (snapshot ?? makeSnapshot()).calendarTimeZoneIdentifier,
             totalRequestedDays: ExportOrchestrator.dateRange(from: start, to: end).count,
             totalTransferDays: totalTransferDays,
             settingsSnapshot: snapshot ?? makeSnapshot(),
