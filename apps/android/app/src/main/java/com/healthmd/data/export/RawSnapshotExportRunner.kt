@@ -117,32 +117,31 @@ class RawSnapshotExportRunner @Inject constructor(
 
         val zone = ZoneId.systemDefault()
         val request = buildRequest(startDate, endDate, zone, settings)
-        val results = mutableListOf<ExportResult>()
-        for (providerId in providerIds) {
-            val repository = rawRepositoryRegistry.repositoryFor(providerId)
-            val result = if (repository == null) {
-                failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
-            } else {
-                // Only runs explicitly marked interactive may launch Health Connect's per-session
-                // exercise route consent UI; every other caller (scheduled exports, the direct
-                // CLI protocol, background jobs) reports consent_required routes unchanged.
-                val providerExport: suspend () -> ExportResult = {
+        val runProviders: suspend () -> ExportResult = {
+            val results = mutableListOf<ExportResult>()
+            for (providerId in providerIds) {
+                val repository = rawRepositoryRegistry.repositoryFor(providerId)
+                val result = if (repository == null) {
+                    failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
+                } else {
                     exportProvider(
                         providerId, repository, startDate, endDate, request, settings, target,
                         apiConfiguration,
                     )
                 }
-                if (allowInteractiveRouteConsent) {
-                    withInteractiveRouteConsent { providerExport() }
-                } else {
-                    providerExport()
-                }
+                results += result
+                if (result.wasCancelled) break
             }
-            results += result
-            if (result.wasCancelled) break
+            if (providerIds.size == 1) results.single()
+            else aggregateProviderResults(results, target, providerIds.size)
         }
-        if (providerIds.size == 1) return results.single()
-        return aggregateProviderResults(results, target, providerIds.size)
+        // One context spans every provider so the ten-prompt budget is run-scoped, not reset per
+        // artifact. Scheduled/direct/background callers leave this disabled.
+        return if (allowInteractiveRouteConsent) {
+            withInteractiveRouteConsent { runProviders() }
+        } else {
+            runProviders()
+        }
     }
 
     override suspend fun previewRange(
@@ -196,12 +195,9 @@ class RawSnapshotExportRunner @Inject constructor(
 
             var artifact: File? = null
             try {
-                val produce: suspend () -> RawExportResult = { producePreviewArtifact(repository, request, context) }
-                val raw = if (allowInteractiveRouteConsent) {
-                    withInteractiveRouteConsent { produce() }
-                } else {
-                    produce()
-                }
+                // Preview is read-only UX and does not disclose or authorize Health Connect's
+                // persistent precise-route grant. It therefore never launches consent UI.
+                val raw = producePreviewArtifact(repository, request, context)
                 artifact = File(raw.finalLocation)
                 check(artifact.isFile) { "Completed raw snapshot preview artifact is missing." }
                 val bounded = readRawArtifactPreview(artifact)

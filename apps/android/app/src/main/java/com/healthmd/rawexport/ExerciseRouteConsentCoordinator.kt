@@ -4,35 +4,48 @@ import androidx.health.connect.client.records.ExerciseRoute
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * App-wide mediator for Health Connect's per-session exercise route consent.
  *
- * Health Connect returns [androidx.health.connect.client.records.ExerciseRouteResult.ConsentRequired]
- * for every exercise route written by another app, and the pinned SDK
- * (androidx.health.connect:connect-client:1.2.0-alpha02) only allows asking for that consent one
- * session at a time through `ExerciseRouteRequestContract` — there is no batched flow. The
- * coordinator therefore bounds a single export to [MAX_PROMPTS_PER_EXPORT] dialogs, preferring
- * the most recent sessions, and degrades to "no grants" whenever no interactive UI surface is
- * attached (scheduled exports, the direct CLI protocol, background jobs).
- *
- * Grants persist inside Health Connect per app and session: once a session is granted here, every
- * later read returns its route as inline data.
+ * The Activity Result contract has no request identifier in its result. This coordinator therefore
+ * owns the in-flight request across Activity/configuration recreation and never launches a second
+ * request until the first result has been consumed. A timeout or cancellation abandons the request
+ * but keeps its result slot occupied; a late result is drained and can never satisfy a newer run.
  */
 @Singleton
 class ExerciseRouteConsentCoordinator @Inject constructor() : ExerciseRouteConsentGateway {
 
     /** UI surface able to launch the Health Connect per-session consent activity. */
     interface Surface {
-        /** Shows the consent prompt for one session; returns its granted route, or null when denied. */
-        suspend fun requestRoute(session: PendingExerciseRouteConsent): ExerciseRoute?
+        /** Returns true only when the request was handed to an Activity Result launcher. */
+        fun launchRouteRequest(session: PendingExerciseRouteConsent): Boolean
     }
+
+    private data class DeliveredResult(val route: ExerciseRoute?)
+
+    private data class ActiveRequest(
+        val result: CompletableDeferred<DeliveredResult>,
+        var abandoned: Boolean = false,
+    )
+
+    private sealed interface PromptOutcome {
+        data object NotLaunched : PromptOutcome
+        data class Completed(val route: ExerciseRoute?) : PromptOutcome
+    }
+
+    private val promptMutex = Mutex()
 
     @Volatile
     private var surface: Surface? = null
+
+    private var activeRequest: ActiveRequest? = null
 
     fun attach(surface: Surface) {
         this.surface = surface
@@ -40,39 +53,93 @@ class ExerciseRouteConsentCoordinator @Inject constructor() : ExerciseRouteConse
 
     fun detach(surface: Surface) {
         if (this.surface === surface) this.surface = null
+        // Do not complete or discard activeRequest. The Activity Result registry rebinds its
+        // callback after configuration recreation while the ViewModel export coroutine survives.
+    }
+
+    /**
+     * Delivers the single Activity Result contract result. There is intentionally no session
+     * argument: the contract does not return one. Serialization plus the retained active slot is
+     * what makes this association safe.
+     */
+    fun onRouteResult(route: ExerciseRoute?) {
+        val completion = synchronized(this) {
+            val active = activeRequest ?: return
+            activeRequest = null
+            if (active.abandoned) null else active.result
+        }
+        completion?.complete(DeliveredResult(route))
     }
 
     override suspend fun requestRoutes(sessions: List<PendingExerciseRouteConsent>): Map<String, ExerciseRoute> {
-        val active = surface ?: return emptyMap()
+        val run = currentCoroutineContext()[InteractiveRouteConsent] ?: return emptyMap()
         val candidates = sessions
             .distinctBy { it.sessionId }
-            .sortedByDescending { it.sessionStartTime }
-            .take(MAX_PROMPTS_PER_EXPORT)
+            .sortedWith(compareByDescending<PendingExerciseRouteConsent> { it.sessionStartTime }.thenBy { it.sessionId })
         if (candidates.isEmpty()) return emptyMap()
-        val granted = linkedMapOf<String, ExerciseRoute>()
-        for (candidate in candidates) {
-            // A cancelled export must stop prompting immediately.
-            currentCoroutineContext().ensureActive()
-            val route = try {
-                withTimeoutOrNull(PROMPT_TIMEOUT_MS) { active.requestRoute(candidate) }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                // A broken surface must never fail the export; treat as a denial.
-                null
+
+        return promptMutex.withLock {
+            val granted = linkedMapOf<String, ExerciseRoute>()
+            for (candidate in candidates) {
+                currentCoroutineContext().ensureActive()
+                if (!canLaunchPrompt() || !run.reservePrompt(candidate.sessionId)) continue
+                when (val outcome = prompt(candidate)) {
+                    PromptOutcome.NotLaunched -> Unit
+                    is PromptOutcome.Completed -> outcome.route?.let { granted[candidate.sessionId] = it }
+                }
             }
-            if (route != null) granted[candidate.sessionId] = route
+            granted
         }
-        return granted
+    }
+
+    private fun canLaunchPrompt(): Boolean = surface != null && synchronized(this) { activeRequest == null }
+
+    private suspend fun prompt(candidate: PendingExerciseRouteConsent): PromptOutcome {
+        val activeSurface = surface ?: return PromptOutcome.NotLaunched
+        val active = ActiveRequest(result = CompletableDeferred())
+        synchronized(this) {
+            // A timed-out/cancelled request remains here until its late result is drained.
+            if (activeRequest != null || surface !== activeSurface) return PromptOutcome.NotLaunched
+            activeRequest = active
+        }
+
+        val launched = try {
+            activeSurface.launchRouteRequest(candidate)
+        } catch (_: Exception) {
+            false
+        }
+        if (!launched) {
+            synchronized(this) {
+                if (activeRequest === active) activeRequest = null
+            }
+            return PromptOutcome.NotLaunched
+        }
+
+        return try {
+            val delivered = withTimeoutOrNull(PROMPT_TIMEOUT_MS) { active.result.await() }
+            if (delivered == null) {
+                abandon(active)
+                PromptOutcome.Completed(null)
+            } else {
+                PromptOutcome.Completed(delivered.route)
+            }
+        } catch (cancelled: CancellationException) {
+            abandon(active)
+            throw cancelled
+        } catch (_: Exception) {
+            abandon(active)
+            PromptOutcome.Completed(null)
+        }
+    }
+
+    private fun abandon(request: ActiveRequest) {
+        synchronized(this) {
+            if (activeRequest === request) request.abandoned = true
+        }
     }
 
     companion object {
-        /**
-         * Upper bound of consent dialogs for one export run. The pinned SDK has no batched
-         * consent flow, so this bound is the only protection against an unbounded dialog
-         * sequence for a huge third-party session count. Sessions beyond the bound stay
-         * `consent_required`; re-running the export can consent the next bounded batch.
-         */
+        /** Global upper bound shared by every read in one interactive export run. */
         const val MAX_PROMPTS_PER_EXPORT = 10
 
         /** Safety timeout for one abandoned dialog so an export cannot hang forever. */

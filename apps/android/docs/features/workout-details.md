@@ -28,7 +28,7 @@ Not currently exported on Android:
 
 - Arbitrary HealthKit-style metadata beyond Health Connect's typed metadata/title/notes fields.
 - A dedicated indoor/outdoor metadata flag for generic walking/running/cycling sessions; Android only infers this for explicit treadmill/stationary/pool/open-water session types.
-- Route points unless Health Connect returns `ExerciseRouteResult.Data` or the user grants the session's route through Health Connect's per-session consent flow. Interactive export runs from the app UI prompt for third-party sessions (bounded per run, most recent first); scheduled, automation, and direct CLI runs have no consent surface and keep reporting `consent_required`. Grants persist inside Health Connect, so a route granted once is returned as `data` by every later export.
+- Route points unless Health Connect returns `ExerciseRouteResult.Data` or the user grants the session's route through Health Connect's per-session consent flow. Interactive export runs from the app UI prompt for third-party sessions (globally serialized, at most 10 across the whole run, newest first); Preview and scheduled, automation, and direct CLI runs do not prompt and keep reporting `consent_required`. Grants persist inside Health Connect, so a route granted once is returned as `data` by every later export.
 - A standalone Health Connect elevation-loss record; descent is derived only when route altitude is accessible.
 - Apple running dynamics such as stride length, ground contact time, and vertical oscillation.
 - Apple Watch heart-rate recovery / AFib burden.

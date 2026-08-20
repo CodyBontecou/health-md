@@ -286,7 +286,9 @@ class HealthConnectManager(
         val sortedDates = requestedDates.sorted()
         val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
 
-        for (chunk in sortedDates.chunked(chunkDays)) {
+        // Consent is globally budgeted per export run. Traverse newest windows first so the
+        // bounded prompt set is globally newest, while the returned list still follows `dates`.
+        for (chunk in sortedDates.chunked(chunkDays).asReversed()) {
             val startDate = chunk.first()
             val endExclusive = chunk.last().plusDays(1)
             val localRange = TimeRangeFilter.between(
@@ -971,10 +973,13 @@ class HealthConnectManager(
             elevationRecords = readRecordsOrEmpty(ElevationGainedRecord::class, timeRange),
         )
 
-        for ((date, sessions) in sessionsByDate) {
+        for (date in sessionsByDate.keys.sortedDescending()) {
             if (date !in requestedDates) continue
+            val sessions = sessionsByDate.getValue(date)
 
-            val grantedRoutes = requestGrantedExerciseRoutes(sessions)
+            // Routes are a persistent precise-location grant. Do not ask when the selected
+            // compatibility output does not include workouts and therefore cannot consume them.
+            val grantedRoutes = if (selection.workouts) requestGrantedExerciseRoutes(sessions) else emptyMap()
             val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData, grantedRoutes) }
             val minutes = sessions.sumOf {
                 java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()

@@ -9,6 +9,10 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -96,7 +100,7 @@ class ExerciseRouteConsentTest {
     fun grantedRouteMergesInPlaceAndPreservesCanonicalRecordOrder() = runTest {
         val third = consentRequiredSession("third", Instant.ofEpochSecond(1_400), Instant.ofEpochSecond(1_500))
         val gateway = RecordingGateway { sessions ->
-            assertThat(sessions.map { it.sessionId }).containsExactly("first", "third").inOrder()
+            assertThat(sessions.map { it.sessionId }).containsExactly("third", "first").inOrder()
             mapOf("first" to grantedRoute)
         }
 
@@ -174,6 +178,46 @@ class ExerciseRouteConsentTest {
     }
 
     @Test
+    fun boundedTwoPassPaginationKeepsCanonicalOrderAndNewestCandidateLimit() = runTest {
+        val pages = (1..24).chunked(3).map { ids ->
+            ids.map { index ->
+                consentRequiredSession(
+                    "session-$index",
+                    Instant.ofEpochSecond(1_000L + index * 10L),
+                    Instant.ofEpochSecond(1_005L + index * 10L),
+                )
+            }
+        }
+        val starts = mutableListOf<String?>()
+        val requested = mutableListOf<PendingExerciseRouteConsent>()
+        val emitted = mutableListOf<RawRecord>()
+
+        val count = withInteractiveRouteConsent {
+            emitExerciseSessionsWithRouteConsent(
+                request = request(),
+                gateway = ExerciseRouteConsentGateway { candidates ->
+                    requested += candidates
+                    emptyMap()
+                },
+                readPage = { token ->
+                    starts += token
+                    val index = token?.toInt() ?: 0
+                    pages[index] to (index + 1).takeIf { it < pages.size }?.toString()
+                },
+                mapper = ::mapper,
+                emitRecord = { emitted += it },
+            )
+        }
+
+        assertThat(starts.count { it == null }).isEqualTo(2)
+        assertThat(requested).hasSize(ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT)
+        assertThat(requested.first().sessionId).isEqualTo("session-24")
+        assertThat(requested.last().sessionId).isEqualTo("session-15")
+        assertThat(emitted.map { it.metadata!!.id }).containsExactlyElementsIn((1..24).map { "session-$it" }).inOrder()
+        assertThat(count).isEqualTo(24)
+    }
+
+    @Test
     fun recordsOutsideTheHalfOpenRangeAreStillExcludedOnTheConsentPath() = runTest {
         val emitted = withInteractiveRouteConsent {
             collectEmitted(
@@ -210,15 +254,18 @@ class ExerciseRouteConsentTest {
     }
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ExerciseRouteConsentCoordinatorTest {
 
     private class RecordingSurface(
-        private val decision: (PendingExerciseRouteConsent) -> ExerciseRoute?,
+        private val coordinator: ExerciseRouteConsentCoordinator,
+        private val decision: ((PendingExerciseRouteConsent) -> ExerciseRoute?)? = null,
     ) : ExerciseRouteConsentCoordinator.Surface {
         val prompted = mutableListOf<PendingExerciseRouteConsent>()
-        override suspend fun requestRoute(session: PendingExerciseRouteConsent): ExerciseRoute? {
+        override fun launchRouteRequest(session: PendingExerciseRouteConsent): Boolean {
             prompted += session
-            return decision(session)
+            decision?.let { coordinator.onRouteResult(it(session)) }
+            return true
         }
     }
 
@@ -237,10 +284,12 @@ class ExerciseRouteConsentCoordinatorTest {
     @Test
     fun grantsAreKeyedBySessionId() = runTest {
         val coordinator = ExerciseRouteConsentCoordinator()
-        val surface = RecordingSurface { route(3) }
+        val surface = RecordingSurface(coordinator) { route(3) }
         coordinator.attach(surface)
 
-        val granted = coordinator.requestRoutes(listOf(pending("a", 100), pending("b", 200)))
+        val granted = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("a", 100), pending("b", 200)))
+        }
 
         assertThat(granted.keys).containsExactly("a", "b")
         assertThat(granted.values.all { it.route.size == 3 }).isTrue()
@@ -249,74 +298,165 @@ class ExerciseRouteConsentCoordinatorTest {
     @Test
     fun denialReturnsNoGrantButContinuesPromptingRemainingSessions() = runTest {
         val coordinator = ExerciseRouteConsentCoordinator()
-        val surface = RecordingSurface { session -> if (session.sessionId == "b") route(1) else null }
+        val surface = RecordingSurface(coordinator) { session -> if (session.sessionId == "b") route(1) else null }
         coordinator.attach(surface)
 
-        val granted = coordinator.requestRoutes(listOf(pending("a", 100), pending("b", 200), pending("c", 300)))
+        val granted = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("a", 100), pending("b", 200), pending("c", 300)))
+        }
 
         assertThat(granted.keys).containsExactly("b")
         assertThat(surface.prompted.map { it.sessionId }).containsExactly("c", "b", "a").inOrder()
     }
 
     @Test
-    fun promptCountIsBoundedToMostRecentSessions() = runTest {
+    fun promptCountIsRunScopedAcrossCallsAndNewestSessionsAreFirst() = runTest {
         val coordinator = ExerciseRouteConsentCoordinator()
-        val surface = RecordingSurface { route(1) }
+        val surface = RecordingSurface(coordinator) { route(1) }
         coordinator.attach(surface)
 
-        val sessions = (1..25).map { index -> pending("session-$index", index * 1_000L) }
-        val granted = coordinator.requestRoutes(sessions)
+        val granted = withInteractiveRouteConsent {
+            val newest = coordinator.requestRoutes((16..25).map { pending("session-$it", it * 1_000L) })
+            val older = coordinator.requestRoutes((1..15).map { pending("session-$it", it * 1_000L) })
+            newest + older
+        }
 
         assertThat(surface.prompted).hasSize(ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT)
-        // Most recent sessions are consented first; older sessions stay consent_required.
         assertThat(surface.prompted.first().sessionId).isEqualTo("session-25")
         assertThat(surface.prompted.last().sessionId).isEqualTo("session-16")
         assertThat(granted).hasSize(ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT)
     }
 
     @Test
-    fun duplicateSessionsArePromptedOnce() = runTest {
+    fun duplicateSessionsArePromptedOncePerRun() = runTest {
         val coordinator = ExerciseRouteConsentCoordinator()
-        val surface = RecordingSurface { route(1) }
+        val surface = RecordingSurface(coordinator) { route(1) }
         coordinator.attach(surface)
 
-        coordinator.requestRoutes(listOf(pending("a", 100), pending("a", 100)))
+        withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("a", 100), pending("a", 100)))
+            coordinator.requestRoutes(listOf(pending("a", 100)))
+        }
 
         assertThat(surface.prompted.map { it.sessionId }).containsExactly("a")
     }
 
     @Test
-    fun withoutAnAttachedSurfaceNoPromptHappensAndNothingIsGranted() = runTest {
+    fun withoutInteractiveRunOrAttachedSurfaceNoPromptHappens() = runTest {
         val coordinator = ExerciseRouteConsentCoordinator()
+        val detached = coordinator.requestRoutes(listOf(pending("a", 100)))
+        val interactiveDetached = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("b", 200)))
+        }
 
-        val granted = coordinator.requestRoutes(listOf(pending("a", 100)))
-
-        assertThat(granted).isEmpty()
+        assertThat(detached).isEmpty()
+        assertThat(interactiveDetached).isEmpty()
     }
 
     @Test
-    fun detachingAnotherSurfaceLeavesTheActiveOne() = runTest {
+    fun pendingResultSurvivesSurfaceRebindingAfterRotation() = runTest {
         val coordinator = ExerciseRouteConsentCoordinator()
-        val active = RecordingSurface { route(1) }
-        val stale = RecordingSurface { route(2) }
-        coordinator.attach(active)
-        coordinator.detach(stale)
+        val original = RecordingSurface(coordinator)
+        coordinator.attach(original)
+        val result = async {
+            withInteractiveRouteConsent { coordinator.requestRoutes(listOf(pending("a", 100))) }
+        }
+        runCurrent()
+        assertThat(original.prompted.map { it.sessionId }).containsExactly("a")
 
-        val granted = coordinator.requestRoutes(listOf(pending("a", 100)))
+        coordinator.detach(original)
+        val rebound = RecordingSurface(coordinator)
+        coordinator.attach(rebound)
+        coordinator.onRouteResult(route(2))
 
-        assertThat(active.prompted).hasSize(1)
-        assertThat(granted.keys).containsExactly("a")
+        assertThat(result.await().keys).containsExactly("a")
+        assertThat(rebound.prompted).isEmpty()
+    }
+
+    @Test
+    fun timeoutLateResultCannotSatisfyNewerRequest() = runTest {
+        val coordinator = ExerciseRouteConsentCoordinator()
+        val surface = RecordingSurface(coordinator)
+        coordinator.attach(surface)
+        val timedOut = async {
+            withInteractiveRouteConsent { coordinator.requestRoutes(listOf(pending("old", 100))) }
+        }
+        runCurrent()
+        advanceTimeBy(ExerciseRouteConsentCoordinator.PROMPT_TIMEOUT_MS + 1)
+        assertThat(timedOut.await()).isEmpty()
+
+        val blockedNew = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("new", 200)))
+        }
+        assertThat(blockedNew).isEmpty()
+        assertThat(surface.prompted.map { it.sessionId }).containsExactly("old")
+
+        coordinator.onRouteResult(route(1)) // drain old late result
+        val replacement = RecordingSurface(coordinator) { route(2) }
+        coordinator.attach(replacement)
+        val afterDrain = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("newer", 300)))
+        }
+        assertThat(afterDrain.keys).containsExactly("newer")
+    }
+
+    @Test
+    fun concurrentRunsAreSerialized() = runTest {
+        val coordinator = ExerciseRouteConsentCoordinator()
+        val surface = RecordingSurface(coordinator)
+        coordinator.attach(surface)
+        val first = async {
+            withInteractiveRouteConsent { coordinator.requestRoutes(listOf(pending("first", 200))) }
+        }
+        val second = async {
+            withInteractiveRouteConsent { coordinator.requestRoutes(listOf(pending("second", 100))) }
+        }
+        runCurrent()
+        assertThat(surface.prompted.map { it.sessionId }).containsExactly("first")
+        coordinator.onRouteResult(route(1))
+        runCurrent()
+        assertThat(surface.prompted.map { it.sessionId }).containsExactly("first", "second").inOrder()
+        coordinator.onRouteResult(route(1))
+        assertThat(first.await().keys).containsExactly("first")
+        assertThat(second.await().keys).containsExactly("second")
+    }
+
+    @Test
+    fun cancellationAbandonsSlotUntilItsLateResultIsDrained() = runTest {
+        val coordinator = ExerciseRouteConsentCoordinator()
+        val surface = RecordingSurface(coordinator)
+        coordinator.attach(surface)
+        val cancelled = async {
+            withInteractiveRouteConsent { coordinator.requestRoutes(listOf(pending("cancelled", 100))) }
+        }
+        runCurrent()
+        cancelled.cancel()
+        runCurrent()
+
+        val blocked = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("blocked", 200)))
+        }
+        assertThat(blocked).isEmpty()
+        coordinator.onRouteResult(route(1))
+
+        val completing = RecordingSurface(coordinator) { route(1) }
+        coordinator.attach(completing)
+        val granted = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("after", 300)))
+        }
+        assertThat(granted.keys).containsExactly("after")
     }
 
     @Test
     fun brokenSurfaceIsTreatedAsDenial() = runTest {
         val coordinator = ExerciseRouteConsentCoordinator()
         coordinator.attach(object : ExerciseRouteConsentCoordinator.Surface {
-            override suspend fun requestRoute(session: PendingExerciseRouteConsent): ExerciseRoute =
-                throw IllegalStateException("activity gone")
+            override fun launchRouteRequest(session: PendingExerciseRouteConsent): Boolean = false
         })
 
-        val granted = coordinator.requestRoutes(listOf(pending("a", 100)))
+        val granted = withInteractiveRouteConsent {
+            coordinator.requestRoutes(listOf(pending("a", 100)))
+        }
 
         assertThat(granted).isEmpty()
     }

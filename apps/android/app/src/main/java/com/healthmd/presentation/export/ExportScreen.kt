@@ -121,20 +121,20 @@ fun ExportScreen(
     }
 
     // Health Connect per-session exercise route consent for third-party sessions. Attached for
-    // the whole screen lifetime; only manual export/preview coroutines carry the interactive
-    // marker, so scheduled, automation, and direct CLI runs never trigger a prompt from here.
+    // the whole screen lifetime; only manual export coroutines carry the interactive marker.
+    // Preview, scheduled, automation, and direct CLI runs never trigger a prompt from here.
     val routeConsentSurface = remember { LauncherExerciseRouteConsentSurface() }
     val routeConsentLauncher = rememberLauncherForActivityResult(
         contract = ExerciseRouteRequestContract(),
     ) { route ->
-        routeConsentSurface.onLaunchResult(route)
+        // The ViewModel-scoped coordinator retains the originating run/session across rotation.
+        viewModel.routeConsentCoordinator.onRouteResult(route)
     }
     DisposableEffect(viewModel.routeConsentCoordinator) {
         routeConsentSurface.bind(routeConsentLauncher)
         viewModel.routeConsentCoordinator.attach(routeConsentSurface)
         onDispose {
             viewModel.routeConsentCoordinator.detach(routeConsentSurface)
-            routeConsentSurface.close()
         }
     }
 

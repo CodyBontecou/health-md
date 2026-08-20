@@ -604,7 +604,9 @@ class ExportViewModel @Inject constructor(
                         startDate = _uiState.value.startDate,
                         endDate = _uiState.value.endDate,
                         settings = settings,
-                        allowInteractiveRouteConsent = true,
+                        // Preview must not persist a precise-route grant without an explicit
+                        // disclosure/authorization step. Consent remains export-only.
+                        allowInteractiveRouteConsent = false,
                     ) ?: ExportPreview(
                         requestedDateCount = dates.size,
                         previewedDateCount = 0,

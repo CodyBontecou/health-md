@@ -278,6 +278,8 @@ class ExportViewModelTest {
         )
         var rawExportCalls = 0
         var rawPreviewCalls = 0
+        var rawExportInteractive: Boolean? = null
+        var rawPreviewInteractive: Boolean? = null
         val rawService = object : RawSnapshotService {
             override suspend fun exportRange(
                 startDate: LocalDate,
@@ -288,6 +290,7 @@ class ExportViewModelTest {
                 allowInteractiveRouteConsent: Boolean,
             ): ExportResult {
                 rawExportCalls++
+                rawExportInteractive = allowInteractiveRouteConsent
                 return ExportResult(1, 1, target = target)
             }
 
@@ -298,6 +301,7 @@ class ExportViewModelTest {
                 allowInteractiveRouteConsent: Boolean,
             ): ExportPreview {
                 rawPreviewCalls++
+                rawPreviewInteractive = allowInteractiveRouteConsent
                 return ExportPreview(
                     requestedDateCount = 3,
                     previewedDateCount = 3,
@@ -335,6 +339,7 @@ class ExportViewModelTest {
         assertThat(viewModel.uiState.value.folderName).isNull()
         assertThat(exportRepository.previewCalls).isEqualTo(0)
         assertThat(rawPreviewCalls).isEqualTo(1)
+        assertThat(rawPreviewInteractive).isFalse()
         assertThat(viewModel.uiState.value.preview?.totalFileCount).isEqualTo(1)
         assertThat(viewModel.uiState.value.preview?.isRangeArtifact).isTrue()
 
@@ -346,6 +351,7 @@ class ExportViewModelTest {
         advanceUntilIdle()
 
         assertThat(rawExportCalls).isEqualTo(1)
+        assertThat(rawExportInteractive).isTrue()
         assertThat(healthRepository.fetchCalls).isEqualTo(0)
         assertThat(exportRepository.exportCalls).isEqualTo(0)
         assertThat(historyRepository.entries.single().totalCount).isEqualTo(1)

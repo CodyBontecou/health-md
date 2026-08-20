@@ -47,7 +47,19 @@ object NoExerciseRouteConsentGateway : ExerciseRouteConsentGateway {
  * protocol, and background jobs never carry it, so they deterministically keep reporting
  * `route.state=consent_required` with empty locations.
  */
-class InteractiveRouteConsent internal constructor() : AbstractCoroutineContextElement(Key) {
+class InteractiveRouteConsent internal constructor(
+    private val maximumPrompts: Int = ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT,
+) : AbstractCoroutineContextElement(Key) {
+    private val promptedSessionIds = linkedSetOf<String>()
+
+    /** Atomically reserves one of this export run's globally shared prompt slots. */
+    @Synchronized
+    internal fun reservePrompt(sessionId: String): Boolean {
+        if (sessionId in promptedSessionIds || promptedSessionIds.size >= maximumPrompts) return false
+        promptedSessionIds += sessionId
+        return true
+    }
+
     companion object Key : CoroutineContext.Key<InteractiveRouteConsent>
 }
 
@@ -93,12 +105,11 @@ internal fun ExerciseSessionRecord.withGrantedExerciseRoute(route: ExerciseRoute
  * coordinator's own bounded prompt policy keeps a huge session count from producing an
  * unbounded dialog sequence.
  *
- * Wire-format contract: the emitted stream keeps the exact record order [readPage] produced
- * (Health Connect's ascending start-time order), because the raw snapshot validator enforces
- * canonical v1 record order. Records are therefore streamed until the first consent-required
- * session appears, and the suffix from that record onward is buffered until the consent round
- * resolves so a granted route can be merged in place. Denied or skipped sessions keep their
- * original `consent_required` mapping and the export never fails because of a denial.
+ * Wire-format contract: the emitted stream keeps the exact record order [readPage] produced.
+ * Interactive reads use two bounded passes: the first retains only the newest prompt candidates,
+ * then the second maps and emits every page. This avoids retaining an unbounded suffix after the
+ * first consent-required record while preserving canonical output order. Denied or skipped
+ * sessions keep their original `consent_required` mapping and never fail the export.
  *
  * [readPage] returns one page of native records plus the next page token (null/blank for the
  * final page) so this path stays unit-testable without a bound Health Connect client.
@@ -111,67 +122,84 @@ internal suspend fun emitExerciseSessionsWithRouteConsent(
     emitRecord: suspend (RawRecord) -> Unit,
 ): Long {
     val interactive = currentCoroutineContext().allowsInteractiveRouteConsent()
-    // Buffered suffix: native record paired with its already-mapped RawRecord.
-    val buffered = mutableListOf<Pair<ExerciseSessionRecord, RawRecord>>()
     val consentCandidates = mutableListOf<PendingExerciseRouteConsent>()
-    val seenSessionIds = mutableSetOf<String>()
-    var emitted = 0L
 
-    suspend fun emit(record: RawRecord) {
-        emitRecord(record)
-        emitted++
+    fun retainNewest(candidate: PendingExerciseRouteConsent) {
+        val duplicateIndex = consentCandidates.indexOfFirst { it.sessionId == candidate.sessionId }
+        if (duplicateIndex >= 0) {
+            if (candidate.sessionStartTime > consentCandidates[duplicateIndex].sessionStartTime) {
+                consentCandidates[duplicateIndex] = candidate
+            }
+            return
+        }
+        consentCandidates += candidate
+        consentCandidates.sortWith(
+            compareByDescending<PendingExerciseRouteConsent> { it.sessionStartTime }.thenBy { it.sessionId },
+        )
+        if (consentCandidates.size > ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT) {
+            consentCandidates.removeAt(consentCandidates.lastIndex)
+        }
     }
 
-    var token: String? = null
-    do {
-        val (records, nextToken) = readPage(token)
-        for (native in records) {
-            val mapped = mapper(native)
-            // The provider query may be broader than the request; enforce v1 half-open semantics.
-            if (!mapped.isInHalfOpenRange(request, RawRangeBehavior.OVERLAP)) continue
-            val requiresConsent = native.exerciseRouteResult is ExerciseRouteResult.ConsentRequired
-            if (interactive && requiresConsent && seenSessionIds.add(native.metadata.id)) {
-                consentCandidates += PendingExerciseRouteConsent(
-                    sessionId = native.metadata.id,
-                    sessionStartTime = native.startTime,
-                    sessionEndTime = native.endTime,
-                )
-                buffered += native to mapped
-            } else if (consentCandidates.isNotEmpty()) {
-                // Keep canonical order: once one session awaits consent, hold the suffix.
-                buffered += native to mapped
-            } else {
-                emit(mapped)
+    // Pass one is metadata-only and bounded to the newest possible prompt batch.
+    if (interactive) {
+        var token: String? = null
+        do {
+            val (records, nextToken) = readPage(token)
+            currentCoroutineContext().ensureActive()
+            for (native in records) {
+                if (native.startTime < Instant.ofEpochSecond(request.endTime.epochSecond, request.endTime.nano.toLong()) &&
+                    native.endTime > Instant.ofEpochSecond(request.startTime.epochSecond, request.startTime.nano.toLong()) &&
+                    native.exerciseRouteResult is ExerciseRouteResult.ConsentRequired
+                ) {
+                    retainNewest(
+                        PendingExerciseRouteConsent(
+                            sessionId = native.metadata.id,
+                            sessionStartTime = native.startTime,
+                            sessionEndTime = native.endTime,
+                        ),
+                    )
+                }
             }
-        }
-        token = nextToken
-    } while (!token.isNullOrBlank())
+            token = nextToken
+        } while (!token.isNullOrBlank())
+    }
 
-    if (buffered.isNotEmpty()) {
-        val granted = try {
+    val granted = if (consentCandidates.isEmpty()) {
+        emptyMap()
+    } else {
+        try {
             gateway.requestRoutes(consentCandidates)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            // A consent failure must never fail the export; fall back to consent_required.
             emptyMap()
         }
-        for ((native, mapped) in buffered) {
+    }
+
+    // Pass two is the only emission pass, so output remains canonical without suffix buffering.
+    var emitted = 0L
+    var token: String? = null
+    do {
+        val (records, nextToken) = readPage(token)
+        currentCoroutineContext().ensureActive()
+        for (native in records) {
+            val mapped = mapper(native)
+            if (!mapped.isInHalfOpenRange(request, RawRangeBehavior.OVERLAP)) continue
             val route = granted[native.metadata.id]
             val merged = if (route != null && native.exerciseRouteResult is ExerciseRouteResult.ConsentRequired) {
                 try {
                     mapper(native.withGrantedExerciseRoute(route))
                 } catch (_: IllegalArgumentException) {
-                    // Health Connect validates granted routes against the session window; a
-                    // route that cannot be rebuilt keeps its consent_required mapping instead
-                    // of failing the export.
                     mapped
                 }
             } else {
                 mapped
             }
-            emit(merged)
+            emitRecord(merged)
+            emitted++
         }
-    }
+        token = nextToken
+    } while (!token.isNullOrBlank())
     return emitted
 }
