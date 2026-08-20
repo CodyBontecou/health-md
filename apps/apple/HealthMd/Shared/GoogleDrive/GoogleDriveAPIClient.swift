@@ -288,7 +288,8 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
         guard let location = response.value(forHTTPHeaderField: "Location"),
               let sessionURL = URL(string: location),
               sessionURL.scheme?.lowercased() == "https",
-              sessionURL.host?.hasSuffix("googleapis.com") == true else {
+              let host = sessionURL.host?.lowercased(),
+              host == "googleapis.com" || host.hasSuffix(".googleapis.com") else {
             throw GoogleDriveError(.ambiguousCommit, isRetryable: true)
         }
         return sessionURL

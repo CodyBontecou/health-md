@@ -291,6 +291,10 @@ actor GoogleDriveJournalStore {
         )
     }
 
+    func contains(operationID: UUID) -> Bool {
+        FileManager.default.fileExists(atPath: journalURL(operationID: operationID).path)
+    }
+
     func load(operationID: UUID) throws -> GoogleDriveOperationJournal {
         do {
             let journal = try JSONDecoder().decode(
@@ -358,7 +362,16 @@ actor GoogleDriveJournalStore {
 
     func prune() throws {
         let cutoff = now().addingTimeInterval(-retention)
-        for journal in loadRecoverable() where journal.createdAt < cutoff && journal.historyAcknowledged {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: journalsURL,
+            includingPropertiesForKeys: nil
+        ) else { return }
+        for url in urls {
+            guard let data = try? Data(contentsOf: url),
+                  let journal = try? JSONDecoder().decode(GoogleDriveOperationJournal.self, from: data),
+                  journal.version == GoogleDriveOperationJournal.currentVersion,
+                  journal.historyAcknowledged,
+                  journal.createdAt < cutoff else { continue }
             try remove(operationID: journal.id)
         }
     }

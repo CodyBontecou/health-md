@@ -80,6 +80,13 @@ final class GoogleDriveFoundationTests: XCTestCase {
         XCTAssertEqual(reloaded.unknownRecordCount, 2)
     }
 
+    @MainActor
+    func testMissingBuildConfigurationIsVisibleButNotRunnable() {
+        let manager = GoogleDriveConnectionManager(configuration: nil)
+        XCTAssertEqual(manager.readiness, .configurationMissing)
+        XCTAssertEqual(manager.lastErrorID, .configurationMissing)
+    }
+
     func testGeneratedBundleRejectsPortablePathCollision() throws {
         let first = try GoogleDriveGeneratedArtifact(
             id: GoogleDriveDigest.sha256(Data("a".utf8)),
@@ -174,6 +181,71 @@ final class GoogleDriveFoundationTests: XCTestCase {
         } catch let error as GoogleDriveError {
             XCTAssertEqual(error.id, .checksumMismatch)
         }
+    }
+
+    @MainActor
+    func testRunnerFailsClosedInsteadOfReplacingCorruptExistingJournal() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let journalStore = try GoogleDriveJournalStore(rootURL: root)
+        let bytes = Data("immutable".utf8)
+        let artifact = try GoogleDriveGeneratedArtifact(
+            id: GoogleDriveDigest.sha256(bytes),
+            relativePath: "Health/day.md",
+            mediaType: "text/markdown",
+            writeIntent: .overwrite,
+            fragmentBytes: bytes
+        )
+        let bundle = try GoogleDriveGeneratedArtifactBundle(
+            operationID: UUID(),
+            profileID: nil,
+            sourceDates: [Date(timeIntervalSince1970: 0)],
+            settingsDigest: "settings",
+            rendererIdentity: "renderer",
+            artifacts: [artifact]
+        )
+        let destination = makeDestination()
+        _ = try await journalStore.create(bundle: bundle, destination: destination)
+        let journalURL = root.appendingPathComponent("journals/\(bundle.operationID.uuidString.lowercased()).json")
+        try Data("corrupt".utf8).write(to: journalURL)
+
+        let runner = try GoogleDriveDestinationRunner(journalStore: journalStore)
+        let result = await runner.run(bundle: bundle, destination: destination, accessToken: "unused")
+
+        XCTAssertEqual(result.errorID, .remoteConflict)
+        XCTAssertEqual(try Data(contentsOf: journalURL), Data("corrupt".utf8))
+    }
+
+    func testAcknowledgedJournalRetentionActuallyPrunesExpiredBytes() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let createdAt = Date(timeIntervalSince1970: 100)
+        let journalStore = try GoogleDriveJournalStore(
+            rootURL: root,
+            now: { Date(timeIntervalSince1970: 1_000) },
+            retention: -1
+        )
+        let bytes = Data("retained".utf8)
+        let artifact = try GoogleDriveGeneratedArtifact(
+            id: GoogleDriveDigest.sha256(bytes),
+            relativePath: "Health/day.json",
+            mediaType: "application/json",
+            writeIntent: .overwrite,
+            fragmentBytes: bytes
+        )
+        let bundle = try GoogleDriveGeneratedArtifactBundle(
+            operationID: UUID(),
+            profileID: nil,
+            sourceDates: [createdAt],
+            settingsDigest: "settings",
+            rendererIdentity: "renderer",
+            artifacts: [artifact]
+        )
+        _ = try await journalStore.create(bundle: bundle, destination: makeDestination())
+        try await journalStore.markAcknowledged(operationID: bundle.operationID)
+        try await journalStore.prune()
+        let remains = await journalStore.contains(operationID: bundle.operationID)
+        XCTAssertFalse(remains)
     }
 
     func testAPIClientSetsSharedDriveFlagsAndResourceKey() async throws {

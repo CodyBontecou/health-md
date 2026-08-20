@@ -79,7 +79,8 @@ final class GoogleDriveDestinationRunner {
 
         do {
             var journal: GoogleDriveOperationJournal
-            if let existing = try? await journalStore.load(operationID: bundle.operationID) {
+            if await journalStore.contains(operationID: bundle.operationID) {
+                let existing = try await journalStore.load(operationID: bundle.operationID)
                 guard existing.bundleDigest == bundle.digest,
                       existing.destinationSnapshot == GoogleDriveDestinationSnapshot(destination: destination) else {
                     throw GoogleDriveError(.remoteConflict)
@@ -118,6 +119,20 @@ final class GoogleDriveDestinationRunner {
                 errorID: .ambiguousCommit
             )
         }
+    }
+
+    func hasJournal(operationID: UUID) async -> Bool {
+        await journalStore.contains(operationID: operationID)
+    }
+
+    func acknowledge(operationID: UUID) async throws {
+        let journal = try await journalStore.load(operationID: operationID)
+        guard journal.terminalErrorID == nil,
+              journal.artifacts.allSatisfy({ $0.phase == .verified }) else {
+            throw GoogleDriveError(.partialCompletion)
+        }
+        try await journalStore.markAcknowledged(operationID: operationID)
+        try await journalStore.prune()
     }
 
     func resume(

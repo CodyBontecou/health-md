@@ -1288,6 +1288,7 @@ struct ContentView: View {
             calendarTimeZoneIdentifier: advancedSettings.exportTimeZoneOverride?.identifier
         )
         let destinationSnapshot = GoogleDriveDestinationSnapshot(destination: destination)
+        let operationID = UUID()
 
         exportTask = Task {
             defer {
@@ -1298,6 +1299,7 @@ struct ContentView: View {
             let dateRange = effectiveExportDateRange()
             let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
             let result = await service.export(
+                operationID: operationID,
                 profileID: profile.id,
                 destinationSnapshot: destinationSnapshot,
                 dates: dates,
@@ -1320,6 +1322,9 @@ struct ContentView: View {
                 exportTarget: .googleDrive,
                 profileName: profile.name
             )
+            if result.didCompleteAllRequestedDates {
+                await service.acknowledgeCompletedOperation(operationID)
+            }
             if result.successCount > 0 {
                 purchaseManager.recordExportUse()
                 trackSuccessfulExport(targetType: .googleDrive, startDate: rangeStart, endDate: rangeEnd)

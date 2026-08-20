@@ -924,6 +924,11 @@ class SchedulingManager: ObservableObject {
             )
         }
 
+        if target == .googleDrive, didCompleteRequest {
+            Task {
+                await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(request.id)
+            }
+        }
         notificationExportResult = makeNotificationExportResult(from: result)
     }
 
@@ -2476,7 +2481,8 @@ class SchedulingManager: ObservableObject {
             dates: dates,
             target: target,
             settings: context.settings,
-            quotaJobID: pendingRequest?.id
+            quotaJobID: pendingRequest?.id,
+            googleDriveDestinationSnapshot: pendingRequest?.googleDriveDestinationSnapshot
         )
 
         if result.didCompleteAllRequestedDates {
@@ -2524,6 +2530,11 @@ class SchedulingManager: ObservableObject {
                 appleExportEnginePin: context.settings.appleExportEnginePin,
                 profileName: profile.name
             )
+        }
+        if target == .googleDrive,
+           result.didCompleteAllRequestedDates,
+           let operationID = pendingRequest?.id {
+            await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(operationID)
         }
     }
 
@@ -2896,6 +2907,12 @@ class SchedulingManager: ObservableObject {
                     appleExportEnginePin: pendingRequest?.settingsSnapshot?.appleExportEnginePin
                 )
             }
+        }
+
+        if target == .googleDrive,
+           didCompleteRequest,
+           let operationID = pendingRequest?.id {
+            await GoogleDriveExportService.shared?.acknowledgeCompletedOperation(operationID)
         }
     }
 

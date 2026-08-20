@@ -132,6 +132,36 @@ final class ExportProfileStoreTests: XCTestCase {
         XCTAssertEqual(second.activeProfile?.name, "Weekly")
     }
 
+    func testProfilePersistencePreservesUnknownRecordWithoutErasingKnownProfile() throws {
+        let known = ExportProfile(
+            name: "Known",
+            settings: makeSnapshot(),
+            target: .googleDrive,
+            createdAt: fixedNow,
+            updatedAt: fixedNow
+        )
+        let knownObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(known))
+        let unknown: [String: Any] = [
+            "id": UUID().uuidString,
+            "name": "Future",
+            "target": "future_destination",
+            "version": 99
+        ]
+        defaults.set(
+            try JSONSerialization.data(withJSONObject: [knownObject, unknown]),
+            forKey: "exportProfiles.list"
+        )
+
+        let store = makeStore()
+        XCTAssertEqual(store.profiles, [known])
+        XCTAssertEqual(store.unknownProfileRecordCount, 1)
+        _ = store.rename(id: known.id, to: "Renamed")
+
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.profiles.map(\.name), ["Renamed"])
+        XCTAssertEqual(reloaded.unknownProfileRecordCount, 1)
+    }
+
     func testProfileCodableRoundTripPreservesSnapshot() throws {
         let snapshot = makeSnapshot()
         let profile = ExportProfile(

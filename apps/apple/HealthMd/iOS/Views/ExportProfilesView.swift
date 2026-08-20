@@ -1,6 +1,4 @@
-#if os(iOS)
-import SwiftUI
-import UIKit
+import Foundation
 
 // MARK: - Pure summary derivation
 
@@ -117,6 +115,10 @@ struct ExportProfileCardSummary: Equatable {
         ExportFormat.allCases.filter { formats.contains($0) }
     }
 }
+
+#if os(iOS)
+import SwiftUI
+import UIKit
 
 // MARK: - Management view
 

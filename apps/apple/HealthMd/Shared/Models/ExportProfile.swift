@@ -83,11 +83,10 @@ struct ExportProfile: Codable, Identifiable, Equatable {
 
 /// Observable, UserDefaults-backed store for the ordered export profile list.
 ///
-/// Persistence follows the `ExportSchedule` pattern: the whole list is stored
-/// as one JSON payload. An empty or undecodable payload means "legacy mode" —
-/// no profiles exist and callers keep using live `AdvancedExportSettings` —
-/// so corruption or a partial decode can never change export behavior, only
-/// lose saved profiles that the user can re-create.
+/// Persistence remains compatible with the shipped JSON array while decoding each record
+/// independently. Unknown or corrupt records are retained opaquely, so they cannot erase or
+/// redirect unrelated runnable profiles when the list is saved again. A wholly undecodable
+/// payload still means legacy mode and callers keep using live settings exactly as before.
 ///
 /// Use from the main thread, matching `AdvancedExportSettings`.
 final class ExportProfileStore: ObservableObject {
@@ -101,9 +100,13 @@ final class ExportProfileStore: ObservableObject {
 
     @Published private(set) var profiles: [ExportProfile]
     @Published private(set) var activeProfileID: UUID?
+    /// Unknown or individually corrupt records retained verbatim so one future profile kind cannot
+    /// erase unrelated runnable profiles when a Drive-capable build reads and later saves the list.
+    @Published private(set) var unknownProfileRecordCount: Int
 
     private let userDefaults: UserDefaults
     private let now: () -> Date
+    private var opaqueProfileRecords: [Data]
 
     private enum Key {
         static let list = "exportProfiles.list"
@@ -120,11 +123,14 @@ final class ExportProfileStore: ObservableObject {
         self.now = now
 
         if let data = userDefaults.data(forKey: Key.list),
-           let decoded = try? JSONDecoder().decode([ExportProfile].self, from: data) {
-            profiles = decoded
+           let decoded = Self.decodeRecords(from: data) {
+            profiles = decoded.profiles
+            opaqueProfileRecords = decoded.opaque
         } else {
             profiles = []
+            opaqueProfileRecords = []
         }
+        unknownProfileRecordCount = opaqueProfileRecords.count
 
         if let idString = userDefaults.string(forKey: Key.activeProfileID),
            let id = UUID(uuidString: idString),
@@ -140,11 +146,15 @@ final class ExportProfileStore: ObservableObject {
     /// mutations. Safe on the main thread, matching every existing call site.
     private func reloadFromDefaults() {
         guard let data = userDefaults.data(forKey: Key.list),
-              let decoded = try? JSONDecoder().decode([ExportProfile].self, from: data) else {
+              let decoded = Self.decodeRecords(from: data) else {
             return
         }
-        if decoded != profiles {
-            profiles = decoded
+        if decoded.profiles != profiles {
+            profiles = decoded.profiles
+        }
+        if decoded.opaque != opaqueProfileRecords {
+            opaqueProfileRecords = decoded.opaque
+            unknownProfileRecordCount = decoded.opaque.count
         }
         if let idString = userDefaults.string(forKey: Key.activeProfileID),
            let id = UUID(uuidString: idString),
@@ -390,13 +400,43 @@ final class ExportProfileStore: ObservableObject {
     // MARK: - Persistence
 
     private func persist() {
-        if let encoded = try? JSONEncoder().encode(profiles) {
+        let encoder = JSONEncoder()
+        let knownObjects = profiles.compactMap { profile -> Any? in
+            guard let data = try? encoder.encode(profile) else { return nil }
+            return try? JSONSerialization.jsonObject(with: data)
+        }
+        let opaqueObjects = opaqueProfileRecords.compactMap {
+            try? JSONSerialization.jsonObject(with: $0, options: [.fragmentsAllowed])
+        }
+        let records = knownObjects + opaqueObjects
+        if JSONSerialization.isValidJSONObject(records),
+           let encoded = try? JSONSerialization.data(withJSONObject: records, options: [.sortedKeys]) {
             userDefaults.set(encoded, forKey: Key.list)
         }
+        unknownProfileRecordCount = opaqueProfileRecords.count
         userDefaults.set(
             activeProfileID?.uuidString,
             forKey: Key.activeProfileID
         )
+    }
+
+    private static func decodeRecords(from data: Data) -> (profiles: [ExportProfile], opaque: [Data])? {
+        guard let records = try? JSONSerialization.jsonObject(with: data) as? [Any] else { return nil }
+        var profiles: [ExportProfile] = []
+        var opaque: [Data] = []
+        for record in records {
+            guard let recordData = try? JSONSerialization.data(
+                withJSONObject: record,
+                options: [.sortedKeys, .fragmentsAllowed]
+            ) else { continue }
+            guard let profile = try? JSONDecoder().decode(ExportProfile.self, from: recordData),
+                  !profiles.contains(where: { $0.id == profile.id }) else {
+                opaque.append(recordData)
+                continue
+            }
+            profiles.append(profile)
+        }
+        return (profiles, opaque)
     }
 
     private func decodedContainsProfile(withID id: UUID, in list: [ExportProfile]) -> Bool {

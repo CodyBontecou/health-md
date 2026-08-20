@@ -268,11 +268,27 @@ final class GoogleDriveConnectionManager: ObservableObject {
                 throw GoogleDriveError(.reauthorizationRequired)
             }
         }
-        let folder = try await api.validateFolder(destination, accessToken: credential.accessToken)
-        guard folder.canAddChildren == true else { throw GoogleDriveError(.folderUnavailable) }
-        readiness = .ready
-        lastErrorID = nil
-        return credential.accessToken
+        do {
+            let folder = try await api.validateFolder(destination, accessToken: credential.accessToken)
+            guard folder.canAddChildren == true else { throw GoogleDriveError(.folderUnavailable) }
+            readiness = .ready
+            lastErrorID = nil
+            return credential.accessToken
+        } catch let error as GoogleDriveError {
+            lastErrorID = error.id
+            switch error.id {
+            case .reauthorizationRequired, .accountMismatch:
+                readiness = .reauthorizationRequired
+            case .folderUnavailable, .permissionDenied:
+                readiness = .folderUnavailable
+            case .configurationMissing:
+                readiness = .configurationMissing
+            case .remoteConflict, .ambiguousCommit, .quotaExceeded, .rateLimited,
+                 .checksumMismatch, .partialCompletion:
+                break
+            }
+            throw error
+        }
     }
 
     /// Removes local authority regardless of revocation network outcome. Remote files are untouched.

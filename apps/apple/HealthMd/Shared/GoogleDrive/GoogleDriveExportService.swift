@@ -177,6 +177,13 @@ final class GoogleDriveExportService {
         return connectionManager.readiness
     }
 
+    /// Called only after the owning manual/scheduled path durably records its terminal history.
+    /// Until then the verified journal remains recoverable and cannot be retention-pruned.
+    func acknowledgeCompletedOperation(_ operationID: UUID) async {
+        guard await runner.hasJournal(operationID: operationID) else { return }
+        try? await runner.acknowledge(operationID: operationID)
+    }
+
     func export(
         operationID: UUID = UUID(),
         profileID: UUID?,
@@ -193,6 +200,20 @@ final class GoogleDriveExportService {
         }
         do {
             let token = try await connectionManager.accessToken(destination: destination)
+
+            // A durable request keeps its operation ID across app launches. Resume its already
+            // staged final bytes before asking HealthKit or the renderer for mutable source data.
+            // A corrupt existing journal fails closed in `resume`; it is never overwritten by a
+            // newly rendered bundle.
+            if await runner.hasJournal(operationID: operationID) {
+                let resumed = await runner.resume(
+                    operationID: operationID,
+                    destination: destination,
+                    accessToken: token
+                )
+                return Self.resumedResult(resumed, dates: dates)
+            }
+
             let (bundle, generationResult) = try await producer.produce(
                 operationID: operationID,
                 profileID: profileID,
@@ -260,6 +281,41 @@ final class GoogleDriveExportService {
         } catch {
             return Self.failure(dates: dates, error: GoogleDriveError(.ambiguousCommit))
         }
+    }
+
+    private static func resumedResult(
+        _ driveResult: GoogleDriveRunResult,
+        dates: [Date]
+    ) -> ExportOrchestrator.ExportResult {
+        guard let errorID = driveResult.errorID else {
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: [],
+                looseAggregateFileCount: driveResult.verifiedArtifactCount,
+                authoritativeFileCount: driveResult.verifiedArtifactCount,
+                isFileCategoryBreakdownComplete: false,
+                dailyNoteSkipCount: driveResult.skippedArtifactCount,
+                completedDates: dates
+            )
+        }
+        return ExportOrchestrator.ExportResult(
+            successCount: 0,
+            totalCount: dates.count,
+            failedDateDetails: dates.map {
+                FailedDateDetail(
+                    date: $0,
+                    reason: .fileWriteError,
+                    errorDetails: errorID.rawValue
+                )
+            },
+            looseAggregateFileCount: driveResult.verifiedArtifactCount,
+            authoritativeFileCount: driveResult.verifiedArtifactCount,
+            isFileCategoryBreakdownComplete: false,
+            dailyNoteSkipCount: driveResult.skippedArtifactCount,
+            hadTerminalRangeFailure: true,
+            completedDates: []
+        )
     }
 
     private static func failure(
