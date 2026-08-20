@@ -335,6 +335,16 @@ private fun ProfileDetailDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 FactRow("Status", if (row.isActive) "Active profile — edit it in the Export tab" else "Not active")
+                if (row.overlappingProfileNames.isNotEmpty()) {
+                    Text(
+                        text = "Overlapping exports: writes the same files as " +
+                            row.overlappingProfileNames.joinToString(", ") +
+                            ". The later run overwrites the earlier one. Give each profile its " +
+                            "own folder or filename template to keep them separate.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.warning,
+                    )
+                }
                 FactRow("Destination", destinationLine(profile))
                 if (profile.target == ExportTarget.DEVICE_FOLDER) {
                     TextButton(onClick = { folderPickerLauncher.launch(null) }) {

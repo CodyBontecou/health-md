@@ -38,7 +38,7 @@ class ProductCapabilityManifestTest {
 
         assertEquals(sharedCapabilities + androidCapabilities, idsWithState(states, "available"))
         assertEquals(appleCapabilities + "source.private-platform-database", idsWithState(states, "unavailable"))
-        assertEquals(setOf("core.shared-rust-profile-engine", "export.profiles", "setup.share-portable-configuration"), idsWithState(states, "planned"))
+        assertEquals(setOf("core.shared-rust-profile-engine", "setup.share-portable-configuration"), idsWithState(states, "planned"))
         assertEquals(allCapabilities, states.keys)
 
         capabilities.forEach { capability ->
@@ -82,6 +82,7 @@ class ProductCapabilityManifestTest {
             "export.mindfulness-sessions",
             "export.completed-workouts",
             "export.mobility-and-performance",
+            "export.profiles",
             "core.shared-rust-metric-registry",
         )
 
@@ -108,7 +109,6 @@ class ProductCapabilityManifestTest {
             "source.private-platform-database",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
-            "export.profiles",
         )
     }
 }

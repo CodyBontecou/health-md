@@ -10,6 +10,7 @@ import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.exportengine.ExportProfileOverlapDetector
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettingsSnapshotView
@@ -30,6 +31,9 @@ data class ExportProfileRow(
     val isActive: Boolean,
     val entry: ScheduledProfileEntry?,
     val snapshot: ExportSettingsSnapshotView?,
+    /** Names of other profiles whose exports write the same files (same destination root
+     * and matching rendered paths). Empty when there is no overlap. */
+    val overlappingProfileNames: List<String> = emptyList(),
 )
 
 data class ExportProfilesUiState(
@@ -70,14 +74,23 @@ class ExportProfilesViewModel @Inject constructor(
                 profileRepository.profiles,
                 profileRepository.activeProfileId,
                 entryStore.entries,
-            ) { profiles, activeId, entries ->
+                settingsRepository.exportFolderUri,
+                settingsRepository.exportSettings,
+            ) { profiles, activeId, entries, currentFolderUri, currentSettings ->
                 val activeProfile = ExportProfileRules.active(profiles, activeId)
+                val identities = ExportProfileOverlapDetector.identities(
+                    profiles = profiles,
+                    currentFolderUri = currentFolderUri,
+                    currentSettings = currentSettings,
+                )
                 profiles.map { profile ->
                     ExportProfileRow(
                         profile = profile,
                         isActive = profile.id == activeProfile?.id,
                         entry = entries.firstOrNull { it.profileId == profile.id },
                         snapshot = ExportProfileRules.decodeSnapshot(profile),
+                        overlappingProfileNames = ExportProfileOverlapDetector
+                            .overlappingProfileNames(profile.id, identities),
                     )
                 }
             }.collect { rows ->

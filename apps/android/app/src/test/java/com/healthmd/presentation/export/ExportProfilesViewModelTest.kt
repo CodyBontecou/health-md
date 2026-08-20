@@ -121,6 +121,10 @@ class ExportProfilesViewModelTest {
         }
         val settingsRepository = mockk<SettingsRepository> {
             coEvery { getExportSettings() } returns com.healthmd.domain.model.ExportSettings()
+            every { exportFolderUri } returns kotlinx.coroutines.flow.flowOf(null)
+            every { exportSettings } returns kotlinx.coroutines.flow.flowOf(
+                com.healthmd.domain.model.ExportSettings(),
+            )
         }
         val profileCoordinator = mockk<ExportProfileCoordinator> {
             coEvery { activate(any()) } returns true
