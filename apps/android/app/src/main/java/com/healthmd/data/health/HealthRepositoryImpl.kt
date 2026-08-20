@@ -1,5 +1,6 @@
 package com.healthmd.data.health
 
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
@@ -74,8 +75,28 @@ class HealthRepositoryImpl(
         return ready to failures
     }
 
-    override suspend fun fetchHealthData(date: LocalDate): HealthData =
-        fetchHealthDataRange(dates = listOf(date)).firstOrNull() ?: HealthData(date)
+    override suspend fun resolveCaptureContext(
+        zoneId: ZoneId,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+    ): AndroidCaptureContext {
+        // Capture the zone argument before the settings read can suspend. An ambient
+        // timezone change during that read must not split one operation's boundaries.
+        val capturedZoneId = zoneId
+        val attribution = when (sleepDayAttributionOverride) {
+            SleepDayAttributionOverride.StoredPreference -> settingsRepository.getSleepDayAttribution()
+            is SleepDayAttributionOverride.Value -> sleepDayAttributionOverride.attribution
+        }
+        return AndroidCaptureContext(capturedZoneId, attribution)
+    }
+
+    override suspend fun fetchHealthData(date: LocalDate): HealthData {
+        val context = resolveCaptureContext()
+        return fetchHealthDataRange(
+            dates = listOf(date),
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
+        ).firstOrNull() ?: HealthData(date)
+    }
 
     override suspend fun fetchHealthDataRange(
         dates: List<LocalDate>,
@@ -86,14 +107,9 @@ class HealthRepositoryImpl(
         sleepDayAttributionOverride: SleepDayAttributionOverride,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
-        // Snapshot the operation's timezone argument and attribution together at
-        // capture entry. Every provider query and projection receives these exact
-        // values even if settings or the system timezone change while suspended.
-        val captureZoneId = zoneId
-        val attribution = when (sleepDayAttributionOverride) {
-            SleepDayAttributionOverride.StoredPreference -> settingsRepository.getSleepDayAttribution()
-            is SleepDayAttributionOverride.Value -> sleepDayAttributionOverride.attribution
-        }
+        val context = resolveCaptureContext(zoneId, sleepDayAttributionOverride)
+        val captureZoneId = context.zoneId
+        val attribution = context.sleepDayAttribution
         if (!shouldUseAllConnected()) {
             return activeProvider().fetchHealthDataRange(
                 dates,

@@ -35,3 +35,12 @@ sealed interface SleepDayAttributionOverride {
     data object StoredPreference : SleepDayAttributionOverride
     data class Value(val attribution: SleepDayAttribution) : SleepDayAttributionOverride
 }
+
+/** Immutable timezone and sleep-owner policy for one Android capture operation. */
+data class AndroidCaptureContext(
+    val zoneId: java.time.ZoneId,
+    val sleepDayAttribution: SleepDayAttribution,
+) {
+    val explicitSleepDayAttributionOverride: SleepDayAttributionOverride
+        get() = SleepDayAttributionOverride.Value(sleepDayAttribution)
+}

@@ -2443,17 +2443,20 @@ final class HealthKitManager: ObservableObject {
 
     // MARK: - Sleep Interval Utilities (internal for testing)
 
-    /// Merges an array of (start, end) intervals, combining any that overlap or are adjacent.
-    /// Returns the merged intervals sorted by start date.
-    static func mergeIntervals(_ intervals: [(start: Date, end: Date)]) -> [(start: Date, end: Date)] {
+    /// Merges intervals whose separating gap does not exceed `maximumGap`.
+    /// The default preserves overlap/adjacency-only behavior for aggregate reducers.
+    static func mergeIntervals(
+        _ intervals: [(start: Date, end: Date)],
+        maximumGap: TimeInterval = 0
+    ) -> [(start: Date, end: Date)] {
         guard !intervals.isEmpty else { return [] }
 
         let sorted = intervals.sorted { $0.start < $1.start }
         var merged: [(start: Date, end: Date)] = [sorted[0]]
 
         for interval in sorted.dropFirst() {
-            if interval.start <= merged[merged.count - 1].end {
-                // Overlapping or adjacent — extend the current merged interval
+            if interval.start.timeIntervalSince(merged[merged.count - 1].end) <= maximumGap {
+                // Overlapping or within the bounded gap — extend the current interval.
                 merged[merged.count - 1].end = max(merged[merged.count - 1].end, interval.end)
             } else {
                 merged.append(interval)
@@ -2756,9 +2759,13 @@ final class HealthKitManager: ObservableObject {
         }
 
         let inBedSessions = mergeIntervals(inBedIntervals)
-        // Awake intervals can bridge adjacent asleep stages into one session, but
-        // an awake-only record is not evidence of a sleep session by itself.
-        let stageSessions = mergeIntervals(stageIntervals).filter { stageSession in
+        // Match HealthMdSleepSessionQuery: inferred stage-only evidence remains
+        // one session through a gap of exactly 90 minutes, but not a larger gap.
+        // Awake-only groups are never sleep sessions.
+        let stageSessions = mergeIntervals(
+            stageIntervals,
+            maximumGap: HealthMdSleepSessionQuery.sessionGap
+        ).filter { stageSession in
             asleepIntervals.contains { asleep in
                 asleep.start < stageSession.end && asleep.end > stageSession.start
             }

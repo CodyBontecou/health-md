@@ -18,6 +18,7 @@ import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.BillingError
 import com.healthmd.domain.billing.FreemiumPolicy
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.ExportFormat
@@ -29,6 +30,8 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.BillingRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -61,6 +64,7 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.time.Duration
 import java.time.LocalDate
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExportViewModelTest {
@@ -606,6 +610,15 @@ private class FakeHealthRepository(
 ) : HealthRepository {
     var fetchCalls = 0
         private set
+
+    override suspend fun resolveCaptureContext(
+        zoneId: ZoneId,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+    ) = AndroidCaptureContext(
+        zoneId,
+        (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+            ?: SleepDayAttribution.DEFAULT,
+    )
 
     override suspend fun fetchHealthData(date: LocalDate): HealthData {
         fetchCalls++

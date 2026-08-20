@@ -257,6 +257,14 @@ class ClinicianReportDataSourceTest {
         var requestedZoneId: ZoneId? = null
         var includeGranular = false
         var pinnedCalendarDays = false
+        override suspend fun resolveCaptureContext(
+            zoneId: ZoneId,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
+        ) = AndroidCaptureContext(
+            zoneId,
+            (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+                ?: SleepDayAttribution.DEFAULT,
+        )
         override suspend fun fetchHealthData(date: LocalDate) = data.firstOrNull { it.date == date } ?: HealthData(date)
         override suspend fun fetchHealthDataRange(
             dates: List<LocalDate>,

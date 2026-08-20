@@ -1,5 +1,6 @@
 package com.healthmd.domain.repository
 
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepDayAttributionOverride
@@ -8,6 +9,12 @@ import java.time.ZoneId
 
 interface HealthRepository {
     suspend fun fetchHealthData(date: LocalDate): HealthData
+
+    /** Resolves all mutable device inputs once, before an operation's first health read. */
+    suspend fun resolveCaptureContext(
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        sleepDayAttributionOverride: SleepDayAttributionOverride = SleepDayAttributionOverride.StoredPreference,
+    ): AndroidCaptureContext
 
     /**
      * [sleepDayAttributionOverride] selects whether capture reads the persisted

@@ -2,6 +2,7 @@ package com.healthmd.widget.data
 
 import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.data.health.HealthConnectWidgetReadSelection
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.widget.model.HealthWidgetSnapshot
@@ -37,14 +38,16 @@ class HealthConnectWidgetDataSource @Inject constructor(
         val dates = (boundedDayCount - 1 downTo 0).map { offset ->
             today.minusDays(offset.toLong())
         }
-        // Widgets show the same daily sleep attribution the user selected for
-        // exports (issue #104), read live like every other capture path.
-        val attribution = settingsRepository.getSleepDayAttribution()
+        // Snapshot the caller's zone before the settings read can suspend.
+        val captureContext = AndroidCaptureContext(
+            zoneId = zoneId,
+            sleepDayAttribution = settingsRepository.getSleepDayAttribution(),
+        )
         val fetchedByDate = provider.fetchWidgetHealthDataRange(
             dates = dates,
             selection = selection,
-            zoneId = zoneId,
-            sleepDayAttribution = attribution,
+            zoneId = captureContext.zoneId,
+            sleepDayAttribution = captureContext.sleepDayAttribution,
         ).associateBy(HealthData::date)
 
         // Preserve missing dates so chart positions continue to represent calendar days.

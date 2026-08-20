@@ -523,6 +523,11 @@ class DirectCliCoordinator @Inject constructor(
             else -> settingsRepository.getExportSettings()
         }
         val zoneId = ZoneId.systemDefault()
+        val captureContext = if (productId == ProductId.GENERATED_FILES_V1) {
+            healthRepository.resolveCaptureContext(zoneId)
+        } else {
+            null
+        }
         val enginePin = when (productId) {
             ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1 -> null
             // A profile basis carries its frozen engine authority (restored with the
@@ -645,6 +650,7 @@ class DirectCliCoordinator @Inject constructor(
                         executionEngineAuthorityIsFrozen = true,
                         exportTarget = ExportTarget.DEVICE_FOLDER,
                     ),
+                    captureContext = requireNotNull(captureContext),
                 ) { completed, total ->
                     channel.sendV2(
                         "export_progress",

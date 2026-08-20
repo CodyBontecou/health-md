@@ -16,15 +16,18 @@ import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
 import com.healthmd.domain.exportengine.artifactIdHex
 import com.healthmd.domain.exportengine.sha256Hex
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.HealthRepository
 import io.mockk.coEvery
 import io.mockk.mockk
 import java.io.File
 import java.nio.file.Files
 import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -34,8 +37,9 @@ class DirectGeneratedFilesProducerTest {
         val repository = mockk<HealthRepository>()
         val date = LocalDate.of(2026, 7, 23)
         val healthData = HealthData(date = date, activity = ActivityData(steps = 12_345))
-        coEvery { repository.fetchHealthDataRange(any(), any(), any()) } returns listOf(healthData)
-        coEvery { repository.fetchHealthData(date) } returns healthData
+        coEvery { repository.resolveCaptureContext(any(), any()) } returns
+            AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.NIGHT_BEGINS)
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns listOf(healthData)
         val producer = DirectGeneratedFilesProducer(
             healthRepository = repository,
             markdownExporter = MarkdownExporter(),
@@ -49,7 +53,7 @@ class DirectGeneratedFilesProducerTest {
         )
         val root = Files.createTempDirectory("direct-generated-test").toFile()
         try {
-            val files = producer.produce(root, listOf(date), settings)
+            val files = producer.produce(root, listOf(date), settings, captureContext())
             assertThat(files.map(ProducedGeneratedFile::format))
                 .containsExactly(ArtifactFormat.MARKDOWN, ArtifactFormat.JSON)
             assertThat(files.all { it.file.isFile && it.file.length() > 0 }).isTrue()
@@ -64,7 +68,7 @@ class DirectGeneratedFilesProducerTest {
         val bytes = "# Café 🫀\n".encodeToByteArray()
         val fixture = fixtureProducer(bytes)
         try {
-            val files = fixture.producer.produce(fixture.root, listOf(fixture.date), fixture.settings)
+            val files = fixture.producer.produce(fixture.root, listOf(fixture.date), fixture.settings, captureContext())
 
             assertThat(files).hasSize(1)
             assertThat(files.single().file.readBytes()).isEqualTo(bytes)
@@ -79,7 +83,7 @@ class DirectGeneratedFilesProducerTest {
         try {
             var failure: Throwable? = null
             try {
-                fixture.producer.produce(fixture.root, listOf(fixture.date), fixture.settings)
+                fixture.producer.produce(fixture.root, listOf(fixture.date), fixture.settings, captureContext())
             } catch (error: Throwable) {
                 failure = error
             }
@@ -91,12 +95,18 @@ class DirectGeneratedFilesProducerTest {
         }
     }
 
+    private fun captureContext() = AndroidCaptureContext(
+        ZoneId.of("UTC"),
+        SleepDayAttribution.NIGHT_BEGINS,
+    )
+
     private fun fixtureProducer(bytes: ByteArray): Fixture {
         val repository = mockk<HealthRepository>()
         val date = LocalDate.of(2026, 7, 23)
         val healthData = HealthData(date = date, activity = ActivityData(steps = 12_345))
-        coEvery { repository.fetchHealthDataRange(any(), any(), any()) } returns listOf(healthData)
-        coEvery { repository.fetchHealthData(date) } returns healthData
+        coEvery { repository.resolveCaptureContext(any(), any()) } returns
+            AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.NIGHT_BEGINS)
+        coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } returns listOf(healthData)
         val relativePath = "Health/2026-07-23.md"
         val mediaType = "text/markdown; charset=utf-8"
         val item = ExportArtifactPlanItem(

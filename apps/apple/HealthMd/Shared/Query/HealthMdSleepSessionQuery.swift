@@ -8,7 +8,9 @@ nonisolated enum HealthMdSleepSessionQuery {
         "sleep_in_bed", "sleep_bedtime", "sleep_wake", "sleep_analysis"
     ]
 
-    private static let sessionGap: TimeInterval = 90 * 60
+    /// Maximum gap retained within one inferred stage-only sleep session.
+    /// Exactly 90 minutes remains one session; a larger gap starts another.
+    static let sessionGap: TimeInterval = 90 * 60
     private static let meaningfulGap: TimeInterval = 5 * 60
 
     static func contextSessions(

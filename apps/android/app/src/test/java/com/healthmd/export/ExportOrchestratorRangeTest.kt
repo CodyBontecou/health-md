@@ -7,6 +7,7 @@ import com.healthmd.data.health.HealthConnectManager
 import com.healthmd.data.health.HealthProviderRegistry
 import com.healthmd.data.health.HealthRepositoryImpl
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
@@ -27,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.TimeZone
 import kotlin.time.Duration.Companion.hours
 
 class ExportOrchestratorRangeTest {
@@ -170,66 +172,79 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
-    fun `range export fallback preserves stored morning ends attribution`() = runTest {
-        val date = LocalDate.of(2026, 5, 4)
-        val manager = mockk<HealthConnectManager>()
-        val provider = HealthConnectDataProvider(manager)
-        val registry = mockk<HealthProviderRegistry>()
-        val settingsRepository = mockk<SettingsRepository>()
-        val observedAttributions = mutableListOf<SleepDayAttribution>()
-        coEvery { settingsRepository.getSelectedHealthProviderId() } returns "health_connect"
-        coEvery { settingsRepository.getSleepDayAttribution() } returns SleepDayAttribution.MORNING_ENDS
-        every { registry.providerFor("health_connect") } returns provider
-        every { registry.primaryExportProvider() } returns provider
-        every { manager.isBeforeFirstUnlock() } returns false
-        coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
-            observedAttributions += arg<SleepDayAttribution>(5)
-            if (observedAttributions.size == 1) {
-                listOf(HealthData(date))
-            } else {
-                listOf(HealthData(date, sleep = SleepData(totalDuration = 8.hours)))
+    fun `manual folder operation pins context across chunks and cannot duplicate adjacent morning owner`() = runTest {
+        val previousZone = TimeZone.getDefault()
+        val capturedZone = ZoneId.of("America/Los_Angeles")
+        val changedZone = ZoneId.of("Europe/Berlin")
+        try {
+            TimeZone.setDefault(TimeZone.getTimeZone(capturedZone))
+            val wakeDate = LocalDate.of(2026, 5, 31)
+            val dates = (0 until 31).map { wakeDate.minusDays(it.toLong()) }
+            val sessionStartDate = dates.last()
+            val sessionWakeDate = dates[dates.lastIndex - 1]
+            var storedAttribution = SleepDayAttribution.MORNING_ENDS
+            val observedContexts = mutableListOf<Pair<ZoneId, SleepDayAttribution>>()
+            val manager = mockk<HealthConnectManager>()
+            val provider = HealthConnectDataProvider(manager)
+            val registry = mockk<HealthProviderRegistry>()
+            val settingsRepository = mockk<SettingsRepository>()
+            coEvery { settingsRepository.getSelectedHealthProviderId() } returns "health_connect"
+            coEvery { settingsRepository.getSleepDayAttribution() } answers { storedAttribution }
+            every { registry.providerFor("health_connect") } returns provider
+            every { registry.primaryExportProvider() } returns provider
+            every { manager.isBeforeFirstUnlock() } returns false
+            coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
+                val requested = firstArg<List<LocalDate>>()
+                val zone = arg<ZoneId>(3)
+                val attribution = arg<SleepDayAttribution>(5)
+                observedContexts += zone to attribution
+                val owner = if (attribution == SleepDayAttribution.MORNING_ENDS) sessionWakeDate else sessionStartDate
+                if (observedContexts.size == 1) {
+                    storedAttribution = SleepDayAttribution.NIGHT_BEGINS
+                    TimeZone.setDefault(TimeZone.getTimeZone(changedZone))
+                }
+                requested.map { date ->
+                    HealthData(
+                        date = date,
+                        activity = ActivityData(steps = 1),
+                        sleep = if (date == owner) SleepData(totalDuration = 8.hours) else SleepData(),
+                    )
+                }
             }
+            val exportRepository = RecordingExportRepository()
+
+            val result = ExportOrchestrator(
+                HealthRepositoryImpl(registry, settingsRepository),
+                exportRepository,
+            ).exportDates(dates, ExportSettings(exportFormat = ExportFormat.JSON))
+
+            assertThat(result.successCount).isEqualTo(31)
+            assertThat(observedContexts).containsExactly(
+                capturedZone to SleepDayAttribution.MORNING_ENDS,
+                capturedZone to SleepDayAttribution.MORNING_ENDS,
+            ).inOrder()
+            assertThat(exportRepository.exported.count { it.sleep.hasData }).isEqualTo(1)
+            assertThat(exportRepository.exported.single { it.sleep.hasData }.date).isEqualTo(sessionWakeDate)
+        } finally {
+            TimeZone.setDefault(previousZone)
         }
-        val exportRepository = RecordingExportRepository()
-        val orchestrator = ExportOrchestrator(
-            HealthRepositoryImpl(registry, settingsRepository),
-            exportRepository,
-        )
-
-        val result = orchestrator.exportDates(
-            listOf(date),
-            ExportSettings(exportFormat = ExportFormat.JSON),
-        )
-
-        assertThat(result.successCount).isEqualTo(1)
-        assertThat(observedAttributions).containsExactly(
-            SleepDayAttribution.MORNING_ENDS,
-            SleepDayAttribution.MORNING_ENDS,
-        ).inOrder()
-        assertThat(exportRepository.exported.single().sleep.totalDuration).isEqualTo(8.hours)
     }
 
     @Test
-    fun `range export retries empty range days with single day reads before skipping`() = runTest {
-        val dates = listOf(
-            LocalDate.of(2026, 5, 4),
-            LocalDate.of(2026, 5, 5),
-            LocalDate.of(2026, 5, 6),
-        )
+    fun `empty authoritative range is not retried through stale single day semantics`() = runTest {
+        val dates = listOf(LocalDate.of(2026, 5, 4), LocalDate.of(2026, 5, 5))
         val healthRepository = FakeHealthRepository(
             singleDayData = dates.associateWith { dataFor(it) },
             rangeReturnsEmptyData = true,
         )
-        val exportRepository = RecordingExportRepository()
-        val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+        val result = ExportOrchestrator(healthRepository, RecordingExportRepository())
+            .exportDates(dates, ExportSettings(exportFormat = ExportFormat.JSON))
 
-        val result = orchestrator.exportDates(dates, ExportSettings(exportFormat = ExportFormat.JSON))
-
-        assertThat(result.successCount).isEqualTo(3)
-        assertThat(result.failedDateDetails).isEmpty()
+        assertThat(result.successCount).isEqualTo(0)
+        assertThat(result.failedDateDetails.map { it.reason })
+            .containsExactly(ExportFailureReason.NO_HEALTH_DATA, ExportFailureReason.NO_HEALTH_DATA)
         assertThat(healthRepository.rangeCalls).isEqualTo(1)
-        assertThat(healthRepository.singleDayCalls).isEqualTo(3)
-        assertThat(exportRepository.exported.map { it.date }).containsExactlyElementsIn(dates).inOrder()
+        assertThat(healthRepository.singleDayCalls).isEqualTo(0)
     }
 
     private fun ninetyDays(): List<LocalDate> {
@@ -253,6 +268,15 @@ class ExportOrchestratorRangeTest {
             private set
         val rangeCallSizes = mutableListOf<Int>()
         val rangeIncludeGranularFlags = mutableListOf<Boolean>()
+
+        override suspend fun resolveCaptureContext(
+            zoneId: ZoneId,
+            sleepDayAttributionOverride: SleepDayAttributionOverride,
+        ) = AndroidCaptureContext(
+            zoneId,
+            (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+                ?: SleepDayAttribution.DEFAULT,
+        )
 
         override suspend fun fetchHealthData(date: LocalDate): HealthData {
             singleDayCalls++

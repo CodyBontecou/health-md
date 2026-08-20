@@ -30,6 +30,7 @@ import com.healthmd.domain.exportengine.ExportArtifactPlanValidationException
 import com.healthmd.domain.exportengine.isFatalExportEngineFailure
 import com.healthmd.domain.exportengine.validateAPIPlan
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
@@ -65,24 +66,40 @@ interface APIExportCaptureSource {
     suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData
 }
 
+/** Production capture source contract for one immutable Android operation context. */
+private interface OperationScopedAPIExportCaptureSource : APIExportCaptureSource {
+    suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
+    suspend fun capture(
+        date: LocalDate,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ): HealthData
+}
+
 private class HealthRepositoryAPIExportCaptureSource(
     private val healthRepository: HealthRepository,
-) : APIExportCaptureSource {
+) : OperationScopedAPIExportCaptureSource {
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
 
-    override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
+    override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
+        healthRepository.resolveCaptureContext(zoneId)
+
+    override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData =
+        error("Production API capture requires an operation-scoped context")
+
+    override suspend fun capture(
+        date: LocalDate,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ): HealthData {
         val effectiveSelection = settings.effectiveDataTypeSelection()
-        val captured = healthRepository.fetchHealthDataRange(
+        return (healthRepository.fetchHealthDataRange(
             dates = listOf(date),
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
-        ).firstOrNull() ?: HealthData(date)
-        val filtered = captured
-            .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
-        if (filtered.hasAnyData) return filtered
-
-        return healthRepository.fetchHealthData(date)
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
+        ).firstOrNull() ?: HealthData(date))
             .filtered(effectiveSelection)
             .filtered(settings.metricSelection)
     }
@@ -263,7 +280,12 @@ class APIEndpointExportRunner private constructor(
             exportedAt = clock(),
             ids = idSource.next(),
         )
-        val capture = captureDates(normalizedDates, snapshot.settings, onProgress)
+        val capture = captureDates(
+            normalizedDates,
+            snapshot.settings,
+            ZoneId.of(snapshot.calendarTimeZone),
+            onProgress,
+        )
         if (capture.wasCancelled) {
             return cancelledResult(normalizedDates, capture.failedDateDetails)
         }
@@ -373,6 +395,7 @@ class APIEndpointExportRunner private constructor(
         val capture = captureDates(
             dates = previewCandidates,
             settings = snapshot.settings,
+            zoneId = ZoneId.of(snapshot.calendarTimeZone),
             onProgress = onProgress,
             stopAfterRecordCount = maxPreviewDays.coerceAtLeast(1),
         )
@@ -478,9 +501,12 @@ class APIEndpointExportRunner private constructor(
     private suspend fun captureDates(
         dates: List<LocalDate>,
         settings: ExportSettings,
+        zoneId: ZoneId,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)?,
         stopAfterRecordCount: Int? = null,
     ): CaptureResult {
+        val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
+        val captureContext = operationSource?.resolveCaptureContext(zoneId)
         val records = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
         val attempted = mutableListOf<LocalDate>()
@@ -498,7 +524,11 @@ class APIEndpointExportRunner private constructor(
                 continue
             }
             try {
-                val record = captureSource.capture(date, settings)
+                val record = if (operationSource != null && captureContext != null) {
+                    operationSource.capture(date, settings, captureContext)
+                } else {
+                    captureSource.capture(date, settings)
+                }
                 if (record.date != date) {
                     failures += FailedDateDetail(date, ExportFailureReason.UNKNOWN)
                 } else if (record.hasAnyData) {
