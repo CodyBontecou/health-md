@@ -826,6 +826,7 @@ struct ExportOrchestrator {
         )
         let captureDates = sourceDates.isEmpty ? dates : sourceDates
         var records: [HealthData] = []
+        var hasRenderableCapture = false
         var selectedRecordDates: [Date] = []
         var dailyOutputOwnerDates: Set<String> = []
         var completedDates: [Date] = []
@@ -869,10 +870,11 @@ struct ExportOrchestrator {
                 // A successful capture is range provenance even when the selected metrics are
                 // empty. Keep it for range-v9 source_dates/days_counted, while selecting daily
                 // output only when the prepared daily artifact has renderable data.
-                if hasRenderableData || (!isSummaryOnly && requestedRange != nil) {
+                if hasRenderableData || requestedRange != nil {
                     records.append(record)
                 }
                 if hasRenderableData {
+                    hasRenderableCapture = true
                     if isSelected && !isSummaryOnly {
                         selectedRecordDates.append(record.date)
                         dailyOutputOwnerDates.insert(
@@ -935,7 +937,7 @@ struct ExportOrchestrator {
             }
         }
 
-        guard !records.isEmpty else {
+        guard !records.isEmpty, hasRenderableCapture else {
             if isSummaryOnly && partialFailures.isEmpty && totalCount > 0 {
                 failures.append(FailedDateDetail(
                     date: dates.first ?? Date(),
