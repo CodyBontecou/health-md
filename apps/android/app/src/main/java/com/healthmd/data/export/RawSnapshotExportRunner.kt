@@ -106,6 +106,12 @@ class RawSnapshotExportRunner @Inject constructor(
         if (providerIds.isEmpty()) {
             return failure(startDate, target, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
         }
+        // Freeze local Drive authority before any potentially long-running provider capture.
+        // Never re-read the mutable active destination after health bytes have been produced.
+        val frozenGoogleDriveDestinationId = if (target == ExportTarget.GOOGLE_DRIVE) {
+            googleDriveDestinationId ?: driveSelectionStore.get()
+                ?: return failure(startDate, target, ExportFailureReason.NO_FOLDER_SELECTED)
+        } else null
 
         val apiConfiguration = if (target == ExportTarget.API_ENDPOINT) {
             val captured = credentialStore.requestConfiguration(settings.apiEndpointUrl)
@@ -133,7 +139,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 exportProvider(
                     providerId, repository, startDate, endDate, request, settings, target,
                     apiConfiguration,
-                    googleDriveDestinationId,
+                    frozenGoogleDriveDestinationId,
                 )
             }
             results += result

@@ -2,6 +2,7 @@ package com.healthmd.presentation.drive
 
 import android.content.Context
 import android.content.Intent
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.healthmd.data.drive.DriveApiResult
@@ -14,6 +15,10 @@ import com.healthmd.data.drive.GoogleDriveErrorId
 import com.healthmd.data.drive.GoogleDriveReadiness
 import com.healthmd.data.drive.GoogleDriveRecoveryWorker
 import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.scheduler.ScheduledProfileEntryStore
+import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.model.ExportTarget
+import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -35,12 +40,20 @@ class GoogleDriveViewModel @Inject constructor(
     private val authorization: GoogleDriveAuthorizationManager,
     private val destinationStore: GoogleDriveDestinationStore,
     private val selectionStore: GoogleDriveSelectionStore,
+    private val profileRepository: ExportProfileRepository,
+    private val scheduledProfileEntryStore: ScheduledProfileEntryStore,
+    private val settingsRepository: SettingsRepository,
+    private val savedStateHandle: SavedStateHandle,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(GoogleDriveUiState(readiness = authorization.readiness()))
     val state: StateFlow<GoogleDriveUiState> = mutableState.asStateFlow()
-    private var expectedDestinationId: String? = null
-    private var pendingOperationId: String? = null
+    private var expectedDestinationId: String?
+        get() = savedStateHandle[EXPECTED_DESTINATION_ID]
+        set(value) { savedStateHandle[EXPECTED_DESTINATION_ID] = value }
+    private var pendingOperationId: String?
+        get() = savedStateHandle[PENDING_OPERATION_ID]
+        set(value) { savedStateHandle[PENDING_OPERATION_ID] = value }
 
     init { refresh() }
 
@@ -79,8 +92,19 @@ class GoogleDriveViewModel @Inject constructor(
         val id = mutableState.value.destination?.id ?: return
         mutableState.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
+            // Disable every future write before removing account authority. Existing remote files
+            // remain untouched and profiles stay visibly Drive-targeted but unbound.
+            val affectedProfiles = profileRepository.clearGoogleDriveDestination(id)
+            affectedProfiles.forEach { profileId ->
+                scheduledProfileEntryStore.update(profileId) { it.copy(isEnabled = false) }
+            }
+            val settings = settingsRepository.getExportSettings()
+            if (settings.scheduleEnabled && settings.scheduledExportTarget == ExportTarget.GOOGLE_DRIVE) {
+                settingsRepository.updateExportSettings(settings.copy(scheduleEnabled = false))
+            }
             authorization.disconnect(id)
             selectionStore.select(null)
+            expectedDestinationId = null
             mutableState.value = GoogleDriveUiState(readiness = authorization.readiness())
         }
     }
@@ -111,5 +135,10 @@ class GoogleDriveViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private companion object {
+        const val EXPECTED_DESTINATION_ID = "google_drive_expected_destination_id"
+        const val PENDING_OPERATION_ID = "google_drive_pending_operation_id"
     }
 }

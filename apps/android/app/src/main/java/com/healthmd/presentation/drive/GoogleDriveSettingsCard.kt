@@ -46,8 +46,14 @@ fun GoogleDriveSettingsCard(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = context as? Activity
-    val operationId = activity?.intent?.getStringExtra(MainActivity.EXTRA_GOOGLE_DRIVE_OPERATION_ID)
-    LaunchedEffect(operationId) { viewModel.setPendingOperation(operationId) }
+    val mainActivity = activity as? MainActivity
+    val operationId = mainActivity?.googleDriveOperationId
+    LaunchedEffect(operationId) {
+        viewModel.setPendingOperation(operationId)
+        if (operationId != null && mainActivity != null) {
+            mainActivity.consumeGoogleDriveOperationId(operationId)
+        }
+    }
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result -> viewModel.finish(result.data) }

@@ -144,7 +144,7 @@ For append or Markdown update:
 
 Daily Note injection follows the same baseline/final-byte protocol while preserving the existing preamble-aware merger. Non-Markdown Update retains the existing overwrite behavior.
 
-A changed, renamed, moved, trashed, duplicated, or inaccessible managed object enters `remote_conflict` or `folder_unavailable`; Health.md does not silently follow it outside the configured hierarchy or create a parallel name. Scheduled work never force-replaces a conflict. A foreground recovery surface may explicitly rebind, create a conflict copy, or replace after showing the exact destination.
+A changed, renamed, moved, trashed, duplicated, or inaccessible **managed** object enters `remote_conflict` or `folder_unavailable`; Health.md does not silently follow it outside the configured hierarchy. Existing files created through Files/SAF, another app, or another OAuth project are not adopted automatically. An accessible unowned same-name object fails closed. Under `drive.file`, Google can hide an unauthorized child and Drive permits duplicate names, so an invisible same-name object cannot be detected; product copy recommends a new or empty app-managed destination and must not promise name uniqueness. Scheduled work never force-replaces a conflict. A foreground recovery surface may explicitly rebind, create a conflict copy, or replace after showing the exact destination.
 
 Drive cannot atomically mutate multiple files. Health.md preflights the complete bundle, commits in deterministic path order, checkpoints each verified artifact, and reports visible partial completion. Retry resumes the exact remaining frontier.
 

@@ -26,10 +26,12 @@ A Files/SAF folder and a direct Drive folder have different permission, history,
 2. Review the sensitive-data disclosure and continue to Google.
 3. Authorize only the `https://www.googleapis.com/auth/drive.file` scope.
 4. Select one writable folder in Google's Picker.
-5. Confirm the account and folder shown in Health.md.
+5. Confirm the account and folder shown in Health.md. Use a new or otherwise empty folder rather than a folder containing earlier Files/SAF exports.
 6. Run a small manual export and inspect it in Drive before enabling a schedule.
 
 The `drive.file` scope is narrower than full Drive access: Health.md can manage files it creates and files you explicitly open or select for the app. It still authorizes highly sensitive files in the selected location.
+
+Direct Drive does not automatically adopt same-named files created through Apple Files, Android SAF, another app, or a different OAuth project. Append, Update, and Daily Note behavior applies to an exact file already managed by this connection. If Health.md can see an unowned same-name object, it stops with a conflict. Google can hide unauthorized children from `drive.file`, so an invisible same-name object cannot always be detected and Drive may show duplicate names. This is why a dedicated empty folder is recommended.
 
 Health.md binds the destination to Google's stable account permission ID and the folder's immutable Drive ID. Names are only labels. Changing a label does not redirect the binding, and Health.md never silently switches to another signed-in account.
 
@@ -50,9 +52,9 @@ Direct Drive carries the same bytes and paths produced for the profile. It does 
 | Mode | Remote behavior |
 |---|---|
 | New or overwrite | Uploads the complete immutable rendered file. Existing managed files are checked before replacement. |
-| Append | Downloads the exact mapped file, appends locally once, then uploads the complete final file—not an append fragment. |
-| Markdown Update | Downloads one baseline, applies the existing Markdown merger locally once, and uploads the complete final file. |
-| Daily Note injection | Uses the same complete-file baseline and final-byte process while preserving the existing preamble-aware merge. |
+| Append | For an exact Health.md-managed file, downloads the baseline, appends locally once, then uploads the complete final file—not an append fragment. |
+| Markdown Update | For an exact Health.md-managed file, downloads one baseline, applies the existing Markdown merger locally once, and uploads the complete final file. |
+| Daily Note injection | Updates only an exact Health.md-managed Daily Note; ordinary existing notes are not adopted automatically. It uses the complete-file baseline and preamble-aware merge. |
 | Update for non-Markdown | Keeps the existing overwrite behavior. |
 
 A managed remote file is identified by its stable ID, not its name alone. A moved, renamed, trashed, duplicated, inaccessible, or concurrently changed file stops with a conflict or folder error instead of creating a parallel file silently.

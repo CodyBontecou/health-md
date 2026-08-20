@@ -42,6 +42,16 @@ class OAuthCredentialSafetyTest {
     }
 
     @Test
+    fun googleDriveAccountAuthority_isExcludedFromBackupAndDeviceTransfer() {
+        val backupRules = repoFile("app/src/main/res/xml/backup_rules.xml").readText()
+        val extractionRules = repoFile("app/src/main/res/xml/data_extraction_rules.xml").readText()
+        val credentialFile = "health_md_google_drive_account_authority.xml"
+
+        assertThat(backupRules).contains(credentialFile)
+        assertThat(extractionRules.split(credentialFile)).hasSize(3)
+    }
+
+    @Test
     fun productionSources_doNotWireGradleClientSecretPropertiesIntoTheApk() {
         val buildGradle = repoFile("app/build.gradle.kts").readText()
         val oauthRegistry = repoFile("app/src/main/java/com/healthmd/data/health/oauth/OAuthConfigRegistry.kt").readText()

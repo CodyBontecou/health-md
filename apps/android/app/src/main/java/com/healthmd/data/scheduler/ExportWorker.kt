@@ -233,10 +233,15 @@ class ExportWorker @AssistedInject constructor(
         if (!persistedSettings.scheduleEnabled) return Result.success()
         if (persistedSettings.scheduledExportTarget != capturedTarget) return Result.success()
 
-        // Validate current credential/destination plumbing before restoring frozen output choices.
+        // Validate and freeze current credential/destination plumbing before restoring output
+        // choices. Raw capture receives this exact local Drive destination ID rather than reading
+        // the mutable active selection after health bytes have been produced.
+        val currentDriveDestinationId = if (capturedTarget == ExportTarget.GOOGLE_DRIVE) {
+            googleDriveSelectionStore.get()
+        } else null
         val currentFingerprint = when (capturedTarget) {
             ExportTarget.API_ENDPOINT -> apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
-            ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()
+            ExportTarget.GOOGLE_DRIVE -> currentDriveDestinationId
                 ?.let { googleDriveDestinationStore.find(it) }
                 ?.fingerprint
             ExportTarget.DEVICE_FOLDER -> null
@@ -475,6 +480,7 @@ class ExportWorker @AssistedInject constructor(
                     settings = settings,
                     target = settings.scheduledExportTarget,
                     expectedDestinationFingerprint = destinationFingerprint,
+                    googleDriveDestinationId = currentDriveDestinationId,
                 )
             } else when (settings.scheduledExportTarget) {
                 ExportTarget.DEVICE_FOLDER -> {

@@ -20,6 +20,8 @@ A binding consists of one local destination ID, the authorized account's Drive `
 
 `drive.file` allows Health.md to access files it creates and files the user explicitly opens or selects for the app. It is narrower than full Drive access, but it still lets Health.md place highly sensitive exports in the selected folder. Consent copy must say this before authorization. No native client secret is embedded.
 
+Health.md manages only files and folders created by, or explicitly authorized to, the same Google OAuth application. It does not adopt same-named exports previously written through Apple Files, Android SAF, another app, or another OAuth project. Users should select a new or otherwise empty destination folder. An accessible unowned same-name object stops the operation. Because `drive.file` can hide an unauthorized child, Drive can still contain an invisible same-name object that Health.md cannot detect; Google Drive permits duplicate names. This provider limitation must be disclosed rather than described as atomic sync.
+
 My Drive and Shared Drive folders are supported under the same destination kind when Drive reports the required capabilities. Shared Drive administrators may restrict uploads, move or delete objects, change access, or enforce retention. Health.md follows capabilities rather than assuming ownership.
 
 ## Running exports
@@ -34,7 +36,7 @@ The destination carries every existing renderer artifact: loose files, archives,
 
 - A new overwrite uploads the immutable rendered bytes.
 - Replacing an existing file preflights its exact ID, parent, version, size, and checksum, then verifies the result.
-- Append, Markdown Update, and Daily Note injection download one exact baseline, merge locally once, stage the complete final file, and upload that complete file. They never upload or replay only a fragment.
+- Append, Markdown Update, and Daily Note injection apply only to an exact Health.md-managed file binding. They download that baseline, merge locally once, stage the complete final file, and upload that complete file. They never upload or replay only a fragment. An ordinary pre-existing Daily Note is not adopted automatically.
 - Non-Markdown Update keeps its existing overwrite behavior.
 
 Drive does not provide a documented ETag/`If-Match` compare-and-swap guarantee for `files.update`. Health.md checks versions and checksums before and after a write, but a concurrent editor can still race those checks. A changed, moved, renamed, trashed, duplicated, inaccessible, or ambiguous managed object stops with a conflict or availability result rather than silently creating a parallel file.

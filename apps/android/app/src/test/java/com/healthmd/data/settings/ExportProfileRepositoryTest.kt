@@ -1,7 +1,11 @@
 package com.healthmd.data.settings
 
 import android.content.Context
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
@@ -12,6 +16,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -27,13 +33,14 @@ class ExportProfileRepositoryTest {
     val temporaryFolder = TemporaryFolder()
 
     private lateinit var dataStoreScope: CoroutineScope
+    private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: ExportProfileRepository
 
     @Before
     fun setUp() {
         dataStoreScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val dataStoreFile = temporaryFolder.newFolder().resolve("export_profiles.preferences_pb")
-        val dataStore = PreferenceDataStoreFactory.create(
+        dataStore = PreferenceDataStoreFactory.create(
             scope = dataStoreScope,
             produceFile = { dataStoreFile },
         )
@@ -152,6 +159,58 @@ class ExportProfileRepositoryTest {
         assertThat(updated.target).isEqualTo(ExportTarget.DEVICE_FOLDER)
         assertThat(updated.apiEndpointUrl).isNull()
         assertThat(updated.folderUri).isEqualTo("content://tree/vault")
+    }
+
+    @Test
+    fun `v2 envelope preserves opaque records across known profile mutations`() = runTest {
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("export_profiles_v2")] =
+                """{"version":2,"records":[{"id":"future","kind":"future_destination","payload":{"kept":true}}]}"""
+        }
+
+        assertThat(repository.getProfiles()).isEmpty()
+        assertThat(repository.hasOpaqueProfiles()).isTrue()
+        val added = repository.add("Drive", "snapshot", ExportTarget.GOOGLE_DRIVE, destinationId = "drive-1")
+        assertThat(repository.profileById(added.id)?.target).isEqualTo(ExportTarget.GOOGLE_DRIVE)
+
+        val raw = dataStore.data.first()[stringPreferencesKey("export_profiles_v2")].orEmpty()
+        assertThat(raw).contains("future_destination")
+        assertThat(raw).contains("\"kept\":true")
+    }
+
+    @Test
+    fun `v2 migration leaves the legacy payload untouched for older binaries`() = runTest {
+        val legacy = ExportProfile(
+            id = "legacy-1",
+            name = "Legacy",
+            settingsSnapshotJson = "snapshot",
+            target = ExportTarget.DEVICE_FOLDER,
+            createdAtEpochMillis = 1,
+            updatedAtEpochMillis = 1,
+        )
+        val legacyRaw = Json.encodeToString(ListSerializer(ExportProfile.serializer()), listOf(legacy))
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("export_profiles")] = legacyRaw
+            preferences[stringPreferencesKey("export_profiles_active_id")] = legacy.id
+        }
+
+        val drive = repository.add("Drive", "snapshot", ExportTarget.GOOGLE_DRIVE, destinationId = "drive-1")
+        assertThat(repository.getProfiles().map { it.id }).containsExactly("legacy-1", drive.id).inOrder()
+        val preferences = dataStore.data.first()
+        assertThat(preferences[stringPreferencesKey("export_profiles")]).isEqualTo(legacyRaw)
+        assertThat(preferences[stringPreferencesKey("export_profiles_active_id")]).isEqualTo("legacy-1")
+        assertThat(preferences[stringPreferencesKey("export_profiles_v2")]).contains("GOOGLE_DRIVE")
+    }
+
+    @Test
+    fun `corrupt profile root blocks default migration instead of overwriting profiles`() = runTest {
+        dataStore.edit { preferences ->
+            preferences[stringPreferencesKey("export_profiles_v2")] = "{not-json"
+        }
+
+        assertThat(repository.hasOpaqueProfiles()).isTrue()
+        assertThat(repository.migrateDefaultIfNeeded("snapshot", ExportTarget.DEVICE_FOLDER)).isNull()
+        assertThat(dataStore.data.first()[stringPreferencesKey("export_profiles_v2")]).isEqualTo("{not-json")
     }
 
     @Test

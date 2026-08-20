@@ -12,6 +12,9 @@ on:
       - 'apps/apple/scripts/generated-*-docs.sh'
       - 'packages/contracts/**'
       - 'packages/healthmd-core-rust/**'
+      - 'docs/architecture/google-drive-export-destination.md'
+      - 'docs/features/google-drive-export.md'
+      - 'docs/qa/google-drive-export-release-checklist.md'
       - '.github/workflows/website-ci.yml'
   schedule:
     - cron: '23 10 * * *'

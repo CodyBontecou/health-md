@@ -20,6 +20,7 @@ import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -171,6 +172,19 @@ class AutomationReceiver : BroadcastReceiver() {
         }
         val profile = profileSettingsAndName.profile
         val settings = profileSettingsAndName.settings ?: settingsRepository.getExportSettings()
+        if ((profile?.target ?: settings.exportTarget) == ExportTarget.GOOGLE_DRIVE) {
+            val result = ExportResult(
+                successCount = 0,
+                totalCount = dates.size,
+                failedDateDetails = dates.map {
+                    FailedDateDetail(it, ExportFailureReason.ACCESS_DENIED, PROTOCOL_DRIVE_REQUIRES_FOREGROUND)
+                },
+                target = ExportTarget.GOOGLE_DRIVE,
+            )
+            recordHistory(context, dates, result, ExportFailureReason.ACCESS_DENIED, PROTOCOL_DRIVE_REQUIRES_FOREGROUND)
+            publishExportResult(result, PROTOCOL_DRIVE_REQUIRES_FOREGROUND)
+            return
+        }
         val isPurchased = settingsRepository.isPurchased.first()
         val freeExportsRemaining = settingsRepository.getFreeExportsRemaining()
         // A folder-bound profile satisfies the destination requirement on its own.
@@ -289,7 +303,8 @@ class AutomationReceiver : BroadcastReceiver() {
                 totalCount = result.totalCount,
                 failureReason = failureReason,
                 failedDateDetails = result.failedDateDetails,
-                targetLabel = targetLabel(settings),
+                target = result.target,
+                targetLabel = if (result.target == ExportTarget.GOOGLE_DRIVE) "Google Drive" else targetLabel(settings),
                 fileCount = result.successCount * settings.selectedExportFormats.size,
                 warningSummary = warning,
             )
@@ -387,6 +402,7 @@ class AutomationReceiver : BroadcastReceiver() {
         private const val PROTOCOL_NO_EXPORT_FOLDER = "No export folder selected"
         private const val PROTOCOL_HEALTH_PERMISSIONS_MISSING = "Health Connect permissions missing"
         private const val PROTOCOL_NO_EXPORT_HISTORY = "No export history"
+        private const val PROTOCOL_DRIVE_REQUIRES_FOREGROUND = "destination_requires_foreground:google_drive"
         private const val PROTOCOL_EXPORT_CANCELLED = "Export cancelled"
         private const val PROTOCOL_PROFILE_NOT_FOUND = "profile_not_found"
     }

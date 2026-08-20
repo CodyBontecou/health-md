@@ -70,7 +70,8 @@ data class ExportHistoryEntry(
     @Transient
     val driveOperationId: String? = null,
 ) {
-    val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0
+    val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0 &&
+        failedDateDetails.isEmpty() && failureReason == null
     val isPartialSuccess: Boolean get() = successCount in 1 until totalCount
     val isFailure: Boolean get() = successCount == 0 && totalCount > 0
 }

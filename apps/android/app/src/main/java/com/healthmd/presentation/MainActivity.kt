@@ -43,6 +43,8 @@ class MainActivity : ComponentActivity() {
 
     private var startRoute by mutableStateOf<String?>(null)
     private var scheduledRecoveryPromptRequestId by mutableStateOf(0L)
+    internal var googleDriveOperationId by mutableStateOf<String?>(null)
+        private set
     private var handledExternalIntent = false
 
     @Inject
@@ -162,8 +164,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         startRoute = intent?.getStringExtra(EXTRA_START_ROUTE)
+        intent?.getStringExtra(EXTRA_GOOGLE_DRIVE_OPERATION_ID)
+            ?.takeIf { it.matches(Regex("[A-Za-z0-9._-]{1,128}")) }
+            ?.let { googleDriveOperationId = it }
         if (intent?.getBooleanExtra(EXTRA_PROMPT_SCHEDULED_RECOVERY, false) == true) {
             scheduledRecoveryPromptRequestId = System.currentTimeMillis()
         }
+    }
+
+    internal fun consumeGoogleDriveOperationId(operationId: String) {
+        if (googleDriveOperationId == operationId) googleDriveOperationId = null
     }
 }
