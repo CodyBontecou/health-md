@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import path from "node:path";
 
 const expectedV7Visualizations = [
   "metric-trend",
@@ -77,14 +78,35 @@ test("plugin-generated preview fixtures cover v7 daily views and current roll-up
     assert.ok(rollup.end_date <= days.at(-1).date);
   }
   const rangeRollup = rollups[1];
-  assert.deepEqual(rangeRollup.units, { steps: "count" });
-  assert.deepEqual(rangeRollup.categories, {
-    Activity: rangeRollup.metrics.filter((metric) => metric.category === "Activity"),
-  });
+  assert.equal(rangeRollup.calendar_timezone, "UTC");
+  assert.equal(rangeRollup.units.steps, "steps");
+  assert.equal(rangeRollup.metrics.find((metric) => metric.key === "steps")?.primary_value, "17,500");
+  for (const [category, metrics] of Object.entries(rangeRollup.categories)) {
+    assert.deepEqual(metrics, rangeRollup.metrics.filter((metric) => metric.category === category));
+  }
 
   const serialized = JSON.stringify({ days, rollups }).toLowerCase();
   for (const forbidden of ["fhir_resource", "clinical_record", "verifiable_clinical", "cda_document", "original_uuid"]) {
     assert.ok(!serialized.includes(forbidden), forbidden);
+  }
+});
+
+test("canonical plugin v9 fixtures are byte-identical to package contract fixtures", {
+  skip: !process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+}, async () => {
+  const pluginFixtureRoot = path.join(
+    path.resolve(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO),
+    "tests",
+    "fixtures",
+    "rollup-summary-v9",
+  );
+  const contractFixtureRoot = new URL("../../../packages/contracts/rollup-summary/v9/fixtures/", import.meta.url);
+  for (const filename of ["range-v9.json", "range-v9.csv", "range-v9.md", "range-v9-bases.md"]) {
+    const [pluginFixture, contractFixture] = await Promise.all([
+      readFile(path.join(pluginFixtureRoot, filename)),
+      readFile(new URL(filename, contractFixtureRoot)),
+    ]);
+    assert.deepEqual(pluginFixture, contractFixture, filename);
   }
 });
 

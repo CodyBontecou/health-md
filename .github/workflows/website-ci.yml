@@ -99,6 +99,8 @@ jobs:
 
       - name: Run website tests
         run: npm test
+        env:
+          HEALTHMD_OBSIDIAN_PLUGIN_REPO: ${{ github.workspace }}/.external/health-md-visualizations
 
       - name: Build complete website
         run: npm run build
