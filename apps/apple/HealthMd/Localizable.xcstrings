@@ -1,6 +1,916 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Generate one summary for the requested date range in every selected export format.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generate one summary for the requested date range in every selected export format."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellt in jedem ausgewählten Exportformat eine Zusammenfassung für den angeforderten Zeitraum."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera un resumen del rango de fechas solicitado en cada formato de exportación seleccionado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Générez un résumé de la plage de dates demandée dans chaque format d’exportation sélectionné."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera un riepilogo dell'intervallo di date richiesto in ogni formato di esportazione selezionato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した各エクスポート形式で、指定した期間の概要を1つ生成します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 각 내보내기 형식으로 요청한 날짜 범위의 요약을 하나 생성합니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genereer voor elke geselecteerde exportindeling één samenvatting van het gevraagde datumbereik."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gere um resumo do intervalo de datas solicitado em cada formato de exportação selecionado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为请求的日期范围按每种所选导出格式生成一份摘要。"
+          }
+        }
+      }
+    },
+    "Generated once per selected format for the requested date range.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generated once per selected format for the requested date range."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird für den angeforderten Zeitraum einmal pro ausgewähltem Format erstellt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se genera una vez por cada formato seleccionado para el rango de fechas solicitado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Généré une fois par format sélectionné pour la plage de dates demandée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generato una volta per ogni formato selezionato per l'intervallo di date richiesto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指定した期間について、選択した形式ごとに1回生成されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청한 날짜 범위에 대해 선택한 형식별로 한 번 생성됩니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wordt voor het gevraagde datumbereik eenmaal per geselecteerde indeling gegenereerd."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerado uma vez por formato selecionado para o intervalo de datas solicitado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "针对请求的日期范围，按每种所选格式生成一次。"
+          }
+        }
+      }
+    },
+    "Generates one range summary for every selected export format": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generates one range summary for every selected export format"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellt für jedes ausgewählte Exportformat eine Zeitraumzusammenfassung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera un resumen del rango de fechas para cada formato de exportación seleccionado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Génère un résumé de la plage de dates pour chaque format d’exportation sélectionné"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genera un riepilogo dell'intervallo per ogni formato di esportazione selezionato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した各エクスポート形式で期間の概要を1つ生成します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 각 내보내기 형식으로 날짜 범위 요약을 하나 생성합니다"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genereert voor elke geselecteerde exportindeling één samenvatting van het datumbereik"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gera um resumo do intervalo para cada formato de exportação selecionado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为每种所选导出格式生成一份日期范围摘要"
+          }
+        }
+      }
+    },
+    "Off · Enable the range summary to write one summary per format.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off · Enable the range summary to write one summary per format."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus · Aktivieren Sie die Zeitraumzusammenfassung, um eine Zusammenfassung pro Format zu schreiben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactivado · Activa el resumen del rango de fechas para escribir un resumen por formato."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivé · Activez le résumé de la plage de dates pour écrire un résumé par format."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disattivato · Attiva il riepilogo dell'intervallo per scrivere un riepilogo per formato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフ · 形式ごとに概要を1つ書き出すには、期間の概要を有効にします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끔 · 형식별로 요약 하나를 작성하려면 날짜 범위 요약을 활성화하세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uit · Schakel de samenvatting van het datumbereik in om één samenvatting per indeling te schrijven."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desativado · Ative o resumo do intervalo para gravar um resumo por formato."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭 · 启用日期范围摘要，以便每种格式写入一份摘要。"
+          }
+        }
+      }
+    },
+    "Only the range summary will be written for the requested dates.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the range summary will be written for the requested dates."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für die angeforderten Daten wird nur die Zeitraumzusammenfassung geschrieben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se escribirá el resumen del rango de fechas solicitado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seul le résumé de la plage de dates demandée sera écrit."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrà scritto solo il riepilogo dell'intervallo di date richiesto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指定した日付については、期間の概要のみが書き出されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청한 날짜에 대해서는 날짜 범위 요약만 작성됩니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voor de gevraagde datums wordt alleen de samenvatting van het datumbereik geschreven."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Somente o resumo do intervalo de datas solicitado será gravado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅写入请求日期的日期范围摘要。"
+          }
+        }
+      }
+    },
+    "Range": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rango de fechas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plage de dates"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervallo di date"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 범위"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datumbereik"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intervalo de Datas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期范围"
+          }
+        }
+      }
+    },
+    "Range Summary": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range Summary"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraumzusammenfassung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumen del rango de fechas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumé de la plage de dates"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riepilogo dell'intervallo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間の概要"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 범위 요약"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samenvatting van het datumbereik"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumo do Intervalo de Datas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期范围摘要"
+          }
+        }
+      }
+    },
+    "Range roll-up summary": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range roll-up summary"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraum-Roll-up-Zusammenfassung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumen acumulativo del rango de fechas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumé cumulatif de la plage de dates"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riepilogo roll-up dell'intervallo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間のロールアップ概要"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 범위 롤업 요약"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Roll-upsamenvatting van het datumbereik"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumo cumulativo do intervalo de datas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期范围汇总摘要"
+          }
+        }
+      }
+    },
+    "Range summaries are off by default. Current exports write one `%@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time is supported and processes source days in bounded batches. Turn on Range summary only to skip daily files and write just the range summary.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range summaries are off by default. Current exports write one `%1$@` v9 aggregate for the immutable requested range; these summaries are not daily records. Historical weekly, monthly, and yearly v8 artifacts remain valid and documented. All Time is supported and processes source days in bounded batches. Turn on Range summary only to skip daily files and write just the range summary."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraumzusammenfassungen sind standardmäßig deaktiviert. Aktuelle Exporte schreiben ein `%1$@`-v9-Aggregat für den unveränderlichen angeforderten Zeitraum; diese Zusammenfassungen sind keine täglichen Datensätze. Historische wöchentliche, monatliche und jährliche v8-Artefakte bleiben gültig und dokumentiert. Gesamter Zeitraum wird unterstützt und verarbeitet Quelldaten in begrenzten Stapeln. Aktivieren Sie „Nur Zeitraumzusammenfassung“, um tägliche Dateien zu überspringen und nur die Zeitraumzusammenfassung zu schreiben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los resúmenes del rango de fechas están desactivados de forma predeterminada. Las exportaciones actuales escriben un agregado `%1$@` v9 para el rango solicitado inmutable; estos resúmenes no son registros diarios. Los artefactos v8 semanales, mensuales y anuales históricos siguen siendo válidos y están documentados. Se admite Todo el historial y se procesan los días de origen en lotes limitados. Activa Solo resumen del rango de fechas para omitir los archivos diarios y escribir únicamente el resumen del rango."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les résumés de plage de dates sont désactivés par défaut. Les exportations actuelles écrivent un agrégat `%1$@` v9 pour la plage demandée immuable ; ces résumés ne sont pas des enregistrements quotidiens. Les artefacts v8 hebdomadaires, mensuels et annuels historiques restent valides et documentés. Depuis toujours est pris en charge et traite les jours sources par lots limités. Activez Résumé de la plage de dates uniquement pour ignorer les fichiers quotidiens et écrire uniquement le résumé de la plage."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I riepiloghi dell'intervallo sono disattivati per impostazione predefinita. Le esportazioni correnti scrivono un aggregato `%1$@` v9 per l'intervallo richiesto immutabile; questi riepiloghi non sono record giornalieri. Gli artefatti v8 storici settimanali, mensili e annuali rimangono validi e documentati. Tutto il periodo è supportato ed elabora i giorni di origine in batch limitati. Attiva Solo riepilogo dell'intervallo per ignorare i file giornalieri e scrivere solo il riepilogo dell'intervallo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間の概要はデフォルトではオフです。現在のエクスポートでは、変更されない指定期間に対して `%1$@` v9 集計を1つ書き出します。これらの概要は日次記録ではありません。過去の週次、月次、年次 v8 アーティファクトは引き続き有効で、文書化されています。全期間がサポートされ、ソース日を上限付きのバッチで処理します。日次ファイルをスキップして期間の概要のみを書き出すには、「期間の概要のみ」をオンにします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 범위 요약은 기본적으로 꺼져 있습니다. 현재 내보내기는 변경할 수 없는 요청 날짜 범위에 대해 `%1$@` v9 집계 하나를 작성하며, 이 요약은 일일 기록이 아닙니다. 이전의 주별, 월별 및 연별 v8 아티팩트는 계속 유효하며 문서화되어 있습니다. 전체 기간이 지원되며 원본 날짜를 제한된 배치로 처리합니다. 일일 파일을 건너뛰고 날짜 범위 요약만 작성하려면 날짜 범위 요약만을 켜세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samenvattingen van datumbereiken zijn standaard uitgeschakeld. Huidige exports schrijven één `%1$@` v9-aggregaat voor het onveranderlijke gevraagde datumbereik; deze samenvattingen zijn geen dagelijkse records. Historische wekelijkse, maandelijkse en jaarlijkse v8-artefacten blijven geldig en gedocumenteerd. Alle tijd wordt ondersteund en verwerkt brondagen in begrensde batches. Schakel Alleen samenvatting van het datumbereik in om dagelijkse bestanden over te slaan en alleen de samenvatting van het datumbereik te schrijven."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os resumos de intervalo estão desativados por padrão. As exportações atuais gravam um agregado `%1$@` v9 para o intervalo solicitado imutável; esses resumos não são registros diários. Os artefatos v8 históricos semanais, mensais e anuais continuam válidos e documentados. Todo o Período é compatível e processa dias de origem em lotes limitados. Ative Somente resumo do intervalo para ignorar arquivos diários e gravar apenas o resumo do intervalo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认情况下，日期范围摘要处于关闭状态。当前导出会为不可变的请求日期范围写入一个 `%1$@` v9 聚合；这些摘要不是每日记录。历史的每周、每月和每年 v8 构件仍然有效并已有文档记录。支持所有时间，并以有界批次处理源日期。启用“仅日期范围摘要”可跳过每日文件，只写入日期范围摘要。"
+          }
+        }
+      }
+    },
+    "Range summary": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range summary"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraumzusammenfassung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumen del rango de fechas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumé de la plage de dates"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riepilogo dell'intervallo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間の概要"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 범위 요약"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samenvatting van het datumbereik"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumo do intervalo de datas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期范围摘要"
+          }
+        }
+      }
+    },
+    "Range summary only": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Range summary only"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Zeitraumzusammenfassung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo resumen del rango de fechas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résumé de la plage de dates uniquement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo riepilogo dell'intervallo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間の概要のみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 범위 요약만"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alleen samenvatting van het datumbereik"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Somente resumo do intervalo de datas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅日期范围摘要"
+          }
+        }
+      }
+    },
+    "Skips daily files and side effects. Health.md still fetches the requested range to build the summary.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skips daily files and side effects. Health.md still fetches the requested range to build the summary."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringt tägliche Dateien und Nebeneffekte. Health.md ruft den angeforderten Zeitraum weiterhin ab, um die Zusammenfassung zu erstellen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omite los archivos diarios y los efectos secundarios. Health.md seguirá obteniendo el rango de fechas solicitado para crear el resumen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore les fichiers quotidiens et les effets secondaires. Health.md récupère toujours la plage de dates demandée pour créer le résumé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora i file giornalieri e gli effetti collaterali. Health.md recupera comunque l'intervallo richiesto per creare il riepilogo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日次ファイルと副作用をスキップします。Health.md は概要を作成するために、指定した期間を引き続き取得します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일일 파일과 부수 효과를 건너뜁니다. Health.md는 요약을 만들기 위해 요청한 날짜 범위를 계속 가져옵니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slaat dagelijkse bestanden en neveneffecten over. Health.md haalt nog steeds het gevraagde datumbereik op om de samenvatting te maken."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora arquivos diários e efeitos colaterais. O Health.md ainda busca o intervalo solicitado para criar o resumo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过每日文件和副作用。Health.md 仍会获取请求的日期范围来构建摘要。"
+          }
+        }
+      }
+    },
+    "Skips daily files when the range summary is enabled.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skips daily files when the range summary is enabled."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringt tägliche Dateien, wenn die Zeitraumzusammenfassung aktiviert ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omite los archivos diarios cuando el resumen del rango de fechas está activado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore les fichiers quotidiens lorsque le résumé de la plage de dates est activé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora i file giornalieri quando è abilitato il riepilogo dell'intervallo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間の概要が有効な場合は、日次ファイルをスキップします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜 범위 요약이 활성화되면 일일 파일을 건너뜁니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slaat dagelijkse bestanden over wanneer de samenvatting van het datumbereik is ingeschakeld."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora arquivos diários quando o resumo do intervalo está ativado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用日期范围摘要时跳过每日文件。"
+          }
+        }
+      }
+    },
+    "When enabled, Health.md summarizes the full requested range but skips daily files, daily-note injection, and individual entries.": {
+      "comment": "Apple range-summary UI",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, Health.md summarizes the full requested range but skips daily files, daily-note injection, and individual entries."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn aktiviert, fasst Health.md den gesamten angeforderten Zeitraum zusammen, überspringt aber tägliche Dateien, die Einfügung in tägliche Notizen und einzelne Einträge."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando está activado, Health.md resume todo el rango de fechas solicitado, pero omite los archivos diarios, la inserción en notas diarias y las entradas individuales."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lorsque cette option est activée, Health.md résume toute la plage de dates demandée, mais ignore les fichiers quotidiens, l’insertion dans les notes quotidiennes et les entrées individuelles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando è abilitato, Health.md riepiloga l'intero intervallo richiesto, ma ignora i file giornalieri, l'inserimento nelle note giornaliere e le singole voci."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効にすると、Health.md は指定した期間全体を要約しますが、日次ファイル、デイリーノートへの挿入、個別エントリはスキップします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성화하면 Health.md가 요청한 전체 날짜 범위를 요약하지만 일일 파일, 일일 노트 삽입 및 개별 항목은 건너뜁니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wanneer dit is ingeschakeld, vat Health.md het volledige gevraagde datumbereik samen, maar worden dagelijkse bestanden, invoeging in dagelijkse notities en afzonderlijke vermeldingen overgeslagen."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando ativado, o Health.md resume todo o intervalo solicitado, mas ignora arquivos diários, inserção em notas diárias e entradas individuais."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用后，Health.md 会汇总请求的完整日期范围，但会跳过每日文件、每日笔记注入和单独条目。"
+          }
+        }
+      }
+    },
     "Apply Shared Setup": {
       "localizations": {
         "es": { "stringUnit": { "state": "translated", "value": "Aplicar configuración compartida" } },

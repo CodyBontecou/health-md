@@ -1750,9 +1750,9 @@ struct ExportTabView: View {
             return "Paused · Daily Notes Only skips roll-up files."
         }
         guard advancedSettings.rollupSummariesEnabled else {
-            return "Off · Enable the range summary to write one summary per format."
+            return String(localized: "Off · Enable the range summary to write one summary per format.")
         }
-        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName }.joined(separator: " · ")
+        let periods = advancedSettings.enabledRollupPeriods.map { $0.localizedDisplayName }.joined(separator: " · ")
         let formatCount = advancedSettings.exportFormats.count
         if formatCount == 0 {
             return "\(periods) · Select an export format first."
