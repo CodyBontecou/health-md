@@ -17,6 +17,7 @@ import com.healthmd.data.drive.GeneratedExportBundleFactory
 import com.healthmd.data.drive.GoogleDriveDestinationRunner
 import com.healthmd.data.drive.GoogleDriveRunResult
 import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.drive.serialId
 import com.healthmd.data.drive.toFailureReason
 import com.healthmd.rawexport.CompletedRawSnapshot
 import com.healthmd.rawexport.ExportMode
@@ -61,6 +62,7 @@ interface RawSnapshotService {
         settings: ExportSettings,
         target: ExportTarget = settings.exportTarget,
         expectedDestinationFingerprint: String? = null,
+        googleDriveDestinationId: String? = null,
     ): ExportResult
 
     /** Performs the same native source read as an export without writing or uploading a user artifact. */
@@ -90,6 +92,7 @@ class RawSnapshotExportRunner @Inject constructor(
         settings: ExportSettings,
         target: ExportTarget,
         expectedDestinationFingerprint: String?,
+        googleDriveDestinationId: String?,
     ): ExportResult {
         if (endDate.isBefore(startDate)) {
             return failure(startDate, target, ExportFailureReason.UNKNOWN)
@@ -130,6 +133,7 @@ class RawSnapshotExportRunner @Inject constructor(
                 exportProvider(
                     providerId, repository, startDate, endDate, request, settings, target,
                     apiConfiguration,
+                    googleDriveDestinationId,
                 )
             }
             results += result
@@ -285,11 +289,20 @@ class RawSnapshotExportRunner @Inject constructor(
         settings: ExportSettings,
         target: ExportTarget,
         apiConfiguration: APIExportRequestConfiguration?,
+        googleDriveDestinationId: String?,
     ): ExportResult = try {
         when (target) {
             ExportTarget.DEVICE_FOLDER -> exportToFolder(providerId, repository, startDate, endDate, request, settings)
             ExportTarget.API_ENDPOINT -> exportToApi(providerId, repository, startDate, request, requireNotNull(apiConfiguration))
-            ExportTarget.GOOGLE_DRIVE -> exportToDrive(providerId, repository, startDate, endDate, request, settings)
+            ExportTarget.GOOGLE_DRIVE -> exportToDrive(
+                providerId,
+                repository,
+                startDate,
+                endDate,
+                request,
+                settings,
+                googleDriveDestinationId,
+            )
         }
     } catch (_: CancellationException) {
         failure(startDate, target, ExportFailureReason.RAW_CANCELLED, cancelled = true)
@@ -390,8 +403,9 @@ class RawSnapshotExportRunner @Inject constructor(
         endDate: LocalDate,
         request: RawSnapshotRequest,
         settings: ExportSettings,
+        expectedDestinationId: String?,
     ): ExportResult {
-        val destinationId = driveSelectionStore.get()
+        val destinationId = expectedDestinationId ?: driveSelectionStore.get()
             ?: return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.NO_FOLDER_SELECTED)
         val storage = NoBackupRawExportStorage(context)
         val raw = RawSnapshotExportOrchestrator(context, repository, storage).export(request)
@@ -422,8 +436,12 @@ class RawSnapshotExportRunner @Inject constructor(
                     exportMode = ExportMode.RAW_SNAPSHOT, artifactCount = result.artifactCount,
                 )
                 is GoogleDriveRunResult.Stopped -> failure(
-                    startDate, ExportTarget.GOOGLE_DRIVE, result.error.toFailureReason(),
+                    startDate,
+                    ExportTarget.GOOGLE_DRIVE,
+                    result.error.toFailureReason(),
                     artifactCount = result.completedArtifactCount,
+                    errorDetails = result.error.serialId,
+                    retryDriveOperationId = bundle.operationId,
                 )
             }
         } finally {
@@ -456,15 +474,18 @@ class RawSnapshotExportRunner @Inject constructor(
         statusCode: Int? = null,
         cancelled: Boolean = false,
         artifactCount: Int = 0,
+        errorDetails: String? = null,
+        retryDriveOperationId: String? = null,
     ) = ExportResult(
         successCount = 0,
         totalCount = 1,
-        failedDateDetails = listOf(FailedDateDetail(date, reason)),
+        failedDateDetails = listOf(FailedDateDetail(date, reason, errorDetails)),
         wasCancelled = cancelled,
         target = target,
         httpStatusCode = statusCode,
         exportMode = ExportMode.RAW_SNAPSHOT,
         artifactCount = artifactCount,
+        retryDriveOperationIds = retryDriveOperationId?.let { mapOf(date to it) }.orEmpty(),
     )
 
     companion object {

@@ -718,7 +718,7 @@ class ExportScheduler @Inject constructor(
     private suspend fun enqueueExport(admission: ScheduledExportAdmission) {
         val occurrence = admission.occurrence
         val constraints = Constraints.Builder().apply {
-            if (occurrence.configuration.target == ExportTarget.API_ENDPOINT) {
+            if (occurrence.configuration.target != ExportTarget.DEVICE_FOLDER) {
                 setRequiredNetworkType(NetworkType.CONNECTED)
             }
         }.build()

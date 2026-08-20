@@ -1,5 +1,6 @@
 package com.healthmd.data.drive
 
+import com.healthmd.BuildConfig
 import com.healthmd.domain.exportengine.sha256Hex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -8,6 +9,11 @@ import java.time.LocalDate
 
 const val GOOGLE_DRIVE_SCOPE: String = "https://www.googleapis.com/auth/drive.file"
 const val GOOGLE_DRIVE_FOLDER_MIME_TYPE: String = "application/vnd.google-apps.folder"
+
+object GoogleDriveConfiguration {
+    fun isConfigured(clientId: String = BuildConfig.GOOGLE_DRIVE_ANDROID_CLIENT_ID): Boolean =
+        clientId.isNotBlank()
+}
 
 /** Stable privacy-safe identifiers shared with the Apple implementation contract. */
 @Serializable

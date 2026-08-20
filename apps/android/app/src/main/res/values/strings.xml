@@ -1479,6 +1479,9 @@
     <string name="google_drive_disconnect">Disconnect</string>
     <string name="google_drive_configuration_missing">Google Drive is unavailable because this build has no public OAuth client configuration.</string>
     <string name="google_drive_connected_destination">%1$s · %2$s</string>
+    <string name="google_drive_target_ready">Connected folder: %1$s</string>
+    <string name="google_drive_target_ready_generic">Connected Drive folder</string>
+    <string name="google_drive_target_not_connected">Connect a Drive folder in Settings before exporting.</string>
     <string name="google_drive_privacy_note">Uses only Drive file access. Health data and authorization go directly between this device and Google; Health.md has no token or health-data server.</string>
     <string name="google_drive_reauthorization_title">Google Drive authorization needed</string>
     <string name="google_drive_reauthorization_message">Open Health.md to authorize the same account and resume the retained export.</string>

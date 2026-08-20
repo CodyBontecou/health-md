@@ -2,6 +2,7 @@ package com.healthmd.domain.model
 
 import com.healthmd.rawexport.ExportMode
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Stable persisted marker for the selected export folder root.
@@ -65,6 +66,9 @@ data class ExportHistoryEntry(
     val reconciliationKey: String? = null,
     /** Export profile display name when this run executed under a profile (phase 6). */
     val profileName: String? = null,
+    /** Local recovery handle. Excluded from automation/shared serialization and ordinary UI. */
+    @Transient
+    val driveOperationId: String? = null,
 ) {
     val isFullSuccess: Boolean get() = successCount == totalCount && totalCount > 0
     val isPartialSuccess: Boolean get() = successCount in 1 until totalCount

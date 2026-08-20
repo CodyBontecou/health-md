@@ -157,6 +157,9 @@ class RawSnapshotProductApiServiceTest {
                 apiClient = RawSnapshotApiClient(client),
                 credentialStore = credentialStore,
                 settingsRepository = settingsRepository,
+                driveBundleFactory = mockk(relaxed = true),
+                driveRunner = mockk(relaxed = true),
+                driveSelectionStore = mockk(relaxed = true),
             ),
         )
     }

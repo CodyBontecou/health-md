@@ -84,7 +84,7 @@ class GoogleDriveDestinationStore @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     private val accountStore: GoogleDriveAccountAuthorityStore,
 ) {
-    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
     private val key = stringPreferencesKey("export_destinations_v1")
 
     suspend fun all(): List<GoogleDriveDestination> = rawRecords().mapNotNull(::decodeKnown)
@@ -160,7 +160,7 @@ private data class ManagedObjectEnvelope(
 class GoogleDriveManagedObjectStore @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
-    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
+    private val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
     private val key = stringPreferencesKey("google_drive_managed_objects_v1")
 
     suspend fun get(destinationId: String, pathHash: String): GoogleDriveManagedObject? =

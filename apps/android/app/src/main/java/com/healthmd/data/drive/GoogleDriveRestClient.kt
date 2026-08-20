@@ -53,6 +53,7 @@ class OkHttpGoogleDriveApi(
     private val client: OkHttpClient,
     private val apiBaseUrl: String = "https://www.googleapis.com/drive/v3",
     private val uploadBaseUrl: String = "https://www.googleapis.com/upload/drive/v3",
+    private val additionalAllowedSessionHosts: Set<String> = emptySet(),
 ) : GoogleDriveApi {
     private val json = Json { ignoreUnknownKeys = true }
     private val metadataFields = "id,name,mimeType,parents,driveId,resourceKey,version,size,md5Checksum,sha256Checksum,trashed,capabilities(canAddChildren,canEdit)"
@@ -81,7 +82,7 @@ class OkHttpGoogleDriveApi(
         resourceKeys: Map<String, String>,
     ): DriveApiResult<List<GoogleDriveRemoteMetadata>> {
         val query = "'${escapeQuery(parentId)}' in parents and name = '${escapeQuery(name)}' and trashed = false"
-        val url = "$apiBaseUrl/files?supportsAllDrives=true&includeItemsFromAllDrives=true&pageSize=100&q=${encode(query)}&fields=${encode("files($metadataFields),nextPageToken")}" 
+        val url = "$apiBaseUrl/files?supportsAllDrives=true&includeItemsFromAllDrives=true&pageSize=100&q=${encode(query)}&fields=${encode("files($metadataFields),nextPageToken")}"
         return execute(request(url, accessToken, resourceKeys)) { response ->
             val root = parseObject(response)
             if (root["nextPageToken"] != null) throw InvalidDriveResponse() // bounded/fail closed
@@ -200,12 +201,19 @@ class OkHttpGoogleDriveApi(
         if (!isGoogleSessionUri(sessionUri) || offset !in 0..bytes.size.toLong()) {
             return DriveApiResult.Failure(GoogleDriveErrorId.AMBIGUOUS_COMMIT)
         }
+        if (bytes.isNotEmpty() && offset == bytes.size.toLong()) {
+            return DriveApiResult.Failure(GoogleDriveErrorId.AMBIGUOUS_COMMIT)
+        }
         val remaining = bytes.copyOfRange(offset.toInt(), bytes.size)
-        val end = if (remaining.isEmpty()) offset else offset + remaining.size - 1
+        val contentRange = if (bytes.isEmpty()) {
+            "bytes */0"
+        } else {
+            "bytes $offset-${offset + remaining.size - 1}/${bytes.size}"
+        }
         val request = Request.Builder().url(sessionUri)
             .header("Authorization", "Bearer $accessToken")
             .header("Content-Length", remaining.size.toString())
-            .header("Content-Range", "bytes $offset-$end/${bytes.size}")
+            .header("Content-Range", contentRange)
             .put(remaining.toRequestBody("application/octet-stream".toMediaType()))
             .build()
         return executeUpload(request, bytes.size.toLong())
@@ -223,8 +231,13 @@ class OkHttpGoogleDriveApi(
             try {
                 client.newCall(request).execute().use { response ->
                     if (response.code == 308) {
-                        val acknowledged = response.header("Range")
-                            ?.substringAfterLast('-')?.toLongOrNull()?.plus(1) ?: 0L
+                        val range = response.header("Range")
+                        val acknowledged = if (range == null) {
+                            0L
+                        } else {
+                            RANGE_HEADER.matchEntire(range)?.groupValues?.get(1)?.toLongOrNull()?.plus(1)
+                                ?: throw InvalidDriveResponse()
+                        }
                         if (acknowledged !in 0..totalSize) throw InvalidDriveResponse()
                         return@use DriveApiResult.Success(GoogleDriveUploadStatus(acknowledged, false))
                     }
@@ -279,18 +292,36 @@ class OkHttpGoogleDriveApi(
 
     private fun mapFailure(response: Response): DriveApiResult.Failure {
         // Bodies can contain account/file/path details and are intentionally never read or logged.
-        val error = when (response.code) {
-            HttpURLConnection.HTTP_UNAUTHORIZED -> GoogleDriveErrorId.REAUTHORIZATION_REQUIRED
-            HttpURLConnection.HTTP_FORBIDDEN -> GoogleDriveErrorId.PERMISSION_DENIED
-            HttpURLConnection.HTTP_NOT_FOUND, HttpURLConnection.HTTP_GONE -> GoogleDriveErrorId.FOLDER_UNAVAILABLE
-            409, 412 -> GoogleDriveErrorId.REMOTE_CONFLICT
-            429 -> GoogleDriveErrorId.RATE_LIMITED
-            507 -> GoogleDriveErrorId.QUOTA_EXCEEDED
-            in 500..599 -> GoogleDriveErrorId.RATE_LIMITED
+        val reasons = errorReasons(response)
+        val error = when {
+            response.code == HttpURLConnection.HTTP_UNAUTHORIZED -> GoogleDriveErrorId.REAUTHORIZATION_REQUIRED
+            response.code == HttpURLConnection.HTTP_FORBIDDEN && reasons.any { it in QUOTA_REASONS } ->
+                GoogleDriveErrorId.QUOTA_EXCEEDED
+            response.code == HttpURLConnection.HTTP_FORBIDDEN && reasons.any { it in RATE_LIMIT_REASONS } ->
+                GoogleDriveErrorId.RATE_LIMITED
+            response.code == HttpURLConnection.HTTP_FORBIDDEN -> GoogleDriveErrorId.PERMISSION_DENIED
+            response.code == HttpURLConnection.HTTP_NOT_FOUND || response.code == HttpURLConnection.HTTP_GONE ->
+                GoogleDriveErrorId.FOLDER_UNAVAILABLE
+            response.code == 409 || response.code == 412 -> GoogleDriveErrorId.REMOTE_CONFLICT
+            response.code == 429 -> GoogleDriveErrorId.RATE_LIMITED
+            response.code == 507 -> GoogleDriveErrorId.QUOTA_EXCEEDED
+            response.code in 500..599 -> GoogleDriveErrorId.RATE_LIMITED
             else -> GoogleDriveErrorId.PERMISSION_DENIED
         }
-        return DriveApiResult.Failure(error, response.code == 429 || response.code in 500..599)
+        val retryable = response.code == 429 || response.code in 500..599 ||
+            (response.code == HttpURLConnection.HTTP_FORBIDDEN && reasons.any { it in RATE_LIMIT_REASONS })
+        return DriveApiResult.Failure(error, retryable)
     }
+
+    private fun errorReasons(response: Response): Set<String> = runCatching {
+        val text = response.peekBody(MAX_ERROR_BYTES).string()
+        val root = json.parseToJsonElement(text).jsonObject
+        val error = root["error"] as? JsonObject ?: return@runCatching emptySet()
+        val reasons = (error["errors"] as? JsonArray).orEmpty().mapNotNull { item ->
+            (item as? JsonObject)?.get("reason")?.jsonPrimitive?.contentOrNull
+        }
+        (reasons + error["status"]?.jsonPrimitive?.contentOrNull).filterNotNull().toSet()
+    }.getOrDefault(emptySet())
 
     private fun request(
         url: String,
@@ -362,7 +393,11 @@ class OkHttpGoogleDriveApi(
     private fun escapeQuery(value: String): String = value.replace("\\", "\\\\").replace("'", "\\'")
     private fun isGoogleSessionUri(value: String): Boolean = runCatching {
         val url = value.toHttpUrlOrNull() ?: return@runCatching false
-        url.isHttps && (url.host == "www.googleapis.com" || url.host.endsWith(".googleapis.com"))
+        url.isHttps && (
+            url.host == "www.googleapis.com" ||
+                url.host.endsWith(".googleapis.com") ||
+                url.host in additionalAllowedSessionHosts
+            )
     }.getOrDefault(false)
 
     private class InvalidDriveResponse : RuntimeException()
@@ -371,6 +406,18 @@ class OkHttpGoogleDriveApi(
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private const val MAX_METADATA_BYTES = 2 * 1024 * 1024L
         private const val MAX_DOWNLOAD_BYTES = 256 * 1024 * 1024L
+        private const val MAX_ERROR_BYTES = 64 * 1024L
+        private val RANGE_HEADER = Regex("bytes=0-([0-9]+)")
+        private val QUOTA_REASONS = setOf(
+            "storageQuotaExceeded",
+            "quotaExceeded",
+            "dailyLimitExceeded",
+        )
+        private val RATE_LIMIT_REASONS = setOf(
+            "rateLimitExceeded",
+            "userRateLimitExceeded",
+            "RESOURCE_EXHAUSTED",
+        )
     }
 }
 

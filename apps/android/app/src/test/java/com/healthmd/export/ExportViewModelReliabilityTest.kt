@@ -183,6 +183,9 @@ class ExportViewModelReliabilityTest {
             billingRepository = billingRepository,
             exportHistoryRepository = historyRepository,
             fileExportManager = fileExportManager,
+            googleDriveExportOrchestrator = mockk(relaxed = true),
+            googleDriveSelectionStore = mockk(relaxed = true),
+            googleDriveDestinationStore = mockk(relaxed = true),
         )
     }
 }

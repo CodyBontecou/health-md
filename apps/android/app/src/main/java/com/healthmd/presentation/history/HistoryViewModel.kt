@@ -9,8 +9,9 @@ import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
-import com.healthmd.data.drive.GoogleDriveExportOrchestrator
-import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.drive.GoogleDriveDestinationRunner
+import com.healthmd.data.drive.GoogleDriveRunResult
+import com.healthmd.data.drive.toFailureReason
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
@@ -44,8 +45,7 @@ class HistoryViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
     private val rawSnapshotService: RawSnapshotService? = null,
-    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
-    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationRunner: GoogleDriveDestinationRunner,
 ) : ViewModel() {
 
     val entries: StateFlow<List<ExportHistoryEntry>> = exportHistoryRepository.getAllEntries()
@@ -97,7 +97,8 @@ class HistoryViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                if (!healthRepository.hasPermissions()) {
+                val resumesDriveJournal = entry.target == ExportTarget.GOOGLE_DRIVE && entry.driveOperationId != null
+                if (!resumesDriveJournal && !healthRepository.hasPermissions()) {
                     _uiState.update {
                         it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_permissions_required))
                     }
@@ -109,7 +110,30 @@ class HistoryViewModel @Inject constructor(
                 } else {
                     retryDatesFor(entry)
                 }
-                val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                val result = if (resumesDriveJournal) {
+                    when (val resumed = googleDriveDestinationRunner.resume(requireNotNull(entry.driveOperationId))) {
+                        is GoogleDriveRunResult.Complete -> ExportResult(
+                            successCount = retryDates.size,
+                            totalCount = retryDates.size,
+                            target = ExportTarget.GOOGLE_DRIVE,
+                            exportMode = entry.exportMode,
+                            artifactCount = resumed.artifactCount,
+                        )
+                        is GoogleDriveRunResult.Stopped -> ExportResult(
+                            successCount = 0,
+                            totalCount = retryDates.size,
+                            failedDateDetails = retryDates.map {
+                                FailedDateDetail(it, resumed.error.toFailureReason())
+                            },
+                            target = ExportTarget.GOOGLE_DRIVE,
+                            exportMode = entry.exportMode,
+                            artifactCount = resumed.completedArtifactCount,
+                            retryDriveOperationIds = retryDates.associateWith {
+                                requireNotNull(entry.driveOperationId)
+                            },
+                        )
+                    }
+                } else if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                     rawSnapshotService?.exportRange(
                         startDate = retryDates.first(),
                         endDate = retryDates.last(),
@@ -143,17 +167,10 @@ class HistoryViewModel @Inject constructor(
                     ).also {
                         Timber.w("API export service unavailable while retrying export history")
                     }
-                    ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()?.let { destinationId ->
-                        googleDriveExportOrchestrator.exportDates(
-                            retryDates,
-                            settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
-                            destinationId,
-                            source = "retry",
-                        )
-                    } ?: ExportResult(
+                    ExportTarget.GOOGLE_DRIVE -> ExportResult(
                         0,
                         retryDates.size,
-                        retryDates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                        retryDates.map { FailedDateDetail(it, ExportFailureReason.FILE_WRITE_ERROR) },
                         target = ExportTarget.GOOGLE_DRIVE,
                     )
                 }
@@ -172,12 +189,19 @@ class HistoryViewModel @Inject constructor(
                         targetLabel = if (entry.target == ExportTarget.API_ENDPOINT) {
                             APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
                         } else entry.targetLabel,
-                        fileCount = if (entry.target == ExportTarget.DEVICE_FOLDER) {
-                            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else estimatedFileCount(result.successCount, settings)
-                        } else 0,
+                        fileCount = when (entry.target) {
+                            ExportTarget.DEVICE_FOLDER -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                                result.artifactCount
+                            } else {
+                                estimatedFileCount(result.successCount, settings)
+                            }
+                            ExportTarget.GOOGLE_DRIVE -> result.artifactCount
+                            ExportTarget.API_ENDPOINT -> 0
+                        },
                         // The UI derives a localized warning from the typed result fields.
                         warningSummary = null,
                         exportMode = result.exportMode,
+                        driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
                     )
                 )
                 _uiState.update {

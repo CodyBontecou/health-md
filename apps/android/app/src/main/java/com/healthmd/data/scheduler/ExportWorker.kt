@@ -22,8 +22,11 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveErrorId
 import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveRecoveryWorker
 import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.drive.serialId
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
@@ -569,6 +572,12 @@ class ExportWorker @AssistedInject constructor(
                 exportRepository.discardDurableScheduledFolderOperation(durableFolderOperationId)
             }
 
+            if (result.requiresGoogleDriveReauthorization()) {
+                result.retryDriveOperationIds.values.firstOrNull()?.let { operationId ->
+                    GoogleDriveRecoveryWorker.enqueue(applicationContext, operationId)
+                }
+            }
+
             val titleResId = when {
                 result.isFullSuccess -> R.string.export_notification_title_complete
                 result.isPartialSuccess -> R.string.export_notification_title_partial
@@ -727,16 +736,19 @@ class ExportWorker @AssistedInject constructor(
         failedDateDetails = result.failedDateDetails,
         target = settings.scheduledExportTarget,
         targetLabel = targetLabel(settings, dates.last()),
-        fileCount = if (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER) {
-            when {
+        fileCount = when (settings.scheduledExportTarget) {
+            ExportTarget.DEVICE_FOLDER -> when {
                 settings.exportMode == ExportMode.RAW_SNAPSHOT -> result.artifactCount
                 result.usesDurableFolderJournal -> result.artifactCount
                 else -> result.successCount * settings.selectedExportFormats.size
             }
-        } else 0,
+            ExportTarget.GOOGLE_DRIVE -> result.artifactCount
+            ExportTarget.API_ENDPOINT -> 0
+        },
         warningSummary = warning,
         exportMode = settings.exportMode,
         reconciliationKey = reconciliationKey,
+        driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
     )
 
     private fun scheduledReconciliationKey(
@@ -762,6 +774,11 @@ class ExportWorker @AssistedInject constructor(
             settings.formatFolderPath(date)?.takeIf { it.isNotBlank() }?.let {
                 append("/").append(it.trim('/'))
             }
+        }
+
+    private fun ExportResult.requiresGoogleDriveReauthorization(): Boolean =
+        target == ExportTarget.GOOGLE_DRIVE && failedDateDetails.any {
+            it.errorDetails == GoogleDriveErrorId.REAUTHORIZATION_REQUIRED.serialId
         }
 
     private fun shouldRetry(result: ExportResult): Boolean = when (result.primaryFailureReason) {

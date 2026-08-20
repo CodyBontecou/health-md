@@ -17,7 +17,11 @@ import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.drive.GoogleDriveErrorId
 import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveRecoveryWorker
+import com.healthmd.data.drive.serialId
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -36,6 +40,7 @@ import com.healthmd.util.runCatchingCancellable
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import com.healthmd.rawexport.ExportMode
 import timber.log.Timber
 
 /**
@@ -62,6 +67,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val folderAdoption: ProfileFolderAdoptionScope,
     private val profileScheduler: dagger.Lazy<ScheduledProfileScheduler>,
     private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val rawSnapshotService: RawSnapshotService,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -201,7 +207,24 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
                     .supportsNonLegacy(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))
         val result = try {
-            when (target) {
+            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                val runRaw: suspend () -> ExportResult = {
+                    rawSnapshotService.exportRange(
+                        startDate = dates.first(),
+                        endDate = dates.last(),
+                        settings = settings,
+                        target = target,
+                        googleDriveDestinationId = profile.destinationId.takeIf {
+                            target == ExportTarget.GOOGLE_DRIVE
+                        },
+                    )
+                }
+                if (target == ExportTarget.DEVICE_FOLDER) {
+                    folderAdoption.withProfileFolder(profile) { runRaw() }
+                } else {
+                    runRaw()
+                }
+            } else when (target) {
                 ExportTarget.DEVICE_FOLDER ->
                     // Per-profile folder: adopt the profile's binding around the run (the live
                     // folder URI is process-global plumbing; see ProfileFolderAdoptionScope).
@@ -272,10 +295,21 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
         if (!result.isFullSuccess && !result.wasCancelled) {
             showFailureNotification(profile.name)
+            if (result.requiresGoogleDriveReauthorization()) {
+                result.retryDriveOperationIds.values.firstOrNull()?.let { operationId ->
+                    GoogleDriveRecoveryWorker.enqueue(applicationContext, operationId)
+                }
+                return Result.failure()
+            }
             return if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
         }
         return Result.success()
     }
+
+    private fun ExportResult.requiresGoogleDriveReauthorization(): Boolean =
+        target == ExportTarget.GOOGLE_DRIVE && failedDateDetails.any {
+            it.errorDetails == GoogleDriveErrorId.REAUTHORIZATION_REQUIRED.serialId
+        }
 
     private fun ExportResult.warningSummary(): String? = when {
         isPartialSuccess -> "${failedDateDetails.size} failed date(s) pending retry"
@@ -315,6 +349,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     exportMode = result.exportMode,
                     reconciliationKey = "profile-$operationId",
                     profileName = profile.name,
+                    driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
                 ),
             )
         }.onFailure { Timber.e(it, "Could not record profile export history") }

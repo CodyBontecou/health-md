@@ -603,16 +603,19 @@ class ScheduledExportRecoveryManager @Inject constructor(
         failedDateDetails = result.failedDateDetails,
         target = target,
         targetLabel = targetLabel(settings, target),
-        fileCount = if (target == ExportTarget.DEVICE_FOLDER) {
-            when {
+        fileCount = when (target) {
+            ExportTarget.DEVICE_FOLDER -> when {
                 settings.exportMode == ExportMode.RAW_SNAPSHOT -> result.artifactCount
                 result.usesDurableFolderJournal -> result.artifactCount
                 else -> result.successCount * settings.selectedExportFormats.size
             }
-        } else 0,
+            ExportTarget.GOOGLE_DRIVE -> result.artifactCount
+            ExportTarget.API_ENDPOINT -> 0
+        },
         warningSummary = result.warningSummary(),
         exportMode = settings.exportMode,
         reconciliationKey = reconciliationKey,
+        driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
     )
 
     private fun scheduledReconciliationKey(
@@ -629,16 +632,17 @@ class ScheduledExportRecoveryManager @Inject constructor(
         "scheduled-${UUID.nameUUIDFromBytes(stable.toByteArray(StandardCharsets.UTF_8))}"
     }
 
-    private fun targetLabel(settings: ExportSettings, target: ExportTarget): String =
-        if (target == ExportTarget.API_ENDPOINT) {
-            APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
-        } else buildString {
+    private fun targetLabel(settings: ExportSettings, target: ExportTarget): String = when (target) {
+        ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+        ExportTarget.GOOGLE_DRIVE -> "Google Drive"
+        ExportTarget.DEVICE_FOLDER -> buildString {
             val subfolder = settings.subfolder.trim('/').takeIf { it.isNotBlank() }
             append(subfolder ?: EXPORT_FOLDER_ROOT_TARGET_LABEL)
             settings.formatFolderPath(LocalDate.now().minusDays(1))?.takeIf { it.isNotBlank() }?.let {
                 append("/").append(it.trim('/'))
             }
         }
+    }
 
     /** History is also returned through the automation broadcast API, so keep this invariant. */
     private fun ExportResult.warningSummary(): String? = when {

@@ -10,6 +10,7 @@ import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.drive.GoogleDriveConfiguration
 import com.healthmd.data.drive.GoogleDriveDestinationStore
 import com.healthmd.data.drive.GoogleDriveExportOrchestrator
 import com.healthmd.data.drive.GoogleDriveSelectionStore
@@ -90,6 +91,7 @@ data class ExportUiState(
     val selectedHealthProviderId: String = "health_connect",
     val googleDriveDestinationId: String? = null,
     val googleDriveDestinationLabel: String? = null,
+    val googleDriveConfigurationAvailable: Boolean = GoogleDriveConfiguration.isConfigured(),
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -132,7 +134,7 @@ data class ExportUiState(
         get() = when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName != null
             ExportTarget.API_ENDPOINT -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) rawApiEndpointConfigured else apiEndpointConfigured
-            ExportTarget.GOOGLE_DRIVE -> googleDriveDestinationId != null
+            ExportTarget.GOOGLE_DRIVE -> googleDriveConfigurationAvailable && googleDriveDestinationId != null
         }
 
     val destinationLabel: String?
@@ -516,11 +518,18 @@ class ExportViewModel @Inject constructor(
                         ExportTarget.API_ENDPOINT -> APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
                         ExportTarget.GOOGLE_DRIVE -> _uiState.value.googleDriveDestinationLabel
                     },
-                    fileCount = if (settings.exportTarget == ExportTarget.DEVICE_FOLDER) {
-                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) presentationResult.artifactCount else estimatedFileCount(presentationResult.successCount, settings)
-                    } else 0,
+                    fileCount = when (settings.exportTarget) {
+                        ExportTarget.DEVICE_FOLDER -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                            presentationResult.artifactCount
+                        } else {
+                            estimatedFileCount(presentationResult.successCount, settings)
+                        }
+                        ExportTarget.GOOGLE_DRIVE -> presentationResult.artifactCount
+                        ExportTarget.API_ENDPOINT -> 0
+                    },
                     warningSummary = null,
                     exportMode = presentationResult.exportMode,
+                    driveOperationId = presentationResult.retryDriveOperationIds.values.firstOrNull(),
                 )
             )
 

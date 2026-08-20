@@ -33,6 +33,7 @@ data class ExportHistoryEntity(
     val warningSummary: String? = null,
     val exportMode: String = ExportMode.COMPATIBILITY.name,
     val reconciliationKey: String? = null,
+    val driveOperationId: String? = null,
 ) {
     fun toDomain(): ExportHistoryEntry {
         val json = Json { ignoreUnknownKeys = true }
@@ -58,6 +59,7 @@ data class ExportHistoryEntity(
             warningSummary = warningSummary,
             exportMode = runCatching { ExportMode.valueOf(exportMode) }.getOrDefault(ExportMode.COMPATIBILITY),
             reconciliationKey = reconciliationKey,
+            driveOperationId = driveOperationId,
         )
     }
 
@@ -85,6 +87,7 @@ data class ExportHistoryEntity(
                 warningSummary = entry.warningSummary,
                 exportMode = entry.exportMode.name,
                 reconciliationKey = entry.reconciliationKey,
+                driveOperationId = entry.driveOperationId,
             )
         }
     }

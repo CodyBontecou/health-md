@@ -172,6 +172,7 @@ class ExportProfileCoordinatorTest {
         profileRepository,
         settingsRepository,
         factory,
+        mockk(relaxed = true),
     ).apply { this.scope = scope }
 
     // MARK: - Bootstrap

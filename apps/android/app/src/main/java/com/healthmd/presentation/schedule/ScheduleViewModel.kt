@@ -7,6 +7,7 @@ import com.healthmd.R
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.drive.GoogleDriveConfiguration
 import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportTarget
@@ -103,7 +104,11 @@ class ScheduleViewModel @Inject constructor(
 
         viewModelScope.launch {
             googleDriveSelectionStore.destinationId.collect { destinationId ->
-                _uiState.update { it.copy(googleDriveConfigured = destinationId != null) }
+                _uiState.update {
+                    it.copy(
+                        googleDriveConfigured = destinationId != null && GoogleDriveConfiguration.isConfigured(),
+                    )
+                }
             }
         }
 
@@ -434,6 +439,7 @@ data class ScheduleUiState(
     val apiRequestHeadersConfigured: Boolean = false,
     val hasExportFolder: Boolean = false,
     val googleDriveConfigured: Boolean = false,
+    val googleDriveConfigurationAvailable: Boolean = GoogleDriveConfiguration.isConfigured(),
     val configurationError: ScheduleUiMessage? = null,
     val exactTimingAvailable: Boolean = true,
     val requiresHealthConnectBackgroundAccess: Boolean = true,

@@ -8,6 +8,7 @@ import com.healthmd.data.scheduler.ScheduledProfileEntry
 import com.healthmd.data.scheduler.ScheduledProfileEntryStore
 import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
@@ -74,6 +75,7 @@ data class ExportProfilesUiState(
     /** Live device folder / settings the editor drafts resolve against (overlap preview, restore base). */
     val currentFolderUri: String? = null,
     val currentSettings: ExportSettings = ExportSettings(),
+    val connectedGoogleDriveDestinationId: String? = null,
 )
 
 /** Inputs the draft overlap preview resolves against, refreshed with the row stream. */
@@ -103,6 +105,7 @@ class ExportProfilesViewModel @Inject constructor(
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
     private val settingsRepository: SettingsRepository,
     private val profileCoordinator: ExportProfileCoordinator,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportProfilesUiState())
@@ -149,6 +152,11 @@ class ExportProfilesViewModel @Inject constructor(
                         currentSettings = currentSettings,
                     )
                 }
+            }
+        }
+        viewModelScope.launch {
+            googleDriveSelectionStore.destinationId.collect { destinationId ->
+                _uiState.update { it.copy(connectedGoogleDriveDestinationId = destinationId) }
             }
         }
         // Bootstrap migration + initial arming, matching the schedule surface.
@@ -429,6 +437,7 @@ class ExportProfilesViewModel @Inject constructor(
         fun initialCreationDraft(
             rows: List<ExportProfileRow>,
             currentSettings: ExportSettings,
+            connectedGoogleDriveDestinationId: String? = null,
         ): ExportProfileEditorDraft {
             val profiles = rows.map { it.profile }
             val active = rows.firstOrNull { it.isActive }?.profile
@@ -437,7 +446,7 @@ class ExportProfilesViewModel @Inject constructor(
                 target = currentSettings.scheduledExportTarget,
                 folderUri = active?.folderUri,
                 folderDisplayName = active?.folderDisplayName,
-                destinationId = active?.destinationId,
+                destinationId = active?.destinationId ?: connectedGoogleDriveDestinationId,
                 apiEndpointUrl = active?.apiEndpointUrl?.takeIf { it.isNotBlank() }
                     ?: currentSettings.apiEndpointUrl,
                 settings = currentSettings,
@@ -452,6 +461,7 @@ class ExportProfilesViewModel @Inject constructor(
         fun initialEditDraft(
             profile: ExportProfile,
             currentSettings: ExportSettings,
+            connectedGoogleDriveDestinationId: String? = null,
         ): ExportProfileEditorDraft {
             val withProfileEndpoint = currentSettings.copy(
                 apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
@@ -466,7 +476,7 @@ class ExportProfilesViewModel @Inject constructor(
                 target = profile.target,
                 folderUri = profile.folderUri,
                 folderDisplayName = profile.folderDisplayName,
-                destinationId = profile.destinationId,
+                destinationId = profile.destinationId ?: connectedGoogleDriveDestinationId,
                 apiEndpointUrl = profile.apiEndpointUrl ?: currentSettings.apiEndpointUrl,
                 settings = restored,
             )

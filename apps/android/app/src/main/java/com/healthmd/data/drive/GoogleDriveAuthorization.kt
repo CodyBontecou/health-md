@@ -14,7 +14,6 @@ import com.google.android.gms.auth.api.identity.RevokeAccessRequest
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Task
-import com.healthmd.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
 import javax.inject.Inject
@@ -50,12 +49,13 @@ interface GoogleDriveAccessTokenProvider {
 class GoogleDriveAuthorizationManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val destinationStore: GoogleDriveDestinationStore,
+    private val managedObjectStore: GoogleDriveManagedObjectStore,
     private val api: GoogleDriveApi,
 ) : GoogleDriveAccessTokenProvider {
     private val scope = Scope(GOOGLE_DRIVE_SCOPE)
     private val client: AuthorizationClient get() = Identity.getAuthorizationClient(context)
 
-    fun readiness(): GoogleDriveReadiness = if (BuildConfig.GOOGLE_DRIVE_ANDROID_CLIENT_ID.isBlank()) {
+    fun readiness(): GoogleDriveReadiness = if (!GoogleDriveConfiguration.isConfigured()) {
         GoogleDriveReadiness.Unavailable(GoogleDriveErrorId.CONFIGURATION_MISSING)
     } else {
         GoogleDriveReadiness.Ready
@@ -169,6 +169,7 @@ class GoogleDriveAuthorizationManager @Inject constructor(
             }
         }
         destinationStore.remove(destinationId)
+        managedObjectStore.removeDestination(destinationId)
     }
 
     private suspend fun exactAccount(destination: GoogleDriveDestination): Account? =
