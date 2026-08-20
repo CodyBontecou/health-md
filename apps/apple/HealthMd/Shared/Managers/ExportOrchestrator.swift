@@ -114,6 +114,9 @@ struct ExportOrchestrator {
         let unclassifiedFileCount: Int
         let authoritativeFileCount: Int?
         let isFileCategoryBreakdownComplete: Bool
+        /// True when persistence budgeting reduced one or more file-category counts.
+        /// Category completeness remains a separate producer fact.
+        let wasFileAccountingTruncated: Bool
         let dailyNoteUpdateCount: Int
         let dailyNoteSkipCount: Int
 
@@ -133,6 +136,7 @@ struct ExportOrchestrator {
             unclassifiedFileCount: Int = 0,
             authoritativeFileCount: Int? = nil,
             isFileCategoryBreakdownComplete: Bool = false,
+            wasFileAccountingTruncated: Bool = false,
             dailyNoteUpdateCount: Int = 0,
             dailyNoteSkipCount: Int = 0,
             wasCancelled: Bool = false,
@@ -168,6 +172,7 @@ struct ExportOrchestrator {
             self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
                 && looseAggregateFileCount != nil
                 && self.unclassifiedFileCount == 0
+            self.wasFileAccountingTruncated = wasFileAccountingTruncated
             self.dailyNoteUpdateCount = max(dailyNoteUpdateCount, 0)
             self.dailyNoteSkipCount = max(dailyNoteSkipCount, 0)
             self.wasCancelled = wasCancelled
@@ -192,11 +197,16 @@ struct ExportOrchestrator {
                 archiveCount: breakdown?.zipArchiveFileCount ?? 0,
                 externalRecordFileCount: breakdown?.providerSidecarFileCount
                     ?? payload.externalRecordFileCount,
+                // A truncated breakdown's gap is budget loss, not evidence that the
+                // producer emitted unclassified files. Keep those concepts distinct.
                 unclassifiedFileCount: (breakdown?.unclassifiedFileCount ?? 0)
-                    + max(payload.totalFilesWritten - classified, 0),
+                    + (breakdown?.wasTruncated == true
+                        ? 0
+                        : max(payload.totalFilesWritten - classified, 0)),
                 authoritativeFileCount: payload.isTotalFilesWrittenAuthoritative
                     ? payload.totalFilesWritten : nil,
                 isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete ?? false,
+                wasFileAccountingTruncated: breakdown?.wasTruncated ?? false,
                 dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
                 dailyNoteSkipCount: payload.dailyNoteSkipCount,
                 wasCancelled: payload.status == .cancelled,
@@ -246,7 +256,8 @@ struct ExportOrchestrator {
         var knownFileCount: Int { categorizedFileCount + unclassifiedFileCount }
         var totalFilesWritten: Int { authoritativeFileCount ?? knownFileCount }
         var hasAuthoritativeFileCount: Bool {
-            authoritativeFileCount != nil || isFileCategoryBreakdownComplete
+            !outputBreakdown.wasTruncated
+                && (authoritativeFileCount != nil || isFileCategoryBreakdownComplete)
         }
         var outputBreakdown: ExportHistoryOutputBreakdown {
             ExportHistoryOutputBreakdown(
@@ -261,7 +272,8 @@ struct ExportOrchestrator {
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
                 unclassifiedFileCount: unclassifiedFileCount,
-                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
+                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete,
+                persistedWasTruncated: wasFileAccountingTruncated
             )
         }
 
@@ -1683,7 +1695,8 @@ struct ExportOrchestrator {
         let history = ExportHistoryManager.shared
         let suppliedFileCount = fileCount.map { max($0, 0) }
         let resolvedFileCount = suppliedFileCount ?? result.totalFilesWritten
-        let isAuthoritative = suppliedFileCount != nil || result.hasAuthoritativeFileCount
+        let isAuthoritative = !result.outputBreakdown.wasTruncated
+            && (suppliedFileCount != nil || result.hasAuthoritativeFileCount)
         let historyFileCount = isAuthoritative ? resolvedFileCount : nil
 
         if result.successCount > 0 || result.dailyNoteSkipCount > 0 {

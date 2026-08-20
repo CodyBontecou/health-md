@@ -1063,6 +1063,94 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(decoded.hadTerminalRangeFailure)
     }
 
+    func testAuthoritativeTotalAboveCapReconstructsPayloadWithConservativeAuthority() throws {
+        let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+        let breakdown = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget,
+            individualEntryFileCount: 1,
+            isFileCategoryBreakdownComplete: true
+        )
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: budget + 1,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: breakdown,
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(breakdown.isFileCategoryBreakdownComplete)
+        XCTAssertTrue(breakdown.wasTruncated)
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        XCTAssertFalse(payload.hasAuthoritativeFileCount)
+        XCTAssertEqual(payload.generatedFileCountDescription, "at least \(budget + 1) file(s)")
+
+        let roundTrippedPayload = try JSONDecoder().decode(
+            MacExportResultPayload.self,
+            from: JSONEncoder().encode(payload)
+        )
+        let result = ExportOrchestrator.ExportResult(macExportPayload: roundTrippedPayload)
+        XCTAssertEqual(result.totalFilesWritten, budget + 1)
+        XCTAssertFalse(result.hasAuthoritativeFileCount)
+        XCTAssertTrue(result.localizedGeneratedFileAndDataDayDescription.hasPrefix("≥ "))
+        XCTAssertTrue(result.outputBreakdown.isFileCategoryBreakdownComplete)
+        XCTAssertTrue(result.outputBreakdown.wasTruncated)
+        XCTAssertEqual(result.outputBreakdown.unclassifiedFileCount, 0)
+
+        let reconstructedHistory = ExportHistoryEntry(
+            source: .macAgent,
+            success: true,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 1,
+            totalCount: 1,
+            fileCount: result.totalFilesWritten,
+            outputBreakdown: result.outputBreakdown
+        )
+        XCTAssertNil(reconstructedHistory.fileCount)
+        XCTAssertTrue(reconstructedHistory.outputBreakdown?.wasTruncated == true)
+    }
+
+    func testNontruncatedPayloadRetainsExactAuthorityAndDisplay() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 2,
+            totalFilesWritten: 2,
+            isTotalFilesWrittenAuthoritative: true,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 1,
+                looseAggregateFileCount: 2,
+                isFileCategoryBreakdownComplete: true
+            ),
+            failedDateDetails: [],
+            completedDates: [Date(timeIntervalSince1970: 1_700_000_000)],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertTrue(payload.hasConsistentFileAccounting)
+        XCTAssertTrue(payload.hasAuthoritativeFileCount)
+        XCTAssertEqual(payload.generatedFileCountDescription, "2 file(s)")
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        XCTAssertTrue(result.hasAuthoritativeFileCount)
+        XCTAssertFalse(result.localizedGeneratedFileAndDataDayDescription.hasPrefix("≥ "))
+        XCTAssertFalse(result.outputBreakdown.wasTruncated)
+    }
+
     func testPartialFailuresRoundTripAndLegacyOmissionDecodesNil() throws {
         let warning = ExportPartialFailure(
             date: Date(timeIntervalSince1970: 1_700_000_000),

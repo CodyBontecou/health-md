@@ -729,7 +729,7 @@ final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
         XCTAssertEqual(decoded.fileCount, 40)
     }
 
-    func testBreakdownRejectsNegativeAndOversizedDecodedCounts() throws {
+    func testBreakdownRejectsNegativeAndOversizedPerFieldDecodedCounts() throws {
         let valid = ExportHistoryOutputBreakdown(
             requestedDataDayCount: 1,
             successfulDataDayCount: 1,
@@ -752,15 +752,54 @@ final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
             )
         }
 
-        var excessiveAggregate = base
-        excessiveAggregate["looseAggregateFileCount"] = ExportHistoryOutputBreakdown.maximumPersistedCount
-        excessiveAggregate["individualEntryFileCount"] = 1
-        XCTAssertThrowsError(
-            try JSONDecoder().decode(
-                ExportHistoryOutputBreakdown.self,
-                from: JSONSerialization.data(withJSONObject: excessiveAggregate)
+    }
+
+    func testLegacyPersistedArrayMigratesAggregateOverBudgetEntryWithoutErasingSiblings() throws {
+        let firstID = UUID()
+        let legacyID = UUID()
+        let entries = [firstID, legacyID].map { id in
+            ExportHistoryEntry(
+                id: id,
+                source: .scheduled,
+                success: true,
+                dateRangeStart: Date(timeIntervalSince1970: 1_700_000_000),
+                dateRangeEnd: Date(timeIntervalSince1970: 1_700_000_000),
+                successCount: 1,
+                totalCount: 1,
+                fileCount: 1,
+                outputBreakdown: ExportHistoryOutputBreakdown(
+                    requestedDataDayCount: 1,
+                    successfulDataDayCount: 1,
+                    looseAggregateFileCount: 1
+                )
             )
+        }
+        var objects = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(entries))
+                as? [[String: Any]]
         )
+        var legacyBreakdown = try XCTUnwrap(
+            objects[1]["outputBreakdown"] as? [String: Any]
+        )
+        let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
+        legacyBreakdown["looseAggregateFileCount"] = budget
+        legacyBreakdown["individualEntryFileCount"] = 1
+        legacyBreakdown.removeValue(forKey: "wasTruncated")
+        legacyBreakdown.removeValue(forKey: "isFileCategoryBreakdownCompleteV2")
+        objects[1]["outputBreakdown"] = legacyBreakdown
+        objects[1]["fileCount"] = budget
+
+        let decoded = try JSONDecoder().decode(
+            [ExportHistoryEntry].self,
+            from: JSONSerialization.data(withJSONObject: objects)
+        )
+
+        XCTAssertEqual(decoded.map(\.id), [firstID, legacyID])
+        XCTAssertEqual(decoded[0].fileCount, 1)
+        XCTAssertEqual(decoded[1].outputBreakdown?.generatedFileCount, budget)
+        XCTAssertEqual(decoded[1].outputBreakdown?.individualEntryFileCount, 0)
+        XCTAssertEqual(decoded[1].outputBreakdown?.wasTruncated, true)
+        XCTAssertNil(decoded[1].fileCount)
     }
 
     func testSyncEventPreservesLowerBoundAuthorityWithoutDisplayingAnExactCount() throws {
@@ -810,7 +849,7 @@ final class ExportHistoryOutputBreakdownCompatibilityTests: XCTestCase {
 final class ExportHistoryOutputBreakdownBudgetTests: XCTestCase {
     private let budget = ExportHistoryOutputBreakdown.maximumPersistedCount
 
-    func testSharedBudgetBoundsPersistedSumAcrossFileCategories() {
+    func testBudgetExhaustionBeforeUnclassifiedPreservesRawIncompleteness() {
         let breakdown = ExportHistoryOutputBreakdown(
             requestedDataDayCount: 30,
             successfulDataDayCount: 30,
@@ -833,6 +872,9 @@ final class ExportHistoryOutputBreakdownBudgetTests: XCTestCase {
         XCTAssertEqual(breakdown.unclassifiedFileCount, 0)
         XCTAssertEqual(breakdown.generatedFileCount, budget)
         XCTAssertTrue(breakdown.wasTruncated)
+        // The raw positive unclassified count still makes the measured-category
+        // fact incomplete even though its last-priority allocation received zero.
+        XCTAssertFalse(breakdown.isFileCategoryBreakdownComplete)
     }
 
     func testPerFieldClampingReducesCountsAndFlagsTruncation() {
@@ -902,6 +944,32 @@ final class ExportHistoryOutputBreakdownBudgetTests: XCTestCase {
         )
         XCTAssertFalse(withUnclassified.isFileCategoryBreakdownComplete)
         XCTAssertFalse(withUnclassified.wasTruncated)
+    }
+
+    func testEncodedLegacyCompletenessIsConservativeForOlderReaders() throws {
+        let truncatedButMeasured = ExportHistoryOutputBreakdown(
+            requestedDataDayCount: 1,
+            successfulDataDayCount: 1,
+            looseAggregateFileCount: budget,
+            individualEntryFileCount: 1,
+            isFileCategoryBreakdownComplete: true
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(truncatedButMeasured))
+                as? [String: Any]
+        )
+
+        XCTAssertEqual(object["isFileCategoryBreakdownComplete"] as? Bool, false)
+        XCTAssertEqual(object["isFileCategoryBreakdownCompleteV2"] as? Bool, true)
+        object.removeValue(forKey: "isFileCategoryBreakdownCompleteV2")
+        object.removeValue(forKey: "wasTruncated")
+
+        let legacyReaderView = try JSONDecoder().decode(
+            ExportHistoryOutputBreakdown.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertFalse(legacyReaderView.isFileCategoryBreakdownComplete)
+        XCTAssertFalse(legacyReaderView.wasTruncated)
     }
 
     func testLegacyJSONWithoutWasTruncatedDecodesAsUntruncated() throws {

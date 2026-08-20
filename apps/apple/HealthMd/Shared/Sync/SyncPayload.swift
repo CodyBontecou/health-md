@@ -1064,9 +1064,15 @@ struct MacExportResultPayload: Codable {
         completedAt = try container.decode(Date.self, forKey: .completedAt)
     }
 
+    /// Exact-count authority for consumers that persist the bounded category breakdown.
+    /// The wire total may be exact while the persisted categories are intentionally capped.
+    var hasAuthoritativeFileCount: Bool {
+        isTotalFilesWrittenAuthoritative && outputBreakdown?.wasTruncated != true
+    }
+
     /// Human-readable count fragment for legacy UI surfaces. Nil means no useful count is known.
     var generatedFileCountDescription: String? {
-        if isTotalFilesWrittenAuthoritative {
+        if hasAuthoritativeFileCount {
             return "\(totalFilesWritten) file(s)"
         }
         guard totalFilesWritten > 0 else { return nil }
@@ -1085,8 +1091,14 @@ struct MacExportResultPayload: Codable {
         guard let outputBreakdown else { return true }
         guard outputBreakdown.requestedDataDayCount == totalCount,
               outputBreakdown.successfulDataDayCount == successCount,
-              outputBreakdown.providerSidecarFileCount == externalRecordFileCount,
               outputBreakdown.generatedFileCount <= totalFilesWritten else { return false }
+        // Budget truncation can reduce the provider category and the generated
+        // aggregate independently of the producer's exact wire totals. It is
+        // consistent but cannot authorize exact persisted-count comparisons.
+        guard !outputBreakdown.wasTruncated else { return true }
+        guard outputBreakdown.providerSidecarFileCount == externalRecordFileCount else {
+            return false
+        }
         return !isTotalFilesWrittenAuthoritative
             || !outputBreakdown.isFileCategoryBreakdownComplete
             || outputBreakdown.generatedFileCount == totalFilesWritten

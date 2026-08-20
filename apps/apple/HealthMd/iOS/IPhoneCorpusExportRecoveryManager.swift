@@ -343,7 +343,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             dateRangeStart: journal.exportManifest.dateRangeStart,
             dateRangeEnd: journal.exportManifest.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.isTotalFilesWrittenAuthoritative
+            fileCount: payload.hasAuthoritativeFileCount
                 ? payload.totalFilesWritten : nil,
             appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
         )

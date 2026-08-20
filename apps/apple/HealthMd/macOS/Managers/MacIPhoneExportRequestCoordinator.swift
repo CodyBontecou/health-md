@@ -950,7 +950,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             successCount: payload.successCount,
             totalCount: payload.totalCount,
             filesWritten: payload.totalFilesWritten,
-            filesWrittenIsLowerBound: payload.isTotalFilesWrittenAuthoritative ? nil : true,
+            filesWrittenIsLowerBound: payload.hasAuthoritativeFileCount ? nil : true,
             externalRecordCount: payload.externalRecordFileCount,
             dailyNotesUpdated: payload.dailyNoteUpdateCount > 0 ? payload.dailyNoteUpdateCount : nil,
             dailyNotesSkipped: payload.dailyNoteSkipCount > 0 ? payload.dailyNoteSkipCount : nil,
@@ -2137,19 +2137,19 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         switch payload.status {
         case .success:
             if payload.dailyNoteUpdateCount > 0,
-               payload.isTotalFilesWrittenAuthoritative,
+               payload.hasAuthoritativeFileCount,
                payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) daily note(s); wrote no additional export files."
             }
             return "Exported \(payload.successCount) day(s); \(generatedFiles)\(suffix)."
         case .partialSuccess:
             if payload.dailyNoteSkipCount > 0,
-               payload.isTotalFilesWrittenAuthoritative,
+               payload.hasAuthoritativeFileCount,
                payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount) and skipped \(payload.dailyNoteSkipCount) daily note(s); wrote no additional export files."
             }
             if payload.dailyNoteUpdateCount > 0,
-               payload.isTotalFilesWrittenAuthoritative,
+               payload.hasAuthoritativeFileCount,
                payload.totalFilesWritten == 0 {
                 return "Updated \(payload.dailyNoteUpdateCount)/\(payload.totalCount) daily note(s); wrote no additional export files."
             }

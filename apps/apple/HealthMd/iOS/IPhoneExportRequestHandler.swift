@@ -623,7 +623,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             dateRangeStart: pending.request.dateRangeStart,
             dateRangeEnd: pending.request.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.isTotalFilesWrittenAuthoritative
+            fileCount: payload.hasAuthoritativeFileCount
                 ? payload.totalFilesWritten : nil
         )
 
