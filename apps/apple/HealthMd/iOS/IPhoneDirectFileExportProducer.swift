@@ -938,7 +938,8 @@ final class IPhoneDirectFileExportProducer {
         let dailyNotePaths = Set(journal.requestedDates.map {
             ExportPathPlanner.dailyNoteRelativePath(
                 settings: settings.dailyNoteInjection,
-                date: $0
+                date: $0,
+                timeZone: settings.exportTimeZoneOverride ?? .current
             )
         })
         let aggregatePaths = Set(journal.requestedDates.flatMap { date in

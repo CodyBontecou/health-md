@@ -2681,6 +2681,7 @@ final class VaultManager: ObservableObject {
                 settings: settings.dailyNoteInjection,
                 customization: settings.formatCustomization,
                 metricSelection: settings.metricSelection,
+                calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
                 fileSystem: fileSystem,
                 fileCoordinator: fileCoordinator,
                 destinationBinding: destinationBinding,
@@ -2729,7 +2730,8 @@ final class VaultManager: ObservableObject {
                     fileURL: ExportPathPlanner.dailyNoteURL(
                         vaultURL: vaultURL,
                         settings: settings.dailyNoteInjection,
-                        date: date
+                        date: date,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     ),
                     securityScopedRootURL: vaultURL
                 )
@@ -4128,7 +4130,8 @@ final class VaultManager: ObservableObject {
                 for date in dates {
                     let dailyNotePath = ExportPathPlanner.dailyNoteRelativePath(
                         settings: settings.dailyNoteInjection,
-                        date: date
+                        date: date,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     )
                     let dailyNoteKey = try ExportPathPlanner.canonicalPortablePathKey(
                         dailyNotePath
@@ -4185,7 +4188,8 @@ final class VaultManager: ObservableObject {
                 destinationPaths.append(contentsOf: dates.map {
                     ExportPathPlanner.dailyNoteRelativePath(
                         settings: settings.dailyNoteInjection,
-                        date: $0
+                        date: $0,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     )
                 })
             }
@@ -4210,7 +4214,8 @@ final class VaultManager: ObservableObject {
             artifactPaths.append(contentsOf: dates.map {
                 ExportPathPlanner.dailyNoteRelativePath(
                     settings: settings.dailyNoteInjection,
-                    date: $0
+                    date: $0,
+                    timeZone: settings.exportTimeZoneOverride ?? .current
                 )
             })
         }

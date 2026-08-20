@@ -1266,7 +1266,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             vaultManager: vaultManager
         )
         XCTAssertEqual(disposition.disposition, .accept)
-        XCTAssertNil(disposition.message)
+        XCTAssertEqual(disposition.message, "Partition may be transferred.")
     }
 
     func testPinnedConnectedRangeRejectsCorruptProtectedBytesBeforeResumeWrites() async throws {
@@ -1559,7 +1559,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         settings.includeGranularData = false
         settings.generateRangeSummary = true
         let snapshot = try await makePinnedSnapshot(
-            engine: .rust,
+            engine: .shadow,
             settings: settings,
             record: record
         )
@@ -1607,7 +1607,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             return XCTFail("Expected connected range file result")
         }
         XCTAssertEqual(result.status, .success)
-        XCTAssertEqual(result.totalFilesWritten, 3)
+        XCTAssertEqual(result.totalFilesWritten, 2)
         XCTAssertEqual(result.completedDates, [requestedDate])
         XCTAssertTrue(result.failedDateDetails.isEmpty)
         XCTAssertEqual(
@@ -2521,7 +2521,8 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultRoot,
             settings: settings.dailyNoteInjection,
-            date: requestedDate
+            date: requestedDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         XCTAssertTrue(FileManager.default.fileExists(atPath: dailyNoteURL.path))
         let archiveURL = vaultRoot
@@ -2530,10 +2531,10 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let listing = try unzipListing(archiveURL)
         XCTAssertTrue(listing.contains("2026-01-15.md"), listing)
         XCTAssertFalse(listing.contains("2026-01-01.md"), listing)
-        XCTAssertTrue(listing.contains("2026-01.md"), listing)
+        XCTAssertTrue(listing.contains("2026-01-15_to_2026-01-15.md"), listing)
     }
 
-    func testFailedSupportingDaySuppressesRollupAndKeepsRequestedDateRetryable() async throws {
+    func testFailedUnrequestedSupportingDayDoesNotChangeImmutableRangeOutcome() async throws {
         let supportDate = Self.day(2026, 1, 1)
         let requestedDate = Self.day(2026, 1, 15)
         let settings = makeSettings()
@@ -2589,13 +2590,13 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             vaultManager: vaultManager
         )
         guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
-        XCTAssertEqual(result.status, .partialSuccess)
-        XCTAssertEqual(result.failedDateDetails.map(\.date), [requestedDate])
-        XCTAssertEqual(result.completedDates, [])
-        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+        XCTAssertEqual(result.status, .success)
+        XCTAssertTrue(result.failedDateDetails.isEmpty)
+        XCTAssertEqual(result.completedDates, [requestedDate])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.contains("/Rollups/Range/") })
     }
 
-    func testFailedRequestedDaySuppressesSharedRollupWindow() async throws {
+    func testFailedRequestedDayProducesPartialImmutableRangeCoverage() async throws {
         let failedDate = Self.day(2026, 1, 1)
         let successfulDate = Self.day(2026, 1, 15)
         let settings = makeSettings()
@@ -2651,9 +2652,9 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         )
         guard case .files(let result, _) = outcome else { return XCTFail("Expected file result") }
         XCTAssertEqual(result.status, .partialSuccess)
-        XCTAssertEqual(Set(result.failedDateDetails.map(\.date)), Set([failedDate, successfulDate]))
-        XCTAssertEqual(result.completedDates, [])
-        XCTAssertFalse(fileSystem.files.keys.contains { $0.contains("/Rollups/") })
+        XCTAssertEqual(result.failedDateDetails.map(\.date), [failedDate])
+        XCTAssertEqual(result.completedDates, [successfulDate])
+        XCTAssertTrue(fileSystem.files.keys.contains { $0.contains("/Rollups/Range/") })
     }
 
     func testSourceTimeZoneOwnsDailyFilenameOnMac() async throws {
@@ -2858,7 +2859,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         let listing = try unzipListing(archiveURL)
         XCTAssertTrue(listing.contains("2026-01-01.md"))
         XCTAssertTrue(listing.contains("2026-01-31.md"))
-        XCTAssertTrue(listing.contains("2026-01.md"), listing)
+        XCTAssertTrue(listing.contains("2026-01-01_to_2026-01-31.md"), listing)
     }
 
     func testCancellationDuringFinalizationCannotBeOverwrittenBySuccess() async throws {
@@ -3277,6 +3278,10 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         session: ConnectedCorpusTransferSession
     ) {
         let settings = suppliedSettings ?? makeSettings()
+        let calendarTimeZoneIdentifier = suppliedSettingsSnapshot?.calendarTimeZoneIdentifier
+            ?? sourceTimeZoneIdentifier
+            ?? settings.exportTimeZoneOverride?.identifier
+            ?? TimeZone.current.identifier
         let scopedSourceIDs = selectedSourceIDs ?? ["apple_health"]
         let canonicalSelection = mode == .encryptedContext
             ? CanonicalHealthDataSelection(
@@ -3298,7 +3303,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             mode: mode,
             createdAt: Date(),
             sourceDeviceName: "Test iPhone",
-            sourceTimeZoneIdentifier: sourceTimeZoneIdentifier,
+            sourceTimeZoneIdentifier: sourceTimeZoneIdentifier ?? calendarTimeZoneIdentifier,
             dateRangeStart: requestedDates.first!,
             dateRangeEnd: requestedDates.last!,
             requestedDates: requestedDates,
@@ -3311,7 +3316,11 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             requestedDateIdentifiers: requestedDateIdentifiers,
             transferDates: suppliedTransferDates ?? requestedDates,
             settingsSnapshot: suppliedSettingsSnapshot
-                ?? .from(settings, healthSubfolder: "Health"),
+                ?? .from(
+                    settings,
+                    healthSubfolder: "Health",
+                    calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                ),
             rawProfile: mode == .strictRaw ? .canonicalSourceRecordsV1 : nil,
             canonicalSelection: canonicalSelection,
             selectedSourceIDs: mode == .encryptedContext ? scopedSourceIDs : selectedSourceIDs,
@@ -3420,9 +3429,8 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         settings.filenameFormat = "{date}"
         settings.folderStructure = ""
         settings.writeMode = .overwrite
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+        settings.exportTimeZoneOverride = .current
         return settings
     }
 

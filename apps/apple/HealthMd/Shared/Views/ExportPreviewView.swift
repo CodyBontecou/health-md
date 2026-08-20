@@ -1050,7 +1050,8 @@ struct ExportPreviewView: View {
             base: previewBase,
             settings: dailyNoteSettings,
             customization: settings.formatCustomization,
-            metricSelection: settings.metricSelection
+            metricSelection: settings.metricSelection,
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current
         )
 
         switch result {
@@ -1099,14 +1100,16 @@ struct ExportPreviewView: View {
         return ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
     }
 
     private func dailyNoteFolderPath(for date: Date) -> String {
         let relativePath = ExportPathPlanner.dailyNoteRelativePath(
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         let folderComponents = relativePath.split(separator: "/").dropLast().map(String.init)
         var components: [String] = [destinationRootName ?? vaultManager.vaultName]

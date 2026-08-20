@@ -409,7 +409,10 @@ final class VaultManagerTests: XCTestCase {
         }
         XCTAssertEqual(error as? ExportError, .destinationChanged)
         XCTAssertEqual(probe.executionCount, 1)
-        let filename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        let filename = settings.dailyNoteInjection.formatFilename(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        ) + ".md"
         XCTAssertEqual(
             coordinator.calls,
             [.init(url: parent.appendingPathComponent(filename), intent: .replace)],
@@ -453,6 +456,7 @@ final class VaultManagerTests: XCTestCase {
 
         let start = ExportFixtures.referenceDate
         let formatter = DateFormatter()
+        formatter.timeZone = settings.exportTimeZoneOverride
         formatter.dateFormat = "yyyy-MM-dd"
         let archiveName = "Health.md Export \(formatter.string(from: start)).zip"
         do {
@@ -2424,7 +2428,10 @@ final class VaultManagerTests: XCTestCase {
         )
 
         XCTAssertTrue(result)
-        let dailyFilename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        let dailyFilename = settings.dailyNoteInjection.formatFilename(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        ) + ".md"
         let rootDailyNote = vaultURL
             .appendingPathComponent("Daily")
             .appendingPathComponent(dailyFilename)
@@ -2451,8 +2458,7 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeIsolatedSettings()
         settings.exportFormats = Set(ExportFormat.allCases)
         settings.archiveExportFiles = true
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         settings.individualTracking.globalEnabled = true
         settings.individualTracking.setTrackIndividually("weight", enabled: true)
@@ -2466,7 +2472,8 @@ final class VaultManagerTests: XCTestCase {
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: ExportFixtures.referenceDate
+            date: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         let rootItems = try FileManager.default.contentsOfDirectory(atPath: vaultURL.path)
         let dailyItems = try FileManager.default.contentsOfDirectory(
@@ -2534,11 +2541,15 @@ final class VaultManagerTests: XCTestCase {
 
         try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
 
-        let dailyRelativePath = settings.dailyNoteInjection.previewPath(for: ExportFixtures.referenceDate)
+        let dailyRelativePath = settings.dailyNoteInjection.previewPath(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        )
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: ExportFixtures.referenceDate
+            date: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         let aggregateURL = vaultURL
             .appendingPathComponent("Health")
@@ -2611,7 +2622,10 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeCollidingDailyNoteSettings(format: format)
         let dailyNoteURL = try precreateCollidingDailyNote(in: vaultURL, settings: settings)
         let originalContent = try String(contentsOf: dailyNoteURL, encoding: .utf8)
-        let expectedPath = settings.dailyNoteInjection.previewPath(for: ExportFixtures.referenceDate)
+        let expectedPath = settings.dailyNoteInjection.previewPath(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        )
 
         do {
             try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
@@ -2645,7 +2659,8 @@ final class VaultManagerTests: XCTestCase {
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: ExportFixtures.referenceDate
+            date: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         try FileManager.default.createDirectory(
             at: dailyNoteURL.deletingLastPathComponent(),

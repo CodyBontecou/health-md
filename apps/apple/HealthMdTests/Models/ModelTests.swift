@@ -1041,18 +1041,14 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let settings = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
 
         let reloaded = LifecycleHarness.retain(AdvancedExportSettings(userDefaults: defaults))
-        XCTAssertTrue(reloaded.generateWeeklyRollups)
-        XCTAssertFalse(reloaded.generateMonthlyRollups)
-        XCTAssertTrue(reloaded.generateYearlyRollups)
+        XCTAssertTrue(reloaded.generateRangeSummary)
         XCTAssertTrue(reloaded.summaryOnlyExport)
         XCTAssertTrue(reloaded.summaryOnlyModeEnabled)
-        XCTAssertEqual(reloaded.enabledRollupPeriods, [.weekly, .yearly])
+        XCTAssertEqual(reloaded.enabledRollupPeriods, [.range])
     }
 
     func testSchemaAffectingExportOptionsDefaultOffForFreshInstall() throws {
@@ -1087,7 +1083,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         settings.exportFormats = [.markdown, .json]
         settings.archiveExportFiles = true
         settings.summaryOnlyExport = true
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.individualTracking.globalEnabled = true
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.dailyNotesOnly = true
@@ -1110,7 +1106,7 @@ final class AdvancedExportSettingsNestedPersistenceTests: XCTestCase {
         XCTAssertFalse(settings.dailyNotesOnlyModeEnabled)
         XCTAssertEqual(settings.effectiveFileExportMode, .summaryOnly)
         XCTAssertTrue(settings.archiveModeEnabled)
-        XCTAssertEqual(settings.enabledRollupPeriods, [.weekly])
+        XCTAssertEqual(settings.enabledRollupPeriods, [.range])
     }
 
     func testDailyNotesOnlyAllowsFileDestinationWithoutAggregateFormats() throws {

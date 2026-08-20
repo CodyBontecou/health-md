@@ -4851,7 +4851,8 @@ final class MacCorpusExportSessionManager {
                 ExportPathPlanner.dailyNoteURL(
                     vaultURL: vaultURL,
                     settings: settings.dailyNoteInjection,
-                    date: $0
+                    date: $0,
+                    timeZone: settings.exportTimeZoneOverride ?? .current
                 )
             })
         }

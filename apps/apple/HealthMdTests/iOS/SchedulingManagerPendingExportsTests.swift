@@ -129,8 +129,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
         let retryRequest = try XCTUnwrap(try store.loadAll().first)
-        let normalizedRetryDate = Calendar.current.startOfDay(for: request.dates[1])
-        XCTAssertEqual(retryRequest.dates, [normalizedRetryDate])
+        let immutableRetryDate = request.dates[1]
+        XCTAssertEqual(retryRequest.dates, [immutableRetryDate])
         XCTAssertEqual(notificationScheduler.immediateRequests[request.id], retryRequest)
         XCTAssertFalse(notificationScheduler.canceledRequestIDs.contains(request.id))
         XCTAssertNil(manager.schedule.lastExportDate)
@@ -143,7 +143,7 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
 
         await manager.performPendingExport(requestId: request.id, source: .scheduled)
 
-        XCTAssertEqual(runs, [request.dates, [normalizedRetryDate]])
+        XCTAssertEqual(runs, [request.dates, [immutableRetryDate]])
         XCTAssertEqual(try store.loadAll(), [])
         XCTAssertNotNil(manager.schedule.lastExportDate)
         XCTAssertEqual(remainingQuota, 0, "Retrying the same scheduled request must not consume another export")

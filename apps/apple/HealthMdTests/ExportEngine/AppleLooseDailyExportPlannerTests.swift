@@ -365,7 +365,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         let requestedRange = try HealthRollupRangeRequest(
             startDate: record.date,
             endDate: record.date,
-            calendarTimeZoneIdentifier: "UTC"
+            calendarTimeZoneIdentifier: try XCTUnwrap(snapshot.calendarTimeZoneIdentifier)
         )
         let summaries = HealthRollupExporter.makeSummaries(
             from: [record],
@@ -905,6 +905,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             defaults: defaults,
             fileSystem: fileSystem,
             bookmarkResolver: resolver,
+            identityProbe: FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         Self.retainedManagers.append(manager)

@@ -141,28 +141,38 @@ enum ExportPathPlanner {
     static func dailyNoteURL(
         vaultURL: URL,
         settings: DailyNoteInjectionSettings,
-        date: Date
+        date: Date,
+        timeZone: TimeZone = .current
     ) -> URL {
         var url = appendingRelativePath(settings.folderPath, to: vaultURL, isDirectory: true)
-        url = fileURL(in: url, filename: settings.formatFilename(for: date) + ".md")
+        url = fileURL(
+            in: url,
+            filename: settings.formatFilename(for: date, timeZone: timeZone) + ".md"
+        )
         return url
     }
 
     static func dailyNoteRelativePath(
         settings: DailyNoteInjectionSettings,
-        date: Date
+        date: Date,
+        timeZone: TimeZone = .current
     ) -> String {
         relativePath([
             settings.folderPath,
-            settings.formatFilename(for: date) + ".md"
+            settings.formatFilename(for: date, timeZone: timeZone) + ".md"
         ])
     }
 
     static func dailyNoteFolderRelativePath(
         settings: DailyNoteInjectionSettings,
-        date: Date
+        date: Date,
+        timeZone: TimeZone = .current
     ) -> String {
-        let relativePath = dailyNoteRelativePath(settings: settings, date: date)
+        let relativePath = dailyNoteRelativePath(
+            settings: settings,
+            date: date,
+            timeZone: timeZone
+        )
         return Self.relativePath(relativePath.split(separator: "/").dropLast().map(String.init))
     }
 
@@ -174,14 +184,17 @@ enum ExportPathPlanner {
     ) -> DailyNoteCollision? {
         guard settings.dailyNoteInjection.enabled else { return nil }
 
+        let timeZone = settings.exportTimeZoneOverride ?? .current
         let dailyNoteURL = dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: timeZone
         )
         let dailyNoteRelativePath = dailyNoteRelativePath(
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: timeZone
         )
 
         guard let exportTarget = aggregateOutputTargets(

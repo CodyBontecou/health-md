@@ -4,6 +4,8 @@ import XCTest
 
 @MainActor
 final class MacExportViewLocalPathTests: XCTestCase {
+    // STATIC RETENTION JUSTIFICATION: VaultManager owns nested ObservableObjects;
+    // process-lifetime retention avoids the known macOS 26 / Swift 6 deinit crash.
     private static var retainedManagers: [VaultManager] = []
     private var retainedSettings: [AdvancedExportSettings] = []
 
