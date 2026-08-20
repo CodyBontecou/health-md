@@ -325,21 +325,24 @@
     {
       "id": "export.profiles",
       "name": "Saved export profiles",
-      "classification": "planned",
+      "classification": "shared",
       "summary": "Save multiple named export configurations with independent metric selection, formats, output options, and destinations, and run any of them manually, from automation, or on independent schedules. Profiles choose which request produces files; they never change the public export schema, which remains healthmd.health_data per output profile.",
-      "profiles": [],
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
       "platforms": {
         "apple": {
-          "state": "planned",
-          "target": "iOS/macOS export profile store, manual export picker, and per-profile scheduled entries"
+          "state": "available"
         },
         "android": {
-          "state": "planned",
-          "target": "Android export profile repository, AutomationReceiver profile extra, per-profile WorkManager schedules, per-profile SAF folder bindings, and the v2 direct-protocol profile settings policy"
+          "state": "available"
         }
       },
       "evidence": [
-        "apps/apple/docs/features/export-profiles.md"
+        "apps/apple/docs/features/export-profiles.md",
+        "apps/android/docs/export-contract/migration-plan.md"
       ]
     },
     {

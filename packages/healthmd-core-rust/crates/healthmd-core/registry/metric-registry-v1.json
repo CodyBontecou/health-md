@@ -10,6 +10,7 @@
       "export.mindfulness-sessions",
       "export.completed-workouts",
       "export.mobility-and-performance",
+      "export.profiles",
       "android.activity-intensity",
       "android.planned-workouts",
       "android.menstruation-periods",
@@ -33,6 +34,7 @@
       "apple.state-of-mind",
       "apple.wrist-temperature",
       "export.mobility-and-performance",
+      "export.profiles",
       "apple.hearing-and-symptoms",
       "apple.typed-whoop-provider-section",
       "core.shared-rust-metric-registry"

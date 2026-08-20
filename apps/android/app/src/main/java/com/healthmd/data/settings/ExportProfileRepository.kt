@@ -152,6 +152,56 @@ class ExportProfileRepository @Inject constructor(
         return applied
     }
 
+    /**
+     * Full editor update in one atomic DataStore edit: rename (trim + unique suffixing),
+     * retarget, rebind the destination — endpoint URL for API targets, SAF folder for folder
+     * targets (both cleared when switching away) — and replace the frozen snapshot. Returns
+     * the stored name, or null when the profile is unknown or the name is invalid.
+     */
+    suspend fun applyEditorUpdate(
+        id: String,
+        rawName: String,
+        settingsSnapshotJson: String,
+        target: ExportTarget,
+        apiEndpointUrl: String?,
+        folderUri: String?,
+        folderDisplayName: String?,
+    ): String? {
+        if (!ExportProfileRules.isValidName(rawName)) return null
+        var storedName: String? = null
+        dataStore.edit { prefs ->
+            val existing = decodeProfiles(prefs[Keys.PROFILES])
+            val index = existing.indexOfFirst { it.id == id }
+            if (index >= 0) {
+                val others = existing.filterIndexed { i, _ -> i != index }
+                val updated = existing[index].copy(
+                    name = ExportProfileRules.uniquifyName(rawName, others),
+                    settingsSnapshotJson = settingsSnapshotJson,
+                    target = target,
+                    apiEndpointUrl = when (target) {
+                        ExportTarget.API_ENDPOINT -> apiEndpointUrl?.takeIf { it.isNotBlank() }
+                        ExportTarget.DEVICE_FOLDER -> null
+                    },
+                    folderUri = when (target) {
+                        ExportTarget.DEVICE_FOLDER -> folderUri?.takeIf { it.isNotBlank() }
+                        ExportTarget.API_ENDPOINT -> null
+                    },
+                    folderDisplayName = when (target) {
+                        ExportTarget.DEVICE_FOLDER -> folderDisplayName?.takeIf { it.isNotBlank() }
+                        ExportTarget.API_ENDPOINT -> null
+                    },
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                )
+                prefs[Keys.PROFILES] = json.encodeToString(
+                    listSerializer,
+                    existing.toMutableList().apply { set(index, updated) },
+                )
+                storedName = updated.name
+            }
+        }
+        return storedName
+    }
+
     /** Rename with trim + unique suffixing. Returns the stored name, or null when rejected. */
     suspend fun rename(id: String, rawName: String): String? {
         if (!ExportProfileRules.isValidName(rawName)) return null

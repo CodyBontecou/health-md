@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
+import com.healthmd.presentation.common.ConfigurationProtectedRegion
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import java.time.LocalTime
@@ -43,6 +45,10 @@ import java.util.Locale
  * Phase-6 profile-schedules section on the Schedule screen: one row per export profile with an
  * enable toggle, a cadence editor dialog, profile creation from current settings, and a usage
  * footer. Pure QA/manage surface — execution lives in the scheduler runtime.
+ *
+ * Every mutation here edits export-profile automation, so the card sits inside the shared
+ * configuration lock: rows stay readable while Prevent Accidental Changes is on, and taps
+ * route to the blocked-change toast instead (iOS `configurationChangesProtected()` parity).
  */
 @Composable
 fun ProfileSchedulesSection(
@@ -50,87 +56,106 @@ fun ProfileSchedulesSection(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val protection = LocalConfigurationProtection.current
+    var pendingDeleteProfile by remember { mutableStateOf<ProfileScheduleRow?>(null) }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = AppColors.bgSecondary),
-    ) {
-        Column(
-            modifier = Modifier.padding(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ConfigurationProtectedRegion(modifier = modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = AppColors.bgSecondary),
         ) {
-            Text(
-                text = "Profile Schedules",
-                style = MaterialTheme.typography.titleMedium,
-                color = AppColors.textPrimary,
-            )
-            Text(
-                text = "Run each export profile on its own cadence. Profiles keep working when this screen is closed.",
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textSecondary,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            var pendingDelete by remember { mutableStateOf<ProfileScheduleRow?>(null) }
-            uiState.rows.forEach { row ->
-                ProfileScheduleRow(
-                    row = row,
-                    onToggle = { enabled -> viewModel.setEnabled(row.profile.id, enabled) },
-                    onOpenEditor = { viewModel.openEditor(row.profile.id) },
-                    onDelete = { pendingDelete = row },
-                )
-            }
-            pendingDelete?.let { row ->
-                AlertDialog(
-                    onDismissRequest = { pendingDelete = null },
-                    title = { Text("Delete \"${row.profile.name}\"?") },
-                    text = {
-                        Text("Its saved settings and schedule are removed. The last remaining profile cannot be deleted.")
-                    },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            viewModel.deleteProfile(row.profile.id)
-                            pendingDelete = null
-                        }) { Text("Delete") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
-                    },
-                )
-            }
-
-            if (uiState.rows.isEmpty()) {
+            Column(
+                modifier = Modifier.padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
                 Text(
-                    text = "No export profiles yet.",
+                    text = "Profile Schedules",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = AppColors.textPrimary,
+                )
+
+                Spacer(modifier = Modifier.height(Spacing.xs))
+
+                uiState.rows.forEach { row ->
+                    ProfileScheduleRow(
+                        row = row,
+                        onToggle = { enabled -> viewModel.setEnabled(row.profile.id, enabled) },
+                        onOpenEditor = { viewModel.openEditor(row.profile.id) },
+                        onDelete = { pendingDeleteProfile = row },
+                    )
+                }
+
+                if (uiState.rows.isEmpty()) {
+                    Text(
+                        text = "No export profiles yet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textSecondary,
+                    )
+                }
+
+                TextButton(onClick = {
+                    if (protection.enabled) {
+                        protection.onBlockedChange()
+                    } else {
+                        viewModel.addProfileFromCurrentSettings()
+                    }
+                }) {
+                    Text("New Profile From Current Settings")
+                }
+
+                Text(
+                    text = if (uiState.projectedMonthlyRequests > 0) {
+                        "Projected use: about ${uiState.projectedMonthlyRequests} export actions per month across scheduled profiles."
+                    } else {
+                        "No profile schedules enabled."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = AppColors.textSecondary,
                 )
             }
-
-            TextButton(onClick = viewModel::addProfileFromCurrentSettings) {
-                Text("New Profile From Current Settings")
-            }
-
-            Text(
-                text = if (uiState.projectedMonthlyRequests > 0) {
-                    "Projected use: about ${uiState.projectedMonthlyRequests} export actions per month across scheduled profiles."
-                } else {
-                    "No profile schedules enabled."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = AppColors.textSecondary,
-            )
         }
     }
 
+    // Confirmation and editor dialogs render in their own windows above the
+    // protected region, so their confirm actions are gated for the case where
+    // the lock was enabled while they were already open.
+    pendingDeleteProfile?.let { row ->
+        AlertDialog(
+            onDismissRequest = { pendingDeleteProfile = null },
+            title = { Text("Delete \"${row.profile.name}\"?") },
+            text = {
+                Text("Its saved settings and schedule are removed. The last remaining profile cannot be deleted.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (protection.enabled) {
+                        pendingDeleteProfile = null
+                        protection.onBlockedChange()
+                    } else {
+                        viewModel.deleteProfile(row.profile.id)
+                        pendingDeleteProfile = null
+                    }
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteProfile = null }) { Text("Cancel") }
+            },
+        )
+    }
     uiState.editingProfileId?.let { profileId ->
         val row = uiState.rows.firstOrNull { it.profile.id == profileId } ?: return
         ProfileCadenceEditorDialog(
             profileId = row.profile.id,
             profileName = row.profile.name,
             entry = row.entry,
-            onSave = viewModel::saveEntry,
+            onSave = { entry ->
+                if (protection.enabled) {
+                    viewModel.openEditor(null)
+                    protection.onBlockedChange()
+                } else {
+                    viewModel.saveEntry(entry)
+                }
+            },
             onDismiss = { viewModel.openEditor(null) },
         )
     }
