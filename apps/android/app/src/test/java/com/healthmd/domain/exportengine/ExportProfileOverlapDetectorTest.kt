@@ -226,4 +226,60 @@ class ExportProfileOverlapDetectorTest {
         )
         assertEquals(null, identities.first { it.profileId == "endpoint" }.destinationRootKey)
     }
+
+    @Test
+    fun `draft preview names profiles the candidate draft would collide with`() {
+        val current = settings()
+        val daily = identity("a", "Daily", root = "content://tree/live", settings = settings())
+        val weekly = identity("b", "Weekly", root = "content://tree/weekly", settings = settings())
+
+        // Unbound candidate falls back to the live folder, matching unbound saved profiles.
+        assertEquals(
+            listOf("Daily"),
+            ExportProfileOverlapDetector.overlapPreviewNames(
+                identities = listOf(daily, weekly),
+                currentFolderUri = "content://tree/live",
+                candidateTarget = ExportTarget.DEVICE_FOLDER,
+                candidateFolderUri = null,
+                candidateSettings = current,
+            ),
+        )
+
+        // Bound candidate collides only with the profile sharing that folder.
+        assertEquals(
+            listOf("Weekly"),
+            ExportProfileOverlapDetector.overlapPreviewNames(
+                identities = listOf(daily, weekly),
+                currentFolderUri = "content://tree/live",
+                candidateTarget = ExportTarget.DEVICE_FOLDER,
+                candidateFolderUri = "content://tree/weekly",
+                candidateSettings = current,
+            ),
+        )
+    }
+
+    @Test
+    fun `draft preview stays silent for api candidates and distinct templates`() {
+        val daily = identity("a", "Daily", root = "content://tree/live", settings = settings())
+
+        assertTrue(
+            ExportProfileOverlapDetector.overlapPreviewNames(
+                identities = listOf(daily),
+                currentFolderUri = "content://tree/live",
+                candidateTarget = ExportTarget.API_ENDPOINT,
+                candidateFolderUri = null,
+                candidateSettings = settings(),
+            ).isEmpty(),
+        )
+
+        assertTrue(
+            ExportProfileOverlapDetector.overlapPreviewNames(
+                identities = listOf(daily),
+                currentFolderUri = "content://tree/live",
+                candidateTarget = ExportTarget.DEVICE_FOLDER,
+                candidateFolderUri = null,
+                candidateSettings = settings(filenameFormat = "unique-{date}"),
+            ).isEmpty(),
+        )
+    }
 }

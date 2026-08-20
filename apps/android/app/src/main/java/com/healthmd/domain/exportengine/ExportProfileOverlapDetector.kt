@@ -23,6 +23,9 @@ import java.time.LocalDate
  */
 object ExportProfileOverlapDetector {
 
+    /** Synthetic identity id for live draft previews; never collides with repository UUIDs. */
+    const val DRAFT_CANDIDATE_ID: String = "__draft_candidate__"
+
     /** Path-relevant identity of one profile. */
     data class ProfilePathIdentity(
         val profileId: String,
@@ -96,6 +99,35 @@ object ExportProfileOverlapDetector {
                 currentFolderUri = currentFolderUri,
             ),
         )
+    }
+
+    /**
+     * Live draft overlap preview (mirror of the iOS `overlapPreviewNames` editor helper): names
+     * of existing profiles whose exports would write the same files as a candidate with this
+     * target, folder binding, and settings. An unbound folder candidate falls back to the live
+     * device folder, matching how unbound saved profiles resolve. Callers editing an existing
+     * profile pass [identities] without that profile's stored row so a draft never overlaps
+     * its own previous frozen state.
+     */
+    fun overlapPreviewNames(
+        identities: List<ProfilePathIdentity>,
+        currentFolderUri: String?,
+        candidateTarget: ExportTarget,
+        candidateFolderUri: String?,
+        candidateSettings: ExportSettings,
+    ): List<String> {
+        val candidate = ProfilePathIdentity(
+            profileId = DRAFT_CANDIDATE_ID,
+            name = "",
+            target = candidateTarget,
+            settings = candidateSettings,
+            destinationRootKey = destinationRootKey(
+                target = candidateTarget,
+                folderUri = candidateFolderUri,
+                currentFolderUri = currentFolderUri,
+            ),
+        )
+        return overlappingProfileNames(DRAFT_CANDIDATE_ID, identities + candidate)
     }
 
     private fun destinationRootKey(

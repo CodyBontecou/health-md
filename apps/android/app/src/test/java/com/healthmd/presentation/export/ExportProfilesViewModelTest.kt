@@ -7,7 +7,10 @@ import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
+import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.model.ExportProfile
+import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
@@ -25,6 +28,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExportProfilesViewModelTest {
@@ -68,6 +72,18 @@ class ExportProfilesViewModelTest {
         anchorEpochDay = 20_000L,
     )
 
+    /** Canonical frozen snapshot the editor path produces (pin-free, target-scoped). */
+    private fun canonicalSnapshot(
+        settings: ExportSettings,
+        target: ExportTarget = ExportTarget.DEVICE_FOLDER,
+    ): String = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+        AndroidExportSettingsSnapshot.capture(
+            settings = settings.copy(exportTarget = target, scheduledExportTarget = target),
+            pin = null,
+            zone = ZoneId.of("UTC"),
+        ),
+    )
+
     private class Harness(
         val profiles: MutableStateFlow<List<ExportProfile>>,
         val activeProfileId: MutableStateFlow<String?>,
@@ -93,6 +109,8 @@ class ExportProfilesViewModelTest {
         initialProfiles: List<ExportProfile> = listOf(profile("p1"), profile("p2", name = "Weekly")),
         initialActiveId: String? = "p1",
         initialEntries: List<ScheduledProfileEntry> = emptyList(),
+        currentFolderUri: String? = null,
+        currentSettings: ExportSettings = ExportSettings(),
     ): Harness {
         val profiles = MutableStateFlow(initialProfiles)
         val activeProfileId = MutableStateFlow(initialActiveId)
@@ -120,10 +138,10 @@ class ExportProfilesViewModelTest {
             every { captureFromCurrent(any(), any(), any()) } returns snapshotJson
         }
         val settingsRepository = mockk<SettingsRepository> {
-            coEvery { getExportSettings() } returns com.healthmd.domain.model.ExportSettings()
-            every { exportFolderUri } returns kotlinx.coroutines.flow.flowOf(null)
+            coEvery { getExportSettings() } returns currentSettings
+            every { exportFolderUri } returns kotlinx.coroutines.flow.flowOf(currentFolderUri)
             every { exportSettings } returns kotlinx.coroutines.flow.flowOf(
-                com.healthmd.domain.model.ExportSettings(),
+                currentSettings,
             )
         }
         val profileCoordinator = mockk<ExportProfileCoordinator> {
@@ -188,34 +206,264 @@ class ExportProfilesViewModelTest {
     }
 
     @Test
-    fun `add from current settings captures snapshot seeds entry and opens detail`() = runTest {
+    fun `start creation opens the form seeded from current settings with a unique name`() = runTest {
+        val harness = harness()
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        viewModel.startCreation()
+
+        assertThat(viewModel.uiState.value.creatingProfile).isTrue()
+        val draft = ExportProfilesViewModel.initialCreationDraft(
+            rows = viewModel.uiState.value.rows,
+            currentSettings = viewModel.uiState.value.currentSettings,
+        )
+        assertThat(draft.name).isEqualTo("Profile")
+        assertThat(draft.target).isEqualTo(ExportTarget.DEVICE_FOLDER)
+        assertThat(draft.settings.filenameFormat)
+            .isEqualTo(ExportSettings.DEFAULT_FILENAME_FORMAT)
+    }
+
+    @Test
+    fun `suggested profile name skips taken names case-insensitively`() {
+        assertThat(
+            ExportProfilesViewModel.suggestedProfileName(
+                listOf(profile("p1", name = "Daily"), profile("p2", name = "Weekly")),
+            ),
+        ).isEqualTo("Profile")
+        assertThat(
+            ExportProfilesViewModel.suggestedProfileName(
+                listOf(
+                    profile("p1", name = "profile"),
+                    profile("p2", name = "Profile 2"),
+                ),
+            ),
+        ).isEqualTo("Profile 3")
+    }
+
+    @Test
+    fun `create profile freezes the draft seeds entry activates and opens detail`() = runTest {
         val harness = harness()
         coEvery {
-            harness.repository.add(any(), any(), any(), any())
+            harness.repository.add(any(), any(), any(), any(), any(), any())
         } answers {
-            profile(id = "p-new", name = "Profile 3")
+            profile(id = "p-new", name = "Morning")
         }
         val viewModel = harness.viewModel()
         advanceUntilIdle()
 
-        viewModel.addFromCurrentSettings()
+        viewModel.startCreation()
+        val draft = ExportProfilesViewModel.initialCreationDraft(
+            rows = viewModel.uiState.value.rows,
+            currentSettings = viewModel.uiState.value.currentSettings,
+        ).copy(
+            name = "Morning",
+            folderUri = "content://tree/morning",
+            folderDisplayName = "Morning",
+            settings = viewModel.uiState.value.currentSettings.copy(filenameFormat = "morning-{date}"),
+        )
+        viewModel.createProfile(draft)
         advanceUntilIdle()
 
         val jsonSlot = slot<String>()
         coVerify {
-            harness.repository.add(any(), capture(jsonSlot), any(), any())
+            harness.repository.add(
+                name = "Morning",
+                any(),
+                ExportTarget.DEVICE_FOLDER,
+                any(),
+                "content://tree/morning",
+                "Morning",
+            )
         }
-        assertThat(jsonSlot.captured).isEqualTo(snapshotJson)
+        coVerify { harness.repository.add(any(), capture(jsonSlot), any(), any(), any(), any()) }
+        val decoded = AndroidExportSettingsSnapshotCodec.decodeOrNull(jsonSlot.captured)
+        assertThat(decoded).isNotNull()
+        assertThat(decoded!!.enginePin).isNull()
+        assertThat(decoded.filenameFormat).isEqualTo("morning-{date}")
+        assertThat(decoded.scheduledExportTarget).isEqualTo(ExportTarget.DEVICE_FOLDER)
 
         val entrySlot = slot<ScheduledProfileEntry>()
         coVerify { harness.entryStore.upsert(capture(entrySlot)) }
         assertThat(entrySlot.captured.profileId).isEqualTo("p-new")
         assertThat(entrySlot.captured.isEnabled).isFalse()
 
-        // Duplicates activate the copy (iOS picker parity).
+        // Creation activates the copy (iOS parity).
         coVerify(exactly = 1) { harness.profileCoordinator.activate("p-new") }
 
         assertThat(viewModel.uiState.value.detailProfileId).isEqualTo("p-new")
+        assertThat(viewModel.uiState.value.creatingProfile).isFalse()
+    }
+
+    @Test
+    fun `initial edit draft restores the frozen snapshot onto current settings`() {
+        val frozen = ExportSettings(
+            filenameFormat = "frozen-{date}",
+            includeGranularData = true,
+        )
+        val stored = profile(
+            "p1",
+            snapshotJson = canonicalSnapshot(frozen),
+        ).copy(
+            folderUri = "content://tree/vault",
+            folderDisplayName = "Vault",
+        )
+
+        val draft = ExportProfilesViewModel.initialEditDraft(
+            profile = stored,
+            currentSettings = ExportSettings(filenameFormat = "live-{date}"),
+        )
+
+        assertThat(draft.name).isEqualTo("Daily")
+        assertThat(draft.target).isEqualTo(ExportTarget.DEVICE_FOLDER)
+        assertThat(draft.folderUri).isEqualTo("content://tree/vault")
+        assertThat(draft.settings.filenameFormat).isEqualTo("frozen-{date}")
+        assertThat(draft.settings.includeGranularData).isTrue()
+    }
+
+    @Test
+    fun `initial edit draft falls back to live settings for a corrupt snapshot`() {
+        val draft = ExportProfilesViewModel.initialEditDraft(
+            profile = profile("p1", snapshotJson = "not-json"),
+            currentSettings = ExportSettings(filenameFormat = "live-{date}"),
+        )
+
+        assertThat(draft.settings.filenameFormat).isEqualTo("live-{date}")
+    }
+
+    @Test
+    fun `update profile persists the draft atomically and syncs the active profile`() = runTest {
+        val harness = harness()
+        coEvery {
+            harness.repository.applyEditorUpdate(any(), any(), any(), any(), any(), any(), any())
+        } returns "Morning"
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        viewModel.openEditor("p1")
+        assertThat(viewModel.uiState.value.editingProfileId).isEqualTo("p1")
+
+        val draft = ExportProfilesViewModel.initialEditDraft(
+            profile = profile("p1"),
+            currentSettings = viewModel.uiState.value.currentSettings,
+        ).copy(name = "Morning")
+        viewModel.updateProfile("p1", draft)
+        advanceUntilIdle()
+
+        val jsonSlot = slot<String>()
+        coVerify {
+            harness.repository.applyEditorUpdate(
+                "p1",
+                "Morning",
+                capture(jsonSlot),
+                ExportTarget.DEVICE_FOLDER,
+                any(),
+                any(),
+                any(),
+            )
+        }
+        val decoded = AndroidExportSettingsSnapshotCodec.decodeOrNull(jsonSlot.captured)
+        assertThat(decoded).isNotNull()
+        assertThat(decoded!!.enginePin).isNull()
+
+        // Editing the ACTIVE profile re-applies the new snapshot onto live settings.
+        coVerify(exactly = 1) { harness.profileCoordinator.activate("p1") }
+        assertThat(viewModel.uiState.value.editingProfileId).isNull()
+    }
+
+    @Test
+    fun `update profile never touches live state for a non-active profile`() = runTest {
+        val harness = harness()
+        coEvery {
+            harness.repository.applyEditorUpdate(any(), any(), any(), any(), any(), any(), any())
+        } returns "Renamed"
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        val draft = ExportProfilesViewModel.initialEditDraft(
+            profile = profile("p2", name = "Weekly"),
+            currentSettings = viewModel.uiState.value.currentSettings,
+        )
+        viewModel.updateProfile("p2", draft)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            harness.repository.applyEditorUpdate("p2", any(), any(), any(), any(), any(), any())
+        }
+        coVerify(exactly = 0) { harness.profileCoordinator.activate(any()) }
+        assertThat(viewModel.uiState.value.editingProfileId).isNull()
+    }
+
+    @Test
+    fun `draft overlap preview names profiles writing the same files as the draft`() = runTest {
+        val overlapping = ExportSettings()
+        val harness = harness(
+            initialProfiles = listOf(
+                profile(
+                    "p1",
+                    name = "Daily",
+                    snapshotJson = canonicalSnapshot(overlapping),
+                ),
+                profile(
+                    "p2",
+                    name = "Weekly",
+                    snapshotJson = canonicalSnapshot(overlapping),
+                ).copy(folderUri = "content://tree/weekly"),
+            ),
+            currentFolderUri = "content://tree/live",
+        )
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        // Unbound candidate falls back to the live folder: overlaps the unbound Daily profile.
+        assertThat(
+            viewModel.draftOverlapPreview(
+                editingProfileId = null,
+                target = ExportTarget.DEVICE_FOLDER,
+                folderUri = null,
+                settings = ExportSettings(),
+            ),
+        ).containsExactly("Daily")
+
+        // A distinct filename template breaks the collision.
+        assertThat(
+            viewModel.draftOverlapPreview(
+                editingProfileId = null,
+                target = ExportTarget.DEVICE_FOLDER,
+                folderUri = null,
+                settings = ExportSettings(filenameFormat = "unique-{date}"),
+            ),
+        ).isEmpty()
+
+        // Binding the weekly folder collides with Weekly instead.
+        assertThat(
+            viewModel.draftOverlapPreview(
+                editingProfileId = null,
+                target = ExportTarget.DEVICE_FOLDER,
+                folderUri = "content://tree/weekly",
+                settings = ExportSettings(),
+            ),
+        ).containsExactly("Weekly")
+
+        // Editing Daily excludes its own stored identity from the preview.
+        assertThat(
+            viewModel.draftOverlapPreview(
+                editingProfileId = "p1",
+                target = ExportTarget.DEVICE_FOLDER,
+                folderUri = null,
+                settings = ExportSettings(),
+            ),
+        ).isEmpty()
+
+        // API endpoint targets never participate in file overlap.
+        assertThat(
+            viewModel.draftOverlapPreview(
+                editingProfileId = null,
+                target = ExportTarget.API_ENDPOINT,
+                folderUri = null,
+                settings = ExportSettings(),
+            ),
+        ).isEmpty()
     }
 
     @Test
