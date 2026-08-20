@@ -353,6 +353,43 @@ class ExportProfileCoordinatorTest {
     }
 
     @Test
+    fun `re-applying the active profile adopts its newly bound folder`() = runTest {
+        profilesState.value = listOf(
+            profile(
+                "p1",
+                settings = ExportSettings(filenameFormat = "frozen-{date}"),
+                folderUri = "content://vault-b",
+                folderDisplayName = "Vault B",
+            ),
+        )
+        activeIdState.value = "p1"
+        liveFolderUri = "content://vault-a"
+        settingsState.value = settingsState.value.copy(filenameFormat = "drifted-{date}")
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        // Editor save / folder rebind on the already-active profile: the snapshot refreshes
+        // live settings AND the new binding is adopted as the live device folder.
+        assertThat(coordinator.activate("p1")).isTrue()
+
+        assertThat(settingsState.value.filenameFormat).isEqualTo("frozen-{date}")
+        assertThat(liveFolderUri).isEqualTo("content://vault-b")
+    }
+
+    @Test
+    fun `re-applying the active profile keeps the live folder when unbound`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "frozen-{date}")),
+        )
+        activeIdState.value = "p1"
+        liveFolderUri = "content://vault-a"
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        assertThat(coordinator.activate("p1")).isTrue()
+
+        assertThat(liveFolderUri).isEqualTo("content://vault-a")
+    }
+
+    @Test
     fun `activate keeps the current folder for unbound profiles`() = runTest {
         profilesState.value = listOf(
             profile("p1", settings = ExportSettings(filenameFormat = "a-{date}")),

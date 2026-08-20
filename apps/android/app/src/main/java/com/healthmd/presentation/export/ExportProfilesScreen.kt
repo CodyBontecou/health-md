@@ -55,6 +55,7 @@ import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.presentation.common.GeistCardClickable
+import com.healthmd.presentation.common.LocalConfigurationProtection
 import com.healthmd.presentation.schedule.ProfileCadenceEditorDialog
 import com.healthmd.presentation.schedule.cadenceSummary
 import com.healthmd.presentation.theme.AppColors
@@ -65,6 +66,10 @@ import com.healthmd.presentation.theme.Spacing
  * `ExportProfilesView`): every profile at a glance with destination, schedule status,
  * formats, and metric count; a detail dialog with the stable profile id used by
  * automation references; and activate / rename / duplicate / delete management.
+ *
+ * Profile management stays inspectable while Prevent Accidental Changes is on —
+ * opening the screen and a profile's detail is read-only — but every mutating
+ * action routes through the shared configuration lock (iOS parity).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +78,10 @@ fun ExportProfilesScreen(
     viewModel: ExportProfilesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val protection = LocalConfigurationProtection.current
+    val attemptProfileChange: (() -> Unit) -> Unit = { action ->
+        if (protection.enabled) protection.onBlockedChange() else action()
+    }
 
     Scaffold(
         topBar = {
@@ -87,7 +96,7 @@ fun ExportProfilesScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = viewModel::addFromCurrentSettings) {
+                    TextButton(onClick = { attemptProfileChange(viewModel::startCreation) }) {
                         Text("New")
                     }
                 },
@@ -146,12 +155,15 @@ fun ExportProfilesScreen(
         ProfileDetailDialog(
             row = row,
             canDelete = uiState.rows.size > 1,
-            onActivate = { viewModel.activate(row.profile.id) },
-            onRename = { viewModel.startRename(row.profile.id) },
-            onDuplicate = { viewModel.duplicate(row.profile.id) },
-            onEditSchedule = { viewModel.openScheduleEditor(row.profile.id) },
-            onDelete = { viewModel.askDelete(row.profile.id) },
-            onFolderSelected = { uri, name -> viewModel.bindProfileFolder(row.profile.id, uri, name) },
+            onActivate = { attemptProfileChange { viewModel.activate(row.profile.id) } },
+            onEdit = { attemptProfileChange { viewModel.openEditor(row.profile.id) } },
+            onRename = { attemptProfileChange { viewModel.startRename(row.profile.id) } },
+            onDuplicate = { attemptProfileChange { viewModel.duplicate(row.profile.id) } },
+            onEditSchedule = { attemptProfileChange { viewModel.openScheduleEditor(row.profile.id) } },
+            onDelete = { attemptProfileChange { viewModel.askDelete(row.profile.id) } },
+            onFolderSelected = { uri, name ->
+                attemptProfileChange { viewModel.bindProfileFolder(row.profile.id, uri, name) }
+            },
             onDismiss = { viewModel.openDetail(null) },
         )
     }
@@ -160,7 +172,17 @@ fun ExportProfilesScreen(
         val row = uiState.rows.firstOrNull { it.profile.id == profileId } ?: return
         RenameProfileDialog(
             currentName = row.profile.name,
-            onSave = { viewModel.rename(profileId, it) },
+            onSave = { name ->
+                // Only reachable when the lock was enabled while the dialog
+                // was already open: dismiss first so the shared toast is not
+                // hidden behind this dialog window.
+                if (protection.enabled) {
+                    viewModel.startRename(null)
+                    protection.onBlockedChange()
+                } else {
+                    viewModel.rename(profileId, name)
+                }
+            },
             onDismiss = { viewModel.startRename(null) },
         )
     }
@@ -174,7 +196,14 @@ fun ExportProfilesScreen(
                 Text("Its saved settings, destination bindings, and schedule are removed. The last remaining profile cannot be deleted.")
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.delete(profileId) }) { Text("Delete") }
+                TextButton(onClick = {
+                    if (protection.enabled) {
+                        viewModel.askDelete(null)
+                        protection.onBlockedChange()
+                    } else {
+                        viewModel.delete(profileId)
+                    }
+                }) { Text("Delete") }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.askDelete(null) }) { Text("Cancel") }
@@ -188,8 +217,73 @@ fun ExportProfilesScreen(
             profileId = row.profile.id,
             profileName = row.profile.name,
             entry = row.entry,
-            onSave = viewModel::saveEntry,
+            onSave = { entry ->
+                if (protection.enabled) {
+                    viewModel.openScheduleEditor(null)
+                    protection.onBlockedChange()
+                } else {
+                    viewModel.saveEntry(entry)
+                }
+            },
             onDismiss = { viewModel.openScheduleEditor(null) },
+        )
+    }
+
+    if (uiState.creatingProfile) {
+        ExportProfileEditorDialog(
+            isCreation = true,
+            initial = ExportProfilesViewModel.initialCreationDraft(
+                rows = uiState.rows,
+                currentSettings = uiState.currentSettings,
+            ),
+            overlapPreview = { target, folderUri, settings ->
+                viewModel.draftOverlapPreview(
+                    editingProfileId = null,
+                    target = target,
+                    folderUri = folderUri,
+                    settings = settings,
+                )
+            },
+            onConfirm = { draft ->
+                // Drafts stay inspectable, but persisting is a mutation, so an
+                // editor already open when the lock was enabled still saves
+                // through the shared gate.
+                if (protection.enabled) {
+                    viewModel.dismissCreation()
+                    protection.onBlockedChange()
+                } else {
+                    viewModel.createProfile(draft)
+                }
+            },
+            onDismiss = viewModel::dismissCreation,
+        )
+    }
+
+    uiState.editingProfileId?.let { profileId ->
+        val row = uiState.rows.firstOrNull { it.profile.id == profileId } ?: return
+        ExportProfileEditorDialog(
+            isCreation = false,
+            initial = ExportProfilesViewModel.initialEditDraft(
+                profile = row.profile,
+                currentSettings = uiState.currentSettings,
+            ),
+            overlapPreview = { target, folderUri, settings ->
+                viewModel.draftOverlapPreview(
+                    editingProfileId = profileId,
+                    target = target,
+                    folderUri = folderUri,
+                    settings = settings,
+                )
+            },
+            onConfirm = { draft ->
+                if (protection.enabled) {
+                    viewModel.openEditor(null)
+                    protection.onBlockedChange()
+                } else {
+                    viewModel.updateProfile(profileId, draft)
+                }
+            },
+            onDismiss = { viewModel.openEditor(null) },
         )
     }
 }
@@ -304,6 +398,7 @@ private fun ProfileDetailDialog(
     row: ExportProfileRow,
     canDelete: Boolean,
     onActivate: () -> Unit,
+    onEdit: () -> Unit,
     onRename: () -> Unit,
     onDuplicate: () -> Unit,
     onEditSchedule: () -> Unit,
@@ -315,6 +410,7 @@ private fun ProfileDetailDialog(
     val context = LocalContext.current
     val profile = row.profile
     var idCopied by remember { mutableStateOf(false) }
+    val protection = LocalConfigurationProtection.current
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
@@ -335,9 +431,28 @@ private fun ProfileDetailDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 FactRow("Status", if (row.isActive) "Active profile — edit it in the Export tab" else "Not active")
+                if (row.overlappingProfileNames.isNotEmpty()) {
+                    Text(
+                        text = "Overlapping exports: writes the same files as " +
+                            row.overlappingProfileNames.joinToString(", ") +
+                            ". The later run overwrites the earlier one. Give each profile its " +
+                            "own folder or filename template to keep them separate.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.warning,
+                    )
+                }
                 FactRow("Destination", destinationLine(profile))
                 if (profile.target == ExportTarget.DEVICE_FOLDER) {
-                    TextButton(onClick = { folderPickerLauncher.launch(null) }) {
+                    TextButton(onClick = {
+                        // Rebinding the folder mutates profile configuration;
+                        // the launch itself is gated so a pick is never
+                        // silently discarded afterwards.
+                        if (protection.enabled) {
+                            protection.onBlockedChange()
+                        } else {
+                            folderPickerLauncher.launch(null)
+                        }
+                    }) {
                         Text(
                             if (profile.folderUri.isNullOrBlank()) {
                                 "Choose Folder…"
@@ -400,6 +515,7 @@ private fun ProfileDetailDialog(
         },
         confirmButton = {
             Row {
+                TextButton(onClick = onEdit) { Text("Edit") }
                 if (!row.isActive) {
                     TextButton(onClick = onActivate) { Text("Make Active & Edit") }
                 }

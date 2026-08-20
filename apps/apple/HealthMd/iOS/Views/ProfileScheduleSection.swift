@@ -50,11 +50,6 @@ struct ProfileScheduleSection: View {
                     Text("Profile Schedules")
                         .font(Typography.bodyEmphasis())
                         .foregroundStyle(Color.textPrimary)
-
-                    Text("Run each export profile on its own cadence and destination. Profiles keep working even when this screen is closed.")
-                        .font(Typography.caption())
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.horizontal, Spacing.s4)
@@ -229,6 +224,7 @@ struct ProfileScheduleEditorSheet: View {
     let entry: ScheduledExportEntry?
     let onSave: (ScheduledExportEntry) -> Void
 
+    @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.dismiss) private var dismiss
     @State private var draft: ScheduledExportEntry
 
@@ -324,10 +320,28 @@ struct ProfileScheduleEditorSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        onSave(normalizedDraft)
-                        dismiss()
+                        // The cadence stays inspectable, but persisting a
+                        // schedule entry mutates the profile's automation, so
+                        // the shared lock can reject an editor that was
+                        // already open when protection was turned on.
+                        configurationProtection.performConfigurationChange {
+                            onSave(normalizedDraft)
+                            dismiss()
+                        }
                     }
                 }
+            }
+        }
+        // The sheet covers the app-level toast, so blocked saves surface a
+        // sheet-local one; its settings shortcut dismisses the editor.
+        .overlay(alignment: .top) {
+            ConfigurationProtectionToast(configurationProtection: configurationProtection)
+                .padding(.horizontal, Spacing.s4)
+                .padding(.top, Spacing.s2)
+        }
+        .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
+            if requestID != nil {
+                dismiss()
             }
         }
     }

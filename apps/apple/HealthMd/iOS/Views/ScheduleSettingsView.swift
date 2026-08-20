@@ -299,7 +299,11 @@ struct ScheduleSettingsView: View {
                 scheduleAutomationCard
 #if os(iOS)
                 if let profileCoordinator {
+                    // Per-profile schedule toggles and cadence editors mutate
+                    // profile automation, so the whole card stays inspectable
+                    // but is intercepted by the shared lock.
                     ProfileScheduleSection(coordinator: profileCoordinator)
+                        .configurationChangesProtected()
                 }
 #endif
                 if schedulingManager.schedule.isEnabled {
