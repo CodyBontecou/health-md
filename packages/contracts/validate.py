@@ -2287,7 +2287,10 @@ def validate_semantic_range_capability_fixture(path: Path) -> None:
     payload = load_json(path, context)
     payload = require_exact_keys(
         payload,
-        {"schema", "schema_version", "calendar_v1", "range_v2", "revision_one_range_rejected"},
+        {
+            "schema", "schema_version", "calendar_v1", "range_v2",
+            "revision_one_range_rejected", "range_limit_cases",
+        },
         context,
     )
     if payload["schema"] != "healthmd.semantic_profile_capability_fixture" or payload["schema_version"] != 1:
@@ -2300,6 +2303,64 @@ def validate_semantic_range_capability_fixture(path: Path) -> None:
         fail(f"{context}.range_v2: range grammar must require revision 2 and explicit bounds")
     if payload["revision_one_range_rejected"] is not True:
         fail(f"{context}: revision-one range rejection must be explicit")
+    limit_cases = payload["range_limit_cases"]
+    expected_cases = {
+        "exact-10000-accepted": (10_000, True),
+        "10001-rejected": (10_001, False),
+        "reversed-rejected": (-9_998, False),
+    }
+    if not isinstance(limit_cases, list) or len(limit_cases) != len(expected_cases):
+        fail(f"{context}.range_limit_cases: exact boundary cases are required")
+    for index, case in enumerate(limit_cases):
+        case_context = f"{context}.range_limit_cases[{index}]"
+        case = require_exact_keys(
+            case,
+            {"id", "start_date", "end_date", "expected_days", "accepted"},
+            case_context,
+        )
+        try:
+            start = datetime.strptime(case["start_date"], "%Y-%m-%d").date()
+            end = datetime.strptime(case["end_date"], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            fail(f"{case_context}: bounds must be canonical civil dates")
+        actual_days = (end - start).days + 1
+        expected = expected_cases.get(case["id"])
+        if expected is None or case["expected_days"] != actual_days or (actual_days, case["accepted"]) != expected:
+            fail(f"{case_context}: range boundary acceptance does not match the 10,000-day limit")
+
+    result_schema = load_json(path.parent.parent / "semantic-result.schema.json", f"{context} result schema")
+    synthetic_result = {
+        "schema": "healthmd.semantic_result",
+        "semantic_input_version": 1,
+        "canonical_model_version": 1,
+        "core_api_version": 3,
+        "registry_sha256": "0" * 64,
+        "profile_revision": 2,
+        "session_id": "range-schema-proof",
+        "profile": "apple_health_data_v8",
+        "state": "completed",
+        "next_batch_index": 1,
+        "records_accepted": 0,
+        "records_filtered": 0,
+        "days": [],
+        "rollups": [{
+            "period": "range",
+            "start_date": range_v2["rollup_range"]["start_date"],
+            "end_date": range_v2["rollup_range"]["end_date"],
+            "calendar_time_zone": "UTC",
+            "source_dates": [],
+            "values": [],
+        }],
+        "retained_extensions": [],
+    }
+    validate_json_schema_subset(synthetic_result, result_schema, f"{context}.range_result_v2")
+    synthetic_result["profile_revision"] = 1
+    try:
+        validate_json_schema_subset(synthetic_result, result_schema, f"{context}.range_result_v1")
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: semantic-result schema must reject range at profile revision 1")
 
 
 def validate_rollup_summary_fixture(path: Path) -> None:
@@ -2307,6 +2368,11 @@ def validate_rollup_summary_fixture(path: Path) -> None:
     payload = load_json(path, context)
     if not isinstance(payload, dict):
         fail(f"{context}: root must be an object")
+    schema_path = path.parent.parent / "rollup-summary.schema.json"
+    schema = load_json(schema_path, f"{context} schema")
+    if not isinstance(schema, dict) or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+        fail(f"{context}: invalid rollup summary schema")
+    validate_json_schema_subset(payload, schema, context)
     start_text = payload.get("start_date")
     end_text = payload.get("end_date")
     source_dates = payload.get("source_dates")
@@ -2340,6 +2406,21 @@ def validate_rollup_summary_fixture(path: Path) -> None:
         counted = metric.get("days_counted") if isinstance(metric, dict) else None
         if type(counted) is not int or counted < 1 or counted > days_counted:
             fail(f"{context}.metrics[{index}].days_counted: must be within artifact coverage")
+    units = payload.get("units")
+    expected_units = {
+        metric["key"]: metric["unit"]
+        for metric in metrics
+        if isinstance(metric, dict) and metric.get("unit")
+    }
+    if units != expected_units:
+        fail(f"{context}.units: must match the production non-empty metric unit projection")
+    categories = payload.get("categories")
+    expected_categories: dict[str, list[Any]] = {}
+    for metric in metrics:
+        if isinstance(metric, dict):
+            expected_categories.setdefault(metric.get("category"), []).append(metric)
+    if categories != expected_categories:
+        fail(f"{context}.categories: must match the production metric category projection")
 
 
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:

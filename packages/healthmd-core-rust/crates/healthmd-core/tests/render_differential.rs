@@ -62,41 +62,7 @@ fn all_profile_artifact_plans_match_exact_fixture_bytes() {
 
 #[test]
 fn apple_range_v9_is_separate_and_keeps_requested_failed_edge_bounds() {
-    let fixture: Value = serde_json::from_slice(FIXTURE).expect("fixture JSON");
-    let case = &fixture["cases"][0];
-    let mut configuration = case["configuration"].clone();
-    let mut semantic = case["semantic_result"].clone();
-    let daily_step = semantic["days"][0]["values"]
-        .as_array()
-        .expect("daily values")
-        .iter()
-        .find(|value| value["output_key"] == "steps")
-        .expect("steps")
-        .clone();
-    configuration["rollups"] = serde_json::json!({
-        "generated_at":"2026-07-27T00:00:00Z",
-        "metrics":{
-            "steps":{
-                "key":"steps","canonical_key":"steps","display_name":"Steps",
-                "category":"Activity","unit":"count","notes":null,
-                "statistic_order":["sum"]
-            }
-        }
-    });
-    semantic["rollups"] = serde_json::json!([{
-        "period":"range",
-        "start_date":"2026-07-24",
-        "end_date":"2026-07-26",
-        "calendar_time_zone":"Asia/Kathmandu",
-        "source_dates":["2026-07-25"],
-        "values":[{
-            "output_key":"steps","rule":"sum",
-            "primary_value":daily_step["value"].clone(),
-            "days_counted":1,
-            "statistics":{"sum":daily_step["value"].clone()}
-        }]
-    }]);
-
+    let (case, configuration, semantic) = range_render_case();
     let mut session = RenderSession::from_json(
         &serde_json::to_vec(&configuration).unwrap(),
         &serde_json::to_vec(&semantic).unwrap(),
@@ -156,6 +122,90 @@ fn apple_range_v9_is_separate_and_keeps_requested_failed_edge_bounds() {
             ),
         ]
     );
+}
+
+#[test]
+fn apple_range_v9_rejects_invalid_revision_coverage_and_contents() {
+    let (case, configuration, semantic) = range_render_case();
+    let mut revision_one_config = configuration.clone();
+    let mut revision_one_semantic = semantic.clone();
+    revision_one_config["profile_revision"] = Value::from(1);
+    revision_one_semantic["profile_revision"] = Value::from(1);
+    assert_eq!(
+        RenderSession::from_json(
+            &serde_json::to_vec(&revision_one_config).unwrap(),
+            &serde_json::to_vec(&revision_one_semantic).unwrap(),
+        )
+        .unwrap_err(),
+        RenderError::InvalidSemanticResult
+    );
+
+    let finish_error = |invalid_semantic: &Value| {
+        let mut invalid_session = RenderSession::from_json(
+            &serde_json::to_vec(&configuration).unwrap(),
+            &serde_json::to_vec(invalid_semantic).unwrap(),
+        )
+        .expect("structurally valid range session");
+        for batch in case["batches"].as_array().expect("batches") {
+            invalid_session
+                .process_batch(&serde_json::to_vec(batch).unwrap(), || false)
+                .expect("batch");
+        }
+        invalid_session.finish(|| false).unwrap_err()
+    };
+
+    let mut duplicate_dates = semantic.clone();
+    duplicate_dates["rollups"][0]["source_dates"] = serde_json::json!(["2026-07-25", "2026-07-25"]);
+    assert_eq!(
+        finish_error(&duplicate_dates),
+        RenderError::InvalidSemanticResult
+    );
+
+    let mut empty_metrics = semantic.clone();
+    empty_metrics["rollups"][0]["values"] = serde_json::json!([]);
+    assert_eq!(
+        finish_error(&empty_metrics),
+        RenderError::InvalidSemanticResult
+    );
+
+    let mut excessive_metric_coverage = semantic.clone();
+    excessive_metric_coverage["rollups"][0]["values"][0]["days_counted"] = Value::from(2);
+    assert_eq!(
+        finish_error(&excessive_metric_coverage),
+        RenderError::InvalidSemanticResult
+    );
+}
+
+fn range_render_case() -> (Value, Value, Value) {
+    let fixture: Value = serde_json::from_slice(FIXTURE).expect("fixture JSON");
+    let case = fixture["cases"][0].clone();
+    let mut configuration = case["configuration"].clone();
+    let mut semantic = case["semantic_result"].clone();
+    let daily_step = semantic["days"][0]["values"]
+        .as_array()
+        .expect("daily values")
+        .iter()
+        .find(|value| value["output_key"] == "steps")
+        .expect("steps")
+        .clone();
+    configuration["profile_revision"] = Value::from(2);
+    semantic["profile_revision"] = Value::from(2);
+    configuration["rollups"] = serde_json::json!({
+        "generated_at":"2026-07-27T00:00:00Z",
+        "metrics":{"steps":{
+            "key":"steps","canonical_key":"steps","display_name":"Steps",
+            "category":"Activity","unit":"count","notes":null,"statistic_order":["sum"]
+        }}
+    });
+    semantic["rollups"] = serde_json::json!([{
+        "period":"range","start_date":"2026-07-24","end_date":"2026-07-26",
+        "calendar_time_zone":"Asia/Kathmandu","source_dates":["2026-07-25"],
+        "values":[{
+            "output_key":"steps","rule":"sum","primary_value":daily_step["value"].clone(),
+            "days_counted":1,"statistics":{"sum":daily_step["value"].clone()}
+        }]
+    }]);
+    (case, configuration, semantic)
 }
 
 #[test]

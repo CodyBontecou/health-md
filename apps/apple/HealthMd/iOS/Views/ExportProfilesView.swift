@@ -658,11 +658,9 @@ struct ExportProfileDetailView: View {
     }
 
     private func rollupRow(_ settings: ExportSettingsSnapshot) -> some View {
-        let periods: [String] = [
-            settings.generateWeeklyRollups ? String(localized: "Weekly", comment: "Roll-up period") : nil,
-            settings.generateMonthlyRollups ? String(localized: "Monthly", comment: "Roll-up period") : nil,
-            settings.generateYearlyRollups ? String(localized: "Yearly", comment: "Roll-up period") : nil
-        ].compactMap { $0 }
+        let periods: [String] = settings.generateRangeSummary
+            ? [String(localized: "Range", comment: "Roll-up period")]
+            : []
         let value = periods.isEmpty
             ? String(localized: "Off", comment: "Disabled state")
             : (settings.summaryOnlyExport

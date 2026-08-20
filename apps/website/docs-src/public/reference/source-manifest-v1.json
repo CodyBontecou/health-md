@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "dfa291e12ed4c13eecb1318a6ed7889e27d394a0",
+  "docs_reference_git_tree": "a19feb77ff13505dff4eda3a5ab38298d43dc57f",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "322fa38b6b1d4db06376156eb9d89b35b958972e914410b0632562911d36bdf4",
+    "digest": "b3cf4b67526f14ba1fb74e39397d81e9a7a8dc227ae080483512e146fdb41748",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -165,8 +165,8 @@
     },
     {
       "path": "generated/README.md",
-      "bytes": 874,
-      "sha256": "8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539",
+      "bytes": 908,
+      "sha256": "8b2e39ed463c2b0417ea89eb0b32d146a30fd5d3c9fe7972fd8862e312e0a3a5",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/readme/",
@@ -1135,8 +1135,8 @@
     },
     {
       "path": "index.md",
-      "bytes": 7383,
-      "sha256": "cbf5e4f76728786bda4e45647f1a7d8f314e2b551ea0653ccbce628c17dc33f5",
+      "bytes": 7479,
+      "sha256": "93c9e60feafc3d8bb568cce571ce8f4988ad26e708475cf3d32308852a0e7363",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/",
@@ -1187,8 +1187,8 @@
   "published_outputs": [
     {
       "path": "public/reference/generated/README.md",
-      "bytes": 874,
-      "sha256": "8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539",
+      "bytes": 908,
+      "sha256": "8b2e39ed463c2b0417ea89eb0b32d146a30fd5d3c9fe7972fd8862e312e0a3a5",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/README.md"
     },
@@ -1986,7 +1986,7 @@
     {
       "path": "src/content/docs/reference/generated/index.md",
       "bytes": 20997,
-      "sha256": "16589d912cb475a83fd274d15ce4df35f78b8585af90c3010c2b7c1f837d262a",
+      "sha256": "e9a04bc93b4e4fcfe6c73a41ebcddf2482c82e8e94b879ff4e6c0903496b1117",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
@@ -2020,8 +2020,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/readme.md",
-      "bytes": 1084,
-      "sha256": "1652d99a1a7f27d9657dafbf46fdb0f7c172dc5a8962e369b5dd3b639204a3a9",
+      "bytes": 1118,
+      "sha256": "7c9c80b16c7ee71215904be5a4449b55f58cb1ecfaffaac11ddfe49efb39d60a",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/readme/"
     },
@@ -2048,8 +2048,8 @@
     },
     {
       "path": "src/content/docs/reference/index.md",
-      "bytes": 7822,
-      "sha256": "7cd1080354b4e56b282cec2ccce2b98254c27f20634a9f86b3e886943a952ba0",
+      "bytes": 7918,
+      "sha256": "b2be19aa9b8ad35d6098b17c52029274356bccf6826a834d5f3dba79491a0e42",
       "classification": "rendered-page",
       "route": "/docs/reference/"
     },

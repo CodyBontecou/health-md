@@ -1074,8 +1074,13 @@ class AdvancedExportSettings: ObservableObject {
         _individualTracking = Published(initialValue: individual)
         _dailyNoteInjection = Published(initialValue: dailyNotes)
         _includeGranularData = Published(initialValue: snapshot.includeGranularData)
-        // Shared Setup v1 cannot represent range summaries losslessly.
-        _generateRangeSummary = Published(initialValue: false)
+        // Shared Setup v1 cannot represent range summaries losslessly, so its
+        // portable snapshot carries the current local value through unchanged.
+        _generateRangeSummary = Published(initialValue:
+            snapshot.generateWeeklyRollups
+                || snapshot.generateMonthlyRollups
+                || snapshot.generateYearlyRollups
+        )
     }
 
     private static func internalSettingsEncoder() -> JSONEncoder {

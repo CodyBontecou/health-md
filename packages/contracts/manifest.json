@@ -171,7 +171,7 @@
         },
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json",
-          "sha256": "adc391235cd1e88881431c57758f0e29a8e21ea7951f792166d065a2af6ee127",
+          "sha256": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
           "provenance": "Reviewed internal capability fixture proving calendar revision 1 remains stable while range requires revision 2.",
           "mirrors": []
         }
@@ -199,7 +199,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.json",
-          "sha256": "8efdbb90936085add36db515a9f1a66c1bf611941fc8ab5d3ef022b6dc499438",
+          "sha256": "70ad121e1bd5cb1de03415792eed863e2060c5e20b266a67b4ef8d5edd7f40f3",
           "provenance": "Reviewed synthetic partial range with immutable requested bounds.",
           "mirrors": []
         },

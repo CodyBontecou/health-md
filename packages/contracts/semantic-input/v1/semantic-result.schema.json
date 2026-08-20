@@ -401,5 +401,36 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "rollups": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "period": {
+                  "const": "range"
+                }
+              },
+              "required": [
+                "period"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "profile": {
+            "const": "apple_health_data_v8"
+          },
+          "profile_revision": {
+            "const": 2
+          }
+        }
+      }
+    }
+  ]
 }

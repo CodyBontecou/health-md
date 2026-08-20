@@ -161,6 +161,51 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(preparedAgain, retryRequest, "Same-occurrence preparation must not re-expand completed dates")
     }
 
+    func testResidualRetryAndRelaunchPreserveFrozenOriginalOwnerDatesByteForByte() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fireDate)
+        let snapshot = makeFrozenSnapshot(pin: try makeSyntheticAppleExportEnginePin())
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: ExportSchedule(
+                isEnabled: true,
+                frequency: .weekly,
+                preferredHour: 8,
+                lookbackDays: 2
+            ),
+            fireDate: fireDate,
+            makeSettingsSnapshot: { snapshot }
+        )
+        let originalBytes = try JSONEncoder().encode(request.originalRequestedDates)
+        let completion = try await coordinator.completePendingScheduledExport(
+            request,
+            result: ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: 2,
+                failedDateDetails: [
+                    FailedDateDetail(date: request.dates[1], reason: .fileWriteError)
+                ],
+                completedDates: [request.dates[0]]
+            )
+        )
+        let retry = try XCTUnwrap(try store.loadAll().first)
+        let relaunched = try JSONDecoder().decode(
+            PendingExportRequest.self,
+            from: JSONEncoder().encode(retry)
+        )
+        let frozenTimeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        let identifiers = relaunched.originalRequestedDates.map {
+            HealthRollupDateFormatting.dayString($0, timeZone: frozenTimeZone)
+        }
+
+        XCTAssertEqual(completion, .preservedPartialSuccess)
+        XCTAssertEqual(try JSONEncoder().encode(retry.originalRequestedDates), originalBytes)
+        XCTAssertEqual(try JSONEncoder().encode(relaunched.originalRequestedDates), originalBytes)
+        XCTAssertEqual(identifiers, ["2026-05-16", "2026-05-17"])
+        XCTAssertEqual(relaunched.originalCalendarTimeZoneIdentifier, frozenTimeZone.identifier)
+    }
+
     func testCompletePendingScheduledExport_reportedNoDataClearsCompletedRequest() async throws {
         let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
         let store = InMemoryPendingExportStore()

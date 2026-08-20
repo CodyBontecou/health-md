@@ -85,6 +85,30 @@ final class HealthRollupExporterTests: XCTestCase {
         XCTAssertEqual(request.periodID, "2020-01-01_to_2022-12-31")
     }
 
+    func testRangeRequestAcceptsExactLimitAndRejectsLimitPlusOneOrReversedBounds() throws {
+        let exact = try HealthRollupRangeRequest(
+            startDate: makeUTCDate(2000, 1, 1),
+            endDate: makeUTCDate(2027, 5, 18),
+            calendarTimeZoneIdentifier: "UTC"
+        )
+
+        XCTAssertEqual(exact.daysExpected, 10_000)
+        XCTAssertThrowsError(try HealthRollupRangeRequest(
+            startDate: makeUTCDate(2000, 1, 1),
+            endDate: makeUTCDate(2027, 5, 19),
+            calendarTimeZoneIdentifier: "UTC"
+        )) { error in
+            XCTAssertEqual(error as? HealthRollupRangeRequest.ValidationError, .exceedsDayLimit)
+        }
+        XCTAssertThrowsError(try HealthRollupRangeRequest(
+            startDate: makeUTCDate(2027, 5, 18),
+            endDate: makeUTCDate(2000, 1, 1),
+            calendarTimeZoneIdentifier: "UTC"
+        )) { error in
+            XCTAssertEqual(error as? HealthRollupRangeRequest.ValidationError, .invalidBounds)
+        }
+    }
+
     func testRangeRequestFreezesTimezoneAcrossDSTAndDefaultTimezoneMutation() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
         var calendar = Calendar(identifier: .gregorian)

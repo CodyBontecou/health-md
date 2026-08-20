@@ -8,7 +8,7 @@ enum PendingExportSource: String, Codable, Equatable {
 struct PendingExportRequest: Codable, Equatable, Identifiable {
     let id: UUID
     /// Residual dates still requiring daily work.
-    let dates: [Date]
+    private(set) var dates: [Date]
     /// Immutable original owner-date request used to overwrite/regenerate the same range summary.
     let originalRequestedDates: [Date]
     /// Frozen calendar authority for the original request. Nil identifies a legacy request.
@@ -43,7 +43,18 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// exactly. The designated initializer re-normalizes through its calendar
     /// and would shift dates captured under a different timezone.
     func markingAttempted(at timestamp: Date) -> PendingExportRequest {
+        replacingResidualDates(dates, attemptedAt: timestamp)
+    }
+
+    /// Copy with reduced residual work while preserving the immutable original
+    /// owner-date instants byte-for-byte. Callers must compute `dates` with the
+    /// request's frozen timezone authority before using this method.
+    func replacingResidualDates(
+        _ dates: [Date],
+        attemptedAt timestamp: Date
+    ) -> PendingExportRequest {
         var copy = self
+        copy.dates = dates
         copy.attemptedAt = timestamp
         return copy
     }

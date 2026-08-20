@@ -1096,7 +1096,9 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
         let start = parse_date(&range.start_date)?;
         let end = parse_date(&range.end_date)?;
         let days = (end - start).num_days() + 1;
-        if start > end || days <= 0 || days > MAX_OWNER_DATES as i64 {
+        let maximum_days =
+            i64::try_from(MAX_OWNER_DATES).map_err(|_| CoreError::InvalidSemanticConfig)?;
+        if start > end || days <= 0 || days > maximum_days {
             return Err(CoreError::InvalidSemanticConfig);
         }
     }
@@ -2885,14 +2887,32 @@ mod tests {
     }
 
     #[test]
-    fn range_accepts_all_time_scope_beyond_legacy_four_hundred_days() {
+    fn range_accepts_exact_limit_and_rejects_limit_plus_one_or_reversed_bounds() {
         let mut range = config(&["steps"], vec![RollupPeriod::Range]);
         range.profile_revision = 2;
         range.rollup_range = Some(RollupRange {
-            start_date: "2020-01-01".to_owned(),
-            end_date: "2022-12-31".to_owned(),
+            start_date: "2000-01-01".to_owned(),
+            end_date: "2027-05-18".to_owned(),
         });
         assert!(SemanticSession::from_json(&serde_json::to_vec(&range).expect("range")).is_ok());
+
+        range.rollup_range = Some(RollupRange {
+            start_date: "2000-01-01".to_owned(),
+            end_date: "2027-05-19".to_owned(),
+        });
+        assert!(matches!(
+            SemanticSession::from_json(&serde_json::to_vec(&range).expect("too-large")),
+            Err(CoreError::InvalidSemanticConfig)
+        ));
+
+        range.rollup_range = Some(RollupRange {
+            start_date: "2027-05-18".to_owned(),
+            end_date: "2000-01-01".to_owned(),
+        });
+        assert!(matches!(
+            SemanticSession::from_json(&serde_json::to_vec(&range).expect("reversed")),
+            Err(CoreError::InvalidSemanticConfig)
+        ));
     }
 
     #[test]

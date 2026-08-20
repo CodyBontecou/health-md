@@ -18,7 +18,7 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `README.md` | 874 | `8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539` | [Open page](/docs/reference/generated/readme/) | [Download](/docs/reference/generated/README.md) |
+| `README.md` | 908 | `8b2e39ed463c2b0417ea89eb0b32d146a30fd5d3c9fe7972fd8862e312e0a3a5` | [Open page](/docs/reference/generated/readme/) | [Download](/docs/reference/generated/README.md) |
 
 ## Core generated artifacts
 

@@ -13,7 +13,10 @@ use thiserror::Error;
 
 use crate::{
     CANONICAL_MODEL_VERSION, REGISTRY_SHA256, REGISTRY_VERSION,
-    semantic::{ExactNumber, SemanticProfile, SemanticResult, SemanticResultState, SemanticValue},
+    semantic::{
+        ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
+        SemanticValue,
+    },
 };
 
 mod android_analytical_v5;
@@ -916,6 +919,21 @@ fn validate_config(
             .any(|rollup| rollup.calendar_time_zone != config.calendar_time_zone)
     {
         return Err(RenderError::InvalidConfig);
+    }
+    let contains_range = semantic
+        .rollups
+        .iter()
+        .any(|rollup| rollup.period == RollupPeriod::Range);
+    if (contains_range
+        && (semantic.profile_revision != 2
+            || semantic.profile != SemanticProfile::AppleHealthDataV8))
+        || (semantic.profile_revision == 2
+            && semantic
+                .rollups
+                .iter()
+                .any(|rollup| rollup.period != RollupPeriod::Range))
+    {
+        return Err(RenderError::InvalidSemanticResult);
     }
     if config.profile != SemanticProfile::AppleHealthDataV8
         && (!semantic.rollups.is_empty() || config.rollups.is_some())

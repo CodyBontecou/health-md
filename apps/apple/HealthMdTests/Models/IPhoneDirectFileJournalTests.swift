@@ -332,42 +332,79 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
 
     @MainActor
-    func testPinnedDirectRollupRangeFailsClosedWhenSourceCaptureIsUnavailable() throws {
+    func testPinnedDirectRangePermitsFailedEdgeDaysWithReducedCoverage() throws {
         let defaults = UserDefaults(suiteName: "IPhoneDirectFileJournalTests.RangeFailure.\(UUID().uuidString)")!
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = [.json]
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let snapshot = ExportSettingsSnapshot.from(
             settings,
             healthSubfolder: "Health",
             calendarTimeZoneIdentifier: "UTC"
         )
-        let date = ExportFixtures.partialDay.date
-        let day = IPhoneDirectCapturedDay(
-            sourceDate: date,
-            sourceDateIdentifier: "2026-03-15",
-            isRequestedDate: true,
-            relativePath: "captured-00000000.json",
-            succeeded: false
-        )
-        let payload = ConnectedCorpusHealthDayPayload(
-            sourceDate: date,
-            isRequestedDate: true,
-            record: nil,
-            externalDailyRecords: [],
-            failure: FailedDateDetail(date: date, reason: .noHealthData)
-        )
+        let middle = ExportFixtures.partialDay
+        let calendar = Calendar(identifier: .gregorian)
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: middle.date))
+        let lastDate = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: middle.date))
+        let days = [
+            IPhoneDirectCapturedDay(
+                sourceDate: firstDate,
+                sourceDateIdentifier: "2026-03-14",
+                isRequestedDate: true,
+                relativePath: "captured-00000000.json",
+                succeeded: false
+            ),
+            IPhoneDirectCapturedDay(
+                sourceDate: middle.date,
+                sourceDateIdentifier: "2026-03-15",
+                isRequestedDate: true,
+                relativePath: "captured-00000001.json",
+                succeeded: true
+            ),
+            IPhoneDirectCapturedDay(
+                sourceDate: lastDate,
+                sourceDateIdentifier: "2026-03-16",
+                isRequestedDate: true,
+                relativePath: "captured-00000002.json",
+                succeeded: false
+            ),
+        ]
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: firstDate,
+                isRequestedDate: true,
+                record: nil,
+                externalDailyRecords: [],
+                failure: FailedDateDetail(date: firstDate, reason: .noHealthData)
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: middle.date,
+                isRequestedDate: true,
+                record: middle,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: lastDate,
+                isRequestedDate: true,
+                record: nil,
+                externalDailyRecords: [],
+                failure: FailedDateDetail(date: lastDate, reason: .healthKitError)
+            ),
+        ]
 
-        XCTAssertThrowsError(try IPhoneDirectFileExportProducer.rangePlanningInput(
-            capturedDays: [day],
-            payloads: [payload],
+        let input = try IPhoneDirectFileExportProducer.rangePlanningInput(
+            capturedDays: days,
+            payloads: payloads,
             settings: settings,
             settingsSnapshot: snapshot
-        )) { error in
-            XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
-        }
+        )
+
+        XCTAssertEqual(input.records.map(\.date), [middle.date])
+        XCTAssertEqual(input.dailyOutputOwnerDates, ["2026-03-15"])
+        XCTAssertTrue(input.hasAnyData)
     }
 
     @MainActor

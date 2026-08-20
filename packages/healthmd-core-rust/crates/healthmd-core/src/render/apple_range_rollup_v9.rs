@@ -89,26 +89,31 @@ fn render(
     let settings = config.rollups.as_ref().ok_or(RenderError::InvalidConfig)?;
     let period_id = period_identifier(rollup)?;
     let days_expected = days_expected(rollup)?;
+    let unique_source_dates = rollup
+        .source_dates
+        .iter()
+        .collect::<std::collections::BTreeSet<_>>();
     if days_expected == 0
         || days_expected > u32::try_from(super::MAX_RENDER_DATES).unwrap_or(u32::MAX)
         || rollup.calendar_time_zone != config.calendar_time_zone
+        || rollup.values.is_empty()
+        || unique_source_dates.len() != rollup.source_dates.len()
         || rollup.source_dates.iter().any(|date| {
-            NaiveDate::parse_from_str(date, "%Y-%m-%d").is_err_and(|_| true)
+            NaiveDate::parse_from_str(date, "%Y-%m-%d").is_err()
                 || date < &rollup.start_date
                 || date > &rollup.end_date
         })
     {
         return Err(RenderError::InvalidSemanticResult);
     }
-    let days_counted = u32::try_from(
-        rollup
-            .source_dates
+    let days_counted =
+        u32::try_from(unique_source_dates.len()).map_err(|_| RenderError::LimitExceeded)?;
+    if days_counted > days_expected
+        || rollup
+            .values
             .iter()
-            .collect::<std::collections::BTreeSet<_>>()
-            .len(),
-    )
-    .map_err(|_| RenderError::LimitExceeded)?;
-    if days_counted > days_expected {
+            .any(|value| value.days_counted == 0 || value.days_counted > days_counted)
+    {
         return Err(RenderError::InvalidSemanticResult);
     }
     let coverage = if days_expected == 0 {

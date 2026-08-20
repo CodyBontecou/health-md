@@ -405,9 +405,10 @@ final class IPhoneDirectFileExportProducer {
     }
 
     /// Builds the complete destination-free range input from the durable capture spool. Empty
-    /// supporting records remain present so roll-up coverage matches the native source-day set,
-    /// while empty requested days do not gain daily artifacts. A missing source day would make
-    /// native finalization suppress its entire roll-up window, so pinned work fails closed.
+    /// successful records remain present so roll-up coverage matches the native source-day set,
+    /// while empty requested days do not gain daily artifacts. Failed/missing days remain absent
+    /// from semantic source dates so a pinned range summary reports reduced coverage without
+    /// changing its immutable requested bounds.
     static func rangePlanningInput(
         capturedDays: [IPhoneDirectCapturedDay],
         payloads: [ConnectedCorpusHealthDayPayload],
@@ -424,11 +425,6 @@ final class IPhoneDirectFileExportProducer {
               settings.summaryOnlyExport == settingsSnapshot.summaryOnlyExport else {
             throw IPhoneDirectFileProducerError.invalidSpool
         }
-        let hasRollups = !settings.enabledRollupPeriods.isEmpty
-        if hasRollups && capturedDays.contains(where: { !$0.succeeded }) {
-            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
-        }
-
         var records: [HealthData] = []
         var dailyOutputOwnerDates: Set<String> = []
         var hasAnyData = false

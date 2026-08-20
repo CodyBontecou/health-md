@@ -1,4 +1,24 @@
 {
+  "categories": {
+    "Activity": [
+      {
+        "canonical_key": "steps",
+        "category": "Activity",
+        "days_counted": 2,
+        "display_name": "Steps",
+        "key": "steps",
+        "primary_value": "3000",
+        "rule": "sum",
+        "statistics": [
+          {
+            "name": "sum",
+            "value": "3000"
+          }
+        ],
+        "unit": "count"
+      }
+    ]
+  },
   "coverage_percent": 50,
   "days_counted": 3,
   "days_expected": 6,
@@ -13,7 +33,12 @@
       "key": "steps",
       "primary_value": "3000",
       "rule": "sum",
-      "statistics": [{"name": "sum", "value": "3000"}],
+      "statistics": [
+        {
+          "name": "sum",
+          "value": "3000"
+        }
+      ],
       "unit": "count"
     }
   ],
@@ -22,9 +47,16 @@
   "rollup_rules_version": 8,
   "schema": "healthmd.rollup_summary",
   "schema_version": 9,
-  "source_dates": ["2026-07-06", "2026-07-08", "2026-07-11"],
+  "source_dates": [
+    "2026-07-06",
+    "2026-07-08",
+    "2026-07-11"
+  ],
   "source_schema": "healthmd.health_data",
   "source_schema_version": 8,
   "start_date": "2026-07-06",
-  "type": "health_rollup"
+  "type": "health_rollup",
+  "units": {
+    "steps": "count"
+  }
 }
