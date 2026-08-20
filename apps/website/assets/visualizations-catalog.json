@@ -1168,7 +1168,7 @@
       "type": "rollup-explorer",
       "label": "Roll-up explorer",
       "category": "summary",
-      "description": "Inspect exported weekly, monthly, and yearly primary values, rules, coverage, and statistics.",
+      "description": "Inspect exported range and historical calendar primary values, rules, coverage, and statistics.",
       "defaultLast": 365,
       "params": [
         {
@@ -1180,6 +1180,10 @@
             {
               "value": "all",
               "label": "All"
+            },
+            {
+              "value": "range",
+              "label": "Range"
             },
             {
               "value": "weekly",

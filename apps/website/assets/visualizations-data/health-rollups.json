@@ -1447,16 +1447,16 @@
     ],
     "period_id": "2026-W20",
     "rollup_period": "weekly",
-    "rollup_rules_version": 7,
+    "rollup_rules_version": 8,
     "schema": "healthmd.rollup_summary",
-    "schema_version": 7,
+    "schema_version": 8,
     "source_dates": [
       "2026-05-11",
       "2026-05-14",
       "2026-05-17"
     ],
     "source_schema": "healthmd.health_data",
-    "source_schema_version": 7,
+    "source_schema_version": 8,
     "start_date": "2026-05-11",
     "type": "health_rollup",
     "units": {
@@ -1483,5 +1483,44 @@
       "workout_min_heart_rate": "bpm",
       "workout_minutes": "min"
     }
+  },
+  {
+    "coverage_percent": 50,
+    "days_counted": 3,
+    "days_expected": 6,
+    "end_date": "2026-05-17",
+    "generated_at": "2026-05-17T23:59:59Z",
+    "metrics": [
+      {
+        "canonical_key": "steps",
+        "category": "Activity",
+        "days_counted": 2,
+        "display_name": "Steps",
+        "key": "steps",
+        "primary_value": "3000",
+        "rule": "sum",
+        "statistics": [
+          {
+            "name": "sum",
+            "value": "3000"
+          }
+        ],
+        "unit": "count"
+      }
+    ],
+    "period_id": "2026-05-12_to_2026-05-17",
+    "rollup_period": "range",
+    "rollup_rules_version": 8,
+    "schema": "healthmd.rollup_summary",
+    "schema_version": 9,
+    "source_dates": [
+      "2026-05-12",
+      "2026-05-15",
+      "2026-05-17"
+    ],
+    "source_schema": "healthmd.health_data",
+    "source_schema_version": 8,
+    "start_date": "2026-05-12",
+    "type": "health_rollup"
   }
 ]

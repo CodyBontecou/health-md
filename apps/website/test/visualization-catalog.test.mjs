@@ -56,7 +56,7 @@ test("Visualization Studio derives availability from the generated plugin catalo
   assert.match(bundleGenerator, /visualizations-catalog\.json/);
 });
 
-test("plugin-generated preview fixtures cover v7 views without Health Records payloads", async () => {
+test("plugin-generated preview fixtures cover v7 daily views and current roll-up contracts without Health Records payloads", async () => {
   const [days, rollups] = await Promise.all([
     readJson("../assets/visualizations-data/health-sample.json"),
     readJson("../assets/visualizations-data/health-rollups.json"),
@@ -64,9 +64,18 @@ test("plugin-generated preview fixtures cover v7 views without Health Records pa
   assert.equal(days.length, 30);
   assert.ok(days.some((day) => day.body && day.nutrition && day.symptoms && day.reproductiveHealth));
   assert.deepEqual(new Set(days.map((day) => day.raw_capture_status)), new Set(["complete", "partial", "not_requested"]));
-  assert.equal(rollups[0]?.schema, "healthmd.rollup_summary");
-  assert.ok(rollups[0].start_date >= days[0].date);
-  assert.ok(rollups[0].end_date <= days.at(-1).date);
+  assert.deepEqual(rollups.map((rollup) => ({
+    schema: rollup.schema,
+    schemaVersion: rollup.schema_version,
+    period: rollup.rollup_period,
+  })), [
+    { schema: "healthmd.rollup_summary", schemaVersion: 8, period: "weekly" },
+    { schema: "healthmd.rollup_summary", schemaVersion: 9, period: "range" },
+  ]);
+  for (const rollup of rollups) {
+    assert.ok(rollup.start_date >= days[0].date);
+    assert.ok(rollup.end_date <= days.at(-1).date);
+  }
 
   const serialized = JSON.stringify({ days, rollups }).toLowerCase();
   for (const forbidden of ["fhir_resource", "clinical_record", "verifiable_clinical", "cda_document", "original_uuid"]) {

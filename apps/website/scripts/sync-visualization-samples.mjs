@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const websiteRoot = path.resolve(__dirname, "..");
+const repositoryRoot = path.resolve(websiteRoot, "..", "..");
 const configuredPluginRepo = process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO;
 if (!configuredPluginRepo) {
   throw new Error("Set HEALTHMD_OBSIDIAN_PLUGIN_REPO to a checkout of CodyBontecou/health-md-visualizations.");
@@ -34,21 +35,26 @@ function isoWeekId(dateIso) {
   return `${year}-W${String(week).padStart(2, "0")}`;
 }
 
-function alignWeeklyRollupToSample(rawRollup) {
-  const start = addDays(endDate, -6);
-  const count = Math.max(1, Math.min(7, Number(rawRollup.days_counted) || 3));
+function alignRollupToSample(rawRollup) {
+  const daysExpected = rawRollup.rollup_period === "weekly"
+    ? 7
+    : Math.max(1, Number(rawRollup.days_expected) || 1);
+  const start = addDays(endDate, 1 - daysExpected);
+  const count = Math.max(1, Math.min(daysExpected, Number(rawRollup.days_counted) || 1));
   const sourceDates = Array.from({ length: count }, (_unused, index) =>
-    addDays(start, count === 1 ? 0 : Math.round(index * 6 / (count - 1)))
+    addDays(start, count === 1 ? 0 : Math.round(index * (daysExpected - 1) / (count - 1)))
   );
   return {
     ...rawRollup,
-    period_id: isoWeekId(endDate),
+    period_id: rawRollup.rollup_period === "weekly"
+      ? isoWeekId(endDate)
+      : `${start}_to_${endDate}`,
     start_date: start,
     end_date: endDate,
     source_dates: sourceDates,
-    days_expected: 7,
+    days_expected: daysExpected,
     days_counted: count,
-    coverage_percent: count / 7 * 100,
+    coverage_percent: count / daysExpected * 100,
     generated_at: `${endDate}T23:59:59Z`,
   };
 }
@@ -77,8 +83,22 @@ function runNode(script, env) {
 }
 
 const generator = path.join(pluginRepo, "scripts", "generate-mock-health-data.mjs");
-const rollupFixture = path.join(pluginRepo, "tests", "fixtures", "schema-v7", "weekly.json");
-await Promise.all([fs.access(generator), fs.access(rollupFixture)]);
+const historicalWeeklyFixture = path.join(
+  repositoryRoot,
+  "apps",
+  "apple",
+  "docs",
+  "reference",
+  "generated",
+  "rollups",
+  "weekly.json"
+);
+const rangeFixture = path.join(pluginRepo, "tests", "fixtures", "rollup-summary-v9", "range-v9.json");
+await Promise.all([
+  fs.access(generator),
+  fs.access(historicalWeeklyFixture),
+  fs.access(rangeFixture),
+]);
 
 const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "healthmd-site-viz-data-"));
 try {
@@ -94,15 +114,17 @@ try {
   const days = await Promise.all(filenames.map(async (filename) =>
     JSON.parse(await fs.readFile(path.join(tmpDir, filename), "utf8"))
   ));
-  const rollup = alignWeeklyRollupToSample(JSON.parse(await fs.readFile(rollupFixture, "utf8")));
+  const rollups = await Promise.all([historicalWeeklyFixture, rangeFixture].map(async (fixture) =>
+    alignRollupToSample(JSON.parse(await fs.readFile(fixture, "utf8")))
+  ));
 
   await fs.mkdir(outputDirectory, { recursive: true });
   await Promise.all([
     fs.writeFile(dailyOutput, `${JSON.stringify(days)}\n`, "utf8"),
-    fs.writeFile(rollupOutput, `${JSON.stringify([rollup], null, 2)}\n`, "utf8"),
+    fs.writeFile(rollupOutput, `${JSON.stringify(rollups, null, 2)}\n`, "utf8"),
   ]);
   console.log(`Wrote ${path.relative(websiteRoot, dailyOutput)} with ${days.length} privacy-safe plugin-generated days`);
-  console.log(`Wrote ${path.relative(websiteRoot, rollupOutput)} with 1 schema-v7 roll-up aligned to the sample window`);
+  console.log(`Wrote ${path.relative(websiteRoot, rollupOutput)} with historical v8 weekly and v9 range examples aligned to the sample window`);
 } finally {
   await fs.rm(tmpDir, { recursive: true, force: true });
 }
