@@ -1104,7 +1104,8 @@ struct MacExportResultPayload: Codable {
         let knownFiles = looseFiles.partialValue.addingReportingOverflow(externalRecordFileCount)
         guard !knownFiles.overflow else { return false }
         let dailyNoteActions = dailyNoteUpdateCount.addingReportingOverflow(dailyNoteSkipCount)
-        guard !dailyNoteActions.overflow else { return false }
+        guard !dailyNoteActions.overflow,
+              dailyNoteActions.partialValue <= totalCount else { return false }
         // Before category breakdowns were added, successful days and formats were
         // the authoritative loose-file category. Provider sidecars were reported
         // separately but included in the wire total, so their sum must fit even

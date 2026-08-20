@@ -1308,6 +1308,53 @@ final class MacExportFileAccountingCompatibilityTests: XCTestCase {
         XCTAssertFalse(payload.hasConsistentFileAccounting)
     }
 
+    func testPayloadWithoutBreakdownRejectsDailyNoteActionsAboveTotalCount() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertNil(payload.outputBreakdown)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
+    func testPayloadWithBreakdownRejectsDailyNoteActionsAboveTotalCount() {
+        let payload = MacExportResultPayload(
+            jobID: UUID(),
+            status: .partialSuccess,
+            successCount: 0,
+            totalCount: 1,
+            formatsPerDate: 0,
+            totalFilesWritten: 0,
+            outputBreakdown: ExportHistoryOutputBreakdown(
+                requestedDataDayCount: 1,
+                successfulDataDayCount: 0,
+                dailyNoteUpdateCount: 1,
+                dailyNoteSkipCount: 1
+            ),
+            dailyNoteUpdateCount: 1,
+            dailyNoteSkipCount: 1,
+            failedDateDetails: [],
+            destinationDisplayName: "Mac",
+            destinationPathForDisplay: nil,
+            completedAt: Date()
+        )
+
+        XCTAssertEqual(payload.outputBreakdown?.dailyNoteUpdateCount, payload.dailyNoteUpdateCount)
+        XCTAssertEqual(payload.outputBreakdown?.dailyNoteSkipCount, payload.dailyNoteSkipCount)
+        XCTAssertFalse(payload.hasConsistentFileAccounting)
+    }
+
     func testPayloadRejectsOverflowingTopLevelAccounting() {
         let multiplicationOverflow = MacExportResultPayload(
             jobID: UUID(),

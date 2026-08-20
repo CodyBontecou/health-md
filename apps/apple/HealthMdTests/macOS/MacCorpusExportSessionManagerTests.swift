@@ -3052,8 +3052,13 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
         )
         XCTAssertTrue(acknowledgement.accepted)
         XCTAssertEqual(result?.status, .cancelled)
+        XCTAssertEqual(result?.successCount, 1)
         XCTAssertEqual(result?.completedDates, [firstDate])
         XCTAssertEqual(result?.totalCount, 2)
+        XCTAssertEqual(result?.totalFilesWritten, 1)
+        XCTAssertEqual(result?.dailyNoteUpdateCount, 0)
+        XCTAssertEqual(result?.dailyNoteSkipCount, 0)
+        XCTAssertEqual(result?.hasConsistentFileAccounting, true)
     }
 
     private func prepareInterruptedPinnedRange(
