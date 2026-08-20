@@ -65,7 +65,7 @@
       "id": "export.sleep-summary",
       "name": "Sleep summaries and stages",
       "classification": "shared",
-      "summary": "Export sleep duration and the stages that both platform APIs expose.",
+      "summary": "Export sleep duration and the stages that both platform APIs expose. The shared settings.sleep-attribution setting chooses whether a midnight-spanning session is owned by the note for the night it starts (default) or the morning it ends.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -81,6 +81,31 @@
       },
       "evidence": [
         "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "settings.sleep-attribution",
+      "name": "Sleep day attribution",
+      "classification": "shared",
+      "summary": "Choose whether a midnight-spanning sleep session belongs to the daily note for the night it starts (default) or the morning it ends; the whole session always stays in one note.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/SleepDayAttribution.swift",
+        "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/docs/features/export-schema.md",
+        "apps/android/app/src/main/java/com/healthmd/domain/model/SleepDayAttribution.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/health/SleepJournalSummary.kt",
+        "apps/android/docs/export-contract/android-sleep-journal-summary.md",
+        "docs/architecture/cross-platform-unification-policy.md"
       ]
     },
     {

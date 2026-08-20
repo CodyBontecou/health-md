@@ -85,6 +85,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.mindfulness-sessions",
         "export.completed-workouts",
         "export.mobility-and-performance",
+        "settings.sleep-attribution",
         "core.shared-rust-metric-registry",
     ]
 
