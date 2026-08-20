@@ -284,6 +284,51 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(chunks.map { $0.dates.count }, [2])
     }
 
+    func testArchiveResidualRetryTransfersEveryImmutableOriginalRequestedDate() async throws {
+        let settings = makeSettings()
+        settings.archiveExportFiles = true
+        settings.generateRangeSummary = false
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride!
+        let originalStart = calendar.startOfDay(for: Self.day(2026, 5, 11))
+        let residualDate = calendar.startOfDay(for: Self.day(2026, 5, 13))
+
+        let metadata = MacExportStreamingJobBuilder.metadata(
+            startDate: residualDate,
+            endDate: residualDate,
+            requestedDates: [residualDate],
+            rollupRequestedDates: [originalStart, residualDate],
+            settings: settings,
+            destinationDisplayName: "MacVault"
+        )
+
+        XCTAssertEqual(metadata.requestedDates, [residualDate])
+        XCTAssertEqual(metadata.originalRequestedDates, [originalStart, residualDate])
+        XCTAssertEqual(metadata.transferDates, [originalStart, residualDate])
+
+        var fetchedDates: [Date] = []
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: residualDate,
+            endDate: residualDate,
+            requestedDates: [residualDate],
+            rollupRequestedDates: [originalStart, residualDate],
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            frozenSettingsSnapshot: .from(
+                settings,
+                calendarTimeZoneIdentifier: settings.exportTimeZoneOverride!.identifier
+            ),
+            fetchHealthData: { date, _ in
+                fetchedDates.append(date)
+                return HealthData(date: date)
+            }
+        )
+        XCTAssertEqual(fetchedDates, [originalStart, residualDate])
+        XCTAssertEqual(job.records.map(\.date), [originalStart, residualDate])
+    }
+
     func testMetadataUsesFrozenNonCurrentCalendarForRequestedDayOwnership() async throws {
         let settings = makeSettings()
         settings.includeGranularData = true

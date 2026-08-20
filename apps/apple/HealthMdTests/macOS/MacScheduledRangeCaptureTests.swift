@@ -10,7 +10,7 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         super.tearDown()
     }
 
-    func testRangeV9CaptureUsesOnlyImmutableRequestedSourceDates() throws {
+    func testNormalModeLegacyAuthorityCaptureGeneratesStandaloneRangeV9Summary() throws {
         let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let selectedDate = try date(2026, 3, 15, timeZone: timeZone)
         let selected = record(on: selectedDate)
@@ -31,6 +31,21 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
         XCTAssertEqual(captured.dailyOutputOwnerDates, ["2026-03-15"])
         XCTAssertEqual(captured.selectedRecordDates, [selectedDate])
         XCTAssertTrue(captured.failures.isEmpty)
+
+        let requestedRange = try HealthRollupRangeRequest(
+            ownerDateIdentifiers: ["2026-03-15"],
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
+        let range = try XCTUnwrap(HealthRollupExporter.makeSummaries(
+            from: captured.records,
+            requestedRange: requestedRange,
+            settings: settings
+        ).first { $0.period == .range })
+        XCTAssertTrue(HealthRollupExporter.content(for: range, format: .json).contains(
+            "\"schema_version\" : 9"
+        ))
+        XCTAssertEqual(range.daysExpected, 1)
+        XCTAssertEqual(range.daysCounted, 1)
     }
 
     func testSuccessfulEmptyRequestedRecordRemainsInRangeCoverage() throws {
@@ -48,8 +63,41 @@ final class MacScheduledRangeCaptureTests: XCTestCase {
 
         XCTAssertEqual(captured.records.count, 1)
         XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
-        XCTAssertTrue(captured.selectedRecordDates.isEmpty)
-        XCTAssertEqual(captured.failures.map(\.reason), [.noHealthData])
+        XCTAssertEqual(captured.selectedRecordDates, [selectedDate])
+        XCTAssertTrue(captured.failures.isEmpty)
+    }
+
+    func testMixedEmptySummaryOnlyCaptureCompletesEveryCapturedDate() throws {
+        let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let firstDate = try date(2026, 3, 14, timeZone: timeZone)
+        let emptyDate = try date(2026, 3, 15, timeZone: timeZone)
+        let settings = makeSettings(summaryOnly: true)
+        let first = record(on: firstDate)
+        let empty = HealthData(date: emptyDate, timeContext: ExportFixtures.timeContext)
+
+        let captured = MacScheduledRangeCapture.capture(
+            selectedDates: [firstDate, emptyDate],
+            settings: settings,
+            timeZone: timeZone,
+            latestAllowedDate: emptyDate
+        ) { requestedDate in
+            ownerDate(requestedDate, timeZone: timeZone) == "2026-03-14" ? first : empty
+        }
+
+        XCTAssertEqual(captured.selectedRecordDates, [firstDate, emptyDate])
+        XCTAssertTrue(captured.dailyOutputOwnerDates.isEmpty)
+        XCTAssertTrue(captured.failures.isEmpty)
+        let requestedRange = try HealthRollupRangeRequest(
+            ownerDateIdentifiers: ["2026-03-14", "2026-03-15"],
+            calendarTimeZoneIdentifier: timeZone.identifier
+        )
+        let range = try XCTUnwrap(HealthRollupExporter.makeSummaries(
+            from: captured.records,
+            requestedRange: requestedRange,
+            settings: settings
+        ).first { $0.period == .range })
+        XCTAssertEqual(range.daysExpected, 2)
+        XCTAssertEqual(range.daysCounted, 2)
     }
 
     func testSelectedCacheMissRemainsRetryable() throws {

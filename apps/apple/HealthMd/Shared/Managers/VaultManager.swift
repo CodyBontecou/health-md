@@ -3624,18 +3624,20 @@ final class VaultManager: ObservableObject {
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
         let immutableRollupDates = rollupRequestedDates ?? requestedDates
-        try preflightExportDestinations(
-            settings: settings,
-            healthSubfolder: healthSubfolder,
-            dates: requestedDates,
-            rollupDates: immutableRollupDates
-        )
-
         var sourceCalendar = Calendar.current
         sourceCalendar.timeZone = rollupCalendarTimeZoneIdentifier
             .flatMap(TimeZone.init(identifier:))
             ?? settings.exportTimeZoneOverride
             ?? .current
+        let immutableArchiveDates = settings.archiveModeEnabled
+            ? immutableRollupDates
+            : requestedDates
+        try preflightExportDestinations(
+            settings: settings,
+            healthSubfolder: healthSubfolder,
+            dates: immutableArchiveDates,
+            rollupDates: immutableRollupDates
+        )
         var datedFiles: [(date: Date, url: URL)] = []
         datedFiles.reserveCapacity(recordPayloadFiles.count)
         if let recordSourceDates,
@@ -3732,6 +3734,18 @@ final class VaultManager: ObservableObject {
             guard !datedFiles.isEmpty || (settings.summaryOnlyModeEnabled && !summaries.isEmpty) else {
                 return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
             }
+            let immutableArchiveDays = Set(immutableArchiveDates.map {
+                sourceCalendar.startOfDay(for: $0)
+            })
+            let availableArchiveDays = Set(datedFiles.map {
+                sourceCalendar.startOfDay(for: $0.date)
+            })
+            guard settings.summaryOnlyModeEnabled
+                    || immutableArchiveDays.isSubset(of: availableArchiveDays) else {
+                throw ExportError.invalidExportPath(
+                    path: "original archive source days are unavailable; existing ZIP preserved"
+                )
+            }
             let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder
@@ -3819,13 +3833,20 @@ final class VaultManager: ObservableObject {
                 }
 
                 if !settings.summaryOnlyModeEnabled {
-                    let requestedDateSet = Set(requestedDates)
-                    for item in datedFiles where requestedDateSet.contains(item.date) {
+                    let requestedDateSet = Set(immutableArchiveDates.map {
+                        sourceCalendar.startOfDay(for: $0)
+                    })
+                    for item in datedFiles
+                        where requestedDateSet.contains(sourceCalendar.startOfDay(for: item.date)) {
                         try checkCancellation()
                         progress?(finalizedUnits, estimatedUnits, item.date)
                         guard let record = try await Self.decodeConnectedHealthData(
                             from: item.url
-                        ) else { continue }
+                        ) else {
+                            throw ExportError.invalidExportPath(
+                                path: "original archive source days are unavailable; existing ZIP preserved"
+                            )
+                        }
                         let preparedExport = record.preparedExport(settings: settings)
                         for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
                             let path = archiveEntryPath(

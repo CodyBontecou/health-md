@@ -1965,6 +1965,134 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(files.contains { $0.hasSuffix(".csv") })
         XCTAssertFalse(files.contains(HealthMdExportSchema.dataDictionaryFilename))
     }
+
+    func testFinalizeCorpusArchiveResidualRetryUsesImmutableOriginalDailyEntryScope() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let secondDate = ExportFixtures.referenceDate
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: secondDate))
+        let firstRecord = HealthData(
+            date: firstDate,
+            timeContext: ExportFixtures.fullDay.timeContext
+        )
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: firstDate,
+                isRequestedDate: false,
+                record: firstRecord,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: secondDate,
+                isRequestedDate: true,
+                record: ExportFixtures.fullDay,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+        ]
+        let payloadURLs = try payloads.enumerated().map { index, payload in
+            let url = workURL.appendingPathComponent("\(index).json")
+            try JSONEncoder().encode(payload).write(to: url)
+            return url
+        }
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: payloadURLs,
+            recordSourceDates: [firstDate, secondDate],
+            settings: settings,
+            requestedDates: [secondDate],
+            rollupRequestedDates: [firstDate, secondDate],
+            rollupCalendarTimeZoneIdentifier: "UTC",
+            startDate: secondDate,
+            endDate: secondDate,
+            healthSubfolder: "Health",
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertEqual(result.archiveFileCount, 1)
+        let archiveURL = try XCTUnwrap(manager.lastExportPresentationTarget?.fileURL)
+        let extracted = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: extracted) }
+        try extractZIP(archiveURL, to: extracted)
+        let paths = try FileManager.default.subpathsOfDirectory(atPath: extracted.path)
+        XCTAssertTrue(paths.contains("2026-03-14.json"), paths.joined(separator: "\n"))
+        XCTAssertTrue(paths.contains("2026-03-15.json"), paths.joined(separator: "\n"))
+    }
+
+    func testFinalizeCorpusArchiveMissingOriginalSourcePreservesExistingZIP() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let secondDate = ExportFixtures.referenceDate
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: secondDate))
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: secondDate,
+            isRequestedDate: true,
+            record: ExportFixtures.fullDay,
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let payloadURL = workURL.appendingPathComponent("residual.json")
+        try JSONEncoder().encode(payload).write(to: payloadURL)
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        let archiveURL = healthURL.appendingPathComponent(
+            "Health.md Export 2026-03-14_to_2026-03-15.zip"
+        )
+        let originalArchive = Data("existing archive must survive".utf8)
+        try originalArchive.write(to: archiveURL)
+
+        do {
+            _ = try await manager.finalizeCorpusDerivedOutputs(
+                recordPayloadFiles: [payloadURL],
+                recordSourceDates: [secondDate],
+                settings: settings,
+                requestedDates: [secondDate],
+                rollupRequestedDates: [firstDate, secondDate],
+                rollupCalendarTimeZoneIdentifier: "UTC",
+                startDate: secondDate,
+                endDate: secondDate,
+                healthSubfolder: "Health",
+                archiveWorkDirectoryURL: workURL
+            )
+            XCTFail("Archive rebuild must fail when an immutable original source is unavailable")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("existing ZIP preserved"))
+        }
+        XCTAssertEqual(try Data(contentsOf: archiveURL), originalArchive)
+    }
     #endif
 
     func testExportHealthData_writesFileToExpectedPath() {

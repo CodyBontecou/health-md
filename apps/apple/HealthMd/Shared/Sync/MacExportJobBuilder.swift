@@ -154,7 +154,8 @@ struct MacExportJobBuilder {
             settings: settings,
             calendar: sourceCalendar
         )
-        let transferDates = Array(Set(dates + rollupDates)).sorted()
+        let archiveSourceDates = settings.archiveModeEnabled ? immutableRollupDates : []
+        let transferDates = Array(Set(dates + archiveSourceDates + rollupDates)).sorted()
         let settingsSnapshot = if let frozenSettingsSnapshot {
             frozenSettingsSnapshot
         } else {
@@ -333,7 +334,8 @@ struct MacExportStreamingJobBuilder {
             settings: settings,
             calendar: sourceCalendar
         )
-        let transferDates = Array(Set(requestedDates + rollupDates)).sorted()
+        let archiveSourceDates = settings.archiveModeEnabled ? immutableRollupDates : []
+        let transferDates = Array(Set(requestedDates + archiveSourceDates + rollupDates)).sorted()
 
         return Metadata(
             requestedDates: requestedDates,

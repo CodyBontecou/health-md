@@ -53,13 +53,9 @@ struct MacScheduledRangeCapture {
             }
             records.append(record)
             guard selectedOwnerDates.contains(ownerDate) else { continue }
-            let prepared = record.preparedExport(settings: settings)
-            guard prepared.hasAnyData else {
-                failures.append(FailedDateDetail(date: captureDate, reason: .noHealthData))
-                continue
-            }
             selectedRecordDates.append(captureDate)
-            if !settings.summaryOnlyModeEnabled {
+            let prepared = record.preparedExport(settings: settings)
+            if prepared.hasAnyData && !settings.summaryOnlyModeEnabled {
                 dailyOutputOwnerDates.insert(ownerDate)
             }
         }
@@ -371,7 +367,10 @@ class SchedulingManager: ObservableObject {
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var wasCancelled = false
-        let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
+        let requiresStandaloneRangeSummary = !settings.archiveModeEnabled
+            && settings.generateRangeSummary
+            && HealthRollupExporter.isEnabled(settings: settings)
+        let requiresDerivedOutput = settings.archiveModeEnabled || requiresStandaloneRangeSummary
         let usesPinnedRange = frozenSettingsSnapshot?.appleExportEnginePin != nil
         let preflightSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
         var preflightFailed = false
@@ -477,7 +476,12 @@ class SchedulingManager: ObservableObject {
             }
 
             if !healthData.hasAnyData {
-                failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                if requiresDerivedOutput {
+                    successCount += 1
+                    successfulHealthData.append(healthData)
+                } else {
+                    failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                }
                 continue
             }
 
@@ -595,7 +599,7 @@ class SchedulingManager: ObservableObject {
                 })
                 successCount = 0
             }
-        } else if !wasCancelled && settings.summaryOnlyModeEnabled && !successfulHealthData.isEmpty {
+        } else if !wasCancelled && requiresStandaloneRangeSummary && !successfulHealthData.isEmpty {
             do {
                 guard let timeZone = settings.exportTimeZoneOverride else {
                     throw ExportError.invalidExportPath(path: "missing calendar timezone")
@@ -622,8 +626,8 @@ class SchedulingManager: ObservableObject {
                     successCount = 0
                 } else {
                     rollupFileCount = results.count
+                    completedDates.append(contentsOf: successfulHealthData.map(\.date))
                 }
-                completedDates.append(contentsOf: successfulHealthData.map(\.date))
             } catch {
                 failedDateDetails.append(contentsOf: successfulHealthData.map {
                     FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.localizedDescription)
