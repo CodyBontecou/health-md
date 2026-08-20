@@ -139,11 +139,17 @@ nonisolated private final class SlowRecordingFileSystem: FileSystemAccessing, @u
 nonisolated private final class SecureCommitHookProbe: @unchecked Sendable {
     private let lock = NSLock()
     private var executionCountStorage = 0
+    private var cancellationRequestedStorage = false
 
     var executionCount: Int { lock.withLock { executionCountStorage } }
+    var cancellationRequested: Bool { lock.withLock { cancellationRequestedStorage } }
 
     func record() {
         lock.withLock { executionCountStorage += 1 }
+    }
+
+    func requestCancellation() {
+        lock.withLock { cancellationRequestedStorage = true }
     }
 }
 
@@ -1768,6 +1774,53 @@ final class VaultManagerTests: XCTestCase {
     #endif
 
     #if os(macOS)
+    func testArchiveCancellationAfterFinalValidationPreservesPriorZIPAndRecordsNoSuccess() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        let archiveURL = healthURL.appendingPathComponent("Health.md Export 2026-03-15.zip")
+        let priorArchive = Data("prior archive remains authoritative".utf8)
+        try priorArchive.write(to: archiveURL)
+
+        let probe = SecureCommitHookProbe()
+        manager.productionDestinationDidValidateForTesting = {
+            probe.record()
+            probe.requestCancellation()
+        }
+
+        do {
+            _ = try await manager.exportArchive(
+                from: [ExportFixtures.fullDay],
+                settings: settings,
+                startDate: ExportFixtures.referenceDate,
+                endDate: ExportFixtures.referenceDate,
+                cancellationCheck: { probe.cancellationRequested }
+            )
+            XCTFail("Cancellation at the final pre-rename boundary must stop archive publication")
+        } catch is CancellationError {
+            // Expected: the prior archive remains authoritative.
+        } catch {
+            XCTFail("Expected CancellationError, got \(error)")
+        }
+
+        XCTAssertEqual(probe.executionCount, 1)
+        XCTAssertEqual(try Data(contentsOf: archiveURL), priorArchive)
+        XCTAssertNil(manager.lastExportPresentationTarget)
+        XCTAssertNil(manager.lastExportStatus)
+    }
+
     func testArchiveDictionaryDisabledKeepsSelectedArtifactsWithoutDictionaryEntry() async throws {
         let vaultURL = makeTempDir()
         defer { try? FileManager.default.removeItem(at: vaultURL) }

@@ -929,14 +929,16 @@ nonisolated enum SecureExactArtifactIO {
         data: Data,
         binding: AppleVaultDestinationBinding,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
-        afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil
+        afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
+        cancellationCheck: () throws -> Void = {}
     ) throws {
         try overwrite(
             rootURL: rootURL,
             relativePath: relativePath,
             binding: binding,
             beforeCommit: beforeCommit,
-            afterValidationBeforeRename: afterValidationBeforeRename
+            afterValidationBeforeRename: afterValidationBeforeRename,
+            cancellationCheck: cancellationCheck
         ) { descriptor in
             try writeAll(data, descriptor: descriptor)
         }
@@ -958,7 +960,8 @@ nonisolated enum SecureExactArtifactIO {
             relativePath: relativePath,
             binding: binding,
             beforeCommit: beforeCommit,
-            afterValidationBeforeRename: afterValidationBeforeRename
+            afterValidationBeforeRename: afterValidationBeforeRename,
+            cancellationCheck: cancellationCheck
         ) { descriptor in
             let input = try FileHandle(forReadingFrom: sourceFileURL)
             defer { try? input.close() }
@@ -987,6 +990,7 @@ nonisolated enum SecureExactArtifactIO {
         binding: AppleVaultDestinationBinding,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
         afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
+        cancellationCheck: () throws -> Void = {},
         writeTemporaryFile: (Int32) throws -> Void
     ) throws {
         let rootDescriptor = try openBoundRoot(rootURL, binding: binding)
@@ -1063,6 +1067,10 @@ nonisolated enum SecureExactArtifactIO {
             openedParentDescriptor: parentDescriptor,
             filename: filename
         )
+        let temporaryPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
+            .appendingPathComponent(temporaryName).path
+        let destinationPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
+            .appendingPathComponent(filename).path
         try beforeCommit?()
         // The hook models arbitrary work and namespace changes between validation and commit.
         // Reopen from the bound root and compare the parent again immediately before rename.
@@ -1074,10 +1082,7 @@ nonisolated enum SecureExactArtifactIO {
             filename: filename
         )
         try afterValidationBeforeRename?()
-        let temporaryPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
-            .appendingPathComponent(temporaryName).path
-        let destinationPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
-            .appendingPathComponent(filename).path
+        try cancellationCheck()
         let renameResult = temporaryPath.withCString { temporaryPointer in
             destinationPath.withCString { filenamePointer in
                 Darwin.renamex_np(
