@@ -5049,7 +5049,7 @@ private let strictRawResultSchema = "healthmd.raw_result"
 private let strictRawResultVersion = 1
 private let strictRawProfile = "canonical_source_records_v1"
 private let currentDailySchema = "healthmd.health_data"
-private let currentDailySchemaVersion = 7
+private let currentDailySchemaVersion = 8
 private let currentArchiveSchema = "healthmd.healthkit_records"
 private let currentArchiveSchemaVersion = 1
 
@@ -5404,7 +5404,7 @@ private func printExtractHelp() {
                     [--timeout 5...900] [--allow-partial] [--output PATH]
 
     Ask the connected iPhone to acquire only the selected metrics and detail,
-    then emit ordinary `healthmd.health_data` v7 documents or projections. The
+    then emit ordinary `healthmd.health_data` v8 documents or projections. The
     transfer/job envelope is validated and removed before stdout. Summary is the
     default and does not capture the lossless archive. `--object records` and
     other archive objects imply lossless detail. Object names include sleep,
