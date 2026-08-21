@@ -33,7 +33,7 @@ Completed-day runs end yesterday. Today Refresh re-fetches the current day when 
 - daily-note injection and individual entries for file targets, if enabled;
 - roll-ups, if explicitly enabled.
 
-Canonical records use strict source-start day ownership. Sleep summary keeps its established noon-to-noon night attribution, so the next completed-day pass remains the final compatibility summary for yesterday.
+Canonical records use strict source-start day ownership. Sleep summary keeps its established noon-to-noon night attribution, so the next completed-day pass remains the final compatibility summary for yesterday. Users who select the **Morning ends** sleep-attribution mode (issue #104) instead capture yesterday's night session in this morning's note; the device-local setting is read at each capture, so already-captured records never move retroactively.
 
 ## Completeness
 

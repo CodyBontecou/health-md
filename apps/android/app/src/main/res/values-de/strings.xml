@@ -537,6 +537,12 @@
     <string name="feedback_no_app_available">Keine App zum Öffnen dieses Links verfügbar</string>
     <string name="granular_data_title">Detaillierte Zeitreihen einbeziehen</string>
     <string name="granular_data_description">Fügen Sie zeitgestempelte Messwerte wie Herzfrequenz und Schlafphasen zu Kompatibilitätsexporten hinzu. Für eine API-vollständige Kopie verwenden Sie den API-Rohdaten-Snapshot.</string>
+    <string name="sleep_attribution_title">Zuordnung des Schlaftags</string>
+    <string name="sleep_attribution_night_begins">Nachtbeginn</string>
+    <string name="sleep_attribution_morning_ends">Morgenende</string>
+    <string name="sleep_attribution_night_begins_description">Jede Schlafsession gehört zur Tagesnotiz der Nacht, in der sie beginnt. Dies ist die Standardeinstellung und entspricht früheren Exporten.</string>
+    <string name="sleep_attribution_morning_ends_description">Jede Schlafsession gehört zur Tagesnotiz des Morgens, an dem sie endet, passend zur Health Connect App. Eine Session von 23:45 Uhr bis 7:30 Uhr erscheint in der Notiz des Aufwachtags.</string>
+
     <string name="metric_category_cycling">Radfahren</string>
     <string name="metric_category_medications">Medikamente</string>
     <string name="metric_category_other">Sonstiges</string>

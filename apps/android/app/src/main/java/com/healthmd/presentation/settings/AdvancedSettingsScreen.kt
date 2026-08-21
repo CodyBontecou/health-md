@@ -23,16 +23,19 @@ import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import com.healthmd.R
 
 @Composable
 fun AdvancedSettingsScreen(
     settings: ExportSettings,
+    sleepDayAttribution: SleepDayAttribution,
     onNavigateToMetrics: () -> Unit,
     onNavigateToFormatCustomization: () -> Unit,
     onNavigateToDailyNoteInjection: () -> Unit,
     onNavigateToIndividualTracking: () -> Unit,
     onIncludeGranularDataChanged: (Boolean) -> Unit,
+    onSleepDayAttributionChanged: (SleepDayAttribution) -> Unit,
     onBack: () -> Unit,
 ) {
     Column(
@@ -122,6 +125,49 @@ fun AdvancedSettingsScreen(
             },
             onClick = onNavigateToIndividualTracking,
         )
+
+        // Sleep Day Attribution (issue #104): which daily note owns a
+        // midnight-spanning sleep session. Device-local capture preference,
+        // applied to every Health Connect capture path and widgets.
+        GeistCard {
+            Text(
+                stringResource(R.string.sleep_attribution_title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = AppColors.textPrimary,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
+                listOf(
+                    SleepDayAttribution.NIGHT_BEGINS to stringResource(R.string.sleep_attribution_night_begins),
+                    SleepDayAttribution.MORNING_ENDS to stringResource(R.string.sleep_attribution_morning_ends),
+                ).forEach { (mode, label) ->
+                    FilterChip(
+                        selected = sleepDayAttribution == mode,
+                        onClick = { onSleepDayAttributionChanged(mode) },
+                        label = { Text(label) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("sleep_attribution_${mode.wireValue}"),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AppColors.accentSubtle,
+                            selectedLabelColor = AppColors.accent,
+                        ),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(
+                stringResource(
+                    when (sleepDayAttribution) {
+                        SleepDayAttribution.NIGHT_BEGINS -> R.string.sleep_attribution_night_begins_description
+                        SleepDayAttribution.MORNING_ENDS -> R.string.sleep_attribution_morning_ends_description
+                    }
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = AppColors.textMuted,
+            )
+        }
 
         // Granular Data
         GeistCard {

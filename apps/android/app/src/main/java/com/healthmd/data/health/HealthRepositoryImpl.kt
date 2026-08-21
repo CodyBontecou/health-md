@@ -1,8 +1,10 @@
 package com.healthmd.data.health
 
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.DataTypeSelection
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.ProviderFailureProvenance
+import com.healthmd.domain.model.SleepDayAttributionOverride
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.util.runCatchingCancellable
@@ -73,21 +75,27 @@ class HealthRepositoryImpl(
         return ready to failures
     }
 
-    override suspend fun fetchHealthData(date: LocalDate): HealthData {
-        if (!shouldUseAllConnected()) return activeProvider().fetchHealthData(date)
-        val attemptedIds = configuredProviderIds()
-        val (providers, failures) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
-        val successful = providers.mapNotNull { provider ->
-            runCatchingCancellable { provider.fetchHealthData(date) }
-                .fold(
-                    onSuccess = { HealthDataMerger.ProviderData(provider.providerId, it) },
-                    onFailure = {
-                        failures += it.toFailure(provider.providerId, "fetchHealthData")
-                        null
-                    },
-                )
+    override suspend fun resolveCaptureContext(
+        zoneId: ZoneId,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+    ): AndroidCaptureContext {
+        // Capture the zone argument before the settings read can suspend. An ambient
+        // timezone change during that read must not split one operation's boundaries.
+        val capturedZoneId = zoneId
+        val attribution = when (sleepDayAttributionOverride) {
+            SleepDayAttributionOverride.StoredPreference -> settingsRepository.getSleepDayAttribution()
+            is SleepDayAttributionOverride.Value -> sleepDayAttributionOverride.attribution
         }
-        return HealthDataMerger.mergeAllConnected(date, attemptedIds, successful, failures)
+        return AndroidCaptureContext(capturedZoneId, attribution)
+    }
+
+    override suspend fun fetchHealthData(date: LocalDate): HealthData {
+        val context = resolveCaptureContext()
+        return fetchHealthDataRange(
+            dates = listOf(date),
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
+        ).firstOrNull() ?: HealthData(date)
     }
 
     override suspend fun fetchHealthDataRange(
@@ -96,17 +104,22 @@ class HealthRepositoryImpl(
         includeGranularData: Boolean,
         zoneId: ZoneId,
         pinnedCalendarDays: Boolean,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
     ): List<HealthData> {
+        if (dates.isEmpty()) return emptyList()
+        val context = resolveCaptureContext(zoneId, sleepDayAttributionOverride)
+        val captureZoneId = context.zoneId
+        val attribution = context.sleepDayAttribution
         if (!shouldUseAllConnected()) {
             return activeProvider().fetchHealthDataRange(
                 dates,
                 dataTypes,
                 includeGranularData,
-                zoneId,
+                captureZoneId,
                 pinnedCalendarDays,
+                attribution,
             )
         }
-        if (dates.isEmpty()) return emptyList()
         val attemptedIds = configuredProviderIds()
         val (providers, readinessFailures) = providerReadiness(attemptedIds, configuredProviders(attemptedIds))
         val failuresByDate = dates.associateWith { readinessFailures.toMutableList() }.toMutableMap()
@@ -118,8 +131,9 @@ class HealthRepositoryImpl(
                     dates,
                     dataTypes,
                     includeGranularData,
-                    zoneId,
+                    captureZoneId,
                     pinnedCalendarDays,
+                    attribution,
                 )
             }
                 .onSuccess { records ->

@@ -28,6 +28,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
 
     // Pre-configured category sample results
     var categorySampleResults: [String: [CategorySampleValue]] = [:]
+    var beforeQueryCategorySamples: (@Sendable (HKCategoryTypeIdentifier) async -> Void)?
 
     // Pre-configured workout results
     var workoutResults: [WorkoutValue] = []
@@ -255,6 +256,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     }
 
     func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool, limit: Int?) async throws -> [CategorySampleValue] {
+        if let beforeQueryCategorySamples { await beforeQueryCategorySamples(identifier) }
         queriedCategoryIdentifiers.append(identifier.rawValue)
         if let error = errorsForCategorySamples[identifier.rawValue] { throw error }
         var results = categorySampleResults[identifier.rawValue] ?? []

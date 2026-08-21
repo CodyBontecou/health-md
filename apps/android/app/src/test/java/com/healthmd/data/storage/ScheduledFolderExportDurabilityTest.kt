@@ -19,10 +19,12 @@ import com.healthmd.domain.exportengine.artifactIdHex
 import com.healthmd.domain.exportengine.sha256Hex as artifactSha256Hex
 import com.healthmd.domain.exportengine.testPin
 import com.healthmd.domain.model.ActivityData
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
@@ -322,7 +324,10 @@ class ScheduledFolderExportDurabilityTest {
         )
         val health = mockk<HealthRepository>()
         every { health.isBeforeFirstUnlock() } returns false
-        coEvery { health.fetchHealthDataRange(any(), any(), any()) } throws
+        coEvery { health.resolveCaptureContext(any(), any()) } answers {
+            AndroidCaptureContext(firstArg(), SleepDayAttribution.NIGHT_BEGINS)
+        }
+        coEvery { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } throws
             kotlinx.coroutines.CancellationException("cancel before plan")
 
         val result = ExportOrchestrator(health, repository).exportDatesDurably(
@@ -506,7 +511,10 @@ class ScheduledFolderExportDurabilityTest {
     private fun healthRepository(dates: List<LocalDate>): HealthRepository =
         mockk<HealthRepository>().also { repository ->
             every { repository.isBeforeFirstUnlock() } returns false
-            coEvery { repository.fetchHealthDataRange(any(), any(), any()) } answers {
+            coEvery { repository.resolveCaptureContext(any(), any()) } answers {
+                AndroidCaptureContext(firstArg(), SleepDayAttribution.NIGHT_BEGINS)
+            }
+            coEvery { repository.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
                 firstArg<List<LocalDate>>().map { date ->
                     HealthData(date = date, activity = ActivityData(steps = 1_234))
                 }

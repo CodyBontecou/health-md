@@ -283,6 +283,12 @@
     </plurals>
     <string name="granular_data_title">ਵਿਸਤ੍ਰਿਤ ਸਮਾਂ-ਸੀਰੀਜ਼ ਸ਼ਾਮਲ ਕਰੋ</string>
     <string name="granular_data_description">ਅਨੁਕੂਲਤਾ ਨਿਰਯਾਤ ਲਈ ਟਾਈਮਸਟੈਂਪ ਕੀਤੇ ਨਮੂਨੇ ਸ਼ਾਮਲ ਕਰੋ ਜਿਵੇਂ ਕਿ ਦਿਲ ਦੀ ਗਤੀ ਅਤੇ ਨੀਂਦ ਦੇ ਪੜਾਅ। ਇੱਕ API-ਪੂਰੀ ਕਾਪੀ ਲਈ, Raw API Snapshot ਦੀ ਵਰਤੋਂ ਕਰੋ।</string>
+    <string name="sleep_attribution_title">ਸੌਣ ਦਿਨ ਦੀ ਨਿਰਧਾਰਤਾ</string>
+    <string name="sleep_attribution_night_begins">ਰਾਤ ਸ਼ੁਰੂ</string>
+    <string name="sleep_attribution_morning_ends">ਸਵੇਰ ਸਮਾਪਤ</string>
+    <string name="sleep_attribution_night_begins_description">ਹਰ ਸੌਣ ਸੈਸ਼ਨ ਉਸ ਰਾਤ ਦੇ ਰੋਜ਼ਾਨਾ ਨੋਟ ਨਾਲ ਸਬੰਧਤ ਹੈ ਜਿਸ ਰਾਤ ਇਹ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ। ਇਹ ਡਿਫ਼ਾਲਟ ਹੈ ਅਤੇ ਪਿਛਲੇ ਐਕਸਪੋਰਟਾਂ ਨਾਲ ਮੇਲ ਖਾਂਦਾ ਹੈ।</string>
+    <string name="sleep_attribution_morning_ends_description">ਹਰ ਸੌਣ ਸੈਸ਼ਨ ਉਸ ਸਵੇਰ ਦੇ ਰੋਜ਼ਾਨਾ ਨੋਟ ਨਾਲ ਸਬੰਧਤ ਹੈ ਜਿਸ ਸਵੇਰ ਇਹ ਸਮਾਪਤ ਹੁੰਦਾ ਹੈ, ਜੋ Health Connect ਐਪ ਨਾਲ ਮੇਲ ਖਾਂਦਾ ਹੈ। ਰਾਤ 11:45 ਤੋਂ ਸਵੇਰੇ 7:30 ਵਾਲਾ ਸੈਸ਼ਨ ਜਾਗਣ ਵਾਲੇ ਦਿਨ ਦੇ ਨੋਟ ਵਿੱਚ ਦਿਖਾਈ ਦਿੰਦਾ ਹੈ।</string>
+
     <!-- Metric selection screen -->
     <string name="metric_selection_title">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>
     <string name="search_metrics_hint">ਮੈਟ੍ਰਿਕਸ ਖੋਜੋ…</string>

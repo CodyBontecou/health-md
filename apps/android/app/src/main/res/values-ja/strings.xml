@@ -263,6 +263,12 @@
     </plurals>
     <string name="granular_data_title">詳細な時系列を含める</string>
     <string name="granular_data_description">心拍数や睡眠段階などのタイムスタンプ付きサンプルを互換性エクスポートに追加します。 API の完全なコピーの場合は、Raw API Snapshot を使用します。</string>
+    <string name="sleep_attribution_title">睡眠日の帰属</string>
+    <string name="sleep_attribution_night_begins">就寝時刻で</string>
+    <string name="sleep_attribution_morning_ends">起床時刻で</string>
+    <string name="sleep_attribution_night_begins_description">各睡眠セッションは、開始した夜のデイリーノートに記録されます。これがデフォルトで、以前のエクスポートと同じです。</string>
+    <string name="sleep_attribution_morning_ends_description">各睡眠セッションは、終了した朝のデイリーノートに記録され、Health Connect アプリと同じ動作です。午後11時45分から午前7時30分までのセッションは、起きた日のノートに表示されます。</string>
+
     <string name="metric_selection_title">健康メトリクス</string>
     <string name="search_metrics_hint">メトリクスを検索\u2026</string>
     <string name="select_all">すべて選択</string>

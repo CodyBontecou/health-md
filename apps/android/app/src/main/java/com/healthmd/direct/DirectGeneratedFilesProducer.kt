@@ -16,6 +16,7 @@ import com.healthmd.domain.exportengine.LocalDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.LocalDailyAggregatePlanningResult
 import com.healthmd.domain.exportengine.ProductionDailyAggregateNativePlanBuilder
 import com.healthmd.domain.exportengine.ShadowExportDiagnosticSink
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
@@ -100,6 +101,7 @@ class DirectGeneratedFilesProducer private constructor(
         jobDirectory: File,
         dates: List<LocalDate>,
         settings: ExportSettings,
+        captureContext: AndroidCaptureContext,
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> },
     ): List<ProducedGeneratedFile> {
         require(dates.isNotEmpty())
@@ -117,6 +119,8 @@ class DirectGeneratedFilesProducer private constructor(
                     dates = chunk,
                     dataTypes = effectiveSelection,
                     includeGranularData = settings.shouldFetchGranularData(),
+                    zoneId = captureContext.zoneId,
+                    sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                 ).associateBy(HealthData::date)
             } catch (error: CancellationException) {
                 throw error
@@ -125,14 +129,9 @@ class DirectGeneratedFilesProducer private constructor(
             }
             chunk.forEach { date ->
                 currentCoroutineContext().ensureActive()
-                var data = (byDate[date] ?: HealthData(date))
+                val data = (byDate[date] ?: HealthData(date))
                     .filtered(effectiveSelection)
                     .filtered(settings.metricSelection)
-                if (!data.hasAnyData) {
-                    data = healthRepository.fetchHealthData(date)
-                        .filtered(effectiveSelection)
-                        .filtered(settings.metricSelection)
-                }
                 if (data.hasAnyData) {
                     (plannedAggregateFiles(data, settings) +
                         dailyNote(data, settings) +

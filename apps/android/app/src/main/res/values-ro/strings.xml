@@ -547,6 +547,12 @@
     <string name="feedback_no_app_available">Nicio aplicație disponibilă pentru a deschide acest link</string>
     <string name="granular_data_title">Includeți serii temporale detaliate</string>
     <string name="granular_data_description">Adăugați în exporturile de compatibilitate mostre cu marcaj temporal, precum frecvența cardiacă și etapele somnului. Pentru o copie completă a datelor API, utilizați Raw API Snapshot.</string>
+    <string name="sleep_attribution_title">Atribuirea zilei de somn</string>
+    <string name="sleep_attribution_night_begins">Începe noaptea</string>
+    <string name="sleep_attribution_morning_ends">Se termină dimineața</string>
+    <string name="sleep_attribution_night_begins_description">Fiecare sesiune de somn aparține notitei zilnice a nopții în care începe. Aceasta este opțiunea implicită și corespunde exporturilor anterioare.</string>
+    <string name="sleep_attribution_morning_ends_description">Fiecare sesiune de somn aparține notitei zilnice a dimineții în care se termină, la fel ca în aplicația Health Connect. O sesiune de la 23:45 la 7:30 apare în notita zilei trezirii.</string>
+
     <string name="metric_category_cycling">Ciclism</string>
     <string name="metric_category_medications">Medicamente</string>
     <string name="metric_category_other">Altele</string>

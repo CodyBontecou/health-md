@@ -96,7 +96,7 @@ Check `raw_capture_status` before consuming the archive:
 
 The query manifest distinguishes successful-empty, unsupported, skipped, cancelled, and failed queries. Do not infer complete capture from the presence of some records.
 
-Raw records belong to a day by source start time in the captured timezone. Their timestamps are never clipped. Sleep summary fields retain their established noon-to-noon compatibility behavior and may therefore use a different presentation window.
+Raw records belong to a day by source start time in the captured timezone. Their timestamps are never clipped. Sleep summary fields retain their established noon-to-noon compatibility behavior (or the wake-up-date window when the user selects the **Morning ends** sleep-attribution mode, issue #104) and may therefore use a different presentation window.
 
 ## Tips
 

@@ -83,6 +83,7 @@ class ProductCapabilityManifestTest {
             "export.completed-workouts",
             "export.mobility-and-performance",
             "export.profiles",
+            "settings.sleep-attribution",
             "core.shared-rust-metric-registry",
         )
 
