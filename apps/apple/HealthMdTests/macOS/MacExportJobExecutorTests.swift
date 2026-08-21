@@ -2046,12 +2046,14 @@ final class MacExportJobExecutorTests: XCTestCase {
         defaults: FakeUserDefaults? = nil,
         fileSystem: FileSystemAccessing? = nil,
         bookmarkResolver: FakeBookmarkResolver? = nil,
+        identityProbe: VaultFolderIdentityProbing? = nil,
         planner: (any AppleLooseDailyExportPlanning)? = nil
     ) -> VaultManager {
         let manager = VaultManager(
             defaults: defaults ?? self.defaults,
             fileSystem: fileSystem ?? self.fileSystem,
             bookmarkResolver: bookmarkResolver ?? self.bookmarkResolver,
+            identityProbe: identityProbe ?? FakeVaultFolderIdentityProbe(),
             appleLooseDailyPlanner: planner
         )
         return LifecycleHarness.retain(manager)
