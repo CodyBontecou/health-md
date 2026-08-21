@@ -1347,6 +1347,7 @@ struct ExportTabView: View {
         case .localIPhoneFolder: return "folder"
         case .connectedMac: return "desktopcomputer"
         case .apiEndpoint: return "network"
+        case .googleDrive: return "externaldrive.connected.to.line.below"
         }
     }
 
@@ -1360,6 +1361,8 @@ struct ExportTabView: View {
                 ?? "Connected Mac"
         case .apiEndpoint:
             return apiExportSettings.displayName
+        case .googleDrive:
+            return "Active profile Drive folder"
         }
     }
 
@@ -1547,6 +1550,8 @@ struct ExportTabView: View {
             return "Connected Mac"
         case .apiEndpoint:
             return "API: \(apiExportSettings.displayName)"
+        case .googleDrive:
+            return "Google Drive: active profile folder"
         }
     }
 
@@ -1554,7 +1559,7 @@ struct ExportTabView: View {
         switch exportTargetSelection {
         case .localIPhoneFolder:
             return nil
-        case .connectedMac, .apiEndpoint:
+        case .connectedMac, .apiEndpoint, .googleDrive:
             return previewDestinationLabel
         }
     }
@@ -1567,6 +1572,8 @@ struct ExportTabView: View {
             return .connectedMac
         case .apiEndpoint:
             return .apiEndpoint
+        case .googleDrive:
+            return .googleDrive
         }
     }
 
@@ -1841,6 +1848,8 @@ struct ExportTabView: View {
             return formattedExportPath(rootName: macDestinationRootName)
         case .apiEndpoint:
             return "POST \(apiExportSettings.redactedEndpointDescription)"
+        case .googleDrive:
+            return formattedExportPath(rootName: "Google Drive")
         }
     }
 
@@ -1911,11 +1920,13 @@ struct ExportTargetSectionView: View {
     let localSubtitle: String
     let macSubtitle: String
     let apiSubtitle: String
+    let driveSubtitle: String
     let canExportToConnectedMac: Bool
     let shouldPromptForLocalFolder: Bool
     let localAccessibilityIdentifier: String
     let macAccessibilityIdentifier: String
     let apiAccessibilityIdentifier: String
+    let driveAccessibilityIdentifier: String
     let onRequestFolderPicker: () -> Void
     let onOpenAPISettings: () -> Void
 
@@ -1927,11 +1938,13 @@ struct ExportTargetSectionView: View {
         localSubtitle: String,
         macSubtitle: String,
         apiSubtitle: String,
+        driveSubtitle: String = "Uses the Google Drive folder bound to the active profile.",
         canExportToConnectedMac: Bool,
         shouldPromptForLocalFolder: Bool,
         localAccessibilityIdentifier: String = AccessibilityID.Export.localTargetOption,
         macAccessibilityIdentifier: String = AccessibilityID.Export.macTargetOption,
         apiAccessibilityIdentifier: String = AccessibilityID.Export.apiTargetOption,
+        driveAccessibilityIdentifier: String = "export.target.googleDrive",
         onRequestFolderPicker: @escaping () -> Void,
         onOpenAPISettings: @escaping () -> Void
     ) {
@@ -1942,11 +1955,13 @@ struct ExportTargetSectionView: View {
         self.localSubtitle = localSubtitle
         self.macSubtitle = macSubtitle
         self.apiSubtitle = apiSubtitle
+        self.driveSubtitle = driveSubtitle
         self.canExportToConnectedMac = canExportToConnectedMac
         self.shouldPromptForLocalFolder = shouldPromptForLocalFolder
         self.localAccessibilityIdentifier = localAccessibilityIdentifier
         self.macAccessibilityIdentifier = macAccessibilityIdentifier
         self.apiAccessibilityIdentifier = apiAccessibilityIdentifier
+        self.driveAccessibilityIdentifier = driveAccessibilityIdentifier
         self.onRequestFolderPicker = onRequestFolderPicker
         self.onOpenAPISettings = onOpenAPISettings
     }
@@ -1995,6 +2010,19 @@ struct ExportTargetSectionView: View {
                     ) {
                         selection = .apiEndpoint
                         onOpenAPISettings()
+                    }
+
+                    Divider().background(Color.borderSubtle)
+
+                    ExportTargetOptionRow(
+                        title: ExportTargetSelection.googleDrive.title,
+                        icon: "externaldrive.connected.to.line.below",
+                        subtitle: driveSubtitle,
+                        isSelected: selection == .googleDrive,
+                        isEnabled: true,
+                        accessibilityIdentifier: driveAccessibilityIdentifier
+                    ) {
+                        selection = .googleDrive
                     }
                 }
             }

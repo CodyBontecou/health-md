@@ -346,6 +346,35 @@
       ]
     },
     {
+      "id": "destination.google-drive",
+      "name": "Direct Google Drive export destination",
+      "classification": "planned",
+      "summary": "Implemented but release-gated direct mobile destination: authorize one Google account with drive.file, bind an export profile to a Picker-selected writable My Drive or Shared Drive folder, and deliver unchanged renderer artifacts manually or on a best-effort schedule without a Health.md health-data or Google-token server; availability remains planned pending production OAuth, physical-device, privacy, and store review receipts.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "planned",
+          "target": "Complete production OAuth publication, physical-iPhone My Drive/Shared Drive and background-recovery validation, App Store privacy review, and release-checklist receipts."
+        },
+        "android": {
+          "state": "planned",
+          "target": "Complete production OAuth publication, physical-Pixel My Drive/Shared Drive and foreground-reauthorization validation, Play Data safety review, and release-checklist receipts."
+        }
+      },
+      "evidence": [
+        "docs/architecture/google-drive-export-destination.md",
+        "docs/features/google-drive-export.md",
+        "docs/qa/google-drive-export-release-checklist.md",
+        "apps/apple/docs/features/google-drive-export.md",
+        "apps/android/docs/google-drive-export.md",
+        "apps/website/docs-src/src/content/docs/guides/google-drive-export.md"
+      ]
+    },
+    {
       "id": "apple.hearing-and-symptoms",
       "name": "HealthKit hearing and symptom records",
       "classification": "apple_only",

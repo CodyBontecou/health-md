@@ -425,10 +425,10 @@ private fun HistoryDetailContent(entry: ExportHistoryEntry, retryMessage: Histor
         DetailLine(
             stringResource(R.string.history_detail_destination_type),
             stringResource(
-                if (entry.target == ExportTarget.API_ENDPOINT) {
-                    R.string.export_preview_api_destination
-                } else {
-                    R.string.export_preview_device_destination
+                when (entry.target) {
+                    ExportTarget.DEVICE_FOLDER -> R.string.export_preview_device_destination
+                    ExportTarget.API_ENDPOINT -> R.string.export_preview_api_destination
+                    ExportTarget.GOOGLE_DRIVE -> R.string.google_drive_title
                 },
             ),
         )

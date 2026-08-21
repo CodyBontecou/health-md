@@ -7,7 +7,7 @@ final class ExportProfileCardSummaryTests: XCTestCase {
     private var fixedNow: Date!
 
     // STATIC RETENTION JUSTIFICATION: ObservableObject-backed settings use
-    // Combine machinery; retain for the process lifetime to avoid
+    // STATIC RETENTION JUSTIFICATION: Combine machinery; retain for the process lifetime to avoid
     // platform-specific deinit aborts while the test process tears down
     // (matches the pattern in ExportProfileStoreTests).
     private static var retainedSettings: [AdvancedExportSettings] = []

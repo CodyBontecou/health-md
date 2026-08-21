@@ -235,6 +235,7 @@ fun ExportProfilesScreen(
             initial = ExportProfilesViewModel.initialCreationDraft(
                 rows = uiState.rows,
                 currentSettings = uiState.currentSettings,
+                connectedGoogleDriveDestinationId = uiState.connectedGoogleDriveDestinationId,
             ),
             overlapPreview = { target, folderUri, settings ->
                 viewModel.draftOverlapPreview(
@@ -266,6 +267,7 @@ fun ExportProfilesScreen(
             initial = ExportProfilesViewModel.initialEditDraft(
                 profile = row.profile,
                 currentSettings = uiState.currentSettings,
+                connectedGoogleDriveDestinationId = uiState.connectedGoogleDriveDestinationId,
             ),
             overlapPreview = { target, folderUri, settings ->
                 viewModel.draftOverlapPreview(
@@ -373,6 +375,8 @@ private fun destinationLine(profile: ExportProfile): String = when (profile.targ
             ?: "Device folder (selected in Export tab)"
     ExportTarget.API_ENDPOINT ->
         "API: ${profile.apiEndpointUrl ?: "not configured"}"
+    ExportTarget.GOOGLE_DRIVE ->
+        if (profile.destinationId.isNullOrBlank()) "Google Drive: not connected" else "Google Drive"
 }
 
 private fun formatsLine(row: ExportProfileRow): String {

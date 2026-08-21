@@ -162,6 +162,33 @@ final class ExportIntentProfileResolutionTests: XCTestCase {
         XCTAssertTrue(vaultEvents.isEmpty, "resolution fails before any vault work")
     }
 
+    func testDriveProfileReturnsTypedForegroundRequirementWithoutVaultFallback() async {
+        let store = ProfileResolutionRetainer.retain(ExportProfileStore(userDefaults: defaults))
+        store.add(name: "Drive", settings: makeSnapshot(), target: .googleDrive)
+        let recorder = ProfileRunRecorder()
+
+        let outcome = await ExportIntentRunner.run(
+            dates: [Date()],
+            profileName: "Drive",
+            dependencies: recorder.makeDependencies(defaults: defaults)
+        )
+
+        guard case .foregroundRequired(let destination) = outcome else {
+            return XCTFail("expected foregroundRequired, got \(outcome)")
+        }
+        XCTAssertEqual(destination, .googleDrive)
+        XCTAssertTrue(recorder.seenFilenameFormats.isEmpty, "Drive intent must not invoke local exporter")
+        let dialog = ExportIntentRunner.dialog(for: outcome)
+        XCTAssertTrue(dialog.contains("foreground"))
+        XCTAssertTrue(dialog.contains("no local-vault fallback"))
+        XCTAssertThrowsError(try ExportIntentRunner.requireNoForegroundTransition(outcome)) { error in
+            XCTAssertEqual(
+                error as? ExportIntentForegroundRequiredError,
+                ExportIntentForegroundRequiredError(destination: .googleDrive)
+            )
+        }
+    }
+
     func testDialogMentionsMissingProfileName() {
         let dialog = ExportIntentRunner.dialog(for: .profileNotFound(name: "Weekly"))
         XCTAssertTrue(dialog.contains("Weekly"))

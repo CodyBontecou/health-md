@@ -3,6 +3,7 @@
     <cloud-backup>
         <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
         <exclude domain="sharedpref" path="health_md_oauth_tokens.xml" />
+        <exclude domain="sharedpref" path="health_md_google_drive_account_authority.xml" />
         <exclude domain="sharedpref" path="wear-sync-private.xml" />
         <exclude domain="file" path="datastore/health_md_settings.preferences_pb" />
         <exclude domain="file" path="datastore/campaign_attribution.preferences_pb" />
@@ -11,6 +12,7 @@
     <device-transfer>
         <exclude domain="sharedpref" path="health_md_api_export_credentials.xml" />
         <exclude domain="sharedpref" path="health_md_oauth_tokens.xml" />
+        <exclude domain="sharedpref" path="health_md_google_drive_account_authority.xml" />
         <exclude domain="sharedpref" path="wear-sync-private.xml" />
         <exclude domain="file" path="datastore/health_md_settings.preferences_pb" />
         <exclude domain="file" path="datastore/campaign_attribution.preferences_pb" />

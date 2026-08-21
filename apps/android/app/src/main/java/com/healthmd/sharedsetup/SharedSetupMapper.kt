@@ -123,7 +123,10 @@ class SharedSetupMapper(
                     injectSections = settings.dailyNoteInjection.injectMarkdownSections,
                 ),
                 schedule = SharedSetupSchedule(
-                    activationRequested = settings.scheduleEnabled,
+                    // Drive account/folder authority is device-local and never enters Shared Setup.
+                    // Importers must confirm a local destination before enabling this schedule.
+                    activationRequested = settings.scheduleEnabled &&
+                        settings.scheduledExportTarget != ExportTarget.GOOGLE_DRIVE,
                     cadence = SharedSetupCadence(settings.scheduleCadenceValue, settings.scheduleCadenceUnit.name.lowercase()),
                     // Always explicit; Android's default time differs from Apple's.
                     localTime = SharedSetupLocalTime(settings.scheduleHour, settings.scheduleMinute),

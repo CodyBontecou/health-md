@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">법률 · 개인정보 보호</p>
         <h1 id="privacy-title">개인정보 보호를<br>쉬운 말로 설명합니다.</h1>
-        <p class="legal-updated">최종 업데이트: 2026년 8월 6일</p>
+        <p class="legal-updated">최종 업데이트: 2026년 8월 20일</p>
         <p class="legal-lede">Health.md는 Health.md 건강 데이터 클라우드를 만들지 않고 민감한 건강 데이터를 이동합니다. 사용자의 기기가 사용자가 승인한 기록을 읽으며, 각 내보내기 또는 직접 응답을 어디로 보낼지는 사용자가 선택합니다.</p>
 
         <div class="legal-promise" role="list" aria-label="개인정보 보호 원칙">
@@ -132,6 +132,7 @@
             <li><strong>사용자의 API 엔드포인트:</strong> 사용자가 선택한 내보내기 데이터를 수신하도록 사용자가 구성한 API 엔드포인트입니다. 보호되는 엔드포인트 모드에는 HTTPS가 필요합니다.</li>
             <li><strong>연결된 건강 정보 제공자:</strong> 사용자가 연결을 승인한 후 시작되는 읽기 전용 제공자 요청입니다.</li>
           </ul>
+          <p><strong>Google Drive 직접 내보내기:</strong> 이 대상이 제공되고 사용자가 선택하면 Health.md는 Google의 <code>drive.file</code> 범위를 요청하고 Google Picker를 사용하여 선택한 계정과 내 드라이브 또는 공유 드라이브의 쓰기 가능한 폴더를 연결합니다. 설치된 앱은 민감한 내보내기 파일을 Google로 직접 전송합니다. Health.md는 건강 데이터 업로드 서버나 Google 토큰 서버를 운영하지 않습니다. 이는 Apple 파일 또는 Android SAF에서 Google Drive 제공자를 선택하는 것과 별개입니다. Google은 사용자의 Google 또는 Workspace 설정과 약관에 따라 사본을 수신하고 보관합니다. Health.md가 Google API에서 받은 정보를 사용하고 전송하는 방식은 Limited Use 요구 사항을 포함한 <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>를 준수합니다. 연결을 해제하면 로컬 자격 증명과 향후 접근 권한은 제거되지만 Drive에 이미 있는 파일은 삭제되지 않습니다. <a href="../ko/docs/guides/google-drive-export/">Google Drive에 업로드</a>를 참조하십시오.</p>
           <p>Health.md는 추후 쿼리를 위해 건강 데이터의 서버 사본을 보관하지 않습니다. 직접 Apple Health 쿼리의 원본은 iPhone에 계속 있습니다. 직접 전송으로 인해 페어링된 컴퓨터에 지속적인 작업 상태와 출력이 남을 수 있지만, 이 상태는 Health.md가 호스팅하는 건강 데이터 말뭉치가 아닙니다.</p>
         </section>
 

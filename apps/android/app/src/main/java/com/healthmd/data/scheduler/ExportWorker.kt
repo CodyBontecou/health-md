@@ -21,6 +21,12 @@ import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveErrorId
+import com.healthmd.data.drive.GoogleDriveExportOrchestrator
+import com.healthmd.data.drive.GoogleDriveRecoveryWorker
+import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.drive.serialId
 import com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
@@ -67,6 +73,9 @@ class ExportWorker @AssistedInject constructor(
     private val timeCalculator: ScheduledExportTimeCalculator,
     private val stateStore: ScheduledExportStateStore,
     private val exportScheduler: Lazy<ExportScheduler>,
+    private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
+    private val googleDriveDestinationStore: GoogleDriveDestinationStore,
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -224,13 +233,22 @@ class ExportWorker @AssistedInject constructor(
         if (!persistedSettings.scheduleEnabled) return Result.success()
         if (persistedSettings.scheduledExportTarget != capturedTarget) return Result.success()
 
-        // Validate current credential/destination plumbing before restoring frozen output choices.
-        val currentFingerprint = if (capturedTarget == ExportTarget.API_ENDPOINT) {
-            apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
+        // Validate and freeze current credential/destination plumbing before restoring output
+        // choices. Raw capture receives this exact local Drive destination ID rather than reading
+        // the mutable active selection after health bytes have been produced.
+        val currentDriveDestinationId = if (capturedTarget == ExportTarget.GOOGLE_DRIVE) {
+            googleDriveSelectionStore.get()
         } else null
+        val currentFingerprint = when (capturedTarget) {
+            ExportTarget.API_ENDPOINT -> apiCredentialStore.destinationFingerprint(persistedSettings.apiEndpointUrl)
+            ExportTarget.GOOGLE_DRIVE -> currentDriveDestinationId
+                ?.let { googleDriveDestinationStore.find(it) }
+                ?.fingerprint
+            ExportTarget.DEVICE_FOLDER -> null
+        }
         val capturedFingerprint = capturedOccurrence.configuration.destinationFingerprint
         if (
-            capturedTarget == ExportTarget.API_ENDPOINT &&
+            capturedTarget != ExportTarget.DEVICE_FOLDER &&
             (capturedFingerprint == null || capturedFingerprint != currentFingerprint)
         ) {
             // A newer schedule points at a different endpoint. Never let this stale worker send to it.
@@ -462,6 +480,10 @@ class ExportWorker @AssistedInject constructor(
                     settings = settings,
                     target = settings.scheduledExportTarget,
                     expectedDestinationFingerprint = destinationFingerprint,
+                    googleDriveDestinationId = currentDriveDestinationId,
+                    googleDriveOperationId = if (settings.scheduledExportTarget == ExportTarget.GOOGLE_DRIVE) {
+                        "raw-drive-$admissionOperationId"
+                    } else null,
                 )
             } else when (settings.scheduledExportTarget) {
                 ExportTarget.DEVICE_FOLDER -> {
@@ -485,6 +507,21 @@ class ExportWorker @AssistedInject constructor(
                     expectedDestinationFingerprint = destinationFingerprint,
                     durableOperationId = durableApiOperationId,
                     durableSettingsSnapshotJson = capturedSnapshotJson,
+                )
+                ExportTarget.GOOGLE_DRIVE -> googleDriveSelectionStore.get()?.let { destinationId ->
+                    googleDriveExportOrchestrator.exportDates(
+                        dates = dates,
+                        settings = settings.copy(exportTarget = ExportTarget.GOOGLE_DRIVE),
+                        destinationId = destinationId,
+                        source = "scheduled",
+                        operationId = "drive-$admissionOperationId",
+                        settingsSnapshotJson = capturedSnapshotJson,
+                    )
+                } ?: ExportResult(
+                    0,
+                    dates.size,
+                    dates.map { FailedDateDetail(it, ExportFailureReason.NO_FOLDER_SELECTED) },
+                    target = ExportTarget.GOOGLE_DRIVE,
                 )
             }
 
@@ -523,6 +560,7 @@ class ExportWorker @AssistedInject constructor(
                 capturedSnapshotJson,
                 result.retryOperationIds,
                 result.retryFolderOperationIds,
+                result.retryDriveOperationIds,
                 result.freshCaptureRetryDates,
             )
             val allFailuresDetachedForFreshCapture = result.failedDateDetails.all { failure ->
@@ -541,6 +579,17 @@ class ExportWorker @AssistedInject constructor(
                 allFailuresDetachedForFreshCapture
             ) {
                 exportRepository.discardDurableScheduledFolderOperation(durableFolderOperationId)
+            }
+
+            if (result.requiresGoogleDriveReauthorization()) {
+                result.retryDriveOperationIds.values.firstOrNull()?.let { operationId ->
+                    GoogleDriveRecoveryWorker.enqueue(applicationContext, operationId)
+                }
+            }
+            if (result.isFullSuccess && settings.scheduledExportTarget == ExportTarget.GOOGLE_DRIVE) {
+                result.retryDriveOperationIds.values.toSet().forEach { operationId ->
+                    googleDriveExportOrchestrator.acknowledgeAfterHistory(operationId)
+                }
             }
 
             val titleResId = when {
@@ -636,6 +685,7 @@ class ExportWorker @AssistedInject constructor(
         settingsSnapshotJson: String?,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ) {
         val latestSettings = settingsRepository.getExportSettings()
@@ -650,6 +700,7 @@ class ExportWorker @AssistedInject constructor(
                 settingsSnapshotJson = settingsSnapshotJson,
                 apiOperationIds = apiOperationIds,
                 folderOperationIds = folderOperationIds,
+                driveOperationIds = driveOperationIds,
                 freshCaptureRetryDates = freshCaptureRetryDates,
             )
         )
@@ -699,16 +750,19 @@ class ExportWorker @AssistedInject constructor(
         failedDateDetails = result.failedDateDetails,
         target = settings.scheduledExportTarget,
         targetLabel = targetLabel(settings, dates.last()),
-        fileCount = if (settings.scheduledExportTarget == ExportTarget.DEVICE_FOLDER) {
-            when {
+        fileCount = when (settings.scheduledExportTarget) {
+            ExportTarget.DEVICE_FOLDER -> when {
                 settings.exportMode == ExportMode.RAW_SNAPSHOT -> result.artifactCount
                 result.usesDurableFolderJournal -> result.artifactCount
                 else -> result.successCount * settings.selectedExportFormats.size
             }
-        } else 0,
+            ExportTarget.GOOGLE_DRIVE -> result.artifactCount
+            ExportTarget.API_ENDPOINT -> 0
+        },
         warningSummary = warning,
         exportMode = settings.exportMode,
         reconciliationKey = reconciliationKey,
+        driveOperationId = result.retryDriveOperationIds.values.firstOrNull(),
     )
 
     private fun scheduledReconciliationKey(
@@ -734,6 +788,11 @@ class ExportWorker @AssistedInject constructor(
             settings.formatFolderPath(date)?.takeIf { it.isNotBlank() }?.let {
                 append("/").append(it.trim('/'))
             }
+        }
+
+    private fun ExportResult.requiresGoogleDriveReauthorization(): Boolean =
+        target == ExportTarget.GOOGLE_DRIVE && failedDateDetails.any {
+            it.errorDetails == GoogleDriveErrorId.REAUTHORIZATION_REQUIRED.serialId
         }
 
     private fun shouldRetry(result: ExportResult): Boolean = when (result.primaryFailureReason) {

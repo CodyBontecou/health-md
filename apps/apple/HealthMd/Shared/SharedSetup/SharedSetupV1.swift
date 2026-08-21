@@ -779,6 +779,10 @@ enum SharedSetupMapper {
         case .localIPhoneFolder: appleTarget = .localIPhoneFolder
         case .connectedMac: appleTarget = .connectedMac
         case .apiEndpoint: appleTarget = .apiEndpoint
+        case .googleDrive:
+            // Shared Setup intentionally omits Google authority. Import sees a portable device
+            // folder request with scheduling disabled until the user binds a local destination.
+            appleTarget = .localIPhoneFolder
         }
         let appleFrequency: SharedSetupV1.AppleFrequency
         switch schedule.frequency {
@@ -808,7 +812,7 @@ enum SharedSetupMapper {
                 presentation: .init(dateFormat: sharedDate(settings.formatCustomization.dateFormat), timeFormat: sharedTime(settings.formatCustomization.timeFormat), units: settings.formatCustomization.unitPreference == .metric ? .metric : .imperial, frontmatter: .init(fields: frontmatter.fields.map { .init(sourceKey: $0.originalKey, outputKey: $0.customKey, enabled: $0.isEnabled) }, customValues: frontmatter.customFields, placeholders: frontmatter.placeholderFields, includeDate: frontmatter.includeDate, includeType: frontmatter.includeType, dateKey: frontmatter.customDateKey, typeKey: frontmatter.customTypeKey, typeValue: frontmatter.customTypeValue, keyStyle: frontmatter.keyStyle == .snakeCase ? .snakeCase : .camelCase), markdown: .init(style: sharedMarkdownStyle(markdown.style), customText: markdown.customTemplate, headerLevel: markdown.sectionHeaderLevel, useEmoji: markdown.useEmoji, includeSummary: markdown.includeSummary, bulletStyle: sharedBullet(markdown.bulletStyle), originDialect: originDialect)),
                 individualEntries: .init(enabled: settings.individualTracking.globalEnabled, metrics: individual, entriesFolder: settings.individualTracking.entriesFolder, organizeByCategory: settings.individualTracking.useCategoryFolders, filenameTemplate: settings.individualTracking.filenameTemplate),
                 dailyNotes: .init(enabled: settings.dailyNoteInjection.enabled, folder: settings.dailyNoteInjection.folderPath, filenameTemplate: settings.dailyNoteInjection.filenamePattern, createIfMissing: settings.dailyNoteInjection.createIfMissing, injectSections: settings.dailyNoteInjection.injectMarkdownSections),
-                schedule: .init(activationRequested: schedule.isEnabled, cadence: cadence, localTime: .init(hour: schedule.preferredHour, minute: schedule.preferredMinute), lookbackDays: schedule.lookbackDays, dateWindow: .pastCompleteDays, desiredTarget: profileTarget),
+                schedule: .init(activationRequested: schedule.isEnabled && schedule.target != .googleDrive, cadence: cadence, localTime: .init(hour: schedule.preferredHour, minute: schedule.preferredMinute), lookbackDays: schedule.lookbackDays, dateWindow: .pastCompleteDays, desiredTarget: profileTarget),
                 apiEndpoint: endpointHint(apiExportSettings)
             ),
             metricAliases: aliases,

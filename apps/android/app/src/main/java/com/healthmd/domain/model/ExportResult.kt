@@ -19,6 +19,8 @@ data class ExportResult(
     val freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     /** Durable exact-plan journal for unresolved scheduled folder owner dates. */
     val retryFolderOperationIds: Map<LocalDate, String> = emptyMap(),
+    /** Durable private Drive journal for unresolved owner dates. */
+    val retryDriveOperationIds: Map<LocalDate, String> = emptyMap(),
     /** Internal accounting marker; durable folder history uses exact acknowledged artifact count. */
     val usesDurableFolderJournal: Boolean = false,
 ) {

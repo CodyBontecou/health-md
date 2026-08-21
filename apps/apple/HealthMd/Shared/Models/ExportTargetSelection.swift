@@ -5,6 +5,7 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
     case localIPhoneFolder
     case connectedMac
     case apiEndpoint
+    case googleDrive
 
     static let storageKey = "exportTargetSelection"
 
@@ -18,6 +19,8 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
             return "Connected Mac"
         case .apiEndpoint:
             return "API Endpoint"
+        case .googleDrive:
+            return "Google Drive"
         }
     }
 
@@ -25,7 +28,7 @@ enum ExportTargetSelection: String, CaseIterable, Codable, Equatable, Identifiab
         switch self {
         case .localIPhoneFolder:
             return false
-        case .connectedMac, .apiEndpoint:
+        case .connectedMac, .apiEndpoint, .googleDrive:
             return true
         }
     }
@@ -40,7 +43,8 @@ struct ExportTargetReadiness {
         target: ExportTargetSelection,
         hasLocalFolder: Bool,
         canExportToConnectedMac: Bool,
-        apiEndpointConfigured: Bool = false
+        apiEndpointConfigured: Bool = false,
+        googleDriveReady: Bool = false
     ) -> Bool {
         guard isHealthKitAuthorized else { return false }
 
@@ -52,6 +56,8 @@ struct ExportTargetReadiness {
         case .apiEndpoint:
             // API destinations cannot resolve or mutate a filesystem daily note.
             return hasSelectedFormat && !dailyNotesOnlyModeEnabled && apiEndpointConfigured
+        case .googleDrive:
+            return (hasSelectedFormat || dailyNotesOnlyModeEnabled) && googleDriveReady
         }
     }
 }

@@ -102,6 +102,7 @@ class ExportProfilesViewModelTest {
             snapshotFactory,
             settingsRepository,
             profileCoordinator,
+            mockk(relaxed = true),
         )
     }
 

@@ -68,6 +68,7 @@ struct ExportLastNDaysIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let dates = Self.exportDates(days: days)
         let outcome = await ExportIntentRunner.run(dates: dates, profileName: profile)
+        try ExportIntentRunner.requireNoForegroundTransition(outcome)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }
 }

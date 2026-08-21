@@ -285,6 +285,9 @@ class ExportViewModelTest {
                 settings: ExportSettings,
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
+                googleDriveDestinationId: String?,
+                googleDriveProfileId: String?,
+                googleDriveOperationId: String?,
             ): ExportResult {
                 rawExportCalls++
                 return ExportResult(1, 1, target = target)
@@ -581,6 +584,9 @@ class ExportViewModelTest {
             fileExportManager = fileExportManager,
             apiEndpointExportRunner = apiEndpointExportRunner,
             rawSnapshotExportRunner = rawSnapshotService,
+            googleDriveExportOrchestrator = mockk(relaxed = true),
+            googleDriveSelectionStore = mockk(relaxed = true),
+            googleDriveDestinationStore = mockk(relaxed = true),
         )
     }
 }

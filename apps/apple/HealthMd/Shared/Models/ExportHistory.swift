@@ -401,7 +401,8 @@ struct ExportHistoryEntry: Codable, Identifiable {
     /// Returns true if all requested data days completed without retained warnings.
     var isFullSuccess: Bool {
         success && successCount == totalCount && totalCount > 0 &&
-            partialFailures.isEmpty && operationDetails?.hasWarnings != true
+            failureReason == nil && failedDateDetails.isEmpty && partialFailures.isEmpty &&
+            operationDetails?.hasWarnings != true
     }
 
     /// Confirmed output remains a partial success even when the operation's terminal flag is
@@ -523,6 +524,13 @@ struct ExportHistoryEntry: Codable, Identifiable {
 
     var sourceIconForDisplay: String {
         operationDetails != nil || isCLIRawDelivery ? "terminal.fill" : source.icon
+    }
+
+    /// Drive entries written before `exportTarget` was persisted used this exact privacy-safe
+    /// target label. Recovery surfaces use both signals so generic Retry can never route Drive
+    /// history into the local vault.
+    var isGoogleDriveDelivery: Bool {
+        exportTarget == .googleDrive || (exportTarget == nil && targetLabel == "Google Drive")
     }
 
     /// API Endpoint exports POST daily records directly and intentionally do not
@@ -883,7 +891,9 @@ class ExportHistoryManager: ObservableObject {
     // MARK: - Private Methods
 
     private func addEntry(_ entry: ExportHistoryEntry) {
-        guard !history.contains(where: { $0.id == entry.id }) else { return }
+        // Durable destination operations replay one stable id. Replace their prior partial/failure
+        // row after exact-journal recovery instead of either duplicating it or freezing stale state.
+        history.removeAll { $0.id == entry.id }
         history.insert(entry, at: 0)
 
         // Trim history to max entries

@@ -355,6 +355,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 ## Documentation
 
 - [API Endpoint export](docs/api-endpoint-export.md) — compatibility HTTP(S) JSON uploads, encrypted custom headers, scheduling, and privacy
+- [Google Drive export](docs/google-drive-export.md) — mobile Picker setup, direct Drive uploads, durable schedules/recovery, and release gates
 - [Raw snapshot v1](docs/export-contract/raw-snapshot-v1.md) — API-complete snapshot semantics, manifests, checksums, and limitations
 - [Raw record v1](docs/export-contract/raw-record-v1.md) — native record and provider-payload wire contract
 - [Raw changes v1](docs/export-contract/raw-changes-v1.md) — incremental Health Connect upsertions, deletion tombstones, and chain durability

@@ -28,6 +28,8 @@ data class ExportProfile(
     val folderUri: String? = null,
     /** Privacy-safe display name of [folderUri] for list/detail surfaces. */
     val folderDisplayName: String? = null,
+    /** Local-only destination reference. Account/folder authority never enters profile JSON. */
+    val destinationId: String? = null,
     /** Legacy marker for the profile synthesized from pre-profile settings during migration. */
     val isMigrationDefault: Boolean = false,
     val createdAtEpochMillis: Long,

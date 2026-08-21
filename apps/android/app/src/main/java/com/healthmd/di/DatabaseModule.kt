@@ -54,6 +54,12 @@ object DatabaseModule {
         }
     }
 
+    internal val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE export_history ADD COLUMN driveOperationId TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideExportHistoryDatabase(@ApplicationContext context: Context): ExportHistoryDatabase =
@@ -62,7 +68,13 @@ object DatabaseModule {
             ExportHistoryDatabase::class.java,
             "export_history.db",
         )
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+            )
             .build()
 
     @Provides

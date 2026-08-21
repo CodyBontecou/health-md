@@ -1,6 +1,7 @@
 package com.healthmd.sharedsetup
 
 import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FolderOrganization
 import com.healthmd.domain.model.MetricSelectionState
 import kotlinx.serialization.json.Json
@@ -70,6 +71,21 @@ class SharedSetupCodecMapperTest {
         ) as SharedSetupDecodeResult.Valid
         assertTrue(roundTrip.document.platformExtensions.android != null)
         assertEquals(document.platformExtensions.apple, roundTrip.document.platformExtensions.apple)
+    }
+
+    @Test
+    fun googleDriveScheduleExportsWithoutAuthorityAndRequiresLocalReactivation() {
+        val document = mapper.export(
+            ExportSettings.newInstallDefaults().copy(
+                scheduleEnabled = true,
+                exportTarget = ExportTarget.GOOGLE_DRIVE,
+                scheduledExportTarget = ExportTarget.GOOGLE_DRIVE,
+            ),
+        )
+
+        assertFalse(document.profile.schedule.activationRequested)
+        assertEquals("device_folder", document.profile.schedule.desiredTarget)
+        assertTrue(document.toString().contains("Google") == false)
     }
 
     @Test

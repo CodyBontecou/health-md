@@ -190,7 +190,8 @@ test("privacy policy uses the landing design and describes the current app surfa
   assert.match(privacyPolicy, /<header class="site-header">/);
   assert.match(privacyPolicy, /<footer class="site-footer">/);
   assert.match(privacyPolicy, /Privacy,<br>in plain language\./);
-  assert.match(privacyPolicy, /Last updated: August 6, 2026/);
+  assert.match(privacyPolicy, /Last updated: August 20, 2026/);
+  assert.match(privacyPolicy, /Direct Google Drive export:[\s\S]*?<code>drive\.file<\/code>/);
   assert.match(privacyPolicy, /Scheduled Apple exports:[\s\S]*?APNs token/);
   assert.match(privacyPolicy, /Lossless files and direct results may preserve exact timestamps/);
   assert.match(privacyPolicy, /Android medical records \(FHIR\)/);

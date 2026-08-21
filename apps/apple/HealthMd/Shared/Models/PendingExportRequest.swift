@@ -27,6 +27,8 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// Display name captured at queue time for notifications and history
     /// labels. Not used for resolution — `profileID` is authoritative.
     let profileName: String?
+    /// Frozen Drive destination ID/fingerprint only. No account, folder, resource key or token.
+    let googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot?
     /// When a scheduled run attempted this request and preserved unresolved
     /// dates for retry. An attempted request is a preserved retry: bulk
     /// fallback re-arm cancellation must never delete it (only its exact-ID
@@ -57,6 +59,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         settingsSnapshot: ExportSettingsSnapshot? = nil,
         profileID: UUID? = nil,
         profileName: String? = nil,
+        googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot? = nil,
         attemptedAt: Date? = nil,
         calendar: Calendar = .current
     ) {
@@ -71,6 +74,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.settingsSnapshot = settingsSnapshot
         self.profileID = source == .scheduled ? profileID : nil
         self.profileName = source == .scheduled ? profileName : nil
+        self.googleDriveDestinationSnapshot = source == .scheduled ? googleDriveDestinationSnapshot : nil
         self.attemptedAt = source == .scheduled ? attemptedAt : nil
     }
 
@@ -97,6 +101,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         // profile-free and keep their legacy execution path.
         profileID = try container.decodeIfPresent(UUID.self, forKey: .profileID)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
+        googleDriveDestinationSnapshot = try container.decodeIfPresent(
+            GoogleDriveDestinationSnapshot.self,
+            forKey: .googleDriveDestinationSnapshot
+        )
         // Pre-marker persisted requests decode as never-attempted; the
         // fallback-window heuristic covers those during migration.
         attemptedAt = try container.decodeIfPresent(Date.self, forKey: .attemptedAt)

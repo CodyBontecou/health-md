@@ -59,13 +59,18 @@ final class ExportProfileStoreTests: XCTestCase {
         XCTAssertNil(store.profile(named: "Default"))
     }
 
-    func testCorruptedOrEmptyPersistedDataFallsBackToLegacyMode() {
+    func testCorruptedPersistedDataFailsClosedInsteadOfEnteringLegacyMode() {
         defaults.set(Data("not json".utf8), forKey: "exportProfiles.list")
 
         let store = makeStore()
 
-        XCTAssertFalse(store.hasProfiles)
+        XCTAssertTrue(store.hasProfiles)
         XCTAssertNil(store.activeProfile)
+        XCTAssertEqual(store.unknownProfileRecordCount, 1)
+        XCTAssertFalse(store.migrateDefaultProfileIfNeeded(
+            settings: makeSnapshot(),
+            target: .localIPhoneFolder
+        ))
     }
 
     func testDanglingActiveProfileIDIgnoredOnLoad() {
@@ -78,12 +83,13 @@ final class ExportProfileStoreTests: XCTestCase {
         let staleID = profile.id
         // Only one profile exists, so deletion is forbidden; simulate external
         // stale state directly instead.
-        defaults.set(staleID.uuidString, forKey: "exportProfiles.activeProfileID")
-        defaults.set(Data("garbage".utf8), forKey: "exportProfiles.list")
+        defaults.set(staleID.uuidString, forKey: "exportProfiles.v2.activeProfileID")
+        defaults.set(Data("garbage".utf8), forKey: "exportProfiles.v2.envelope")
 
         let reloaded = makeStore()
-        XCTAssertFalse(reloaded.hasProfiles)
+        XCTAssertTrue(reloaded.hasProfiles)
         XCTAssertNil(reloaded.activeProfile)
+        XCTAssertEqual(reloaded.unknownProfileRecordCount, 1)
     }
 
     // MARK: - Migration
@@ -130,6 +136,86 @@ final class ExportProfileStoreTests: XCTestCase {
         XCTAssertEqual(second.profiles, [sleep, weekly])
         XCTAssertEqual(second.activeProfileID, weekly.id)
         XCTAssertEqual(second.activeProfile?.name, "Weekly")
+    }
+
+    func testProfilePersistencePreservesUnknownRecordWithoutErasingKnownProfile() throws {
+        let known = ExportProfile(
+            name: "Known",
+            settings: makeSnapshot(),
+            target: .googleDrive,
+            createdAt: fixedNow,
+            updatedAt: fixedNow
+        )
+        let knownObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(known))
+        let unknown: [String: Any] = [
+            "id": UUID().uuidString,
+            "name": "Future",
+            "target": "future_destination",
+            "version": 99
+        ]
+        defaults.set(
+            try JSONSerialization.data(withJSONObject: [knownObject, unknown]),
+            forKey: "exportProfiles.list"
+        )
+
+        let store = makeStore()
+        XCTAssertEqual(store.profiles, [known])
+        XCTAssertEqual(store.unknownProfileRecordCount, 1)
+        _ = store.rename(id: known.id, to: "Renamed")
+
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.profiles.map(\.name), ["Renamed"])
+        XCTAssertEqual(reloaded.unknownProfileRecordCount, 1)
+    }
+
+    func testOpaqueOnlyProfileStateBlocksLegacyModeAndDefaultMigration() throws {
+        defaults.set(
+            try JSONSerialization.data(withJSONObject: [[
+                "id": UUID().uuidString,
+                "name": "Future",
+                "target": "future_destination",
+                "version": 99
+            ]]),
+            forKey: "exportProfiles.list"
+        )
+
+        let store = makeStore()
+        XCTAssertTrue(store.hasProfiles)
+        XCTAssertNil(store.activeProfile)
+        XCTAssertEqual(store.unknownProfileRecordCount, 1)
+        XCTAssertFalse(store.migrateDefaultProfileIfNeeded(
+            settings: makeSnapshot(),
+            target: .localIPhoneFolder
+        ))
+        XCTAssertEqual(makeStore().unknownProfileRecordCount, 1)
+    }
+
+    func testDriveProfileUsesV2EnvelopeAndLeavesLegacyPayloadUntouched() throws {
+        let legacy = ExportProfile(
+            name: "Legacy",
+            settings: makeSnapshot(),
+            target: .localIPhoneFolder,
+            createdAt: fixedNow,
+            updatedAt: fixedNow
+        )
+        let legacyData = try JSONEncoder().encode([legacy])
+        defaults.set(legacyData, forKey: "exportProfiles.list")
+        defaults.set(legacy.id.uuidString, forKey: "exportProfiles.activeProfileID")
+
+        let store = makeStore()
+        let drive = store.add(
+            name: "Drive",
+            settings: makeSnapshot(),
+            target: .googleDrive,
+            googleDriveDestinationID: UUID()
+        )
+
+        XCTAssertEqual(defaults.data(forKey: "exportProfiles.list"), legacyData)
+        let envelopeData = try XCTUnwrap(defaults.data(forKey: "exportProfiles.v2.envelope"))
+        let envelope = try XCTUnwrap(JSONSerialization.jsonObject(with: envelopeData) as? [String: Any])
+        XCTAssertEqual(envelope["version"] as? Int, 2)
+        XCTAssertEqual((envelope["records"] as? [Any])?.count, 2)
+        XCTAssertEqual(makeStore().profile(id: drive.id)?.target, .googleDrive)
     }
 
     func testProfileCodableRoundTripPreservesSnapshot() throws {
