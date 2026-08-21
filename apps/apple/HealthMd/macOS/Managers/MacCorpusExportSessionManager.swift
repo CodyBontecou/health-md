@@ -1608,10 +1608,11 @@ final class MacCorpusExportSessionManager {
         }
         suspendedExpiryTasks.removeValue(forKey: sessionID)?.cancel()
         let journalBeforeCancellation = session.journal
-        session.journal.state = .cancelled
-        session.journal.receivedRangePlan = nil
-        session.journal.updatedAt = Date()
         do {
+            try recordDurableRangePlanProgressForCancellation(session: session)
+            session.journal.state = .cancelled
+            session.journal.receivedRangePlan = nil
+            session.journal.updatedAt = Date()
             try persist(session)
         } catch {
             session.journal = journalBeforeCancellation
@@ -1643,6 +1644,46 @@ final class MacCorpusExportSessionManager {
             ),
             session.journal.exportManifest.mode == .strictRaw ? nil : result
         )
+    }
+
+    private func recordDurableRangePlanProgressForCancellation(session: Session) throws {
+        guard session.dailyExportOperation?.usesRangePlan == true,
+              let plan = session.journal.receivedRangePlan else { return }
+        let committedArtifacts = plan.artifacts.prefix(plan.nextArtifactIndex)
+        let fileCount = session.journal.totalFilesWritten.addingReportingOverflow(
+            committedArtifacts.count
+        )
+        guard !fileCount.overflow else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+
+        let settings = session.journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+        var completedDates = Set(session.journal.completedDates)
+        if settings.summaryOnlyModeEnabled {
+            // A summary date represents the complete immutable range, not one
+            // format within it. Only the fully committed plan completes those dates.
+            if plan.nextArtifactIndex == plan.artifacts.count, plan.rollupFileCount > 0 {
+                completedDates.formUnion(plan.requestedRecordDatesWithData)
+            }
+        } else {
+            let formatsPerDate = settings.looseFormatsPerDate
+            guard formatsPerDate > 0 else {
+                throw ConnectedCorpusTransferModelError.invalidJournal
+            }
+            // Daily artifacts are materialized date-major and precede roll-ups.
+            // A date becomes durable only after every configured format crossed
+            // the persisted artifact frontier.
+            let committedDailyFileCount = committedArtifacts.count(where: { $0.kind == .daily })
+            let completedDailyDateCount = min(
+                committedDailyFileCount / formatsPerDate,
+                plan.requestedRecordDatesWithData.count
+            )
+            completedDates.formUnion(
+                plan.requestedRecordDatesWithData.prefix(completedDailyDateCount)
+            )
+        }
+        session.journal.totalFilesWritten = fileCount.partialValue
+        session.journal.completedDates = Array(completedDates).sorted()
     }
 
     private func validateItemContinuity(
@@ -3707,9 +3748,12 @@ final class MacCorpusExportSessionManager {
         let settings = session.journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
         let successfulDates = Set(session.journal.successfulRequestedDates)
         let durableDates = Set(session.journal.completedDates)
+        let requiresDurableDate = settings.archiveModeEnabled
+            || settings.summaryOnlyModeEnabled
+            || session.dailyExportOperation?.usesRangePlan == true
         let successCount = requestedDates.filter {
             successfulDates.contains($0)
-                && (!settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled || durableDates.contains($0))
+                && (!requiresDurableDate || durableDates.contains($0))
         }.count
         let status: MacExportResultStatus = forcedStatus ?? {
             if successCount == requestedDates.count && session.journal.failedDateDetails.isEmpty { return .success }

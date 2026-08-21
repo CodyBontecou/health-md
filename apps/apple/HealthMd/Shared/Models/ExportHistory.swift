@@ -136,7 +136,13 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
     /// Confirmed files whose category was unavailable from the producer.
     let unclassifiedFileCount: Int
     /// True only when every physical generated-file category was measured.
+    /// Deliberately independent from `wasTruncated`: an exhausted budget never
+    /// silently flips category-completeness.
     let isFileCategoryBreakdownComplete: Bool
+    /// True when the shared file-category budget reduced any persisted count, so
+    /// readers can distinguish exact totals from budget-limited ones. Entries
+    /// persisted before this flag existed derive truncation during migration.
+    let wasTruncated: Bool
 
     private enum CodingKeys: String, CodingKey {
         case requestedDataDayCount
@@ -150,7 +156,12 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
         case dailyNoteUpdateCount
         case dailyNoteSkipCount
         case unclassifiedFileCount
+        /// Legacy readers know only this key, so encoding makes it conservative
+        /// whenever persisted counts were truncated.
         case isFileCategoryBreakdownComplete
+        /// Preserves category completeness independently for current readers.
+        case isFileCategoryBreakdownCompleteV2
+        case wasTruncated
     }
 
     init(
@@ -165,33 +176,75 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
         dailyNoteUpdateCount: Int = 0,
         dailyNoteSkipCount: Int = 0,
         unclassifiedFileCount: Int = 0,
-        isFileCategoryBreakdownComplete: Bool = true
+        isFileCategoryBreakdownComplete: Bool = true,
+        /// Truncation flag for a value that was already persisted with this shape.
+        /// Leave nil to derive the flag from the shared-budget allocation below;
+        /// decoding passes the stored flag so a budget-limited history entry keeps
+        /// advertising that its counts were reduced.
+        persistedWasTruncated: Bool? = nil
     ) {
         self.requestedDataDayCount = Self.boundedCount(requestedDataDayCount)
         self.successfulDataDayCount = min(
             Self.boundedCount(successfulDataDayCount),
             self.requestedDataDayCount
         )
-        self.looseAggregateFileCount = Self.boundedCount(looseAggregateFileCount)
-        self.individualEntryFileCount = Self.boundedCount(individualEntryFileCount)
-        self.dataDictionaryFileCount = Self.boundedCount(dataDictionaryFileCount)
-        self.zipArchiveFileCount = Self.boundedCount(zipArchiveFileCount)
-        self.rollupFileCount = Self.boundedCount(rollupFileCount)
-        self.providerSidecarFileCount = Self.boundedCount(providerSidecarFileCount)
         self.dailyNoteUpdateCount = Self.boundedCount(dailyNoteUpdateCount)
         self.dailyNoteSkipCount = Self.boundedCount(dailyNoteSkipCount)
-        self.unclassifiedFileCount = Self.boundedCount(unclassifiedFileCount)
-        let categorizedCounts = [
-            self.looseAggregateFileCount,
-            self.individualEntryFileCount,
-            self.dataDictionaryFileCount,
-            self.zipArchiveFileCount,
-            self.rollupFileCount,
-            self.providerSidecarFileCount
-        ]
+
+        // One shared budget funds every generated-file category so the persisted
+        // *sum* stays bounded; categories are funded in declaration order until
+        // the budget runs out. Data-day and daily-note counts keep their per-field
+        // bounds and are not part of this budget. Any reduction — per-field
+        // clamping or an exhausted budget — marks the breakdown truncated.
+        let hadUnclassifiedFiles = unclassifiedFileCount > 0
+        var remainingFileCategoryBudget = Self.maximumPersistedCount
+        var reducedAnyAllocation = false
+        func allocate(_ rawCount: Int) -> Int {
+            let allocated = min(Self.boundedCount(rawCount), remainingFileCategoryBudget)
+            remainingFileCategoryBudget -= allocated
+            if allocated != rawCount { reducedAnyAllocation = true }
+            return allocated
+        }
+        self.looseAggregateFileCount = allocate(looseAggregateFileCount)
+        self.individualEntryFileCount = allocate(individualEntryFileCount)
+        self.dataDictionaryFileCount = allocate(dataDictionaryFileCount)
+        self.zipArchiveFileCount = allocate(zipArchiveFileCount)
+        self.rollupFileCount = allocate(rollupFileCount)
+        self.providerSidecarFileCount = allocate(providerSidecarFileCount)
+        self.unclassifiedFileCount = allocate(unclassifiedFileCount)
+        self.wasTruncated = (persistedWasTruncated ?? false) || reducedAnyAllocation
+        // Completeness describes whether every category was measured, independently
+        // of whether the persistence budget retained every count. Consult the raw
+        // unclassified fact because that last-priority allocation may receive zero.
         self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
-            && self.unclassifiedFileCount == 0
-            && Self.hasValidAggregate(categorizedCounts)
+            && !hadUnclassifiedFiles
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(requestedDataDayCount, forKey: .requestedDataDayCount)
+        try container.encode(successfulDataDayCount, forKey: .successfulDataDayCount)
+        try container.encode(looseAggregateFileCount, forKey: .looseAggregateFileCount)
+        try container.encode(individualEntryFileCount, forKey: .individualEntryFileCount)
+        try container.encode(dataDictionaryFileCount, forKey: .dataDictionaryFileCount)
+        try container.encode(zipArchiveFileCount, forKey: .zipArchiveFileCount)
+        try container.encode(rollupFileCount, forKey: .rollupFileCount)
+        try container.encode(providerSidecarFileCount, forKey: .providerSidecarFileCount)
+        try container.encode(dailyNoteUpdateCount, forKey: .dailyNoteUpdateCount)
+        try container.encode(dailyNoteSkipCount, forKey: .dailyNoteSkipCount)
+        try container.encode(unclassifiedFileCount, forKey: .unclassifiedFileCount)
+        // Older readers infer exact-count authority from the original completeness
+        // key and do not understand wasTruncated, so never advertise a truncated
+        // breakdown as complete to them.
+        try container.encode(
+            isFileCategoryBreakdownComplete && !wasTruncated,
+            forKey: .isFileCategoryBreakdownComplete
+        )
+        try container.encode(
+            isFileCategoryBreakdownComplete,
+            forKey: .isFileCategoryBreakdownCompleteV2
+        )
+        try container.encode(wasTruncated, forKey: .wasTruncated)
     }
 
     init(from decoder: Decoder) throws {
@@ -212,10 +265,7 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
             sidecar, noteUpdates, noteSkips, unclassified
         ]
         guard counts.allSatisfy({ (0...Self.maximumPersistedCount).contains($0) }),
-              successful <= requested,
-              Self.hasValidAggregate([
-                  loose, individual, dictionary, archive, rollup, sidecar, unclassified
-              ]) else {
+              successful <= requested else {
             throw DecodingError.dataCorrupted(
                 .init(
                     codingPath: decoder.codingPath,
@@ -235,9 +285,19 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
             dailyNoteUpdateCount: noteUpdates,
             dailyNoteSkipCount: noteSkips,
             unclassifiedFileCount: unclassified,
-            isFileCategoryBreakdownComplete: try container.decode(
+            isFileCategoryBreakdownComplete: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .isFileCategoryBreakdownCompleteV2
+            ) ?? container.decode(
                 Bool.self,
                 forKey: .isFileCategoryBreakdownComplete
+            ),
+            // Legacy per-field-valid entries may predate the aggregate budget. The
+            // initializer migrates them through the allocator and records any loss,
+            // even if an explicitly persisted false flag is present.
+            persistedWasTruncated: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .wasTruncated
             )
         )
     }
@@ -259,17 +319,6 @@ nonisolated struct ExportHistoryOutputBreakdown: Codable, Equatable, Sendable {
 
     nonisolated static func boundedCount(_ value: Int) -> Int {
         min(max(value, 0), maximumPersistedCount)
-    }
-
-    nonisolated private static func hasValidAggregate(_ counts: [Int]) -> Bool {
-        var total = 0
-        for count in counts {
-            let addition = total.addingReportingOverflow(count)
-            guard !addition.overflow,
-                  addition.partialValue <= maximumPersistedCount else { return false }
-            total = addition.partialValue
-        }
-        return true
     }
 
     nonisolated private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
@@ -349,7 +398,9 @@ struct ExportHistoryEntry: Codable, Identifiable {
         self.targetLabel = targetLabel
         self.profileName = profileName
         self.exportTarget = exportTarget
-        self.fileCount = fileCount.map(ExportHistoryOutputBreakdown.boundedCount)
+        self.fileCount = outputBreakdown?.wasTruncated == true
+            ? nil
+            : fileCount.map(ExportHistoryOutputBreakdown.boundedCount)
         self.outputBreakdown = outputBreakdown
         self.dailyNoteUpdateCount = dailyNoteUpdateCount
         self.dailyNoteSkipCount = dailyNoteSkipCount
@@ -373,12 +424,15 @@ struct ExportHistoryEntry: Codable, Identifiable {
         targetLabel = try container.decodeIfPresent(String.self, forKey: .targetLabel)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
         exportTarget = try container.decodeIfPresent(ExportTargetSelection.self, forKey: .exportTarget)
-        fileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
-            .map(ExportHistoryOutputBreakdown.boundedCount)
-        outputBreakdown = try container.decodeIfPresent(
+        let decodedFileCount = try container.decodeIfPresent(Int.self, forKey: .fileCount)
+        let decodedOutputBreakdown = try container.decodeIfPresent(
             ExportHistoryOutputBreakdown.self,
             forKey: .outputBreakdown
         )
+        fileCount = decodedOutputBreakdown?.wasTruncated == true
+            ? nil
+            : decodedFileCount.map(ExportHistoryOutputBreakdown.boundedCount)
+        outputBreakdown = decodedOutputBreakdown
         dailyNoteUpdateCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteUpdateCount) ?? 0
         dailyNoteSkipCount = try container.decodeIfPresent(Int.self, forKey: .dailyNoteSkipCount) ?? 0
         partialFailures = try container.decodeIfPresent([ExportPartialFailure].self, forKey: .partialFailures) ?? []

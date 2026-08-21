@@ -1499,6 +1499,7 @@ class SchedulingManager: ObservableObject {
 
     @discardableResult
     @MainActor func completeScheduledMacExport(with payload: MacExportResultPayload) -> Bool {
+        guard payload.hasConsistentFileAccounting else { return false }
         guard let context = scheduledMacExportContexts.removeValue(forKey: payload.jobID) else {
             return false
         }
@@ -1525,6 +1526,7 @@ class SchedulingManager: ObservableObject {
     @MainActor func completeRecoveredScheduledMacExport(
         with payload: MacExportResultPayload
     ) async -> Bool {
+        guard payload.hasConsistentFileAccounting else { return false }
         let request: PendingExportRequest
         do {
             guard let storedRequest = try pendingExportStore.loadAll().first(where: {
@@ -1548,6 +1550,45 @@ class SchedulingManager: ObservableObject {
         let result = scheduledMacExportResult(from: payload, settings: settings)
         recordScheduledExportQuotaUseIfNeeded(for: result, jobID: request.id)
 
+        let range = scheduledExportHistoryRange(for: request)
+        await processAutomaticScheduledExportResult(
+            result,
+            pendingRequest: request,
+            target: .connectedMac,
+            dateRangeStart: range.start,
+            dateRangeEnd: range.end,
+            fallbackDaysToExport: range.totalCount,
+            scheduledFireDate: request.scheduledFireDate ?? now()
+        )
+        return true
+    }
+
+    @discardableResult
+    @MainActor func completeRecoveredScheduledMacExport(
+        with failure: MacExportFailure
+    ) async -> Bool {
+        guard let jobID = failure.jobID else { return false }
+        let request: PendingExportRequest
+        do {
+            guard let storedRequest = try pendingExportStore.loadAll().first(where: {
+                $0.id == jobID
+                    && $0.source == .scheduled
+                    && scheduledTarget(for: $0) == .connectedMac
+            }) else { return false }
+            request = storedRequest
+        } catch {
+            logger.error("Could not load a rejected recovered Mac export: \(error.localizedDescription)")
+            return false
+        }
+
+        let settings = request.settingsSnapshot?.makeAdvancedExportSettings()
+            ?? AdvancedExportSettings()
+        let result = scheduledMacFailureResult(
+            failure,
+            dateRangeStart: request.dates.first ?? request.scheduledFireDate ?? now(),
+            dateRangeEnd: request.dates.last ?? request.scheduledFireDate ?? now(),
+            settings: settings
+        )
         let range = scheduledExportHistoryRange(for: request)
         await processAutomaticScheduledExportResult(
             result,
@@ -1646,7 +1687,11 @@ class SchedulingManager: ObservableObject {
         _ payload: MacExportResultPayload,
         requestedDates: [Date]
     ) -> Bool {
+        let dailyNoteActions = payload.dailyNoteUpdateCount.addingReportingOverflow(
+            payload.dailyNoteSkipCount
+        )
         guard payload.hasConsistentFileAccounting,
+              !dailyNoteActions.overflow,
               payload.totalCount == requestedDates.count,
               payload.successCount >= 0,
               payload.successCount <= payload.totalCount,
@@ -1657,14 +1702,14 @@ class SchedulingManager: ObservableObject {
               payload.dailyNoteUpdateCount <= payload.totalCount,
               payload.dailyNoteSkipCount >= 0,
               payload.dailyNoteSkipCount <= payload.totalCount,
-              payload.dailyNoteUpdateCount + payload.dailyNoteSkipCount <= payload.totalCount,
+              dailyNoteActions.partialValue <= payload.totalCount,
               let completedDates = payload.completedDates,
               Set(completedDates).count == completedDates.count else {
             return false
         }
         let requested = Set(requestedDates)
         guard completedDates.allSatisfy(requested.contains),
-              payload.dailyNoteUpdateCount + payload.dailyNoteSkipCount <= completedDates.count else {
+              dailyNoteActions.partialValue <= completedDates.count else {
             return false
         }
         if payload.status == .success && completedDates.count != requested.count {
