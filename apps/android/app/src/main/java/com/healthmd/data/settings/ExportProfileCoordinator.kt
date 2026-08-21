@@ -67,7 +67,14 @@ class ExportProfileCoordinator @Inject constructor(
     }
 
     private suspend fun bootstrapAndApply() {
-        val current = settingsRepository.getExportSettings()
+        var current = settingsRepository.getExportSettings()
+        if (profileRepository.getProfiles().isEmpty() && profileRepository.hasOpaqueProfiles()) {
+            if (current.scheduleEnabled) {
+                current = current.copy(scheduleEnabled = false)
+                settingsRepository.updateExportSettings(current)
+            }
+            return
+        }
         if (profileRepository.getProfiles().isEmpty()) {
             val target = current.scheduledExportTarget
             val endpointUrl = current.apiEndpointUrl.takeIf { it.isNotBlank() }

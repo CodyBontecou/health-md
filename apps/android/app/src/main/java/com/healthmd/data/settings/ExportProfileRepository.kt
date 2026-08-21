@@ -13,6 +13,7 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -71,6 +72,10 @@ class ExportProfileRepository @Inject constructor(
             decodeProfiles(prefs).profiles.any { it.id == id }
         }
     }
+
+    val hasOpaqueProfileState: Flow<Boolean> = dataStore.data
+        .map { decodeProfiles(it).blocksDefaultMigration }
+        .distinctUntilChanged()
 
     suspend fun getProfiles(): List<ExportProfile> = profiles.first()
 

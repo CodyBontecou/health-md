@@ -95,6 +95,16 @@ final class ExportProfileCoordinator: ObservableObject {
     /// is identical to the pre-profile single-destination state.
     private func bootstrapIfNeeded(initialTarget: ExportTargetSelection) {
         guard profileStore.profiles.isEmpty else { return }
+        guard profileStore.unknownProfileRecordCount == 0 else {
+            // Unknown/corrupt profile authority must never be replaced by a synthesized Default or
+            // permit a legacy schedule to run live settings under another destination.
+            var legacy = ExportSchedule.load()
+            if legacy.isEnabled {
+                legacy.isEnabled = false
+                legacy.save()
+            }
+            return
+        }
 
         var folderVaultID: UUID?
         if let persisted = vaultManager.persistedVaultSnapshot() {

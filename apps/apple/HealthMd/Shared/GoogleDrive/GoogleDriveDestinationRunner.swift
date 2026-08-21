@@ -575,6 +575,25 @@ final class GoogleDriveDestinationRunner {
                     sessionURL = existing
                 }
             } catch {
+                // The final chunk may have committed even when the session probe expired or its
+                // response was lost. Reconcile the exact reserved/mapped object against intended
+                // bytes before comparing it with the old baseline or starting another session.
+                if let metadata = try? await api.metadata(
+                    id: objectID,
+                    resourceKey: artifact.objectResourceKey,
+                    accessToken: accessToken
+                ), (try? await verifyAndBind(
+                    metadata: metadata,
+                    artifact: artifact,
+                    destination: destination,
+                    finalBytes: finalBytes,
+                    accessToken: accessToken
+                )) != nil {
+                    artifact.phase = .verified
+                    journal.artifacts[index] = artifact
+                    try await journalStore.save(journal)
+                    return
+                }
                 artifact.uploadSessionURL = nil
                 artifact.acknowledgedByteOffset = 0
                 journal.artifacts[index] = artifact

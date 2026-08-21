@@ -11,6 +11,7 @@ import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.drive.GoogleDriveDestinationRunner
 import com.healthmd.data.drive.GoogleDriveRunResult
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.data.drive.toFailureReason
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
@@ -46,6 +47,7 @@ class HistoryViewModel @Inject constructor(
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
     private val rawSnapshotService: RawSnapshotService? = null,
     private val googleDriveDestinationRunner: GoogleDriveDestinationRunner,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
 ) : ViewModel() {
 
     val entries: StateFlow<List<ExportHistoryEntry>> = exportHistoryRepository.getAllEntries()
@@ -97,7 +99,8 @@ class HistoryViewModel @Inject constructor(
                     }
                     return@launch
                 }
-                val resumesDriveJournal = entry.target == ExportTarget.GOOGLE_DRIVE && entry.driveOperationId != null
+                val resumesDriveJournal = entry.target == ExportTarget.GOOGLE_DRIVE &&
+                    entry.exportMode != ExportMode.RAW_SNAPSHOT && entry.driveOperationId != null
                 if (!resumesDriveJournal && !healthRepository.hasPermissions()) {
                     _uiState.update {
                         it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_permissions_required))
@@ -139,6 +142,10 @@ class HistoryViewModel @Inject constructor(
                         endDate = retryDates.last(),
                         settings = settings,
                         target = entry.target,
+                        googleDriveDestinationId = if (entry.target == ExportTarget.GOOGLE_DRIVE) {
+                            googleDriveSelectionStore.get()
+                        } else null,
+                        googleDriveOperationId = entry.driveOperationId,
                     ) ?: ExportResult(
                         successCount = 0,
                         totalCount = 1,

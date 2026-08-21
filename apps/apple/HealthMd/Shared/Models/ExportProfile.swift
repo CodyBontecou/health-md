@@ -107,10 +107,14 @@ final class ExportProfileStore: ObservableObject {
     private let userDefaults: UserDefaults
     private let now: () -> Date
     private var opaqueProfileRecords: [Data]
+    private var persistenceUnavailable = false
 
     private enum Key {
+        // Keep V1 untouched so an older binary never decodes a Google Drive target record.
         static let list = "exportProfiles.list"
         static let activeProfileID = "exportProfiles.activeProfileID"
+        static let listV2 = "exportProfiles.v2.envelope"
+        static let activeProfileIDV2 = "exportProfiles.v2.activeProfileID"
     }
 
     static let defaultProfileName = String(localized: "Default", comment: "Name of the export profile migrated from existing settings")
@@ -122,17 +126,20 @@ final class ExportProfileStore: ObservableObject {
         self.userDefaults = userDefaults
         self.now = now
 
-        if let data = userDefaults.data(forKey: Key.list),
-           let decoded = Self.decodeRecords(from: data) {
+        let hasV2 = userDefaults.data(forKey: Key.listV2) != nil
+        let data = userDefaults.data(forKey: hasV2 ? Key.listV2 : Key.list)
+        let decoded = data.flatMap { hasV2 ? Self.decodeEnvelope(from: $0) : Self.decodeRecords(from: $0) }
+        if let decoded {
             profiles = decoded.profiles
             opaqueProfileRecords = decoded.opaque
         } else {
             profiles = []
             opaqueProfileRecords = []
+            persistenceUnavailable = data != nil
         }
-        unknownProfileRecordCount = opaqueProfileRecords.count
+        unknownProfileRecordCount = opaqueProfileRecords.count + (persistenceUnavailable ? 1 : 0)
 
-        if let idString = userDefaults.string(forKey: Key.activeProfileID),
+        if let idString = userDefaults.string(forKey: hasV2 ? Key.activeProfileIDV2 : Key.activeProfileID),
            let id = UUID(uuidString: idString),
            decodedContainsProfile(withID: id, in: profiles) {
             activeProfileID = id
@@ -145,22 +152,29 @@ final class ExportProfileStore: ObservableObject {
     /// (UI coordinator, SchedulingManager, CLI paths) observe each other's
     /// mutations. Safe on the main thread, matching every existing call site.
     private func reloadFromDefaults() {
-        guard let data = userDefaults.data(forKey: Key.list),
-              let decoded = Self.decodeRecords(from: data) else {
+        let hasV2 = userDefaults.data(forKey: Key.listV2) != nil
+        guard let data = userDefaults.data(forKey: hasV2 ? Key.listV2 : Key.list) else { return }
+        guard let decoded = hasV2 ? Self.decodeEnvelope(from: data) : Self.decodeRecords(from: data) else {
+            persistenceUnavailable = true
+            unknownProfileRecordCount = opaqueProfileRecords.count + 1
+            activeProfileID = nil
             return
         }
+        persistenceUnavailable = false
         if decoded.profiles != profiles {
             profiles = decoded.profiles
         }
         if decoded.opaque != opaqueProfileRecords {
             opaqueProfileRecords = decoded.opaque
-            unknownProfileRecordCount = decoded.opaque.count
         }
-        if let idString = userDefaults.string(forKey: Key.activeProfileID),
+        unknownProfileRecordCount = decoded.opaque.count
+        let activeKey = hasV2 ? Key.activeProfileIDV2 : Key.activeProfileID
+        if let idString = userDefaults.string(forKey: activeKey),
            let id = UUID(uuidString: idString),
-           decodedContainsProfile(withID: id, in: profiles),
-           id != activeProfileID {
+           decodedContainsProfile(withID: id, in: profiles) {
             activeProfileID = id
+        } else {
+            activeProfileID = nil
         }
     }
 
@@ -168,7 +182,7 @@ final class ExportProfileStore: ObservableObject {
 
     /// True when at least one profile exists. Callers without profile support
     /// keep the legacy single-settings behavior while this is false.
-    var hasProfiles: Bool { !profiles.isEmpty }
+    var hasProfiles: Bool { !profiles.isEmpty || unknownProfileRecordCount > 0 }
 
     /// The profile used by manual exports, or nil in legacy mode (no profiles,
     /// or the persisted active id dangles after external data loss).
@@ -208,7 +222,7 @@ final class ExportProfileStore: ObservableObject {
         apiEndpointID: UUID? = nil,
         googleDriveDestinationID: UUID? = nil
     ) -> Bool {
-        guard profiles.isEmpty else { return false }
+        guard profiles.isEmpty, opaqueProfileRecords.isEmpty, !persistenceUnavailable else { return false }
 
         let profile = ExportProfile(
             name: uniquifiedName(Self.defaultProfileName),
@@ -400,6 +414,7 @@ final class ExportProfileStore: ObservableObject {
     // MARK: - Persistence
 
     private func persist() {
+        guard !persistenceUnavailable else { return }
         let encoder = JSONEncoder()
         let knownObjects = profiles.compactMap { profile -> Any? in
             guard let data = try? encoder.encode(profile) else { return nil }
@@ -408,16 +423,29 @@ final class ExportProfileStore: ObservableObject {
         let opaqueObjects = opaqueProfileRecords.compactMap {
             try? JSONSerialization.jsonObject(with: $0, options: [.fragmentsAllowed])
         }
-        let records = knownObjects + opaqueObjects
-        if JSONSerialization.isValidJSONObject(records),
-           let encoded = try? JSONSerialization.data(withJSONObject: records, options: [.sortedKeys]) {
-            userDefaults.set(encoded, forKey: Key.list)
+        let root: [String: Any] = [
+            "version": 2,
+            "records": knownObjects + opaqueObjects
+        ]
+        if JSONSerialization.isValidJSONObject(root),
+           let encoded = try? JSONSerialization.data(withJSONObject: root, options: [.sortedKeys]) {
+            userDefaults.set(encoded, forKey: Key.listV2)
         }
         unknownProfileRecordCount = opaqueProfileRecords.count
         userDefaults.set(
             activeProfileID?.uuidString,
-            forKey: Key.activeProfileID
+            forKey: Key.activeProfileIDV2
         )
+    }
+
+    private static func decodeEnvelope(from data: Data) -> (profiles: [ExportProfile], opaque: [Data])? {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              root["version"] as? Int == 2,
+              let records = root["records"] as? [Any],
+              let recordsData = try? JSONSerialization.data(withJSONObject: records, options: [.sortedKeys]) else {
+            return nil
+        }
+        return decodeRecords(from: recordsData)
     }
 
     private static func decodeRecords(from data: Data) -> (profiles: [ExportProfile], opaque: [Data])? {

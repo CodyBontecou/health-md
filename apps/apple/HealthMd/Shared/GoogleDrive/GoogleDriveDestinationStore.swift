@@ -13,7 +13,8 @@ final class GoogleDriveDestinationStore: ObservableObject {
     @Published private(set) var unknownRecordCount = 0
 
     private let userDefaults: UserDefaults
-    private var opaqueRecords: [[String: Any]] = []
+    private var opaqueRecords: [Any] = []
+    private var persistenceUnavailable = false
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -26,7 +27,8 @@ final class GoogleDriveDestinationStore: ObservableObject {
     }
 
     func upsert(_ destination: GoogleDriveDestination) {
-        guard destination.version == GoogleDriveDestination.currentVersion else { return }
+        guard !persistenceUnavailable,
+              destination.version == GoogleDriveDestination.currentVersion else { return }
         if let index = destinations.firstIndex(where: { $0.id == destination.id }) {
             destinations[index] = destination
         } else {
@@ -37,6 +39,7 @@ final class GoogleDriveDestinationStore: ObservableObject {
     }
 
     func remove(id: UUID) {
+        guard !persistenceUnavailable else { return }
         destinations.removeAll { $0.id == id }
         persist()
     }
@@ -45,19 +48,31 @@ final class GoogleDriveDestinationStore: ObservableObject {
     /// profile coordinator). Drive execution calls this immediately before resolving authority so
     /// it never runs against a stale in-memory snapshot or falls back to another destination.
     func reload() {
-        guard let data = userDefaults.data(forKey: Self.storageKey),
-              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let records = root["records"] as? [Any] else {
+        guard let data = userDefaults.data(forKey: Self.storageKey) else {
             destinations = []
             opaqueRecords = []
             unknownRecordCount = 0
+            persistenceUnavailable = false
+            return
+        }
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              root["version"] as? Int == Self.envelopeVersion,
+              let records = root["records"] as? [Any] else {
+            destinations = []
+            opaqueRecords = []
+            unknownRecordCount = 1
+            persistenceUnavailable = true
             return
         }
 
+        persistenceUnavailable = false
         var known: [GoogleDriveDestination] = []
-        var opaque: [[String: Any]] = []
+        var opaque: [Any] = []
         for value in records {
-            guard let record = value as? [String: Any] else { continue }
+            guard let record = value as? [String: Any] else {
+                opaque.append(value)
+                continue
+            }
             guard record["kind"] as? String == "google_drive",
                   let payload = record["payload"],
                   JSONSerialization.isValidJSONObject(payload),
@@ -76,6 +91,7 @@ final class GoogleDriveDestinationStore: ObservableObject {
     }
 
     private func persist() {
+        guard !persistenceUnavailable else { return }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let known: [[String: Any]] = destinations.compactMap { destination in

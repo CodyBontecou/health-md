@@ -17,9 +17,9 @@ nonisolated enum GoogleDriveProtectedFileStore {
             withIntermediateDirectories: true,
             attributes: [.posixPermissions: 0o700]
         )
-        try? (url as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
+        try (url as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
         #if os(iOS)
-        try? FileManager.default.setAttributes(
+        try FileManager.default.setAttributes(
             [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
             ofItemAtPath: url.path
         )
@@ -49,7 +49,13 @@ nonisolated enum GoogleDriveProtectedFileStore {
             } else {
                 try FileManager.default.moveItem(at: temporary, to: url)
             }
-            try? (url as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
+            try (url as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
+            #if os(iOS)
+            try FileManager.default.setAttributes(
+                [.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                ofItemAtPath: url.path
+            )
+            #endif
             try synchronizeDirectory(url.deletingLastPathComponent())
         } catch {
             try? FileManager.default.removeItem(at: temporary)

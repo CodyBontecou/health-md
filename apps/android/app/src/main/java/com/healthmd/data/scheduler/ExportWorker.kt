@@ -481,6 +481,9 @@ class ExportWorker @AssistedInject constructor(
                     target = settings.scheduledExportTarget,
                     expectedDestinationFingerprint = destinationFingerprint,
                     googleDriveDestinationId = currentDriveDestinationId,
+                    googleDriveOperationId = if (settings.scheduledExportTarget == ExportTarget.GOOGLE_DRIVE) {
+                        "raw-drive-$admissionOperationId"
+                    } else null,
                 )
             } else when (settings.scheduledExportTarget) {
                 ExportTarget.DEVICE_FOLDER -> {

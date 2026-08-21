@@ -13,6 +13,8 @@ import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
+import com.healthmd.domain.exportengine.sha256Hex
+import com.healthmd.data.drive.GeneratedExportBundle
 import com.healthmd.data.drive.GeneratedExportBundleFactory
 import com.healthmd.data.drive.GoogleDriveDestinationRunner
 import com.healthmd.data.drive.GoogleDriveRunResult
@@ -44,6 +46,7 @@ import java.nio.charset.CodingErrorAction
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -64,6 +67,7 @@ interface RawSnapshotService {
         expectedDestinationFingerprint: String? = null,
         googleDriveDestinationId: String? = null,
         googleDriveProfileId: String? = null,
+        googleDriveOperationId: String? = null,
     ): ExportResult
 
     /** Performs the same native source read as an export without writing or uploading a user artifact. */
@@ -95,6 +99,7 @@ class RawSnapshotExportRunner @Inject constructor(
         expectedDestinationFingerprint: String?,
         googleDriveDestinationId: String?,
         googleDriveProfileId: String?,
+        googleDriveOperationId: String?,
     ): ExportResult {
         if (endDate.isBefore(startDate)) {
             return failure(startDate, target, ExportFailureReason.UNKNOWN)
@@ -132,6 +137,18 @@ class RawSnapshotExportRunner @Inject constructor(
 
         val zone = ZoneId.systemDefault()
         val request = buildRequest(startDate, endDate, zone, settings)
+        if (target == ExportTarget.GOOGLE_DRIVE) {
+            return exportProvidersToDrive(
+                providerIds = providerIds,
+                startDate = startDate,
+                endDate = endDate,
+                request = request,
+                settings = settings,
+                destinationId = requireNotNull(frozenGoogleDriveDestinationId),
+                profileId = googleDriveProfileId,
+                operationId = googleDriveOperationId ?: UUID.randomUUID().toString(),
+            )
+        }
         val results = mutableListOf<ExportResult>()
         for (providerId in providerIds) {
             val repository = rawRepositoryRegistry.repositoryFor(providerId)
@@ -288,6 +305,135 @@ class RawSnapshotExportRunner @Inject constructor(
         days = listOf(ExportPreviewDay(startDate, failureReason = reason, issues = listOf(issue))),
         isRangeArtifact = true,
     )
+
+    private suspend fun exportProvidersToDrive(
+        providerIds: List<String>,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        request: RawSnapshotRequest,
+        settings: ExportSettings,
+        destinationId: String,
+        profileId: String?,
+        operationId: String,
+    ): ExportResult {
+        val settingsSnapshotJson = kotlinx.serialization.json.Json.encodeToString(
+            ExportSettings.serializer(),
+            settings,
+        )
+        val settingsHash = sha256Hex(settingsSnapshotJson.encodeToByteArray())
+        driveRunner.resumeIfPresent(
+            operationId = operationId,
+            expectedDestinationId = destinationId,
+            expectedSettingsSnapshotSha256 = settingsHash,
+        )?.let { resumed ->
+            return when (resumed) {
+                is GoogleDriveRunResult.Complete -> ExportResult(
+                    successCount = providerIds.size,
+                    totalCount = providerIds.size,
+                    target = ExportTarget.GOOGLE_DRIVE,
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    artifactCount = resumed.artifactCount,
+                    retryDriveOperationIds = mapOf(startDate to operationId),
+                )
+                is GoogleDriveRunResult.Stopped -> ExportResult(
+                    successCount = 0,
+                    totalCount = providerIds.size,
+                    failedDateDetails = providerIds.map {
+                        FailedDateDetail(startDate, resumed.error.toFailureReason(), resumed.error.serialId)
+                    },
+                    target = ExportTarget.GOOGLE_DRIVE,
+                    exportMode = ExportMode.RAW_SNAPSHOT,
+                    artifactCount = resumed.completedArtifactCount,
+                    retryDriveOperationIds = mapOf(startDate to operationId),
+                )
+            }
+        }
+
+        val artifacts = mutableListOf<com.healthmd.data.drive.GeneratedExportArtifact>()
+        for (providerId in providerIds) {
+            val repository = rawRepositoryRegistry.repositoryFor(providerId)
+                ?: return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.RAW_UNSUPPORTED_PROVIDER)
+            val raw = try {
+                RawSnapshotExportOrchestrator(
+                    context,
+                    repository,
+                    NoBackupRawExportStorage(context),
+                ).export(request)
+            } catch (_: CancellationException) {
+                return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.RAW_CANCELLED, cancelled = true)
+            } catch (_: SecurityException) {
+                return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.ACCESS_DENIED)
+            } catch (_: Exception) {
+                return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.HEALTH_CONNECT_ERROR)
+            }
+            val artifactFile = File(raw.finalLocation)
+            try {
+                if (raw.manifest.status != RawSnapshotStatus.COMPLETE || !artifactFile.isFile) {
+                    return raw.toProductResult(startDate, ExportTarget.GOOGLE_DRIVE)
+                }
+                val extension = artifactFile.extension.ifBlank {
+                    if (raw.format.name == "JSON") "json" else "ndjson"
+                }
+                val relativePath = listOf(
+                    settings.subfolder.trim('/').takeIf(String::isNotBlank),
+                    RAW_DIRECTORY,
+                    artifactFile.name.ifBlank {
+                        "healthmd-raw-$providerId-${startDate}_to_${endDate}.$extension"
+                    },
+                ).filterNotNull().joinToString("/")
+                artifacts += driveBundleFactory.rawSnapshot(
+                    operationId = operationId,
+                    profileId = profileId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    settingsSnapshotJson = settingsSnapshotJson,
+                    relativePath = relativePath,
+                    mediaType = if (extension == "json") "application/json" else "application/x-ndjson",
+                    exactFile = artifactFile,
+                    artifactChecksumSha256 = raw.artifactChecksumSha256,
+                ).artifacts
+            } finally {
+                cleanupPrivateArtifact(artifactFile)
+            }
+        }
+
+        val bundle = try {
+            GeneratedExportBundle(
+                operationId = operationId,
+                profileId = profileId,
+                source = "raw",
+                dates = generateSequence(startDate) { it.plusDays(1) }
+                    .takeWhile { !it.isAfter(endDate) }
+                    .toList(),
+                settingsSnapshotSha256 = settingsHash,
+                rendererPin = "android-raw-snapshot-v1",
+                artifacts = artifacts,
+            )
+        } catch (_: Exception) {
+            return failure(startDate, ExportTarget.GOOGLE_DRIVE, ExportFailureReason.FILE_WRITE_ERROR)
+        }
+        return when (val result = driveRunner.run(bundle, destinationId)) {
+            is GoogleDriveRunResult.Complete -> ExportResult(
+                successCount = providerIds.size,
+                totalCount = providerIds.size,
+                target = ExportTarget.GOOGLE_DRIVE,
+                exportMode = ExportMode.RAW_SNAPSHOT,
+                artifactCount = result.artifactCount,
+                retryDriveOperationIds = mapOf(startDate to operationId),
+            )
+            is GoogleDriveRunResult.Stopped -> ExportResult(
+                successCount = 0,
+                totalCount = providerIds.size,
+                failedDateDetails = providerIds.map {
+                    FailedDateDetail(startDate, result.error.toFailureReason(), result.error.serialId)
+                },
+                target = ExportTarget.GOOGLE_DRIVE,
+                exportMode = ExportMode.RAW_SNAPSHOT,
+                artifactCount = result.completedArtifactCount,
+                retryDriveOperationIds = mapOf(startDate to operationId),
+            )
+        }
+    }
 
     private suspend fun exportProvider(
         providerId: String,

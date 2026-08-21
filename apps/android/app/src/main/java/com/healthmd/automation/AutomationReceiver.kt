@@ -121,13 +121,15 @@ class AutomationReceiver : BroadcastReceiver() {
     private suspend fun resolveProfileForRun(
         profileReference: String?,
     ): ProfileRunScope {
+        if (exportProfileRepository.hasOpaqueProfiles()) throw AutomationProfileUnavailable()
         val reference = profileReference?.trim().orEmpty()
         if (reference.isEmpty()) {
             val profiles = exportProfileRepository.getProfiles()
             if (profiles.isEmpty()) return ProfileRunScope(null, null)
             val active = exportProfileRepository.getActiveProfile()
-                ?: return ProfileRunScope(null, null)
-            return ProfileRunScope(resolveProfileSettings(active), active)
+                ?: throw AutomationProfileUnavailable()
+            val restored = resolveProfileSettings(active) ?: throw AutomationProfileUnavailable()
+            return ProfileRunScope(restored, active)
         }
         return when (
             val resolution = ExportProfileRules.resolve(
@@ -136,8 +138,10 @@ class AutomationReceiver : BroadcastReceiver() {
                 name = reference,
             )
         ) {
-            is ExportProfileResolution.Resolved ->
-                ProfileRunScope(resolveProfileSettings(resolution.profile), resolution.profile)
+            is ExportProfileResolution.Resolved -> ProfileRunScope(
+                resolveProfileSettings(resolution.profile) ?: throw AutomationProfileUnavailable(),
+                resolution.profile,
+            )
             is ExportProfileResolution.NotFound ->
                 throw AutomationProfileNotFound(reference)
             ExportProfileResolution.LegacySettings -> ProfileRunScope(null, null)
@@ -168,6 +172,16 @@ class AutomationReceiver : BroadcastReceiver() {
                 failedDateDetails = emptyList(),
             )
             publishExportResult(result, "$PROTOCOL_PROFILE_NOT_FOUND:$profileReference")
+            return
+        } catch (_: AutomationProfileUnavailable) {
+            val result = ExportResult(
+                successCount = 0,
+                totalCount = dates.size,
+                failedDateDetails = dates.map {
+                    FailedDateDetail(it, ExportFailureReason.ACCESS_DENIED, PROTOCOL_PROFILE_UNAVAILABLE)
+                },
+            )
+            publishExportResult(result, PROTOCOL_PROFILE_UNAVAILABLE)
             return
         }
         val profile = profileSettingsAndName.profile
@@ -367,6 +381,7 @@ class AutomationReceiver : BroadcastReceiver() {
 
     /** Thrown when an explicit profile reference does not resolve; never falls back. */
     private class AutomationProfileNotFound(val reference: String) : Exception(reference)
+    private class AutomationProfileUnavailable : Exception()
 
     companion object {
         const val ACTION_EXPORT_YESTERDAY = "com.healthmd.android.action.EXPORT_YESTERDAY"
@@ -403,6 +418,7 @@ class AutomationReceiver : BroadcastReceiver() {
         private const val PROTOCOL_HEALTH_PERMISSIONS_MISSING = "Health Connect permissions missing"
         private const val PROTOCOL_NO_EXPORT_HISTORY = "No export history"
         private const val PROTOCOL_DRIVE_REQUIRES_FOREGROUND = "destination_requires_foreground:google_drive"
+        private const val PROTOCOL_PROFILE_UNAVAILABLE = "profile_unavailable"
         private const val PROTOCOL_EXPORT_CANCELLED = "Export cancelled"
         private const val PROTOCOL_PROFILE_NOT_FOUND = "profile_not_found"
     }

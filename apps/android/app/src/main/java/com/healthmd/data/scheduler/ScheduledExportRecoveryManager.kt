@@ -163,6 +163,11 @@ class ScheduledExportRecoveryManager @Inject constructor(
                     )
                 } else null
                 if (!isDestinationReady(settings, target, destinationFingerprint)) continue
+                val recoveryDriveDestinationId = if (target == ExportTarget.GOOGLE_DRIVE) {
+                    googleDriveSelectionStore.get()?.takeIf { selectedId ->
+                        googleDriveDestinationStore.find(selectedId)?.fingerprint == destinationFingerprint
+                    }
+                } else null
                 val restoredOutputSettings = runCatching {
                     if (settingsSnapshotJson == null) {
                         // Explicit old-request compatibility: output settings are read at recovery.
@@ -228,7 +233,10 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 ) {
                     snapshotFailure(targetDates, target)
                 } else try {
-                    if (target == ExportTarget.GOOGLE_DRIVE && operation.driveOperationId != null) {
+                    if (target == ExportTarget.GOOGLE_DRIVE &&
+                        targetSettings.exportMode != ExportMode.RAW_SNAPSHOT &&
+                        operation.driveOperationId != null
+                    ) {
                         when (val resumed = googleDriveDestinationRunner.resume(operation.driveOperationId)) {
                             is GoogleDriveRunResult.Complete -> ExportResult(
                                 targetDates.size,
@@ -255,6 +263,8 @@ class ScheduledExportRecoveryManager @Inject constructor(
                             settings = targetSettings,
                             target = target,
                             expectedDestinationFingerprint = destinationFingerprint,
+                            googleDriveDestinationId = recoveryDriveDestinationId,
+                            googleDriveOperationId = operation.driveOperationId,
                         ) ?: ExportResult(
                             successCount = 0,
                             totalCount = 1,

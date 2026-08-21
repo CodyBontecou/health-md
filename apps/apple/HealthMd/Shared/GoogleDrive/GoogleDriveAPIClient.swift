@@ -22,7 +22,10 @@ nonisolated enum GoogleDriveUploadResponse: Equatable, Sendable {
 nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable {
     private struct AboutResponse: Decodable { let user: User; struct User: Decodable { let permissionId: String } }
     private struct GenerateResponse: Decodable { let ids: [String] }
-    private struct ListResponse: Decodable { let files: [MetadataResponse] }
+    private struct ListResponse: Decodable {
+        let files: [MetadataResponse]
+        let nextPageToken: String?
+    }
     private struct MetadataResponse: Decodable {
         let id: String
         let name: String
@@ -162,19 +165,29 @@ nonisolated struct GoogleDriveAPIClient: GoogleDriveAPIClientProtocol, Sendable 
         // Health.md ownership/path markers and fails on accessible unowned collisions.
         _ = pathHash
         let query = "'\(escapedParent)' in parents and name = '\(escapedName)' and trashed = false"
-        let url = Self.url(path: "/drive/v3/files", query: [
-            URLQueryItem(name: "q", value: query),
-            URLQueryItem(name: "spaces", value: "drive"),
-            URLQueryItem(name: "corpora", value: "allDrives"),
-            URLQueryItem(name: "includeItemsFromAllDrives", value: "true"),
-            URLQueryItem(name: "supportsAllDrives", value: "true"),
-            URLQueryItem(name: "pageSize", value: "10"),
-            URLQueryItem(name: "fields", value: "files(\(Self.metadataFields))")
-        ])
-        var request = Self.request(url: url, token: accessToken)
-        Self.attachResourceKeys(resourceKeys, to: &request)
-        let (data, _) = try await send(request)
-        return try decode(ListResponse.self, from: data).files.map(\.value)
+        var output: [GoogleDriveFileMetadata] = []
+        var pageToken: String?
+        repeat {
+            var queryItems = [
+                URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "spaces", value: "drive"),
+                URLQueryItem(name: "corpora", value: "allDrives"),
+                URLQueryItem(name: "includeItemsFromAllDrives", value: "true"),
+                URLQueryItem(name: "supportsAllDrives", value: "true"),
+                URLQueryItem(name: "pageSize", value: "100"),
+                URLQueryItem(name: "fields", value: "nextPageToken,files(\(Self.metadataFields))")
+            ]
+            if let pageToken { queryItems.append(URLQueryItem(name: "pageToken", value: pageToken)) }
+            let url = Self.url(path: "/drive/v3/files", query: queryItems)
+            var request = Self.request(url: url, token: accessToken)
+            Self.attachResourceKeys(resourceKeys, to: &request)
+            let (data, _) = try await send(request)
+            let page = try decode(ListResponse.self, from: data)
+            output.append(contentsOf: page.files.map(\.value))
+            guard output.count <= 1_000 else { throw GoogleDriveError(.remoteConflict) }
+            pageToken = page.nextPageToken.flatMap { $0.isEmpty ? nil : $0 }
+        } while pageToken != nil
+        return output
     }
 
     func startResumableCreate(

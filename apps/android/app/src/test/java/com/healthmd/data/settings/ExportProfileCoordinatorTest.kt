@@ -79,6 +79,7 @@ class ExportProfileCoordinatorTest {
         every { profiles } returns profilesState
         every { activeProfileId } returns activeIdState
         coEvery { getProfiles() } answers { profilesState.value }
+        coEvery { hasOpaqueProfiles() } returns false
         coEvery { getActiveProfileId() } answers { activeIdState.value }
         coEvery { getActiveProfile() } answers {
             profilesState.value.firstOrNull { it.id == activeIdState.value }

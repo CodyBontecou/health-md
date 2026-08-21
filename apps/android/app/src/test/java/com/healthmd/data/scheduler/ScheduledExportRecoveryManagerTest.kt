@@ -452,6 +452,7 @@ class ScheduledExportRecoveryManagerTest {
                 expectedDestinationFingerprint: String?,
                 googleDriveDestinationId: String?,
                 googleDriveProfileId: String?,
+                googleDriveOperationId: String?,
             ) = ExportResult(
                 successCount = 1,
                 totalCount = 2,

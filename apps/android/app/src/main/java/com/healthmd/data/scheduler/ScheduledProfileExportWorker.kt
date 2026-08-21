@@ -218,6 +218,9 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                             target == ExportTarget.GOOGLE_DRIVE
                         },
                         googleDriveProfileId = profile.id.takeIf { target == ExportTarget.GOOGLE_DRIVE },
+                        googleDriveOperationId = "raw-profile-drive-$operationId".takeIf {
+                            target == ExportTarget.GOOGLE_DRIVE
+                        },
                     )
                 }
                 if (target == ExportTarget.DEVICE_FOLDER) {

@@ -51,7 +51,7 @@ enum ExportIntentRunner {
             if let active = profileStore.activeProfile {
                 return .profile(active)
             }
-            return .legacySettings
+            return .notFound("Active profile is unavailable")
         }
 
         if let named = profileStore.profile(named: rawName) {

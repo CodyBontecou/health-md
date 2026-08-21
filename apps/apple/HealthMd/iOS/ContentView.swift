@@ -636,7 +636,12 @@ struct ContentView: View {
     // MARK: - Computed Properties
 
     private var canExport: Bool {
-        ExportTargetReadiness.canExport(
+        if let profileCoordinator,
+           profileCoordinator.profileStore.hasProfiles,
+           profileCoordinator.profileStore.activeProfile == nil {
+            return false
+        }
+        return ExportTargetReadiness.canExport(
             isHealthKitAuthorized: healthKitManager.isAuthorized,
             hasSelectedFormat: !advancedSettings.exportFormats.isEmpty,
             dailyNotesOnlyModeEnabled: advancedSettings.dailyNotesOnlyModeEnabled,

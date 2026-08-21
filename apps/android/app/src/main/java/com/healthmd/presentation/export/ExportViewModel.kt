@@ -14,6 +14,7 @@ import com.healthmd.data.drive.GoogleDriveConfiguration
 import com.healthmd.data.drive.GoogleDriveDestinationStore
 import com.healthmd.data.drive.GoogleDriveExportOrchestrator
 import com.healthmd.data.drive.GoogleDriveSelectionStore
+import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.storage.FileExportManager
 import com.healthmd.domain.billing.FreemiumPolicy
@@ -92,6 +93,7 @@ data class ExportUiState(
     val googleDriveDestinationId: String? = null,
     val googleDriveDestinationLabel: String? = null,
     val googleDriveConfigurationAvailable: Boolean = GoogleDriveConfiguration.isConfigured(),
+    val profileStorageBlocked: Boolean = false,
 ) {
     val requiresHistoricalReadPermission: Boolean
         get() = ExportHistoryAccess.requiresHistoricalReadPermission(
@@ -131,7 +133,7 @@ data class ExportUiState(
             (rawProviderSupported && rawSelectionReady)
 
     val destinationReady: Boolean
-        get() = when (selectedTarget) {
+        get() = !profileStorageBlocked && when (selectedTarget) {
             ExportTarget.DEVICE_FOLDER -> folderName != null
             ExportTarget.API_ENDPOINT -> if (settings.exportMode == ExportMode.RAW_SNAPSHOT) rawApiEndpointConfigured else apiEndpointConfigured
             ExportTarget.GOOGLE_DRIVE -> googleDriveConfigurationAvailable && googleDriveDestinationId != null
@@ -160,6 +162,7 @@ class ExportViewModel @Inject constructor(
     private val googleDriveExportOrchestrator: GoogleDriveExportOrchestrator,
     private val googleDriveSelectionStore: GoogleDriveSelectionStore,
     private val googleDriveDestinationStore: GoogleDriveDestinationStore,
+    private val exportProfileRepository: ExportProfileRepository? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportUiState())
@@ -209,6 +212,13 @@ class ExportViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.selectedHealthProviderId.collect { providerId ->
                 _uiState.update { it.copy(selectedHealthProviderId = providerId) }
+            }
+        }
+        exportProfileRepository?.let { repository ->
+            viewModelScope.launch {
+                repository.hasOpaqueProfileState.collect { blocked ->
+                    _uiState.update { it.copy(profileStorageBlocked = blocked) }
+                }
             }
         }
         viewModelScope.launch {
@@ -417,7 +427,9 @@ class ExportViewModel @Inject constructor(
 
     fun startExport() {
         val currentState = _uiState.value
-        if (currentState.isExporting || currentState.isPreviewing || exportJob?.isActive == true) return
+        if (currentState.isExporting || currentState.isPreviewing || exportJob?.isActive == true ||
+            currentState.profileStorageBlocked
+        ) return
 
         // Block export if free tier is exhausted
         if (!currentState.isPurchased && currentState.freeExportsRemaining <= 0) return
@@ -445,9 +457,9 @@ class ExportViewModel @Inject constructor(
 
             val settings = settingsRepository.getExportSettings()
             val dates = ExportOrchestrator.dateRange(_uiState.value.startDate, _uiState.value.endDate)
-            val googleDriveOperationId = if (
-                settings.exportMode != ExportMode.RAW_SNAPSHOT && settings.exportTarget == ExportTarget.GOOGLE_DRIVE
-            ) java.util.UUID.randomUUID().toString() else null
+            val googleDriveOperationId = if (settings.exportTarget == ExportTarget.GOOGLE_DRIVE) {
+                java.util.UUID.randomUUID().toString()
+            } else null
 
             val progress: (Int, Int, String) -> Unit = { current, total, dateStr ->
                 _uiState.update {
@@ -464,6 +476,8 @@ class ExportViewModel @Inject constructor(
                     startDate = _uiState.value.startDate,
                     endDate = _uiState.value.endDate,
                     settings = settings,
+                    googleDriveDestinationId = _uiState.value.googleDriveDestinationId,
+                    googleDriveOperationId = googleDriveOperationId,
                 ) ?: ExportResult(
                     successCount = 0,
                     totalCount = 1,

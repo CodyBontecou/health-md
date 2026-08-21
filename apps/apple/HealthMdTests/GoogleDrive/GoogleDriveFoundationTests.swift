@@ -181,6 +181,35 @@ final class GoogleDriveFoundationTests: XCTestCase {
     }
 
     @MainActor
+    func testFutureDestinationEnvelopeAndScalarRecordsRemainUnrunnable() throws {
+        let suiteName = "GoogleDriveFoundationTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(try JSONSerialization.data(withJSONObject: [
+            "version": 99,
+            "records": [["kind": "google_drive", "payload": ["version": 1]], "future-scalar"]
+        ]), forKey: GoogleDriveDestinationStore.storageKey)
+
+        let store = GoogleDriveDestinationStore(userDefaults: defaults)
+        XCTAssertTrue(store.destinations.isEmpty)
+        XCTAssertEqual(store.unknownRecordCount, 1)
+        store.upsert(makeDestination())
+        XCTAssertTrue(store.destinations.isEmpty)
+        XCTAssertEqual(GoogleDriveDestinationStore(userDefaults: defaults).unknownRecordCount, 1)
+
+        defaults.set(try JSONSerialization.data(withJSONObject: [
+            "version": 1,
+            "records": ["future-scalar"]
+        ]), forKey: GoogleDriveDestinationStore.storageKey)
+        let scalarStore = GoogleDriveDestinationStore(userDefaults: defaults)
+        XCTAssertEqual(scalarStore.unknownRecordCount, 1)
+        scalarStore.upsert(makeDestination())
+        let scalarReloaded = GoogleDriveDestinationStore(userDefaults: defaults)
+        XCTAssertEqual(scalarReloaded.destinations.count, 1)
+        XCTAssertEqual(scalarReloaded.unknownRecordCount, 1)
+    }
+
+    @MainActor
     func testMissingBuildConfigurationIsVisibleButNotRunnable() {
         let manager = GoogleDriveConnectionManager(configuration: nil)
         XCTAssertEqual(manager.readiness, .configurationMissing)
@@ -463,6 +492,28 @@ final class GoogleDriveFoundationTests: XCTestCase {
         let properties = try XCTUnwrap(root["appProperties"] as? [String: String])
         XCTAssertEqual(properties["healthmd_operation_id"], operationID.uuidString.lowercased())
         XCTAssertEqual(properties["healthmd_path_hash"], String(repeating: "b", count: 64))
+    }
+
+    func testSameNameCollisionSearchConsumesEveryPage() async throws {
+        let transport = RecordingDriveTransport { request in
+            let token = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "pageToken" })?.value
+            let body = token == nil
+                ? #"{"files":[{"id":"one","name":"day.md","mimeType":"text/markdown","parents":["folder"],"trashed":false}],"nextPageToken":"page-2"}"#
+                : #"{"files":[{"id":"two","name":"day.md","mimeType":"text/markdown","parents":["folder"],"trashed":false}]}"#
+            return (Data(body.utf8), HTTPURLResponse(
+                url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil
+            )!)
+        }
+        let client = GoogleDriveAPIClient(transport: transport)
+        let matches = try await client.findManagedObjects(
+            parentID: "folder",
+            name: "day.md",
+            pathHash: GoogleDrivePath.hash("day.md"),
+            resourceKeys: [:],
+            accessToken: "secret"
+        )
+        XCTAssertEqual(matches.map(\.id), ["one", "two"])
     }
 
     func testAPIClientSetsSharedDriveFlagsAndResourceKey() async throws {
