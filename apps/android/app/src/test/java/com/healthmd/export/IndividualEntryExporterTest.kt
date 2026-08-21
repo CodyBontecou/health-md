@@ -193,4 +193,34 @@ class IndividualEntryExporterTest {
         assertThat(workoutContent).contains("- **Distance:** 5.00 km")
         assertThat(workoutContent).contains("- **Elevation loss:** 25 m")
     }
+
+    @Test
+    fun workoutEntry_exportsGrantedRouteAsDataWithPointCount() {
+        val settings = IndividualTrackingSettings(globalEnabled = true).enableAll(listOf("workouts"))
+        val data = HealthData(
+            date = date,
+            workouts = listOf(
+                WorkoutData(
+                    workoutType = WorkoutType.RUNNING,
+                    startTime = t6,
+                    endTime = t6.plusMinutes(30),
+                    duration = 30.minutes,
+                    // Shape produced after Health Connect per-session route consent was granted.
+                    routeAccess = WorkoutRouteAccess.DATA,
+                    route = listOf(
+                        WorkoutRoutePointData(t6, 45.25, -122.75, altitude = 100.0),
+                        WorkoutRoutePointData(t6.plusMinutes(1), 45.5, -122.5),
+                    ),
+                ),
+            ),
+        )
+
+        val workoutContent = exporter.exportEntries(data, settings)
+            .single { it.first.contains("running") }
+            .second
+
+        assertThat(workoutContent).contains("route_access: \"data\"")
+        assertThat(workoutContent).contains("route_points: 2")
+        assertThat(workoutContent).contains("- **Route:** data (2 points)")
+    }
 }

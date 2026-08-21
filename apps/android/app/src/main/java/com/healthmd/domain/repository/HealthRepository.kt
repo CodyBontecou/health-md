@@ -17,6 +17,17 @@ interface HealthRepository {
         fetchHealthData(date).filtered(dataTypes)
     }
 
+    /**
+     * Selects and authorizes exercise-route consent candidates across a complete interactive run.
+     * Non-Health Connect and noninteractive implementations intentionally do nothing.
+     */
+    suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        dataTypes: DataTypeSelection = DataTypeSelection(),
+        includeGranularData: Boolean = false,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ) = Unit
+
     suspend fun isAvailable(): Boolean
     suspend fun hasPermissions(): Boolean
     suspend fun hasHistoricalReadPermission(): Boolean
