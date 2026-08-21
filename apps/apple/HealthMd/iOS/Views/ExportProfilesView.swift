@@ -765,7 +765,7 @@ struct ExportProfileDetailView: View {
                     Button {
                         UIPasteboard.general.string = profile.id.uuidString
                         idCopied = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                             idCopied = false
                         }
                     } label: {
@@ -780,6 +780,11 @@ struct ExportProfileDetailView: View {
                     .buttonStyle(.borderless)
                     .accessibilityIdentifier(AccessibilityID.ExportProfiles.copyIDButton)
                     .accessibilityLabel(String(localized: "Copy profile ID", comment: "Accessibility label for the copy ID button"))
+                    .accessibilityValue(
+                        idCopied
+                            ? String(localized: "Copied", comment: "Accessibility value after copying the profile ID")
+                            : String(localized: "Not copied", comment: "Accessibility value before copying the profile ID")
+                    )
                 }
             }
         }
