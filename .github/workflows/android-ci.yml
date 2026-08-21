@@ -145,8 +145,20 @@ jobs:
       - name: Prepare source-built Rust core
         run: ./gradlew :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
-      - name: Run debug unit, wearable contract, Wear, and protocol tests
-        run: ./gradlew testDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test --stacktrace
+      - name: Run app variant, wearable contract, Wear, and protocol tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep Compose compiler peaks bounded and compile one app variant at a time.
+          ./gradlew --no-daemon --max-workers=2 \
+            :app:testDebugUnitTest \
+            :healthmd-core:testDebugUnitTest \
+            :wearable-contract:test \
+            :wear:testDebugUnitTest \
+            :direct-protocol:test \
+            --stacktrace
+          ./gradlew --no-daemon --max-workers=2 :app:testReleaseUnitTest --stacktrace
+          ./gradlew --no-daemon --max-workers=2 :app:testE2eUnitTest --stacktrace
 
       - name: Run Wear lint, assemble, and bundle
         run: ./gradlew :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
