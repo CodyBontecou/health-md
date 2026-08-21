@@ -248,7 +248,7 @@ struct MacMenuBarView: View {
             switch result.status {
             case .success:
                 if result.dailyNoteUpdateCount > 0,
-                   result.isTotalFilesWrittenAuthoritative,
+                   result.hasAuthoritativeFileCount,
                    result.totalFilesWritten == 0 {
                     return String(localized: "\(result.dailyNoteUpdateCount) daily notes updated")
                 }
@@ -256,12 +256,12 @@ struct MacMenuBarView: View {
                     ?? String(localized: "Export Complete")
             case .partialSuccess:
                 if result.dailyNoteSkipCount > 0,
-                   result.isTotalFilesWrittenAuthoritative,
+                   result.hasAuthoritativeFileCount,
                    result.totalFilesWritten == 0 {
                     return String(localized: "\(result.dailyNoteUpdateCount) updated, \(result.dailyNoteSkipCount) daily notes skipped")
                 }
                 if result.dailyNoteUpdateCount > 0,
-                   result.isTotalFilesWrittenAuthoritative,
+                   result.hasAuthoritativeFileCount,
                    result.totalFilesWritten == 0 {
                     return String(localized: "Partial: \(result.dailyNoteUpdateCount) daily notes updated")
                 }

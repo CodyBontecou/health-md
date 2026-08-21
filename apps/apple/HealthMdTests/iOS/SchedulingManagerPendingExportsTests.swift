@@ -1010,6 +1010,59 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(recordedQuotaJobIDs, [request.id])
     }
 
+    func testRecoveredConnectedMacCompletionRejectsInconsistentAccountingBeforeMutation() async throws {
+        let exportDate = date(year: 2026, month: 5, day: 17)
+        let request = pendingRequest(
+            id: "15151515-1515-1515-1515-151515151515",
+            dates: [exportDate],
+            source: .scheduled,
+            exportTarget: .connectedMac
+        )
+        let store = TestPendingExportStore(requests: [request])
+        let notificationScheduler = InspectableExportNotificationScheduler()
+        var recordedQuotaJobIDs: [UUID] = []
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+        let manager = makeManager(
+            store: store,
+            notificationScheduler: notificationScheduler,
+            quotaRecorder: { jobID in
+                if let jobID { recordedQuotaJobIDs.append(jobID) }
+            }
+        ) { dates, _ in
+            XCTFail("Rejected completion should not rerun HealthKit export work")
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: []
+            )
+        }
+        let payload = MacExportResultPayload(
+            jobID: request.id,
+            status: .success,
+            successCount: 1,
+            totalCount: 1,
+            formatsPerDate: 1,
+            totalFilesWritten: 1,
+            isTotalFilesWrittenAuthoritative: true,
+            externalRecordFileCount: 2,
+            failedDateDetails: [],
+            completedDates: [exportDate],
+            destinationDisplayName: "Mac Vault",
+            destinationPathForDisplay: nil,
+            completedAt: date(year: 2026, month: 5, day: 18, hour: 9)
+        )
+
+        let handled = await manager.completeRecoveredScheduledMacExport(with: payload)
+
+        XCTAssertFalse(handled)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(recordedQuotaJobIDs, [])
+        XCTAssertTrue(history.history.isEmpty)
+        XCTAssertNil(manager.schedule.lastExportDate)
+    }
+
     func testScheduledExportDependencyWaitResumesAfterAppServicesAreConfigured() async {
         let store = TestPendingExportStore()
         let notificationScheduler = InspectableExportNotificationScheduler()

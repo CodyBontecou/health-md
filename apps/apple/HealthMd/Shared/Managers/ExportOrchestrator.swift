@@ -119,8 +119,13 @@ struct ExportOrchestrator {
         /// Provider records encoded in an API request; never generated files.
         let externalRecordPayloadCount: Int
         let unclassifiedFileCount: Int
+        /// Confirmed wire total retained even when category persistence was truncated.
+        let fileCountLowerBound: Int?
         let authoritativeFileCount: Int?
         let isFileCategoryBreakdownComplete: Bool
+        /// True when persistence budgeting reduced one or more file-category counts.
+        /// Category completeness remains a separate producer fact.
+        let wasFileAccountingTruncated: Bool
         let dailyNoteUpdateCount: Int
         let dailyNoteSkipCount: Int
 
@@ -138,8 +143,10 @@ struct ExportOrchestrator {
             externalRecordFileCount: Int = 0,
             externalRecordPayloadCount: Int = 0,
             unclassifiedFileCount: Int = 0,
+            fileCountLowerBound: Int? = nil,
             authoritativeFileCount: Int? = nil,
             isFileCategoryBreakdownComplete: Bool = false,
+            wasFileAccountingTruncated: Bool = false,
             dailyNoteUpdateCount: Int = 0,
             dailyNoteSkipCount: Int = 0,
             wasCancelled: Bool = false,
@@ -170,11 +177,16 @@ struct ExportOrchestrator {
             self.archiveCount = max(archiveCount, 0)
             self.externalRecordFileCount = max(externalRecordFileCount, 0)
             self.externalRecordPayloadCount = max(externalRecordPayloadCount, 0)
-            self.unclassifiedFileCount = max(unclassifiedFileCount, 0) + legacyUnclassified
+            self.unclassifiedFileCount = Self.saturatingAdd(
+                max(unclassifiedFileCount, 0),
+                legacyUnclassified
+            )
+            self.fileCountLowerBound = fileCountLowerBound.map { max($0, 0) }
             self.authoritativeFileCount = authoritativeFileCount.map { max($0, 0) }
             self.isFileCategoryBreakdownComplete = isFileCategoryBreakdownComplete
                 && looseAggregateFileCount != nil
                 && self.unclassifiedFileCount == 0
+            self.wasFileAccountingTruncated = wasFileAccountingTruncated
             self.dailyNoteUpdateCount = max(dailyNoteUpdateCount, 0)
             self.dailyNoteSkipCount = max(dailyNoteSkipCount, 0)
             self.wasCancelled = wasCancelled
@@ -183,33 +195,65 @@ struct ExportOrchestrator {
 
         init(macExportPayload payload: MacExportResultPayload) {
             let breakdown = payload.outputBreakdown
-            let classified = breakdown?.generatedFileCount ?? 0
+            let impliedLooseFiles = payload.successCount.multipliedReportingOverflow(
+                by: payload.formatsPerDate
+            )
+            let legacyLooseFileCount = impliedLooseFiles.overflow
+                ? 0 : max(impliedLooseFiles.partialValue, 0)
+            let legacyCategorizedFileCount = Self.saturatingAdd(
+                legacyLooseFileCount,
+                payload.externalRecordFileCount
+            )
+            let knownFiles = breakdown?.generatedFileCount ?? legacyCategorizedFileCount
+            let unclassifiedGap: Int
+            if breakdown?.wasTruncated == true {
+                unclassifiedGap = 0
+            } else {
+                let difference = payload.totalFilesWritten.subtractingReportingOverflow(knownFiles)
+                unclassifiedGap = difference.overflow ? 0 : max(difference.partialValue, 0)
+            }
+            let unclassified = Self.saturatingAdd(
+                breakdown?.unclassifiedFileCount ?? 0,
+                unclassifiedGap
+            )
             self.init(
                 successCount: payload.successCount,
                 totalCount: payload.totalCount,
                 failedDateDetails: payload.failedDateDetails,
                 partialFailures: payload.partialFailures ?? [],
                 formatsPerDate: payload.formatsPerDate,
-                // Supplying explicit zero avoids also applying the legacy formats-per-day
-                // estimate when the payload has no category breakdown.
-                looseAggregateFileCount: breakdown?.looseAggregateFileCount ?? 0,
+                // Legacy payloads identify successful per-format outputs as loose
+                // files even though they predate the full category breakdown.
+                looseAggregateFileCount: breakdown?.looseAggregateFileCount
+                    ?? legacyLooseFileCount,
                 individualEntryFileCount: breakdown?.individualEntryFileCount ?? 0,
                 dataDictionaryFileCount: breakdown?.dataDictionaryFileCount ?? 0,
                 rollupFileCount: breakdown?.rollupFileCount ?? 0,
                 archiveCount: breakdown?.zipArchiveFileCount ?? 0,
                 externalRecordFileCount: breakdown?.providerSidecarFileCount
                     ?? payload.externalRecordFileCount,
-                unclassifiedFileCount: (breakdown?.unclassifiedFileCount ?? 0)
-                    + max(payload.totalFilesWritten - classified, 0),
+                // Only the remainder after every known category (including provider
+                // sidecars) is unclassified. A truncated breakdown's gap is budget
+                // loss, not evidence that the producer emitted unclassified files.
+                // Saturation also keeps malformed direct construction non-trapping;
+                // app ingress separately rejects inconsistent wire payloads.
+                unclassifiedFileCount: unclassified,
+                fileCountLowerBound: payload.totalFilesWritten,
                 authoritativeFileCount: payload.isTotalFilesWrittenAuthoritative
                     ? payload.totalFilesWritten : nil,
                 isFileCategoryBreakdownComplete: breakdown?.isFileCategoryBreakdownComplete ?? false,
+                wasFileAccountingTruncated: breakdown?.wasTruncated ?? false,
                 dailyNoteUpdateCount: payload.dailyNoteUpdateCount,
                 dailyNoteSkipCount: payload.dailyNoteSkipCount,
                 wasCancelled: payload.status == .cancelled,
                 hadTerminalRangeFailure: payload.hadTerminalRangeFailure,
                 completedDates: payload.completedDates
             )
+        }
+
+        private static func saturatingAdd(_ lhs: Int, _ rhs: Int) -> Int {
+            let result = lhs.addingReportingOverflow(rhs)
+            return result.overflow ? Int.max : result.partialValue
         }
 
         var hasPartialFailures: Bool { !partialFailures.isEmpty }
@@ -247,13 +291,24 @@ struct ExportOrchestrator {
         }
         var primaryFailureReason: ExportFailureReason? { failedDateDetails.first?.reason }
         var categorizedFileCount: Int {
-            looseAggregateFileCount + individualEntryFileCount + dataDictionaryFileCount
-                + rollupFileCount + archiveCount + externalRecordFileCount
+            [
+                looseAggregateFileCount,
+                individualEntryFileCount,
+                dataDictionaryFileCount,
+                rollupFileCount,
+                archiveCount,
+                externalRecordFileCount
+            ].reduce(0, Self.saturatingAdd)
         }
-        var knownFileCount: Int { categorizedFileCount + unclassifiedFileCount }
-        var totalFilesWritten: Int { authoritativeFileCount ?? knownFileCount }
+        var knownFileCount: Int {
+            Self.saturatingAdd(categorizedFileCount, unclassifiedFileCount)
+        }
+        var totalFilesWritten: Int {
+            max(authoritativeFileCount ?? 0, max(fileCountLowerBound ?? 0, knownFileCount))
+        }
         var hasAuthoritativeFileCount: Bool {
-            authoritativeFileCount != nil || isFileCategoryBreakdownComplete
+            !outputBreakdown.wasTruncated
+                && (authoritativeFileCount != nil || isFileCategoryBreakdownComplete)
         }
         var outputBreakdown: ExportHistoryOutputBreakdown {
             ExportHistoryOutputBreakdown(
@@ -268,7 +323,8 @@ struct ExportOrchestrator {
                 dailyNoteUpdateCount: dailyNoteUpdateCount,
                 dailyNoteSkipCount: dailyNoteSkipCount,
                 unclassifiedFileCount: unclassifiedFileCount,
-                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete
+                isFileCategoryBreakdownComplete: isFileCategoryBreakdownComplete,
+                persistedWasTruncated: wasFileAccountingTruncated
             )
         }
 
@@ -1960,7 +2016,8 @@ struct ExportOrchestrator {
         let history = ExportHistoryManager.shared
         let suppliedFileCount = fileCount.map { max($0, 0) }
         let resolvedFileCount = suppliedFileCount ?? result.totalFilesWritten
-        let isAuthoritative = suppliedFileCount != nil || result.hasAuthoritativeFileCount
+        let isAuthoritative = !result.outputBreakdown.wasTruncated
+            && (suppliedFileCount != nil || result.hasAuthoritativeFileCount)
         let historyFileCount = isAuthoritative ? resolvedFileCount : nil
 
         if result.successCount > 0 || result.dailyNoteSkipCount > 0 {

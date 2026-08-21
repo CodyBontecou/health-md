@@ -2042,6 +2042,7 @@ struct ContentView: View {
     }
 
     private func completeMacExport(with result: MacExportResultPayload) {
+        guard result.hasConsistentFileAccounting else { return }
         let durableJournal = corpusRecoveryManager.journal(jobID: result.jobID)
         let completionSettings = durableJournal?.exportManifest.settingsSnapshot
             .makeAdvancedExportSettings() ?? advancedSettings
@@ -2071,7 +2072,7 @@ struct ContentView: View {
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate,
                 targetLabel: destinationName,
-                fileCount: result.isTotalFilesWrittenAuthoritative
+                fileCount: result.hasAuthoritativeFileCount
                     ? result.totalFilesWritten : nil
             )
 
@@ -2096,7 +2097,7 @@ struct ContentView: View {
             syncService.isSyncing = false
         }
 
-        let generatedFileCountText: String = if result.isTotalFilesWrittenAuthoritative {
+        let generatedFileCountText: String = if result.hasAuthoritativeFileCount {
             "\(result.totalFilesWritten) files"
         } else if result.totalFilesWritten > 0 {
             "at least \(result.totalFilesWritten) files"
@@ -2113,7 +2114,7 @@ struct ContentView: View {
             if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)\(warningSuffix)"
                 vaultManager.lastExportStatus = exportStatusMessage
-            } else if !result.isTotalFilesWrittenAuthoritative
+            } else if !result.hasAuthoritativeFileCount
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {
@@ -2147,7 +2148,7 @@ struct ContentView: View {
             } else if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). \(suffix)"
                 vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
-            } else if !result.isTotalFilesWrittenAuthoritative
+            } else if !result.hasAuthoritativeFileCount
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {

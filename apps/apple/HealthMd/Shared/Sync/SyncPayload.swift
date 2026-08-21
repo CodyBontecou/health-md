@@ -1061,7 +1061,11 @@ struct MacExportResultPayload: Codable {
         self.totalCount = totalCount
         self.formatsPerDate = formatsPerDate
         self.totalFilesWritten = totalFilesWritten
+        // Older readers do not understand breakdown truncation and rely only on
+        // this wire flag. Never let a budget-reduced breakdown advertise an exact
+        // total, while retaining totalFilesWritten as lower-bound evidence.
         self.isTotalFilesWrittenAuthoritative = isTotalFilesWrittenAuthoritative
+            && outputBreakdown?.wasTruncated != true
         self.externalRecordFileCount = externalRecordFileCount
         self.outputBreakdown = outputBreakdown
         self.hadTerminalRangeFailure = hadTerminalRangeFailure
@@ -1083,7 +1087,7 @@ struct MacExportResultPayload: Codable {
         totalCount = try container.decode(Int.self, forKey: .totalCount)
         formatsPerDate = try container.decode(Int.self, forKey: .formatsPerDate)
         totalFilesWritten = try container.decode(Int.self, forKey: .totalFilesWritten)
-        isTotalFilesWrittenAuthoritative = try container.decodeIfPresent(
+        let decodedAuthority = try container.decodeIfPresent(
             Bool.self,
             forKey: .isTotalFilesWrittenAuthoritative
         ) ?? false
@@ -1092,6 +1096,10 @@ struct MacExportResultPayload: Codable {
             ExportHistoryOutputBreakdown.self,
             forKey: .outputBreakdown
         )
+        // Normalize newer malformed/mixed-version input before it can be
+        // re-encoded for a reader that does not know the truncation field.
+        isTotalFilesWrittenAuthoritative = decodedAuthority
+            && outputBreakdown?.wasTruncated != true
         hadTerminalRangeFailure = try container.decodeIfPresent(
             Bool.self,
             forKey: .hadTerminalRangeFailure
@@ -1109,13 +1117,48 @@ struct MacExportResultPayload: Codable {
         completedAt = try container.decode(Date.self, forKey: .completedAt)
     }
 
+    /// Exact-count authority for consumers that persist the bounded category breakdown.
+    /// The wire total may be exact while the persisted categories are intentionally capped.
+    var hasAuthoritativeFileCount: Bool {
+        isTotalFilesWrittenAuthoritative
+            && outputBreakdown?.wasTruncated != true
+            && hasConsistentFileAccounting
+    }
+
     /// Human-readable count fragment for legacy UI surfaces. Nil means no useful count is known.
     var generatedFileCountDescription: String? {
-        if isTotalFilesWrittenAuthoritative {
+        if hasAuthoritativeFileCount {
             return "\(totalFilesWritten) file(s)"
         }
         guard totalFilesWritten > 0 else { return nil }
         return "at least \(totalFilesWritten) file(s)"
+    }
+
+    /// Whether the terminal status agrees with the producer counters and the
+    /// output/effect evidence used by `ExportResult` to distinguish partials.
+    /// Cancellation can interrupt at any coherent accounting point, including
+    /// before the first requested day, but still refers to a nonempty request.
+    var hasCoherentStatus: Bool {
+        guard totalCount > 0 else { return false }
+
+        let isProducerSuccess = successCount == totalCount
+            && failedDateDetails.isEmpty
+            && !hadTerminalRangeFailure
+        let hasConfirmedPartialResult = successCount > 0
+            || dailyNoteUpdateCount > 0
+            || dailyNoteSkipCount > 0
+            || totalFilesWritten > 0
+
+        switch status {
+        case .success:
+            return isProducerSuccess
+        case .partialSuccess:
+            return !isProducerSuccess && hasConfirmedPartialResult
+        case .failure:
+            return !hasConfirmedPartialResult
+        case .cancelled:
+            return true
+        }
     }
 
     var hasConsistentFileAccounting: Bool {
@@ -1125,13 +1168,36 @@ struct MacExportResultPayload: Codable {
               formatsPerDate >= 0,
               totalFilesWritten >= 0,
               externalRecordFileCount >= 0,
+              externalRecordFileCount <= totalFilesWritten,
               dailyNoteUpdateCount >= 0,
               dailyNoteSkipCount >= 0 else { return false }
-        guard let outputBreakdown else { return true }
+        let looseFiles = successCount.multipliedReportingOverflow(by: formatsPerDate)
+        guard !looseFiles.overflow else { return false }
+        let knownFiles = looseFiles.partialValue.addingReportingOverflow(externalRecordFileCount)
+        guard !knownFiles.overflow else { return false }
+        let dailyNoteActions = dailyNoteUpdateCount.addingReportingOverflow(dailyNoteSkipCount)
+        guard !dailyNoteActions.overflow,
+              dailyNoteActions.partialValue <= totalCount else { return false }
+        // Before category breakdowns were added, successful days and formats were
+        // the authoritative loose-file category. Provider sidecars were reported
+        // separately but included in the wire total, so their sum must fit even
+        // when totalFilesWritten itself is only advertised as a lower bound.
+        guard let outputBreakdown else {
+            return knownFiles.partialValue <= totalFilesWritten
+        }
         guard outputBreakdown.requestedDataDayCount == totalCount,
               outputBreakdown.successfulDataDayCount == successCount,
-              outputBreakdown.providerSidecarFileCount == externalRecordFileCount,
+              outputBreakdown.dailyNoteUpdateCount == dailyNoteUpdateCount,
+              outputBreakdown.dailyNoteSkipCount == dailyNoteSkipCount,
+              outputBreakdown.providerSidecarFileCount <= externalRecordFileCount,
               outputBreakdown.generatedFileCount <= totalFilesWritten else { return false }
+        // Budget truncation can reduce the provider category and the generated
+        // aggregate independently of the producer's exact wire totals. It is
+        // consistent but cannot authorize exact persisted-count comparisons.
+        guard !outputBreakdown.wasTruncated else { return true }
+        guard outputBreakdown.providerSidecarFileCount == externalRecordFileCount else {
+            return false
+        }
         return !isTotalFilesWrittenAuthoritative
             || !outputBreakdown.isFileCategoryBreakdownComplete
             || outputBreakdown.generatedFileCount == totalFilesWritten

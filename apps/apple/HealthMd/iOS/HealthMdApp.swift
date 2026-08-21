@@ -563,6 +563,15 @@ struct HealthMdApp: App {
 
     private func setupSyncMessageHandler() {
         syncService.onMessageReceived = { message in
+            // Validate Mac accounting synchronously at the app ingress. The
+            // asynchronous router receives a typed validated/rejected input, so
+            // no raw result can cancel waiters or reach event subscribers first.
+            let macExportResultIngress: MacExportResultIngress.Input?
+            if case .macExportResult(let payload) = message {
+                macExportResultIngress = MacExportResultIngress.validate(payload)
+            } else {
+                macExportResultIngress = nil
+            }
             Task { @MainActor in
                 switch message {
                 case .requestData(let dates):
@@ -597,28 +606,79 @@ struct HealthMdApp: App {
                     SchedulingManager.shared.handleScheduledMacExportProgress(progress)
                     CLIExportActivityTracker.shared.updateMac(progress)
                     self.syncService.publishMacExportMessage(message)
-                case .macExportResult(let payload):
-                    self.syncService.cancelMacExportStreamAckWaiters(jobID: payload.jobID)
-                    let scheduledHandled = SchedulingManager.shared.completeScheduledMacExport(
-                        with: payload
+                case .macExportResult:
+                    guard let macExportResultIngress else { return }
+                    _ = await MacExportResultIngress.handle(
+                        macExportResultIngress,
+                        cancelWaiters: { jobID in
+                            self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
+                        },
+                        completeScheduledResult: { result in
+                            let handled = SchedulingManager.shared.completeScheduledMacExport(
+                                with: result
+                            )
+                            if handled {
+                                self.syncService.isSyncing = false
+                                self.corpusRecoveryManager.markCompletionRecorded(jobID: result.jobID)
+                            }
+                            return handled
+                        },
+                        completeRequestResult: { result in
+                            let handled = self.iPhoneExportRequestHandler.complete(with: result)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRecoveredScheduledResult: { result in
+                            let handled = await SchedulingManager.shared
+                                .completeRecoveredScheduledMacExport(with: result)
+                            if handled {
+                                self.syncService.isSyncing = false
+                                self.corpusRecoveryManager.markCompletionRecorded(jobID: result.jobID)
+                            }
+                            return handled
+                        },
+                        completeRecoveredRequestResult: { result in
+                            let handled = self.corpusRecoveryManager
+                                .recordRecoveredMacRequestCompletion(result)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        publishResult: { result in
+                            self.corpusRecoveryManager.recordRecoveredCompletion(result)
+                            self.syncService.publishMacExportMessage(.macExportResult(result))
+                        },
+                        completeScheduledFailure: { failure in
+                            let handled = SchedulingManager.shared.completeScheduledMacExport(
+                                with: failure
+                            )
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRequestFailure: { failure in
+                            let handled = self.iPhoneExportRequestHandler.complete(with: failure)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRecoveredScheduledFailure: { failure in
+                            let handled = await SchedulingManager.shared
+                                .completeRecoveredScheduledMacExport(with: failure)
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        completeRecoveredRequestFailure: { failure in
+                            guard let jobID = failure.jobID else { return false }
+                            let handled = self.corpusRecoveryManager
+                                .rejectRecoveredMacRequestCompletion(
+                                    jobID: jobID,
+                                    message: failure.message
+                                )
+                            if handled { self.syncService.isSyncing = false }
+                            return handled
+                        },
+                        publishFailure: { failure in
+                            self.syncService.publishMacExportMessage(.macExportFailed(failure))
+                        }
                     )
-                    let requestHandled = self.iPhoneExportRequestHandler.complete(with: payload)
-                    let recoveredScheduledHandled = if !scheduledHandled && !requestHandled {
-                        await SchedulingManager.shared.completeRecoveredScheduledMacExport(
-                            with: payload
-                        )
-                    } else {
-                        false
-                    }
-                    if scheduledHandled || requestHandled || recoveredScheduledHandled {
-                        self.syncService.isSyncing = false
-                    }
-                    if scheduledHandled || recoveredScheduledHandled {
-                        self.corpusRecoveryManager.markCompletionRecorded(jobID: payload.jobID)
-                    } else if !requestHandled {
-                        self.corpusRecoveryManager.recordRecoveredCompletion(payload)
-                    }
-                    self.syncService.publishMacExportMessage(message)
                 case .macExportFailed(let failure):
                     if let jobID = failure.jobID {
                         self.syncService.cancelMacExportStreamAckWaiters(jobID: jobID)
