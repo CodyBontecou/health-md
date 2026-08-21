@@ -219,9 +219,12 @@ struct SyncPeerCapabilities: Codable, Equatable {
     let supportsMacDestinationStatus: Bool
     let supportsJobCancellation: Bool
     let supportsGranularPayloads: Bool
-    /// Older Mac builds can accept v2 Mac export jobs but silently ignore roll-up
-    /// settings because the executor did not write derived summaries yet.
+    /// Older Mac builds can accept v2 Mac export jobs but silently ignore historical
+    /// calendar roll-up settings because the executor did not write derived summaries yet.
     let supportsRollupSummaries: Bool
+    /// Whether this peer preserves immutable range authority and renders public range-v9.
+    /// Missing on historical peers decodes false independently of calendar roll-up support.
+    let supportsRangeV9Summaries: Bool
     /// Whether this peer understands roll-up jobs that intentionally skip daily records.
     let supportsSummaryOnlyExports: Bool
     /// Whether this peer can participate in Mac-initiated requests that ask an
@@ -289,6 +292,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         case supportsJobCancellation
         case supportsGranularPayloads
         case supportsRollupSummaries
+        case supportsRangeV9Summaries
         case supportsSummaryOnlyExports
         case supportsIPhoneExportRequests
         case supportsAllAvailableHistoryExportRequests
@@ -323,6 +327,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsJobCancellation: Bool,
         supportsGranularPayloads: Bool,
         supportsRollupSummaries: Bool = false,
+        supportsRangeV9Summaries: Bool = false,
         supportsSummaryOnlyExports: Bool = false,
         supportsIPhoneExportRequests: Bool = false,
         supportsAllAvailableHistoryExportRequests: Bool = false,
@@ -355,6 +360,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
         self.supportsJobCancellation = supportsJobCancellation
         self.supportsGranularPayloads = supportsGranularPayloads
         self.supportsRollupSummaries = supportsRollupSummaries
+        self.supportsRangeV9Summaries = supportsRangeV9Summaries
         self.supportsSummaryOnlyExports = supportsSummaryOnlyExports
         self.supportsIPhoneExportRequests = supportsIPhoneExportRequests
         self.supportsAllAvailableHistoryExportRequests = supportsAllAvailableHistoryExportRequests
@@ -395,6 +401,10 @@ struct SyncPeerCapabilities: Codable, Equatable {
         supportsJobCancellation = try container.decode(Bool.self, forKey: .supportsJobCancellation)
         supportsGranularPayloads = try container.decode(Bool.self, forKey: .supportsGranularPayloads)
         supportsRollupSummaries = try container.decodeIfPresent(Bool.self, forKey: .supportsRollupSummaries) ?? false
+        supportsRangeV9Summaries = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .supportsRangeV9Summaries
+        ) ?? false
         supportsSummaryOnlyExports = try container.decodeIfPresent(Bool.self, forKey: .supportsSummaryOnlyExports) ?? false
         supportsIPhoneExportRequests = try container.decodeIfPresent(Bool.self, forKey: .supportsIPhoneExportRequests) ?? false
         supportsAllAvailableHistoryExportRequests = try container.decodeIfPresent(
@@ -550,6 +560,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
 
     func supportsRequestedMacExportFeatures(
         rollupSummariesEnabled: Bool,
+        rangeV9SummaryEnabled: Bool = false,
         summaryOnlyExportEnabled: Bool = false,
         effectiveGranularDataEnabled: Bool = false,
         dailyNotesOnlyExportEnabled: Bool = false,
@@ -557,6 +568,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
     ) -> Bool {
         isCompatibleWithMacExportJobs
             && (!rollupSummariesEnabled || supportsRollupSummaries)
+            && (!rangeV9SummaryEnabled || supportsRangeV9Summaries)
             && (!summaryOnlyExportEnabled || supportsSummaryOnlyExports)
             && (!dailyNotesOnlyExportEnabled || supportsDailyNoteOnlyExports)
             && (!dataDictionarySuppressionRequested || supportsDataDictionaryExportPreference)
@@ -582,6 +594,7 @@ struct SyncPeerCapabilities: Codable, Equatable {
             supportsJobCancellation: true,
             supportsGranularPayloads: true,
             supportsRollupSummaries: true,
+            supportsRangeV9Summaries: true,
             supportsSummaryOnlyExports: true,
             supportsIPhoneExportRequests: true,
             supportsAllAvailableHistoryExportRequests: true,
@@ -661,8 +674,11 @@ struct MacExportJob: Codable {
     let sourceDeviceName: String
     let dateRangeStart: Date
     let dateRangeEnd: Date
-    /// Exact source-device day instants, preserved across peer time zones.
+    /// Exact residual source-device day instants, preserved across peer time zones.
     let requestedDates: [Date]?
+    /// Immutable original range authority. Missing identifies a backward legacy job.
+    let originalRequestedDates: [Date]?
+    let originalCalendarTimeZoneIdentifier: String?
     let records: [HealthData]
     let externalDailyRecords: [ExternalDailyRecord]
     let settingsSnapshot: ExportSettingsSnapshot
@@ -676,6 +692,8 @@ struct MacExportJob: Codable {
         case dateRangeStart
         case dateRangeEnd
         case requestedDates
+        case originalRequestedDates
+        case originalCalendarTimeZoneIdentifier
         case records
         case externalDailyRecords
         case settingsSnapshot
@@ -690,6 +708,8 @@ struct MacExportJob: Codable {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         requestedDates: [Date]? = nil,
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         records: [HealthData],
         externalDailyRecords: [ExternalDailyRecord] = [],
         settingsSnapshot: ExportSettingsSnapshot,
@@ -702,6 +722,8 @@ struct MacExportJob: Codable {
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
         self.requestedDates = requestedDates
+        self.originalRequestedDates = originalRequestedDates
+        self.originalCalendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
         self.records = records
         self.externalDailyRecords = externalDailyRecords
         self.settingsSnapshot = settingsSnapshot
@@ -717,6 +739,14 @@ struct MacExportJob: Codable {
         dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
         dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
         requestedDates = try container.decodeIfPresent([Date].self, forKey: .requestedDates)
+        originalRequestedDates = try container.decodeIfPresent(
+            [Date].self,
+            forKey: .originalRequestedDates
+        )
+        originalCalendarTimeZoneIdentifier = try container.decodeIfPresent(
+            String.self,
+            forKey: .originalCalendarTimeZoneIdentifier
+        )
         records = try container.decode([HealthData].self, forKey: .records)
         externalDailyRecords = try container.decodeIfPresent([ExternalDailyRecord].self, forKey: .externalDailyRecords) ?? []
         settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)
@@ -734,8 +764,11 @@ struct MacExportStreamStart: Codable, Equatable {
     let sourceDeviceName: String
     let dateRangeStart: Date
     let dateRangeEnd: Date
-    /// Exact source-device day instants, preserved across peer time zones.
+    /// Exact residual source-device day instants, preserved across peer time zones.
     let requestedDates: [Date]?
+    /// Immutable original range authority. Missing identifies a backward legacy stream.
+    let originalRequestedDates: [Date]?
+    let originalCalendarTimeZoneIdentifier: String?
     let totalRequestedDays: Int
     let totalTransferDays: Int
     let settingsSnapshot: ExportSettingsSnapshot
@@ -750,6 +783,8 @@ struct MacExportStreamStart: Codable, Equatable {
         dateRangeStart: Date,
         dateRangeEnd: Date,
         requestedDates: [Date]?,
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         totalRequestedDays: Int,
         totalTransferDays: Int,
         settingsSnapshot: ExportSettingsSnapshot,
@@ -763,6 +798,8 @@ struct MacExportStreamStart: Codable, Equatable {
         self.dateRangeStart = dateRangeStart
         self.dateRangeEnd = dateRangeEnd
         self.requestedDates = requestedDates
+        self.originalRequestedDates = originalRequestedDates
+        self.originalCalendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
         self.totalRequestedDays = totalRequestedDays
         self.totalTransferDays = totalTransferDays
         self.settingsSnapshot = settingsSnapshot
@@ -779,6 +816,14 @@ struct MacExportStreamStart: Codable, Equatable {
         dateRangeStart = try container.decode(Date.self, forKey: .dateRangeStart)
         dateRangeEnd = try container.decode(Date.self, forKey: .dateRangeEnd)
         requestedDates = try container.decodeIfPresent([Date].self, forKey: .requestedDates)
+        originalRequestedDates = try container.decodeIfPresent(
+            [Date].self,
+            forKey: .originalRequestedDates
+        )
+        originalCalendarTimeZoneIdentifier = try container.decodeIfPresent(
+            String.self,
+            forKey: .originalCalendarTimeZoneIdentifier
+        )
         totalRequestedDays = try container.decode(Int.self, forKey: .totalRequestedDays)
         totalTransferDays = try container.decode(Int.self, forKey: .totalTransferDays)
         settingsSnapshot = try container.decode(ExportSettingsSnapshot.self, forKey: .settingsSnapshot)

@@ -75,6 +75,19 @@ enum ExportRollupOutputSizeEstimator {
         let latestAllowedDay = calendar.startOfDay(for: latestAllowedDate)
         var windows = Set<HealthRollupPeriodWindow>()
         for period in periods {
+            if period == .range {
+                if let startDate = selectedDates.min(),
+                   let endDate = selectedDates.max(),
+                   let request = try? HealthRollupRangeRequest(
+                       startDate: startDate,
+                       endDate: endDate,
+                       calendarTimeZoneIdentifier: calendar.timeZone.identifier
+                   ),
+                   calendar.startOfDay(for: request.startDate) <= latestAllowedDay {
+                    windows.insert(.range(request))
+                }
+                continue
+            }
             for date in selectedDates {
                 let window = HealthRollupPeriodWindow.window(
                     containing: calendar.startOfDay(for: date),

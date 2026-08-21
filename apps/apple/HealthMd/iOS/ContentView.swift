@@ -1131,7 +1131,15 @@ struct ContentView: View {
             let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
-            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: dateRange.startDate,
+                to: dateRange.endDate,
+                calendar: calendar
+            )
             let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
 
             let result = await ExportOrchestrator.exportDates(
@@ -1260,7 +1268,15 @@ struct ContentView: View {
             let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
-            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: dateRange.startDate,
+                to: dateRange.endDate,
+                calendar: calendar
+            )
             let normalizedStartDate = dates.first ?? dateRange.startDate
             let normalizedEndDate = dates.last ?? dateRange.endDate
             let totalDays = dates.count
@@ -1636,6 +1652,8 @@ struct ContentView: View {
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
             requestedDates: metadata.requestedDates,
+            originalRequestedDates: metadata.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: metadata.originalCalendarTimeZoneIdentifier,
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,
@@ -2168,9 +2186,15 @@ struct ContentView: View {
     private func completeMacExport(with failure: MacExportFailure) {
         let hasDurableJournal = activeMacExportJobID
             .flatMap { corpusRecoveryManager.journal(jobID: $0) } != nil
-        let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
-        let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
-        let totalCount = max(ExportOrchestrator.dateRange(from: normalizedStartDate, to: normalizedEndDate).count, 1)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .gmt
+        let normalizedStartDate = activeMacExportStartDate ?? calendar.startOfDay(for: startDate)
+        let normalizedEndDate = activeMacExportEndDate ?? calendar.startOfDay(for: endDate)
+        let totalCount = max(ExportOrchestrator.dateRange(
+            from: normalizedStartDate,
+            to: normalizedEndDate,
+            calendar: calendar
+        ).count, 1)
         let reason = exportFailureReason(for: failure.reason)
         let failedDetail = FailedDateDetail(
             date: normalizedStartDate,

@@ -3,7 +3,7 @@
 Status: internal canonical contract
 Public export schemas affected: none
 
-This contract is the bounded native-to-Rust handoff after HealthKit or Health Connect capture and before public rendering. It is independently versioned from Apple `healthmd.health_data` v7, Android frozen v4, Android analytical v5, and direct protocol v1/v2.
+This contract is the bounded native-to-Rust handoff after HealthKit or Health Connect capture and before public rendering. It is independently versioned from Apple `healthmd.health_data` v8, Android frozen v4, Android analytical v5, `healthmd.rollup_summary` v9, and direct protocol v1/v2.
 
 ## Ownership boundary
 
@@ -21,7 +21,9 @@ An OS aggregate is represented as `kind: "sdk_aggregate"`; Rust must not reconst
 
 The caller supplies exact registry/version and profile-revision pins, an IANA calendar timezone, native persisted selection IDs, disabled profile output keys, an explicit platform-extension retention policy, and optional Apple roll-up periods. Profiles are never inferred. Android period requests fail with `unsupported_semantic_operation`.
 
-Limits are core-owned: 256 KiB configuration, 1 MiB per batch, 4,096 records per batch, 64 KiB per record, 512 selected IDs, 100,000 records/32 MiB per session, 400 owner dates, 32 extension references per record, and 128 UTF-8 bytes per retention token.
+Calendar periods (`iso_week`, `calendar_month`, and `calendar_year`) retain their semantic-input v1 shape and fixtures. A `range` request is gated to semantic-input v1, `apple_health_data_v8` profile revision 2, exactly one roll-up period, and a required `rollup_range` containing immutable inclusive civil bounds. Range bounds may cover at most 10,000 days; revision-1 calendar requests remain byte-compatible. Native code freezes the IANA timezone and requested bounds before capture; neither is inferred from successfully returned owner dates.
+
+Limits are core-owned: 256 KiB configuration, 1 MiB per batch, 4,096 records per batch, 64 KiB per record, 512 selected IDs, 100,000 records/32 MiB per session, 10,000 cumulative owner dates, 32 extension references per record, and 128 UTF-8 bytes per retention token.
 
 ## Exact time
 
@@ -74,7 +76,7 @@ The closed daily rules are pass-through, sum, average, minimum, maximum, latest,
 
 Shared derivation includes BMI from enabled weight and height facts when no direct BMI fact exists. Workouts preserve source record IDs and use explicit duration weights. State-of-Mind source records may attribute to multiple independent views so disabling one view does not alter another view's population.
 
-Apple roll-ups use supplied civil owner dates for ISO weeks, calendar months, and years. Missing days are ignored, zero remains a value, lower later VO2 is still latest, workout averages use daily workout-minute weights, and `days_counted` counts only days containing that key. The configured IANA label is returned unchanged; timezone offsets do not redefine owner dates.
+Apple calendar roll-ups use supplied civil owner dates for ISO weeks, calendar months, and years. Range roll-ups use the explicit configured bounds even when the first or last query fails. Missing days are ignored, successful empty owner dates remain in `source_dates`, zero remains a value, lower later VO2 is still latest, workout averages use daily workout-minute weights, and metric `days_counted` counts only days containing that key. The configured IANA label is returned unchanged; timezone offsets do not redefine owner dates.
 
 ## Canonicalization and diagnostics
 

@@ -782,9 +782,12 @@ final class HealthMdControlServer: ObservableObject {
             dateSelection = .explicitRange
             startDate = parsedStart
             endDate = parsedEnd
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
             requestedDateIdentifiers = ExportOrchestrator.dateRange(
                 from: parsedStart,
-                to: parsedEnd
+                to: parsedEnd,
+                calendar: calendar
             ).map { Self.dateFormatter.string(from: $0) }
         case IPhoneExportRequest.DateSelection.allAvailable.rawValue, "allAvailable":
             guard decoded.dateRange == nil, decoded.from == nil, decoded.to == nil else {

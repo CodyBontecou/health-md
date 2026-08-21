@@ -205,7 +205,11 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     return
                 }
             } else {
-                dates = ExportOrchestrator.dateRange(from: request.dateRangeStart, to: request.dateRangeEnd)
+                dates = ExportOrchestrator.dateRange(
+                    from: request.dateRangeStart,
+                    to: request.dateRangeEnd,
+                    calendar: sourceCalendar
+                )
             }
         case .allAvailable:
             guard request.requestedDateIdentifiers == nil,
@@ -265,10 +269,13 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         earliestCandidates.append(earliestDate)
                     }
                 }
-                let calendar = Calendar.current
-                let end = calendar.startOfDay(for: Date())
-                let start = earliestCandidates.min().map(calendar.startOfDay(for:)) ?? end
-                dates = ExportOrchestrator.dateRange(from: start, to: end)
+                let end = sourceCalendar.startOfDay(for: Date())
+                let start = earliestCandidates.min().map(sourceCalendar.startOfDay(for:)) ?? end
+                dates = ExportOrchestrator.dateRange(
+                    from: start,
+                    to: end,
+                    calendar: sourceCalendar
+                )
             }
         }
         guard !dates.isEmpty else {
@@ -659,9 +666,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
             reason: exportFailureReason(for: failure.reason),
             errorDetails: failure.underlyingError ?? failure.message
         )
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = pending.settings.exportTimeZoneOverride ?? .gmt
         let result = ExportOrchestrator.ExportResult(
             successCount: 0,
-            totalCount: max(ExportOrchestrator.dateRange(from: pending.request.dateRangeStart, to: pending.request.dateRangeEnd).count, 1),
+            totalCount: max(ExportOrchestrator.dateRange(
+                from: pending.request.dateRangeStart,
+                to: pending.request.dateRangeEnd,
+                calendar: calendar
+            ).count, 1),
             failedDateDetails: [failedDetail],
             formatsPerDate: pending.settings.looseFormatsPerDate,
             wasCancelled: failure.reason == .cancelled
@@ -1321,6 +1334,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
             requestedDates: metadata.requestedDates,
+            originalRequestedDates: metadata.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: metadata.originalCalendarTimeZoneIdentifier,
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,

@@ -21,6 +21,26 @@ final class SharedSetupV1Tests: XCTestCase {
         XCTAssertEqual(SharedSetupMapper.exactAppleSchedule(document)?.isEnabled, false)
     }
 
+    func testExportOmitsRangeSummaryFromCalendarOnlySharedSetupV1() throws {
+        let settings = AdvancedExportSettings(userDefaults: isolatedDefaults())
+        settings.generateRangeSummary = true
+
+        let document = try SharedSetupMapper.exportDocument(
+            settings: settings,
+            schedule: ExportSchedule(),
+            appVersion: "range-summary-test",
+            registry: fixtureRegistry()
+        )
+        let encoded = try SharedSetupCodec.encode(document)
+        let decoded = try SharedSetupCodec.decode(encoded)
+
+        XCTAssertTrue(settings.generateRangeSummary)
+        XCTAssertEqual(decoded.platformExtensions.apple?.export.rollups, [])
+        XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("weekly"))
+        XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("monthly"))
+        XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("yearly"))
+    }
+
     func testAndroidOriginFixtureMapsExactSharedFieldsAndLeavesDistinctMetricUnsupported() throws {
         let document = try SharedSetupCodec.decode(Data(contentsOf: fixtureURL("android-shared-setup-v1.json")))
         let preview = SharedSetupMapper.preview(document, registry: fixtureRegistry())

@@ -96,6 +96,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "export.range-summary",
     ]
 
     private static let androidCapabilities: Set<String> = [

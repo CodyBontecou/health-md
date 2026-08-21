@@ -585,6 +585,8 @@ class SchedulingManager: ObservableObject {
                 dates: request.dates,
                 target: target,
                 settingsSnapshot: request.settingsSnapshot,
+                originalRequestedDates: request.originalRequestedDates,
+                originalCalendarTimeZoneIdentifier: request.originalCalendarTimeZoneIdentifier,
                 quotaJobID: request.id,
                 notificationOperationID: notificationOperationID
             )
@@ -1064,6 +1066,8 @@ class SchedulingManager: ObservableObject {
         dates: [Date],
         target: ExportTargetSelection,
         settingsSnapshot: ExportSettingsSnapshot? = nil,
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         quotaJobID: UUID?,
         notificationOperationID: UUID? = nil
     ) async -> ExportOrchestrator.ExportResult {
@@ -1093,6 +1097,8 @@ class SchedulingManager: ObservableObject {
                 result = await performBackgroundExport(
                     dates: dates,
                     settingsSnapshot: settingsSnapshot,
+                    originalRequestedDates: originalRequestedDates,
+                    originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                     notificationOperationID: notificationOperationID
                 )
             case .apiEndpoint:
@@ -1105,6 +1111,8 @@ class SchedulingManager: ObservableObject {
                 result = await performBackgroundConnectedMacExport(
                     dates: dates,
                     settingsSnapshot: settingsSnapshot,
+                    originalRequestedDates: originalRequestedDates,
+                    originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                     quotaJobID: quotaJobID,
                     notificationOperationID: notificationOperationID
                 )
@@ -1170,6 +1178,8 @@ class SchedulingManager: ObservableObject {
     private func performBackgroundConnectedMacExport(
         dates: [Date],
         settingsSnapshot: ExportSettingsSnapshot?,
+        originalRequestedDates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?,
         quotaJobID: UUID?,
         notificationOperationID: UUID?
     ) async -> ExportOrchestrator.ExportResult {
@@ -1245,6 +1255,8 @@ class SchedulingManager: ObservableObject {
                     startDate: startDate,
                     endDate: endDate,
                     requestedDates: normalizedDates,
+                    originalRequestedDates: originalRequestedDates,
+                    originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                     settings: settings,
                     settingsSnapshot: settingsSnapshot,
                     negotiation: negotiation,
@@ -1261,6 +1273,7 @@ class SchedulingManager: ObservableObject {
                 startDate: startDate,
                 endDate: endDate,
                 requestedDates: normalizedDates,
+                rollupRequestedDates: originalRequestedDates,
                 settings: settings,
                 healthSubfolder: VaultManager.savedHealthSubfolder(),
                 destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
@@ -1338,6 +1351,8 @@ class SchedulingManager: ObservableObject {
         startDate: Date,
         endDate: Date,
         requestedDates: [Date],
+        originalRequestedDates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?,
         settings: AdvancedExportSettings,
         settingsSnapshot: ExportSettingsSnapshot?,
         negotiation: ConnectedCorpusTransferNegotiation,
@@ -1363,6 +1378,8 @@ class SchedulingManager: ObservableObject {
                         startDate: startDate,
                         endDate: endDate,
                         requestedDates: requestedDates,
+                        originalRequestedDates: originalRequestedDates,
+                        originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                         settings: settings,
                         healthSubfolder: VaultManager.savedHealthSubfolder(),
                         destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
@@ -1435,7 +1452,16 @@ class SchedulingManager: ObservableObject {
                 dateRangeStart: job.dateRangeStart,
                 dateRangeEnd: job.dateRangeEnd,
                 requestedDates: job.requestedDates
-                    ?? ExportOrchestrator.dateRange(from: job.dateRangeStart, to: job.dateRangeEnd),
+                    ?? {
+                        var calendar = Calendar(identifier: .gregorian)
+                        calendar.timeZone = job.settingsSnapshot.calendarTimeZoneIdentifier
+                            .flatMap(TimeZone.init(identifier:)) ?? .gmt
+                        return ExportOrchestrator.dateRange(
+                            from: job.dateRangeStart,
+                            to: job.dateRangeEnd,
+                            calendar: calendar
+                        )
+                    }(),
                 settings: settings,
                 notificationOperationID: notificationOperationID,
                 continuation: continuation
@@ -1731,7 +1757,13 @@ class SchedulingManager: ObservableObject {
         dateRangeEnd: Date,
         settings: AdvancedExportSettings
     ) -> ExportOrchestrator.ExportResult {
-        let dates = ExportOrchestrator.dateRange(from: dateRangeStart, to: dateRangeEnd)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = settings.exportTimeZoneOverride ?? .gmt
+        let dates = ExportOrchestrator.dateRange(
+            from: dateRangeStart,
+            to: dateRangeEnd,
+            calendar: calendar
+        )
         let fallbackDates = dates.isEmpty ? [dateRangeStart] : dates
         let reason = scheduledFailureReason(for: failure.reason)
         return ExportOrchestrator.ExportResult(
@@ -1855,6 +1887,8 @@ class SchedulingManager: ObservableObject {
             dates: dates,
             target: target,
             settingsSnapshot: pendingRequest?.settingsSnapshot,
+            originalRequestedDates: pendingRequest?.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: pendingRequest?.originalCalendarTimeZoneIdentifier,
             quotaJobID: notificationOperationID,
             notificationOperationID: notificationOperationID
         )
@@ -1938,6 +1972,8 @@ class SchedulingManager: ObservableObject {
             dates: dates,
             target: target,
             settingsSnapshot: pendingRequest?.settingsSnapshot,
+            originalRequestedDates: pendingRequest?.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: pendingRequest?.originalCalendarTimeZoneIdentifier,
             quotaJobID: pendingRequest?.id
         )
 
@@ -2084,6 +2120,8 @@ class SchedulingManager: ObservableObject {
             dates: pendingRequest.dates,
             target: target,
             settingsSnapshot: pendingRequest.settingsSnapshot,
+            originalRequestedDates: pendingRequest.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
             quotaJobID: pendingRequest.id
         )
         let completion = await completePendingScheduledExport(pendingRequest, result: result)
@@ -2309,6 +2347,8 @@ class SchedulingManager: ObservableObject {
             dates: dates,
             target: target,
             settingsSnapshot: pendingRequest?.settingsSnapshot,
+            originalRequestedDates: pendingRequest?.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: pendingRequest?.originalCalendarTimeZoneIdentifier,
             quotaJobID: pendingRequest?.id
         )
 
@@ -2540,6 +2580,8 @@ class SchedulingManager: ObservableObject {
     private func performBackgroundExport(
         dates: [Date],
         settingsSnapshot: ExportSettingsSnapshot?,
+        originalRequestedDates: [Date]?,
+        originalCalendarTimeZoneIdentifier: String?,
         notificationOperationID: UUID?
     ) async -> ExportOrchestrator.ExportResult {
         logger.info("Starting background export")
@@ -2558,6 +2600,10 @@ class SchedulingManager: ObservableObject {
         let vaultManager = VaultManager()
         let advancedSettings = settingsSnapshot?.makeAdvancedExportSettings()
             ?? AdvancedExportSettings()
+        if let originalCalendarTimeZoneIdentifier,
+           let originalCalendarTimeZone = TimeZone(identifier: originalCalendarTimeZoneIdentifier) {
+            advancedSettings.exportTimeZoneOverride = originalCalendarTimeZone
+        }
 
         // Check if vault is configured and currently accessible.
         vaultManager.refreshVaultAccess()
@@ -2601,6 +2647,7 @@ class SchedulingManager: ObservableObject {
             vaultManager: vaultManager,
             settings: advancedSettings,
             frozenSettingsSnapshot: settingsSnapshot,
+            requestedRollupDates: originalRequestedDates,
             operationSurface: settingsSnapshot == nil
                 ? .legacyOnly
                 : .localVaultRangeWithoutSideEffects,

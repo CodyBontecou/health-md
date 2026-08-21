@@ -40,6 +40,9 @@ pub(crate) fn add_rollups(
     });
     let formats = super::ordered_formats(config.profile, &config.formats);
     for rollup in rollups {
+        if rollup.period == RollupPeriod::Range {
+            continue;
+        }
         let period_id = period_identifier(rollup)?;
         for output_format in &formats {
             let content = render(config, rollup, *output_format)?;
@@ -574,6 +577,7 @@ fn period_identifier(rollup: &SemanticRollupResult) -> Result<String, RenderErro
         ),
         RollupPeriod::CalendarMonth => format!("{:04}-{:02}", start.year(), start.month()),
         RollupPeriod::CalendarYear => format!("{:04}", start.year()),
+        RollupPeriod::Range => return Err(RenderError::InvalidSemanticResult),
     })
 }
 
@@ -586,23 +590,25 @@ fn days_expected(rollup: &SemanticRollupResult) -> Result<u32, RenderError> {
     u32::try_from(days).map_err(|_| RenderError::InvalidSemanticResult)
 }
 
-const fn period_id(period: RollupPeriod) -> &'static str {
+fn period_id(period: RollupPeriod) -> &'static str {
     match period {
         RollupPeriod::IsoWeek => "weekly",
         RollupPeriod::CalendarMonth => "monthly",
         RollupPeriod::CalendarYear => "yearly",
+        RollupPeriod::Range => unreachable!("range roll-ups use the v9 renderer"),
     }
 }
 
-const fn period_display(period: RollupPeriod) -> &'static str {
+fn period_display(period: RollupPeriod) -> &'static str {
     match period {
         RollupPeriod::IsoWeek => "Weekly",
         RollupPeriod::CalendarMonth => "Monthly",
         RollupPeriod::CalendarYear => "Yearly",
+        RollupPeriod::Range => unreachable!("range roll-ups use the v9 renderer"),
     }
 }
 
-const fn period_folder(period: RollupPeriod) -> &'static str {
+fn period_folder(period: RollupPeriod) -> &'static str {
     period_display(period)
 }
 

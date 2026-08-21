@@ -62,6 +62,7 @@ struct DailyNoteInjector {
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
         metricSelection: MetricSelectionState,
+        calendarTimeZone: TimeZone = .current,
         fileSystem: FileSystemAccessing = SystemFileSystem(),
         fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
         destinationBinding: AppleVaultDestinationBinding? = nil,
@@ -73,11 +74,13 @@ struct DailyNoteInjector {
         let targetURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings,
-            date: healthData.date
+            date: healthData.date,
+            timeZone: calendarTimeZone
         )
         let relativePath = ExportPathPlanner.dailyNoteRelativePath(
             settings: settings,
-            date: healthData.date
+            date: healthData.date,
+            timeZone: calendarTimeZone
         )
 
         do {
@@ -182,7 +185,8 @@ struct DailyNoteInjector {
         base: InjectionPreviewBase,
         settings: DailyNoteInjectionSettings,
         customization: FormatCustomization,
-        metricSelection: MetricSelectionState
+        metricSelection: MetricSelectionState,
+        calendarTimeZone: TimeZone = .current
     ) -> InjectionPreviewResult {
         guard settings.enabled else { return .skipped(reason: "Injection disabled") }
 
@@ -213,11 +217,18 @@ struct DailyNoteInjector {
         } catch {
             return .skipped(reason: error.localizedDescription)
         }
-        let filename = settings.formatFilename(for: healthData.date) + ".md"
+        let filename = settings.formatFilename(
+            for: healthData.date,
+            timeZone: calendarTimeZone
+        ) + ".md"
 
         return .preview(InjectionPreview(
             filename: filename,
-            path: ExportPathPlanner.dailyNoteRelativePath(settings: settings, date: healthData.date),
+            path: ExportPathPlanner.dailyNoteRelativePath(
+                settings: settings,
+                date: healthData.date,
+                timeZone: calendarTimeZone
+            ),
             content: content
         ))
     }

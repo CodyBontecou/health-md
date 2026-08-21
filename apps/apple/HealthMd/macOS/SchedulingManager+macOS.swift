@@ -5,14 +5,70 @@ import ServiceManagement
 import UserNotifications
 import os.log
 
+struct MacLocalExportResultReconciliation {
+    static func makeResult(
+        requestedDates: [Date],
+        successCount: Int,
+        failedDateDetails: [FailedDateDetail],
+        partialFailures: [ExportPartialFailure],
+        formatsPerDate: Int,
+        rollupFileCount: Int = 0,
+        archiveCount: Int = 0,
+        dailyNoteUpdateCount: Int = 0,
+        dailyNoteSkipCount: Int = 0,
+        wasCancelled: Bool = false,
+        completedDates: [Date],
+        summaryOnly: Bool,
+        capturedRequestedDates: [Date],
+        hasRenderableSummaryData: Bool,
+        calendar: Calendar
+    ) -> ExportOrchestrator.ExportResult {
+        var terminalFailures = failedDateDetails
+        var terminalCompletedDates = completedDates
+        let requestedDays = Set(requestedDates.map { calendar.startOfDay(for: $0) })
+        let capturedDays = Set(capturedRequestedDates.map { calendar.startOfDay(for: $0) })
+        let isAllEmptySummaryOnly = summaryOnly
+            && !wasCancelled
+            && rollupFileCount + archiveCount == 0
+            && partialFailures.isEmpty
+            && !hasRenderableSummaryData
+            && !requestedDays.isEmpty
+            && requestedDays.isSubset(of: capturedDays)
+
+        if isAllEmptySummaryOnly {
+            terminalFailures = ExportOrchestrator.terminalNoDataFailures(
+                for: requestedDates,
+                calendar: calendar
+            )
+            terminalCompletedDates = requestedDates
+        }
+
+        return ExportOrchestrator.ExportResult(
+            successCount: isAllEmptySummaryOnly ? 0 : successCount,
+            totalCount: requestedDates.count,
+            failedDateDetails: terminalFailures,
+            partialFailures: partialFailures,
+            formatsPerDate: formatsPerDate,
+            rollupFileCount: rollupFileCount,
+            archiveCount: archiveCount,
+            dailyNoteUpdateCount: dailyNoteUpdateCount,
+            dailyNoteSkipCount: dailyNoteSkipCount,
+            wasCancelled: wasCancelled,
+            completedDates: terminalCompletedDates
+        )
+    }
+}
+
 struct MacScheduledRangeCapture {
     let records: [HealthData]
     let dailyOutputOwnerDates: Set<String>
     let selectedRecordDates: [Date]
+    let selectedRenderableDates: [Date]
     let failures: [FailedDateDetail]
 
     static func capture(
         selectedDates: [Date],
+        rollupRequestedDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         timeZone: TimeZone,
         latestAllowedDate: Date = Date(),
@@ -26,16 +82,18 @@ struct MacScheduledRangeCapture {
                 calendarTimeZoneIdentifier: timeZone.identifier
             )
         })
+        let immutableRollupDates = rollupRequestedDates ?? selectedDates
         let rollupDates = ExportOrchestrator.rollupSourceDates(
-            for: selectedDates,
+            for: immutableRollupDates,
             settings: settings,
             calendar: calendar,
-            latestAllowedDate: max(latestAllowedDate, selectedDates.max() ?? latestAllowedDate)
+            latestAllowedDate: max(latestAllowedDate, immutableRollupDates.max() ?? latestAllowedDate)
         )
         let captureDates = rollupDates.isEmpty ? selectedDates : rollupDates
         var records: [HealthData] = []
         var dailyOutputOwnerDates: Set<String> = []
         var selectedRecordDates: [Date] = []
+        var selectedRenderableDates: [Date] = []
         var failures: [FailedDateDetail] = []
 
         for captureDate in captureDates {
@@ -51,14 +109,13 @@ struct MacScheduledRangeCapture {
             }
             records.append(record)
             guard selectedOwnerDates.contains(ownerDate) else { continue }
-            let prepared = record.preparedExport(settings: settings)
-            guard prepared.hasAnyData else {
-                failures.append(FailedDateDetail(date: captureDate, reason: .noHealthData))
-                continue
-            }
             selectedRecordDates.append(captureDate)
-            if !settings.summaryOnlyModeEnabled {
-                dailyOutputOwnerDates.insert(ownerDate)
+            let prepared = record.preparedExport(settings: settings)
+            if prepared.hasAnyData {
+                selectedRenderableDates.append(captureDate)
+                if !settings.summaryOnlyModeEnabled {
+                    dailyOutputOwnerDates.insert(ownerDate)
+                }
             }
         }
 
@@ -66,8 +123,43 @@ struct MacScheduledRangeCapture {
             records: records,
             dailyOutputOwnerDates: dailyOutputOwnerDates,
             selectedRecordDates: selectedRecordDates,
+            selectedRenderableDates: selectedRenderableDates,
             failures: failures
         )
+    }
+
+    /// Rebuilds the complete immutable daily source set before an archive overwrite. A residual
+    /// retry may reuse records captured in this run, but every other original day must still be
+    /// available from the local cache or the existing ZIP remains authoritative.
+    static func archiveSources(
+        originalRequestedDates: [Date],
+        reusing records: [HealthData],
+        timeZone: TimeZone,
+        fetch: (Date) -> HealthData?
+    ) -> [HealthData]? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        var recordsByDay: [Date: HealthData] = [:]
+        for record in records {
+            recordsByDay[calendar.startOfDay(for: record.date)] = record
+        }
+        var result: [HealthData] = []
+        result.reserveCapacity(originalRequestedDates.count)
+
+        for requestedDate in originalRequestedDates {
+            let day = calendar.startOfDay(for: requestedDate)
+            if let reused = recordsByDay[day] {
+                result.append(reused)
+                continue
+            }
+            guard let recaptured = fetch(requestedDate),
+                  calendar.startOfDay(for: recaptured.date) == day else {
+                return nil
+            }
+            recordsByDay[day] = recaptured
+            result.append(recaptured)
+        }
+        return result
     }
 }
 
@@ -265,7 +357,8 @@ class SchedulingManager: ObservableObject {
             let dayAfterLastExport = calendar.date(byAdding: .day, value: 1, to: lastExportedDataDay)!
             newlyDueDates = ExportOrchestrator.dateRange(
                 from: max(dayAfterLastExport, oldestDateToExport),
-                to: yesterday
+                to: yesterday,
+                calendar: calendar
             )
         } else {
             newlyDueDates = []
@@ -282,18 +375,41 @@ class SchedulingManager: ObservableObject {
         // Use HealthDataStore (local cache) instead of HealthKitManager
         let healthDataStore = HealthDataStore()
         let vaultManager = VaultManager()
-        let settings = existingPendingRequest?.settingsSnapshot?.makeAdvancedExportSettings()
+        let storedSettings = existingPendingRequest?.settingsSnapshot?.makeAdvancedExportSettings()
             ?? AdvancedExportSettings()
+        let immutableRangeDates = existingPendingRequest?.originalRequestedDates ?? dates
+        let immutableRangeTimeZone = existingPendingRequest?.originalCalendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? storedSettings.exportTimeZoneOverride
+            ?? calendar.timeZone
+        storedSettings.exportTimeZoneOverride = immutableRangeTimeZone
         let frozenSettingsSnapshot: ExportSettingsSnapshot? = if existingPendingRequest == nil {
             await ExportSettingsSnapshot.forNewAppleOperation(
-                settings,
+                storedSettings,
                 healthSubfolder: vaultManager.healthSubfolder,
-                calendarTimeZone: .current,
+                calendarTimeZone: immutableRangeTimeZone,
                 surface: .localVaultRangeWithoutSideEffects
             )
         } else {
             existingPendingRequest?.settingsSnapshot
         }
+        let availabilitySnapshot = frozenSettingsSnapshot ?? ExportSettingsSnapshot.from(
+            storedSettings,
+            healthSubfolder: vaultManager.healthSubfolder,
+            appleExportEngineAuthorityIsFrozen: true,
+            calendarTimeZoneIdentifier: immutableRangeTimeZone.identifier
+        )
+        let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+            availabilitySnapshot,
+            requestedDates: immutableRangeDates,
+            calendarTimeZone: immutableRangeTimeZone
+        )
+        let effectiveSettingsSnapshot = frozenSettingsSnapshot == nil
+            ? nil
+            : rangeAvailability.snapshot
+        let settings = rangeAvailability.snapshot.makeAdvancedExportSettings()
+        var reconciliationCalendar = Calendar(identifier: .gregorian)
+        reconciliationCalendar.timeZone = immutableRangeTimeZone
 
         vaultManager.refreshVaultAccess()
         guard vaultManager.hasVaultAccess else {
@@ -321,21 +437,24 @@ class SchedulingManager: ObservableObject {
         var successCount = 0
         var completedDates: [Date] = []
         var failedDateDetails: [FailedDateDetail] = []
-        var partialFailures: [ExportPartialFailure] = []
+        var partialFailures: [ExportPartialFailure] = rangeAvailability.warning.map { [$0] } ?? []
         var successfulHealthData: [HealthData] = []
         var rollupFileCount = 0
         var archiveCount = 0
         var dailyNoteUpdateCount = 0
         var dailyNoteSkipCount = 0
         var wasCancelled = false
-        let requiresDerivedOutput = settings.archiveModeEnabled || settings.summaryOnlyModeEnabled
-        let usesPinnedRange = frozenSettingsSnapshot?.appleExportEnginePin != nil
-        let preflightSettings = frozenSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
+        let requiresStandaloneRangeSummary = !settings.archiveModeEnabled
+            && settings.generateRangeSummary
+            && HealthRollupExporter.isEnabled(settings: settings)
+        let requiresDerivedOutput = settings.archiveModeEnabled || requiresStandaloneRangeSummary
+        let usesPinnedRange = effectiveSettingsSnapshot?.appleExportEnginePin != nil
+        let preflightSettings = effectiveSettingsSnapshot?.makeAdvancedExportSettings() ?? settings
         var preflightFailed = false
         do {
             try vaultManager.preflightExportDestinations(
                 settings: preflightSettings,
-                healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
+                healthSubfolder: effectiveSettingsSnapshot?.healthSubfolder,
                 dates: dates
             )
         } catch {
@@ -352,25 +471,52 @@ class SchedulingManager: ObservableObject {
         if Task.isCancelled {
             wasCancelled = true
         } else if !preflightFailed, usesPinnedRange,
-           let frozenSettingsSnapshot,
-           let timeZoneIdentifier = frozenSettingsSnapshot.calendarTimeZoneIdentifier,
+           let effectiveSettingsSnapshot,
+           let timeZoneIdentifier = effectiveSettingsSnapshot.calendarTimeZoneIdentifier,
            let timeZone = TimeZone(identifier: timeZoneIdentifier) {
             let captured = MacScheduledRangeCapture.capture(
                 selectedDates: dates,
+                rollupRequestedDates: immutableRangeDates,
                 settings: settings,
                 timeZone: timeZone,
                 fetch: healthDataStore.fetchHealthData(for:)
             )
             failedDateDetails = captured.failures
+            successfulHealthData = captured.records
+            let renderableDays = Set(captured.selectedRenderableDates.map {
+                reconciliationCalendar.startOfDay(for: $0)
+            })
+            let emptySelectedDates = captured.selectedRecordDates.filter {
+                !renderableDays.contains(reconciliationCalendar.startOfDay(for: $0))
+            }
+            failedDateDetails.append(contentsOf: ExportOrchestrator.terminalNoDataFailures(
+                for: emptySelectedDates,
+                calendar: reconciliationCalendar
+            ))
+            completedDates.append(contentsOf: emptySelectedDates)
 
-            if !captured.records.isEmpty
-                && (!settings.summaryOnlyModeEnabled || !captured.selectedRecordDates.isEmpty) {
+            let shouldWriteRange = settings.summaryOnlyModeEnabled
+                ? !captured.selectedRenderableDates.isEmpty
+                : !captured.dailyOutputOwnerDates.isEmpty
+            if !captured.records.isEmpty && shouldWriteRange {
                 do {
+                    let requestedRange = settings.generateRangeSummary
+                        ? try HealthRollupRangeRequest(
+                            ownerDateIdentifiers: Set(immutableRangeDates.map {
+                                HealthKitDailyOwnershipMetadata.ownerDate(
+                                    for: $0,
+                                    calendarTimeZoneIdentifier: timeZone.identifier
+                                )
+                            }),
+                            calendarTimeZoneIdentifier: timeZone.identifier
+                        )
+                        : nil
                     guard let writeResult = try await vaultManager.exportHealthDataRange(
                         captured.records,
-                        settingsSnapshot: frozenSettingsSnapshot,
+                        settingsSnapshot: effectiveSettingsSnapshot,
                         operationSurface: .localVaultRangeWithoutSideEffects,
-                        dailyOutputOwnerDates: captured.dailyOutputOwnerDates
+                        dailyOutputOwnerDates: captured.dailyOutputOwnerDates,
+                        requestedRange: requestedRange
                     ) else {
                         throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                     }
@@ -379,19 +525,21 @@ class SchedulingManager: ObservableObject {
                         if rollupFileCount > 0 {
                             successCount = captured.selectedRecordDates.count
                             completedDates = captured.selectedRecordDates
-                        } else {
-                            failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
-                                FailedDateDetail(date: $0, reason: .noHealthData)
+                            let capturedDays = Set(captured.selectedRecordDates.map {
+                                reconciliationCalendar.startOfDay(for: $0)
                             })
+                            failedDateDetails.removeAll {
+                                capturedDays.contains(reconciliationCalendar.startOfDay(for: $0.date))
+                            }
                         }
                     } else {
-                        successCount = captured.selectedRecordDates.count
-                        completedDates = captured.selectedRecordDates
+                        successCount = captured.selectedRenderableDates.count
+                        completedDates.append(contentsOf: captured.selectedRenderableDates)
                     }
                 } catch is CancellationError {
                     wasCancelled = true
                 } catch {
-                    failedDateDetails.append(contentsOf: captured.selectedRecordDates.map {
+                    failedDateDetails.append(contentsOf: captured.selectedRenderableDates.map {
                         FailedDateDetail(
                             date: $0,
                             reason: .fileWriteError,
@@ -424,6 +572,12 @@ class SchedulingManager: ObservableObject {
 
             if !healthData.hasAnyData {
                 failedDateDetails.append(FailedDateDetail(date: date, reason: .noHealthData))
+                completedDates.append(date)
+                if requiresDerivedOutput {
+                    // A successful empty cache read is still immutable range provenance. Keep it
+                    // so a residual retry can reconstruct exact days_counted without retrying it.
+                    successfulHealthData.append(healthData)
+                }
                 continue
             }
 
@@ -431,11 +585,11 @@ class SchedulingManager: ObservableObject {
                 let writeResult = try await vaultManager.exportHealthData(
                     healthData,
                     settings: settings,
-                    healthSubfolder: frozenSettingsSnapshot?.healthSubfolder,
-                    operationSurface: frozenSettingsSnapshot == nil
+                    healthSubfolder: effectiveSettingsSnapshot?.healthSubfolder,
+                    operationSurface: effectiveSettingsSnapshot == nil
                         ? .legacyOnly
                         : .localVaultWithoutSideEffects,
-                    frozenSettingsSnapshot: frozenSettingsSnapshot
+                    frozenSettingsSnapshot: effectiveSettingsSnapshot
                 )
                 dailyNoteUpdateCount += writeResult.dailyNoteUpdatedCount
                 dailyNoteSkipCount += writeResult.dailyNoteSkippedCount
@@ -489,12 +643,30 @@ class SchedulingManager: ObservableObject {
         // output begins. Recheck at that exact boundary so no archive/roll-up starts afterward.
         if Task.isCancelled { wasCancelled = true }
 
-        var rollupHealthData = successfulHealthData
-        if !wasCancelled {
-            let retainedRollupDays = Set(rollupHealthData.map { calendar.startOfDay(for: $0.date) })
-            for rollupDate in ExportOrchestrator.rollupSourceDates(for: dates, settings: settings)
-                where !retainedRollupDays.contains(calendar.startOfDay(for: rollupDate)) {
-                if let data = healthDataStore.fetchHealthData(for: rollupDate), data.hasAnyData {
+        let archiveSourceHealthData: [HealthData]? = if settings.archiveModeEnabled && !wasCancelled {
+            MacScheduledRangeCapture.archiveSources(
+                originalRequestedDates: immutableRangeDates,
+                reusing: successfulHealthData,
+                timeZone: immutableRangeTimeZone,
+                fetch: healthDataStore.fetchHealthData(for:)
+            )
+        } else {
+            nil
+        }
+        var rollupHealthData = archiveSourceHealthData ?? successfulHealthData
+        if !wasCancelled && (!settings.archiveModeEnabled || archiveSourceHealthData != nil) {
+            let retainedRollupDays = Set(rollupHealthData.map {
+                reconciliationCalendar.startOfDay(for: $0.date)
+            })
+            for rollupDate in ExportOrchestrator.rollupSourceDates(
+                for: immutableRangeDates,
+                settings: settings,
+                calendar: reconciliationCalendar
+            )
+                where !retainedRollupDays.contains(reconciliationCalendar.startOfDay(for: rollupDate)) {
+                if let data = healthDataStore.fetchHealthData(for: rollupDate) {
+                    // Empty cached days are successful captures and must remain in range-v9
+                    // provenance when a residual retry rebuilds the immutable original range.
                     rollupHealthData.append(data)
                 }
             }
@@ -502,15 +674,29 @@ class SchedulingManager: ObservableObject {
 
         if !wasCancelled && settings.archiveModeEnabled && !successfulHealthData.isEmpty {
             do {
+                guard let archiveSourceHealthData else {
+                    throw ExportError.invalidExportPath(
+                        path: "original archive source days are unavailable; existing ZIP preserved"
+                    )
+                }
                 if try await vaultManager.exportArchive(
-                    from: successfulHealthData,
+                    from: archiveSourceHealthData,
                     rollupHealthData: rollupHealthData,
                     settings: settings,
-                    startDate: dates.first ?? yesterday,
-                    endDate: dates.last ?? yesterday
+                    startDate: immutableRangeDates.first ?? dates.first ?? yesterday,
+                    endDate: immutableRangeDates.last ?? dates.last ?? yesterday
                 ) != nil {
                     archiveCount = 1
                     completedDates.append(contentsOf: successfulHealthData.map(\.date))
+                    if settings.summaryOnlyModeEnabled {
+                        successCount = successfulHealthData.count
+                        let capturedDays = Set(successfulHealthData.map {
+                            reconciliationCalendar.startOfDay(for: $0.date)
+                        })
+                        failedDateDetails.removeAll {
+                            capturedDays.contains(reconciliationCalendar.startOfDay(for: $0.date))
+                        }
+                    }
                 } else {
                     throw ExportError.noHealthData
                 }
@@ -522,10 +708,24 @@ class SchedulingManager: ObservableObject {
                 })
                 successCount = 0
             }
-        } else if !wasCancelled && settings.summaryOnlyModeEnabled && !successfulHealthData.isEmpty {
+        } else if !wasCancelled && requiresStandaloneRangeSummary && !successfulHealthData.isEmpty {
             do {
+                guard let timeZone = settings.exportTimeZoneOverride else {
+                    throw ExportError.invalidExportPath(path: "missing calendar timezone")
+                }
+                let identifiers = Set(immutableRangeDates.map {
+                    HealthKitDailyOwnershipMetadata.ownerDate(
+                        for: $0,
+                        calendarTimeZoneIdentifier: timeZone.identifier
+                    )
+                })
+                let requestedRange = try HealthRollupRangeRequest(
+                    ownerDateIdentifiers: identifiers,
+                    calendarTimeZoneIdentifier: timeZone.identifier
+                )
                 let results = try vaultManager.exportRollupSummaries(
                     from: rollupHealthData,
+                    requestedRange: requestedRange,
                     settings: settings
                 )
                 if results.isEmpty {
@@ -535,8 +735,17 @@ class SchedulingManager: ObservableObject {
                     successCount = 0
                 } else {
                     rollupFileCount = results.count
+                    completedDates.append(contentsOf: successfulHealthData.map(\.date))
+                    if settings.summaryOnlyModeEnabled {
+                        successCount = successfulHealthData.count
+                        let capturedDays = Set(successfulHealthData.map {
+                            reconciliationCalendar.startOfDay(for: $0.date)
+                        })
+                        failedDateDetails.removeAll {
+                            capturedDays.contains(reconciliationCalendar.startOfDay(for: $0.date))
+                        }
+                    }
                 }
-                completedDates.append(contentsOf: successfulHealthData.map(\.date))
             } catch {
                 failedDateDetails.append(contentsOf: successfulHealthData.map {
                     FailedDateDetail(date: $0.date, reason: .fileWriteError, errorDetails: error.localizedDescription)
@@ -546,9 +755,12 @@ class SchedulingManager: ObservableObject {
         }
         }
 
-        let result = ExportOrchestrator.ExportResult(
+        let hasRenderableSummaryData = successfulHealthData.contains {
+            $0.preparedExport(settings: settings).hasAnyData
+        }
+        let result = MacLocalExportResultReconciliation.makeResult(
+            requestedDates: dates,
             successCount: successCount,
-            totalCount: dates.count,
             failedDateDetails: failedDateDetails,
             partialFailures: partialFailures,
             formatsPerDate: settings.looseFormatsPerDate,
@@ -557,21 +769,17 @@ class SchedulingManager: ObservableObject {
             dailyNoteUpdateCount: dailyNoteUpdateCount,
             dailyNoteSkipCount: dailyNoteSkipCount,
             wasCancelled: wasCancelled,
-            completedDates: completedDates
+            completedDates: completedDates,
+            summaryOnly: settings.summaryOnlyModeEnabled,
+            capturedRequestedDates: successfulHealthData.map(\.date),
+            hasRenderableSummaryData: hasRenderableSummaryData,
+            calendar: reconciliationCalendar
         )
         let originalRequest: PendingExportRequest
         if let existingPendingRequest {
-            originalRequest = PendingExportRequest(
-                id: existingPendingRequest.id,
-                dates: dates,
-                source: existingPendingRequest.source,
-                scheduledFireDate: existingPendingRequest.scheduledFireDate,
-                scheduledKind: existingPendingRequest.scheduledKind,
-                createdAt: existingPendingRequest.createdAt,
-                notificationMetadata: existingPendingRequest.notificationMetadata,
-                exportTarget: existingPendingRequest.exportTarget,
-                settingsSnapshot: existingPendingRequest.settingsSnapshot,
-                calendar: calendar
+            originalRequest = existingPendingRequest.replacingResidualDates(
+                dates,
+                attemptedAt: Date()
             )
         } else {
             originalRequest = PendingExportRequest(
@@ -582,10 +790,13 @@ class SchedulingManager: ObservableObject {
                 notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
                 exportTarget: .localIPhoneFolder,
                 settingsSnapshot: frozenSettingsSnapshot,
-                calendar: calendar
+                calendar: reconciliationCalendar
             )
         }
-        let remainingDates = result.remainingDates(from: originalRequest.dates, calendar: calendar)
+        let remainingDates = result.remainingDates(
+            from: originalRequest.dates,
+            calendar: reconciliationCalendar
+        )
             ?? originalRequest.dates
         var didPersistReconciliation = false
         if remainingDates.isEmpty {
@@ -596,17 +807,9 @@ class SchedulingManager: ObservableObject {
                 logger.error("Could not clear completed Mac schedule: \(error.localizedDescription)")
             }
         } else {
-            let retryRequest = PendingExportRequest(
-                id: originalRequest.id,
-                dates: remainingDates,
-                source: originalRequest.source,
-                scheduledFireDate: originalRequest.scheduledFireDate,
-                scheduledKind: originalRequest.scheduledKind,
-                createdAt: originalRequest.createdAt,
-                notificationMetadata: originalRequest.notificationMetadata,
-                exportTarget: originalRequest.exportTarget,
-                settingsSnapshot: originalRequest.settingsSnapshot,
-                calendar: calendar
+            let retryRequest = originalRequest.replacingResidualDates(
+                remainingDates,
+                attemptedAt: Date()
             )
             do {
                 try pendingExportStore.upsert(retryRequest)

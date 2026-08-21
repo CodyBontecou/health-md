@@ -791,7 +791,7 @@ struct ExportTabView: View {
                 inlineIcon("calendar.badge.clock", isActive: advancedSettings.rollupSummariesEnabled)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Roll-Up Summaries")
+                    Text("Range Summary")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.textPrimary)
 
@@ -814,31 +814,19 @@ struct ExportTabView: View {
             }
 
             VStack(spacing: 0) {
-                Toggle("Weekly", isOn: $advancedSettings.generateWeeklyRollups)
+                Toggle("Range summary", isOn: $advancedSettings.generateRangeSummary)
                     .tint(Color.accent)
                     .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
                     .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates weekly roll-up files for every selected export format")
+                    .accessibilityHint("Generates one range summary for every selected export format")
 
-                Toggle("Monthly", isOn: $advancedSettings.generateMonthlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates monthly roll-up files for every selected export format")
-
-                Toggle("Yearly", isOn: $advancedSettings.generateYearlyRollups)
-                    .tint(Color.accent)
-                    .disabled(advancedSettings.dailyNotesOnlyModeEnabled)
-                    .padding(.vertical, Spacing.s1)
-                    .accessibilityHint("Generates yearly roll-up files for every selected export format")
-
-                Toggle("Summary files only", isOn: $advancedSettings.summaryOnlyExport)
+                Toggle("Range summary only", isOn: $advancedSettings.summaryOnlyExport)
                     .tint(Color.accent)
                     .padding(.vertical, Spacing.s1)
                     .disabled(!advancedSettings.rollupSummariesEnabled || advancedSettings.dailyNotesOnlyModeEnabled)
                     .accessibilityHint("Skips daily export files and writes only the enabled roll-up summaries")
 
-                Text("When enabled, Health.md fetches the full touched periods but skips daily files, daily-note injection, and individual entries.")
+                Text("When enabled, Health.md summarizes the full requested range but skips daily files, daily-note injection, and individual entries.")
                     .font(.caption)
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1139,9 +1127,12 @@ struct ExportTabView: View {
     }
 
     private var exportDates: [Date] {
-        ExportOrchestrator.dateRange(
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
+        return ExportOrchestrator.dateRange(
             from: min(startDate, endDate),
-            to: max(startDate, endDate)
+            to: max(startDate, endDate),
+            calendar: calendar
         )
     }
 
@@ -1280,22 +1271,7 @@ struct ExportTabView: View {
     }
 
     private var projectedRollupFileCount: Int {
-        guard exportTargetSelection != .apiEndpoint,
-              !advancedSettings.dailyNotesOnlyModeEnabled,
-              !advancedSettings.enabledRollupPeriods.isEmpty,
-              !advancedSettings.exportFormats.isEmpty else { return 0 }
-
-        var windows = Set<HealthRollupPeriodWindow>()
-        for period in advancedSettings.enabledRollupPeriods {
-            for date in exportDates {
-                windows.insert(HealthRollupPeriodWindow.window(
-                    containing: date,
-                    period: period,
-                    calendar: .current
-                ))
-            }
-        }
-        return windows.count * advancedSettings.exportFormats.count
+        projectedRollupOutputProjection.fileCount
     }
 
     private var projectedRollupSourceDateCount: Int {
@@ -1305,11 +1281,14 @@ struct ExportTabView: View {
             return exportDateCount
         }
 
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return max(
             exportDateCount,
             ExportOrchestrator.rollupSourceDates(
                 for: exportDates,
-                periods: advancedSettings.enabledRollupPeriods
+                periods: advancedSettings.enabledRollupPeriods,
+                calendar: calendar
             ).count
         )
     }
@@ -1771,9 +1750,9 @@ struct ExportTabView: View {
             return "Paused · Daily Notes Only skips roll-up files."
         }
         guard advancedSettings.rollupSummariesEnabled else {
-            return "Off · Enable a period to write summary files."
+            return String(localized: "Off · Enable the range summary to write one summary per format.")
         }
-        let periods = advancedSettings.enabledRollupPeriods.map { $0.displayName }.joined(separator: " · ")
+        let periods = advancedSettings.enabledRollupPeriods.map { $0.localizedDisplayName }.joined(separator: " · ")
         let formatCount = advancedSettings.exportFormats.count
         if formatCount == 0 {
             return "\(periods) · Select an export format first."

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import csv
 import hashlib
 import json
 import math
@@ -691,7 +692,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
         or payload["registry_sha256"]
-        != "9ed4fc3a75c3a03d569cd733e24617c9bf028c9cd3f718e5d85a67c47d7aca65"
+        != "3f21e560d2d27a4ec1055327b97bc194b847d64ca5ff250d1216e94a71a2586f"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
@@ -2282,6 +2283,204 @@ def validate_metric_registry(
         fail(f"{context}: missing required registry profiles")
 
 
+def validate_semantic_range_capability_fixture(path: Path) -> None:
+    context = f"semantic range capability fixture {path}"
+    payload = load_json(path, context)
+    payload = require_exact_keys(
+        payload,
+        {
+            "schema", "schema_version", "calendar_v1", "range_v2",
+            "revision_one_range_rejected", "range_limit_cases",
+        },
+        context,
+    )
+    if payload["schema"] != "healthmd.semantic_profile_capability_fixture" or payload["schema_version"] != 1:
+        fail(f"{context}: invalid fixture identity")
+    calendar = payload["calendar_v1"]
+    range_v2 = payload["range_v2"]
+    if calendar.get("profile_revision") != 1 or calendar.get("rollup_periods") != ["iso_week"] or calendar.get("rollup_range") is not None:
+        fail(f"{context}.calendar_v1: calendar grammar must remain revision 1")
+    if range_v2.get("profile_revision") != 2 or range_v2.get("rollup_periods") != ["range"] or not isinstance(range_v2.get("rollup_range"), dict):
+        fail(f"{context}.range_v2: range grammar must require revision 2 and explicit bounds")
+    if payload["revision_one_range_rejected"] is not True:
+        fail(f"{context}: revision-one range rejection must be explicit")
+    limit_cases = payload["range_limit_cases"]
+    expected_cases = {
+        "exact-10000-accepted": (10_000, True),
+        "10001-rejected": (10_001, False),
+        "reversed-rejected": (-9_998, False),
+    }
+    if not isinstance(limit_cases, list) or len(limit_cases) != len(expected_cases):
+        fail(f"{context}.range_limit_cases: exact boundary cases are required")
+    for index, case in enumerate(limit_cases):
+        case_context = f"{context}.range_limit_cases[{index}]"
+        case = require_exact_keys(
+            case,
+            {"id", "start_date", "end_date", "expected_days", "accepted"},
+            case_context,
+        )
+        try:
+            start = datetime.strptime(case["start_date"], "%Y-%m-%d").date()
+            end = datetime.strptime(case["end_date"], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            fail(f"{case_context}: bounds must be canonical civil dates")
+        actual_days = (end - start).days + 1
+        expected = expected_cases.get(case["id"])
+        if expected is None or case["expected_days"] != actual_days or (actual_days, case["accepted"]) != expected:
+            fail(f"{case_context}: range boundary acceptance does not match the 10,000-day limit")
+
+    result_schema = load_json(path.parent.parent / "semantic-result.schema.json", f"{context} result schema")
+    synthetic_result = {
+        "schema": "healthmd.semantic_result",
+        "semantic_input_version": 1,
+        "canonical_model_version": 1,
+        "core_api_version": 3,
+        "registry_sha256": "0" * 64,
+        "profile_revision": 2,
+        "session_id": "range-schema-proof",
+        "profile": "apple_health_data_v8",
+        "state": "completed",
+        "next_batch_index": 1,
+        "records_accepted": 0,
+        "records_filtered": 0,
+        "days": [],
+        "rollups": [{
+            "period": "range",
+            "start_date": range_v2["rollup_range"]["start_date"],
+            "end_date": range_v2["rollup_range"]["end_date"],
+            "calendar_time_zone": "UTC",
+            "source_dates": [range_v2["rollup_range"]["start_date"]],
+            "values": [{
+                "output_key": "steps",
+                "rule": "sum",
+                "primary_value": {
+                    "value_type": "number",
+                    "number": {"representation": "unsigned_integer", "decimal": "1"},
+                    "unit": {"id": "steps"},
+                },
+                "days_counted": 1,
+                "statistics": {},
+            }],
+        }],
+        "retained_extensions": [],
+    }
+    validate_json_schema_subset(synthetic_result, result_schema, f"{context}.range_result_v2")
+    synthetic_result["profile_revision"] = 1
+    try:
+        validate_json_schema_subset(synthetic_result, result_schema, f"{context}.range_result_v1")
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: semantic-result schema must reject range at profile revision 1")
+
+    synthetic_result["profile_revision"] = 2
+    synthetic_result["rollups"][0]["period"] = "iso_week"
+    try:
+        validate_json_schema_subset(synthetic_result, result_schema, f"{context}.calendar_result_v2")
+    except ContractValidationError:
+        pass
+    else:
+        fail(f"{context}: semantic-result schema must reject calendar roll-ups at profile revision 2")
+
+
+def validate_rollup_summary_fixture(root: Path, path: Path) -> None:
+    context = f"rollup fixture {path}"
+    payload = load_json(path, context)
+    if not isinstance(payload, dict):
+        fail(f"{context}: root must be an object")
+    schema_path = path.parent.parent / "rollup-summary.schema.json"
+    schema = load_json(schema_path, f"{context} schema")
+    if not isinstance(schema, dict) or schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
+        fail(f"{context}: invalid rollup summary schema")
+    validate_json_schema_subset(payload, schema, context)
+    start_text = payload.get("start_date")
+    end_text = payload.get("end_date")
+    source_dates = payload.get("source_dates")
+    try:
+        ZoneInfo(payload.get("calendar_timezone"))
+    except (TypeError, ZoneInfoNotFoundError):
+        fail(f"{context}.calendar_timezone: must be a valid IANA timezone identifier")
+    try:
+        start = datetime.strptime(start_text, "%Y-%m-%d").date()
+        end = datetime.strptime(end_text, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        fail(f"{context}: start_date and end_date must be canonical civil dates")
+    days_expected = (end - start).days + 1
+    if start > end or days_expected > 10_000:
+        fail(f"{context}: invalid or unbounded requested range")
+    if payload.get("period_id") != f"{start_text}_to_{end_text}":
+        fail(f"{context}.period_id: must equal the immutable requested bounds")
+    if payload.get("days_expected") != days_expected:
+        fail(f"{context}.days_expected: must equal the inclusive requested bounds")
+    if not isinstance(source_dates, list) or source_dates != sorted(set(source_dates)):
+        fail(f"{context}.source_dates: must be unique and sorted")
+    if any(not isinstance(value, str) or value < start_text or value > end_text for value in source_dates):
+        fail(f"{context}.source_dates: every date must be within requested bounds")
+    days_counted = payload.get("days_counted")
+    if days_counted != len(source_dates) or days_counted > days_expected:
+        fail(f"{context}.days_counted: must equal unique source_dates and not exceed days_expected")
+    coverage = payload.get("coverage_percent")
+    expected_coverage = days_counted * 100.0 / days_expected
+    if not isinstance(coverage, (int, float)) or not math.isclose(coverage, expected_coverage, abs_tol=1e-9):
+        fail(f"{context}.coverage_percent: must equal days_counted / days_expected * 100")
+    metrics = payload.get("metrics")
+    if not isinstance(metrics, list) or not metrics:
+        fail(f"{context}.metrics: must be a non-empty array")
+    for index, metric in enumerate(metrics):
+        counted = metric.get("days_counted") if isinstance(metric, dict) else None
+        if type(counted) is not int or counted < 1 or counted > days_counted:
+            fail(f"{context}.metrics[{index}].days_counted: must be within artifact coverage")
+    units = payload.get("units")
+    expected_units = {
+        metric["key"]: metric["unit"]
+        for metric in metrics
+        if isinstance(metric, dict) and metric.get("unit")
+    }
+    if units != expected_units:
+        fail(f"{context}.units: must match the production non-empty metric unit projection")
+    categories = payload.get("categories")
+    expected_categories: dict[str, list[Any]] = {}
+    for metric in metrics:
+        if isinstance(metric, dict):
+            expected_categories.setdefault(metric.get("category"), []).append(metric)
+    if categories != expected_categories:
+        fail(f"{context}.categories: must match the production metric category projection")
+
+
+def validate_rollup_production_fixture(root: Path, path: Path) -> None:
+    context = f"rollup production fixture {path}"
+    production_names = {
+        "range-v9.json": "range.json",
+        "range-v9.csv": "range.csv",
+        "range-v9.md": "range.md",
+        "range-v9-bases.md": "range-bases.md",
+    }
+    production_name = production_names.get(path.name)
+    if production_name is None:
+        fail(f"{context}: unknown canonical range-v9 fixture")
+    generated = root / "apps/apple/docs/reference/generated/rollups" / production_name
+    if generated.read_bytes() != path.read_bytes():
+        fail(f"{context}: fixture must be copied byte-for-byte from the production Swift renderer")
+
+    content = path.read_text()
+    if path.suffix == ".csv":
+        rows = list(csv.reader(content.splitlines()))
+        if not rows or rows[0][:6] != [
+            "Schema", "Schema Version", "Source Schema", "Source Schema Version",
+            "Rollup Rules Version", "Calendar Timezone",
+        ]:
+            fail(f"{context}: range-v9 CSV leading contract columns are incomplete")
+        if len(rows) < 2 or any(len(row) != len(rows[0]) or row[5] != "UTC" for row in rows[1:]):
+            fail(f"{context}: every production CSV row must carry the frozen calendar timezone")
+    elif path.suffix == ".md":
+        if "\ncalendar_timezone: UTC\n" not in content:
+            fail(f"{context}: Markdown/Bases frontmatter must carry calendar_timezone")
+        if path.name == "range-v9.md" and "## Roll-up notes" not in content:
+            fail(f"{context}: canonical Markdown fixture must include the production body")
+        if path.name == "range-v9-bases.md" and "rollup_metrics:" not in content:
+            fail(f"{context}: canonical Bases fixture must include all metric projections")
+
+
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
     manifest_path = root / "packages/contracts/manifest.json"
     manifest = require_exact_keys(
@@ -2367,7 +2566,13 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     f"{fixture_context}: SHA-256 mismatch for {raw_path}; "
                     f"declared {declared_hash}, actual {actual_hash}"
                 )
-            load_json(fixture_path, fixture_context)
+            if fixture_path.suffix == ".json":
+                load_json(fixture_path, fixture_context)
+            else:
+                try:
+                    fixture_bytes.decode("utf-8")
+                except UnicodeDecodeError as error:
+                    fail(f"{fixture_context}: fixture is not UTF-8: {error}")
             provenance = fixture.get("provenance")
             if not isinstance(provenance, str) or not provenance:
                 fail(f"{fixture_context}: provenance must be a non-empty string")
@@ -2395,7 +2600,10 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             elif identifier == "healthmd.direct.android":
                 validate_v2_fixture(fixture_path)
             elif identifier == "healthmd.semantic_input":
-                validate_semantic_fixture(root, fixture_path)
+                if fixture_path.name == "range-profile-revision-v2.json":
+                    validate_semantic_range_capability_fixture(fixture_path)
+                else:
+                    validate_semantic_fixture(root, fixture_path)
             elif identifier == "healthmd.render_input":
                 validate_render_fixture(root, fixture_path)
             elif identifier == "healthmd.provider_sections":
@@ -2404,6 +2612,10 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 validate_shared_setup_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
+            elif identifier == "healthmd.rollup_summary":
+                validate_rollup_production_fixture(root, fixture_path)
+                if fixture_path.suffix == ".json":
+                    validate_rollup_summary_fixture(root, fixture_path)
 
     inventories = manifest.get("inventories")
     if not isinstance(inventories, list) or not inventories:

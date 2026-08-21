@@ -929,14 +929,16 @@ nonisolated enum SecureExactArtifactIO {
         data: Data,
         binding: AppleVaultDestinationBinding,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
-        afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil
+        afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
+        cancellationCheck: () throws -> Void = {}
     ) throws {
         try overwrite(
             rootURL: rootURL,
             relativePath: relativePath,
             binding: binding,
             beforeCommit: beforeCommit,
-            afterValidationBeforeRename: afterValidationBeforeRename
+            afterValidationBeforeRename: afterValidationBeforeRename,
+            cancellationCheck: cancellationCheck
         ) { descriptor in
             try writeAll(data, descriptor: descriptor)
         }
@@ -958,7 +960,8 @@ nonisolated enum SecureExactArtifactIO {
             relativePath: relativePath,
             binding: binding,
             beforeCommit: beforeCommit,
-            afterValidationBeforeRename: afterValidationBeforeRename
+            afterValidationBeforeRename: afterValidationBeforeRename,
+            cancellationCheck: cancellationCheck
         ) { descriptor in
             let input = try FileHandle(forReadingFrom: sourceFileURL)
             defer { try? input.close() }
@@ -987,6 +990,7 @@ nonisolated enum SecureExactArtifactIO {
         binding: AppleVaultDestinationBinding,
         beforeCommit: (@Sendable () throws -> Void)? = nil,
         afterValidationBeforeRename: (@Sendable () throws -> Void)? = nil,
+        cancellationCheck: () throws -> Void = {},
         writeTemporaryFile: (Int32) throws -> Void
     ) throws {
         let rootDescriptor = try openBoundRoot(rootURL, binding: binding)
@@ -1063,6 +1067,10 @@ nonisolated enum SecureExactArtifactIO {
             openedParentDescriptor: parentDescriptor,
             filename: filename
         )
+        let temporaryPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
+            .appendingPathComponent(temporaryName).path
+        let destinationPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
+            .appendingPathComponent(filename).path
         try beforeCommit?()
         // The hook models arbitrary work and namespace changes between validation and commit.
         // Reopen from the bound root and compare the parent again immediately before rename.
@@ -1074,10 +1082,7 @@ nonisolated enum SecureExactArtifactIO {
             filename: filename
         )
         try afterValidationBeforeRename?()
-        let temporaryPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
-            .appendingPathComponent(temporaryName).path
-        let destinationPath = URL(fileURLWithPath: boundParentPath, isDirectory: true)
-            .appendingPathComponent(filename).path
+        try cancellationCheck()
         let renameResult = temporaryPath.withCString { temporaryPointer in
             destinationPath.withCString { filenamePointer in
                 Darwin.renamex_np(
@@ -1501,6 +1506,13 @@ final class VaultManager: ObservableObject {
 
     #if DEBUG
     var archiveEntryWillAppendForTesting: (() -> Void)?
+    /// Runs after a daily export has returned its committed output result, allowing
+    /// callers to prove that later cancellation cannot erase that accounting.
+    var dailyExportDidCommitForTesting: (() -> Void)?
+    /// Runs after the ZIP's atomic rename has committed but before presentation
+    /// state is recorded, allowing tests to prove committed success wins over a
+    /// cancellation delivered after publication.
+    var archiveDidPublishForTesting: (() -> Void)?
     var exactDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
     var productionDestinationWillCommitForTesting: (@Sendable () throws -> Void)?
     var productionDestinationDidValidateForTesting: (@Sendable () throws -> Void)?
@@ -2241,9 +2253,10 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        let result: DailyExportWriteResult
         switch planResolution {
         case .legacy:
-            return try await writeHealthDataOutputsOffMain(
+            result = try await writeHealthDataOutputsOffMain(
                 healthData,
                 date: healthData.date,
                 vaultURL: vaultURL,
@@ -2253,7 +2266,7 @@ final class VaultManager: ObservableObject {
                 preparedExport: preparedExport
             )
         case .planned(let operation):
-            return try await writePlannedLooseDailyOutputsOffMain(
+            result = try await writePlannedLooseDailyOutputsOffMain(
                 healthData,
                 date: healthData.date,
                 vaultURL: vaultURL,
@@ -2263,6 +2276,10 @@ final class VaultManager: ObservableObject {
                 operation: operation
             )
         }
+        #if DEBUG
+        dailyExportDidCommitForTesting?()
+        #endif
+        return result
     }
 
     /// Materializes a complete simple-summary range without opening or mutating the selected
@@ -2273,6 +2290,7 @@ final class VaultManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot,
         operationSurface: AppleExportOperationSurface,
         dailyOutputOwnerDates: Set<String>? = nil,
+        requestedRange: HealthRollupRangeRequest? = nil,
         operationIdentity: AppleExportOperationIdentity? = nil,
         includeDataDictionary: Bool = true
     ) async throws -> AppleLooseDailyRangeMaterialization? {
@@ -2292,6 +2310,7 @@ final class VaultManager: ObservableObject {
         let resolution = try await rangePlanner.planRange(
             healthData: healthData,
             dailyOutputOwnerDates: outputDates,
+            requestedRange: requestedRange,
             settingsSnapshot: settingsSnapshot,
             surface: operationSurface,
             operationIdentity: operationIdentity
@@ -2353,6 +2372,7 @@ final class VaultManager: ObservableObject {
         settingsSnapshot: ExportSettingsSnapshot,
         operationSurface: AppleExportOperationSurface,
         dailyOutputOwnerDates: Set<String>? = nil,
+        requestedRange: HealthRollupRangeRequest? = nil,
         operationIdentity: AppleExportOperationIdentity? = nil,
         writeDataDictionary shouldWriteDataDictionary: Bool = true
     ) async throws -> AppleLooseDailyRangeWriteResult? {
@@ -2367,6 +2387,7 @@ final class VaultManager: ObservableObject {
             settingsSnapshot: settingsSnapshot,
             operationSurface: operationSurface,
             dailyOutputOwnerDates: dailyOutputOwnerDates,
+            requestedRange: requestedRange,
             operationIdentity: operationIdentity,
             includeDataDictionary: shouldWriteDataDictionary
         ) else { return nil }
@@ -2660,6 +2681,7 @@ final class VaultManager: ObservableObject {
                 settings: settings.dailyNoteInjection,
                 customization: settings.formatCustomization,
                 metricSelection: settings.metricSelection,
+                calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
                 fileSystem: fileSystem,
                 fileCoordinator: fileCoordinator,
                 destinationBinding: destinationBinding,
@@ -2708,7 +2730,8 @@ final class VaultManager: ObservableObject {
                     fileURL: ExportPathPlanner.dailyNoteURL(
                         vaultURL: vaultURL,
                         settings: settings.dailyNoteInjection,
-                        date: date
+                        date: date,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     ),
                     securityScopedRootURL: vaultURL
                 )
@@ -3109,7 +3132,8 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
             sources: healthData.map(HealthDataArchiveSource.inMemory),
@@ -3117,7 +3141,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             startDate: startDate,
             endDate: endDate,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder,
+            cancellationCheck: cancellationCheck
         )
     }
 
@@ -3128,7 +3153,8 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String? = nil
+        healthSubfolder: String? = nil,
+        cancellationCheck: @escaping @Sendable () -> Bool = { false }
     ) async throws -> URL? {
         try await exportArchive(
             sources: files.map(HealthDataArchiveSource.file),
@@ -3136,7 +3162,8 @@ final class VaultManager: ObservableObject {
             settings: settings,
             startDate: startDate,
             endDate: endDate,
-            healthSubfolder: healthSubfolder
+            healthSubfolder: healthSubfolder,
+            cancellationCheck: cancellationCheck
         )
     }
 
@@ -3146,8 +3173,12 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         startDate: Date,
         endDate: Date,
-        healthSubfolder: String?
+        healthSubfolder: String?,
+        cancellationCheck: @escaping @Sendable () -> Bool
     ) async throws -> URL? {
+        func checkCancellation() throws {
+            if Task.isCancelled || cancellationCheck() { throw CancellationError() }
+        }
         #if DEBUG
         let performanceTimer = ExportPerformanceTimer()
         defer {
@@ -3160,6 +3191,7 @@ final class VaultManager: ObservableObject {
         }
         #endif
         guard settings.archiveModeEnabled else { return nil }
+        try checkCancellation()
         let archivedFormats = settings.exportFormats
             .sorted(by: { $0.rawValue < $1.rawValue })
         guard !archivedFormats.isEmpty else { return nil }
@@ -3172,7 +3204,32 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
-        let rollupEntries = rollupArchiveEntries(from: rollupHealthData, settings: settings)
+        try checkCancellation()
+        let rollupEntries: [ZipArchiveWriter.Entry]
+        if HealthRollupExporter.isEnabled(settings: settings) {
+            guard let frozenTimeZone = settings.exportTimeZoneOverride else {
+                throw ExportError.invalidExportPath(path: "missing calendar timezone")
+            }
+            do {
+                let requestedRange = try HealthRollupRangeRequest(
+                    startDate: startDate,
+                    endDate: endDate,
+                    calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                )
+                rollupEntries = rollupArchiveEntries(
+                    from: rollupHealthData,
+                    requestedRange: requestedRange,
+                    settings: settings
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // Range v9 is independently bounded. Preserve the daily archive instead of
+                // turning an unavailable supplemental summary into a total export failure.
+                rollupEntries = []
+            }
+        } else {
+            rollupEntries = []
+        }
+        try checkCancellation()
         if settings.summaryOnlyModeEnabled && rollupEntries.isEmpty { return nil }
 
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
@@ -3261,9 +3318,10 @@ final class VaultManager: ObservableObject {
                 try await Self.performArchiveIO {
                     try writer.append(
                         dictionaryEntry,
-                        cancellationCheck: { Task.isCancelled }
+                        cancellationCheck: { Task.isCancelled || cancellationCheck() }
                     )
                 }
+                try checkCancellation()
             }
             if !settings.summaryOnlyModeEnabled {
                 let orderedSources = sources.sorted {
@@ -3271,12 +3329,12 @@ final class VaultManager: ObservableObject {
                     return $0.order < $1.order
                 }
                 for source in orderedSources {
-                    try Task.checkCancellation()
+                    try checkCancellation()
                     switch source {
                     case .inMemory(let data):
                         let preparedExport = data.preparedExport(settings: settings)
                         for format in archivedFormats {
-                            try Task.checkCancellation()
+                            try checkCancellation()
                             let content = try preparedExport.content(format: format, settings: settings)
                             guard let bytes = content.data(using: .utf8) else {
                                 throw CocoaError(.fileWriteInapplicableStringEncoding)
@@ -3290,9 +3348,14 @@ final class VaultManager: ObservableObject {
                                 data: bytes
                             )
                             try await Self.performArchiveIO {
-                                try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                                try writer.append(
+                                    entry,
+                                    cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                                )
                             }
+                            try checkCancellation()
                             await Task.yield()
+                            try checkCancellation()
                         }
                     case .file(let file):
                         try await Self.performArchiveIO {
@@ -3301,23 +3364,37 @@ final class VaultManager: ObservableObject {
                                     path: file.archivePath,
                                     sourceURL: file.url
                                 ),
-                                cancellationCheck: { Task.isCancelled }
+                                cancellationCheck: { Task.isCancelled || cancellationCheck() }
                             )
                         }
+                        try checkCancellation()
                         await Task.yield()
+                        try checkCancellation()
                     }
                 }
             }
             for entry in rollupEntries {
-                try Task.checkCancellation()
+                try checkCancellation()
                 try await Self.performArchiveIO {
-                    try writer.append(entry, cancellationCheck: { Task.isCancelled })
+                    try writer.append(
+                        entry,
+                        cancellationCheck: { Task.isCancelled || cancellationCheck() }
+                    )
                 }
+                try checkCancellation()
                 await Task.yield()
+                try checkCancellation()
             }
+            try checkCancellation()
             try await Self.performArchiveIO {
-                try writer.finish(cancellationCheck: { Task.isCancelled })
+                try writer.finish(cancellationCheck: { Task.isCancelled || cancellationCheck() })
             }
+            // `finish` atomically publishes the destination. Cancellation is a
+            // pre-commit concern; once it returns, committed success owns the
+            // result and presentation must not be suppressed.
+            #if DEBUG
+            archiveDidPublishForTesting?()
+            #endif
         } catch {
             try? await Self.performArchiveIO { writer.abandon() }
             if error as? FileCoordinationError == .destinationChanged
@@ -3343,9 +3420,17 @@ final class VaultManager: ObservableObject {
         return components.joined(separator: "/")
     }
 
-    private func rollupArchiveEntries(from healthData: [HealthData], settings: AdvancedExportSettings) -> [ZipArchiveWriter.Entry] {
+    private func rollupArchiveEntries(
+        from healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest,
+        settings: AdvancedExportSettings
+    ) -> [ZipArchiveWriter.Entry] {
         guard HealthRollupExporter.isEnabled(settings: settings), !healthData.isEmpty else { return [] }
-        let summaries = HealthRollupExporter.makeSummaries(from: healthData, settings: settings)
+        let summaries = HealthRollupExporter.makeSummaries(
+            from: healthData,
+            requestedRange: requestedRange,
+            settings: settings
+        )
         return HealthRollupExporter.outputTargets(
             for: summaries,
             healthSubfolder: "",
@@ -3393,6 +3478,7 @@ final class VaultManager: ObservableObject {
     @discardableResult
     func exportRollupSummaries(
         from healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest,
         settings: AdvancedExportSettings,
         generatedAt: Date = Date(),
         healthSubfolder: String? = nil,
@@ -3409,8 +3495,10 @@ final class VaultManager: ObservableObject {
         }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
 
+        try Task.checkCancellation()
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
+            requestedRange: requestedRange,
             settings: settings,
             generatedAt: generatedAt
         )
@@ -3422,9 +3510,11 @@ final class VaultManager: ObservableObject {
             settings: settings,
             healthSubfolder: effectiveHealthSubfolder,
             dates: [],
-            rollupDates: healthData.map(\.date)
+            rollupDates: healthData.map(\.date),
+            authoritativeRollupRange: requestedRange
         )
         if shouldWriteDataDictionary {
+            try Task.checkCancellation()
             try writeDataDictionary(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3439,6 +3529,7 @@ final class VaultManager: ObservableObject {
             healthSubfolder: effectiveHealthSubfolder,
             settings: settings
         ) {
+            try Task.checkCancellation()
             let folderURL = HealthRollupExporter.folderURL(
                 vaultURL: vaultURL,
                 healthSubfolder: effectiveHealthSubfolder,
@@ -3447,6 +3538,7 @@ final class VaultManager: ObservableObject {
                 settings: settings
             )
             let fileURL = ExportPathPlanner.fileURL(in: folderURL, filename: target.filename)
+            try Task.checkCancellation()
             _ = try aggregateFileWriter.writeSynchronously(secureRequest(
                 AggregateFileWriteRequest(
                     fileURL: fileURL,
@@ -3550,6 +3642,8 @@ final class VaultManager: ObservableObject {
         recordSourceDates: [Date]? = nil,
         settings: AdvancedExportSettings,
         requestedDates: [Date],
+        rollupRequestedDates: [Date]? = nil,
+        rollupCalendarTimeZoneIdentifier: String? = nil,
         startDate: Date,
         endDate: Date,
         healthSubfolder: String? = nil,
@@ -3584,15 +3678,22 @@ final class VaultManager: ObservableObject {
         let destinationBinding = try productionDestinationBinding(for: vaultURL)
         guard bookmarkResolver.startAccessing(vaultURL) else { throw ExportError.accessDenied }
         defer { bookmarkResolver.stopAccessing(vaultURL) }
+        let immutableRollupDates = rollupRequestedDates ?? requestedDates
+        var sourceCalendar = Calendar.current
+        sourceCalendar.timeZone = rollupCalendarTimeZoneIdentifier
+            .flatMap(TimeZone.init(identifier:))
+            ?? settings.exportTimeZoneOverride
+            ?? .current
+        let immutableArchiveDates = settings.archiveModeEnabled
+            ? immutableRollupDates
+            : requestedDates
         try preflightExportDestinations(
             settings: settings,
             healthSubfolder: healthSubfolder,
             dates: requestedDates,
-            rollupDates: requestedDates
+            rollupDates: immutableRollupDates,
+            archiveDates: immutableArchiveDates
         )
-
-        var sourceCalendar = Calendar.current
-        sourceCalendar.timeZone = settings.exportTimeZoneOverride ?? .current
         var datedFiles: [(date: Date, url: URL)] = []
         datedFiles.reserveCapacity(recordPayloadFiles.count)
         if let recordSourceDates,
@@ -3650,38 +3751,37 @@ final class VaultManager: ObservableObject {
 
         var summaries: [HealthRollupSummary] = []
         var finalizedUnits = 0
-        let estimatedUnits = max(datedFiles.count + requestedDates.count, 1)
+        let estimatedUnits = max(datedFiles.count + immutableRollupDates.count, 1)
         if HealthRollupExporter.isEnabled(settings: settings) {
-            for period in settings.enabledRollupPeriods {
-                let windows = Set(requestedDates.map {
-                    HealthRollupPeriodWindow.window(containing: $0, period: period, calendar: sourceCalendar)
-                }).sorted { $0.startDate < $1.startDate }
-                for window in windows {
-                    try checkCancellation()
-                    if unavailableRollupDates.contains(where: {
-                        $0 >= window.startDate && $0 <= window.endDate
-                    }) {
-                        finalizedUnits += 1
-                        progress?(finalizedUnits, estimatedUnits, window.endDate)
-                        await Task.yield()
-                        continue
-                    }
-                    var records: [HealthData] = []
-                    for item in rollupProjectionFiles
-                        where item.date >= window.startDate && item.date <= window.endDate {
-                        records.append(try await Self.decodeHealthData(from: item.url))
-                    }
-                    let windowSummaries = HealthRollupExporter.makeSummaries(
-                        from: records,
-                        settings: settings,
-                        periods: [period],
-                        calendar: sourceCalendar
-                    ).filter { $0.window == window }
-                    summaries.append(contentsOf: windowSummaries)
-                    finalizedUnits += 1
-                    progress?(finalizedUnits, estimatedUnits, window.endDate)
-                    await Task.yield()
+            try checkCancellation()
+            let identifiers = Set(immutableRollupDates.map {
+                HealthKitDailyOwnershipMetadata.ownerDate(
+                    for: $0,
+                    calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
+                )
+            })
+            do {
+                let requestedRange = try HealthRollupRangeRequest(
+                    ownerDateIdentifiers: identifiers,
+                    calendarTimeZoneIdentifier: sourceCalendar.timeZone.identifier
+                )
+                var records: [HealthData] = []
+                for item in rollupProjectionFiles
+                    where item.date >= requestedRange.startDate && item.date <= requestedRange.endDate {
+                    records.append(try await Self.decodeHealthData(from: item.url))
                 }
+                summaries = HealthRollupExporter.makeSummaries(
+                    from: records,
+                    requestedRange: requestedRange,
+                    settings: settings
+                )
+                finalizedUnits += 1
+                progress?(finalizedUnits, estimatedUnits, requestedRange.endDate)
+                await Task.yield()
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // Daily files may already be committed by the legacy receiver. Treat the bounded
+                // supplemental summary as unavailable without invalidating those daily outputs.
+                summaries = []
             }
         }
 
@@ -3689,6 +3789,18 @@ final class VaultManager: ObservableObject {
         if settings.archiveModeEnabled {
             guard !datedFiles.isEmpty || (settings.summaryOnlyModeEnabled && !summaries.isEmpty) else {
                 return MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
+            }
+            let immutableArchiveDays = Set(immutableArchiveDates.map {
+                sourceCalendar.startOfDay(for: $0)
+            })
+            let availableArchiveDays = Set(datedFiles.map {
+                sourceCalendar.startOfDay(for: $0.date)
+            })
+            guard settings.summaryOnlyModeEnabled
+                    || immutableArchiveDays.isSubset(of: availableArchiveDays) else {
+                throw ExportError.invalidExportPath(
+                    path: "original archive source days are unavailable; existing ZIP preserved"
+                )
             }
             let healthFolderURL = ExportPathPlanner.healthSubfolderURL(
                 vaultURL: vaultURL,
@@ -3698,9 +3810,9 @@ final class VaultManager: ObservableObject {
                 try ensureCoordinatedDirectoryExists(at: healthFolderURL)
             }
             let archiveName = archiveFilename(
-                startDate: startDate,
-                endDate: endDate,
-                timeZone: settings.exportTimeZoneOverride
+                startDate: immutableRollupDates.first ?? startDate,
+                endDate: immutableRollupDates.last ?? endDate,
+                timeZone: sourceCalendar.timeZone
             )
             let archiveURL = healthFolderURL.appendingPathComponent(
                 archiveName,
@@ -3777,13 +3889,20 @@ final class VaultManager: ObservableObject {
                 }
 
                 if !settings.summaryOnlyModeEnabled {
-                    let requestedDateSet = Set(requestedDates)
-                    for item in datedFiles where requestedDateSet.contains(item.date) {
+                    let requestedDateSet = Set(immutableArchiveDates.map {
+                        sourceCalendar.startOfDay(for: $0)
+                    })
+                    for item in datedFiles
+                        where requestedDateSet.contains(sourceCalendar.startOfDay(for: item.date)) {
                         try checkCancellation()
                         progress?(finalizedUnits, estimatedUnits, item.date)
                         guard let record = try await Self.decodeConnectedHealthData(
                             from: item.url
-                        ) else { continue }
+                        ) else {
+                            throw ExportError.invalidExportPath(
+                                path: "original archive source days are unavailable; existing ZIP preserved"
+                            )
+                        }
                         let preparedExport = record.preparedExport(settings: settings)
                         for format in settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }) {
                             let path = archiveEntryPath(
@@ -3961,7 +4080,9 @@ final class VaultManager: ObservableObject {
         settings: AdvancedExportSettings,
         healthSubfolder: String? = nil,
         dates: [Date],
-        rollupDates: [Date]? = nil
+        rollupDates: [Date]? = nil,
+        archiveDates: [Date]? = nil,
+        authoritativeRollupRange: HealthRollupRangeRequest? = nil
     ) throws {
         guard destinationState == .available, let vaultURL else {
             throw unavailableExportError
@@ -3974,8 +4095,42 @@ final class VaultManager: ObservableObject {
             if requiresSecurityScope { bookmarkResolver.stopAccessing(vaultURL) }
         }
         let effectiveHealthSubfolder = healthSubfolder ?? self.healthSubfolder
-        var calendar = Calendar.current
-        calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+        let requestedRollupDates = rollupDates ?? dates
+        let rollupPaths: [String]
+        if HealthRollupExporter.isEnabled(settings: settings),
+           authoritativeRollupRange != nil || !requestedRollupDates.isEmpty {
+            do {
+                let request: HealthRollupRangeRequest
+                if let authoritativeRollupRange {
+                    request = authoritativeRollupRange
+                } else {
+                    guard let frozenTimeZone = settings.exportTimeZoneOverride else {
+                        throw ExportError.invalidExportPath(path: "missing calendar timezone")
+                    }
+                    let identifiers = Set(requestedRollupDates.map {
+                        HealthKitDailyOwnershipMetadata.ownerDate(
+                            for: $0,
+                            calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                        )
+                    })
+                    request = try HealthRollupRangeRequest(
+                        ownerDateIdentifiers: identifiers,
+                        calendarTimeZoneIdentifier: frozenTimeZone.identifier
+                    )
+                }
+                rollupPaths = HealthRollupExporter.outputRelativePaths(
+                    for: request,
+                    healthSubfolder: settings.archiveModeEnabled ? "" : effectiveHealthSubfolder,
+                    settings: settings
+                )
+            } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                // The supplemental range artifact is unavailable, but daily destination
+                // collision checks must still run so the daily export can proceed safely.
+                rollupPaths = []
+            }
+        } else {
+            rollupPaths = []
+        }
 
         if !settings.archiveModeEnabled,
            settings.dailyNoteInjection.enabled,
@@ -3984,7 +4139,8 @@ final class VaultManager: ObservableObject {
                 for date in dates {
                     let dailyNotePath = ExportPathPlanner.dailyNoteRelativePath(
                         settings: settings.dailyNoteInjection,
-                        date: date
+                        date: date,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     )
                     let dailyNoteKey = try ExportPathPlanner.canonicalPortablePathKey(
                         dailyNotePath
@@ -4011,17 +4167,13 @@ final class VaultManager: ObservableObject {
         }
 
         if settings.archiveModeEnabled {
-            var entryPaths = settings.summaryOnlyModeEnabled ? [] : dates.flatMap { date in
+            let requestedArchiveDates = archiveDates ?? dates
+            var entryPaths = settings.summaryOnlyModeEnabled ? [] : requestedArchiveDates.flatMap { date in
                 settings.exportFormats.sorted(by: { $0.rawValue < $1.rawValue }).map {
                     archiveEntryPath(for: date, format: $0, settings: settings)
                 }
             }
-            entryPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
-                for: rollupDates ?? dates,
-                healthSubfolder: "",
-                settings: settings,
-                calendar: calendar
-            ))
+            entryPaths.append(contentsOf: rollupPaths)
             if settings.writesDataDictionary {
                 entryPaths.append(HealthMdExportSchema.dataDictionaryFilename)
             }
@@ -4031,8 +4183,12 @@ final class VaultManager: ObservableObject {
                 throw invalidExportPathError(error)
             }
 
-            let startDate = dates.min() ?? rollupDates?.min() ?? Date()
-            let endDate = dates.max() ?? rollupDates?.max() ?? startDate
+            let startDate = authoritativeRollupRange?.startDate
+                ?? requestedArchiveDates.min()
+                ?? Date()
+            let endDate = authoritativeRollupRange?.endDate
+                ?? requestedArchiveDates.max()
+                ?? startDate
             let archivePath = [
                 effectiveHealthSubfolder,
                 archiveFilename(
@@ -4046,7 +4202,8 @@ final class VaultManager: ObservableObject {
                 destinationPaths.append(contentsOf: dates.map {
                     ExportPathPlanner.dailyNoteRelativePath(
                         settings: settings.dailyNoteInjection,
-                        date: $0
+                        date: $0,
+                        timeZone: settings.exportTimeZoneOverride ?? .current
                     )
                 })
             }
@@ -4071,16 +4228,12 @@ final class VaultManager: ObservableObject {
             artifactPaths.append(contentsOf: dates.map {
                 ExportPathPlanner.dailyNoteRelativePath(
                     settings: settings.dailyNoteInjection,
-                    date: $0
+                    date: $0,
+                    timeZone: settings.exportTimeZoneOverride ?? .current
                 )
             })
         }
-        artifactPaths.append(contentsOf: HealthRollupExporter.outputRelativePaths(
-            for: rollupDates ?? dates,
-            healthSubfolder: effectiveHealthSubfolder,
-            settings: settings,
-            calendar: calendar
-        ))
+        artifactPaths.append(contentsOf: rollupPaths)
         if settings.writesDataDictionary && !settings.dailyNotesOnlyModeEnabled {
             artifactPaths.append(
                 ExportPathPlanner.dataDictionaryRelativePath(

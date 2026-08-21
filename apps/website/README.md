@@ -74,7 +74,7 @@ HEALTHMD_OBSIDIAN_PLUGIN_REPO=/path/to/health-md-visualizations \
   npm run visualizations:sync
 ```
 
-Update `external-sources.json` deliberately when adopting a new plugin revision, regenerate assets, and commit both changes together.
+Update `external-sources.json` deliberately when adopting a new plugin revision, regenerate assets, and commit both changes together. `visualizations:sync` also refreshes the shipped Apple onboarding bundle and its daily/roll-up sample wrappers; drift tests require those resources to remain byte-identical to the website outputs.
 
 ## Apple reference documentation
 

@@ -961,9 +961,7 @@
       "timeFormat" : "HH:mm",
       "unitPreference" : "Metric"
     },
-    "generateMonthlyRollups" : false,
-    "generateWeeklyRollups" : false,
-    "generateYearlyRollups" : false,
+    "generateRangeSummary" : false,
     "groupByCategory" : true,
     "healthSubfolder" : "Health.md/Synthetic Exports",
     "includeDataDictionary" : false,

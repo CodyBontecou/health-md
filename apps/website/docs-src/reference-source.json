@@ -4,10 +4,10 @@
   "app_repository_url": "https://github.com/CodyBontecou/health-md.git",
   "source_app_commit": null,
   "source_revision_strategy": "content-addressed docs/reference tree; commit omitted to avoid same-commit self-reference",
-  "docs_reference_git_tree": "13d20d5c3ddc5fc03b73515c2f1213abc20c4e20",
+  "docs_reference_git_tree": "6188191038293a1478cbea271631ab51495275aa",
   "aggregate": {
     "algorithm": "SHA-256",
-    "digest": "e12fa5ca29410a89c85d587c048fadb5840587fc53317804277bb31bb415dff8",
+    "digest": "bf486f1273d6585d76cc4c02019065bad8f36d23327e5a357d87e377bddd8899",
     "canonicalization": "For each source file sorted by path: UTF-8 path, NUL, decimal byte count, NUL, lowercase SHA-256, LF."
   },
   "schemas": [
@@ -75,21 +75,22 @@
     {
       "identifier": "healthmd.rollup_summary",
       "versions": [
-        8
+        8,
+        9
       ]
     }
   ],
   "counts": {
-    "source_files": 105,
+    "source_files": 109,
     "handwritten_markdown_pages": 13,
-    "generated_artifacts": 92,
-    "generated_json_artifacts": 53,
-    "generated_markdown_artifacts": 35,
-    "generated_csv_artifacts": 4,
+    "generated_artifacts": 96,
+    "generated_json_artifacts": 54,
+    "generated_markdown_artifacts": 37,
+    "generated_csv_artifacts": 5,
     "rendered_source_pages": 26,
     "generated_landing_pages": 6,
     "rendered_pages": 32,
-    "raw_artifacts": 92
+    "raw_artifacts": 96
   },
   "files": [
     {
@@ -134,8 +135,8 @@
     },
     {
       "path": "data-dictionary-and-rollups.md",
-      "bytes": 6855,
-      "sha256": "7bab8cabebad51a055df3e88e61701d92b1662ea5d62c7f987e2d23380360f3f",
+      "bytes": 6862,
+      "sha256": "aad31ed9f092fab20673e1dbf587c06ff4042e8cc63ec3053000994b0cb50d90",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/data-dictionary-and-rollups/",
@@ -164,8 +165,8 @@
     },
     {
       "path": "generated/README.md",
-      "bytes": 874,
-      "sha256": "8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539",
+      "bytes": 908,
+      "sha256": "8b2e39ed463c2b0417ea89eb0b32d146a30fd5d3c9fe7972fd8862e312e0a3a5",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/readme/",
@@ -364,8 +365,8 @@
     },
     {
       "path": "generated/automation/mac-export-job.json",
-      "bytes": 27662,
-      "sha256": "3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a",
+      "bytes": 27586,
+      "sha256": "b414fa483debfb4acbd40417bb625b8894e80c42321a9858af0968af4f7f1725",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -395,7 +396,7 @@
     {
       "path": "generated/automation/manifest.json",
       "bytes": 5848,
-      "sha256": "418c63a091d0a46848cfc9727c09eecd051b7dccaef9b433d9cbf6902e434318",
+      "sha256": "44adced6aef0744408907f4a6e6276630164bda907119c09b9ede09e2b9c66eb",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -404,8 +405,8 @@
     },
     {
       "path": "generated/automation/message-fields.md",
-      "bytes": 127872,
-      "sha256": "74aa2afeb7be8387258aa28712fa5e9315d1144c2e394b03610a017097ec67db",
+      "bytes": 127438,
+      "sha256": "2912dbe35119ac61c998e781c66922e9a5f6575f123d5ab26826caba09933a2a",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/automation/message-fields/",
@@ -414,8 +415,8 @@
     },
     {
       "path": "generated/automation/peer-capabilities.json",
-      "bytes": 1553,
-      "sha256": "5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023",
+      "bytes": 1591,
+      "sha256": "15111cc0d942012cb4a7cc1c8c1d51bfcde36fbaebe458abbfd419339bf6e492",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
@@ -1024,8 +1025,8 @@
     },
     {
       "path": "generated/rollups/aggregation-behavior.md",
-      "bytes": 104830,
-      "sha256": "c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68",
+      "bytes": 104834,
+      "sha256": "22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92",
       "classification": "generated-rendered-markdown",
       "routes": {
         "rendered": "/docs/reference/generated/rollups/aggregation-behavior/",
@@ -1034,12 +1035,52 @@
     },
     {
       "path": "generated/rollups/manifest.json",
-      "bytes": 4348,
-      "sha256": "27696256e8e51c92e583c79d5a6fa3d746912d379ba7dfc22d301c0e0adb8654",
+      "bytes": 5365,
+      "sha256": "e1e4882b33d8b0c30b5d54d73471f36f7a382b9a07cfcd13471ef396840d1906",
       "classification": "generated-json",
       "routes": {
         "rendered": null,
         "raw": "/docs/reference/generated/rollups/manifest.json"
+      }
+    },
+    {
+      "path": "generated/rollups/range-bases.md",
+      "bytes": 11629,
+      "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/range-bases.md"
+      }
+    },
+    {
+      "path": "generated/rollups/range.csv",
+      "bytes": 38202,
+      "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+      "classification": "generated-csv",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/range.csv"
+      }
+    },
+    {
+      "path": "generated/rollups/range.json",
+      "bytes": 39662,
+      "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+      "classification": "generated-json",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/range.json"
+      }
+    },
+    {
+      "path": "generated/rollups/range.md",
+      "bytes": 9249,
+      "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+      "classification": "generated-raw-markdown-fixture",
+      "routes": {
+        "rendered": null,
+        "raw": "/docs/reference/generated/rollups/range.md"
       }
     },
     {
@@ -1094,8 +1135,8 @@
     },
     {
       "path": "index.md",
-      "bytes": 7383,
-      "sha256": "cbf5e4f76728786bda4e45647f1a7d8f314e2b551ea0653ccbce628c17dc33f5",
+      "bytes": 7479,
+      "sha256": "93c9e60feafc3d8bb568cce571ce8f4988ad26e708475cf3d32308852a0e7363",
       "classification": "handwritten-markdown",
       "routes": {
         "rendered": "/docs/reference/",
@@ -1146,8 +1187,8 @@
   "published_outputs": [
     {
       "path": "public/reference/generated/README.md",
-      "bytes": 874,
-      "sha256": "8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539",
+      "bytes": 908,
+      "sha256": "8b2e39ed463c2b0417ea89eb0b32d146a30fd5d3c9fe7972fd8862e312e0a3a5",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/README.md"
     },
@@ -1286,8 +1327,8 @@
     },
     {
       "path": "public/reference/generated/automation/mac-export-job.json",
-      "bytes": 27662,
-      "sha256": "3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a",
+      "bytes": 27586,
+      "sha256": "b414fa483debfb4acbd40417bb625b8894e80c42321a9858af0968af4f7f1725",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/mac-export-job.json"
     },
@@ -1308,21 +1349,21 @@
     {
       "path": "public/reference/generated/automation/manifest.json",
       "bytes": 5848,
-      "sha256": "418c63a091d0a46848cfc9727c09eecd051b7dccaef9b433d9cbf6902e434318",
+      "sha256": "44adced6aef0744408907f4a6e6276630164bda907119c09b9ede09e2b9c66eb",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/manifest.json"
     },
     {
       "path": "public/reference/generated/automation/message-fields.md",
-      "bytes": 127872,
-      "sha256": "74aa2afeb7be8387258aa28712fa5e9315d1144c2e394b03610a017097ec67db",
+      "bytes": 127438,
+      "sha256": "2912dbe35119ac61c998e781c66922e9a5f6575f123d5ab26826caba09933a2a",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/message-fields.md"
     },
     {
       "path": "public/reference/generated/automation/peer-capabilities.json",
-      "bytes": 1553,
-      "sha256": "5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023",
+      "bytes": 1591,
+      "sha256": "15111cc0d942012cb4a7cc1c8c1d51bfcde36fbaebe458abbfd419339bf6e492",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/automation/peer-capabilities.json"
     },
@@ -1748,17 +1789,45 @@
     },
     {
       "path": "public/reference/generated/rollups/aggregation-behavior.md",
-      "bytes": 104830,
-      "sha256": "c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68",
+      "bytes": 104834,
+      "sha256": "22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/aggregation-behavior.md"
     },
     {
       "path": "public/reference/generated/rollups/manifest.json",
-      "bytes": 4348,
-      "sha256": "27696256e8e51c92e583c79d5a6fa3d746912d379ba7dfc22d301c0e0adb8654",
+      "bytes": 5365,
+      "sha256": "e1e4882b33d8b0c30b5d54d73471f36f7a382b9a07cfcd13471ef396840d1906",
       "classification": "raw-artifact",
       "route": "/docs/reference/generated/rollups/manifest.json"
+    },
+    {
+      "path": "public/reference/generated/rollups/range-bases.md",
+      "bytes": 11629,
+      "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/range-bases.md"
+    },
+    {
+      "path": "public/reference/generated/rollups/range.csv",
+      "bytes": 38202,
+      "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/range.csv"
+    },
+    {
+      "path": "public/reference/generated/rollups/range.json",
+      "bytes": 39662,
+      "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/range.json"
+    },
+    {
+      "path": "public/reference/generated/rollups/range.md",
+      "bytes": 9249,
+      "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+      "classification": "raw-artifact",
+      "route": "/docs/reference/generated/rollups/range.md"
     },
     {
       "path": "public/reference/generated/rollups/weekly-bases.md",
@@ -1818,8 +1887,8 @@
     },
     {
       "path": "src/content/docs/reference/data-dictionary-and-rollups.md",
-      "bytes": 7182,
-      "sha256": "dbbfe496d9a03cec7fb4ef69cae36d3bb7894de41a83837901d31c4734e520ae",
+      "bytes": 7189,
+      "sha256": "cb8bfe809634dcb69b37f6559091a6dc65ad7d052341e7f67f7e7783a442a01f",
       "classification": "rendered-page",
       "route": "/docs/reference/data-dictionary-and-rollups/"
     },
@@ -1840,14 +1909,14 @@
     {
       "path": "src/content/docs/reference/generated/automation/index.md",
       "bytes": 6752,
-      "sha256": "f0145ef26bb92a4139f40c1b256bdc04f1e6be356c44dc51adf1fb4222afb844",
+      "sha256": "8416b06dd9b0d301ac1821411584aff839d188eb4d299aa675dac5b22cd42f0e",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/"
     },
     {
       "path": "src/content/docs/reference/generated/automation/message-fields.md",
-      "bytes": 128075,
-      "sha256": "483779e1f48e6681e19d8426025e83f7cf9a88e688b37d2394eb0b86f487f1b8",
+      "bytes": 127641,
+      "sha256": "747f731dca5a88e8ca6994bc20406a89cb0ac21b6ac6ba0896be0484c0692932",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/automation/message-fields/"
     },
@@ -1916,8 +1985,8 @@
     },
     {
       "path": "src/content/docs/reference/generated/index.md",
-      "bytes": 20328,
-      "sha256": "30f55284e257ab378692c473e81fa32e5036bb727fedb9270d78da9880943f63",
+      "bytes": 20997,
+      "sha256": "924093de652d7b4b021396350a03d8c90c4e7ae8882d97f7c4959e48aa0ea0db",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/"
     },
@@ -1951,22 +2020,22 @@
     },
     {
       "path": "src/content/docs/reference/generated/readme.md",
-      "bytes": 1084,
-      "sha256": "1652d99a1a7f27d9657dafbf46fdb0f7c172dc5a8962e369b5dd3b639204a3a9",
+      "bytes": 1118,
+      "sha256": "7c9c80b16c7ee71215904be5a4449b55f58cb1ecfaffaac11ddfe49efb39d60a",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/readme/"
     },
     {
       "path": "src/content/docs/reference/generated/rollups/aggregation-behavior.md",
-      "bytes": 103627,
-      "sha256": "8dfc0e9276ee6b2bb9ffdc4098a438c30876dde0235309e4db3f240bd9ccc261",
+      "bytes": 103620,
+      "sha256": "1df202fcf1c09a98275209d8f269204381453e59e2fb2e785547be6c10f06971",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/rollups/aggregation-behavior/"
     },
     {
       "path": "src/content/docs/reference/generated/rollups/index.md",
-      "bytes": 1468,
-      "sha256": "6492bc43925188dc7f2b475efb316c31f161d45a638c2dbdfe2cffc84e1d2929",
+      "bytes": 2107,
+      "sha256": "864cfc6140b568ffa56222935104427ba2de4abcbcf4fc1f42b4371f48c76701",
       "classification": "rendered-page",
       "route": "/docs/reference/generated/rollups/"
     },
@@ -1979,8 +2048,8 @@
     },
     {
       "path": "src/content/docs/reference/index.md",
-      "bytes": 7822,
-      "sha256": "7cd1080354b4e56b282cec2ccce2b98254c27f20634a9f86b3e886943a952ba0",
+      "bytes": 7918,
+      "sha256": "b2be19aa9b8ad35d6098b17c52029274356bccf6826a834d5f3dba79491a0e42",
       "classification": "rendered-page",
       "route": "/docs/reference/"
     },

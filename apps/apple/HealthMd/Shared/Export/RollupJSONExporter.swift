@@ -26,9 +26,10 @@ extension RollupDataSnapshot {
             metric["category"] as? String ?? "Other"
         }
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "schema": HealthRollupExportSchema.identifier,
-            "schema_version": HealthMdExportSchema.version,
+            "schema_version": period == .range
+                ? HealthRollupExportSchema.currentVersion : HealthMdExportSchema.version,
             "type": "health_rollup",
             "rollup_period": period.rawValue,
             "period_id": periodID,
@@ -38,14 +39,17 @@ extension RollupDataSnapshot {
             "days_counted": daysCounted,
             "coverage_percent": coveragePercent,
             "source_schema": HealthMdExportSchema.identifier,
-            "source_schema_version": HealthMdExportSchema.version,
-            "rollup_rules_version": HealthMdExportSchema.version,
+            "source_schema_version": HealthRollupExportSchema.sourceDailyVersion,
+            "rollup_rules_version": HealthRollupExportSchema.rulesVersion,
             "generated_at": HealthRollupDateFormatting.timestampString(generatedAt),
             "source_dates": sourceDates.sorted().map(dayString),
             "units": Dictionary(uniqueKeysWithValues: units),
             "metrics": metricsPayload,
             "categories": categoriesPayload
         ]
+        if period == .range {
+            payload["calendar_timezone"] = window.calendarTimeZoneIdentifier
+        }
 
         if let jsonData = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]),
            let jsonString = String(data: jsonData, encoding: .utf8) {

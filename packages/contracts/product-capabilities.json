@@ -62,6 +62,29 @@
       ]
     },
     {
+      "id": "export.range-summary",
+      "name": "Requested-range summary",
+      "classification": "planned",
+      "summary": "Write one independently versioned aggregate for immutable requested owner-date bounds, with explicit coverage and canonical units, while preserving daily export output.",
+      "profiles": [
+        "apple-v8"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Adopt healthmd.rollup_summary range semantics in the first Android writer for the new unified healthmd.health_data v9 profile; Android frozen v4 and analytical v5 remain byte-immutable."
+        }
+      },
+      "evidence": [
+        "packages/contracts/rollup-summary/v9/contract.md",
+        "apps/apple/docs/features/rollup-summaries.md",
+        "docs/architecture/rfc-0004-unified-health-data-v9.md"
+      ]
+    },
+    {
       "id": "export.sleep-summary",
       "name": "Sleep summaries and stages",
       "classification": "shared",

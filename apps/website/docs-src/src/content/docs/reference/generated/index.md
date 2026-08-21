@@ -18,7 +18,7 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `README.md` | 874 | `8a9aaa84dcdff51ed5c8027e140ad912ccf6dd2ef4837f519964ec06aba96539` | [Open page](/docs/reference/generated/readme/) | [Download](/docs/reference/generated/README.md) |
+| `README.md` | 908 | `8b2e39ed463c2b0417ea89eb0b32d146a30fd5d3c9fe7972fd8862e312e0a3a5` | [Open page](/docs/reference/generated/readme/) | [Download](/docs/reference/generated/README.md) |
 
 ## Core generated artifacts
 
@@ -72,8 +72,12 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 
 | Artifact | Bytes | SHA-256 | Rendered | Raw |
 |---|---:|---|---|---|
-| `rollups/aggregation-behavior.md` | 104830 | `c17af5859ee15e9037229e54501e656010793e8b48c82e4d97b1783791383a68` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
-| `rollups/manifest.json` | 4348 | `27696256e8e51c92e583c79d5a6fa3d746912d379ba7dfc22d301c0e0adb8654` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
+| `rollups/aggregation-behavior.md` | 104834 | `22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92` | [Open page](/docs/reference/generated/rollups/aggregation-behavior/) | [Download](/docs/reference/generated/rollups/aggregation-behavior.md) |
+| `rollups/manifest.json` | 5365 | `e1e4882b33d8b0c30b5d54d73471f36f7a382b9a07cfcd13471ef396840d1906` | — | [Download](/docs/reference/generated/rollups/manifest.json) |
+| `rollups/range-bases.md` | 11629 | `8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec` | — | [Download](/docs/reference/generated/rollups/range-bases.md) |
+| `rollups/range.csv` | 38202 | `6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7` | — | [Download](/docs/reference/generated/rollups/range.csv) |
+| `rollups/range.json` | 39662 | `3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b` | — | [Download](/docs/reference/generated/rollups/range.json) |
+| `rollups/range.md` | 9249 | `1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4` | — | [Download](/docs/reference/generated/rollups/range.md) |
 | `rollups/weekly-bases.md` | 11564 | `fc63dff32df2daee19c8e6b04b2a3b95530205e7e2cb242204560827dd9d1815` | — | [Download](/docs/reference/generated/rollups/weekly-bases.md) |
 | `rollups/weekly.csv` | 29797 | `447a352eaddac7b11d5fd9ff62ff47e0315f888d3b6da8aca0a9971c1b6feaf9` | — | [Download](/docs/reference/generated/rollups/weekly.csv) |
 | `rollups/weekly.json` | 39632 | `58f77bb0073a4d0f30fe80ba161d62f77f80f8bfab0054efb0d3f1f17b86bc84` | — | [Download](/docs/reference/generated/rollups/weekly.json) |
@@ -102,12 +106,12 @@ These deterministic synthetic artifacts are copied byte-for-byte from the author
 | `automation/iphone-export-progress.json` | 175 | `c5b23bd614bf2d1bde81213c9e4e24e59bcbc6bb7da52eb30238a04baf1f54d5` | — | [Download](/docs/reference/generated/automation/iphone-export-progress.json) |
 | `automation/iphone-export-request-strict-raw.json` | 328 | `fd170ee749831c1d45c1cacca4c64106bec324af91874baf54c57c513d63b722` | — | [Download](/docs/reference/generated/automation/iphone-export-request-strict-raw.json) |
 | `automation/iphone-export-request-write-files.json` | 526 | `db67e939e126597830242f06eb51c8d3913dda2f41b20ae96e7916de19598a6b` | — | [Download](/docs/reference/generated/automation/iphone-export-request-write-files.json) |
-| `automation/mac-export-job.json` | 27662 | `3024ceb5a8d3f3a33d6220cffb7f2f096ed95b4bbc7709a2c1def86f78911d2a` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
+| `automation/mac-export-job.json` | 27586 | `b414fa483debfb4acbd40417bb625b8894e80c42321a9858af0968af4f7f1725` | — | [Download](/docs/reference/generated/automation/mac-export-job.json) |
 | `automation/mac-export-result-partial.json` | 1034 | `f9c8630140c1d961e93a40cc887133da30c1c757a0dd651f81b932f9ae05c201` | — | [Download](/docs/reference/generated/automation/mac-export-result-partial.json) |
 | `automation/mac-export-result-success.json` | 585 | `b9a72e7f9eb09520595467270d1954d373491d1620ee738da2043361a56ab03b` | — | [Download](/docs/reference/generated/automation/mac-export-result-success.json) |
-| `automation/manifest.json` | 5848 | `418c63a091d0a46848cfc9727c09eecd051b7dccaef9b433d9cbf6902e434318` | — | [Download](/docs/reference/generated/automation/manifest.json) |
-| `automation/message-fields.md` | 127872 | `74aa2afeb7be8387258aa28712fa5e9315d1144c2e394b03610a017097ec67db` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
-| `automation/peer-capabilities.json` | 1553 | `5b20fb57e4af65274b88f09d1a11618779f05d85f5cad208b0f65fba28e0a023` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
+| `automation/manifest.json` | 5848 | `44adced6aef0744408907f4a6e6276630164bda907119c09b9ede09e2b9c66eb` | — | [Download](/docs/reference/generated/automation/manifest.json) |
+| `automation/message-fields.md` | 127438 | `2912dbe35119ac61c998e781c66922e9a5f6575f123d5ab26826caba09933a2a` | [Open page](/docs/reference/generated/automation/message-fields/) | [Download](/docs/reference/generated/automation/message-fields.md) |
+| `automation/peer-capabilities.json` | 1591 | `15111cc0d942012cb4a7cc1c8c1d51bfcde36fbaebe458abbfd419339bf6e492` | — | [Download](/docs/reference/generated/automation/peer-capabilities.json) |
 | `automation/raw-result-complete.json` | 3240 | `d82df3876394ac05761c2fdc44db41b6b4021ebc8b4becba20bf51793c25f6c6` | — | [Download](/docs/reference/generated/automation/raw-result-complete.json) |
 | `automation/raw-result-partial.json` | 5280 | `311e1f6b6225226b0a3000aab2322114e47067bfc36a54cc78f7a9e3a0482d33` | — | [Download](/docs/reference/generated/automation/raw-result-partial.json) |
 | `automation/transfer-acknowledgement.json` | 213 | `c83bbf4756dd8a07760f199c39ecb3cc5f712b3f3802f6d26a7d286caf08a62e` | — | [Download](/docs/reference/generated/automation/transfer-acknowledgement.json) |

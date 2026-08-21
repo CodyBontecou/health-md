@@ -36,7 +36,7 @@ struct ExportHealthDataDateRangeIntent: AppIntent {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: min(startDate, endDate))
         let end = calendar.startOfDay(for: max(startDate, endDate))
-        let dates = ExportOrchestrator.dateRange(from: start, to: end)
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
         let outcome = await ExportIntentRunner.run(dates: dates, profileName: profile)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }

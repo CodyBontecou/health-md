@@ -658,11 +658,9 @@ struct ExportProfileDetailView: View {
     }
 
     private func rollupRow(_ settings: ExportSettingsSnapshot) -> some View {
-        let periods: [String] = [
-            settings.generateWeeklyRollups ? String(localized: "Weekly", comment: "Roll-up period") : nil,
-            settings.generateMonthlyRollups ? String(localized: "Monthly", comment: "Roll-up period") : nil,
-            settings.generateYearlyRollups ? String(localized: "Yearly", comment: "Roll-up period") : nil
-        ].compactMap { $0 }
+        let periods: [String] = settings.generateRangeSummary
+            ? [String(localized: "Range", comment: "Roll-up period")]
+            : []
         let value = periods.isEmpty
             ? String(localized: "Off", comment: "Disabled state")
             : (settings.summaryOnlyExport
@@ -1307,16 +1305,8 @@ struct ExportProfileEditorSheet: View {
     private var rollupSection: some View {
         Section {
             Toggle(
-                String(localized: "Weekly roll-ups", comment: "Profile editor weekly rollup toggle"),
-                isOn: $draft.generateWeeklyRollups
-            )
-            Toggle(
-                String(localized: "Monthly roll-ups", comment: "Profile editor monthly rollup toggle"),
-                isOn: $draft.generateMonthlyRollups
-            )
-            Toggle(
-                String(localized: "Yearly roll-ups", comment: "Profile editor yearly rollup toggle"),
-                isOn: $draft.generateYearlyRollups
+                String(localized: "Range summary", comment: "Profile editor range-summary toggle"),
+                isOn: $draft.generateRangeSummary
             )
         } header: {
             Text("Roll-Ups")

@@ -170,7 +170,8 @@ final class SyncService: NSObject, ObservableObject {
     func canExportToConnectedMac(requiring settings: AdvancedExportSettings) -> Bool {
         guard canExportToConnectedMac else { return false }
         return remoteCapabilities?.supportsRequestedMacExportFeatures(
-            rollupSummariesEnabled: settings.rollupSummariesEnabled && !settings.dailyNotesOnlyModeEnabled,
+            rollupSummariesEnabled: false,
+            rangeV9SummaryEnabled: settings.generateRangeSummary && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
             effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
             dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled,
@@ -183,7 +184,8 @@ final class SyncService: NSObject, ObservableObject {
         let baseMessage = macExportReadinessMessage
         guard canExportToConnectedMac else { return baseMessage }
         guard remoteCapabilities?.supportsRequestedMacExportFeatures(
-            rollupSummariesEnabled: settings.rollupSummariesEnabled && !settings.dailyNotesOnlyModeEnabled,
+            rollupSummariesEnabled: false,
+            rangeV9SummaryEnabled: settings.generateRangeSummary && !settings.dailyNotesOnlyModeEnabled,
             summaryOnlyExportEnabled: settings.summaryOnlyModeEnabled,
             effectiveGranularDataEnabled: ConnectedExportGranularMode.isEnabled(for: settings),
             dailyNotesOnlyExportEnabled: settings.dailyNotesOnlyModeEnabled,
@@ -199,8 +201,8 @@ final class SyncService: NSObject, ObservableObject {
             if settings.summaryOnlyModeEnabled {
                 return "Update Health.md on Mac to export summary-only roll-ups"
             }
-            if settings.rollupSummariesEnabled {
-                return "Update Health.md on Mac to export roll-up summaries"
+            if settings.generateRangeSummary {
+                return "Update Health.md on Mac to export range summaries"
             }
             if ConnectedExportGranularMode.isEnabled(for: settings) {
                 return "Update Health.md on Mac to export Lossless Health Records"

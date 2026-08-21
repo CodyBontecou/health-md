@@ -340,11 +340,15 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         XCTAssertEqual(decoded.appleExportEnginePin, pin)
         XCTAssertEqual(decoded.effectiveAppleExportEnginePin, pin)
         XCTAssertEqual(decoded.settingsSnapshot.appleExportEnginePin, pin)
+        XCTAssertEqual(decoded.effectiveOriginalRequestedDates, [date])
+        XCTAssertEqual(decoded.effectiveOriginalCalendarTimeZoneIdentifier, "America/Los_Angeles")
 
         var legacyObject = try XCTUnwrap(
             JSONSerialization.jsonObject(with: encoded) as? [String: Any]
         )
         legacyObject.removeValue(forKey: "appleExportEnginePin")
+        legacyObject.removeValue(forKey: "originalRequestedDates")
+        legacyObject.removeValue(forKey: "originalCalendarTimeZoneIdentifier")
         var legacySettings = try XCTUnwrap(legacyObject["settingsSnapshot"] as? [String: Any])
         legacySettings.removeValue(forKey: "appleExportEnginePin")
         legacySettings.removeValue(forKey: "calendarTimeZoneIdentifier")
@@ -356,6 +360,11 @@ final class ConnectedCorpusTransferProtocolTests: XCTestCase {
         XCTAssertNil(legacy.appleExportEnginePin)
         XCTAssertNil(legacy.effectiveAppleExportEnginePin)
         XCTAssertNil(legacy.settingsSnapshot.appleExportEnginePin)
+        XCTAssertEqual(legacy.effectiveOriginalRequestedDates, [date])
+        XCTAssertEqual(
+            legacy.effectiveOriginalCalendarTimeZoneIdentifier,
+            "America/Los_Angeles"
+        )
 
         for (mutateSnapshot, invalidEngine) in [(false, "future-engine"), (true, "legacy")] {
             var invalidObject = try XCTUnwrap(
