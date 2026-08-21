@@ -6,6 +6,7 @@ import com.healthmd.domain.repository.DurableScheduledFolderOperationStart
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.data.isHealthConnectRateLimit
+import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import java.time.LocalDate
@@ -81,6 +82,32 @@ class ExportOrchestrator(
         val failedDateDetails = mutableListOf<FailedDateDetail>()
         var processedDays = 0
         val effectiveSelection = settings.effectiveDataTypeSelection()
+
+        // Manual interactive runs select route-consent candidates across the complete date scope
+        // before canonical chunk capture. The repository is a no-op for every noninteractive path.
+        if (coroutineContext.allowsInteractiveRouteConsent() &&
+            effectiveSelection.workouts &&
+            !healthRepository.isBeforeFirstUnlock()
+        ) {
+            try {
+                healthRepository.authorizeExerciseRouteConsent(
+                    dates = dates,
+                    dataTypes = effectiveSelection,
+                    includeGranularData = settings.shouldFetchGranularData(),
+                )
+            } catch (_: CancellationException) {
+                return finalizeResult(
+                    ExportResult(
+                        successCount = successCount,
+                        totalCount = totalDays,
+                        failedDateDetails = failedDateDetails,
+                        wasCancelled = true,
+                    ),
+                )
+            } catch (_: Exception) {
+                // Consent is optional; canonical capture retains the established failure behavior.
+            }
+        }
 
         for (chunk in dates.chunked(chunkSize(settings))) {
             try {

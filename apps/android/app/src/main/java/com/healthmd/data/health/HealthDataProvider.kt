@@ -27,6 +27,13 @@ interface HealthDataProvider {
         fetchHealthData(date).filtered(dataTypes)
     }
 
+    suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        dataTypes: DataTypeSelection = DataTypeSelection(),
+        includeGranularData: Boolean = false,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ) = Unit
+
     suspend fun isAvailable(): Boolean
     suspend fun hasPermissions(): Boolean
     suspend fun hasHistoricalReadPermission(): Boolean

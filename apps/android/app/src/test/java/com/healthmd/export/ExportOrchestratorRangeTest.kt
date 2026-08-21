@@ -13,6 +13,10 @@ import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.SleepData
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
+import com.healthmd.rawexport.ExerciseRouteConsentGateway
+import com.healthmd.rawexport.PendingExerciseRouteConsent
+import com.healthmd.rawexport.withInteractiveRouteConsent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.time.LocalDate
@@ -35,9 +39,53 @@ class ExportOrchestratorRangeTest {
         assertThat(result.successCount).isEqualTo(90)
         assertThat(result.failedDateDetails).isEmpty()
         assertThat(healthRepository.singleDayCalls).isEqualTo(0)
+        assertThat(healthRepository.authorizedDateScopes).isEmpty()
         assertThat(healthRepository.rangeCalls).isEqualTo(3)
         assertThat(healthRepository.rangeCallSizes).containsExactly(30, 30, 30).inOrder()
         assertThat(exportRepository.exported.map { it.date }).containsExactlyElementsIn(dates).inOrder()
+    }
+
+    @Test
+    fun `interactive export authorizes globally newest sessions before canonical multi-chunk capture`() = runTest {
+        val dates = (0 until 61).map { LocalDate.of(2026, 1, 1).plusDays(it.toLong()) }
+        val coordinator = ExerciseRouteConsentCoordinator()
+        val prompted = mutableListOf<PendingExerciseRouteConsent>()
+        coordinator.attach(object : ExerciseRouteConsentCoordinator.Surface {
+            override fun launchRouteRequest(session: PendingExerciseRouteConsent): Boolean {
+                prompted += session
+                coordinator.onRouteResult(null)
+                return true
+            }
+        })
+        val healthRepository = FakeHealthRepository(
+            rangeData = dates.associateWith { dataFor(it) },
+            routeConsentGateway = coordinator,
+        )
+        val exportRepository = RecordingExportRepository()
+        val progressDates = mutableListOf<String>()
+
+        val result = withInteractiveRouteConsent {
+            ExportOrchestrator(healthRepository, exportRepository).exportDates(
+                dates = dates,
+                settings = ExportSettings(exportFormat = ExportFormat.JSON),
+                onProgress = { _, _, date -> progressDates += date },
+            )
+        }
+
+        assertThat(result.successCount).isEqualTo(dates.size)
+        assertThat(healthRepository.authorizedDateScopes).containsExactly(dates)
+        assertThat(prompted.map { it.sessionId }).containsExactlyElementsIn(
+            dates.takeLast(ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT)
+                .asReversed()
+                .map { "session-$it" },
+        ).inOrder()
+        assertThat(healthRepository.rangeCallDates).containsExactly(
+            dates.take(30),
+            dates.drop(30).take(30),
+            dates.takeLast(1),
+        ).inOrder()
+        assertThat(exportRepository.exported.map { it.date }).containsExactlyElementsIn(dates).inOrder()
+        assertThat(progressDates).containsExactlyElementsIn(dates.map(LocalDate::toString)).inOrder()
     }
 
     @Test
@@ -196,13 +244,16 @@ class ExportOrchestratorRangeTest {
         private val rateLimitOnRangeCall: Int? = null,
         private val rangeReturnsEmptyData: Boolean = false,
         private val emptyRangeDates: Set<LocalDate> = emptySet(),
+        private val routeConsentGateway: ExerciseRouteConsentGateway? = null,
     ) : HealthRepository {
         var singleDayCalls = 0
             private set
         var rangeCalls = 0
             private set
         val rangeCallSizes = mutableListOf<Int>()
+        val rangeCallDates = mutableListOf<List<LocalDate>>()
         val rangeIncludeGranularFlags = mutableListOf<Boolean>()
+        val authorizedDateScopes = mutableListOf<List<LocalDate>>()
 
         override suspend fun fetchHealthData(date: LocalDate): HealthData {
             singleDayCalls++
@@ -221,6 +272,7 @@ class ExportOrchestratorRangeTest {
         ): List<HealthData> {
             rangeCalls++
             rangeCallSizes += dates.size
+            rangeCallDates += listOf(dates.toList())
             rangeIncludeGranularFlags += includeGranularData
             if (rateLimitOnRangeCall == rangeCalls) {
                 throw RuntimeException("Health Connect rate limit exceeded")
@@ -238,6 +290,24 @@ class ExportOrchestratorRangeTest {
                     )).filtered(dataTypes)
                 }
             }
+        }
+
+        override suspend fun authorizeExerciseRouteConsent(
+            dates: List<LocalDate>,
+            dataTypes: DataTypeSelection,
+            includeGranularData: Boolean,
+            zoneId: ZoneId,
+        ) {
+            authorizedDateScopes += dates.toList()
+            routeConsentGateway?.requestRoutes(
+                dates.map { date ->
+                    PendingExerciseRouteConsent(
+                        sessionId = "session-$date",
+                        sessionStartTime = date.atTime(12, 0).atZone(zoneId).toInstant(),
+                        sessionEndTime = date.atTime(13, 0).atZone(zoneId).toInstant(),
+                    )
+                },
+            )
         }
 
         override suspend fun isAvailable(): Boolean = true

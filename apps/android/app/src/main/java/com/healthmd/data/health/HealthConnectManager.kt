@@ -22,9 +22,15 @@ import com.healthmd.domain.model.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import com.healthmd.domain.model.BloodPressureSample
 import com.healthmd.domain.model.SleepStageEntry
 import com.healthmd.domain.model.TimestampedSample
+import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
+import com.healthmd.rawexport.ExerciseRouteConsentGateway
+import com.healthmd.rawexport.InteractiveRouteConsent
+import com.healthmd.rawexport.NoExerciseRouteConsentGateway
+import com.healthmd.rawexport.PendingExerciseRouteConsent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -39,6 +45,7 @@ import kotlin.time.Duration.Companion.minutes
 class HealthConnectManager(
     private val context: Context,
     sharedClient: HealthConnectClient? = null,
+    private val routeConsentGateway: ExerciseRouteConsentGateway = NoExerciseRouteConsentGateway,
 ) {
     private val healthConnectClient by lazy { sharedClient ?: HealthConnectClient.getOrCreate(context) }
 
@@ -255,6 +262,53 @@ class HealthConnectManager(
     }
 
     /**
+     * Performs the consent-only acquisition phase for a complete compatibility export. Candidate
+     * windows are bounded and traversed newest-first; the interactive run is then sealed so the
+     * canonical capture pass can reuse grants without letting an older chunk consume spare slots.
+     */
+    suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        includeGranularData: Boolean,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ) {
+        val run = currentCoroutineContext()[InteractiveRouteConsent] ?: return
+        try {
+            val sortedDates = dates.distinct().sorted()
+            val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
+            val boundedWindows = mutableListOf<MutableList<LocalDate>>()
+            for (date in sortedDates) {
+                val current = boundedWindows.lastOrNull()
+                if (current == null || current.size >= chunkDays || date != current.last().plusDays(1)) {
+                    boundedWindows += mutableListOf(date)
+                } else {
+                    current += date
+                }
+            }
+            for (chunk in boundedWindows.asReversed()) {
+                if (!run.hasPromptCapacity()) break
+                val chunkDates = chunk.toSet()
+                val range = TimeRangeFilter.between(
+                    chunk.first().atStartOfDay(zoneId).toInstant(),
+                    chunk.last().plusDays(1).atStartOfDay(zoneId).toInstant(),
+                )
+                val candidates = readExerciseRouteConsentCandidates(range, chunkDates, zoneId)
+                if (candidates.isNotEmpty()) {
+                    routeConsentGateway.requestRoutes(candidates).forEach { (sessionId, route) ->
+                        run.recordGrantedRoute(sessionId, route)
+                    }
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // Consent is optional. A failed discovery pass must not fail or partially reorder the
+            // compatibility export; sealing below prevents a later oldest-first pass from prompting.
+        } finally {
+            run.sealPromptSelection()
+        }
+    }
+
+    /**
      * Fetches a multi-day export window with Health Connect range APIs.
      *
      * The goal is to keep 30/90/all-time exports away from the old N days x N categories
@@ -280,7 +334,9 @@ class HealthConnectManager(
         val sortedDates = requestedDates.sorted()
         val chunkDays = if (includeGranularData) GRANULAR_READ_CHUNK_DAYS else RANGE_READ_CHUNK_DAYS
 
-        for (chunk in sortedDates.chunked(chunkDays)) {
+        // Interactive compatibility exports complete their global consent-only pass before this
+        // canonical capture. Newest-first traversal remains useful for direct range callers.
+        for (chunk in sortedDates.chunked(chunkDays).asReversed()) {
             val startDate = chunk.first()
             val endExclusive = chunk.last().plusDays(1)
             val localRange = TimeRangeFilter.between(
@@ -965,10 +1021,14 @@ class HealthConnectManager(
             elevationRecords = readRecordsOrEmpty(ElevationGainedRecord::class, timeRange),
         )
 
-        for ((date, sessions) in sessionsByDate) {
+        for (date in sessionsByDate.keys.sortedDescending()) {
             if (date !in requestedDates) continue
+            val sessions = sessionsByDate.getValue(date)
 
-            val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData) }
+            // Routes are a persistent precise-location grant. Do not ask when the selected
+            // compatibility output does not include workouts and therefore cannot consume them.
+            val grantedRoutes = if (selection.workouts) requestGrantedExerciseRoutes(sessions) else emptyMap()
+            val workouts = sessions.map { buildWorkoutData(it, zone, sources, includeGranularData, grantedRoutes) }
             val minutes = sessions.sumOf {
                 java.time.Duration.between(it.startTime, it.endTime).toMinutes().toDouble()
             }
@@ -1801,6 +1861,55 @@ class HealthConnectManager(
     ) {
         @Suppress("UNCHECKED_CAST")
         operator fun <T : Any> get(metric: AggregateMetric<T>): T? = values[metric] as? T
+    }
+
+    /** Retains at most the prompt budget while paging a bounded owner-date window. */
+    private suspend fun readExerciseRouteConsentCandidates(
+        timeRange: TimeRangeFilter,
+        requestedDates: Set<LocalDate>,
+        zone: ZoneId,
+    ): List<PendingExerciseRouteConsent> {
+        val retained = mutableListOf<PendingExerciseRouteConsent>()
+
+        fun retain(candidate: PendingExerciseRouteConsent) {
+            val duplicateIndex = retained.indexOfFirst { it.sessionId == candidate.sessionId }
+            if (duplicateIndex >= 0) {
+                if (candidate.sessionStartTime > retained[duplicateIndex].sessionStartTime) {
+                    retained[duplicateIndex] = candidate
+                }
+            } else {
+                retained += candidate
+            }
+            retained.sortWith(
+                compareByDescending<PendingExerciseRouteConsent> { it.sessionStartTime }
+                    .thenBy { it.sessionId },
+            )
+            if (retained.size > ExerciseRouteConsentCoordinator.MAX_PROMPTS_PER_EXPORT) {
+                retained.removeAt(retained.lastIndex)
+            }
+        }
+
+        var pageToken: String? = null
+        do {
+            val response = healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    recordType = ExerciseSessionRecord::class,
+                    timeRangeFilter = timeRange,
+                    ascendingOrder = true,
+                    pageSize = READ_PAGE_SIZE,
+                    pageToken = pageToken,
+                ),
+            )
+            response.records.forEach { session ->
+                if (session.exerciseRouteResult is ExerciseRouteResult.ConsentRequired &&
+                    session.startTime.atZone(zone).toLocalDate() in requestedDates
+                ) {
+                    retain(PendingExerciseRouteConsent(session.metadata.id, session.startTime, session.endTime))
+                }
+            }
+            pageToken = response.pageToken
+        } while (!pageToken.isNullOrEmpty())
+        return retained
     }
 
     private suspend fun <T : androidx.health.connect.client.records.Record> readRecordsOrEmpty(
@@ -2765,12 +2874,53 @@ class HealthConnectManager(
                 elevationRecords = readRecordsOrEmpty(ElevationGainedRecord::class, timeRange),
             )
 
+            val grantedRoutes = requestGrantedExerciseRoutes(response.records)
             response.records.map { session ->
-                buildWorkoutData(session, zone, sources, includeGranularData = true)
+                buildWorkoutData(
+                    session,
+                    zone,
+                    sources,
+                    includeGranularData = true,
+                    grantedRoutes = grantedRoutes,
+                )
             }
         } catch (e: Exception) {
             e.rethrowIfActionableExportFailure()
             emptyList()
+        }
+    }
+
+    /**
+     * Asks the interactive consent gateway for third-party routes Health Connect reported as
+     * ConsentRequired. Non-interactive runs (scheduled exports, automation, the direct CLI
+     * protocol) and denied prompts return no grants, so workouts keep reporting
+     * WorkoutRouteAccess.CONSENT_REQUIRED with no route points.
+     */
+    private suspend fun requestGrantedExerciseRoutes(sessions: List<ExerciseSessionRecord>): Map<String, ExerciseRoute> {
+        val run = currentCoroutineContext()[InteractiveRouteConsent] ?: return emptyMap()
+        val pending = sessions
+            .filter { it.exerciseRouteResult is ExerciseRouteResult.ConsentRequired }
+            .map { PendingExerciseRouteConsent(it.metadata.id, it.startTime, it.endTime) }
+        if (pending.isEmpty()) return emptyMap()
+
+        val granted = linkedMapOf<String, ExerciseRoute>()
+        val unresolved = pending.filter { candidate ->
+            val cached = run.grantedRoute(candidate.sessionId)
+            if (cached != null) granted[candidate.sessionId] = cached
+            cached == null
+        }
+        if (unresolved.isEmpty() || !run.hasPromptCapacity()) return granted
+
+        return try {
+            routeConsentGateway.requestRoutes(unresolved).forEach { (sessionId, route) ->
+                run.recordGrantedRoute(sessionId, route)
+                granted[sessionId] = route
+            }
+            granted
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            granted
         }
     }
 
@@ -2779,6 +2929,7 @@ class HealthConnectManager(
         zone: ZoneId,
         sources: WorkoutSourceRecords,
         includeGranularData: Boolean,
+        grantedRoutes: Map<String, ExerciseRoute> = emptyMap(),
     ): WorkoutData {
         val duration = java.time.Duration.between(session.startTime, session.endTime)
         val heartSamples = sources.heartRateRecords
@@ -2858,7 +3009,14 @@ class HealthConnectManager(
             .filter { it.overlaps(session.startTime, session.endTime) }
             .sumOf { it.energy.inKilocalories }
             .positiveOrNull()
-        val routeResult = session.exerciseRouteResult
+        // A route granted through the interactive per-session consent flow is equivalent to
+        // Health Connect returning it inline; sessions without a grant keep their exact
+        // inline result, including consent_required.
+        val routeResult = when (val inline = session.exerciseRouteResult) {
+            is ExerciseRouteResult.ConsentRequired ->
+                grantedRoutes[session.metadata.id]?.let { ExerciseRouteResult.Data(it) } ?: inline
+            else -> inline
+        }
         val routeAccess = when (routeResult) {
             is ExerciseRouteResult.Data -> WorkoutRouteAccess.DATA
             is ExerciseRouteResult.ConsentRequired -> WorkoutRouteAccess.CONSENT_REQUIRED
