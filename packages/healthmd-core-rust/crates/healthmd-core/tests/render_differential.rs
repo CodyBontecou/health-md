@@ -4,7 +4,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 const FIXTURE: &[u8] = include_bytes!("fixtures/render-differential-v1.json");
-const FIXTURE_SHA256: &str = "7c394c1aeda97c597afc1d1a6a3890671b1fc2f4b49b036bc060456b73e074d6";
+const FIXTURE_SHA256: &str = "024f43390ec74151ea278f2347d48312e66142816dfcfc16d0ad56655a281c92";
 const RANGE_JSON: &[u8] =
     include_bytes!("../../../../contracts/rollup-summary/v9/fixtures/range-v9.json");
 const RANGE_CSV: &[u8] =

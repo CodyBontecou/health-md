@@ -692,7 +692,7 @@ def validate_render_fixture(root: Path, path: Path) -> None:
         or payload["render_input_version"] != 1
         or payload["artifact_plan_version"] != 1
         or payload["registry_sha256"]
-        != "9ed4fc3a75c3a03d569cd733e24617c9bf028c9cd3f718e5d85a67c47d7aca65"
+        != "3f21e560d2d27a4ec1055327b97bc194b847d64ca5ff250d1216e94a71a2586f"
     ):
         fail("healthmd.render differential: version or registry pin is invalid")
     cases = payload.get("cases")
