@@ -85,7 +85,8 @@ Export Preview currently:
 - renders weekly/monthly/yearly roll-up summary files for the previewed days when roll-up periods are enabled; full exports refresh the complete touched roll-up windows;
 - in summary-only mode, shows the roll-up summary files without daily file rows;
 - hints at daily-note injection and individual entry tracking instead of rendering every side-effect file;
-- may truncate the middle of very large lossless content while preserving a head/tail preview and original/omitted byte counts.
+- may truncate the middle of very large lossless content while preserving a head/tail preview and original/omitted byte counts;
+- applies a rough text-heavy DEFLATE projection when **Zip Export Files** is on; per-entry ZIP overhead and incompressible expansion mean the displayed size is not exact.
 
 The full export still runs on every selected date and queries the complete touched roll-up windows when roll-up summaries are enabled. In summary-only mode, the daily records are used as source snapshots only and are not written.
 

@@ -49,9 +49,9 @@ Bases receives `-bases` only when readable Markdown is also selected. A three-da
 
 ## Size and transport
 
-Lossless JSON/CSV can be much larger than Markdown/Bases because they include routes, waveforms, binary content, and attachments. Current Connected Mac jobs use bounded checksum-validated frames rather than an unbounded whole payload, but capture and final file serialization can still use substantial memory.
+Lossless JSON/CSV can be much larger than Markdown/Bases because they include routes, waveforms, binary content, and attachments. **Zip Export Files** packages the selected outputs with standard per-entry ZIP DEFLATE while keeping input and output buffers bounded; extracted filenames and bytes are unchanged. Tiny or incompressible entries can grow slightly because archive mode does not stage or replay an entry solely to choose store mode. Current Connected Mac jobs use bounded checksum-validated frames rather than an unbounded whole payload, but capture and final file serialization can still use substantial memory.
 
-Disable formats you do not need and export smaller date ranges for dense records.
+Preview and status use a rough text-export compression projection, not an exact promised archive size. Disable formats you do not need and export smaller date ranges for dense records.
 
 ## Tips
 

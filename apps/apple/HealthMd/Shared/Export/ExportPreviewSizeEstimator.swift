@@ -282,8 +282,9 @@ enum ExportPreviewSizeEstimator {
             + projectedRollupBytes
             + Double(max(fixedByteCount, 0))
         if archiveMode {
-            // Match the rough status estimate for the final ZIP rather than
-            // replacing it with the uncompressed preview contents.
+            // Match the rough text-heavy DEFLATE projection used by status.
+            // Per-entry ZIP overhead and incompressible expansion make this an
+            // estimate, never a promised ratio or exact archive byte count.
             estimatedBytes *= 0.4
         }
         guard estimatedBytes > 0 else { return nil }
@@ -383,8 +384,9 @@ enum ExportStatusSizeEstimator {
             projectedBytes += Double(max(fixedByteCount ?? (64 * 1_024), 0))
 
             if archiveMode {
-                // Health.md ZIP archives contain text-heavy output, which generally
-                // compresses well. This remains a projection, not a promised size.
+                // Health.md applies standard per-entry DEFLATE to text-heavy output,
+                // which generally compresses well. Per-entry overhead and
+                // incompressible expansion remain outside this rough projection.
                 projectedBytes *= 0.4
             }
         }

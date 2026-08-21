@@ -1,3 +1,4 @@
+import Foundation
 import HealthMdCoreRust
 import XCTest
 @testable import HealthMd
@@ -1770,9 +1771,11 @@ final class MacExportJobExecutorTests: XCTestCase {
         let archiveData = try Data(contentsOf: archiveURL)
         XCTAssertNotNil(archiveData.range(of: Data("2026-05-12.md".utf8)))
         XCTAssertNotNil(archiveData.range(of: Data("2026-05-12.json".utf8)))
-        XCTAssertNotNil(archiveData.range(of: Data("Rollups/Range/2026-05-12_to_2026-05-12.md".utf8)))
+        let rangeMarkdownPath = "Rollups/Range/2026-05-12_to_2026-05-12.md"
+        XCTAssertNotNil(archiveData.range(of: Data(rangeMarkdownPath.utf8)))
         XCTAssertNotNil(archiveData.range(of: Data("Rollups/Range/2026-05-12_to_2026-05-12.json".utf8)))
-        XCTAssertNotNil(archiveData.range(of: Data("days_counted: 1".utf8)))
+        let rangeMarkdown = try unzipEntry(rangeMarkdownPath, from: archiveURL)
+        XCTAssertNotNil(rangeMarkdown.range(of: Data("days_counted: 1".utf8)))
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: vaultURL.appendingPathComponent("Rollups/Range/2026-05-12_to_2026-05-12.md").path
         ))
@@ -2295,6 +2298,31 @@ final class MacExportJobExecutorTests: XCTestCase {
                 line: line
             )
         }
+    }
+
+    private func unzipEntry(_ path: String, from archiveURL: URL) throws -> Data {
+        let process = Process()
+        let output = Pipe()
+        let errors = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        process.arguments = ["-p", archiveURL.path, path]
+        process.standardOutput = output
+        process.standardError = errors
+        try process.run()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errors.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            throw NSError(
+                domain: "MacExportJobExecutorTests.unzip",
+                code: Int(process.terminationStatus),
+                userInfo: [
+                    NSLocalizedDescriptionKey: String(data: errorData, encoding: .utf8)
+                        ?? "Unable to extract \(path)"
+                ]
+            )
+        }
+        return data
     }
 
     private func makeAccessGrantedBookmarkResolver() -> FakeBookmarkResolver {

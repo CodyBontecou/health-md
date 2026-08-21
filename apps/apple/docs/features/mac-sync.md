@@ -73,7 +73,7 @@ Current peers use one stable, durable corpus session instead of preparing a whol
 - aggregate corpus bytes use 64-bit counters with no 2 GiB session cap;
 - available-storage checks, inactivity timeouts, cancellation, and protected-spool cleanup remain enforced.
 
-Archive mode uses a checkpointed streaming ZIP64 writer. Mac first converts each dense day to a disk-backed aggregate-only projection, then loads one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses canonical daily disk spools and a streamed checksummed loopback response rather than whole-item `JSONEncoder`/`Data` or one in-memory result object.
+Archive mode uses a checkpointed streaming ZIP64 writer with standard per-entry DEFLATE (method 8). CRCs remain over the original bytes, and interrupted work resumes only from fully finalized entry boundaries; legacy store-mode checkpoints continue in store mode. Mac first converts each dense day to a disk-backed aggregate-only projection, then loads one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses canonical daily disk spools and a streamed checksummed loopback response rather than whole-item `JSONEncoder`/`Data` or one in-memory result object.
 
 Mixed-version peers use the legacy single-payload protocol, which remains capped at 2 GiB and 8,192 chunks.
 

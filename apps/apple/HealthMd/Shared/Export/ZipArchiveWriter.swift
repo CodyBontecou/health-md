@@ -1,13 +1,21 @@
+import Compression
 import Foundation
 
 /// A disk-backed ZIP64 writer for export archives.
 ///
-/// Entries use ZIP's store method. Entry bytes and central-directory records are
-/// written incrementally so the completed archive is never assembled in memory.
+/// Entries use ZIP's DEFLATE method by default. Source bytes, compressed output,
+/// and central-directory records are written incrementally so the completed
+/// archive is never assembled in memory.
 nonisolated enum ZipArchiveWriter {
     static let defaultChunkSize = 64 * 1024
     private static let maximumChunkSize = 1024 * 1024
-    private static let checkpointFormatVersion = 1
+    private static let checkpointFormatVersion = 2
+    private static let legacyCheckpointFormatVersion = 1
+
+    enum CompressionMethod: UInt16, Codable, Sendable {
+        case store = 0
+        case deflate = 8
+    }
 
     struct Entry: Sendable {
         let path: String
@@ -45,6 +53,8 @@ nonisolated enum ZipArchiveWriter {
         fileprivate let dosDate: UInt16
         fileprivate let dosTime: UInt16
         fileprivate let chunkSize: Int
+        /// Missing only in legacy v1 checkpoints, whose entries always used store.
+        fileprivate let compressionMethod: CompressionMethod?
 
         var entryCount: UInt64 { UInt64(entryPaths.count) }
     }
@@ -60,6 +70,7 @@ nonisolated enum ZipArchiveWriter {
         case recoveryFileTooShort(URL)
         case archiveNotOpen
         case sourceIsNotARegularFile(URL)
+        case compressionFailed
         case integerOverflow
 
         var errorDescription: String? {
@@ -84,6 +95,8 @@ nonisolated enum ZipArchiveWriter {
                 return "The ZIP writer is no longer open"
             case .sourceIsNotARegularFile(let url):
                 return "ZIP source is not a regular file: \(url.path)"
+            case .compressionFailed:
+                return "ZIP entry compression failed"
             case .integerOverflow:
                 return "The ZIP archive exceeded supported integer limits"
             }
@@ -99,6 +112,7 @@ nonisolated enum ZipArchiveWriter {
         fileManager: FileManager = .default,
         fileCoordinator: FileCoordinating = PassthroughFileCoordinator(),
         chunkSize: Int = defaultChunkSize,
+        compressionMethod: CompressionMethod = .deflate,
         securePublication: SecurePublication? = nil
     ) throws -> Writer {
         try validate(chunkSize: chunkSize)
@@ -152,6 +166,7 @@ nonisolated enum ZipArchiveWriter {
                 dosDate: timestamp.date,
                 dosTime: timestamp.time,
                 chunkSize: chunkSize,
+                compressionMethod: compressionMethod,
                 fileManager: fileManager,
                 fileCoordinator: fileCoordinator,
                 securePublication: securePublication
@@ -191,8 +206,23 @@ nonisolated enum ZipArchiveWriter {
             checkpoint.centralDirectoryURL.standardizedFileURL,
             checkpoint.destinationURL.standardizedFileURL
         ]
-        guard checkpoint.formatVersion == checkpointFormatVersion,
-              checkpoint.checkpointURL.standardizedFileURL == checkpointURL.standardizedFileURL,
+        let compressionMethod: CompressionMethod
+        switch checkpoint.formatVersion {
+        case legacyCheckpointFormatVersion:
+            guard checkpoint.compressionMethod == nil else {
+                throw ArchiveError.invalidCheckpoint
+            }
+            compressionMethod = .store
+        case checkpointFormatVersion:
+            guard let savedCompressionMethod = checkpoint.compressionMethod else {
+                throw ArchiveError.invalidCheckpoint
+            }
+            compressionMethod = savedCompressionMethod
+        default:
+            throw ArchiveError.invalidCheckpoint
+        }
+
+        guard checkpoint.checkpointURL.standardizedFileURL == checkpointURL.standardizedFileURL,
               UInt64(checkpoint.entryPaths.count) == checkpoint.entryCount,
               temporaryParent == checkpointParent,
               centralParent == checkpointParent,
@@ -243,6 +273,7 @@ nonisolated enum ZipArchiveWriter {
             dosDate: checkpoint.dosDate,
             dosTime: checkpoint.dosTime,
             chunkSize: effectiveChunkSize,
+            compressionMethod: compressionMethod,
             fileManager: fileManager,
             fileCoordinator: fileCoordinator,
             securePublication: securePublication,
@@ -272,7 +303,7 @@ nonisolated enum ZipArchiveWriter {
         entries: [Entry],
         to destinationURL: URL,
         fileManager: FileManager = .default,
-        cancellationCheck: () -> Bool = { false }
+        cancellationCheck: @escaping () -> Bool = { false }
     ) throws {
         let checkpointURL = destinationURL.deletingLastPathComponent()
             .appendingPathComponent(".\(destinationURL.lastPathComponent).zip-checkpoint-\(UUID().uuidString)")
@@ -297,7 +328,7 @@ nonisolated enum ZipArchiveWriter {
         fileEntries: [FileEntry],
         to destinationURL: URL,
         fileManager: FileManager = .default,
-        cancellationCheck: () -> Bool = { false }
+        cancellationCheck: @escaping () -> Bool = { false }
     ) throws {
         let checkpointURL = destinationURL.deletingLastPathComponent()
             .appendingPathComponent(".\(destinationURL.lastPathComponent).zip-checkpoint-\(UUID().uuidString)")
@@ -346,6 +377,7 @@ nonisolated enum ZipArchiveWriter {
         let checkpointURL: URL
         let chunkSize: Int
 
+        private let compressionMethod: CompressionMethod
         private let fileManager: FileManager
         private let fileCoordinator: FileCoordinating
         private let securePublication: SecurePublication?
@@ -370,6 +402,7 @@ nonisolated enum ZipArchiveWriter {
             dosDate: UInt16,
             dosTime: UInt16,
             chunkSize: Int,
+            compressionMethod: CompressionMethod,
             fileManager: FileManager,
             fileCoordinator: FileCoordinating,
             securePublication: SecurePublication? = nil,
@@ -386,6 +419,7 @@ nonisolated enum ZipArchiveWriter {
             self.dosDate = dosDate
             self.dosTime = dosTime
             self.chunkSize = chunkSize
+            self.compressionMethod = compressionMethod
             self.fileManager = fileManager
             self.fileCoordinator = fileCoordinator
             self.securePublication = securePublication
@@ -421,18 +455,18 @@ nonisolated enum ZipArchiveWriter {
 
         var writtenEntryCount: UInt64 { UInt64(entryPaths.count) }
 
-        func append(_ entry: Entry, cancellationCheck: () -> Bool = { false }) throws {
+        func append(_ entry: Entry, cancellationCheck: @escaping () -> Bool = { false }) throws {
             try append(path: entry.requestedPath, data: entry.data, cancellationCheck: cancellationCheck)
         }
 
-        func append(_ entry: FileEntry, cancellationCheck: () -> Bool = { false }) throws {
+        func append(_ entry: FileEntry, cancellationCheck: @escaping () -> Bool = { false }) throws {
             try append(path: entry.requestedPath, contentsOf: entry.sourceURL, cancellationCheck: cancellationCheck)
         }
 
         func append(
             path: String,
             data: Data,
-            cancellationCheck: () -> Bool = { false }
+            cancellationCheck: @escaping () -> Bool = { false }
         ) throws {
             try appendStream(path: path, cancellationCheck: cancellationCheck) { consume in
                 var offset = 0
@@ -448,7 +482,7 @@ nonisolated enum ZipArchiveWriter {
         func append(
             path: String,
             contentsOf sourceURL: URL,
-            cancellationCheck: () -> Bool = { false }
+            cancellationCheck: @escaping () -> Bool = { false }
         ) throws {
             let values = try sourceURL.resourceValues(forKeys: [.isRegularFileKey])
             guard values.isRegularFile == true else {
@@ -471,7 +505,7 @@ nonisolated enum ZipArchiveWriter {
         func appendFile(
             at sourceURL: URL,
             path: String,
-            cancellationCheck: () -> Bool = { false }
+            cancellationCheck: @escaping () -> Bool = { false }
         ) throws {
             try append(path: path, contentsOf: sourceURL, cancellationCheck: cancellationCheck)
         }
@@ -494,7 +528,8 @@ nonisolated enum ZipArchiveWriter {
                 entryPaths: entryPaths,
                 dosDate: dosDate,
                 dosTime: dosTime,
-                chunkSize: chunkSize
+                chunkSize: chunkSize,
+                compressionMethod: compressionMethod
             )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.sortedKeys]
@@ -608,7 +643,7 @@ nonisolated enum ZipArchiveWriter {
 
         private func appendStream(
             path requestedPath: String,
-            cancellationCheck: () -> Bool,
+            cancellationCheck: @escaping () -> Bool,
             produce: (_ consume: (Data) throws -> Void) throws -> Void
         ) throws {
             let path = try ZipArchiveWriter.validatedEntryPath(requestedPath)
@@ -629,6 +664,7 @@ nonisolated enum ZipArchiveWriter {
                 try Self.throwIfCancelled(cancellationCheck)
                 let localHeader = Self.localHeader(
                     nameData: nameData,
+                    compressionMethod: compressionMethod,
                     dosDate: dosDate,
                     dosTime: dosTime
                 )
@@ -636,45 +672,96 @@ nonisolated enum ZipArchiveWriter {
                 archiveByteCount = try Self.adding(archiveByteCount, UInt64(localHeader.count))
 
                 var crc = CRC32()
-                var size: UInt64 = 0
-                try produce { bytes in
-                    guard !bytes.isEmpty else { return }
+                var compressedSize: UInt64 = 0
+                var uncompressedSize: UInt64 = 0
 
-                    func writeChunk(_ chunk: Data) throws {
-                        crc.update(chunk)
-                        try archiveHandle.write(contentsOf: chunk)
-                        size = try Self.adding(size, UInt64(chunk.count))
-                        self.archiveByteCount = try Self.adding(
-                            self.archiveByteCount,
-                            UInt64(chunk.count)
-                        )
-                    }
-
-                    // Current producers already yield at most one chunk. Keep a
-                    // defensive split for future producers, but do not copy every
-                    // file-read chunk a second time on the hot path.
-                    if bytes.count <= self.chunkSize {
-                        try writeChunk(bytes)
-                    } else {
-                        var offset = 0
-                        while offset < bytes.count {
-                            let end = min(offset + self.chunkSize, bytes.count)
-                            try writeChunk(bytes.subdata(in: offset..<end))
-                            offset = end
-                        }
-                    }
+                func writeArchiveChunk(_ chunk: Data) throws {
+                    guard !chunk.isEmpty else { return }
+                    try Self.throwIfCancelled(cancellationCheck)
+                    try archiveHandle.write(contentsOf: chunk)
+                    compressedSize = try Self.adding(compressedSize, UInt64(chunk.count))
+                    self.archiveByteCount = try Self.adding(
+                        self.archiveByteCount,
+                        UInt64(chunk.count)
+                    )
                 }
 
+                func recordSourceChunk(_ chunk: Data) throws {
+                    guard !chunk.isEmpty else { return }
+                    try Self.throwIfCancelled(cancellationCheck)
+                    crc.update(chunk)
+                    uncompressedSize = try Self.adding(
+                        uncompressedSize,
+                        UInt64(chunk.count)
+                    )
+                }
+
+                switch compressionMethod {
+                case .store:
+                    try produce { bytes in
+                        guard !bytes.isEmpty else { return }
+                        if bytes.count <= self.chunkSize {
+                            try recordSourceChunk(bytes)
+                            try writeArchiveChunk(bytes)
+                        } else {
+                            var offset = 0
+                            while offset < bytes.count {
+                                let end = min(offset + self.chunkSize, bytes.count)
+                                let chunk = bytes.subdata(in: offset..<end)
+                                try recordSourceChunk(chunk)
+                                try writeArchiveChunk(chunk)
+                                offset = end
+                            }
+                        }
+                    }
+                case .deflate:
+                    let compressor = try DeflateEncoder(outputBufferSize: chunkSize)
+                    try produce { bytes in
+                        guard !bytes.isEmpty else { return }
+
+                        func compress(_ chunk: Data) throws {
+                            try recordSourceChunk(chunk)
+                            try compressor.write(chunk, emit: writeArchiveChunk)
+                        }
+
+                        // Current producers already yield at most one chunk. Keep a
+                        // defensive split for future oversized producers while each
+                        // compressor input and output buffer remains bounded.
+                        if bytes.count <= self.chunkSize {
+                            try compress(bytes)
+                        } else {
+                            var offset = 0
+                            while offset < bytes.count {
+                                let end = min(offset + self.chunkSize, bytes.count)
+                                try compress(bytes.subdata(in: offset..<end))
+                                offset = end
+                            }
+                        }
+                    }
+                    try Self.throwIfCancelled(cancellationCheck)
+                    try compressor.finish(emit: writeArchiveChunk)
+                }
+
+                // A complete DEFLATE end marker must be durable in the archive
+                // spool before the descriptor, central record, or checkpoint can
+                // make this entry visible as committed.
+                try Self.throwIfCancelled(cancellationCheck)
                 let checksum = crc.finalize()
-                let descriptor = Self.dataDescriptor(crc32: checksum, size: size)
+                let descriptor = Self.dataDescriptor(
+                    crc32: checksum,
+                    compressedSize: compressedSize,
+                    uncompressedSize: uncompressedSize
+                )
                 try archiveHandle.write(contentsOf: descriptor)
                 archiveByteCount = try Self.adding(archiveByteCount, UInt64(descriptor.count))
 
                 let centralRecord = Self.centralDirectoryRecord(
                     nameData: nameData,
                     crc32: checksum,
-                    size: size,
+                    compressedSize: compressedSize,
+                    uncompressedSize: uncompressedSize,
                     localHeaderOffset: startingArchiveByteCount,
+                    compressionMethod: compressionMethod,
                     dosDate: dosDate,
                     dosTime: dosTime
                 )
@@ -700,6 +787,111 @@ nonisolated enum ZipArchiveWriter {
                     abandon()
                 }
                 throw error
+            }
+        }
+
+        /// Compression framework's COMPRESSION_ZLIB encoder emits raw RFC 1951
+        /// DEFLATE (equivalent to zlib's deflateInit2 windowBits -15), which is
+        /// the payload framing required by ZIP compression method 8.
+        private final class DeflateEncoder {
+            private var stream: compression_stream
+            private var outputBuffer: [UInt8]
+            private var isInitialized: Bool
+
+            init(outputBufferSize: Int) throws {
+                outputBuffer = [UInt8](repeating: 0, count: outputBufferSize)
+                isInitialized = false
+
+                // compression_stream_init replaces all user-managed pointers, but
+                // Swift imports the C struct fields as non-optional. Supply one
+                // valid placeholder for the duration of initialization.
+                let placeholder = UnsafeMutablePointer<UInt8>.allocate(capacity: 1)
+                stream = compression_stream(
+                    dst_ptr: placeholder,
+                    dst_size: 0,
+                    src_ptr: UnsafePointer(placeholder),
+                    src_size: 0,
+                    state: nil
+                )
+                let status = compression_stream_init(
+                    &stream,
+                    COMPRESSION_STREAM_ENCODE,
+                    COMPRESSION_ZLIB
+                )
+                placeholder.deallocate()
+                guard status == COMPRESSION_STATUS_OK else {
+                    throw ArchiveError.compressionFailed
+                }
+                isInitialized = true
+            }
+
+            deinit {
+                if isInitialized {
+                    _ = compression_stream_destroy(&stream)
+                }
+            }
+
+            func write(_ data: Data, emit: (Data) throws -> Void) throws {
+                guard !data.isEmpty else { return }
+                try data.withUnsafeBytes { rawBuffer in
+                    let source = rawBuffer.bindMemory(to: UInt8.self)
+                    guard let baseAddress = source.baseAddress else {
+                        throw ArchiveError.compressionFailed
+                    }
+                    stream.src_ptr = baseAddress
+                    stream.src_size = source.count
+
+                    while stream.src_size > 0 {
+                        let sourceSizeBefore = stream.src_size
+                        let (status, producedByteCount) = try process(
+                            flags: 0,
+                            emit: emit
+                        )
+                        guard status == COMPRESSION_STATUS_OK,
+                              stream.src_size < sourceSizeBefore || producedByteCount > 0 else {
+                            throw ArchiveError.compressionFailed
+                        }
+                    }
+                }
+            }
+
+            func finish(emit: (Data) throws -> Void) throws {
+                while true {
+                    let (status, producedByteCount) = try process(
+                        flags: Int32(COMPRESSION_STREAM_FINALIZE.rawValue),
+                        emit: emit
+                    )
+                    if status == COMPRESSION_STATUS_END { return }
+                    guard status == COMPRESSION_STATUS_OK, producedByteCount > 0 else {
+                        throw ArchiveError.compressionFailed
+                    }
+                }
+            }
+
+            private func process(
+                flags: Int32,
+                emit: (Data) throws -> Void
+            ) throws -> (compression_status, Int) {
+                try outputBuffer.withUnsafeMutableBufferPointer { destination in
+                    guard let baseAddress = destination.baseAddress else {
+                        throw ArchiveError.compressionFailed
+                    }
+                    stream.dst_ptr = baseAddress
+                    stream.dst_size = destination.count
+                    if stream.src_size == 0 {
+                        stream.src_ptr = UnsafePointer(baseAddress)
+                    }
+
+                    let status = compression_stream_process(&stream, flags)
+                    guard status != COMPRESSION_STATUS_ERROR else {
+                        throw ArchiveError.compressionFailed
+                    }
+                    let producedByteCount = destination.count - stream.dst_size
+                    if producedByteCount > 0 {
+                        try emit(Data(bytes: baseAddress, count: producedByteCount))
+                    }
+                    return (status, producedByteCount)
+                }
             }
         }
 
@@ -735,13 +927,18 @@ nonisolated enum ZipArchiveWriter {
             return result.partialValue
         }
 
-        private static func localHeader(nameData: Data, dosDate: UInt16, dosTime: UInt16) -> Data {
+        private static func localHeader(
+            nameData: Data,
+            compressionMethod: CompressionMethod,
+            dosDate: UInt16,
+            dosTime: UInt16
+        ) -> Data {
             var header = Data()
             header.reserveCapacity(30 + nameData.count + 20)
             header.appendUInt32LE(0x04034b50)
             header.appendUInt16LE(45) // ZIP 4.5 / ZIP64
             header.appendUInt16LE(0x0808) // UTF-8 + data descriptor
-            header.appendUInt16LE(0) // Store/no compression
+            header.appendUInt16LE(compressionMethod.rawValue)
             header.appendUInt16LE(dosTime)
             header.appendUInt16LE(dosDate)
             header.appendUInt32LE(0) // CRC follows in descriptor
@@ -757,21 +954,27 @@ nonisolated enum ZipArchiveWriter {
             return header
         }
 
-        private static func dataDescriptor(crc32: UInt32, size: UInt64) -> Data {
+        private static func dataDescriptor(
+            crc32: UInt32,
+            compressedSize: UInt64,
+            uncompressedSize: UInt64
+        ) -> Data {
             var descriptor = Data()
             descriptor.reserveCapacity(24)
             descriptor.appendUInt32LE(0x08074b50)
             descriptor.appendUInt32LE(crc32)
-            descriptor.appendUInt64LE(size)
-            descriptor.appendUInt64LE(size)
+            descriptor.appendUInt64LE(compressedSize)
+            descriptor.appendUInt64LE(uncompressedSize)
             return descriptor
         }
 
         private static func centralDirectoryRecord(
             nameData: Data,
             crc32: UInt32,
-            size: UInt64,
+            compressedSize: UInt64,
+            uncompressedSize: UInt64,
             localHeaderOffset: UInt64,
+            compressionMethod: CompressionMethod,
             dosDate: UInt16,
             dosTime: UInt16
         ) -> Data {
@@ -781,7 +984,7 @@ nonisolated enum ZipArchiveWriter {
             record.appendUInt16LE(45)
             record.appendUInt16LE(45)
             record.appendUInt16LE(0x0808)
-            record.appendUInt16LE(0)
+            record.appendUInt16LE(compressionMethod.rawValue)
             record.appendUInt16LE(dosTime)
             record.appendUInt16LE(dosDate)
             record.appendUInt32LE(crc32)
@@ -797,8 +1000,8 @@ nonisolated enum ZipArchiveWriter {
             record.append(nameData)
             record.appendUInt16LE(0x0001)
             record.appendUInt16LE(24)
-            record.appendUInt64LE(size)
-            record.appendUInt64LE(size)
+            record.appendUInt64LE(uncompressedSize)
+            record.appendUInt64LE(compressedSize)
             record.appendUInt64LE(localHeaderOffset)
             return record
         }
