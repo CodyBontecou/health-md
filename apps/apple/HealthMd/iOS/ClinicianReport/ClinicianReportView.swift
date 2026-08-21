@@ -48,11 +48,12 @@ struct ClinicianReportView: View {
                         .id(ScrollTarget.top)
 
                     Group {
-                        if let report = viewModel.report {
+                        if let report = viewModel.report, !viewModel.isRendering {
                             reportPreview(report)
                         } else {
                             configurationContent
                                 .configurationChangesProtected()
+                                .disabled(!viewModel.isConfigurationEditable)
                         }
                     }
                     .padding(.horizontal, Spacing.s4)
@@ -64,7 +65,7 @@ struct ClinicianReportView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     actionBar
                 }
-                .onChange(of: viewModel.report != nil) { _, _ in
+                .onChange(of: viewModel.report != nil && !viewModel.isRendering) { _, _ in
                     Task { @MainActor in
                         await Task.yield()
                         proxy.scrollTo(ScrollTarget.top, anchor: .top)
@@ -92,7 +93,7 @@ struct ClinicianReportView: View {
                 }
             }
         }
-        .interactiveDismissDisabled(viewModel.isLoading || viewModel.isRendering)
+        .interactiveDismissDisabled(viewModel.isBusy)
         .sheet(isPresented: $showShare) {
             if let artifact = viewModel.artifact {
                 ClinicianReportShareSheet(artifact: artifact) { completed in
