@@ -256,8 +256,12 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         // Copy the profile ID for CLI/automation references.
         let copy = app.buttons["export.profiles.copyID"]
         XCTAssertTrue(copy.waitForExistence(timeout: 5))
+        let copied = expectation(
+            for: NSPredicate(format: "value == 'Copied'"),
+            evaluatedWith: copy
+        )
         copy.tap()
-        XCTAssertTrue(app.staticTexts["Copied"].waitForExistence(timeout: 5), "copy should confirm")
+        wait(for: [copied], timeout: 5)
 
         // Activate the profile: detail pops and the active banner reflects it.
         app.buttons["export.profiles.makeActive"].tap()
