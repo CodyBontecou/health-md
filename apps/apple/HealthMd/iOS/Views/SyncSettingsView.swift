@@ -504,13 +504,12 @@ struct SyncSettingsView: View {
                             .foregroundStyle(Color.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                            Button("Forget Pairing", role: .destructive) {
+                            DestructiveButton(title: "Forget Pairing") {
                                 configurationProtection.performConfigurationChange {
                                     directCLIService.forgetPairedCLI()
                                     directCLIPairingCode = ""
                                 }
                             }
-                            .buttonStyle(.bordered)
                         }
                     }
 

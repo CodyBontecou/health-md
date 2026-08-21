@@ -209,7 +209,7 @@ struct DestructiveButton: View {
     @State private var isPressed = false
 
     var body: some View {
-        Button(action: action) {
+        Button(role: .destructive, action: action) {
             Text(LocalizedStringKey(title))
                 .font(.system(size: 14, weight: .medium, design: .default))
                 .foregroundStyle(Color.error)

@@ -343,6 +343,9 @@ struct HealthMdApp: App {
                 Text(sharedSetupCoordinator.errorMessage ?? "")
             }
                         .environmentObject(configurationProtection)
+            // Keep native bordered controls aligned with the 6px Geist control radius
+            // instead of SwiftUI's default capsule shape.
+            .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
             .safeAreaInset(edge: .top, spacing: 0) {
                 Group {
                     if let snapshot = notificationExportActivity.snapshot {

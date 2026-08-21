@@ -2521,8 +2521,8 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
-    /// Built by ContentView when the main UI appears; observed inside
-    /// `ExportProfilesSettingsRow` so the active-profile status stays live.
+    /// Built by ContentView when the main UI appears; used to gate the
+    /// profile-management row while remaining optional at the call site.
     var profileCoordinator: ExportProfileCoordinator?
     @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
         @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
@@ -2735,8 +2735,8 @@ struct SettingsTabView: View {
             title: "Profiles & Reports",
             subtitle: "Manage saved export configurations and clinician-ready summaries."
         ) {
-            if let profileCoordinator {
-                ExportProfilesSettingsRow(coordinator: profileCoordinator) {
+            if profileCoordinator != nil {
+                ExportProfilesSettingsRow {
                     showExportProfiles = true
                 }
 
@@ -3116,11 +3116,9 @@ private struct SettingsRowIdentifier: ViewModifier {
     }
 }
 
-/// Export Profiles entry row. Isolated from `SettingsTabView` so the
-/// coordinator (which ContentView builds just after first render) can be
-/// observed here while remaining optional at the call site.
+/// Export Profiles entry row. Isolated from `SettingsTabView` to keep the
+/// profile-management entry's layout independent from the surrounding section.
 private struct ExportProfilesSettingsRow: View {
-    @ObservedObject var coordinator: ExportProfileCoordinator
     let action: () -> Void
 
     var body: some View {
@@ -3128,8 +3126,6 @@ private struct ExportProfilesSettingsRow: View {
             icon: "square.and.arrow.down.on.square",
             title: "Export Profiles",
             subtitle: "Save multiple export configurations and run them on their own schedules.",
-            status: coordinator.activeProfileName,
-            statusTone: .accent,
             isActive: true,
             accessibilityHint: "Double tap to manage export profiles",
             accessibilityIdentifier: AccessibilityID.ExportProfiles.entry,

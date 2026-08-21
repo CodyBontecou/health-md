@@ -67,14 +67,14 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
-        // Migration synthesizes the Default profile before the row renders,
-        // so the Settings row carries its name as the status value.
+        // The active profile is managed inside the destination screen rather
+        // than rendered as a status pill on the Settings entry row.
         openSettingsTab(app)
         let row = app.buttons["export.profiles.entry"]
         XCTAssertTrue(row.waitForExistence(timeout: 10), "Export Profiles row should exist in Settings")
         snap("01-settings-profiles-row")
-        let defaultValue = expectation(for: NSPredicate(format: "value == 'Default'"), evaluatedWith: row)
-        wait(for: [defaultValue], timeout: 10)
+        let configuredValue = expectation(for: NSPredicate(format: "value == 'Configured'"), evaluatedWith: row)
+        wait(for: [configuredValue], timeout: 10)
 
         openProfilesManagementSheet(app)
         XCTAssertTrue(
