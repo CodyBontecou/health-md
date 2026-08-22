@@ -578,10 +578,7 @@ jobs:
                 EXPECTED_DESCRIPTION=$(printf '%s' "$EXPECTED" | jq -r '.description')
                 MATCH=$(printf '%s' "$REMOTE_IAP_LOCALIZATIONS" \
                   | jq -r --arg locale "$EXPECTED_LOCALE" --arg name "$EXPECTED_NAME" --arg description "$EXPECTED_DESCRIPTION" \
-                    '[(.data // [])[] | select(.attributes.locale == $locale)][0] as $loc \
-                     | if $loc == null then "missing" \
-                       elif $loc.attributes.name != $name or $loc.attributes.description != $description then "differs" \
-                       else "match" end')
+                    '[(.data // [])[] | select(.attributes.locale == $locale)][0] as $loc | if $loc == null then "missing" elif $loc.attributes.name != $name or $loc.attributes.description != $description then "differs" else "match" end')
                 if [[ "$MATCH" != "match" ]]; then
                   echo "::error::IAP $PRODUCT_ID locale $EXPECTED_LOCALE metadata $MATCH on version $REFERENCE_VERSION_ID"
                   IAP_MISMATCH=1
