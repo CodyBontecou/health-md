@@ -40,6 +40,8 @@ When the operating systems differ, Health.md represents that difference explicit
 
 The governing workflow and definition of done are in [`docs/architecture/cross-platform-unification-policy.md`](docs/architecture/cross-platform-unification-policy.md).
 
+The product-wide feature baseline lives in [`docs/features/feature-inventory.md`](docs/features/feature-inventory.md): every feature across Apple, Android, CLI, core, contracts, practice, and website surfaces, with source evidence, per-feature documentation status, and the gap list used to manage documentation. Update it when adding a feature.
+
 ## Public contracts
 
 Health.md exports and the direct-device protocol are long-lived compatibility contracts used across Apple, Android, the CLI, website documentation, and external integrations. Contract changes must update fixtures and run every affected consumer's compatibility tests.
