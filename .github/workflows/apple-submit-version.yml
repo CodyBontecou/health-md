@@ -173,7 +173,9 @@ jobs:
           set -euo pipefail
           asc versions view --version-id "$VERSION_ID" --output json | python3 -c '
           import sys, json
-          v = json.load(sys.stdin)["data"]
-          print("version:", v["attributes"]["versionString"], v["attributes"]["appStoreState"])
+          v = json.load(sys.stdin)
+          v = v.get("data", v)
+          attrs = v.get("attributes", v)
+          print("version:", attrs.get("versionString"), attrs.get("appStoreState"))
           '
           asc apps info list --app "$ASC_APP_ID" --output table
