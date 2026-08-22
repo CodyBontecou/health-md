@@ -522,10 +522,29 @@ jobs:
             --build "${{ steps.asc_upload.outputs.build_id }}"
 
           echo "Applying canonical app-info and $VERSION metadata"
-          APP_INFO_ARGS=()
           if [[ -n "${{ github.event.inputs.app_info }}" ]]; then
-            APP_INFO_ARGS=(--app-info "${{ github.event.inputs.app_info }}")
-            echo "Using app-info override: ${{ github.event.inputs.app_info }}"
+            RESOLVED_APP_INFO="${{ github.event.inputs.app_info }}"
+          else
+            # A concurrent platform submission can leave two app info records
+            # (the live READY_FOR_DISTRIBUTION one plus an editable copy for
+            # in-flight versions). Pin the single editable record so asc does
+            # not fail closed on the ambiguity.
+            RESOLVED_APP_INFO=$(asc apps info list --app "$ASC_APP_ID" --output json | python3 -c '
+          import sys, json
+          records = json.load(sys.stdin)["data"]
+          editable = [r for r in records if r["attributes"]["state"] != "READY_FOR_DISTRIBUTION"]
+          if len(records) <= 1:
+              print("")
+          elif len(editable) == 1:
+              print(editable[0]["id"])
+          else:
+              raise SystemExit("ambiguous app infos: " + ", ".join("{}[{}]".format(r["id"], r["attributes"]["state"]) for r in records))
+          ')
+          fi
+          APP_INFO_ARGS=()
+          if [[ -n "$RESOLVED_APP_INFO" ]]; then
+            APP_INFO_ARGS=(--app-info "$RESOLVED_APP_INFO")
+            echo "Using app-info: $RESOLVED_APP_INFO"
           fi
           asc metadata apply \
             --app "$ASC_APP_ID" \
