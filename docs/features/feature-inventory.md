@@ -165,8 +165,8 @@
 |---|---|---|---|---|
 | iOS home-screen widgets | iOS | HealthSummary, ActivityRings, HeartRange, SleepSummary; small/medium/large + accessories | `HealthMdWidgets/HealthWidgets.swift` | ✅ `apps/apple/docs/features/widgets.md` |
 | CLI Export Live Activity | iOS | Live Activity showing CLI export progress | `HealthMdWidgets/CLIExportLiveActivityWidget.swift` | ✅ within `widgets.md` |
-| Watch app | watchOS | Watch dashboard from health snapshot | `HealthMdWatch/WatchDashboardView.swift` | ❌ |
-| Watch widgets | watchOS | DailyActivity, Recovery, Steps, MoveEnergy, ExerciseMinutes, StandHours, Sleep, RestingHeartRate, HRV, BloodOxygen | `HealthMdWatchWidgets/WatchHealthWidgets.swift` | ❌ |
+| Watch app | watchOS | Watch dashboard from health snapshot | `HealthMdWatch/WatchDashboardView.swift` | ✅ `apps/apple/docs/features/watch-app.md` |
+| Watch widgets | watchOS | DailyActivity, Recovery, Steps, MoveEnergy, ExerciseMinutes, StandHours, Sleep, RestingHeartRate, HRV, BloodOxygen | `HealthMdWatchWidgets/WatchHealthWidgets.swift` | ✅ within `watch-app.md` |
 | Android home-screen widgets | Android | Glance: Health Summary, Activity, Heart Range, Sleep; 14-day no-backup snapshot; 7-day charts; permission-revocation pulse; no lock-screen measurement widgets | `widget/` package | ✅ `docs/features/widgets.md` |
 | Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os-implementation.md` |
 | Wear OS complications | Wear | 10 metric complications (activity, recovery, steps, move, exercise, sleep, RHR, avg HR, HRV, SpO2) | `wear/.../surface/HealthComplications.kt` | ✅ wear docs |
@@ -244,18 +244,17 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-1. **Watch app + watch widgets** (`HealthMdWatch*`).
-2. **Share My Setup** — contract exists; user-facing page missing (both platforms).
-3. **Configuration protection ("Prevent Accidental Changes")**.
-4. **Zip archive export** toggle.
-5. **Mac menu bar popup** surface.
-6. **Export issue guidance / format help sheets**.
-7. **Exported Markdown viewer**.
-8. **Export banners / Live Activity progress** (may fold into scheduled-exports page).
-9. **Android Wear OS** has docs ✅ but no website/public page.
-10. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
+1. **Share My Setup** — contract exists; user-facing page missing (both platforms).
+2. **Configuration protection ("Prevent Accidental Changes")**.
+3. **Zip archive export** toggle.
+4. **Mac menu bar popup** surface.
+5. **Export issue guidance / format help sheets**.
+6. **Exported Markdown viewer**.
+7. **Export banners / Live Activity progress** (may fold into scheduled-exports page).
+8. **Android Wear OS** has docs ✅ but no website/public page.
+9. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
 
-(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed.)
+(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed.)
 
 ### C. Docs-only / weakly-mapped surfaces
 - None fully orphaned. `bounded-encrypted-query-executor.md` and `encrypted-query-context-store.md` have thin user-facing UI (Mac settings maintenance buttons) and read as contract docs — consider moving to `docs/reference/` or reframing.
