@@ -1,6 +1,6 @@
 ---
 title: "Shortcuts y App Intents"
-description: "Ocho App Intents te permiten iniciar exportaciones, obtener resúmenes y alternar la programación desde Siri, la app Shortcuts, filtros de Concentración, automatizaciones y cualquier otro host compatible con AppIntent."
+description: "Siete App Intents te permiten iniciar exportaciones, obtener resúmenes y alternar la programación desde Siri, la app Shortcuts, filtros de Concentración, automatizaciones y cualquier otro host compatible con AppIntent."
 ---
 
 ## Intents disponibles
@@ -12,12 +12,12 @@ description: "Ocho App Intents te permiten iniciar exportaciones, obtener resúm
 <div class="option"><strong>Obtener resumen de salud para una fecha</strong><p>Devuelve una instantánea estructurada: pasos, calorías activas, sueño y frecuencia cardíaca, sin escribir nada en la bóveda. Úsalo en Shortcuts para pasar valores a otras apps.</p></div>
 <div class="option"><strong>Obtener estado de la última exportación</strong><p>Devuelve la marca de tiempo, el estado de éxito, el recuento de días y cualquier motivo de fallo de la exportación registrada más reciente. Una solicitud con el dispositivo bloqueado queda pendiente hasta que se reintente, por lo que no se devuelve como estado actual mientras está pendiente.</p></div>
 <div class="option"><strong>Activar o desactivar exportación programada</strong><p>Parámetro booleano. Úsalo para suspender la programación, por ejemplo durante una Concentración de vacaciones, y reanudarla más tarde.</p></div>
-<div class="option"><strong>Exportar datos de salud</strong><p>Exportación genérica: usa el intervalo de fechas del último estado del modal Exportar dentro de la app. Es menos común; las variantes con intervalo de fechas suelen ser más claras. Parámetro opcional <em>Perfil</em>.</p></div>
 </div>
 
 <a id="profiles"></a>
 ## Perfiles de exportación
-<p>Los cinco intents de exportación aceptan un parámetro opcional <em>Perfil</em>. Déjalo vacío para ejecutar con tus ajustes de exportación actuales de la app; pasa el nombre de un perfil guardado para ejecutar la configuración congelada de ese perfil —su selección de métricas, formatos y destino— sin importar lo que la app muestre en ese momento.</p>
+<p>Crea y administra perfiles de exportación guardados en Health.md para iPhone o Android. En las plataformas Apple, la gestión de perfiles está documentada actualmente solo para iPhone; no se afirma su disponibilidad en iPad ni macOS.</p>
+<p>Los cuatro intents de exportación aceptan un parámetro opcional <em>Perfil</em>. Cuando existen perfiles, dejarlo vacío usa el perfil activo; en el modo heredado sin perfiles, usa los ajustes de exportación actuales de la app. Pasa el nombre de un perfil guardado para ejecutar la configuración congelada de ese perfil —su selección de métricas, formatos y destino— sin importar lo que la app muestre en ese momento.</p>
 <div class="callout">
 <strong>Atención para los atajos existentes sin parámetro.</strong>
 <p style="margin-top:6px;">Una vez que crees tu primer perfil de exportación en la app, un atajo sin <em>Perfil</em> definido exporta usando los ajustes guardados del perfil <em>activo</em> en lugar de los ajustes en vivo de la app. Si dependes del comportamiento anterior, fija el atajo a un perfil concreto (o mantén cero perfiles) para seguir siendo explícito. Un nombre de perfil que ya no existe falla con un error claro en lugar de exportar lo incorrecto.</p>

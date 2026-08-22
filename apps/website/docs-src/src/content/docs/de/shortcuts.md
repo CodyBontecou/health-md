@@ -1,6 +1,6 @@
 ---
 title: "Kurzbefehle & App Intents"
-description: "Acht App Intents starten Exporte, rufen Zusammenfassungen ab und schalten den Zeitplan über Siri, die App Kurzbefehle, Fokusfilter, Automationen und andere AppIntent-kompatible Hosts um."
+description: "Sieben App Intents starten Exporte, rufen Zusammenfassungen ab und schalten den Zeitplan über Siri, die App Kurzbefehle, Fokusfilter, Automationen und andere AppIntent-kompatible Hosts um."
 ---
 
 ## Verfügbare Intents
@@ -12,12 +12,12 @@ description: "Acht App Intents starten Exporte, rufen Zusammenfassungen ab und s
 <div class="option"><strong>Gesundheitszusammenfassung für ein Datum abrufen</strong><p>Gibt eine strukturierte Momentaufnahme mit Schritten, aktiven Kalorien, Schlaf und Herzfrequenz zurück, ohne etwas in den Vault zu schreiben. Verwenden Sie die Werte in Kurzbefehlen für andere Apps.</p></div>
 <div class="option"><strong>Status des letzten Exports abrufen</strong><p>Gibt Zeitstempel, Erfolgsstatus, Zahl der Tage und mögliche Fehlerursache des zuletzt aufgezeichneten Exports zurück. Eine Anfrage bei gesperrtem Gerät bleibt bis zum erneuten Versuch ausstehend und wird daher nicht als aktueller Status zurückgegeben.</p></div>
 <div class="option"><strong>Geplanten Export ein- oder ausschalten</strong><p>Boolescher Parameter. Unterbrechen Sie damit den Zeitplan, etwa während eines Urlaubsfokus, und setzen Sie ihn später fort.</p></div>
-<div class="option"><strong>Gesundheitsdaten exportieren</strong><p>Allgemeiner Export, der den zuletzt im Exportdialog der App verwendeten Datumsbereich übernimmt. Seltener benötigt; die Varianten mit Datumsbereich sind meist eindeutiger. Optionaler Parameter <em>Profil</em>.</p></div>
 </div>
 
 <a id="profiles"></a>
 ## Export-Profile
-<p>Alle fünf Export-Intents akzeptieren einen optionalen <em>Profil</em>-Parameter. Lassen Sie ihn leer, um mit den aktuellen In-App-Exporteinstellungen zu laufen; übergeben Sie den Namen eines gespeicherten Profils, um die eingefrorene Konfiguration dieses Profils — Metrikauswahl, Formate und Ziel — auszuführen, unabhängig davon, was die App gerade anzeigt.</p>
+<p>Gespeicherte Export-Profile können in Health.md auf dem iPhone oder unter Android erstellt und verwaltet werden. Auf Apple-Plattformen ist die Profilverwaltung derzeit nur für das iPhone dokumentiert; eine Verfügbarkeit auf iPad oder macOS wird nicht behauptet.</p>
+<p>Alle vier Export-Intents akzeptieren einen optionalen <em>Profil</em>-Parameter. Sobald Profile vorhanden sind, verwendet ein leerer Parameter das aktive Profil; im Legacy-Modus ohne Profile werden die aktuellen In-App-Exporteinstellungen verwendet. Übergeben Sie den Namen eines gespeicherten Profils, um die eingefrorene Konfiguration dieses Profils — Metrikauswahl, Formate und Ziel — auszuführen, unabhängig davon, was die App gerade anzeigt.</p>
 <div class="callout">
 <strong>Hinweis für bestehende Shortcuts ohne Parameter.</strong>
 <p style="margin-top:6px;">Sobald Sie Ihr erstes Export-Profil in der App anlegen, exportiert ein Shortcut ohne gesetztes <em>Profil</em> mit den gespeicherten Einstellungen des <em>aktiven</em> Profils statt mit den Live-Einstellungen der App. Wenn Sie auf das alte Verhalten angewiesen sind, fixieren Sie den Shortcut auf ein konkretes Profil (oder behalten Sie null Profile), um explizit zu bleiben. Ein nicht mehr existierender Profilname schlägt mit einer klaren Fehlermeldung fehl, statt das Falsche zu exportieren.</p>
