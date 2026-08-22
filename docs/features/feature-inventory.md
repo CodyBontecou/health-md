@@ -231,7 +231,7 @@
 | Shared Rust core (semantic/render) | core | Deterministic post-capture semantic ingestion + frozen render formats (apple_v8, rollups, android v4/v5) | `healthmd-core/src/{semantic,render}` | ✅ ADR-0001, milestone baselines |
 | Rust output profile engine (planned) | core | Native-authoritative → Rust serialization migration, shadow gates | `product-capabilities.json` (planned) | ✅ rollout runbooks |
 | UniFFI bindings | core | Swift + Kotlin bindings, xcframework, registry adapters | `healthmd-core-uniffi`, `scripts/generate-*-bindings.sh` | ✅ |
-| Share My Setup (portable configuration) | iOS, macOS, Android | Export/review/transactionally import bounded setup profile (no health data/credentials); apply/undo/share; **planned** pending device QA | `Shared/SharedSetup/`, `sharedsetup/` android; contract `shared-setup/v1` | 🟡 contract doc; ❌ no user-facing feature page |
+| Share My Setup (portable configuration) | iOS, macOS, Android | Export/review/transactionally import bounded setup profile (no health data/credentials); apply/undo/share; registry entry `planned` pending device QA (contract pre-canonical) | `Shared/SharedSetup/`, `iOS/SharedSetup/SharedSetupCoordinator.swift`; android `sharedsetup/`; contract `shared-setup/v1` | 🟡 `apps/apple/docs/features/share-my-setup.md` (status: needs QA) |
 | Semantic-input / render-input contracts | core | Internal post-capture envelope + rendering/artifact-plan contracts | `packages/contracts/{semantic-input,render-input}` | ✅ contract docs |
 | Unified v9 proposal | contract | Proposed unified Apple/Android daily contract with platform sections | `proposals/unified-health-data-v9` | ✅ RFC-0004 |
 
@@ -244,17 +244,16 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-1. **Share My Setup** — contract exists; user-facing page missing (both platforms).
-2. **Configuration protection ("Prevent Accidental Changes")**.
-3. **Zip archive export** toggle.
-4. **Mac menu bar popup** surface.
-5. **Export issue guidance / format help sheets**.
-6. **Exported Markdown viewer**.
-7. **Export banners / Live Activity progress** (may fold into scheduled-exports page).
-8. **Android Wear OS** has docs ✅ but no website/public page.
-9. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
+1. **Configuration protection ("Prevent Accidental Changes")**.
+2. **Zip archive export** toggle.
+3. **Mac menu bar popup** surface.
+4. **Export issue guidance / format help sheets**.
+5. **Exported Markdown viewer**.
+6. **Export banners / Live Activity progress** (may fold into scheduled-exports page).
+7. **Android Wear OS** has docs ✅ but no website/public page.
+8. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
 
-(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed.)
+(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed.)
 
 ### C. Docs-only / weakly-mapped surfaces
 - None fully orphaned. `bounded-encrypted-query-executor.md` and `encrypted-query-context-store.md` have thin user-facing UI (Mac settings maintenance buttons) and read as contract docs — consider moving to `docs/reference/` or reframing.
