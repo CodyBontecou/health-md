@@ -5,8 +5,10 @@ import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -57,7 +59,9 @@ class ProfileFolderAdoptionScope @Inject constructor(
             try {
                 block()
             } finally {
-                settingsRepository.saveExportFolderUri(previous)
+                withContext(NonCancellable) {
+                    settingsRepository.saveExportFolderUri(previous)
+                }
             }
         }
     }

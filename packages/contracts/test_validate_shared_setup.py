@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import validate
 
@@ -15,6 +17,37 @@ import validate
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json"
 ANDROID_FIXTURE = ROOT / "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json"
+METRIC_REGISTRY = ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"
+
+
+def project_onto_current_metric_registry(payload: dict[str, Any]) -> dict[str, Any]:
+    """Build an exact current-registry projection without rewriting historical fixtures."""
+    candidate = copy.deepcopy(payload)
+    registry_bytes = METRIC_REGISTRY.read_bytes()
+    registry = json.loads(registry_bytes)
+    registry_metrics = {metric["semantic_id"]: metric for metric in registry["metrics"]}
+    enabled_ids = candidate["profile"]["metrics"]["enabled_ids"]
+
+    candidate["metric_registry"] = {
+        "schema": registry["schema"],
+        "registry_version": registry["registry_version"],
+        "registry_sha256": hashlib.sha256(registry_bytes).hexdigest(),
+    }
+    candidate["metric_aliases"] = [
+        {
+            "semantic_id": semantic_id,
+            "equivalence": registry_metrics[semantic_id]["equivalence"],
+            "apple_selection_id": _backed_selection_id(registry_metrics[semantic_id], "apple"),
+            "android_selection_id": _backed_selection_id(registry_metrics[semantic_id], "android"),
+        }
+        for semantic_id in enabled_ids
+    ]
+    return candidate
+
+
+def _backed_selection_id(metric: dict[str, Any], platform: str) -> str | None:
+    binding = metric[platform]
+    return binding["selection_id"] if binding["status"] == "backed" else None
 
 
 class SharedSetupValidationTests(unittest.TestCase):
@@ -46,6 +79,18 @@ class SharedSetupValidationTests(unittest.TestCase):
         candidate["future_optional"] = {"bounded_note": "ignored"}
         candidate["profile"]["presentation"]["future_optional"] = [1, 2, 3]
         self.validate(candidate)
+
+    def test_canonical_fixtures_pin_the_current_metric_registry(self) -> None:
+        registry_bytes = METRIC_REGISTRY.read_bytes()
+        registry = json.loads(registry_bytes)
+        expected = {
+            "schema": registry["schema"],
+            "registry_version": registry["registry_version"],
+            "registry_sha256": hashlib.sha256(registry_bytes).hexdigest(),
+        }
+        for fixture in (FIXTURE, ANDROID_FIXTURE):
+            payload = json.loads(fixture.read_text(encoding="utf-8"))
+            self.assertEqual(payload["metric_registry"], expected)
 
     def test_writer_extension_is_required_but_foreign_extension_may_be_null(self) -> None:
         candidate = copy.deepcopy(self.payload)
@@ -150,7 +195,8 @@ class SharedSetupValidationTests(unittest.TestCase):
             self.assert_rejected(candidate)
 
     def test_metric_alias_tampering_and_categories_are_rejected(self) -> None:
-        candidate = copy.deepcopy(self.payload)
+        candidate = project_onto_current_metric_registry(self.payload)
+        self.validate(candidate)
         candidate["metric_aliases"][0]["android_selection_id"] = "wrong"
         self.assert_rejected(candidate)
         candidate = copy.deepcopy(self.payload)

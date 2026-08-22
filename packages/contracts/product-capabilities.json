@@ -349,7 +349,7 @@
       "id": "export.profiles",
       "name": "Saved export profiles",
       "classification": "shared",
-      "summary": "Save multiple named export configurations with independent metric selection, formats, output options, and destinations, and run any of them manually, from automation, or on independent schedules. Profiles choose which request produces files; they never change the public export schema, which remains healthmd.health_data per output profile.",
+      "summary": "Save multiple named export configurations with independent metric selection, formats, output options, and destinations, and run any of them manually, from automation, or on independent schedules. On Apple, profile management is currently documented and QA-attested on iPhone only; iPad and macOS management availability is not claimed. Profiles choose which request produces files; they never change the public export schema, which remains healthmd.health_data per output profile.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -365,7 +365,9 @@
       },
       "evidence": [
         "apps/apple/docs/features/export-profiles.md",
-        "apps/android/docs/export-contract/migration-plan.md"
+        "apps/apple/HealthMdUITests/ExportProfilesJourneyUITests.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportProfilesScreen.kt",
+        "apps/android/app/src/test/java/com/healthmd/presentation/export/ExportProfilesViewModelTest.kt"
       ]
     },
     {

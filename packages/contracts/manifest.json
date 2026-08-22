@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "e69c26caebe880bf223588641173a0013b18f161afb62f03f557200fc7c30edd",
+      "sha256": "d787577589be0a28eae46ca0e69d2aa500a0c4cef63269e5bfe4abb4464ba748",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -122,7 +122,9 @@
       ],
       "consumers": [
         "packages/healthmd-core-rust/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/v2_profile_vectors.rs",
         "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/ProfilePolicyInteropTest.kt",
         "apps/android/app/src/test/java/com/healthmd/direct/AndroidDirectProtocolAuthorityTest.kt",
         "apps/android/healthmd-core/src/androidTest/kotlin/com/healthmd/core/HealthMdCoreInstrumentationTest.kt"
       ],
@@ -133,6 +135,14 @@
           "provenance": "The former Rust and Kotlin reference copies were byte-identical when centralized; both implementations verify this shared vector.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "provenance": "Reviewed synthetic Android v2 profile-policy request with byte-exact canonical request, envelope, fingerprint, and unnamed-reference omission vectors; contains no credentials, grants, or health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json"
           ]
         }
       ]
@@ -328,13 +338,13 @@
       "fixtures": [
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
-          "sha256": "ad1b4570facba92d6a64cab859e660d2b9b2f4641b0f894a52fc71e83e0cc380",
+          "sha256": "13a0c9ea7bac48075d81396cc5f3bd56840922f7ef59c51cda8ace8331a7f079",
           "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
-          "sha256": "bb24e26aa0fe62675564cfbd518db293a6feca70f73b57499bb4b5a8b1382206",
+          "sha256": "7eea91a92af78279d8f2a9ee9eaf8fb16c1b5e6968e6e5d2a8ca4f26b48b5974",
           "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         }

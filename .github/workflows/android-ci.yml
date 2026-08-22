@@ -44,7 +44,9 @@ jobs:
 
       - name: Validate shared contracts
         working-directory: ${{ github.workspace }}
-        run: python3 packages/contracts/validate.py
+        run: |
+          python3 packages/contracts/validate.py
+          (cd packages/contracts && python3 -m unittest test_validate_shared_setup.py)
 
       - name: Set up Java
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4

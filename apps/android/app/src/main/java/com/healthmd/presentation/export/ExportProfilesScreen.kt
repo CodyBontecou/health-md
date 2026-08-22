@@ -61,6 +61,26 @@ import com.healthmd.presentation.schedule.cadenceSummary
 import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.Spacing
 
+object ExportProfilesTestTags {
+    const val ROW = "export_profile_row"
+}
+
+internal fun attemptExportProfileDetailChange(
+    protectionEnabled: Boolean,
+    closeDetail: () -> Unit,
+    onBlockedChange: () -> Unit,
+    action: () -> Unit,
+) {
+    if (protectionEnabled) {
+        // Material dialogs use a separate window. Close it before publishing the graph-level
+        // notice so the Settings action is visible and touchable above this screen.
+        closeDetail()
+        onBlockedChange()
+    } else {
+        action()
+    }
+}
+
 /**
  * Dedicated export-profiles management screen (cross-platform parity with the iOS
  * `ExportProfilesView`): every profile at a glance with destination, schedule status,
@@ -81,6 +101,14 @@ fun ExportProfilesScreen(
     val protection = LocalConfigurationProtection.current
     val attemptProfileChange: (() -> Unit) -> Unit = { action ->
         if (protection.enabled) protection.onBlockedChange() else action()
+    }
+    val attemptDetailProfileChange: (() -> Unit) -> Unit = { action ->
+        attemptExportProfileDetailChange(
+            protectionEnabled = protection.enabled,
+            closeDetail = { viewModel.openDetail(null) },
+            onBlockedChange = protection.onBlockedChange,
+            action = action,
+        )
     }
 
     Scaffold(
@@ -155,15 +183,16 @@ fun ExportProfilesScreen(
         ProfileDetailDialog(
             row = row,
             canDelete = uiState.rows.size > 1,
-            onActivate = { attemptProfileChange { viewModel.activate(row.profile.id) } },
-            onEdit = { attemptProfileChange { viewModel.openEditor(row.profile.id) } },
-            onRename = { attemptProfileChange { viewModel.startRename(row.profile.id) } },
-            onDuplicate = { attemptProfileChange { viewModel.duplicate(row.profile.id) } },
-            onEditSchedule = { attemptProfileChange { viewModel.openScheduleEditor(row.profile.id) } },
-            onDelete = { attemptProfileChange { viewModel.askDelete(row.profile.id) } },
+            onActivate = { attemptDetailProfileChange { viewModel.activate(row.profile.id) } },
+            onEdit = { attemptDetailProfileChange { viewModel.openEditor(row.profile.id) } },
+            onRename = { attemptDetailProfileChange { viewModel.startRename(row.profile.id) } },
+            onDuplicate = { attemptDetailProfileChange { viewModel.duplicate(row.profile.id) } },
+            onEditSchedule = { attemptDetailProfileChange { viewModel.openScheduleEditor(row.profile.id) } },
+            onDelete = { attemptDetailProfileChange { viewModel.askDelete(row.profile.id) } },
             onFolderSelected = { uri, name ->
-                attemptProfileChange { viewModel.bindProfileFolder(row.profile.id, uri, name) }
+                attemptDetailProfileChange { viewModel.bindProfileFolder(row.profile.id, uri, name) }
             },
+            onBlockedChange = { attemptDetailProfileChange {} },
             onDismiss = { viewModel.openDetail(null) },
         )
     }
@@ -296,6 +325,7 @@ private fun ProfileCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(ExportProfilesTestTags.ROW)
             .clickable(onClick = onOpen),
         colors = CardDefaults.cardColors(containerColor = AppColors.bgSecondary),
     ) {
@@ -404,6 +434,7 @@ private fun ProfileDetailDialog(
     onEditSchedule: () -> Unit,
     onDelete: () -> Unit,
     onFolderSelected: (Uri, String?) -> Unit,
+    onBlockedChange: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
@@ -448,7 +479,7 @@ private fun ProfileDetailDialog(
                         // the launch itself is gated so a pick is never
                         // silently discarded afterwards.
                         if (protection.enabled) {
-                            protection.onBlockedChange()
+                            onBlockedChange()
                         } else {
                             folderPickerLauncher.launch(null)
                         }

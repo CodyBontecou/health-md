@@ -17,12 +17,13 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -91,6 +92,18 @@ class ExportProfileCoordinatorTest {
                 activeIdState.value = id
                 true
             } else false
+        }
+        coEvery { delete(any()) } answers {
+            val id = firstArg<String>()
+            if (profilesState.value.size <= 1 || profilesState.value.none { it.id == id }) {
+                false
+            } else {
+                profilesState.value = profilesState.value.filterNot { it.id == id }
+                if (activeIdState.value == id) {
+                    activeIdState.value = profilesState.value.firstOrNull()?.id
+                }
+                true
+            }
         }
         coEvery { updateProfile(any(), any(), any(), any()) } answers {
             val id = firstArg<String>()
@@ -227,6 +240,37 @@ class ExportProfileCoordinatorTest {
         }
     }
 
+    @Test
+    fun `invalid active snapshot disables edit observation instead of overwriting profile`() = runTest {
+        val corrupt = ExportProfile(
+            id = "p1",
+            name = "Corrupt",
+            settingsSnapshotJson = "not-json",
+            target = ExportTarget.DEVICE_FOLDER,
+            createdAtEpochMillis = 0L,
+            updatedAtEpochMillis = 0L,
+        )
+        profilesState.value = listOf(corrupt)
+        activeIdState.value = "p1"
+        settingsState.value = ExportSettings(filenameFormat = "live-must-survive-{date}")
+        val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+        val coordinator = coordinator(scope)
+
+        try {
+            coordinator.ensureStarted()
+            advanceTimeBy(ExportProfileCoordinator.EDIT_FLUSH_INTERVAL_MILLIS + 1)
+            advanceUntilIdle()
+
+            assertThat(settingsState.value.filenameFormat).isEqualTo("live-must-survive-{date}")
+            assertThat(profilesState.value.single().settingsSnapshotJson).isEqualTo("not-json")
+            coVerify(exactly = 0) {
+                profileRepository.updateProfile(any(), any(), any(), any())
+            }
+        } finally {
+            scope.cancel()
+        }
+    }
+
     // MARK: - Activation
 
     @Test
@@ -283,6 +327,71 @@ class ExportProfileCoordinatorTest {
     }
 
     @Test
+    fun `activation completes authority move after caller cancellation`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "outgoing-{date}")),
+            profile("p2", settings = ExportSettings(filenameFormat = "incoming-{date}")),
+        )
+        activeIdState.value = "p1"
+        settingsState.value = ExportSettings(filenameFormat = "outgoing-{date}")
+        val stagedWriteStarted = CompletableDeferred<Unit>()
+        val releaseStagedWrite = CompletableDeferred<Unit>()
+        coEvery { settingsRepository.updateExportSettings(any()) } coAnswers {
+            val candidate = firstArg<ExportSettings>()
+            if (candidate.filenameFormat == "incoming-{date}") {
+                stagedWriteStarted.complete(Unit)
+                releaseStagedWrite.await()
+            }
+            settingsState.value = candidate
+        }
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        val activation = launch { coordinator.activate("p2") }
+        stagedWriteStarted.await()
+        activation.cancel()
+        releaseStagedWrite.complete(Unit)
+        activation.join()
+
+        assertThat(activeIdState.value).isEqualTo("p2")
+        assertThat(settingsState.value.filenameFormat).isEqualTo("incoming-{date}")
+    }
+
+    @Test
+    fun `activation rollback failure disables edit flush`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "outgoing-{date}")),
+            profile("p2", settings = ExportSettings(filenameFormat = "incoming-{date}")),
+        )
+        activeIdState.value = "p1"
+        settingsState.value = ExportSettings(filenameFormat = "outgoing-{date}")
+        var stagedWritten = false
+        coEvery { settingsRepository.updateExportSettings(any()) } answers {
+            val candidate = firstArg<ExportSettings>()
+            if (candidate.filenameFormat == "incoming-{date}") {
+                stagedWritten = true
+                settingsState.value = candidate
+            } else if (stagedWritten && candidate.filenameFormat == "outgoing-{date}") {
+                error("synthetic rollback failure")
+            } else {
+                settingsState.value = candidate
+            }
+        }
+        coEvery { profileRepository.activate("p2") } throws
+            IllegalStateException("synthetic activation failure")
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        val failure = runCatching { coordinator.activate("p2") }.exceptionOrNull()
+        coordinator.flushEdits()
+
+        assertThat(failure).hasMessageThat().contains("synthetic activation failure")
+        assertThat(activeIdState.value).isEqualTo("p1")
+        assertThat(settingsState.value.filenameFormat).isEqualTo("incoming-{date}")
+        coVerify(exactly = 0) {
+            profileRepository.updateProfile(any(), any(), any(), any())
+        }
+    }
+
+    @Test
     fun `activate reapplying the active profile is a plain apply`() = runTest {
         profilesState.value = listOf(
             profile("p1", settings = ExportSettings(filenameFormat = "frozen-{date}")),
@@ -327,6 +436,157 @@ class ExportProfileCoordinatorTest {
 
         assertThat(coordinator.activate("missing")).isFalse()
         assertThat(activeIdState.value).isEqualTo("p1")
+    }
+
+    // MARK: - Deletion
+
+    @Test
+    fun `deleting active profile flushes outgoing edits and applies successor without contaminating it`() = runTest {
+        val outgoing = profile(
+            "p1",
+            settings = ExportSettings(filenameFormat = "outgoing-{date}"),
+        )
+        val successor = profile(
+            "p2",
+            settings = ExportSettings(
+                filenameFormat = "successor-{date}",
+                exportFormats = setOf(com.healthmd.domain.model.ExportFormat.MARKDOWN),
+            ),
+        )
+        profilesState.value = listOf(outgoing, successor)
+        activeIdState.value = "p1"
+        settingsState.value = ExportSettings(
+            filenameFormat = "edited-outgoing-{date}",
+            exportFormats = setOf(com.healthmd.domain.model.ExportFormat.JSON),
+        )
+        val successorSnapshot = successor.settingsSnapshotJson
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        assertThat(coordinator.delete("p1")).isTrue()
+
+        assertThat(activeIdState.value).isEqualTo("p2")
+        assertThat(profilesState.value.map { it.id }).containsExactly("p2")
+        assertThat(profilesState.value.single().settingsSnapshotJson).isEqualTo(successorSnapshot)
+        assertThat(settingsState.value.filenameFormat).isEqualTo("successor-{date}")
+        assertThat(settingsState.value.exportFormats)
+            .containsExactly(com.healthmd.domain.model.ExportFormat.MARKDOWN)
+        coVerify(exactly = 1) { profileRepository.updateProfile("p1", any(), any(), any()) }
+    }
+
+    @Test
+    fun `deleting non-active profile leaves active live settings unchanged`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "active-{date}")),
+            profile("p2", settings = ExportSettings(filenameFormat = "inactive-{date}")),
+        )
+        activeIdState.value = "p1"
+        settingsState.value = ExportSettings(filenameFormat = "active-live-{date}")
+        val before = settingsState.value
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        assertThat(coordinator.delete("p2")).isTrue()
+
+        assertThat(activeIdState.value).isEqualTo("p1")
+        assertThat(settingsState.value).isEqualTo(before)
+        coVerify(exactly = 0) { profileRepository.updateProfile(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `active delete completes authority move after caller cancellation`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "outgoing-{date}")),
+            profile("p2", settings = ExportSettings(filenameFormat = "successor-{date}")),
+        )
+        activeIdState.value = "p1"
+        settingsState.value = ExportSettings(filenameFormat = "outgoing-{date}")
+        val stagedWriteStarted = CompletableDeferred<Unit>()
+        val releaseStagedWrite = CompletableDeferred<Unit>()
+        coEvery { settingsRepository.updateExportSettings(any()) } coAnswers {
+            val candidate = firstArg<ExportSettings>()
+            if (candidate.filenameFormat == "successor-{date}") {
+                stagedWriteStarted.complete(Unit)
+                releaseStagedWrite.await()
+            }
+            settingsState.value = candidate
+        }
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        val deletion = launch { coordinator.delete("p1") }
+        stagedWriteStarted.await()
+        deletion.cancel()
+        releaseStagedWrite.complete(Unit)
+        deletion.join()
+
+        assertThat(profilesState.value.map { it.id }).containsExactly("p2")
+        assertThat(activeIdState.value).isEqualTo("p2")
+        assertThat(settingsState.value.filenameFormat).isEqualTo("successor-{date}")
+    }
+
+    @Test
+    fun `deleting active profile rolls live settings back when repository refuses`() = runTest {
+        profilesState.value = listOf(
+            profile("p1", settings = ExportSettings(filenameFormat = "outgoing-{date}")),
+            profile("p2", settings = ExportSettings(filenameFormat = "successor-{date}")),
+        )
+        activeIdState.value = "p1"
+        settingsState.value = ExportSettings(filenameFormat = "outgoing-{date}")
+        coEvery { profileRepository.delete("p1") } returns false
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        assertThat(coordinator.delete("p1")).isFalse()
+
+        assertThat(activeIdState.value).isEqualTo("p1")
+        assertThat(profilesState.value.map { it.id }).containsExactly("p1", "p2").inOrder()
+        assertThat(settingsState.value.filenameFormat).isEqualTo("outgoing-{date}")
+    }
+
+    @Test
+    fun `deleting active profile fails closed when successor snapshot is invalid`() = runTest {
+        val corrupt = ExportProfile(
+            id = "p2",
+            name = "Corrupt",
+            settingsSnapshotJson = "not-json",
+            target = ExportTarget.DEVICE_FOLDER,
+            createdAtEpochMillis = 0L,
+            updatedAtEpochMillis = 0L,
+        )
+        profilesState.value = listOf(profile("p1"), corrupt)
+        activeIdState.value = "p1"
+        val coordinator = coordinator(CoroutineScope(SupervisorJob()))
+
+        assertThat(coordinator.delete("p1")).isFalse()
+
+        assertThat(profilesState.value.map { it.id }).containsExactly("p1", "p2").inOrder()
+        assertThat(activeIdState.value).isEqualTo("p1")
+        coVerify(exactly = 0) { profileRepository.delete(any()) }
+    }
+
+    @Test
+    fun `pending debounced flush cannot overwrite successor during active delete`() = runTest {
+        val outgoing = profile("p1", settings = ExportSettings(filenameFormat = "outgoing-{date}"))
+        val successor = profile("p2", settings = ExportSettings(filenameFormat = "successor-{date}"))
+        profilesState.value = listOf(outgoing, successor)
+        activeIdState.value = "p1"
+        val successorSnapshot = successor.settingsSnapshotJson
+        val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+        val coordinator = coordinator(scope)
+
+        try {
+            coordinator.ensureStarted()
+            advanceUntilIdle()
+            settingsState.value = settingsState.value.copy(filenameFormat = "pending-outgoing-{date}")
+
+            assertThat(coordinator.delete("p1")).isTrue()
+            advanceTimeBy(ExportProfileCoordinator.EDIT_FLUSH_INTERVAL_MILLIS + 1)
+            advanceUntilIdle()
+
+            assertThat(profilesState.value.single().id).isEqualTo("p2")
+            assertThat(profilesState.value.single().settingsSnapshotJson)
+                .isEqualTo(successorSnapshot)
+            assertThat(settingsState.value.filenameFormat).isEqualTo("successor-{date}")
+        } finally {
+            scope.cancel()
+        }
     }
 
     // MARK: - Folder binding adoption

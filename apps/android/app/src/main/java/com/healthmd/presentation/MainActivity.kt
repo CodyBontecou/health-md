@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.theme.HealthMdTheme
@@ -54,10 +55,15 @@ class MainActivity : ComponentActivity() {
     lateinit var exportProfileCoordinator: ExportProfileCoordinator
 
     @Inject
+    lateinit var scheduledProfileScheduler: ScheduledProfileScheduler
+
+    @Inject
     lateinit var widgetLifecycle: HealthWidgetLifecycleCoordinator
 
     @Inject
     lateinit var sharedSetupCoordinator: SharedSetupCoordinator
+
+    @Inject
     lateinit var wearPhoneSyncScheduler: WearPhoneSyncScheduler
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -125,6 +131,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         lifecycleScope.launch {
             runCatching { exportScheduler.reconcile() }
+            runCatching { scheduledProfileScheduler.reconcile() }
             runCatching { widgetLifecycle.refreshFromForeground() }
             runCatching { wearPhoneSyncScheduler.reconcile() }
         }

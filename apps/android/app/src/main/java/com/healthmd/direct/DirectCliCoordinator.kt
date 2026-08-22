@@ -39,6 +39,7 @@ import com.healthmd.direct.protocol.TransferNegotiation
 import com.healthmd.direct.protocol.TransferPlanBuilder
 import com.healthmd.direct.protocol.V2Codec
 import com.healthmd.domain.billing.FreemiumPolicy
+import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.BillingRepository
@@ -81,6 +82,15 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+
+internal fun resolveDirectGeneratedFilesEnginePin(
+    settings: ExportSettings,
+    planFreshPin: () -> ExportEnginePin?,
+): ExportEnginePin? = when {
+    settings.executionEngineAuthorityIsFrozen -> settings.executionEnginePin
+    settings.executionEnginePin != null -> settings.executionEnginePin
+    else -> planFreshPin()
+}
 
 sealed interface DirectCliCompletion {
     data class Paired(val listenerName: String) : DirectCliCompletion
@@ -527,8 +537,9 @@ class DirectCliCoordinator @Inject constructor(
             ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1 -> null
             // A profile basis carries its frozen engine authority (restored with the
             // snapshot); only the saved-device basis plans a fresh direct pin.
-            ProductId.GENERATED_FILES_V1 ->
-                settings.executionEnginePin ?: enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
+            ProductId.GENERATED_FILES_V1 -> resolveDirectGeneratedFilesEnginePin(settings) {
+                enginePinPlanner.forDirectGeneratedFiles(settings, zoneId)
+            }
             ProductId.ANDROID_DAILY_RECORDS_V1 -> enginePinPlanner.forApiV1(zoneId)
         }
         // Persist renderer authority before either producer can read non-transactional provider data.

@@ -42,6 +42,7 @@ class ExportProfileOverlapDetectorTest {
         id: String,
         name: String = id,
         target: ExportTarget = ExportTarget.DEVICE_FOLDER,
+        apiEndpointUrl: String? = null,
         folderUri: String? = null,
         settingsJson: String = AndroidExportSettingsSnapshotCodec.encodeCanonical(
             AndroidExportSettingsSnapshot.capture(
@@ -55,6 +56,7 @@ class ExportProfileOverlapDetectorTest {
         name = name,
         settingsSnapshotJson = settingsJson,
         target = target,
+        apiEndpointUrl = apiEndpointUrl,
         folderUri = folderUri,
         createdAtEpochMillis = 0,
         updatedAtEpochMillis = 0,
@@ -225,6 +227,82 @@ class ExportProfileOverlapDetectorTest {
             identities.first { it.profileId == "unbound" }.destinationRootKey,
         )
         assertEquals(null, identities.first { it.profileId == "endpoint" }.destinationRootKey)
+    }
+
+    @Test
+    fun `identities inspect saved api profiles against their own endpoint`() {
+        fun apiSnapshot(endpoint: String): String = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+            AndroidExportSettingsSnapshot.capture(
+                settings = settings().copy(
+                    exportTarget = ExportTarget.API_ENDPOINT,
+                    scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                    apiEndpointUrl = endpoint,
+                ),
+                pin = null,
+                zone = java.time.ZoneId.of("UTC"),
+            ),
+        )
+        val firstEndpoint = "https://first.invalid/health"
+        val secondEndpoint = "https://second.invalid/health"
+        val profiles = listOf(
+            profile(
+                id = "folder",
+                folderUri = "content://tree/live",
+            ),
+            profile(
+                id = "api-a",
+                target = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = firstEndpoint,
+                settingsJson = apiSnapshot(firstEndpoint),
+            ),
+            profile(
+                id = "api-b",
+                target = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = secondEndpoint,
+                settingsJson = apiSnapshot(secondEndpoint),
+            ),
+        )
+
+        val identities = ExportProfileOverlapDetector.identities(
+            profiles = profiles,
+            currentFolderUri = "content://tree/live",
+            currentSettings = settings().copy(apiEndpointUrl = "https://active.invalid/health"),
+        )
+
+        assertEquals(3, identities.size)
+        assertEquals(null, identities.first { it.profileId == "api-a" }.destinationRootKey)
+        assertEquals(null, identities.first { it.profileId == "api-b" }.destinationRootKey)
+        assertTrue(
+            ExportProfileOverlapDetector
+                .overlappingProfileNames("api-a", identities)
+                .isEmpty(),
+        )
+    }
+
+    @Test
+    fun `corrupt snapshot has unknown root and cannot fabricate overlap`() {
+        val identities = ExportProfileOverlapDetector.identities(
+            profiles = listOf(
+                profile(
+                    id = "valid",
+                    folderUri = "content://tree/live",
+                ),
+                profile(
+                    id = "corrupt",
+                    folderUri = "content://tree/live",
+                    settingsJson = "not-json",
+                ),
+            ),
+            currentFolderUri = "content://tree/live",
+            currentSettings = settings(),
+        )
+
+        assertEquals(null, identities.first { it.profileId == "corrupt" }.destinationRootKey)
+        assertTrue(
+            ExportProfileOverlapDetector
+                .overlappingProfileNames("valid", identities)
+                .isEmpty(),
+        )
     }
 
     @Test

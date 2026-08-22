@@ -114,7 +114,18 @@ fun HealthMdNavigation(
     val shouldSkipOnboarding = requireNotNull(initialShouldSkipOnboarding)
     LaunchedEffect(sharedSetupCoordinator) {
         sharedSetupCoordinator.imports.filterNotNull().collect {
-            navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true }
+            // Reuse a retained Shared Setup back-stack entry instead of pushing a second
+            // ViewModel. The coordinator keeps the request until Finish/Cancel, so an inactive
+            // entry cannot consume a warm ACTION_VIEW before navigation observes it.
+            if (navController.currentDestination?.route != SubRoutes.SHARED_SETUP) {
+                val revealedExisting = navController.popBackStack(
+                    route = SubRoutes.SHARED_SETUP,
+                    inclusive = false,
+                )
+                if (!revealedExisting) {
+                    navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true }
+                }
+            }
         }
     }
     val hasCompletedSetup = hasCompletedOnboarding == true
@@ -149,6 +160,7 @@ fun HealthMdNavigation(
             SubRoutes.CLINICIAN_REPORT,
             SubRoutes.DIRECT_CLI,
             SubRoutes.SHARED_SETUP,
+            SubRoutes.EXPORT_PROFILES,
         )
     } else {
         emptyList()
@@ -405,12 +417,28 @@ fun HealthMdNavigation(
         ConfigurationProtectionToast(
             visible = blockedChangeToastId != null,
             onOpenSettings = {
-                settingsViewModel.openProtectionSetting()
-                navController.navigate(NavDestination.SETTINGS.route) {
-                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
+                settingsViewModel.dismissBlockedChangeToast()
+                val settingsRoute = NavDestination.SETTINGS.route
+                if (navController.currentDestination?.route != settingsRoute) {
+                    val revealedExisting = navController.popBackStack(
+                        route = settingsRoute,
+                        inclusive = false,
+                    )
+                    if (!revealedExisting) {
+                        // This is an explicit settings deep-link, not ordinary tab navigation:
+                        // never restore the nested Export Profiles route we are leaving.
+                        navController.navigate(settingsRoute) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = false
+                            }
+                            launchSingleTop = true
+                            restoreState = false
+                        }
+                    }
                 }
+                // StateFlow retains the request until Settings composes, then scrolls the
+                // protection section into view.
+                settingsViewModel.openProtectionSetting()
             },
             modifier = Modifier
                 .align(Alignment.TopCenter)

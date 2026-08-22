@@ -10,7 +10,6 @@ import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
-import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
 import com.healthmd.domain.exportengine.ExportProfileOverlapDetector
 import com.healthmd.domain.model.APIExportEndpoint
@@ -21,7 +20,6 @@ import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -167,7 +165,7 @@ class ExportProfilesViewModel @Inject constructor(
     /**
      * Creates a profile from the creation form's draft: name, target, destination binding,
      * and a frozen snapshot captured from the draft settings. Seeds the schedule entry
-     * (disabled) and activates the copy, matching the previous instant-create behavior
+     * (disabled) and activates the new profile, matching the previous instant-create behavior
      * (iOS parity).
      */
     fun createProfile(draft: ExportProfileEditorDraft) {
@@ -341,9 +339,11 @@ class ExportProfilesViewModel @Inject constructor(
             runCatching {
                 // Atomic order matters: the last-profile guard can refuse the profile
                 // deletion, and then its scheduled entry must survive too.
-                val deleted = profileRepository.delete(profileId)
+                val deleted = profileCoordinator.delete(profileId)
                 if (deleted || profileRepository.profileById(profileId) == null) {
-                    entryStore.delete(profileId)
+                    // Keep the id long enough to remove alarms and both unique WorkManager chains;
+                    // reconcile cannot discover runtime artifacts after the entry row is gone.
+                    profileScheduler.removeEntry(profileId)
                 }
                 profileScheduler.reconcile()
             }.onFailure { Timber.e(it, "Could not delete profile") }
@@ -381,8 +381,8 @@ class ExportProfilesViewModel @Inject constructor(
 
     /**
      * Freezes the draft's editable settings into a canonical snapshot scoped to the chosen
-     * target and endpoint. The engine pin is deliberately null: editor saves freeze output
-     * choices only, and each later run resolves and persists its own execution authority.
+     * target and endpoint. Capture also freezes the currently planned engine authority, matching
+     * every other profile creation path; a null frozen pin remains reserved for explicit legacy.
      */
     private fun encodeDraftSnapshot(draft: ExportProfileEditorDraft): String {
         val scoped = draft.settings.copy(
@@ -394,12 +394,12 @@ class ExportProfilesViewModel @Inject constructor(
                 ExportTarget.DEVICE_FOLDER -> draft.settings.apiEndpointUrl
             },
         )
-        return AndroidExportSettingsSnapshotCodec.encodeCanonical(
-            AndroidExportSettingsSnapshot.capture(
-                settings = scoped,
-                pin = null,
-                zone = ZoneId.systemDefault(),
-            ),
+        return snapshotFactory.captureFromCurrent(
+            current = scoped,
+            target = draft.target,
+            apiEndpointUrl = scoped.apiEndpointUrl.takeIf {
+                draft.target == ExportTarget.API_ENDPOINT
+            },
         )
     }
 

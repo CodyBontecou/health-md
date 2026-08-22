@@ -1068,6 +1068,81 @@ def validate_v2_fixture(path: Path) -> None:
         fail(f"{context}: status envelope does not identify protocol v2 status_request")
 
 
+def validate_v2_profile_policy_fixture(path: Path) -> None:
+    context = "healthmd.direct.android v2 profile-policy fixture"
+    payload = require_exact_keys(
+        load_json(path, context),
+        {
+            "envelope_json_base64",
+            "request_fingerprint",
+            "request_json_base64",
+            "request_unnamed_reference_json_base64",
+            "schema",
+            "schema_version",
+        },
+        context,
+    )
+    if payload["schema"] != "healthmd.direct_v2_profile_policy_reference":
+        fail(f"{context}: schema discriminator mismatch")
+    if payload["schema_version"] != 1:
+        fail(f"{context}: schema version must be 1")
+    if not isinstance(payload["request_fingerprint"], str) or not SHA256_RE.fullmatch(
+        payload["request_fingerprint"]
+    ):
+        fail(f"{context}: request_fingerprint must be lowercase SHA-256 hex")
+
+    request_bytes, request = decode_json_base64(
+        payload["request_json_base64"], f"{context}.request"
+    )
+    if canonical_json(request) != request_bytes:
+        fail(f"{context}: request JSON is not canonical sorted compact JSON")
+    if hashlib.sha256(request_bytes).hexdigest() != payload["request_fingerprint"]:
+        fail(f"{context}: request fingerprint does not match request bytes")
+
+    product = request.get("product")
+    if not isinstance(product, dict):
+        fail(f"{context}.request.product: must be an object")
+    if product.get("product_id") != "generated_files_v1" or product.get("settings_policy") != "profile":
+        fail(f"{context}.request.product: profile policy discriminator mismatch")
+    reference = require_exact_keys(
+        product.get("profile_reference"), {"name", "profile_id"},
+        f"{context}.request.product.profile_reference",
+    )
+    if not isinstance(reference["profile_id"], str) or not reference["profile_id"].strip():
+        fail(f"{context}: profile_id must be non-empty")
+    if not isinstance(reference["name"], str) or not reference["name"].strip():
+        fail(f"{context}: profile name must be non-empty when present")
+
+    unnamed_bytes, unnamed = decode_json_base64(
+        payload["request_unnamed_reference_json_base64"], f"{context}.unnamed_request"
+    )
+    if canonical_json(unnamed) != unnamed_bytes:
+        fail(f"{context}: unnamed request JSON is not canonical sorted compact JSON")
+    unnamed_product = unnamed.get("product")
+    if not isinstance(unnamed_product, dict):
+        fail(f"{context}.unnamed_request.product: must be an object")
+    unnamed_reference = require_exact_keys(
+        unnamed_product.get("profile_reference"), {"profile_id"},
+        f"{context}.unnamed_request.product.profile_reference",
+    )
+    if unnamed_reference["profile_id"] != reference["profile_id"]:
+        fail(f"{context}: unnamed reference changed profile_id")
+    expected_unnamed = json.loads(json.dumps(request))
+    del expected_unnamed["product"]["profile_reference"]["name"]
+    if unnamed != expected_unnamed:
+        fail(f"{context}: unnamed request differs by more than omitted profile name")
+
+    envelope_bytes, envelope = decode_json_base64(
+        payload["envelope_json_base64"], f"{context}.envelope"
+    )
+    if canonical_json(envelope) != envelope_bytes:
+        fail(f"{context}: envelope JSON is not canonical sorted compact JSON")
+    if envelope.get("protocol_version") != 2 or envelope.get("type") != "export_request":
+        fail(f"{context}: envelope discriminator mismatch")
+    if envelope.get("payload") != request:
+        fail(f"{context}: envelope payload differs from request")
+
+
 def validate_v3_fixture(path: Path) -> None:
     context = "healthmd.direct.ios-query v3 fixture"
     payload = require_exact_keys(
@@ -2598,7 +2673,12 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             elif identifier == "healthmd.direct.ios-query":
                 validate_v3_fixture(fixture_path)
             elif identifier == "healthmd.direct.android":
-                validate_v2_fixture(fixture_path)
+                if fixture_path.name == "interop.json":
+                    validate_v2_fixture(fixture_path)
+                elif fixture_path.name == "profile-policy-reference.json":
+                    validate_v2_profile_policy_fixture(fixture_path)
+                else:
+                    fail(f"{fixture_context}: unknown healthmd.direct.android fixture file")
             elif identifier == "healthmd.semantic_input":
                 if fixture_path.name == "range-profile-revision-v2.json":
                     validate_semantic_range_capability_fixture(fixture_path)

@@ -6,24 +6,24 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 @Singleton
 class SharedSetupCoordinator @Inject constructor(
     private val documentStore: SharedSetupDocumentStore,
 ) {
     private val ids = AtomicLong()
-    private val externalRequestIDs = AtomicLong()
     private val mutableImport = MutableStateFlow<PendingSharedSetupImport?>(null)
     private val externalReadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val externalReadMutex = Mutex()
-    private val externalStateLock = Any()
+    private val externalLock = Any()
+    private var externalRequestID: Long = 0
+    private var activeExternalRead: Job? = null
     private var latestExternalBytes: ByteArray? = null
     private var externalImportFinished = false
     val imports = mutableImport.asStateFlow()
@@ -34,59 +34,81 @@ class SharedSetupCoordinator @Inject constructor(
      * therefore skip replaying the retained launch intent without cancelling the accepted read.
      */
     fun acceptExternalUriAsync(uri: Uri) {
-        val requestID = externalRequestIDs.incrementAndGet()
-        synchronized(externalStateLock) {
+        lateinit var requestJob: Job
+        val requestID = synchronized(externalLock) {
+            externalRequestID += 1
+            val id = externalRequestID
             latestExternalBytes = null
             externalImportFinished = false
-        }
-        externalReadScope.launch {
-            externalReadMutex.withLock {
-                val result = readExternal(uri)
-                if (externalRequestIDs.get() != requestID) return@withLock
-                result.onSuccess { bytes ->
-                    rememberExternalBytes(bytes)
-                    acceptBytes(bytes)
-                }.onFailure(::publishExternalFailure)
+            requestJob = externalReadScope.launch(start = CoroutineStart.LAZY) {
+                try {
+                    // ContentResolver reads are blocking and may ignore coroutine cancellation.
+                    // The newest request gets its own IO job; only its generation may publish.
+                    val result = readExternal(uri)
+                    result.onSuccess { bytes -> publishExternalBytes(id, bytes) }
+                        .onFailure { error -> publishExternalFailure(id, error) }
+                } finally {
+                    synchronized(externalLock) {
+                        if (activeExternalRead === requestJob) activeExternalRead = null
+                    }
+                }
             }
+            activeExternalRead?.cancel()
+            activeExternalRead = requestJob
+            id
         }
+        check(requestID > 0)
+        requestJob.start()
     }
 
     /** Copies an untrusted content URI immediately; no persisted URI grant is assumed or kept. */
     fun acceptExternalUri(uri: Uri): Result<Unit> {
-        externalRequestIDs.incrementAndGet()
-        synchronized(externalStateLock) {
+        val requestID = synchronized(externalLock) {
+            externalRequestID += 1
+            activeExternalRead?.cancel()
+            activeExternalRead = null
             latestExternalBytes = null
             externalImportFinished = false
+            externalRequestID
         }
         val result = readExternal(uri)
-        result.onSuccess { bytes ->
-            rememberExternalBytes(bytes)
-            acceptBytes(bytes)
-        }.onFailure(::publishExternalFailure)
+        result.onSuccess { bytes -> publishExternalBytes(requestID, bytes) }
+            .onFailure { error -> publishExternalFailure(requestID, error) }
         return result.map { }
     }
 
     fun restoreExternalBytes(bytes: ByteArray) {
-        externalRequestIDs.incrementAndGet()
-        rememberExternalBytes(bytes)
-        acceptBytes(bytes)
+        require(bytes.size <= SHARED_SETUP_MAX_BYTES)
+        synchronized(externalLock) {
+            externalRequestID += 1
+            activeExternalRead?.cancel()
+            activeExternalRead = null
+            latestExternalBytes = bytes.copyOf()
+            externalImportFinished = false
+            mutableImport.value = PendingSharedSetupImport(
+                ids.incrementAndGet(),
+                bytes = bytes.copyOf(),
+            )
+        }
     }
 
-    fun restorableExternalBytes(): ByteArray? = synchronized(externalStateLock) {
+    fun restorableExternalBytes(): ByteArray? = synchronized(externalLock) {
         latestExternalBytes?.copyOf()
     }
 
-    fun isExternalImportFinished(): Boolean = synchronized(externalStateLock) {
+    fun isExternalImportFinished(): Boolean = synchronized(externalLock) {
         externalImportFinished
     }
 
     fun finishExternalImport() {
-        externalRequestIDs.incrementAndGet()
-        synchronized(externalStateLock) {
+        synchronized(externalLock) {
+            externalRequestID += 1
+            activeExternalRead?.cancel()
+            activeExternalRead = null
             latestExternalBytes = null
             externalImportFinished = true
+            mutableImport.value = null
         }
-        mutableImport.value = null
     }
 
     private fun readExternal(uri: Uri): Result<ByteArray> = runCatching {
@@ -96,26 +118,32 @@ class SharedSetupCoordinator @Inject constructor(
         documentStore.read(uri)
     }
 
-    private fun rememberExternalBytes(bytes: ByteArray) {
-        synchronized(externalStateLock) {
+    private fun publishExternalBytes(requestID: Long, bytes: ByteArray) {
+        require(bytes.size <= SHARED_SETUP_MAX_BYTES)
+        synchronized(externalLock) {
+            if (externalRequestID != requestID) return
             latestExternalBytes = bytes.copyOf()
             externalImportFinished = false
+            mutableImport.value = PendingSharedSetupImport(
+                ids.incrementAndGet(),
+                bytes = bytes.copyOf(),
+            )
         }
     }
 
-    private fun publishExternalFailure(error: Throwable) {
-        mutableImport.value = PendingSharedSetupImport(
-            id = ids.incrementAndGet(),
-            errorMessage = error.message?.take(300) ?: "The shared setup document could not be opened.",
-        )
+    private fun publishExternalFailure(requestID: Long, error: Throwable) {
+        synchronized(externalLock) {
+            if (externalRequestID != requestID) return
+            mutableImport.value = PendingSharedSetupImport(
+                id = ids.incrementAndGet(),
+                errorMessage = error.message?.take(300)
+                    ?: "The shared setup document could not be opened.",
+            )
+        }
     }
 
     fun acceptBytes(bytes: ByteArray) {
-        require(bytes.size <= SHARED_SETUP_MAX_BYTES)
-        mutableImport.value = PendingSharedSetupImport(ids.incrementAndGet(), bytes = bytes.copyOf())
+        restoreExternalBytes(bytes)
     }
 
-    fun consume(id: Long) {
-        if (mutableImport.value?.id == id) mutableImport.value = null
-    }
 }
