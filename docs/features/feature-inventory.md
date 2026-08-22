@@ -70,7 +70,7 @@
 | Raw changes backend | Android | `healthmd.raw-changes` change tokens + deletion tombstones for incremental archives | android `rawchanges/` | ✅ `raw-changes-v1.md` |
 | Exercise route consent | Android | Explicit consent coordination before exporting exercise routes | `rawexport/ExerciseRouteConsent*.kt` | 🟡 raw docs |
 | Daily note injection | iOS, macOS, Android | Merge health sections into existing Obsidian daily notes | `DailyNoteInjector` (+`MarkdownMerger`) | ✅ `daily-note-injection.md`; website `daily-notes.md` |
-| Clinician report (PDF) | iOS, Android | Clinician-facing configured report (presets, metric selection) rendered to PDF with share sheet; localized copy | `iOS/ClinicianReport/*`, `Shared/ClinicianReport/`; android `presentation/clinicianreport/` | ❌ no feature page (only root `docs/features/clinician-report-v1.md` spec) |
+| Clinician report (PDF) | iOS, Android | Clinician-facing configured report (presets, metric selection) rendered to PDF with share sheet; localized copy | `iOS/ClinicianReport/*`, `Shared/ClinicianReport/`; android `presentation/clinicianreport/` | ✅ `apps/apple/docs/features/clinician-report.md` (spec: root `docs/features/clinician-report-v1.md`) |
 
 ## 4. Export configuration & customization
 
@@ -244,21 +244,19 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-1. **Clinician report** (iOS + Android) — highest-value gap; only a v1 spec exists at root `docs/features/clinician-report-v1.md`.
-2. **iOS widgets + Live Activity** (`HealthMdWidgets/`).
-3. **Watch app + watch widgets** (`HealthMdWatch*`).
-4. **Share My Setup** — contract exists; user-facing page missing (both platforms).
-5. **Configuration protection ("Prevent Accidental Changes")**.
-6. **Zip archive export** toggle.
-7. **Mac menu bar popup** surface.
-8. **Export issue guidance / format help sheets**.
-9. **Exported Markdown viewer**.
-10. **Export banners / Live Activity progress** (may fold into scheduled-exports page).
-11. **Android Wear OS** has docs ✅ but no website/public page.
-12. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
+1. **iOS widgets + Live Activity** (`HealthMdWidgets/`).
+2. **Watch app + watch widgets** (`HealthMdWatch*`).
+3. **Share My Setup** — contract exists; user-facing page missing (both platforms).
+4. **Configuration protection ("Prevent Accidental Changes")**.
+5. **Zip archive export** toggle.
+6. **Mac menu bar popup** surface.
+7. **Export issue guidance / format help sheets**.
+8. **Exported Markdown viewer**.
+9. **Export banners / Live Activity progress** (may fold into scheduled-exports page).
+10. **Android Wear OS** has docs ✅ but no website/public page.
+11. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
 
-### B. Doc pages missing from the Apple features index
-- `agent-local-api.md`, `encrypted-query-context-store.md`, `bounded-encrypted-query-executor.md`, `cli-direct-iphone.md` exist as pages but are absent from `apps/apple/docs/features/index.md` inventory table.
+(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions below were added to the table.)
 
 ### C. Docs-only / weakly-mapped surfaces
 - None fully orphaned. `bounded-encrypted-query-executor.md` and `encrypted-query-context-store.md` have thin user-facing UI (Mac settings maintenance buttons) and read as contract docs — consider moving to `docs/reference/` or reframing.
