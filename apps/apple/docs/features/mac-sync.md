@@ -83,6 +83,8 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 
 ## Tips
 
+- The **menu-bar popup** (menu-bar icon → Health.md) is a compact destination agent: it shows iPhone connection status, the Mac destination folder, readiness, and the last export result, and can open full settings — without switching to the app window.
+
 - Keep both apps foregrounded and devices nearby during large jobs.
 - Start with one lossless day to verify permissions/paths, then use a multi-year partitioned backfill.
 - Use Preview to check paths and formats.

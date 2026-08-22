@@ -64,7 +64,7 @@
 | Mood / State of Mind export | iOS | Daily State of Mind averages + individual mood entries | `SystemHealthStoreAdapter+SpecializedRecords.swift` | ✅ `mood-state-of-mind.md` |
 | Workout details | iOS, macOS, Android | Complete public workout graphs + route/splits/metadata while keeping MD/Bases readable | `SystemHealthStoreAdapter+CanonicalWorkouts.swift` | ✅ `workout-details.md` (apple + android) |
 | Medication dose events | iOS | HealthKit medication catalog + taken/skipped dose events in export | export schema; parity ledger | ✅ via export-schema/parity docs |
-| Zip archive export toggle | iOS | Bundle export files into a zip (DEFLATE) | `ExportTabView.swift:673`, `ZipArchiveWriter.swift` | ❌ no dedicated page |
+| Zip archive export toggle | iOS | Bundle export files into a zip (DEFLATE) | `ExportTabView.swift:673`, `ZipArchiveWriter.swift` | 🟡 within `multi-format-export.md` |
 | Export schema contract | iOS, Android, CLI, core | Versioned public schema (Apple v8; Android frozen v4 + analytical v5; v9 proposed) | `packages/contracts/`, `HealthMdExportSchema` | ✅ `export-schema.md` + contracts |
 | Raw API Snapshot product | Android (+CLI delivery) | Immutable versioned JSON/NDJSON provider-native snapshot: Health Connect + Fitbit/Oura/WHOOP/Withings cloud; manifests, checksums, `.sha256` sidecars, preview-without-destination, HTTPS-only streaming upload | android `rawexport/`, `rawchanges/`; docs `raw-snapshot-v1.md`, `raw-record-v1.md`, `raw-changes-v1.md` | ✅ android export-contract docs |
 | Raw changes backend | Android | `healthmd.raw-changes` change tokens + deletion tombstones for incremental archives | android `rawchanges/` | ✅ `raw-changes-v1.md` |
@@ -83,7 +83,7 @@
 | Date/time/unit preferences | iOS, macOS, Android | Date style, time style, metric/imperial | `FormatPreferences`, `FormatCustomizationView` | ✅ `date-time-units.md` |
 | Write modes | iOS, macOS, Android | Overwrite / append / update-merge | `WriteMode`, `MarkdownMerger` | ✅ `write-modes.md` |
 | Emoji headers / grouping options | macOS (+iOS) | Section grouping, emoji headers, folder-by-type | `MacSettingsView` Format tab | 🟡 mac settings coverage |
-| Configuration protection | iOS | "Prevent Accidental Changes" lock for config edits | `SettingsTabView.configurationProtectionSection` | ❌ |
+| Configuration protection | iOS | "Prevent Accidental Changes" lock for config edits | `SettingsTabView.configurationProtectionSection` | 🟡 within `manual-export.md` |
 
 ## 5. Export execution & reliability
 
@@ -93,9 +93,9 @@
 | Export preview | iOS, macOS, Android | Inspect generated files + size estimate before writing | `ExportPreviewView`, `ExportPreviewSizeEstimator` | ✅ `export-preview.md` |
 | Export profiles | iOS, macOS, Android | Named configs: independent metrics, formats, destinations, schedules; overlap detection | `ExportProfilesView`, `Shared/Models/ExportProfileOverlapDetector.swift`, `Shared/Managers/ExportProfileCoordinator.swift` | ✅ `export-profiles.md` |
 | Export history & retry | iOS, macOS, Android | Review results, retry failed dates (Room DB on Android) | `ExportHistory`, `ScheduleSettingsView`; android `data/history/` | ✅ `export-history-retry.md` |
-| Export issue guidance | iOS, macOS | In-app guidance/help sheets for export problems | `ExportIssueGuidance.swift`, `ExportFormatHelpSheet.swift` | ❌ |
-| Exported Markdown viewer | iOS | In-app viewer for generated markdown | `ExportedMarkdownViewer.swift` | ❌ |
-| Export progress banners / Live Activity | iOS | Export activity banners + CLI export Live Activity | `iOS/Components/*Banner*.swift`, `CLIExportLiveActivity*` | ❌ |
+| Export issue guidance | iOS, macOS | In-app guidance/help sheets for export problems | `ExportIssueGuidance.swift`, `ExportFormatHelpSheet.swift` | 🟡 permission guidance in `healthkit-permissions.md` |
+| Exported Markdown viewer | iOS | In-app viewer for generated markdown | `ExportedMarkdownViewer.swift` | 🟡 within `export-preview.md` |
+| Export progress banners / Live Activity | iOS | Export activity banners + CLI export Live Activity | `iOS/Components/*Banner*.swift`, `CLIExportLiveActivity*` | 🟡 within `scheduled-exports.md` + `widgets.md` |
 | Awake/foreground coordination | Android | Keep-export-awake coordination for foreground execution | `data/export/ExportAwakeCoordinator.kt` | 🔧 |
 | Export performance lab | iOS, macOS (debug) | Instrumentation, lab telemetry, API sink; release-absence checked | `iOS/Debug/IPhoneExportPerformanceLabCoordinator.swift`, `scripts/export-performance-lab.py` | 🔧 internal testing docs |
 | Export engine parity machinery | iOS (internal) | Legacy/shadow/Rust planner comparator, pins, rollout copy, evidence recorder | `Shared/ExportEngine/*` | 🔧 internal (ADR-0001, rollout runbooks) |
@@ -244,16 +244,10 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-1. **Configuration protection ("Prevent Accidental Changes")**.
-2. **Zip archive export** toggle.
-3. **Mac menu bar popup** surface.
-4. **Export issue guidance / format help sheets**.
-5. **Exported Markdown viewer**.
-6. **Export banners / Live Activity progress** (may fold into scheduled-exports page).
-7. **Android Wear OS** has docs ✅ but no website/public page.
-8. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
+1. **Android Wear OS** has docs ✅ but no website/public page.
+2. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
 
-(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed.)
+(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed; six minor Apple surfaces folded into existing pages — configuration protection → `manual-export.md`, zip export → `multi-format-export.md`, exported Markdown viewer → `export-preview.md`, permission guidance → `healthkit-permissions.md`, progress banners → `scheduled-exports.md`, Mac menu-bar popup → `mac-sync.md`.)
 
 ### C. Docs-only / weakly-mapped surfaces
 - None fully orphaned. `bounded-encrypted-query-executor.md` and `encrypted-query-context-store.md` have thin user-facing UI (Mac settings maintenance buttons) and read as contract docs — consider moving to `docs/reference/` or reframing.

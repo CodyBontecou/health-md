@@ -92,6 +92,8 @@ The full export still runs on every selected date and queries the complete touch
 
 ## Tips
 
+- After exporting, tap any generated Markdown file in the export result sheet to read it in the built-in **Exported Markdown viewer** — no need to leave Health.md or open your vault app.
+
 - Use Preview after changing filename, folder organization, or export target settings.
 - Tap into a file row to verify schema v8, `raw_capture_status`, frontmatter, and field names.
 - Preview multiple formats to confirm Markdown/Bases stay summary-oriented while JSON/CSV carry canonical source data.

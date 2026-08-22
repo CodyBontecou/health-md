@@ -57,6 +57,8 @@ With the setting off, output is summary-only and explicitly says `raw_capture_st
 
 ## Tips
 
+- When a run reports missing data, the export result sheet explains exactly which requested health types were not authorized (Export Permission Guidance) and names them, so you can fix the gap in Apple Health settings instead of guessing.
+
 - Grant only categories you want Health.md to read.
 - Opt into medications and vision prescriptions deliberately.
 - Check the manifest instead of inferring permission from a missing field.

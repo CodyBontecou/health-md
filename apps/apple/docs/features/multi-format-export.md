@@ -53,6 +53,10 @@ Lossless JSON/CSV can be much larger than Markdown/Bases because they include ro
 
 Preview and status use a rough text-export compression projection, not an exact promised archive size. Disable formats you do not need and export smaller date ranges for dense records.
 
+## Zipping one export run
+
+Enable **Zip Export Files** (Export tab → Output) to write the selected formats for a run into a single compressed ZIP archive (DEFLATE) instead of loose files. The toggle is disabled while Daily Notes-only mode is on. Unzip yields exactly the files the same run would have written loose.
+
 ## Tips
 
 - Use Markdown + JSON for readable notes plus source-complete backup.

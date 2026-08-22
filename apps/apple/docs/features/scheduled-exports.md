@@ -70,6 +70,8 @@ Connected Mac schedules require an open, compatible, ready Mac to begin; they do
 
 ## Practical guidance
 
+- Progress is always visible while an export runs: an in-app activity banner for normal exports, a banner plus lock-screen Live Activity for CLI-triggered exports, and local notifications for scheduled results. Banners dismiss automatically when the run finishes.
+
 - Begin with a one-day lookback.
 - Use Update/Overwrite for repeated dates.
 - Split route/ECG/clinical/attachment-heavy history into manual backfills.

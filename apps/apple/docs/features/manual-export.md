@@ -88,6 +88,8 @@ Lossless capture can include routes, waveforms, exact binary values, and attachm
 
 ## Tips
 
+- Lock your configuration when you're happy with it: **Settings → Prevent Accidental Changes → Lock Configuration Changes** blocks edits to your saved export configuration on this device while leaving manual exports and syncs available (`ConfigurationProtection`).
+
 - Preview after schema v8 migration and before backfills.
 - Use JSON when source completeness matters.
 - Check `raw_capture_status` for every date.
