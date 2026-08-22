@@ -354,6 +354,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 
 ## Documentation
 
+- [Feature documentation index](docs/features/index.md) — the canonical per-feature page inventory (mirrors the Apple feature docs tree), with setup, export, formats, automation, devices, purchase, and privacy guides
 - [API Endpoint export](docs/api-endpoint-export.md) — compatibility HTTP(S) JSON uploads, encrypted custom headers, scheduling, and privacy
 - [Raw snapshot v1](docs/export-contract/raw-snapshot-v1.md) — API-complete snapshot semantics, manifests, checksums, and limitations
 - [Raw record v1](docs/export-contract/raw-record-v1.md) — native record and provider-payload wire contract

@@ -13,7 +13,7 @@
 | macOS app | `apps/apple/HealthMd/macOS` | Sidebar: Home, CLI, Settings; menu-bar popup |
 | watchOS app + watch widgets | `apps/apple/HealthMdWatch`, `HealthMdWatchWidgets` | Dashboard app + 10 widget metrics |
 | iOS widgets + Live Activity | `apps/apple/HealthMdWidgets` | 4 widget families + CLI export Live Activity |
-| Android phone app | `apps/android/app` | Tabs: Export, Schedule, History, Settings |
+| Android phone app | `apps/android/app` | Tabs: Export, Schedule, History, Settings; feature docs tree at `apps/android/docs/features/` mirroring Apple's |
 | Wear OS companion | `apps/android/wear` | Tiles + complications; phone stays authoritative |
 | Android widgets | `apps/android/app/.../widget` | Glance: Health Summary, Activity, Heart Range, Sleep |
 | Standalone CLI + MCP | `apps/cli/crates/*` | `healthmd` CLI, `healthmd-mcp`, portable macOS/Linux/Windows |
@@ -244,7 +244,7 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-- None remaining. (Website follow-up: translate `guides/raw-snapshots` and `guides/wear-os` into the 9 non-English locales and promote them from canonical-English fallback to authored guides.)
+- None remaining. (Website follow-up: translate `guides/raw-snapshots` and `guides/wear-os` into the 9 non-English locales and promote them from canonical-English fallback to authored guides. Android follow-up: editorial pass — screenshots, on-device verification, and public-site selection for the 26 new `apps/android/docs/features/` pages drafted 2026-08-22.)
 
 (Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed; six minor Apple surfaces folded into existing pages — configuration protection → `manual-export.md`, zip export → `multi-format-export.md`, exported Markdown viewer → `export-preview.md`, permission guidance → `healthkit-permissions.md`, progress banners → `scheduled-exports.md`, Mac menu-bar popup → `mac-sync.md`; Wear OS and Raw API Snapshot public website guides published as canonical-English fallback pages under `guides/` with sidebar entries in all 10 locale labels, verified by i18n:check, website tests, and a full site build.)
 
