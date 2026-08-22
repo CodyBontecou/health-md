@@ -156,9 +156,10 @@ final class OnboardingJourneyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Create My First Export"].exists)
 
         tapButton("Create My First Export", in: app)
-        let setupAlert = app.alerts["Finish Preview Setup"]
-        XCTAssertTrue(setupAlert.waitForExistence(timeout: 8))
-        XCTAssertTrue(setupAlert.buttons["Connect Apple Health"].exists)
+        // Geist dialogs are in-tree SwiftUI overlays rather than native UIAlert instances.
+        let setupPromptTitle = app.staticTexts["Finish Preview Setup"]
+        XCTAssertTrue(setupPromptTitle.waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["Connect Apple Health"].waitForExistence(timeout: 3))
     }
 
     private func openSharedSetupSettings(
