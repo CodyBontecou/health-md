@@ -1,14 +1,9 @@
-Health.md 3.0.5 turns your Apple Health data into a clinician-ready report without sending it anywhere.
+Health.md 3.1 makes export profiles fully editable and scheduled exports far more dependable.
 
 New
-• Create 7-, 30-, 90-day, or custom-range reports with 11 focused health metrics.
-• Preview summaries and detailed readings, then export an accessible Letter or A4 PDF.
-• Scan a Direct CLI pairing QR in the app to connect more quickly.
-• Use the fully localized Mac app in German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, or Simplified Chinese.
-
-Privacy
-• Report generation stays on your device. Temporary files remain private until you explicitly share or save them.
+• Edit every profile setting in one place — target, destination folder or endpoint, formats, write mode, templates, and metrics — with a system folder picker and inline endpoint creation.
+• New profiles start with a quick setup form and warn live when two profiles would write the same files.
 
 Improved
-• Missing, partial, and unavailable readings are explained clearly so reports do not imply data that is not there.
-• The Mac dashboard makes connection, destination, export activity, and settings clearer, with localized labels that wrap cleanly.
+• Profile schedules and the classic schedule run side by side; preserved retries survive interruptions, notification taps resume the exact export, and schedule edits update the next export time immediately.
+• Clearer wording when a workout's structured plan can't be read on your device, with copyable partial-export warnings for bug reports.

@@ -27,6 +27,36 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.1",
+            items: [
+                .list(
+                    title: "Profiles, fully editable",
+                    rows: [
+                        .init(
+                            symbolSystemName: "slider.horizontal.3",
+                            title: "One-place profile editor",
+                            description: "Edit every export profile setting — target, destination folder or endpoint, formats, write mode, templates, and metrics — from a single editor with a system folder picker and inline endpoint creation."
+                        ),
+                        .init(
+                            symbolSystemName: "exclamationmark.triangle",
+                            title: "Overlap warnings",
+                            description: "Health.md warns live when a new profile would write the same files as an existing one, before your data lands in the wrong place."
+                        ),
+                        .init(
+                            symbolSystemName: "clock.badge.checkmark",
+                            title: "Dependable scheduled exports",
+                            description: "Profile schedules and the classic schedule run side by side, preserved retries survive interruptions, and notification taps resume the exact export."
+                        ),
+                        .init(
+                            symbolSystemName: "figure.run",
+                            title: "Clearer workout warnings",
+                            description: "When a workout's structured plan can't be read on your device you'll see plain-language detail, and partial-export warnings can now be copied for bug reports."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0.5",
             items: [
                 .list(
