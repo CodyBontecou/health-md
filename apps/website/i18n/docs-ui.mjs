@@ -54,6 +54,7 @@ export const docsSidebar = Object.freeze([
       item(text('Shortcuts & App Intents', 'Atajos y App Intents', 'Kurzbefehle & App Intents', 'Raccourcis et App Intents', 'Atalhos e App Intents', 'Comandi rapidi e App Intents', 'Opdrachten en App Intents', 'ショートカットとApp Intents', '단축어 및 App Intents', '快捷指令与 App Intents'), 'shortcuts'),
       item(text('Individual entries', 'Entradas individuales', 'Individuelle Einträge', 'Entrées individuelles', 'Registros individuais', 'Voci singole', 'Individuele vermeldingen', '個別エントリ', '개별 항목', '单条记录'), 'individual-tracking'),
       item(text('Daily notes', 'Notas diarias', 'Tägliche Notizen', 'Notes quotidiennes', 'Notas diárias', 'Note giornaliere', 'Dagelijkse notities', 'デイリーノート', '일일 노트', '每日笔记'), 'daily-notes'),
+      item(text('Raw API snapshots', 'Instantáneas de API sin procesar', 'Rohe API-Snapshots', 'Instantanés d’API brutes', 'Snapshots de API brutas', 'Snapshot API non elaborati', 'Ruwe API-snapshots', 'Raw APIスナップショット', '원시 API 스냅샷', '原始 API 快照'), 'guides/raw-snapshots'),
     ]),
   }),
   Object.freeze({
@@ -88,6 +89,7 @@ export const docsSidebar = Object.freeze([
     items: Object.freeze([
       item(text('Visualization catalog', 'Catálogo de visualizaciones', 'Visualisierungskatalog', 'Catalogue de visualisations', 'Catálogo de visualizações', 'Catalogo delle visualizzazioni', 'Visualisatiecatalogus', '可視化カタログ', '시각화 카탈로그', '可视化目录'), 'visualizations-roadmap'),
       item(text('Unlock & plans', 'Desbloqueo y planes', 'Freischaltung & Pläne', 'Déverrouillage et offres', 'Desbloqueio e planos', 'Sblocco e piani', 'Ontgrendelen en opties', 'ロック解除とプラン', '잠금 해제 및 요금제', '解锁与方案'), 'paywall'),
+      item(text('Wear OS companion', 'Complemento de Wear OS', 'Wear-OS-Begleiter', 'Compagnon Wear OS', 'Complemento Wear OS', 'Compagno Wear OS', 'Wear OS-compagnon', 'Wear OSコンパニオン', 'Wear OS 컴패니언', 'Wear OS 配套应用'), 'guides/wear-os'),
     ]),
   }),
 ]);

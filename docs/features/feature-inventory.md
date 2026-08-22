@@ -66,7 +66,7 @@
 | Medication dose events | iOS | HealthKit medication catalog + taken/skipped dose events in export | export schema; parity ledger | ✅ via export-schema/parity docs |
 | Zip archive export toggle | iOS | Bundle export files into a zip (DEFLATE) | `ExportTabView.swift:673`, `ZipArchiveWriter.swift` | 🟡 within `multi-format-export.md` |
 | Export schema contract | iOS, Android, CLI, core | Versioned public schema (Apple v8; Android frozen v4 + analytical v5; v9 proposed) | `packages/contracts/`, `HealthMdExportSchema` | ✅ `export-schema.md` + contracts |
-| Raw API Snapshot product | Android (+CLI delivery) | Immutable versioned JSON/NDJSON provider-native snapshot: Health Connect + Fitbit/Oura/WHOOP/Withings cloud; manifests, checksums, `.sha256` sidecars, preview-without-destination, HTTPS-only streaming upload | android `rawexport/`, `rawchanges/`; docs `raw-snapshot-v1.md`, `raw-record-v1.md`, `raw-changes-v1.md` | ✅ android export-contract docs |
+| Raw API Snapshot product | Android (+CLI delivery) | Immutable versioned JSON/NDJSON provider-native snapshot: Health Connect + Fitbit/Oura/WHOOP/Withings cloud; manifests, checksums, `.sha256` sidecars, preview-without-destination, HTTPS-only streaming upload | android `rawexport/`, `rawchanges/`; docs `raw-snapshot-v1.md`, `raw-record-v1.md`, `raw-changes-v1.md` | ✅ android export-contract docs + website `guides/raw-snapshots` (canonical EN, translations pending) |
 | Raw changes backend | Android | `healthmd.raw-changes` change tokens + deletion tombstones for incremental archives | android `rawchanges/` | ✅ `raw-changes-v1.md` |
 | Exercise route consent | Android | Explicit consent coordination before exporting exercise routes | `rawexport/ExerciseRouteConsent*.kt` | 🟡 raw docs |
 | Daily note injection | iOS, macOS, Android | Merge health sections into existing Obsidian daily notes | `DailyNoteInjector` (+`MarkdownMerger`) | ✅ `daily-note-injection.md`; website `daily-notes.md` |
@@ -168,7 +168,7 @@
 | Watch app | watchOS | Watch dashboard from health snapshot | `HealthMdWatch/WatchDashboardView.swift` | ✅ `apps/apple/docs/features/watch-app.md` |
 | Watch widgets | watchOS | DailyActivity, Recovery, Steps, MoveEnergy, ExerciseMinutes, StandHours, Sleep, RestingHeartRate, HRV, BloodOxygen | `HealthMdWatchWidgets/WatchHealthWidgets.swift` | ✅ within `watch-app.md` |
 | Android home-screen widgets | Android | Glance: Health Summary, Activity, Heart Range, Sleep; 14-day no-backup snapshot; 7-day charts; permission-revocation pulse; no lock-screen measurement widgets | `widget/` package | ✅ `docs/features/widgets.md` |
-| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os-implementation.md` |
+| Wear OS tiles | Wear | DailyActivity + Recovery tiles | `wear/.../surface/HealthTiles.kt` | ✅ `wear-os-implementation.md` + website `guides/wear-os` (canonical EN, translations pending) |
 | Wear OS complications | Wear | 10 metric complications (activity, recovery, steps, move, exercise, sleep, RHR, avg HR, HRV, SpO2) | `wear/.../surface/HealthComplications.kt` | ✅ wear docs |
 | Wear data layer sync | Wear, Android | Phone-authoritative aggregate transport, diagnostics provider, invalidation | `wear/.../sync/`, `wearable-contract/` | ✅ |
 
@@ -244,10 +244,9 @@ Apple (`apple-ci`, `apple-nightly`, `release-ios`, `release-macos`, `apple-submi
 ## Documentation gap analysis
 
 ### A. Features with no dedicated docs page (candidates for new pages)
-1. **Android Wear OS** has docs ✅ but no website/public page.
-2. **Android raw snapshot product** — deep contract docs exist, but no public user-facing page on the website.
+- None remaining. (Website follow-up: translate `guides/raw-snapshots` and `guides/wear-os` into the 9 non-English locales and promote them from canonical-English fallback to authored guides.)
 
-(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed; six minor Apple surfaces folded into existing pages — configuration protection → `manual-export.md`, zip export → `multi-format-export.md`, exported Markdown viewer → `export-preview.md`, permission guidance → `healthkit-permissions.md`, progress banners → `scheduled-exports.md`, Mac menu-bar popup → `mac-sync.md`.)
+(Closed 2026-08-22: Clinician Report page drafted and indexed; the four Apple index omissions were added to the table; iOS widgets + Live Activity page drafted and indexed; Watch app + watch widgets page drafted and indexed; Share My Setup page drafted as `needs QA` per its pre-canonical contract and indexed; six minor Apple surfaces folded into existing pages — configuration protection → `manual-export.md`, zip export → `multi-format-export.md`, exported Markdown viewer → `export-preview.md`, permission guidance → `healthkit-permissions.md`, progress banners → `scheduled-exports.md`, Mac menu-bar popup → `mac-sync.md`; Wear OS and Raw API Snapshot public website guides published as canonical-English fallback pages under `guides/` with sidebar entries in all 10 locale labels, verified by i18n:check, website tests, and a full site build.)
 
 ### C. Docs-only / weakly-mapped surfaces
 - None fully orphaned. `bounded-encrypted-query-executor.md` and `encrypted-query-context-store.md` have thin user-facing UI (Mac settings maintenance buttons) and read as contract docs — consider moving to `docs/reference/` or reframing.
