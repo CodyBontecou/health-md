@@ -40,7 +40,7 @@ When the operating systems differ, Health.md represents that difference explicit
 
 The governing workflow and definition of done are in [`docs/architecture/cross-platform-unification-policy.md`](docs/architecture/cross-platform-unification-policy.md).
 
-The product-wide feature baseline lives in [`docs/features/feature-inventory.md`](docs/features/feature-inventory.md): every feature across Apple, Android, CLI, core, contracts, practice, and website surfaces, with source evidence, per-feature documentation status, and the gap list used to manage documentation. Update it when adding a feature.
+The product-wide feature baseline lives in [`docs/features/feature-inventory.md`](docs/features/feature-inventory.md): every feature across Apple, Android, CLI, core, contracts, practice, and website surfaces, with source evidence, per-feature documentation status, and the gap list used to manage documentation. Update it when adding a feature. Per-capability Apple↔Android pairings and honest parity classifications live in [`docs/features/feature-parity.md`](docs/features/feature-parity.md).
 
 ## Public contracts
 

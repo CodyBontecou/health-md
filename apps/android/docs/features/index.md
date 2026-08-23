@@ -5,7 +5,7 @@ This directory is the canonical inventory for documenting Health.md for Android 
 1. a user-facing docs page here (use [`_template.md`](./_template.md)), and
 2. a video outline that can become one episode in the feature series.
 
-Deep machine contracts live in [`docs/export-contract/`](../export-contract/) and are linked from each page rather than duplicated. Product-wide cross-platform status lives in the repository-root [`docs/features/feature-inventory.md`](../../../../docs/features/feature-inventory.md).
+Deep machine contracts live in [`docs/export-contract/`](../export-contract/) and are linked from each page rather than duplicated. Product-wide cross-platform status lives in the repository-root [`docs/features/feature-inventory.md`](../../../../docs/features/feature-inventory.md), and the per-capability Apple↔Android pairing lives in [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md).
 
 ## Draft status
 

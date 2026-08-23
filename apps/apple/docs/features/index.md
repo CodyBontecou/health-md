@@ -5,6 +5,8 @@ This directory is the canonical inventory for documenting Health.md end-to-end. 
 1. a user-facing docs page for the docs site, and
 2. a video outline that can become one episode in the Health.md feature series.
 
+Cross-platform pairings for every Apple/Android capability live in the repository-root [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md).
+
 Use [`_template.md`](./_template.md) for new feature pages. Use [`video-series.md`](./video-series.md) as the running episode roadmap.
 
 ## Technical reference

@@ -3,7 +3,7 @@
 - **Status:** Living baseline. First compiled 2026-08-22 from full-source recon of every component (Apple iOS/iPadOS/macOS/watchOS/widgets, Android phone/Wear/widgets, CLI+MCP, shared Rust core, contracts, practice portal, website).
 - **Purpose:** One structured inventory of every product feature, used as the baseline to manage documentation: every row says what exists, where the evidence lives, and whether a docs page exists.
 - **Method:** Source-first (screens, navigations, exporters, intents, CLI clap tree, MCP tool catalog, protocol specs), cross-checked against each component's docs tree. Docs status: ✅ dedicated page · 🟡 covered inside another page · ❌ no docs · 🔧 internal/no user docs needed.
-- **Related inventories:** `packages/contracts/product-capabilities.json` (machine-readable export-contract capabilities), `apps/apple/docs/features/index.md` (Apple feature-doc index), `packages/contracts/manifest.json` (public contract registry). This page is the product-wide superset.
+- **Related inventories:** `packages/contracts/product-capabilities.json` (machine-readable export-contract capabilities), `apps/apple/docs/features/index.md` and `apps/android/docs/features/index.md` (platform feature-doc indexes), `packages/contracts/manifest.json` (public contract registry), and [`feature-parity.md`](./feature-parity.md) (Apple↔Android per-capability pairing). This page is the product-wide superset.
 
 ## Product surfaces
 
