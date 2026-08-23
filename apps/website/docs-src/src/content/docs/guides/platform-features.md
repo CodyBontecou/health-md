@@ -4,11 +4,11 @@ description: What Health.md does on iPhone, iPad, Mac, Android, Wear OS, and the
 ---
 
 <div class="docs-hero">
-  <p class="docs-eyebrow">Every platform, one honest table</p>
-  <p>Health.md is a local-first health journal: read your health data on-device and write clean files to folders you choose. The same product ships across iPhone, iPad, Mac, Android, Wear OS, and a standalone CLI — with shared capabilities wherever the platforms allow, and clearly named differences where they don't.</p>
+  <p class="docs-eyebrow">Platform overview</p>
+  <p>What Health.md does on iPhone, iPad, Mac, Android, Wear OS, and the CLI — shared wherever the platforms allow, honest where they differ.</p>
   <div class="docs-actions">
-    <a class="docs-button" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">Get for iPhone & Mac</a>
-    <a class="docs-button-secondary" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get for Android</a>
+    <a class="docs-button" href="https://apps.apple.com/us/app/health-md/id6757763969" target="_blank" rel="noopener">iPhone & Mac</a>
+    <a class="docs-button-secondary" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Android</a>
   </div>
 </div>
 

@@ -5,7 +5,7 @@ description: Export immutable, versioned JSON or NDJSON snapshots of Health Conn
 
 <div class="docs-hero">
   <p class="docs-eyebrow">Android · archival-grade export</p>
-  <p>Raw API Snapshot is a separate Health.md for Android export product for migration and archival workflows. It writes one immutable, versioned JSON or NDJSON artifact for the selected range without converting native records into daily summaries.</p>
+  <p>Raw API Snapshot is a separate Health.md for Android export product for migration and archival workflows: one immutable, versioned JSON or NDJSON artifact per selected range, preserving native records.</p>
   <div class="docs-actions">
     <a class="docs-button" href="https://play.google.com/store/apps/details?id=com.healthmd.android" target="_blank" rel="noopener">Get on Google Play</a>
     <a class="docs-button-secondary" href="/docs/android/">Android App Guide</a>
