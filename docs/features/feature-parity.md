@@ -2,7 +2,7 @@
 
 - **Status:** Living cross-reference. First compiled 2026-08-22 from both feature-doc trees (`apps/apple/docs/features/`, `apps/android/docs/features/`).
 - **Purpose:** One row per user-facing capability, pairing the Apple and Android feature pages and stating the honest parity classification. Use it to find documentation gaps, plan cross-platform work, and avoid fabricated parity.
-- **Sources of truth:** [`docs/architecture/cross-platform-unification-policy.md`](../architecture/cross-platform-unification-policy.md) (governing policy), [`packages/contracts/product-capabilities.json`](../../packages/contracts/product-capabilities.json) (machine-readable export-contract classifications), and both feature trees.
+- **Sources of truth:** [`docs/architecture/cross-platform-unification-policy.md`](../architecture/cross-platform-unification-policy.md) (governing policy), [`packages/contracts/product-capabilities.json`](../../packages/contracts/product-capabilities.json) (machine-readable export-contract classifications), and both feature trees. A distilled user-facing version is published on the website at `apps/website/docs-src/src/content/docs/guides/platform-features.md` (canonical English; keep the two in sync when capability rows change).
 - **Rule:** A pair is `shared` only when the *user outcome* is equivalent. Where the OS APIs differ, the row says `platform-distinct` with the difference named — related-but-different values keep distinct identities (HealthKit HRV SDNN ≠ Health Connect/WHOOP RMSSD; Apple wrist temperature ≠ Health Connect skin temperature).
 
 ## Legend
