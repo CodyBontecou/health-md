@@ -4,6 +4,8 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-08-25
+
 ### Fixed
 - A failed scheduled export whose target is an API endpoint with no configured URL now records and displays "API endpoint not configured" with matching recovery guidance, instead of the misleading "Export failed: Unknown error" while the real reason was buried in the details. Export history failure reasons also now tolerate values written by newer app versions, so an unrecognized reason no longer makes the whole history unreadable.
 - The iPhone export-completion toast no longer shows a successful local export in error red. Success was inferred by checking whether the status text started with "Exported"/"Updated", which the generated-file/data-day success summary never does (and which localization breaks entirely); full-success statuses now carry an explicit recorded outcome, restoring the success styling along with the persistent toast and its Preview/Browse actions.

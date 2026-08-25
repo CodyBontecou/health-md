@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.1.1",
+            items: [
+                .list(
+                    title: "Cloud folders stay selected",
+                    rows: [
+                        .init(
+                            symbolSystemName: "icloud.fill",
+                            title: "Cloud folders stay selected",
+                            description: "Export folders on iCloud Drive, Dropbox, and similar cloud locations no longer lose their selection when the app restarts, so automatic exports and Shortcuts keep working without re-selecting the folder."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.circle.fill",
+                            title: "Honest export toasts",
+                            description: "A completed export shows the success toast with its Preview and Browse actions again instead of a red error."
+                        ),
+                        .init(
+                            symbolSystemName: "text.badge.checkmark",
+                            title: "Clearer failure reasons",
+                            description: "Scheduled exports targeting an API endpoint with no configured URL now say exactly what to fix, and choosing the iCloud Drive root shows its real name."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.1",
             items: [
                 .list(

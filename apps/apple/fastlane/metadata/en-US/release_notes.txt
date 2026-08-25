@@ -1,9 +1,7 @@
-Health.md 3.1 makes export profiles fully editable and scheduled exports far more dependable.
+Health.md 3.1.1 fixes export reliability issues.
 
-New
-• Edit every profile setting in one place — target, destination folder or endpoint, formats, write mode, templates, and metrics — with a system folder picker and inline endpoint creation.
-• New profiles start with a quick setup form and warn live when two profiles would write the same files.
-
-Improved
-• Profile schedules and the classic schedule run side by side; preserved retries survive interruptions, notification taps resume the exact export, and schedule edits update the next export time immediately.
-• Clearer wording when a workout's structured plan can't be read on your device, with copyable partial-export warnings for bug reports.
+Fixed
+• Export folders on iCloud Drive, Dropbox, and similar cloud locations no longer lose their selection when the app restarts. Previously the folder had to be re-selected before automatic exports and Shortcuts would run again.
+• A completed export no longer shows a red error toast — the success toast is back, with its Preview and Browse actions.
+• Choosing the iCloud Drive root now shows it as "iCloud Drive" instead of a technical folder name.
+• Scheduled exports targeting an API endpoint with no configured URL now explain exactly what to fix, instead of a generic unknown error.
