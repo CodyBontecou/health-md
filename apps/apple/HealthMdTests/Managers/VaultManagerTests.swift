@@ -1308,6 +1308,25 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [pickedURL])
     }
 
+    func testRecordSuccessfulExportStatusMarksOutcomeUntilReassigned() {
+        let manager = makeManager()
+        XCTAssertFalse(manager.lastExportStatusIsSuccess)
+
+        // The local-export full-success status carries no success prefix;
+        // only the recorded outcome may mark it successful.
+        manager.recordSuccessfulExportStatus("≥ 1 generated file(s) · 1 of 1 data day(s)")
+        XCTAssertTrue(manager.lastExportStatusIsSuccess)
+
+        // Re-recording an identical success keeps the marking.
+        manager.recordSuccessfulExportStatus("≥ 1 generated file(s) · 1 of 1 data day(s)")
+        XCTAssertTrue(manager.lastExportStatusIsSuccess)
+
+        // Any direct status assignment resets the outcome flag so a stale
+        // success cannot recolor a later destination-error status.
+        manager.lastExportStatus = "Saved folder unavailable. Reconnect the location in Files or re-select the folder."
+        XCTAssertFalse(manager.lastExportStatusIsSuccess)
+    }
+
     func testSetVaultFolder_accessDenied_setsErrorStatus() {
         bookmarkResolver.accessGranted = false
         let manager = makeManager()

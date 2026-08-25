@@ -1443,7 +1443,18 @@ final class VaultManager: ObservableObject {
     @Published var vaultName: String = "No vault selected"
     @Published private(set) var destinationState: VaultDestinationState = .notSelected
     @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
-    @Published var lastExportStatus: String?
+    /// Whether `lastExportStatus` currently describes a fully successful
+    /// export. Success cannot be inferred from the status copy: the local-export
+    /// success status is the generated-file/data-day description, prefixed
+    /// sniffing breaks under localization, and destination-error statuses are
+    /// assigned directly. Assignment sites that know the outcome record it
+    /// through `recordSuccessfulExportStatus`; any other assignment resets it.
+    @Published private(set) var lastExportStatusIsSuccess = false
+    @Published var lastExportStatus: String? {
+        didSet {
+            if oldValue != lastExportStatus { lastExportStatusIsSuccess = false }
+        }
+    }
     #if DEBUG && os(macOS)
     @Published private var marketingCaptureDisplayPath: String?
     private var marketingCaptureAccessOverride = false
@@ -1771,7 +1782,9 @@ final class VaultManager: ObservableObject {
                 return
             }
 
-            let acceptedName = pathMatches ? expectedSelection.displayName : resolvedURL.lastPathComponent
+            let acceptedName = pathMatches
+                ? expectedSelection.displayName
+                : Self.displayName(for: resolvedURL)
             let acceptedSelection = SavedVaultSelection(
                 version: Self.savedSelectionVersion,
                 standardizedPath: resolvedURL.standardizedFileURL.path,
@@ -1820,6 +1833,13 @@ final class VaultManager: ObservableObject {
         }
     }
 
+    /// Records a fully successful export status. Must be assigned before the
+    /// flag so the resetting `didSet` observe runs first.
+    func recordSuccessfulExportStatus(_ status: String) {
+        lastExportStatus = status
+        lastExportStatusIsSuccess = true
+    }
+
     private func setTemporarilyUnavailable(selection: SavedVaultSelection) {
         vaultURL = nil
         vaultName = selection.displayName
@@ -1834,6 +1854,19 @@ final class VaultManager: ObservableObject {
         destinationState = .requiresReselectionDestinationChanged
         lastExportStatus = Self.destinationChangedMessage
         clearLastExportPresentationTarget()
+    }
+
+    /// Display name for a selected/resolved vault URL. File-provider roots
+    /// report a raw provider identifier as their path name (the iCloud Drive
+    /// root is `com~apple~CloudDocs`, whose tildes render like strikethroughs
+    /// around "apple"); the localized name resource surfaces the name Files
+    /// shows the user ("iCloud Drive") instead.
+    private static func displayName(for url: URL) -> String {
+        if let localized = try? url.resourceValues(forKeys: [.localizedNameKey]).localizedName,
+           !localized.isEmpty {
+            return localized
+        }
+        return url.lastPathComponent
     }
 
     /// Captures the trusted selection through the same bookmark round-trip that
@@ -1856,7 +1889,7 @@ final class VaultManager: ObservableObject {
         let selection = SavedVaultSelection(
             version: Self.savedSelectionVersion,
             standardizedPath: canonicalURL.standardizedFileURL.path,
-            displayName: canonicalURL.lastPathComponent,
+            displayName: Self.displayName(for: canonicalURL),
             identity: try identityProbe.persistentIdentity(for: canonicalURL)
         )
         return (selection, bookmarkData, try JSONEncoder().encode(selection))

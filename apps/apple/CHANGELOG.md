@@ -5,6 +5,8 @@ All notable changes to Health.md will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- The iPhone export-completion toast no longer shows a successful local export in error red. Success was inferred by checking whether the status text started with "Exported"/"Updated", which the generated-file/data-day success summary never does (and which localization breaks entirely); full-success statuses now carry an explicit recorded outcome, restoring the success styling along with the persistent toast and its Preview/Browse actions.
+- Selecting the iCloud Drive root (or other file-provider roots) no longer displays the raw provider identifier `com~apple~CloudDocs` — whose tildes render like strikethroughs around "apple" — as the vault name. Destination names now prefer the localized name Files shows ("iCloud Drive").
 - Export folders on cloud file providers (iCloud Drive, Dropbox, and similar) no longer lose their saved selection on cold starts. Bookmarks for folders whose volume never reports persistent file identifiers now rebind to the provider's current path and refresh the saved metadata when resolution succeeds with security-scoped access, instead of demanding manual re-selection on every launch — which had broken automatic exports and Shortcuts until the folder was re-picked. A confirmed persistent-identity mismatch is still blocked outright, identity evidence appearing on only one side of a move still requires review, and newly selected folders now store their trusted path through the same bookmark round-trip that later verifies it, eliminating save/verify normalization mismatches.
 
 ## [3.1] - 2026-08-22
