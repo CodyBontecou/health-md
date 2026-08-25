@@ -165,6 +165,10 @@ def main() -> int:
         fail("release signing identity ledger is invalid")
     cli = metadata(cli_manifest)
     core = metadata(core_manifest)
+    dist_config = tomllib.loads(
+        (root / "apps/cli/dist-workspace.toml").read_text(encoding="utf-8")
+    )
+    windows_in_release = "x86_64-pc-windows-msvc" in dist_config["dist"]["targets"]
     packages = {package["name"]: package for package in cli["packages"] + core["packages"]}
     if set(packages) != ALL_PACKAGES:
         fail(f"unexpected workspace package set: {sorted(packages)}")
@@ -186,12 +190,15 @@ def main() -> int:
         if arguments.main_sha != arguments.sha:
             fail(f"main commit {arguments.main_sha} does not equal tag SHA {arguments.sha}")
         windows_identity = signing_identities.get("windows", {})
-        if (
+        if windows_in_release and (
             windows_identity.get("status") != "qualified"
             or not isinstance(windows_identity.get("publisher_subject"), str)
             or not windows_identity["publisher_subject"].strip()
         ):
-            fail("Windows publisher identity must be committed as qualified before tagging")
+            fail(
+                "Windows publisher identity must be committed as qualified before tagging "
+                "a release whose dist targets include x86_64-pc-windows-msvc"
+            )
     else:
         if arguments.sha or arguments.main_sha:
             fail("--sha and --main-sha are valid only with --tag")

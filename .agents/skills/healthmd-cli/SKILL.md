@@ -165,7 +165,12 @@ Protocol v1 treats the destination as an opaque immutable label on iPhone. The r
 
 ## Codex and Claude MCP
 
-For Codex, run `healthmd setup codex`. It safely preserves unrelated Codex settings, configures the absolute `healthmd` executable with arguments `mcp serve`, applies approval prompts to export mutations, and opens iPhone pairing when needed. Pairing and MCP deliberately use the same installed executable identity so native credentials never require a second Keychain ACL. `healthmd-mcp` remains a compatibility launcher that delegates to the sibling `healthmd`. Do not run MCP serve mode as an interactive shell command.
+For Codex, run `healthmd setup codex`. For Claude, run `healthmd setup claude` (or add `--project
+/absolute/path` to write a Claude Code project `.mcp.json`). Both safely preserve unrelated host
+settings, configure the absolute `healthmd` executable with arguments `mcp serve`, and open iPhone
+pairing when needed. Codex configuration applies approval prompts to export mutations. Pairing and
+MCP deliberately use the same installed executable identity so native credentials never require a
+second Keychain ACL. `healthmd-mcp` remains a compatibility launcher that delegates to the sibling `healthmd`. Do not run MCP serve mode as an interactive shell command.
 
 The complete server exposes 19 fixed tools for local pairing, direct readiness, Apple metric catalog, bounded typed queries, charts, sleep, workouts, comparison, coverage, evidence, and durable generated-file exports. Every query runs against the paired foreground iPhone; Health.md for Mac is not involved. Export, resume, and cancel calls require explicit user approval and an export needs an existing `destination`.
 

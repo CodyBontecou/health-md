@@ -53,7 +53,7 @@ It uses the isolated `com.healthmd.android.e2e` app and concurrently runs the ig
 notification Disconnect action, requests status only, and retains no health payload. Verify the
 release archive's checksum and assert that it contains both `healthmd` and
 `healthmd-mcp` (`.exe` on Windows). Run `healthmd --version`, `healthmd --help`,
-`healthmd setup codex --help`, `healthmd query --help`, `healthmd mcp serve --help`,
+`healthmd setup codex --help`, `healthmd setup claude --help`, `healthmd query --help`, `healthmd mcp serve --help`,
 `healthmd mcp serve-read-only --help`, and `healthmd mcp schema healthmd_sleep_sessions`. Feed the
 same bounded stdio initialize/tools calls to both serve modes: the complete mode must expose 19
 tools, while read-only mode must expose exactly 13 tools with `readOnlyHint`, no pairing resource,
@@ -81,7 +81,9 @@ Record the exact candidate in the [health-free release evidence template](releas
 
 ## Physical iPhone gate
 
-Use a disposable destination and test account/data policy appropriate for sensitive health data.
+Windows physical qualification (the dedicated Windows steps below and the Windows legs of shared
+steps) is deferred together with signed Windows release artifacts; Windows source builds remain
+covered by CI. Run every macOS and Linux step. Use a disposable destination and test account/data policy appropriate for sensitive health data.
 Never attach raw output to an issue or CI log.
 
 1. Pair on LAN with a generated code; reject a wrong code and an untrusted peer.
@@ -100,9 +102,10 @@ Never attach raw output to an issue or CI log.
    interruption between destination commit and final confirmation.
 9. On Windows, verify status/raw/extract/resume/cancel plus protocol-v1 generated-file export into
    an existing NTFS destination, including drive-root and UNC-path validation where available.
-10. Run `healthmd setup codex` and verify first-pair, idempotent rerun, safe preservation of existing
-    Codex settings, explicit multi-iPhone selection, export approval policy, and that the generated
-    command uses the same `healthmd` executable with `mcp serve`. Then test status, metric catalog,
+10. Run `healthmd setup codex` and `healthmd setup claude` and verify first-pair, idempotent rerun, safe preservation of existing
+    Codex and Claude settings, explicit multi-iPhone selection, export approval policy, and that the generated
+    command uses the same `healthmd` executable with `mcp serve`. For Claude also verify the Claude Desktop
+    target and `--project DIR` writing a Claude Code `.mcp.json`. Then test status, metric catalog,
     metric chart, sleep, workouts, comparison, coverage, evidence, explicit raw query, multipage
     traversal, and identical `healthmd query` canonical payloads for the same arguments; then test
     generated-file export, status/resume/cancel, MCP cancellation, interactive-App

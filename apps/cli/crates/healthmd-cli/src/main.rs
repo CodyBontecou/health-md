@@ -194,6 +194,9 @@ struct SetupArgs {
 enum SetupCommand {
     /// Configure Codex to use this executable, then pair an iPhone if none is trusted.
     Codex(SetupCodexArgs),
+
+    /// Configure Claude to use this executable, then pair an iPhone if none is trusted.
+    Claude(SetupClaudeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -205,6 +208,22 @@ struct SetupCodexArgs {
     /// Maximum time to wait for iPhone pairing.
     #[arg(long, default_value_t = 180)]
     pairing_timeout: u64,
+}
+
+#[derive(Debug, Args)]
+struct SetupClaudeArgs {
+    /// Configure Claude without opening a pairing listener.
+    #[arg(long)]
+    skip_pairing: bool,
+
+    /// Maximum time to wait for iPhone pairing.
+    #[arg(long, default_value_t = 180)]
+    pairing_timeout: u64,
+
+    /// Write a Claude Code project `.mcp.json` under this absolute directory instead of the
+    /// Claude Desktop configuration.
+    #[arg(long)]
+    project: Option<PathBuf>,
 }
 
 #[derive(Debug, Args)]
@@ -665,6 +684,11 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         }) if backend == Backend::Direct => setup_codex(options, device, port)
             .await
             .map(CommandSuccess::json),
+        Command::Setup(SetupArgs {
+            command: SetupCommand::Claude(options),
+        }) if backend == Backend::Direct => setup_claude(options, device, port)
+            .await
+            .map(CommandSuccess::json),
         Command::Status(options) if backend == Backend::Direct => {
             direct_status(options, device, port)
                 .await
@@ -903,6 +927,7 @@ struct SetupPairing {
 }
 
 async fn setup_codex_pairing(
+    host: &'static str,
     skip_pairing: bool,
     pairing_timeout: u64,
     requested_device: Option<Uuid>,
@@ -972,7 +997,7 @@ async fn setup_codex_pairing(
         return Err(CommandError {
             backend: "direct",
             code: "direct_source_unsupported",
-            message: "Codex health analysis requires a paired iPhone".into(),
+            message: format!("{host} health analysis requires a paired iPhone"),
         });
     }
     let device_id = result
@@ -1002,6 +1027,7 @@ async fn setup_codex(
         ));
     }
     let pairing = setup_codex_pairing(
+        "Codex",
         options.skip_pairing,
         options.pairing_timeout,
         requested_device,
@@ -1049,6 +1075,80 @@ async fn setup_codex(
             "Codex is configured for the paired iPhone. Restart Codex, keep Health.md foreground, and call healthmd_doctor."
         }
     }))
+}
+
+async fn setup_claude(
+    options: SetupClaudeArgs,
+    requested_device: Option<Uuid>,
+    port: u16,
+) -> Result<Value, CommandError> {
+    if !(10..=600).contains(&options.pairing_timeout) {
+        return Err(usage_error(
+            "setup pairing timeout must be between 10 and 600 seconds",
+        ));
+    }
+    let pairing = setup_codex_pairing(
+        "Claude",
+        options.skip_pairing,
+        options.pairing_timeout,
+        requested_device,
+        port,
+    )
+    .await?;
+
+    let executable = onboarding::current_invocation_executable().map_err(|_| CommandError {
+        backend: "direct",
+        code: "claude_configuration_failed",
+        message: "The installed healthmd executable path could not be resolved".into(),
+    })?;
+    let (receipt, target) = match &options.project {
+        Some(project) => (
+            onboarding::configure_claude_project(project, &executable, pairing.device_id, port)
+                .map_err(|error| claude_configuration_error(&error))?,
+            "project",
+        ),
+        None => (
+            onboarding::configure_claude_desktop(&executable, pairing.device_id, port)
+                .map_err(|error| claude_configuration_error(&error))?,
+            "desktop",
+        ),
+    };
+
+    Ok(json!({
+        "schema": "healthmd.claude_setup",
+        "schema_version": 1,
+        "status": "success",
+        "backend": "direct",
+        "configuration": {
+            "host": "claude",
+            "target": target,
+            "path": receipt.config_path,
+            "changed": receipt.changed,
+            "command": receipt.command,
+            "args": receipt.args,
+            "same_executable_identity": true
+        },
+        "pairing": {
+            "status": pairing.status,
+            "device_id": pairing.device_id.map(|value| value.to_string().to_lowercase()),
+            "receipt": pairing.receipt
+        },
+        "restart_claude": receipt.changed,
+        "message": match (target, options.skip_pairing) {
+            ("project", true) => "Claude Code is configured for the project. Run `healthmd setup claude` with Health.md open on iPhone to pair.",
+            ("project", false) => "Claude Code is configured for the project. Trust the workspace, approve the healthmd server, keep Health.md foreground, and call healthmd_doctor.",
+            (_, true) => "Claude Desktop is configured. Run `healthmd setup claude` with Health.md open on iPhone to pair.",
+            (_, false) => "Claude Desktop is configured for the paired iPhone. Restart Claude Desktop, keep Health.md foreground, and call healthmd_doctor."
+        }
+    }))
+}
+
+fn claude_configuration_error(error: &onboarding::OnboardingError) -> CommandError {
+    CommandError {
+        backend: "direct",
+        code: "claude_configuration_failed",
+        message: error.to_string(),
+    }
 }
 
 async fn direct_status(
@@ -2092,6 +2192,9 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Setup(SetupArgs {
             command: SetupCommand::Codex(_),
         }) => "setup codex",
+        Command::Setup(SetupArgs {
+            command: SetupCommand::Claude(_),
+        }) => "setup claude",
     }
 }
 

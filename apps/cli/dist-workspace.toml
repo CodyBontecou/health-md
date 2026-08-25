@@ -7,10 +7,12 @@ members = ["cargo:."]
 cargo-dist-version = "0.31.0"
 # CI backends to support
 ci = "github"
-# The installers to generate for each app
-installers = ["shell", "powershell", "homebrew"]
+# The installers to generate for each app. Windows x86_64 release artifacts and the PowerShell
+# installer are deferred until the Authenticode identity is provisioned; restore them together
+# with the Windows signing jobs removed from .github/workflows/cli-release.yml.
+installers = ["shell", "homebrew"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu"]
 # Path that shell/PowerShell installers should place binaries in
 install-path = "~/.local/bin"
 # Publish generated formulae to the project tap after a successful release

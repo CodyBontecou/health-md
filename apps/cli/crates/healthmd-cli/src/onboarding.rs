@@ -13,10 +13,19 @@ use toml_edit::{Array, DocumentMut, Item, Table, value};
 use uuid::Uuid;
 
 const MAXIMUM_CODEX_CONFIG_BYTES: usize = 2 * 1_024 * 1_024;
+const MAXIMUM_CLAUDE_CONFIG_BYTES: usize = 2 * 1_024 * 1_024;
 const DEFAULT_DIRECT_PORT: u16 = 17_647;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CodexSetupReceipt {
+    pub config_path: PathBuf,
+    pub command: PathBuf,
+    pub args: Vec<String>,
+    pub changed: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ClaudeSetupReceipt {
     pub config_path: PathBuf,
     pub command: PathBuf,
     pub args: Vec<String>,
@@ -36,14 +45,14 @@ pub enum OnboardingError {
 impl fmt::Display for OnboardingError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
-            Self::HomeUnavailable => "the Codex configuration directory could not be resolved",
+            Self::HomeUnavailable => "the MCP host configuration directory could not be resolved",
             Self::InvalidExecutable => "the healthmd executable path is invalid",
-            Self::InvalidConfig => "the existing Codex configuration is not valid TOML",
-            Self::ConfigTooLarge => "the existing Codex configuration exceeds the safety limit",
+            Self::InvalidConfig => "the existing host configuration is not valid",
+            Self::ConfigTooLarge => "the existing host configuration exceeds the safety limit",
             Self::ConfigChanged => {
-                "the Codex configuration changed during setup; no update was written, so rerun setup"
+                "the host configuration changed during setup; no update was written, so rerun setup"
             }
-            Self::Io => "the Codex configuration could not be updated safely",
+            Self::Io => "the host configuration could not be updated safely",
         })
     }
 }
@@ -193,6 +202,155 @@ pub fn configure_codex_at(
     })
 }
 
+/// Resolve the Claude Desktop MCP configuration for the current platform.
+///
+/// # Errors
+///
+/// Returns [`OnboardingError::HomeUnavailable`] when no user configuration directory exists.
+pub fn default_claude_desktop_config_path() -> Result<PathBuf, OnboardingError> {
+    let directories = BaseDirs::new().ok_or(OnboardingError::HomeUnavailable)?;
+    // Claude Desktop stores its MCP configuration under the platform data directory on
+    // macOS and Windows and under the XDG configuration directory on Linux.
+    let root = if cfg!(target_os = "linux") {
+        directories.config_dir()
+    } else {
+        directories.data_dir()
+    };
+    Ok(root.join("Claude").join("claude_desktop_config.json"))
+}
+
+/// Configure Claude Desktop to launch the same `healthmd` executable in MCP serve mode.
+///
+/// # Errors
+///
+/// Returns an [`OnboardingError`] under the same conditions as [`configure_codex`].
+pub fn configure_claude_desktop(
+    executable: &Path,
+    device_id: Option<Uuid>,
+    port: u16,
+) -> Result<ClaudeSetupReceipt, OnboardingError> {
+    configure_claude_at(
+        &default_claude_desktop_config_path()?,
+        executable,
+        device_id,
+        port,
+    )
+}
+
+/// Configure a Claude Code project `.mcp.json` at `project_root` to launch the same `healthmd`
+/// executable in MCP serve mode.
+///
+/// # Errors
+///
+/// Returns an [`OnboardingError`] under the same conditions as [`configure_codex`].
+pub fn configure_claude_project(
+    project_root: &Path,
+    executable: &Path,
+    device_id: Option<Uuid>,
+    port: u16,
+) -> Result<ClaudeSetupReceipt, OnboardingError> {
+    if !project_root.is_absolute() {
+        return Err(OnboardingError::InvalidConfig);
+    }
+    configure_claude_at(&project_root.join(".mcp.json"), executable, device_id, port)
+}
+
+/// Configure an explicit Claude JSON configuration path. This is primarily useful for
+/// installers and isolated verification; ordinary callers should use
+/// [`configure_claude_desktop`] or [`configure_claude_project`].
+///
+/// # Errors
+///
+/// Returns an [`OnboardingError`] under the same conditions as [`configure_codex`].
+pub fn configure_claude_at(
+    requested_config_path: &Path,
+    executable: &Path,
+    device_id: Option<Uuid>,
+    port: u16,
+) -> Result<ClaudeSetupReceipt, OnboardingError> {
+    if !executable.is_absolute() {
+        return Err(OnboardingError::InvalidExecutable);
+    }
+    let resolved_executable = executable
+        .canonicalize()
+        .map_err(|_| OnboardingError::InvalidExecutable)?;
+    if !resolved_executable.is_file() {
+        return Err(OnboardingError::InvalidExecutable);
+    }
+    let command = executable
+        .to_str()
+        .ok_or(OnboardingError::InvalidExecutable)?
+        .to_owned();
+    let args = mcp_arguments(device_id, port);
+
+    let config_path = resolve_config_path(requested_config_path)?;
+    let parent = config_path
+        .parent()
+        .filter(|value| !value.as_os_str().is_empty())
+        .ok_or(OnboardingError::Io)?;
+    fs::create_dir_all(parent).map_err(|_| OnboardingError::Io)?;
+
+    let lock_path = parent.join(".healthmd-claude-config.lock");
+    let lock = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(lock_path)
+        .map_err(|_| OnboardingError::Io)?;
+    set_owner_only_permissions(&lock).map_err(|_| OnboardingError::Io)?;
+    lock.lock_exclusive().map_err(|_| OnboardingError::Io)?;
+
+    let result = update_locked_claude_config(&config_path, parent, &command, &args);
+    let _ = fs2::FileExt::unlock(&lock);
+    result.map(|changed| ClaudeSetupReceipt {
+        config_path,
+        command: executable.to_owned(),
+        args,
+        changed,
+    })
+}
+
+fn update_locked_claude_config(
+    config_path: &Path,
+    parent: &Path,
+    command: &str,
+    args: &[String],
+) -> Result<bool, OnboardingError> {
+    let original = read_bounded(config_path, MAXIMUM_CLAUDE_CONFIG_BYTES)?;
+    let mut root: serde_json::Value = if original.trim().is_empty() {
+        serde_json::json!({})
+    } else {
+        serde_json::from_str(&original).map_err(|_| OnboardingError::InvalidConfig)?
+    };
+    let Some(object) = root.as_object_mut() else {
+        return Err(OnboardingError::InvalidConfig);
+    };
+    let servers = object
+        .entry("mcpServers")
+        .or_insert_with(|| serde_json::json!({}));
+    let Some(servers) = servers.as_object_mut() else {
+        return Err(OnboardingError::InvalidConfig);
+    };
+    servers.insert(
+        "healthmd".to_owned(),
+        serde_json::json!({ "command": command, "args": args }),
+    );
+    let mut updated = serde_json::to_string_pretty(&root).map_err(|_| OnboardingError::Io)?;
+    updated.push('\n');
+    if updated == original {
+        return Ok(false);
+    }
+    write_atomic(
+        config_path,
+        parent,
+        updated.as_bytes(),
+        &original,
+        MAXIMUM_CLAUDE_CONFIG_BYTES,
+    )?;
+    Ok(true)
+}
+
 fn resolve_config_path(path: &Path) -> Result<PathBuf, OnboardingError> {
     match fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_symlink() => {
@@ -210,7 +368,7 @@ fn update_locked_config(
     command: &str,
     args: &[String],
 ) -> Result<bool, OnboardingError> {
-    let original = read_bounded(config_path)?;
+    let original = read_bounded(config_path, MAXIMUM_CODEX_CONFIG_BYTES)?;
     let mut document = if original.trim().is_empty() {
         DocumentMut::new()
     } else {
@@ -241,29 +399,32 @@ fn update_locked_config(
     if updated == original {
         return Ok(false);
     }
-    write_atomic(config_path, parent, updated.as_bytes(), &original)?;
+    write_atomic(
+        config_path,
+        parent,
+        updated.as_bytes(),
+        &original,
+        MAXIMUM_CODEX_CONFIG_BYTES,
+    )?;
     Ok(true)
 }
 
-fn read_bounded(path: &Path) -> Result<String, OnboardingError> {
+fn read_bounded(path: &Path, maximum_bytes: usize) -> Result<String, OnboardingError> {
     let file = match fs::File::open(path) {
         Ok(file) => file,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(String::new()),
         Err(_) => return Err(OnboardingError::Io),
     };
     if file.metadata().map_err(|_| OnboardingError::Io)?.len()
-        > u64::try_from(MAXIMUM_CODEX_CONFIG_BYTES).map_err(|_| OnboardingError::ConfigTooLarge)?
+        > u64::try_from(maximum_bytes).map_err(|_| OnboardingError::ConfigTooLarge)?
     {
         return Err(OnboardingError::ConfigTooLarge);
     }
     let mut bytes = Vec::new();
-    file.take(
-        u64::try_from(MAXIMUM_CODEX_CONFIG_BYTES + 1)
-            .map_err(|_| OnboardingError::ConfigTooLarge)?,
-    )
-    .read_to_end(&mut bytes)
-    .map_err(|_| OnboardingError::Io)?;
-    if bytes.len() > MAXIMUM_CODEX_CONFIG_BYTES {
+    file.take(u64::try_from(maximum_bytes + 1).map_err(|_| OnboardingError::ConfigTooLarge)?)
+        .read_to_end(&mut bytes)
+        .map_err(|_| OnboardingError::Io)?;
+    if bytes.len() > maximum_bytes {
         return Err(OnboardingError::ConfigTooLarge);
     }
     String::from_utf8(bytes).map_err(|_| OnboardingError::InvalidConfig)
@@ -310,6 +471,7 @@ fn write_atomic(
     parent: &Path,
     bytes: &[u8],
     expected_original: &str,
+    maximum_bytes: usize,
 ) -> Result<(), OnboardingError> {
     let mut temporary = NamedTempFile::new_in(parent).map_err(|_| OnboardingError::Io)?;
     set_owner_only_permissions(temporary.as_file()).map_err(|_| OnboardingError::Io)?;
@@ -317,7 +479,7 @@ fn write_atomic(
         .write_all(bytes)
         .and_then(|()| temporary.as_file().sync_all())
         .map_err(|_| OnboardingError::Io)?;
-    if read_bounded(path)? != expected_original {
+    if read_bounded(path, maximum_bytes)? != expected_original {
         return Err(OnboardingError::ConfigChanged);
     }
     temporary.persist(path).map_err(|_| OnboardingError::Io)?;
@@ -442,6 +604,7 @@ mod tests {
             temporary.path(),
             b"healthmd = true\n",
             "original = true\n",
+            MAXIMUM_CODEX_CONFIG_BYTES,
         )
         .unwrap_err();
         assert!(matches!(error, OnboardingError::ConfigChanged));
@@ -489,6 +652,124 @@ mod tests {
         fs::write(&config, vec![b'x'; MAXIMUM_CODEX_CONFIG_BYTES + 1]).unwrap();
         assert!(matches!(
             configure_codex_at(&config, &executable, None, DEFAULT_DIRECT_PORT),
+            Err(OnboardingError::ConfigTooLarge)
+        ));
+    }
+
+    #[test]
+    fn claude_desktop_configuration_is_idempotent_and_preserves_unrelated_values() {
+        let temporary = TempDir::new().unwrap();
+        let executable = temporary.path().join("healthmd");
+        fs::write(&executable, b"test").unwrap();
+        let config = temporary.path().join("claude/claude_desktop_config.json");
+        fs::create_dir_all(config.parent().unwrap()).unwrap();
+        fs::write(
+            &config,
+            "{\n  \"globalShortcut\": \"Ctrl+Space\",\n  \"mcpServers\": {\"other\": {\"command\": \"other\", \"args\": []}}\n}\n",
+        )
+        .unwrap();
+
+        let first = configure_claude_at(&config, &executable, None, DEFAULT_DIRECT_PORT).unwrap();
+        assert!(first.changed);
+        let first_bytes = fs::read_to_string(&config).unwrap();
+        let document: serde_json::Value = serde_json::from_str(&first_bytes).unwrap();
+        assert_eq!(document["globalShortcut"].as_str(), Some("Ctrl+Space"));
+        assert_eq!(
+            document["mcpServers"]["other"]["command"].as_str(),
+            Some("other")
+        );
+        assert_eq!(
+            document["mcpServers"]["healthmd"]["command"].as_str(),
+            executable.to_str()
+        );
+        assert_eq!(
+            document["mcpServers"]["healthmd"]["args"],
+            serde_json::json!(["mcp", "serve"])
+        );
+
+        let second = configure_claude_at(&config, &executable, None, DEFAULT_DIRECT_PORT).unwrap();
+        assert!(!second.changed);
+        assert_eq!(first_bytes, fs::read_to_string(&config).unwrap());
+    }
+
+    #[test]
+    fn claude_project_configuration_creates_and_pins_explicit_device_and_port() {
+        let temporary = TempDir::new().unwrap();
+        let executable = temporary.path().join("healthmd");
+        fs::write(&executable, b"test").unwrap();
+        let project = temporary.path().join("project");
+        fs::create_dir_all(&project).unwrap();
+        let device_id = Uuid::parse_str("01234567-89ab-4cde-8fab-0123456789ab").unwrap();
+
+        let receipt =
+            configure_claude_project(&project, &executable, Some(device_id), 18_647).unwrap();
+        assert!(receipt.changed);
+        assert_eq!(receipt.config_path, project.join(".mcp.json"));
+        assert_eq!(
+            receipt.args,
+            [
+                "--device",
+                "01234567-89ab-4cde-8fab-0123456789ab",
+                "--port",
+                "18647",
+                "mcp",
+                "serve"
+            ]
+        );
+        let document: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&receipt.config_path).unwrap()).unwrap();
+        assert_eq!(
+            document["mcpServers"]["healthmd"]["args"],
+            serde_json::json!([
+                "--device",
+                "01234567-89ab-4cde-8fab-0123456789ab",
+                "--port",
+                "18647",
+                "mcp",
+                "serve"
+            ])
+        );
+    }
+
+    #[test]
+    fn claude_project_configuration_requires_absolute_project_root() {
+        let temporary = TempDir::new().unwrap();
+        let executable = temporary.path().join("healthmd");
+        fs::write(&executable, b"test").unwrap();
+        assert!(matches!(
+            configure_claude_project(
+                Path::new("relative"),
+                &executable,
+                None,
+                DEFAULT_DIRECT_PORT
+            ),
+            Err(OnboardingError::InvalidConfig)
+        ));
+    }
+
+    #[test]
+    fn malformed_claude_config_fails_without_replacement() {
+        let temporary = TempDir::new().unwrap();
+        let executable = temporary.path().join("healthmd");
+        fs::write(&executable, b"test").unwrap();
+        let config = temporary.path().join("claude_desktop_config.json");
+        fs::write(&config, b"{not valid").unwrap();
+        assert!(matches!(
+            configure_claude_at(&config, &executable, None, DEFAULT_DIRECT_PORT),
+            Err(OnboardingError::InvalidConfig)
+        ));
+        assert_eq!(fs::read(&config).unwrap(), b"{not valid");
+
+        fs::write(&config, "[]\n").unwrap();
+        assert!(matches!(
+            configure_claude_at(&config, &executable, None, DEFAULT_DIRECT_PORT),
+            Err(OnboardingError::InvalidConfig)
+        ));
+        assert_eq!(fs::read(&config).unwrap(), b"[]\n");
+
+        fs::write(&config, vec![b'x'; MAXIMUM_CLAUDE_CONFIG_BYTES + 1]).unwrap();
+        assert!(matches!(
+            configure_claude_at(&config, &executable, None, DEFAULT_DIRECT_PORT),
             Err(OnboardingError::ConfigTooLarge)
         ));
     }

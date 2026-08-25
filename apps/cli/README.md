@@ -35,6 +35,10 @@ in the legacy Swift client. No command silently falls back to another backend or
 | Manual IP / Tailscale | Yes | Yes | Yes |
 | Nearby / MultipeerConnectivity | No | No | No |
 
+Windows remains fully supported in source builds and CI, but signed Windows release artifacts
+(the `.zip` archive and PowerShell installer) are deferred until the Authenticode signing identity
+is provisioned. Prebuilt release archives currently cover macOS and Linux only.
+
 iOS protocol v1 and Android protocol v2 bind the destination path as opaque request state while the
 receiving CLI validates it as an existing absolute non-symlink directory under the host OS. Android
 v2 has a 4,096-file limit per generated job. Android raw snapshots retain their provider-native
@@ -68,8 +72,10 @@ brew install CodyBontecou/tap/healthmd
 cargo install healthmd-cli --locked
 ```
 
-PowerShell installer and checksummed `.zip`/`.tar.xz` archives for Windows, Linux, and macOS are
-attached to each release. Rust users can also install a published version from crates.io:
+The checksummed `.tar.xz` archives, notarized DMGs, shell installer, and Homebrew formula are
+attached to each release for macOS and Linux. Windows archives and the PowerShell installer are
+deferred until the Authenticode identity is provisioned; until then Windows users should build
+from source with `cargo install`. Rust users can also install a published version from crates.io:
 
 ```bash
 cargo install healthmd-cli --locked
@@ -117,30 +123,10 @@ test -n "$expected" && test "$actual" = "$expected"
 sh healthmd-cli-installer.sh
 ```
 
-```powershell
-$Version = '0.1.0-alpha.1'
-$Tag = "healthmd-cli/v$Version"
-$Base = "https://github.com/CodyBontecou/health-md/releases/download/$Tag"
-Invoke-WebRequest "$Base/healthmd-cli-installer.ps1" -OutFile healthmd-cli-installer.ps1
-Invoke-WebRequest "$Base/sha256.sum" -OutFile sha256.sum
-Invoke-WebRequest "$Base/sha256.sum.sigstore.json" -OutFile sha256.sum.sigstore.json
-Invoke-WebRequest "$Base/release-identities.json" -OutFile release-identities.json
-cosign verify-blob --bundle sha256.sum.sigstore.json `
-  --certificate-identity "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/$Tag" `
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com sha256.sum
-if ($LASTEXITCODE -ne 0) { throw 'checksum signature verification failed' }
-$Line = (Select-String '^[0-9a-f]{64}  healthmd-cli-installer\.ps1$' sha256.sum).Line
-$IdentityLine = (Select-String '^[0-9a-f]{64}  release-identities\.json$' sha256.sum).Line
-if (!$Line -or !$IdentityLine -or
-    (Get-FileHash .\healthmd-cli-installer.ps1 -Algorithm SHA256).Hash.ToLower() -ne $Line.Substring(0, 64) -or
-    (Get-FileHash .\release-identities.json -Algorithm SHA256).Hash.ToLower() -ne $IdentityLine.Substring(0, 64)) { throw 'release asset checksum mismatch' }
-$Identity = Get-Content .\release-identities.json -Raw | ConvertFrom-Json
-$Signature = Get-AuthenticodeSignature .\healthmd-cli-installer.ps1
-if ($Identity.windows.status -ne 'qualified' -or $Signature.Status -ne 'Valid' -or
-    $Signature.SignerCertificate.Subject -cne $Identity.windows.publisher_subject) { throw 'publisher verification failed' }
-powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\healthmd-cli-installer.ps1
-if ($LASTEXITCODE -ne 0) { throw 'installer failed' }
-```
+Windows release artifacts are deferred until the Authenticode signing identity is provisioned.
+When they return, the signed PowerShell installer will be verified the same way: confirm the
+`release-identities.json` row lists a `qualified` Windows publisher, validate the installer's
+Authenticode signature against that exact subject, and check its `sha256.sum` row before running it.
 
 ## Upgrade, uninstall, and support
 
@@ -295,6 +281,17 @@ Restart Codex after a changed configuration. The generated entry launches `healt
 cancel tools for approval. `healthmd-mcp` remains an installed compatibility launcher. On Unix it
 replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
 and supervises its own same-file helper against the same fixed Credential Manager service/account.
+
+For Claude, the same flow configures Claude Desktop's MCP configuration:
+
+```bash
+healthmd setup claude
+```
+
+Add `--project /absolute/path/to/workspace` to write a Claude Code project `.mcp.json` instead.
+Restart Claude Desktop after a changed configuration; for a project configuration, trust the
+workspace in Claude Code and approve the `healthmd` server. The generated entry launches the same
+`healthmd mcp serve` executable identity used for pairing.
 
 The complete local server exposes 19 fixed operations for pairing, readiness, bounded typed
 queries, charts, sleep, workouts, comparisons, coverage, evidence, and durable generated-file

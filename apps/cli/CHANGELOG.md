@@ -2,6 +2,14 @@
 
 ## 0.1.0-alpha.1
 
+- Add `healthmd setup claude`, which configures Claude Desktop's MCP configuration or a Claude
+  Code project `.mcp.json` (with `--project DIR`) for the same executable identity and iPhone
+  pairing flow as `healthmd setup codex`, with bounded JSON reads, unrelated-key preservation,
+  idempotent atomic writes, and per-directory locking.
+- Defer signed Windows release artifacts: dist targets now cover macOS and Linux only, the
+  PowerShell installer is not generated, and the Windows Authenticode signing gates return with
+  the provisioned certificate identity. Windows remains supported in source builds and CI.
+
 - Establish the standalone Rust workspace and portable CLI architecture.
 - Implement protocol-v1 pairing and trusted reconnect with Swift-compatible X25519, HMAC-SHA256,
   ChaCha20-Poly1305, canonical request fingerprints, and binary transfer frames.

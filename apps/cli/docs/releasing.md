@@ -41,9 +41,8 @@ submits an architecture-specific DMG to Apple's notary service, staples and vali
 and then reconstructs the matching tar archive from the byte-identical signed executables. Apple
 publishes tickets for the nested standalone binaries, but Apple does not support stapling a ticket
 directly to a standalone executable or tar/ZIP archive; the DMG is the offline-stapled
-installation artifact. The workflow applies Azure Artifact Signing Authenticode signatures and an
-RFC 3161 timestamp to both Windows executables before rebuilding the ZIP, then signs the generated
-PowerShell installer before sealing the final checksum manifest.
+installation artifact. Windows Authenticode signing is currently deferred (see above) and must be
+restored together with the Windows dist target before any Windows artifact is advertised.
 
 Configure these **repository variables**:
 
@@ -72,10 +71,13 @@ Give the Entra principal the **Artifact Signing Certificate Profile Signer** rol
 selected profile. Add a federated credential for the GitHub environment subject
 `repo:CodyBontecou/health-md:environment:cli-signing`; do not create a long-lived Azure client
 secret. Protect `cli-signing` with required reviewers and restrict it to
-`healthmd-cli/v*` tags. Before creating the first tag, commit the exact public certificate subject
-as `windows.publisher_subject` in `release-identities.json`, set its status to `qualified`, and make
-`CLI_WINDOWS_SIGNER_SUBJECT` match exactly. `verify-release.py` blocks tags while that public
-identity remains pending, and native signing jobs compare the committed ledger with the certificate.
+`healthmd-cli/v*` tags. Windows packaging is deferred: while `x86_64-pc-windows-msvc` is absent
+from the dist targets, `release-identities.json` keeps `windows.status` as
+`pending_external_certificate_provisioning` and `verify-release.py` accepts it. Before restoring
+the Windows target, commit the exact public certificate subject as `windows.publisher_subject` in
+`release-identities.json`, set its status to `qualified`, and make `CLI_WINDOWS_SIGNER_SUBJECT`
+match exactly; `verify-release.py` then blocks tags again while that public identity is pending,
+and native signing jobs compare the committed ledger with the certificate.
 The separate `cli-release` environment remains the final publication approval after all signature
 and artifact qualification jobs pass.
 
@@ -89,7 +91,8 @@ signed-binary upgrades and the legacy Swift service/account mapping. A user movi
 Developer ID identity is crossing principals and must explicitly unpair/re-pair once; installers
 must never delete or silently migrate trust.
 
-`sha256.sum` covers all five binary archives, both notarized DMGs, both generated installers, the
+`sha256.sum` covers all four binary archives, both notarized DMGs, the generated shell installer,
+the
 Homebrew formula, the public signing-identity ledger, every per-artifact checksum, and the three
 SBOM assets. The workflow signs it with a
 keyless Sigstore identity and publishes `sha256.sum.sigstore.json`. Verify a downloaded release
@@ -111,8 +114,8 @@ and match `SignerCertificate.Subject` to the `qualified` subject in the checksum
 `release-identities.json`; never accept an undocumented publisher.
 
 Native post-extraction gates independently require `codesign` plus Gatekeeper assessment on both
-macOS binaries, `stapler validate` plus Gatekeeper assessment on each DMG, and a valid expected
-Authenticode signer plus timestamp on both Windows executables and the PowerShell installer. A checksum, signing, notarization,
+macOS binaries and `stapler validate` plus Gatekeeper assessment on each DMG. Windows
+Authenticode gates return with the Windows dist target. A checksum, signing, notarization,
 stapling, credential-upgrade, or post-extraction failure leaves the GitHub Release in draft state.
 
 ## Release checks
@@ -301,5 +304,6 @@ Linux before committing the formula idempotently to `CodyBontecou/homebrew-tap`.
 If the formula is wrong, revert its tap commit or publish a reviewed correction; never mutate the
 release archives. User recovery is `brew update`, `brew upgrade healthmd`, or `brew uninstall
 healthmd` followed by a verified reinstall. Remove the tap only when intended with `brew untap
-CodyBontecou/tap`. Homebrew is not a Windows recovery path; use the exact versioned signed ZIP or
-PowerShell installer there. Record the tap commit and install/upgrade results in release evidence.
+CodyBontecou/tap`. Homebrew is not a Windows recovery path; Windows users build from source with
+`cargo install` until signed Windows artifacts return. Record the tap commit and install/upgrade
+results in release evidence.

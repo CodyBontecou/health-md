@@ -330,146 +330,13 @@ jobs:
             candidate/*-dist-manifest.json
           if-no-files-found: error
 
-  sign-windows-artifacts:
-    name: Authenticode sign Windows
-    needs: [identity, build-local-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-local-artifacts.result == 'success' }}
-    runs-on: windows-2022
-    timeout-minutes: 30
-    environment: cli-signing
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: artifacts-build-local-x86_64-pc-windows-msvc
-          path: candidate
-      - name: Extract exact Windows candidate
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $archives = @(Get-ChildItem candidate -Recurse -File -Filter 'healthmd-cli-x86_64-pc-windows-msvc.zip')
-          if ($archives.Count -ne 1) { throw "expected one Windows archive, found $($archives.Count)" }
-          $root = Join-Path $env:RUNNER_TEMP 'healthmd-windows-sign'
-          Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
-          python apps/cli/scripts/safe-extract-release.py $($archives[0].FullName) $root
-          if ($LASTEXITCODE -ne 0) { throw 'safe archive extraction failed' }
-          Get-ChildItem $root -Recurse -File | ForEach-Object { $_.IsReadOnly = $false }
-          $executables = @(Get-ChildItem $root -Recurse -File -Filter '*.exe')
-          $names = @($executables | ForEach-Object Name | Sort-Object)
-          if ($names.Count -ne 2 -or $names[0] -ne 'healthmd-mcp.exe' -or $names[1] -ne 'healthmd.exe') {
-            throw "archive executable set is not exact: $($names -join ', ')"
-          }
-          "WINDOWS_SIGN_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "WINDOWS_ARCHIVE=$($archives[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Authenticate to Azure with OIDC
-        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Apply Azure Artifact Signing signatures
-        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
-        with:
-          endpoint: ${{ vars.CLI_AZURE_SIGNING_ENDPOINT }}
-          signing-account-name: ${{ vars.CLI_AZURE_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ vars.CLI_AZURE_SIGNING_PROFILE }}
-          files-folder: ${{ env.WINDOWS_SIGN_ROOT }}
-          files-folder-filter: exe
-          files-folder-recurse: true
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-      - name: Verify Authenticode and rebuild archive
-        shell: pwsh
-        env:
-          EXPECTED_SIGNER_SUBJECT: ${{ vars.CLI_WINDOWS_SIGNER_SUBJECT }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ledger = Get-Content apps/cli/release-identities.json -Raw | ConvertFrom-Json
-          if ($ledger.windows.status -ne 'qualified' -or
-              [string]::IsNullOrWhiteSpace($ledger.windows.publisher_subject) -or
-              $ledger.windows.publisher_subject -cne $env:EXPECTED_SIGNER_SUBJECT) {
-            throw 'committed Windows publisher identity is absent or differs from the release variable'
-          }
-          $executables = @(Get-ChildItem $env:WINDOWS_SIGN_ROOT -Recurse -File -Filter '*.exe')
-          foreach ($executable in $executables) {
-            $signature = Get-AuthenticodeSignature -LiteralPath $executable.FullName
-            if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
-              throw "invalid Authenticode signature for $($executable.Name): $($signature.Status)"
-            }
-            if ($null -eq $signature.SignerCertificate -or
-                $signature.SignerCertificate.Subject -cne $env:EXPECTED_SIGNER_SUBJECT) {
-              throw "unexpected Authenticode signer for $($executable.Name)"
-            }
-            if ($null -eq $signature.TimeStamperCertificate) {
-              throw "missing RFC3161 timestamp for $($executable.Name)"
-            }
-          }
-          $healthmd = @($executables | Where-Object Name -eq 'healthmd.exe')
-          if ($healthmd.Count -ne 1) { throw 'signed healthmd executable is missing' }
-          $credentialTarget = 'trust-state-v1.com.codybontecou.obsidianhealth.direct-cli-trust'
-          $credentialState = Join-Path $env:RUNNER_TEMP 'healthmd-windows-credential-upgrade'
-          Remove-Item $credentialState -Recurse -Force -ErrorAction SilentlyContinue
-          New-Item $credentialState -ItemType Directory | Out-Null
-          cmdkey.exe /delete:$credentialTarget | Out-Null
-          try {
-            $env:HEALTHMD_CLI_DATA_DIR = $credentialState
-            & $healthmd[0].FullName --backend direct direct devices | Out-File -Encoding utf8 (Join-Path $credentialState 'before.json')
-            if ($LASTEXITCODE -ne 0) { throw 'initial Credential Manager probe failed' }
-            $identity = Get-Content (Join-Path $credentialState 'identity.json') -Raw | ConvertFrom-Json
-            $fixtureID = '11111111-1111-4111-8111-111111111111'
-            $fixture = @{
-              installationID = $fixtureID
-              displayName = 'Signing Fixture'
-              platform = 'ios'
-              reconnectSecret = [Convert]::ToBase64String((New-Object byte[] 32))
-              pairedAt = 800000000.0
-              lastConnectedAt = 800000000.0
-            }
-            $trust = @{ ownerInstallationID = $identity.installationID; trustedClients = @($fixture) } | ConvertTo-Json -Compress -Depth 4
-            cmdkey.exe /generic:$credentialTarget /user:trust-state-v1 /pass:$trust | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw 'Credential Manager fixture creation failed' }
-            & $healthmd[0].FullName --backend direct direct devices | Out-File -Encoding utf8 (Join-Path $credentialState 'after.json')
-            if ($LASTEXITCODE -ne 0) { throw 'signed credential upgrade probe failed' }
-            $result = Get-Content (Join-Path $credentialState 'after.json') -Raw | ConvertFrom-Json
-            $devices = @($result.devices)
-            if ($result.schema -ne 'healthmd.direct_devices' -or $devices.Count -ne 1 -or
-                $devices[0].installation_id -ne $fixtureID -or
-                $devices[0].name -ne 'Signing Fixture' -or
-                $devices[0].platform -ne 'ios') {
-              throw 'signed credential upgrade probe did not read the seeded legacy target'
-            }
-          } finally {
-            cmdkey.exe /delete:$credentialTarget | Out-Null
-            Remove-Item Env:HEALTHMD_CLI_DATA_DIR -ErrorAction SilentlyContinue
-          }
-          Remove-Item -LiteralPath $env:WINDOWS_ARCHIVE -Force
-          Compress-Archive -Path (Join-Path $env:WINDOWS_SIGN_ROOT '*') -DestinationPath $env:WINDOWS_ARCHIVE -CompressionLevel Optimal
-          $normalized = Join-Path (Resolve-Path candidate) 'healthmd-cli-x86_64-pc-windows-msvc.zip'
-          if ((Resolve-Path $env:WINDOWS_ARCHIVE).Path -ne $normalized) {
-            Copy-Item -LiteralPath $env:WINDOWS_ARCHIVE -Destination $normalized -Force
-          }
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: artifacts-signed-x86_64-pc-windows-msvc
-          path: |
-            candidate/healthmd-cli-x86_64-pc-windows-msvc.zip
-            candidate/*-dist-manifest.json
-          if-no-files-found: error
-
   assemble-release-artifacts:
     name: Assemble exact signed candidate set
-    needs: [identity, build-local-artifacts, sign-macos-artifacts, sign-windows-artifacts]
+    needs: [identity, build-local-artifacts, sign-macos-artifacts]
     if: >-
       ${{ always() && needs.identity.outputs.publishing == 'true' &&
           needs.build-local-artifacts.result == 'success' &&
-          needs.sign-macos-artifacts.result == 'success' &&
-          needs.sign-windows-artifacts.result == 'success' }}
+          needs.sign-macos-artifacts.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       attestations: write
@@ -492,12 +359,8 @@ jobs:
           set -euo pipefail
           mkdir release
           cp -R unsigned/. release/
-          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc; do
-            case "$target" in
-              *windows*) extension=zip ;;
-              *) extension=tar.xz ;;
-            esac
-            name="healthmd-cli-${target}.${extension}"
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            name="healthmd-cli-${target}.tar.xz"
             replacement="$(find signed -type f -name "$name" -print -quit)"
             destination="$(find release -type f -name "$name" -print -quit)"
             checksum="$(find release -type f -name "${name}.sha256" -print -quit)"
@@ -510,7 +373,7 @@ jobs:
             test -n "$dmg"
             cp "$dmg" release/
           done
-          test "$(find release -type f \( -name '*.tar.xz' -o -name '*.zip' \) | wc -l | tr -d ' ')" = 5
+          test "$(find release -type f \( -name '*.tar.xz' -o -name '*.zip' \) | wc -l | tr -d ' ')" = 4
           test "$(find release -type f -name '*.dmg' | wc -l | tr -d ' ')" = 2
       - name: Attest exact signed candidate set
         uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
@@ -682,78 +545,12 @@ jobs:
             ${{ steps.cargo-dist.outputs.paths }}
             apps/cli/${{ env.BUILD_MANIFEST_NAME }}
 
-  sign-windows-installer:
-    name: Authenticode sign PowerShell installer
-    needs: [identity, build-global-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-global-artifacts.result == 'success' }}
-    runs-on: windows-2022
-    timeout-minutes: 20
-    environment: cli-signing
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: artifacts-build-global
-          path: candidate
-      - name: Locate exact PowerShell installer
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $installers = @(Get-ChildItem candidate -Recurse -File -Filter 'healthmd-cli-installer.ps1')
-          if ($installers.Count -ne 1) { throw "expected one PowerShell installer" }
-          "WINDOWS_INSTALLER=$($installers[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Authenticate to Azure with OIDC
-        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Sign PowerShell installer
-        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
-        with:
-          endpoint: ${{ vars.CLI_AZURE_SIGNING_ENDPOINT }}
-          signing-account-name: ${{ vars.CLI_AZURE_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ vars.CLI_AZURE_SIGNING_PROFILE }}
-          files: ${{ env.WINDOWS_INSTALLER }}
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-      - name: Verify installer Authenticode
-        shell: pwsh
-        env:
-          EXPECTED_SIGNER_SUBJECT: ${{ vars.CLI_WINDOWS_SIGNER_SUBJECT }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ledger = Get-Content apps/cli/release-identities.json -Raw | ConvertFrom-Json
-          if ($ledger.windows.status -ne 'qualified' -or
-              $ledger.windows.publisher_subject -cne $env:EXPECTED_SIGNER_SUBJECT) {
-            throw 'committed Windows publisher identity differs from the release variable'
-          }
-          $signature = Get-AuthenticodeSignature -LiteralPath $env:WINDOWS_INSTALLER
-          if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid -or
-              $null -eq $signature.TimeStamperCertificate -or
-              $null -eq $signature.SignerCertificate -or
-              $signature.SignerCertificate.Subject -cne $env:EXPECTED_SIGNER_SUBJECT) {
-            throw 'PowerShell installer signature qualification failed'
-          }
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-        with:
-          name: artifacts-signed-global
-          path: candidate/
-          if-no-files-found: error
-
   seal-release-artifacts:
     name: Sign final checksum closure
-    needs: [identity, assemble-release-artifacts, sign-windows-installer, sbom]
+    needs: [identity, assemble-release-artifacts, sbom]
     if: >-
       ${{ needs.identity.outputs.publishing == 'true' &&
           needs.assemble-release-artifacts.result == 'success' &&
-          needs.sign-windows-installer.result == 'success' &&
           needs.sbom.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
@@ -770,7 +567,7 @@ jobs:
           path: release
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          name: artifacts-signed-global
+          name: artifacts-build-global
           path: global
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
@@ -784,11 +581,11 @@ jobs:
           set -euo pipefail
           mapfile -t archives < <(find release -maxdepth 1 -type f \( -name '*.tar.xz' -o -name '*.zip' \) -print | sort)
           mapfile -t dmgs < <(find release -maxdepth 1 -type f -name '*.dmg' -print | sort)
-          test "${#archives[@]}" = 5
+          test "${#archives[@]}" = 4
           test "${#dmgs[@]}" = 2
           mapfile -t archive_checksums < <(find release -maxdepth 1 -type f -name '*.sha256' -print | sort)
           mapfile -t sbom_payloads < <(find sbom -maxdepth 1 -type f -print | sort)
-          test "${#archive_checksums[@]}" = 5
+          test "${#archive_checksums[@]}" = 4
           test "${#sbom_payloads[@]}" = 3
           dmg_checksums=()
           for dmg in "${dmgs[@]}"; do
@@ -798,8 +595,6 @@ jobs:
             dmg_checksums+=("$checksum")
           done
           cp apps/cli/release-identities.json global/release-identities.json
-          test "$(jq -r .windows.status global/release-identities.json)" = qualified
-          test -n "$(jq -r .windows.publisher_subject global/release-identities.json)"
           payloads=(
             "${archives[@]}"
             "${dmgs[@]}"
@@ -807,11 +602,10 @@ jobs:
             "${dmg_checksums[@]}"
             "${sbom_payloads[@]}"
             global/healthmd-cli-installer.sh
-            global/healthmd-cli-installer.ps1
             global/healthmd.rb
             global/release-identities.json
           )
-          test "${#payloads[@]}" = 21
+          test "${#payloads[@]}" = 18
           printf '%s\n' "${payloads[@]##*/}" | LC_ALL=C sort | uniq -d > duplicate-names.txt
           test ! -s duplicate-names.txt
           : > global/sha256.sum
@@ -829,7 +623,6 @@ jobs:
         with:
           subject-path: |
             global/healthmd-cli-installer.sh
-            global/healthmd-cli-installer.ps1
             global/healthmd.rb
             global/release-identities.json
             global/sha256.sum
@@ -902,8 +695,8 @@ jobs:
               --certificate-identity "$expected_identity" \
               --certificate-oidc-issuer https://token.actions.githubusercontent.com \
               sha256.sum
-            grep -F "$TAG" healthmd-cli-installer.sh healthmd-cli-installer.ps1 healthmd.rb
-            if grep -R -F '/releases/latest' healthmd-cli-installer.sh healthmd-cli-installer.ps1 healthmd.rb; then
+            grep -F "$TAG" healthmd-cli-installer.sh healthmd.rb
+            if grep -R -F '/releases/latest' healthmd-cli-installer.sh healthmd.rb; then
               echo "installer must not use the repository-wide latest release" >&2
               exit 1
             fi
@@ -911,7 +704,7 @@ jobs:
             test -f healthmd-cli-aarch64-apple-darwin.dmg.sha256
             test -f healthmd-cli-x86_64-apple-darwin.dmg.sha256
           fi
-          test "$(find . -maxdepth 1 -type f \( -name '*.tar.xz' -o -name '*.zip' \) | wc -l | tr -d ' ')" = 5
+          test "$(find . -maxdepth 1 -type f \( -name '*.tar.xz' -o -name '*.zip' \) | wc -l | tr -d ' ')" = 4
 
   sbom:
     name: Qualify release SBOM
