@@ -324,7 +324,7 @@ struct APIEndpointExportRunner {
         guard let destination = apiSettings.destinationSnapshot else {
             return failureResult(
                 dates: normalizedDates,
-                reason: .unknown,
+                reason: .apiEndpointNotConfigured,
                 message: APIExportClientError.invalidEndpoint.localizedDescription
             )
         }

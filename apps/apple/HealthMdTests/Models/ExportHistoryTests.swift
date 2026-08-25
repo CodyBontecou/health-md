@@ -411,6 +411,39 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(entry.summaryDescription, "Export failed: Vault access denied")
     }
 
+    func testEntry_apiEndpointNotConfiguredNamesTheActualCause() {
+        let entry = ExportHistoryEntry(
+            source: .scheduled,
+            success: false,
+            dateRangeStart: Date(),
+            dateRangeEnd: Date(),
+            successCount: 0,
+            totalCount: 1,
+            failureReason: .apiEndpointNotConfigured
+        )
+
+        XCTAssertEqual(entry.summaryDescription, "Export failed: API endpoint not configured")
+        XCTAssertEqual(entry.failureReasonForDisplay, .apiEndpointNotConfigured)
+        XCTAssertTrue(entry.failureRecoverySuggestion?.contains("Export → API Endpoint") == true)
+    }
+
+    func testEntry_decodesUnknownFailureReasonRawValueAsUnknown() throws {
+        // History may be read by an older build; an unrecognized reason raw
+        // value must not make the whole history undecodable.
+        let newerReasonJSON = """
+        {"id":"8A7F3B2E-1C1C-4D4D-9E9E-111111111111","timestamp":700000000,"source":"Scheduled","success":false,"dateRangeStart":700000000,"dateRangeEnd":700000000,"successCount":0,"totalCount":1,"failureReason":"api_quota_exceeded_future_case"}
+        """
+        let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: Data(newerReasonJSON.utf8))
+
+        XCTAssertEqual(decoded.failureReason, .unknown)
+
+        let knownRawJSON = """
+        {"id":"8A7F3B2E-1C1C-4D4D-9E9E-111111111111","timestamp":700000000,"source":"Scheduled","success":false,"dateRangeStart":700000000,"dateRangeEnd":700000000,"successCount":0,"totalCount":1,"failureReason":"api_endpoint_not_configured"}
+        """
+        let known = try JSONDecoder().decode(ExportHistoryEntry.self, from: Data(knownRawJSON.utf8))
+        XCTAssertEqual(known.failureReason, .apiEndpointNotConfigured)
+    }
+
     func testEntry_failureDiagnosticDetailsAreTrimmedAndDeduplicated() {
         let entry = ExportHistoryEntry(
             source: .manual,

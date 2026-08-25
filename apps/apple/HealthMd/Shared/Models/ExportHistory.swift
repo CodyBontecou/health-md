@@ -721,7 +721,16 @@ enum ExportFailureReason: String, Codable {
     case deviceLocked = "device_locked"
     case fileWriteError = "file_write_error"
     case backgroundTaskExpired = "task_expired"
+    case apiEndpointNotConfigured = "api_endpoint_not_configured"
     case unknown = "unknown"
+
+    /// History may have been written by a newer app version whose failure
+    /// reasons this build does not know. Map unrecognized raw values to
+    /// `.unknown` instead of failing to decode the entire history.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = ExportFailureReason(rawValue: raw) ?? .unknown
+    }
 
     var shortDescription: String {
         switch self {
@@ -739,6 +748,8 @@ enum ExportFailureReason: String, Codable {
             return String(localized: "File write failed", comment: "Short error: file write failed")
         case .backgroundTaskExpired:
             return String(localized: "Task timed out", comment: "Short error: background task timed out")
+        case .apiEndpointNotConfigured:
+            return String(localized: "API endpoint not configured", comment: "Short error: API endpoint destination has no valid endpoint")
         case .unknown:
             return String(localized: "Unknown error", comment: "Short error: unknown")
         }
@@ -769,6 +780,8 @@ enum ExportFailureReason: String, Codable {
             return String(localized: "Health.md reached the export destination but could not create or update one or more files.", comment: "Detailed error: file write failed")
         case .backgroundTaskExpired:
             return String(localized: "iOS ended the background export before Health.md could finish writing all requested dates.", comment: "Detailed error: task expired")
+        case .apiEndpointNotConfigured:
+            return String(localized: "This export target sends data to an HTTP(S) API endpoint, but no valid endpoint URL is configured, so Health.md had nowhere to send the data.", comment: "Detailed error: API endpoint not configured")
         case .unknown:
             return String(localized: "Health.md encountered an unexpected error during export. Any system message captured at the time appears in the Technical details section.", comment: "Detailed error: unknown")
         }
@@ -790,6 +803,8 @@ enum ExportFailureReason: String, Codable {
             return String(localized: "Check that the destination is online and has free space. Re-select the export folder to refresh access, then retry.", comment: "Recovery: file write failed")
         case .backgroundTaskExpired:
             return String(localized: "Open Health.md and retry while the app is visible. If it happens again, export a smaller date range.", comment: "Recovery: task expired")
+        case .apiEndpointNotConfigured:
+            return String(localized: "Set a valid HTTP(S) endpoint URL under Export → API Endpoint, or turn off the schedule for the profile that targets it.", comment: "Recovery: API endpoint not configured")
         case .unknown:
             return String(localized: "Review the Technical details section below, then retry. If it fails again, include that exact message in your bug report.", comment: "Recovery: unknown export error")
         }

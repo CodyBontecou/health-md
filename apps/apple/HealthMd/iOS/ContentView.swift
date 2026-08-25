@@ -243,7 +243,14 @@ struct ContentView: View {
                 if !isExporting,
                    partialExportNotice == nil,
                    let status = vaultManager.lastExportStatus {
-                    let isSuccess = status.starts(with: "Exported") || status.starts(with: "Updated")
+                    // Success cannot be derived from the status copy: the local
+                    // full-success status is the generated-file/data-day
+                    // description, and prefix sniffing breaks under localization.
+                    // The recorded outcome flag is authoritative; the prefixes
+                    // remain as a fallback for assignment sites not yet migrated.
+                    let isSuccess = vaultManager.lastExportStatusIsSuccess
+                        || status.starts(with: "Exported")
+                        || status.starts(with: "Updated")
                     let presentationTarget = isSuccess
                         ? vaultManager.lastExportPresentationTarget
                         : nil
@@ -731,8 +738,10 @@ struct ContentView: View {
     private func startStatusDismissTimer() {
         statusDismissTimer?.invalidate()
         let status = vaultManager.lastExportStatus ?? ""
-        let hasExportActions = vaultManager.lastExportPresentationTarget != nil
-            && (status.starts(with: "Exported") || status.starts(with: "Updated"))
+        let isSuccess = vaultManager.lastExportStatusIsSuccess
+            || status.starts(with: "Exported")
+            || status.starts(with: "Updated")
+        let hasExportActions = vaultManager.lastExportPresentationTarget != nil && isSuccess
         guard !hasExportActions else { return }
 
         statusDismissTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
@@ -1191,13 +1200,13 @@ struct ContentView: View {
             } else if result.isFullSuccess {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    vaultManager.lastExportStatus = exportStatusMessage
+                    vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))"
-                    vaultManager.lastExportStatus = result.localizedGeneratedFileAndDataDayDescription
+                    vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
                 } else {
                     exportStatusMessage = result.localizedGeneratedFileAndDataDayDescription
-                    vaultManager.lastExportStatus = exportStatusMessage
+                    vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
                 }
                 startStatusDismissTimer()
 

@@ -1443,7 +1443,18 @@ final class VaultManager: ObservableObject {
     @Published var vaultName: String = "No vault selected"
     @Published private(set) var destinationState: VaultDestinationState = .notSelected
     @Published var healthSubfolder: String = VaultManager.defaultHealthSubfolder
-    @Published var lastExportStatus: String?
+    /// Whether `lastExportStatus` currently describes a fully successful
+    /// export. Success cannot be inferred from the status copy: the local-export
+    /// success status is the generated-file/data-day description, prefixed
+    /// sniffing breaks under localization, and destination-error statuses are
+    /// assigned directly. Assignment sites that know the outcome record it
+    /// through `recordSuccessfulExportStatus`; any other assignment resets it.
+    @Published private(set) var lastExportStatusIsSuccess = false
+    @Published var lastExportStatus: String? {
+        didSet {
+            if oldValue != lastExportStatus { lastExportStatusIsSuccess = false }
+        }
+    }
     #if DEBUG && os(macOS)
     @Published private var marketingCaptureDisplayPath: String?
     private var marketingCaptureAccessOverride = false
@@ -1742,7 +1753,26 @@ final class VaultManager: ObservableObject {
                 return
             }
 
-            guard pathMatches || (expectedSelection.identity != nil && expectedSelection.identity == resolvedIdentity) else {
+            // Acceptance evidence for a resolved bookmark, strongest first:
+            // 1. The resolved path matches the trusted selection path.
+            // 2. Persistent identity proves the same folder across a provider
+            //    move (volumes that report persistent IDs).
+            // 3. Neither side offers identity evidence. File-provider volumes
+            //    (iCloud Drive, Dropbox, and similar) commonly never expose
+            //    persistent IDs, so a bookmark that resolves while security
+            //    scope is acquired is the strongest same-resource evidence
+            //    those providers can offer. Accepting the rebind keeps cloud
+            //    destinations usable across provider path drift instead of
+            //    demanding reselection on every launch (issue #140).
+            // A confirmed identity mismatch stays a hard fail above, and
+            // one-sided identity evidence across a moved path (evidence that
+            // appears or disappears) still requires review below.
+            let providerLacksIdentityEvidence = expectedSelection.identity == nil && resolvedIdentity == nil
+
+            guard pathMatches
+                || (expectedSelection.identity != nil && expectedSelection.identity == resolvedIdentity)
+                || providerLacksIdentityEvidence
+            else {
                 vaultURL = nil
                 vaultName = expectedSelection.displayName
                 destinationState = .requiresReviewIdentityUnavailable
@@ -1752,7 +1782,9 @@ final class VaultManager: ObservableObject {
                 return
             }
 
-            let acceptedName = pathMatches ? expectedSelection.displayName : resolvedURL.lastPathComponent
+            let acceptedName = pathMatches
+                ? expectedSelection.displayName
+                : Self.displayName(for: resolvedURL)
             let acceptedSelection = SavedVaultSelection(
                 version: Self.savedSelectionVersion,
                 standardizedPath: resolvedURL.standardizedFileURL.path,
@@ -1790,11 +1822,22 @@ final class VaultManager: ObservableObject {
             if !persistenceRefreshFailed {
                 clearTransientFolderStatusIfNeeded()
             }
-            Self.logger.info("Vault bookmark resolution accepted after identity validation")
+            if providerLacksIdentityEvidence && !pathMatches {
+                Self.logger.info("Vault bookmark rebound across provider path drift without identity evidence")
+            } else {
+                Self.logger.info("Vault bookmark resolution accepted after identity validation")
+            }
         } catch {
             setTemporarilyUnavailable(selection: expectedSelection)
             Self.logger.error("Vault bookmark or identity probe temporarily unavailable")
         }
+    }
+
+    /// Records a fully successful export status. Must be assigned before the
+    /// flag so the resetting `didSet` observe runs first.
+    func recordSuccessfulExportStatus(_ status: String) {
+        lastExportStatus = status
+        lastExportStatusIsSuccess = true
     }
 
     private func setTemporarilyUnavailable(selection: SavedVaultSelection) {
@@ -1813,14 +1856,43 @@ final class VaultManager: ObservableObject {
         clearLastExportPresentationTarget()
     }
 
-    private func makeSavedSelection(for url: URL) throws -> (SavedVaultSelection, Data) {
+    /// Display name for a selected/resolved vault URL. File-provider roots
+    /// report a raw provider identifier as their path name (the iCloud Drive
+    /// root is `com~apple~CloudDocs`, whose tildes render like strikethroughs
+    /// around "apple"); the localized name resource surfaces the name Files
+    /// shows the user ("iCloud Drive") instead.
+    private static func displayName(for url: URL) -> String {
+        if let localized = try? url.resourceValues(forKeys: [.localizedNameKey]).localizedName,
+           !localized.isEmpty {
+            return localized
+        }
+        return url.lastPathComponent
+    }
+
+    /// Captures the trusted selection through the same bookmark round-trip that
+    /// verifies it on later launches. File-provider destinations can normalize
+    /// the picker URL differently from the bookmark-resolved URL, so storing the
+    /// round-tripped path keeps save-time and load-time comparison symmetric and
+    /// prevents spurious verification failures on cloud folders (issue #140).
+    /// If the round-trip cannot run, the picked URL is stored; an unresolvable
+    /// bookmark at load time is already treated as transient rather than trusted.
+    private func makeSavedSelection(
+        for url: URL
+    ) throws -> (selection: SavedVaultSelection, bookmarkData: Data, selectionData: Data) {
+        let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
+        let canonicalURL: URL
+        if let (resolvedURL, _) = try? bookmarkResolver.resolveBookmark(data: bookmarkData) {
+            canonicalURL = resolvedURL
+        } else {
+            canonicalURL = url
+        }
         let selection = SavedVaultSelection(
             version: Self.savedSelectionVersion,
-            standardizedPath: url.standardizedFileURL.path,
-            displayName: url.lastPathComponent,
-            identity: try identityProbe.persistentIdentity(for: url)
+            standardizedPath: canonicalURL.standardizedFileURL.path,
+            displayName: Self.displayName(for: canonicalURL),
+            identity: try identityProbe.persistentIdentity(for: canonicalURL)
         )
-        return (selection, try JSONEncoder().encode(selection))
+        return (selection, bookmarkData, try JSONEncoder().encode(selection))
     }
 
     private func clearTransientFolderStatusIfNeeded() {
@@ -1915,11 +1987,11 @@ final class VaultManager: ObservableObject {
         defer { bookmarkResolver.stopAccessing(url) }
 
         do {
-            let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
+            let (selection, bookmarkData, _) = try makeSavedSelection(for: url)
             return (
                 bookmarkData,
-                url.standardizedFileURL.path,
-                url.lastPathComponent
+                selection.standardizedPath,
+                selection.displayName
             )
         } catch {
             lastExportStatus = error.localizedDescription
@@ -1936,8 +2008,7 @@ final class VaultManager: ObservableObject {
         defer { bookmarkResolver.stopAccessing(url) }
 
         do {
-            let bookmarkData = try bookmarkResolver.createBookmarkData(for: url)
-            let (selection, selectionData) = try makeSavedSelection(for: url)
+            let (selection, bookmarkData, selectionData) = try makeSavedSelection(for: url)
 
             defaults.set(bookmarkData, forKey: bookmarkKey)
             defaults.set(selectionData, forKey: vaultSelectionKey)

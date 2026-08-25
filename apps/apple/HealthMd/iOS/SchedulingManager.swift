@@ -1147,7 +1147,7 @@ class SchedulingManager: ObservableObject {
         guard let destination = apiSettings.destinationSnapshot else {
             return scheduledFailureResult(
                 dates: dates,
-                reason: .unknown,
+                reason: .apiEndpointNotConfigured,
                 message: APIExportClientError.invalidEndpoint.localizedDescription
             )
         }

@@ -6520,6 +6520,65 @@
         }
       }
     },
+    "API endpoint not configured": {
+      "comment": "Short error: API endpoint destination has no valid endpoint",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Endpunkt nicht konfiguriert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint de API no configurado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Point de terminaison d’API non configuré"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint API non configurato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APIエンドポイントが未設定です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 엔드포인트가 구성되지 않았습니다"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-endpoint niet geconfigureerd"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint de API não configurado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 端点未配置"
+          }
+        }
+      }
+    },
     "API Endpoint": {
       "localizations": {
         "es": {
@@ -64983,6 +65042,65 @@
         }
       }
     },
+    "Set a valid HTTP(S) endpoint URL under Export → API Endpoint, or turn off the schedule for the profile that targets it.": {
+      "comment": "Recovery: API endpoint not configured",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lege unter „Exportieren“ → „API-Endpunkt“ eine gültige HTTP(S)-Endpunkt-URL fest oder deaktiviere den Zeitplan des Profils, das dieses Ziel verwendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura una URL de endpoint HTTP(S) válida en Exportar → Endpoint de API, o desactiva la programación del perfil que lo usa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Définissez une URL de point de terminaison HTTP(S) valide sous Exporter → Point de terminaison d’API, ou désactivez la planification du profil qui l’utilise."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imposta un URL di endpoint HTTP(S) valido in Esporta → Endpoint API, oppure disattiva la pianificazione del profilo che lo usa."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「エクスポート」→「APIエンドポイント」で有効なHTTP(S)エンドポイントURLを設定するか、このターゲットを使用するプロファイルのスケジュールをオフにしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내보내기 → API 엔드포인트에서 유효한 HTTP(S) 엔드포인트 URL을 설정하거나, 이 대상을 사용하는 프로필의 일정을 끄세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stel een geldige HTTP(S)-endpoint-URL in onder Exporteren → API-endpoint, of zet het schema uit van het profiel dat dit doel gebruikt."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Defina uma URL de endpoint HTTP(S) válida em Exportar → Endpoint de API, ou desative o agendamento do perfil que o usa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在“导出”→“API 端点”中设置有效的 HTTP(S) 端点 URL，或关闭使用该目标的配置文件的日程。"
+          }
+        }
+      }
+    },
     "Open Health.md and retry while the app is visible. If it happens again, export a smaller date range.": {
       "comment": "macOS production UI",
       "localizations": {
@@ -116578,6 +116696,65 @@
           "stringUnit": {
             "state": "translated",
             "value": "iOS 会自动确定最佳的后台任务执行时间。请确保在设置中为 Health.md 启用了后台应用刷新。"
+          }
+        }
+      }
+    },
+    "This export target sends data to an HTTP(S) API endpoint, but no valid endpoint URL is configured, so Health.md had nowhere to send the data.": {
+      "comment": "Detailed error: API endpoint not configured",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Exportziel sendet Daten an einen HTTP(S)-API-Endpunkt, aber es ist keine gültige Endpunkt-URL konfiguriert, sodass Health.md die Daten nicht senden konnte."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este destino de exportación envía datos a un endpoint de API HTTP(S), pero no hay ninguna URL de endpoint válida configurada, por lo que Health.md no tenía adónde enviar los datos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette cible d’exportation envoie des données vers un point de terminaison d’API HTTP(S), mais aucune URL de point de terminaison valide n’est configurée : Health.md ne savait pas où envoyer les données."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa destinazione di esportazione invia i dati a un endpoint API HTTP(S), ma non è configurato alcun URL di endpoint valido, quindi Health.md non aveva dove inviare i dati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この書き出しターゲットはHTTP(S) APIエンドポイントにデータを送信しますが、有効なエンドポイントURLが設定されていないため、Health.mdはデータの送信先を見つけられませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 내보내기 대상은 HTTP(S) API 엔드포인트로 데이터를 전송하지만 유효한 엔드포인트 URL이 구성되어 있지 않아 Health.md가 데이터를 보낼 곳이 없었습니다."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit exportdoel stuurt gegevens naar een HTTP(S)-API-endpoint, maar er is geen geldige endpoint-URL geconfigureerd, dus Health.md had geen bestemming om de gegevens naartoe te sturen."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este destino de exportação envia dados para um endpoint de API HTTP(S), mas não há uma URL de endpoint válida configurada, então o Health.md não tinha para onde enviar os dados."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此导出目标会将数据发送到 HTTP(S) API 端点，但尚未配置有效的端点 URL，因此 Health.md 无处发送数据。"
           }
         }
       }
