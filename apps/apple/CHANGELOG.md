@@ -4,6 +4,9 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Export folders on cloud file providers (iCloud Drive, Dropbox, and similar) no longer lose their saved selection on cold starts. Bookmarks for folders whose volume never reports persistent file identifiers now rebind to the provider's current path and refresh the saved metadata when resolution succeeds with security-scoped access, instead of demanding manual re-selection on every launch — which had broken automatic exports and Shortcuts until the folder was re-picked. A confirmed persistent-identity mismatch is still blocked outright, identity evidence appearing on only one side of a move still requires review, and newly selected folders now store their trusted path through the same bookmark round-trip that later verifies it, eliminating save/verify normalization mismatches.
+
 ## [3.1] - 2026-08-22
 
 ### Added

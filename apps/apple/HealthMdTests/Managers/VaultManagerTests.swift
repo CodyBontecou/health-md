@@ -206,18 +206,21 @@ final class VaultManagerTests: XCTestCase {
 
     private func seedV2Selection(
         for url: URL,
-        identity: VaultFolderIdentity,
+        identity: VaultFolderIdentity?,
         name: String? = nil
     ) throws {
-        defaults.storage["obsidianVaultSelectionV2"] = try JSONSerialization.data(withJSONObject: [
+        var selection: [String: Any] = [
             "version": 2,
             "standardizedPath": url.standardizedFileURL.path,
-            "displayName": name ?? url.lastPathComponent,
-            "identity": [
+            "displayName": name ?? url.lastPathComponent
+        ]
+        if let identity {
+            selection["identity"] = [
                 "volumeUUIDString": identity.volumeUUIDString,
                 "fileIdentifier": identity.fileIdentifier
             ]
-        ])
+        }
+        defaults.storage["obsidianVaultSelectionV2"] = try JSONSerialization.data(withJSONObject: selection)
         defaults.storage["obsidianVaultPath"] = url.standardizedFileURL.path
         defaults.storage["obsidianVaultName"] = name ?? url.lastPathComponent
     }
@@ -1088,6 +1091,61 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(bookmarkResolver.createBookmarkCalls.isEmpty)
     }
 
+    func testInit_identitylessProviderMovedPathRebindsAndRefreshesDurableSelection() throws {
+        // Cloud file-provider volumes (iCloud Drive, Dropbox, and similar) never
+        // report persistent IDs, so both the trusted selection and the resolved
+        // URL carry nil identity. A bookmark that resolves with acquired security
+        // scope is the strongest same-resource evidence such providers offer;
+        // the destination must rebind across provider path drift instead of
+        // demanding reselection on every launch (issue #140).
+        let savedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/Provider/Healthmd")
+        defaults.storage["obsidianVaultBookmark"] = Data("old-bookmark".utf8)
+        try seedV2Selection(for: savedURL, identity: nil)
+        bookmarkResolver.resolvedURL = movedURL
+        bookmarkResolver.createdBookmarkData = Data("refreshed-bookmark".utf8)
+        identityProbe.defaultIdentity = nil
+
+        let manager = makeManager()
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(manager.vaultName, "Healthmd")
+        XCTAssertFalse(manager.requiresVaultReselection)
+        XCTAssertTrue(manager.isVaultDestinationUsable)
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultBookmark"), Data("refreshed-bookmark".utf8))
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), movedURL.standardizedFileURL.path)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultName"), "Healthmd")
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+
+        // The rebound selection is durable: the next launch resolves the same
+        // path and needs no further bookmark refresh.
+        manager.refreshVaultAccess()
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+    }
+
+    func testInit_identityEvidenceAppearingAcrossMovedPathStillRequiresReview() throws {
+        // A selection saved without identity evidence that later resolves with
+        // identity evidence at a moved path keeps one-sided verification: the
+        // volume became identity-capable, so the move cannot be proven safe.
+        let savedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd")
+        let movedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd-moved")
+        defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        try seedV2Selection(for: savedURL, identity: nil)
+        let before = defaults.storage
+        bookmarkResolver.resolvedURL = movedURL
+        identityProbe.defaultIdentity = identity("newly-visible")
+
+        let manager = makeManager()
+
+        XCTAssertEqual(manager.destinationState, .requiresReviewIdentityUnavailable)
+        XCTAssertNil(manager.vaultURL)
+        XCTAssertEqual(defaults.storage as NSDictionary, before as NSDictionary)
+        XCTAssertTrue(bookmarkResolver.createBookmarkCalls.isEmpty)
+    }
+
     func testInit_v1SamePathUpgradesIdentity() throws {
         let url = URL(fileURLWithPath: "/tmp/LegacyVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
@@ -1217,6 +1275,39 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNil(manager.lastExportStatus)
     }
 
+    func testSetVaultFolder_storesRoundTrippedSelectionMetadata() throws {
+        // File-provider destinations can normalize the picker URL differently
+        // from the bookmark-resolved URL. The trusted path and identity must be
+        // captured through the same resolution pipeline that verifies them on
+        // later launches, so the next cold start matches instead of failing
+        // verification (issue #140).
+        let pickedURL = URL(fileURLWithPath: "/tmp/Picked/Healthmd")
+        let canonicalURL = URL(fileURLWithPath: "/private/tmp/Picked/Healthmd")
+        let canonicalIdentity = identity("canonical")
+        bookmarkResolver.resolvedURL = canonicalURL
+        identityProbe.identitiesByPath[canonicalURL.standardizedFileURL.path] = canonicalIdentity
+        let manager = makeManager()
+
+        manager.setVaultFolder(pickedURL)
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), canonicalURL.standardizedFileURL.path)
+        let selectionData = try XCTUnwrap(defaults.data(forKey: "obsidianVaultSelectionV2"))
+        let selection = try JSONSerialization.jsonObject(with: selectionData) as? [String: Any]
+        XCTAssertEqual(selection?["standardizedPath"] as? String, canonicalURL.standardizedFileURL.path)
+        let identityObject = try XCTUnwrap(selection?["identity"] as? [String: Any])
+        XCTAssertEqual(identityObject["volumeUUIDString"] as? String, canonicalIdentity.volumeUUIDString)
+        XCTAssertTrue(identityProbe.calls.contains(canonicalURL))
+
+        // The stored selection already describes the bookmark-resolved URL, so
+        // the next launch accepts it without any launch-time bookmark refresh
+        // (only the selection-time creation is recorded).
+        manager.refreshVaultAccess()
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, canonicalURL)
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [pickedURL])
+    }
+
     func testSetVaultFolder_accessDenied_setsErrorStatus() {
         bookmarkResolver.accessGranted = false
         let manager = makeManager()
@@ -1274,12 +1365,15 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(manager.lastExportStatus?.contains("Failed to save folder access") == true)
     }
 
-    func testExplicitReselectionAuthorizesChangedPathAndClearsIssue() {
+    func testExplicitReselectionAuthorizesChangedPathAndClearsIssue() throws {
         let originalURL = URL(fileURLWithPath: "/tmp/Healthmd")
         let changedURL = URL(fileURLWithPath: "/tmp/Healthmd(1)")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
-        seedLegacySelection(for: originalURL)
+        // A confirmed identity mismatch is what forces reselection under the
+        // identity-evidence contract; identity-less provider drift now rebinds.
+        try seedV2Selection(for: originalURL, identity: identity("original"))
         bookmarkResolver.resolvedURL = changedURL
+        identityProbe.defaultIdentity = identity("replacement")
         let manager = makeManager()
         XCTAssertTrue(manager.requiresVaultReselection)
 
@@ -1649,11 +1743,14 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(sharedFileSystem.maximumConcurrentWrites, 1)
     }
 
-    func testDirectExportReportsDestinationChangedWithoutFilesystemWork() {
+    func testDirectExportReportsDestinationChangedWithoutFilesystemWork() throws {
         let expectedURL = URL(fileURLWithPath: "/tmp/Healthmd")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
-        seedLegacySelection(for: expectedURL)
+        // Confirmed identity mismatch (not identity-less provider drift, which
+        // now rebinds) is what must stop an export before any filesystem work.
+        try seedV2Selection(for: expectedURL, identity: identity("original"))
         bookmarkResolver.resolvedURL = URL(fileURLWithPath: "/tmp/Healthmd(1)")
+        identityProbe.defaultIdentity = identity("replacement")
         let manager = makeManager()
 
         XCTAssertThrowsError(try manager.exportHealthDataResult(
