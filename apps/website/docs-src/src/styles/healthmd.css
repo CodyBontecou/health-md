@@ -1356,6 +1356,12 @@ mobile-starlight-toc details#starlight__mobile-toc {
   margin-inline-start: auto;
 }
 
+/* Starlight's language select is fixed at 7em, which truncates longer locale
+   labels such as “Português (Brasil)”. Size it to the widest option instead. */
+.healthmd-footer-language starlight-lang-select select {
+  width: auto;
+}
+
 .healthmd-footer-note a {
   color: var(--hmd-purple-900);
   font-weight: 500;
