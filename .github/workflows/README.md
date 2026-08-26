@@ -108,8 +108,12 @@ installer, tests signed Keychain upgrade continuity, publishes the committed qua
 ledger, regenerates all post-signing checksums, and keyless-signs `sha256.sum` with the workflow's
 GitHub OIDC identity. The tag preflight fails while `apps/cli/release-identities.json` has no
 qualified Windows publisher, and native jobs require an exact match with the protected variable. Native runners verify every
-extracted signature. The remote draft assets are then compared byte-for-byte with the qualified
-workflow artifacts before the separate protected `cli-release` environment can publish them.
+extracted signature. The generated Homebrew formula is normalized in an isolated tap before the
+checksum closure is signed. The remote draft assets are then compared byte-for-byte with the
+qualified workflow artifacts before the separate protected `cli-release` environment can publish
+them. After publication, the sealed formula clean-installs on every supported macOS/Linux
+architecture, preserves the signed binaries byte-for-byte, and completes an installed MCP handshake
+before a serialized, anti-rollback tap job pushes and remotely rechecks the exact formula blob.
 
 The repository variables, `cli-signing` environment secrets, rollback/key-compromise/crates-yank/
 Homebrew runbooks, and mobile compatibility requirements are documented in

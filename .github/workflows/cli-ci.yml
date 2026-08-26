@@ -87,6 +87,13 @@ jobs:
           cmp LICENSE crates/healthmd-mcp/LICENSE
           cmp LICENSE crates/healthmd-cli/LICENSE
           bash -n .github/workflows/wait-for-crate.sh
+          bash -n scripts/normalize-homebrew-formula.sh
+          bash -n scripts/verify-sealed-homebrew-formula.sh
+          python3 -m py_compile \
+            scripts/check-homebrew-formula-freshness.py \
+            scripts/smoke-mcp-stdio.py \
+            scripts/test-homebrew-release-scripts.py
+          python3 scripts/test-homebrew-release-scripts.py
           dist_version="$(awk -F'"' '/cargo-dist-version/ { print $2 }' dist-workspace.toml)"
           test "$dist_version" = 0.31.0
           installer="$(mktemp)"
@@ -100,6 +107,15 @@ jobs:
           # generated workflow, so validate the distribution plan rather than requiring
           # byte-for-byte generated workflow output under apps/cli/.github.
           dist plan --allow-dirty >/dev/null
+          version="$(cargo metadata --no-deps --format-version=1 | \
+            jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
+          rm -rf target/distrib
+          dist build --tag="healthmd-cli/v${version}" --allow-dirty \
+            --artifacts=global --output-format=json > /dev/null
+          export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+          scripts/normalize-homebrew-formula.sh \
+            target/distrib/healthmd.rb target/distrib/sha256.sum
+          (cd target/distrib && sha256sum --check sha256.sum)
       - name: Test default local build
         run: cargo test --workspace --locked
       - name: Test every optional feature

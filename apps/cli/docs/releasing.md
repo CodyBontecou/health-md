@@ -34,6 +34,12 @@ installed with:
 brew install CodyBontecou/tap/healthmd
 ```
 
+The workflow normalizes the generated formula in an isolated synthetic tap before it enters the
+signed checksum closure. After the GitHub Release becomes public, the exact Sigstore-authenticated
+formula must clean-install on ARM64 and Intel macOS plus ARM64 and x86-64 Linux, preserve both
+packaged binaries byte-for-byte, pass the installed macOS Developer ID/Gatekeeper checks, and
+complete a real `healthmd-mcp` handshake before the tap can change.
+
 ## Signing, notarization, and checksum identity
 
 The release workflow does not accept unsigned tag artifacts. It signs the two Mach-O executables,
@@ -90,8 +96,8 @@ Developer ID identity is crossing principals and must explicitly unpair/re-pair 
 must never delete or silently migrate trust.
 
 `sha256.sum` covers all five binary archives, both notarized DMGs, both generated installers, the
-Homebrew formula, the public signing-identity ledger, every per-artifact checksum, and the three
-SBOM assets. The workflow signs it with a
+normalized Homebrew formula, the public signing-identity ledger, every per-artifact checksum, and
+the three SBOM assets. The workflow signs it with a
 keyless Sigstore identity and publishes `sha256.sum.sigstore.json`. Verify a downloaded release
 with the exact tag identity before trusting its checksums:
 
@@ -112,8 +118,12 @@ and match `SignerCertificate.Subject` to the `qualified` subject in the checksum
 
 Native post-extraction gates independently require `codesign` plus Gatekeeper assessment on both
 macOS binaries, `stapler validate` plus Gatekeeper assessment on each DMG, and a valid expected
-Authenticode signer plus timestamp on both Windows executables and the PowerShell installer. A checksum, signing, notarization,
-stapling, credential-upgrade, or post-extraction failure leaves the GitHub Release in draft state.
+Authenticode signer plus timestamp on both Windows executables and the PowerShell installer. After
+publication, the Homebrew qualification matrix compares each installed binary byte-for-byte with
+its signed release archive; on macOS it repeats the identifier, Team ID, designated-requirement,
+and Gatekeeper checks. A checksum, signing, notarization, stapling, credential-upgrade, or
+post-extraction failure leaves the GitHub Release in draft state. A later Homebrew qualification
+failure leaves the already-public versioned release intact but blocks every tap mutation.
 
 ## Release checks
 
@@ -146,7 +156,7 @@ python3 scripts/verify-release.py
 version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
 python3 scripts/smoke-crate-packages.py --version "$version"
 cargo deny --manifest-path Cargo.toml --config ../../deny.toml check
-dist generate --check
+dist generate --check --allow-dirty
 dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
@@ -166,7 +176,13 @@ pending or malformed. The tag must point to the exact current `main` commit. It 
 the tag SHA, executes every packaged binary on its native runner, validates installers and
 checksums, builds SBOMs, and then waits for approval on the protected `cli-release` environment.
 Only that final job changes the draft to public, with `make_latest=false` so Apple remains the
-repository-wide latest release. Never publish an artifact built from uncommitted source.
+repository-wide latest release. Homebrew then needs public anonymous access to those exact
+versioned archives, so its four clean-install gates run after GitHub publication but before the
+credentialed tap job. The tap job re-verifies the Sigstore manifest before obtaining tap
+credentials, serializes cross-version writes, rejects stale-version rollback and same-version
+rewrites, pushes without force, and fetches the remote branch to prove its `Formula/healthmd.rb`
+blob is byte-identical to the sealed release asset. Never publish
+an artifact built from uncommitted source.
 
 The root workflow is a path-adjusted version of cargo-dist's generated workflow. After changing
 `dist-workspace.toml`, generate into a temporary checkout and port relevant changes into
@@ -292,14 +308,21 @@ Homebrew formula still require their own recovery decisions.
 
 ## Homebrew publication recovery
 
-A GitHub Release can be public even if the final tap update fails. Inspect the failed
-`publish-homebrew-formula` job, retrieve the sealed `healthmd.rb` workflow artifact, and verify its
-versioned (never `/releases/latest`) URLs and archive hashes against the Sigstore-verified
-`sha256.sum`. Run `brew style`, applicable `brew audit`, and clean install/upgrade tests on macOS and
-Linux before committing the formula idempotently to `CodyBontecou/homebrew-tap`.
+A GitHub Release can be public even if Homebrew qualification or the final tap update fails. Inspect
+the failed `qualify-homebrew-formula` or `publish-homebrew-formula` job, retrieve the sealed
+`healthmd.rb` workflow artifact, and verify its versioned (never `/releases/latest`) URLs and archive
+hashes against the Sigstore-verified `sha256.sum`. Normal releases already run strict style and
+clean-install checks on every supported macOS/Linux architecture. For manual recovery, rerun those
+checks plus applicable `brew audit` and upgrade coverage before committing the exact sealed formula
+idempotently to `CodyBontecou/homebrew-tap`.
 
-If the formula is wrong, revert its tap commit or publish a reviewed correction; never mutate the
-release archives. User recovery is `brew update`, `brew upgrade healthmd`, or `brew uninstall
+If a push reports an unknown outcome, fetch the tap first. Treat an exact remote formula match as
+successful reconciliation; otherwise stop without force-pushing. Ordinary release automation must
+never replace a newer tap formula with an older signed version or rewrite different bytes under the
+same version. An intentional rollback uses a separately reviewed manual recovery commit. If the
+formula is wrong, revert its tap commit or publish a reviewed correction; never mutate the release
+archives. User recovery
+is `brew update`, `brew upgrade healthmd`, or `brew uninstall
 healthmd` followed by a verified reinstall. Remove the tap only when intended with `brew untap
 CodyBontecou/tap`. Homebrew is not a Windows recovery path; use the exact versioned signed ZIP or
 PowerShell installer there. Record the tap commit and install/upgrade results in release evidence.
