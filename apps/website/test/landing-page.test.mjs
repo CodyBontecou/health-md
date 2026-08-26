@@ -512,6 +512,10 @@ test("language selection lives in the landing and documentation footers", () => 
   assert.match(docsFooter, /import LanguageSelect from '@astrojs\/starlight\/components\/LanguageSelect\.astro'/);
   assert.match(docsFooter, /class="healthmd-footer-language"[\s\S]*?<LanguageSelect \/>/);
   assert.match(docsStyles, /\.healthmd-footer-language\s*\{[\s\S]*?margin-inline-start:\s*auto/);
+  assert.match(
+    docsStyles,
+    /\.healthmd-footer-language starlight-lang-select select\s*\{[\s\S]*?width:\s*auto/,
+  );
 });
 
 test("docs navigation starts with user goals and labels preview surfaces", () => {
@@ -522,7 +526,7 @@ test("docs navigation starts with user goals and labels preview surfaces", () =>
   assert.ok(getStarted >= 0 && getStarted < agents);
   assert.ok(agents < exports && exports < integrations);
   assert.match(docsUi, /text\('First iPhone export', 'Primera exportación desde iPhone', 'Erster iPhone-Export'/);
-  assert.match(docsUi, /Direct iPhone CLI · Preview/);
+  assert.match(docsUi, /Direct phone CLI · Preview/);
   assert.ok((docsUi.match(/collapsed: true/g) ?? []).length >= 5);
   assert.match(docsConfig, /sidebar: starlightSidebar\(\)/);
   assert.match(docsIndex, /Start with Health\.md/);

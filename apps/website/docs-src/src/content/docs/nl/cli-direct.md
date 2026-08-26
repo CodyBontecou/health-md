@@ -1,46 +1,46 @@
 ---
-title: "CLI rechtstreeks naar de iPhone"
-description: "Koppel healthmd via Manual IP, Tailscale of ondersteund Nearby-transport aan een iPhone en exporteer zonder Health.md voor Mac uit te voeren."
+title: "CLI rechtstreeks naar de telefoon"
+description: "Koppel healthmd via Manual IP of Tailscale aan een iPhone of Android-telefoon en exporteer zonder Health.md voor Mac uit te voeren."
 ---
 
-De rechtstreekse backend verbindt `healthmd` met een geopende Health.md-app op de iPhone zonder de opdracht via Health.md voor Mac te sturen. De iPhone leest HealthKit, zet het resultaat klaar in beveiligde opslag en draagt gevalideerde partities over aan de CLI.
+De rechtstreekse backend verbindt `healthmd` met een geopende Health.md-app op een iPhone of Android-telefoon zonder de opdracht via Health.md voor Mac te sturen. De telefoon leest het gezondheidsarchief van het platform — HealthKit op de iPhone, Health Connect op Android —, zet het resultaat klaar in beveiligde opslag en draagt gevalideerde partities over aan de CLI.
 
 ```text
 healthmd on the computer
   <-> authenticated encrypted Manual IP, Tailscale, or supported Nearby channel
-Health.md on iPhone -> HealthKit -> protected bounded spool / typed query evaluator
-  -> canonical JSON, production-generated files, or bounded MCP query pages
+Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounded spool
+  -> raw snapshots, production-generated files, or (iPhone) canonical and typed query data
 ```
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe CLI</strong>
-<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS. De platformonafhankelijke Rust-client is een alpha die wacht op release-QA met een fysieke iPhone en het eerste openbare pakket. De opdrachten voor Linux en Windows beschrijven de voorbereide workflow.</p>
+<p>De gebundelde rechtstreekse Swift-backend is beschikbaar op macOS en koppelt met de iPhone. Android-koppeling (protocol v2) maakt deel uit van de platformonafhankelijke Rust-client, een alpha die wacht op release-QA met fysieke iPhones en Android-toestellen en op het eerste openbare pakket. De opdrachten voor Linux en Windows beschrijven de voorbereide workflow.</p>
 </div>
 
 ## Ondersteuning in de directe modus
 
-- eenmalige koppeling en opnieuw verbinden met een vertrouwd apparaat;
+- eenmalige koppeling en opnieuw verbinden met een vertrouwd apparaat bij bronnen op de iPhone (protocol v1) of op Android (protocol v2);
 - lokale inspectie en ontkoppeling van vertrouwde apparaten;
-- actuele gereedheid van de iPhone;
-- strikte onbewerkte export volgens schema v7;
-- geselecteerde canonieke extractie;
-- export van bestanden met de productie-exporters;
+- actuele gereedheid van de telefoon;
+- strikte onbewerkte export — schema v7 `healthmd.health_data` op de iPhone, systeemeigen Health Connect-momentopnames op Android;
+- geselecteerde canonieke extractie (alleen iPhone);
+- export van bestanden met de productie-exporters op beide telefoonplatforms;
 - status en hervatting van persistente lokale taken;
 - expliciete annulering;
-- de stdio-server `healthmd mcp serve` in hetzelfde uitvoerbare bestand, met rechtstreekse getypeerde queries, de meetwaardecatalogus, bewijs, de MCP Apps-interface en een PNG-alternatief.
+- de stdio-server `healthmd mcp serve` in hetzelfde uitvoerbare bestand, met rechtstreekse getypeerde queries, de meetwaardecatalogus, bewijs, de MCP Apps-interface en een PNG-alternatief (alleen iPhone).
 
 De rechtstreekse backend van de opdracht `healthmd` bootst de HTTP-routes voor versleutelde context van de Mac-app niet na. Subopdrachten voor de Mac, zoals `doctor`, queries, bewijs en verversing, geven daarom nog steeds `backend_unsupported` terug in plaats van van backend te wisselen. Gebruik `healthmd mcp serve` voor nieuwe getypeerde analyse rechtstreeks op de iPhone. Je kunt ook `healthmd setup codex` uitvoeren om Codex automatisch te configureren en te koppelen. `healthmd mcp schema [TOOL]` toont lokaal het exacte geneste MCP-invoerschema en voorbeelden. Gebruik voor slaap rechtstreeks `healthmd_sleep_sessions` en behandel canonieke `extract`-uitvoer niet als de getypeerde query-API.
 
 ## Vereisten
 
-- Een versie van `healthmd` die rechtstreekse toegang ondersteunt en een bijpassende versie van Health.md op de iPhone.
-- Health.md op de voorgrond van een iPhone voor koppeling en nieuwe opdrachten.
-- **Instellingen > Mac-synchronisatie > Direct CLI-toegang** ingeschakeld op de iPhone.
-- Beschikbare HealthKit-toestemming, beveiligde gegevens, toestemming voor het lokale netwerk en exporttegoed.
+- Een versie van `healthmd` die rechtstreekse toegang ondersteunt en een bijpassende Health.md-build: iPhone (protocol v1) of Android (protocol v2). Android-koppeling vereist de platformonafhankelijke Rust-client; het gebundelde macOS-hulpprogramma koppelt alleen met de iPhone.
+- Health.md op de voorgrond van de telefoon voor koppeling en nieuwe opdrachten.
+- **Instellingen > Mac-synchronisatie > Direct CLI-toegang** ingeschakeld op de iPhone, of **Instellingen → Direct CLI** op Android.
+- Beschikbare gezondheidstoestemming van het platform (HealthKit of Health Connect), beveiligde gegevens, toestemming voor het lokale netwerk en exporttegoed.
 - Een bereikbaar computeradres en TCP-poort `17647` voor Manual IP. Een Tailscale-adres werkt ook.
 - Een bestaande absolute bestemming voor de modus met gegenereerde bestanden.
 
-De CLI luistert. De iPhone maakt verbinding met het computeradres dat bij Direct CLI-toegang is ingevoerd.
+De CLI luistert. De telefoon maakt verbinding met het computeradres dat bij Direct CLI-toegang is ingevoerd.
 
 ## Ondersteunde transporten
 
@@ -60,7 +60,7 @@ Start de listener op de computer:
 healthmd direct pair --transport manual-ip
 ```
 
-De opdracht schrijft een zescijferige code, mogelijke computeradressen en de listenerpoort naar stderr. Stdout blijft gereserveerd voor het uiteindelijke JSON-resultaat.
+De platformonafhankelijke Rust-client schrijft een zescijferige iPhone-code, een aparte twintigcijferige Android-code, mogelijke computeradressen en de listenerpoort naar stderr; het gebundelde macOS-hulpprogramma toont alleen de zescijferige iPhone-code. Stdout blijft gereserveerd voor het uiteindelijke JSON-resultaat.
 
 Op de iPhone:
 
@@ -72,7 +72,18 @@ Op de iPhone:
 6. Voer de koppelingscode in en tik op Koppelen.
 7. Houd de app geopend totdat beide kanten melden dat de koppeling is geslaagd.
 
-Koppelingscodes verlopen na 10 minuten. Ze worden nooit via het netwerk verstuurd of blijvend opgeslagen.
+Koppelingscodes voor de iPhone verlopen na 10 minuten. Ze worden nooit via het netwerk verstuurd of blijvend opgeslagen.
+
+## Een Android-telefoon koppelen
+
+Android-koppeling gebruikt de platformonafhankelijke Rust-client en de aparte eenmalige code van twintig cijfers (~66 bits) die `healthmd direct pair` afdrukt. Android schakelt nooit terug op het iPhone-protocol.
+
+1. Open **Health.md > Instellingen → Direct CLI** op de Android-telefoon.
+2. Voer het LAN- of Tailscale-adres van de computer en poort `17647` in.
+3. Voer de code van twintig cijfers in en bevestig de koppeling.
+4. Houd de app geopend; voor een actieve rechtstreekse sessie draait Android een zichtbare, door de gebruiker gestarte voorgronddienst voor gegevenssynchronisatie.
+
+Nadat de eenmalige code is verbruikt, is het vertrouwen voor opnieuw verbinden gebaseerd op de Keystore.
 
 Gebruik zo nodig een andere poort:
 
@@ -102,15 +113,15 @@ healthmd direct devices
 healthmd direct unpair DEVICE_UUID
 ```
 
-Deze opdrachten lezen of wijzigen het lokale vertrouwen en maken geen verbinding met de iPhone. Gebruik op de iPhone **Gekoppelde CLI vergeten** om de andere kant te verwijderen.
+Deze opdrachten lezen of wijzigen het lokale vertrouwen en maken geen verbinding met de telefoon. Gebruik op de iPhone **Gekoppelde CLI vergeten** om de andere kant te verwijderen; verwijder op Android de koppeling via **Instellingen → Direct CLI**.
 
-Als meer dan één iPhone wordt vertrouwd, selecteer je de bedoelde installatie expliciet:
+Als meer dan één telefoon wordt vertrouwd, selecteer je de bedoelde installatie expliciet:
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID status
 ```
 
-Gebruik `healthmd direct reset-trust --confirm` alleen als het lokale vertrouwen beschadigd is of bij een vervangen installatie hoort. De opdracht verwijdert alle lokale rechtstreekse koppelingen. Vergeet die koppelingen ook op de iPhone voordat je opnieuw begint.
+Gebruik `healthmd direct reset-trust --confirm` alleen als het lokale vertrouwen beschadigd is of bij een vervangen installatie hoort. De opdracht verwijdert alle lokale rechtstreekse koppelingen. Vergeet die koppelingen ook op de telefoon voordat je opnieuw begint.
 
 ## Actuele gereedheid controleren
 
@@ -118,7 +129,7 @@ Gebruik `healthmd direct reset-trust --confirm` alleen als het lokale vertrouwen
 healthmd --backend direct --transport manual-ip status
 ```
 
-Een rechtstreeks statusantwoord meldt de verbindings- en veiligheidsstatus zonder gezondheidswaarden. Controleer deze velden voordat je begint:
+Een rechtstreeks statusantwoord meldt de verbindings- en veiligheidsstatus zonder gezondheidswaarden. De platformonafhankelijke client meldt de bron onder `source` met een `platform` van `ios` of `android`; het gebundelde hulpprogramma toont de onderstaande velden van `iphone`. Controleer deze velden voordat je begint (iPhone-bron getoond):
 
 | Veld | Gereedheidsstatus |
 |---|---|
@@ -133,7 +144,9 @@ Een rechtstreeks statusantwoord meldt de verbindings- en veiligheidsstatus zonde
 
 In de rechtstreekse status blijft de bestemming ongeselecteerd. De bestandsmodus gebruikt uitsluitend de expliciete `--destination` die aan de opdracht is meegegeven.
 
-## Strikte onbewerkte export
+Een Android-bron meldt `platform: "android"` met `app_active`, `protected_data_available`, `export_in_progress` en de beschikbare onbewerkte producten, in plaats van de triggermarkeringen van de iPhone.
+
+## Strikte onbewerkte export (iPhone)
 
 Kies één bereikselectie:
 
@@ -147,13 +160,26 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 Laat `--output` weg om gevalideerde JSON naar stdout te streamen. Een uitvoerbestand is veiliger voor gevoelige of omvangrijke antwoorden.
 
-Strikte onbewerkte export geeft `healthmd.raw_result` v1 terug met gewone dagen volgens schema v7 `healthmd.health_data` en de bijbehorende canonieke bronarchieven. De export vraagt tijdelijk verliesvrij detail op zonder opgeslagen iPhone-instellingen te wijzigen. Voordat het resultaat beschikbaar komt, valideert de CLI de exacte datums, het profiel, schema, archief, de manifesten, digestketen, uiteindelijke digest van de hoofdtekst en voltooiingsstatus.
+Strikte onbewerkte export op de iPhone geeft `healthmd.raw_result` v1 terug met gewone dagen volgens schema v7 `healthmd.health_data` en de bijbehorende canonieke bronarchieven. De export vraagt tijdelijk verliesvrij detail op zonder opgeslagen iPhone-instellingen te wijzigen. Voordat het resultaat beschikbaar komt, valideert de CLI de exacte datums, het profiel, schema, archief, de manifesten, digestketen, uiteindelijke digest van de hoofdtekst en voltooiingsstatus.
 
 Een volledig lege dag geldt als geslaagd. Ontbrekende, gedeeltelijke, mislukte, geannuleerde, niet-ondersteunde of overgeslagen gevraagde gegevens leveren `partial_success` en een afsluitcode anders dan nul op, tenzij `--allow-partial` expliciet is opgegeven.
 
+## Systeemeigen onbewerkte provider-export (Android)
+
+De platformonafhankelijke Rust-client is standaard rechtstreeks, dus onbewerkte Android-opdrachten laten de vlag `--backend` weg:
+
+```bash
+healthmd export --last 7 --raw --provider health_connect \
+  --raw-format ndjson --output health-connect.ndjson
+```
+
+`--provider` benoemt één expliciete provider en staat standaard op `health_connect`. `--raw-format` staat standaard op NDJSON, de aanbevolen vorm voor omvangrijke momentopnames; validatie van JSON in het geheugen is begrensd op 64 MiB. Meetwaardeselectie ondersteunt `--metric` en `--all-metrics`, maar geen canonieke selectors of selectors voor gegenereerde bestanden — dat blijven iPhone-mogelijkheden.
+
+Onbewerkte Android-momentopnames houden hun systeemeigen Health Connect-contract. Ze worden nooit omgezet in `healthmd.health_data`-dagen in HealthKit-vorm, en verwante maar verschillende statistieken behouden hun eigen identiteiten.
+
 ## Canonieke extractie
 
-Rechtstreekse extractie gebruikt hetzelfde persistente onbewerkte transport, maar geeft geselecteerde gegevens in de vorm van de bron terug in plaats van de transportwrapper:
+Rechtstreekse extractie gebruikt hetzelfde persistente onbewerkte transport, maar geeft geselecteerde gegevens in de vorm van de bron terug in plaats van de transportwrapper. Dit is een iPhone-mogelijkheid:
 
 ```bash
 healthmd --backend direct extract \
@@ -168,7 +194,7 @@ De selectie van meetwaarden, categorieën, bronnen en het detailniveau bereikt d
 
 ## Bestanden uit de productie-exporters
 
-In de rechtstreekse bestandsmodus voert de iPhone de productie-exporters van Health.md uit en draagt daarna de gemaakte bestanden over naar een expliciete bestemming op de computer.
+In de rechtstreekse bestandsmodus voert de telefoon de productie-exporters van Health.md uit en draagt daarna de gemaakte bestanden over naar een expliciete bestemming op de computer.
 
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
@@ -190,15 +216,19 @@ Standaard behoudt een verzoek de opgeslagen formaten, Health-submap, bestandsnam
 
 De iPhone kan JSON, CSV, Markdown, ZIP, gegevenswoordenboeken, periodeoverzichten, individuele records, dagelijkse notities en provider-sidecars klaarzetten. Voordat bestanden worden vastgelegd, valideert de CLI elk relatief pad, byteaantal, elke digest, het bestandsmanifest, de bestemmingsidentiteit en de vingerafdruk van het verzoek. De CLI wijst directory traversal, symbolische koppelingen in bovenliggende mappen, wijzigingen aan de hoofdmap, padconflicten en gewijzigde digests af. Overschrijven is atomair. Toevoegen en samenvoegen van Markdown gebruiken opgeslagen plannen, zodat opnieuw afspelen geen dubbele inhoud oplevert.
 
-Bestemmingen voor gegenereerde bestanden werken op macOS en Linux. Protocol v1 wijst ze af op Windows. Gebruikers van de rechtstreekse modus op Windows kunnen onbewerkte export en extractie gebruiken.
+Bestemmingen voor gegenereerde bestanden werken op macOS en Linux voor iPhone protocol v1, dat ze op Windows afwijst. Android protocol v2 legt bestandsbestemmingen vast op elk CLI-besturingssysteem — macOS, Linux en Windows — en beperkt elke gegenereerde taak tot 4,096 bestanden.
+
+Bestandstaken van Android protocol v2 halen hun bereik uit de opgeslagen exportselecties op het apparaat of uit `--profile PROFILE_ID`; het profiel bepaalt de bevroren instellingen en de bestemming. Selectors voor meetwaarden, categorieën en details van de CLI worden afgewezen voor Android-bestandstaken.
 
 ## Gedrag op de voorgrond en achtergrond
 
-Voor koppeling en nieuw werk moet de iPhone-app op de voorgrond staan. Direct CLI-toegang maakt van iOS geen headless exportserver en kan de app niet op verzoek activeren.
+Voor koppeling en nieuw werk moet de telefoon-app op de voorgrond staan. Direct CLI-toegang maakt van de telefoon geen headless exportserver en kan de app niet op verzoek activeren.
 
-Als een export al verbonden is wanneer de app naar de achtergrond gaat, vraagt Health.md een beperkte hoeveelheid iOS-achtergrondtijd aan. De export kan binnen die periode worden voltooid. Verstrijkt de toegewezen tijd, dan sluit de verbinding en pauzeert de persistente taak. Open Health.md opnieuw en hervat dezelfde taak.
+Op de iPhone geldt: als een export al verbonden is wanneer de app naar de achtergrond gaat, vraagt Health.md een beperkte hoeveelheid iOS-achtergrondtijd aan. De export kan binnen die periode worden voltooid. Verstrijkt de toegewezen tijd, dan sluit de verbinding en pauzeert de persistente taak. Open Health.md opnieuw en hervat dezelfde taak.
 
-Tijdens rechtstreeks werk toont de iPhone een algemene activiteitsbanner. Deze vermeldt de vastleggings- en overdrachtsfase, voltooide dagen, bytevoortgang en de gepauzeerde of voltooide status zonder gezondheidswaarden te tonen.
+Op Android draait een actieve rechtstreekse sessie als zichtbare, door de gebruiker gestarte voorgronddienst voor gegevenssynchronisatie. Houd de app op de voorgrond voor koppeling en nieuw werk.
+
+Op de iPhone toont een algemene activiteitsbanner tijdens rechtstreeks werk de vastleggings- en overdrachtsfase, voltooide dagen, bytevoortgang en de gepauzeerde of voltooide status zonder gezondheidswaarden te tonen.
 
 ## Persistente taken hervatten en annuleren
 
@@ -216,12 +246,12 @@ Annuleren legt een blijvend verzoek vast, maar de annulering is pas definitief n
 
 ## Beveiligingsmodel
 
-- De koppeling gebruikt tijdelijke Curve25519-sleuteluitwisseling en transcriptbewijzen die aan de zescijferige code zijn gebonden.
+- De koppeling gebruikt tijdelijke sleuteluitwisseling en transcriptbewijzen die aan de koppelingscode van het platform zijn gebonden — de zescijferige iPhone-stroom of de aparte eenmalige Android-code van twintig cijfers (~66 bits) met hoge entropie.
 - Bij opnieuw verbinden worden een willekeurig opgeslagen geheim en beide installatie-identiteiten bewezen.
 - Elke verbinding leidt nieuwe sleutels en nonces af.
 - Berichten en binaire frames gebruiken ChaCha20-Poly1305 met controles op oplopende volgnummers.
 - Partities gebruiken SHA-256-manifesten en een gekoppeld digestvoortgangspunt.
-- Vertrouwen op de iPhone wordt in de sleutelhanger bewaard.
+- Vertrouwen op de iPhone wordt in de sleutelhanger bewaard; vertrouwen voor opnieuw verbinden op Android is gebaseerd op de Keystore.
 - Platformonafhankelijk vertrouwen gebruikt de sleutelhanger, Secret Service of Windows Credential Manager en valt nooit terug op platte tekst.
 - Spools en journalen gebruiken privéopslag van de app en worden uitgesloten van reservekopieën waar het platform dit ondersteunt.
 
@@ -247,7 +277,8 @@ Manual IP blijft versleuteld op een lokaal netwerk of via Tailscale. Tailscale b
 
 <div class="related">
   <a href="/nl/docs/cli/"><span>Overzicht</span>Health.md-CLI: installeer de gebundelde hulpprogramma's en kies de juiste backend.</a>
-  <a href="/nl/docs/cli-extract/"><span>Gegevens</span>Canonieke extractie: selecteer Health.md-gegevens en voer ze uit in de vorm van de bron.</a>
+  <a href="/nl/docs/android/"><span>Android</span>Health.md voor Android: Health Connect-bronnen, mapbestemmingen en automatisering op het apparaat.</a>
+  <a href="/nl/docs/cli-extract/"><span>Gegevens</span>Canonieke extractie: selecteer Health.md-gegevens en voer ze uit in de vorm van de bron (iPhone).</a>
   <a href="/nl/docs/cli-jobs/"><span>Betrouwbaarheid</span>Persistente taken en automatisering: hervatten, annuleren, gedeeltelijke resultaten en scripts.</a>
   <a href="/nl/docs/reference/connected-mac-iphone-protocol/"><span>Protocol</span>Referentie voor verbonden Mac en iPhone: mogelijkheden, afgebakende overdracht en resultaatstatussen.</a>
 </div>

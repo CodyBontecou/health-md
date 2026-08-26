@@ -65,7 +65,7 @@ A ready `doctor` result uses the `healthmd.cli_doctor` schema and includes next 
 
 <div class="related">
   <a href="/docs/agent-queries/"><span>Typed queries</span>Ask for metrics, sleep sessions, workouts, comparisons, coverage, and factual evidence.</a>
-  <a href="/docs/cli-direct/"><span>Preview · portable CLI</span>Direct iPhone access — understand Manual IP or Tailscale pairing before standalone packaging is released.</a>
+  <a href="/docs/cli-direct/"><span>Preview · portable CLI</span>Direct phone access — understand Manual IP or Tailscale pairing with iPhone or Android before standalone packaging is released.</a>
   <a href="/docs/cli-extract/"><span>Source data</span>Canonical extraction — acquire selected schema-v7 days, source records, projections, or JSONL.</a>
   <a href="/docs/cli-jobs/"><span>Reliable runs</span>Durable jobs — handle timeouts, unknown outcomes, resume, cancellation, and partial results safely.</a>
   <a href="/docs/agent-api/"><span>Low level</span>Loopback API — use exact query, evidence, cursor, refresh, and durable job routes.</a>

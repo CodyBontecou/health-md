@@ -1,46 +1,46 @@
 ---
-title: "iPhone直接接続CLI"
-description: "Manual IP、Tailscale、または対応するNearby転送でhealthmdをiPhoneとペアリングし、Health.md for Macを起動せずにエクスポートします。"
+title: "スマートフォン直接接続CLI"
+description: "Manual IPまたはTailscaleでhealthmdをiPhoneまたはAndroidスマートフォンとペアリングし、Health.md for Macを起動せずにエクスポートします。"
 ---
 
-直接接続バックエンドは、コマンドをHealth.md for Mac経由で送ることなく、`healthmd`を開いているiPhone版Health.mdへ接続します。iPhoneがHealthKitを読み取り、保護されたストレージへ結果を準備して、検証済みのパーティションをCLIへ転送します。
+直接接続バックエンドは、コマンドをHealth.md for Mac経由で送ることなく、`healthmd`を開いているiPhoneまたはAndroidのHealth.mdアプリへ接続します。スマートフォンは各プラットフォームのヘルスデータストア（iPhoneではHealthKit、AndroidではHealth Connect）を読み取り、結果を保護されたストレージへ準備して、検証済みのパーティションをCLIへ転送します。
 
 ```text
 healthmd on the computer
   <-> authenticated encrypted Manual IP, Tailscale, or supported Nearby channel
-Health.md on iPhone -> HealthKit -> protected bounded spool / typed query evaluator
-  -> canonical JSON, production-generated files, or bounded MCP query pages
+Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounded spool
+  -> raw snapshots, production-generated files, or (iPhone) canonical and typed query data
 ```
 
 <div class="availability preview">
 <strong>プレビュー · ポータブル直接接続CLI</strong>
-<p>同梱のSwift直接接続バックエンドはmacOSで利用できます。クロスプラットフォームのRustクライアントは、実機iPhoneでのリリースQAと最初の公開パッケージを待つアルファ版です。LinuxとWindowsのコマンドは、段階的に提供予定のワークフローを説明しています。</p>
+<p>同梱のSwift直接接続バックエンドはmacOSで利用でき、iPhoneとペアリングします。Androidのペアリング（プロトコルv2）はクロスプラットフォームのRustクライアントの一部で、実機iPhoneとAndroidでのリリースQAと最初の公開パッケージを待つアルファ版です。LinuxとWindowsのコマンドは、段階的に提供予定のワークフローを説明しています。</p>
 </div>
 
 ## 直接接続モードの対応機能
 
-- 1回限りのペアリングと信頼済みの再接続
+- iPhone（プロトコルv1）またはAndroid（プロトコルv2）のソースとの、1回限りのペアリングと信頼済みの再接続
 - ローカルの信頼済みデバイスの確認とペアリング解除
-- iPhoneのリアルタイムな準備状況
-- 厳密な生のschema-v7エクスポート
-- 選択範囲の正規抽出
-- 本番エクスポーターによるファイル生成
+- スマートフォンのリアルタイムな準備状況
+- 厳密な生データエクスポート。iPhoneではschema-v7 `healthmd.health_data`、AndroidではプロバイダネイティブなHealth Connectスナップショット
+- 選択範囲の正規抽出（iPhoneのみ）
+- 両方のスマートフォンプラットフォームでの本番エクスポーターによるファイル生成
 - ローカル永続ジョブの状態確認と再開
 - 明示的なキャンセル
-- 同じ実行ファイルによる`healthmd mcp serve` stdioサーバー。iPhone直接接続の型付きクエリ、指標カタログ、エビデンス、MCP Apps UI、PNGフォールバックに対応
+- 同じ実行ファイルによる`healthmd mcp serve` stdioサーバー。iPhone直接接続の型付きクエリ、指標カタログ、エビデンス、MCP Apps UI、PNGフォールバックに対応（iPhoneのみ）
 
 `healthmd`コマンドの直接接続バックエンドは、Macアプリの暗号化コンテキスト用HTTPルートをエミュレートしません。このため、Mac向けの`doctor`、query、evidence、refreshサブコマンドは、バックエンドを切り替えずに`backend_unsupported`を返します。iPhone直接接続で新規の型付き分析を行うには`healthmd mcp serve`を使用します。Codexの設定とペアリングを自動で行うには、`healthmd setup codex`を実行します。`healthmd mcp schema [TOOL]`は、ネストしたMCP入力スキーマと例をローカルに正確に出力します。睡眠には`healthmd_sleep_sessions`を直接使用し、正規の`extract`出力を型付きクエリAPIとして扱わないでください。
 
 ## 要件
 
-- 直接接続に対応する`healthmd`バイナリと、対応するiPhone版Health.mdのビルド
-- ペアリング時と新しいコマンドの開始時に、iPhoneでHealth.mdが前面表示されていること
-- iPhoneの**設定 > Mac同期 > Direct CLI Access**が有効であること
-- HealthKit権限、保護されたデータ、ローカルネットワーク権限、エクスポート利用枠を使用できること
+- 直接接続に対応する`healthmd`バイナリと、対応するHealth.mdのビルド（iPhoneはプロトコルv1、Androidはプロトコルv2）。AndroidのペアリングにはポータブルRustクライアントが必要です。同梱のmacOSヘルパーがペアリングできるのはiPhoneだけです。
+- ペアリング時と新しいコマンドの開始時に、スマートフォンでHealth.mdが前面表示されていること
+- iPhoneでは**設定 > Mac同期 > Direct CLI Access**、Androidでは**設定 → Direct CLI**が有効であること
+- プラットフォームのヘルス権限（HealthKitまたはHealth Connect）、保護されたデータ、ローカルネットワーク権限、エクスポート利用枠を使用できること
 - Manual IPでは、到達可能なコンピューターのアドレスとTCPポート`17647`。Tailscaleアドレスも使用可能
 - 生成ファイルモードでは、既存の絶対パスの保存先
 
-CLIがリスナーになります。iPhoneは、Direct CLI Accessに入力したコンピューターのアドレスへ接続します。
+CLIがリスナーになります。スマートフォンは、Direct CLI Accessに入力したコンピューターのアドレスへ接続します。
 
 ## 対応する転送方式
 
@@ -60,7 +60,7 @@ Nearbyでは、Appleの暗号化されたMultipeerセッションに加え、Man
 healthmd direct pair --transport manual-ip
 ```
 
-コマンドは、6桁のコード、候補となるコンピューターのアドレス、リスナーポートを標準エラー出力へ出力し、標準出力は最終的なJSON結果のために空けておきます。
+ポータブルRustクライアントは、6桁のiPhoneコード、別個の20桁のAndroidコード、候補となるコンピューターのアドレス、リスナーポートを標準エラー出力へ出力します。同梱のmacOSヘルパーが表示するのは6桁のiPhoneコードだけです。標準出力は、最終的なJSON結果のために空けておきます。
 
 iPhoneでは、次の手順を行います。
 
@@ -72,7 +72,18 @@ iPhoneでは、次の手順を行います。
 6. ペアリングコードを入力し、「ペアリング」をタップします。
 7. 両方で成功が報告されるまで、アプリを開いたままにします。
 
-ペアリングコードの有効期限は10分です。ネットワーク経由で送信されることも、保存されることもありません。
+iPhoneのペアリングコードの有効期限は10分です。ネットワーク経由で送信されることも、保存されることもありません。
+
+## Androidスマートフォンをペアリングする
+
+Androidのペアリングでは、ポータブルRustクライアントと、`healthmd direct pair`が表示する別個の20桁（約66ビット）の1回限りコードを使用します。AndroidがiPhoneプロトコルへダウングレードされることはありません。
+
+1. Androidスマートフォンで**Health.md >設定 → Direct CLI**を開きます。
+2. コンピューターのLANアドレスまたはTailscaleアドレスと、ポート`17647`を入力します。
+3. 20桁のコードを入力し、ペアリングを確認します。
+4. アプリを開いたままにします。Androidでは、アクティブな直接接続セッションの間、ユーザーが開始した可視のデータ同期フォアグラウンドサービスが実行されます。
+
+1回限りコードが消費された後の再接続の信頼は、Keystoreによって保護されます。
 
 必要に応じて別のポートを使用します。
 
@@ -102,15 +113,15 @@ healthmd direct devices
 healthmd direct unpair DEVICE_UUID
 ```
 
-これらのコマンドはローカルの信頼情報を読み取り、または変更するだけで、iPhoneには接続しません。iPhone側では、**ペアリング済みCLIを削除**を使用して相手側を削除します。
+これらのコマンドはローカルの信頼情報を読み取り、または変更するだけで、スマートフォンには接続しません。iPhone側では、**ペアリング済みCLIを削除**を使用して相手側を削除します。Androidでは、**設定 → Direct CLI**からペアリングを削除します。
 
-複数のiPhoneを信頼している場合は、対象のインストールを明示的に選択します。
+複数のスマートフォンを信頼している場合は、対象のインストールを明示的に選択します。
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID status
 ```
 
-`healthmd direct reset-trust --confirm`は、ローカルの信頼情報が破損しているか、交換前のインストールに属している場合にだけ使用してください。ローカルの直接ペアリングがすべて削除されます。最初からやり直す前に、iPhone側でもそれらのペアリングを削除してください。
+`healthmd direct reset-trust --confirm`は、ローカルの信頼情報が破損しているか、交換前のインストールに属している場合にだけ使用してください。ローカルの直接ペアリングがすべて削除されます。最初からやり直す前に、スマートフォン側でもそれらのペアリングを削除してください。
 
 ## リアルタイムの準備状況を確認する
 
@@ -118,7 +129,7 @@ healthmd --backend direct --device DEVICE_UUID status
 healthmd --backend direct --transport manual-ip status
 ```
 
-直接接続のstatusレスポンスは、ヘルスデータの値を含めず、接続状態と安全性の状態を報告します。作業を始める前に、次のフィールドを確認してください。
+直接接続のstatusレスポンスは、ヘルスデータの値を含めず、接続状態と安全性の状態を報告します。ポータブルクライアントは、ソースを`source`として報告し、`platform`は`ios`または`android`になります。同梱ヘルパーは、以下の`iphone`フィールドを公開します。作業を始める前に、次のフィールドを確認してください（iPhoneソースの例）。
 
 | フィールド | 準備完了の値 |
 |---|---|
@@ -133,7 +144,9 @@ healthmd --backend direct --transport manual-ip status
 
 直接接続のstatusでは、保存先は未選択のままです。ファイルモードで使用するのは、コマンドに明示した`--destination`だけです。
 
-## 厳密な生データエクスポート
+Androidのソースでは、iPhoneのトリガーフラグの代わりに、`platform: "android"`と、`app_active`、`protected_data_available`、`export_in_progress`、利用可能な生データ製品が報告されます。
+
+## 厳密な生データエクスポート（iPhone）
 
 範囲セレクターを1つ選択します。
 
@@ -147,13 +160,26 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 検証済みJSONを標準出力へストリームするには、`--output`を省略します。機密性の高いレスポンスや大きなレスポンスでは、出力ファイルを使用する方が安全です。
 
-厳密な生データエクスポートは`healthmd.raw_result` v1を返します。この結果には、通常のschema-v7 `healthmd.health_data`日次データと、その正規ソースアーカイブが含まれます。iPhoneに保存済みの設定を変更せず、一時的にロスレス詳細を要求します。CLIは結果を公開する前に、正確な日付、プロファイル、スキーマ、アーカイブ、マニフェスト、ダイジェストチェーン、最終本文ダイジェスト、完了状態を検証します。
+iPhoneの厳密な生データエクスポートは`healthmd.raw_result` v1を返します。この結果には、通常のschema-v7 `healthmd.health_data`日次データと、その正規ソースアーカイブが含まれます。iPhoneに保存済みの設定を変更せず、一時的にロスレス詳細を要求します。CLIは結果を公開する前に、正確な日付、プロファイル、スキーマ、アーカイブ、マニフェスト、ダイジェストチェーン、最終本文ダイジェスト、完了状態を検証します。
 
 完全だが空の日は成功です。要求したデータが欠損、一部完了、失敗、キャンセル、未対応、スキップの場合は、`partial_success`とゼロ以外の終了コードになります。`--allow-partial`を明示した場合に限り、この終了動作を許容できます。
 
+## プロバイダネイティブな生データエクスポート（Android）
+
+ポータブルRustクライアントは既定で直接接続を使用するため、Androidの生データコマンドでは`--backend`フラグを省略します。
+
+```bash
+healthmd export --last 7 --raw --provider health_connect \
+  --raw-format ndjson --output health-connect.ndjson
+```
+
+`--provider`は1つの明示的なプロバイダを指定し、既定値は`health_connect`です。`--raw-format`の既定値はNDJSONで、大きなスナップショットに推奨される形式です。メモリ内でのJSON検証は64 MiBが上限です。指標の選択では`--metric`と`--all-metrics`に対応しますが、正規抽出や生成ファイルのセレクターには対応しません。それらはiPhoneの機能として残ります。
+
+Androidの生スナップショットは、Health Connectのプロバイダネイティブなコントラクトを維持します。HealthKit形式の`healthmd.health_data`日次データへ変換されることはなく、関連はするが異なる統計は独自の識別情報を持ち続けます。
+
 ## 正規抽出
 
-直接抽出は、同じ永続的な生データ転送を使用しますが、転送ラッパーではなく、選択したソースに近い形式のデータを返します。
+直接抽出は、同じ永続的な生データ転送を使用しますが、転送ラッパーではなく、選択したソースに近い形式のデータを返します。これはiPhoneの機能です。
 
 ```bash
 healthmd --backend direct extract \
@@ -168,7 +194,7 @@ healthmd --backend direct extract \
 
 ## 本番エクスポーターによる生成ファイル
 
-直接ファイルモードでは、iPhoneへHealth.mdの本番エクスポーターを実行するよう要求し、生成されたファイルを明示したコンピューターの保存先へ転送します。
+直接ファイルモードでは、スマートフォンへHealth.mdの本番エクスポーターを実行するよう要求し、生成されたファイルを明示したコンピューターの保存先へ転送します。
 
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
@@ -190,15 +216,19 @@ healthmd --backend direct export --yesterday --use-iphone-settings \
 
 iPhoneは、JSON、CSV、Markdown、ZIP、データ辞書、ロールアップ、個別レコード、デイリーノート、プロバイダサイドカーを準備できます。CLIはコミット前に、各相対パス、バイト数、ダイジェスト、ファイルマニフェスト、保存先ID、リクエストフィンガープリントを検証します。パストラバーサル、シンボリックリンクを含む祖先パス、ルートの変更、パスの衝突、ダイジェストの変化を拒否します。上書きはアトミックです。追記とMarkdownマージでは保存済みの計画を使用するため、リプレイで内容が重複することはありません。
 
-生成ファイルの保存先はmacOSとLinuxで利用できます。プロトコルv1ではWindows上の保存先を拒否します。Windowsの直接接続ユーザーは、生データエクスポートと抽出を使用できます。
+生成ファイルの保存先は、iPhoneプロトコルv1ではmacOSとLinuxで動作し、Windowsでは拒否されます。Androidプロトコルv2は、すべてのCLIオペレーティングシステム（macOS、Linux、Windows）でファイル保存先をコミットし、各生成ジョブの上限は4,096ファイルです。
+
+Androidプロトコルv2のファイルジョブのスコープは、デバイスに保存済みのエクスポート選択、または`--profile PROFILE_ID`から決まります。プロファイルが凍結された設定と保存先を所有します。Androidのファイルジョブでは、CLIの指標、カテゴリ、詳細のセレクターは拒否されます。
 
 ## 前面表示とバックグラウンドでの動作
 
-ペアリングと新しい処理の開始時は、iPhoneアプリを前面に表示する必要があります。Direct CLI AccessによってiOSがヘッドレスなエクスポートサーバーになることはなく、必要に応じてアプリを起動することもできません。
+ペアリングと新しい処理の開始時は、スマートフォンのアプリを前面に表示する必要があります。Direct CLI Accessによってスマートフォンがヘッドレスなエクスポートサーバーになることはなく、必要に応じてアプリを起動することもできません。
 
-エクスポートが接続済みの状態でアプリがバックグラウンドへ移動すると、Health.mdは、限られたiOSバックグラウンド実行時間を要求します。その時間内にエクスポートが完了する場合があります。iOSによって実行時間が終了されると、接続が閉じ、永続ジョブが一時停止します。Health.mdを再度開き、同じジョブを再開してください。
+iPhoneでは、エクスポートが接続済みの状態でアプリがバックグラウンドへ移動すると、Health.mdは、限られたiOSバックグラウンド実行時間を要求します。その時間内にエクスポートが完了する場合があります。iOSによって実行時間が終了されると、接続が閉じ、永続ジョブが一時停止します。Health.mdを再度開き、同じジョブを再開してください。
 
-iPhoneは、直接接続の処理中に全体アクティビティバナーを表示します。ヘルスデータの値は表示せず、取得と転送のフェーズ、完了した日数、バイト単位の進捗、一時停止または完了の状態を示します。
+Androidでは、アクティブな直接接続セッションの間、ユーザーが開始した可視のデータ同期フォアグラウンドサービスが実行されます。ペアリングと新しい処理の開始時は、アプリを前面に表示してください。
+
+iPhoneでは、直接接続の処理中に表示される全体アクティビティバナーが、ヘルスデータの値を表示せずに、取得と転送のフェーズ、完了した日数、バイト単位の進捗、一時停止または完了の状態を示します。
 
 ## 永続ジョブの再開とキャンセル
 
@@ -216,12 +246,12 @@ healthmd --backend direct cancel JOB_UUID
 
 ## セキュリティモデル
 
-- ペアリングでは、一時的なCurve25519鍵共有と、6桁のコードに紐づくトランスクリプト証明を使用します。
+- ペアリングでは、一時的な鍵共有と、プラットフォームのペアリングコード（6桁のiPhoneフロー、または別個の高エントロピーな20桁（約66ビット）のAndroid 1回限りコード）に紐づくトランスクリプト証明を使用します。
 - 再接続では、保存済みのランダムなシークレットと両方のインストールIDを証明します。
 - 接続ごとに新しい鍵とnonceを導出します。
 - メッセージとバイナリフレームでは、単調増加するシーケンス検証を備えたChaCha20-Poly1305を使用します。
 - パーティションでは、SHA-256マニフェストと連鎖ダイジェストの進行地点を使用します。
-- iPhoneの信頼情報はKeychainに保存されます。
+- iPhoneの信頼情報はKeychainに保存され、Androidの再接続の信頼はKeystoreによって保護されます。
 - ポータブル版の信頼情報はKeychain、Secret Service、またはWindows Credential Managerを使用し、平文へフォールバックしません。
 - スプールとジャーナルはアプリ専用ストレージを使用し、プラットフォームが対応している場合はバックアップから除外します。
 
@@ -247,7 +277,8 @@ Manual IPは、ローカルネットワークまたはTailscale上でも暗号�
 
 <div class="related">
   <a href="/ja/docs/cli/"><span>概要</span>Health.md CLI：同梱ヘルパーをインストールし、適切なバックエンドを選択します。</a>
-  <a href="/ja/docs/cli-extract/"><span>データ</span>正規抽出：ソースに近い形式のHealth.mdデータを選択して出力します。</a>
+  <a href="/ja/docs/android/"><span>Android</span>Android版Health.md：Health Connectソース、フォルダー保存先、端末上の自動化。</a>
+  <a href="/ja/docs/cli-extract/"><span>データ</span>正規抽出：ソースに近い形式のHealth.mdデータを選択して出力します（iPhone）。</a>
   <a href="/ja/docs/cli-jobs/"><span>信頼性</span>永続ジョブと自動化：再開、キャンセル、部分的な結果、スクリプト処理。</a>
   <a href="/ja/docs/reference/connected-mac-iphone-protocol/"><span>プロトコル</span>接続中のMacとiPhoneのリファレンス：機能、上限付き転送、結果の状態。</a>
 </div>

@@ -1,46 +1,46 @@
 ---
-title: "iPhone 直连 CLI"
-description: "通过手动 IP、Tailscale 或受支持的“附近”传输将 healthmd 与 iPhone 配对，无需运行 Health.md Mac 版即可导出。"
+title: "手机直连 CLI"
+description: "通过手动 IP 或 Tailscale 将 healthmd 与 iPhone 或 Android 手机配对，无需运行 Health.md Mac 版即可导出。"
 ---
 
-直连后端会将 `healthmd` 连接到已打开的 Health.md iPhone 应用，命令无需经过 Health.md Mac 版。iPhone 读取 HealthKit，将结果暂存到受保护的存储空间，再把经过验证的分区传输给 CLI。
+直连后端会将 `healthmd` 连接到 iPhone 或 Android 上已打开的 Health.md 应用，命令无需经过 Health.md Mac 版。手机会读取自身平台的健康数据存储——iPhone 上是 HealthKit，Android 上是 Health Connect——将结果暂存到受保护的存储空间，再把经过验证的分区传输给 CLI。
 
 ```text
 healthmd on the computer
   <-> authenticated encrypted Manual IP, Tailscale, or supported Nearby channel
-Health.md on iPhone -> HealthKit -> protected bounded spool / typed query evaluator
-  -> canonical JSON, production-generated files, or bounded MCP query pages
+Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounded spool
+  -> raw snapshots, production-generated files, or (iPhone) canonical and typed query data
 ```
 
 <div class="availability preview">
 <strong>预览版 · 可移植直连 CLI</strong>
-<p>macOS 上已可使用内置的 Swift 直连后端。跨平台 Rust 客户端仍处于 Alpha 阶段，正在等待实体 iPhone 发布质量验证和首个公开软件包；Linux 和 Windows 命令描述的是分阶段推出的工作流。</p>
+<p>macOS 上已可使用内置的 Swift 直连后端，可与 iPhone 配对。Android 配对（协议 v2）属于跨平台 Rust 客户端的一部分；该客户端仍处于 Alpha 阶段，正在等待实体 iPhone 和 Android 发布质量验证以及首个公开软件包；Linux 和 Windows 命令描述的是分阶段推出的工作流。</p>
 </div>
 
 ## 直连模式支持的功能
 
-- 一次性配对和可信重连；
+- 与 iPhone（协议 v1）或 Android（协议 v2）来源完成一次性配对和可信重连；
 - 在本地查看可信设备并解除配对；
-- 实时检查 iPhone 就绪状态；
-- 严格的原始 schema-v7 导出；
-- 按选择范围进行规范提取；
-- 使用生产导出器生成文件；
+- 实时检查手机就绪状态；
+- 严格的原始导出——iPhone 上为 schema-v7 `healthmd.health_data`，Android 上为提供方原生的 Health Connect 快照；
+- 按选择范围进行规范提取（仅限 iPhone）；
+- 在两种手机平台上导出生产生成的文件；
 - 查看和恢复本地持久作业；
 - 明确取消作业；
-- 与 CLI 共用可执行文件的 `healthmd mcp serve` stdio 服务器，提供 iPhone 直连类型化查询、指标目录、证据、MCP Apps UI 和 PNG 后备图表。
+- 与 CLI 共用可执行文件的 `healthmd mcp serve` stdio 服务器，提供直连类型化查询、指标目录、证据、MCP Apps UI 和 PNG 后备图表（仅限 iPhone）。
 
 `healthmd` 命令的直连后端不会模拟 Mac 应用的加密上下文 HTTP 路由。因此，面向 Mac 的 `doctor`、查询、证据和刷新子命令仍会返回 `backend_unsupported`，不会自行切换后端。需要对 iPhone 中的全新数据进行类型化分析时，请使用 `healthmd mcp serve`；也可以运行 `healthmd setup codex`，自动配置 Codex 并完成配对。`healthmd mcp schema [TOOL]` 会在本地输出准确的嵌套 MCP 输入架构和示例。睡眠问题应直接使用 `healthmd_sleep_sessions`，不要把规范 `extract` 输出当作类型化查询 API。
 
 ## 要求
 
-- 支持直连的 `healthmd` 二进制文件，以及与之匹配的 Health.md iPhone 版本。
-- 配对和启动新命令时，Health.md 必须在 iPhone 前台保持打开。
-- 在 iPhone 上启用**设置 > Mac 同步 > Direct CLI 访问**。
-- 已授予 HealthKit 和本地网络权限，受保护数据可用，并有可用的导出额度。
+- 支持直连的 `healthmd` 二进制文件，以及与之匹配的 Health.md 版本：iPhone（协议 v1）或 Android（协议 v2）。Android 配对需要可移植 Rust 客户端；内置 macOS 辅助程序只能与 iPhone 配对。
+- 配对和启动新命令时，Health.md 必须在手机前台保持打开。
+- 在 iPhone 上启用**设置 > Mac 同步 > Direct CLI 访问**，或在 Android 上启用**设置 → Direct CLI**。
+- 已授予平台健康权限（HealthKit 或 Health Connect），受保护数据可用，本地网络权限已授予，并有可用的导出额度。
 - 使用手动 IP 时，计算机地址必须可达，并开放 TCP 端口 `17647`。也可以使用 Tailscale 地址。
 - 使用生成文件模式时，必须提供已存在的绝对目标路径。
 
-CLI 充当监听器。iPhone 会连接到 Direct CLI 访问中填写的计算机地址。
+CLI 充当监听器。手机会连接到 Direct CLI 访问中填写的计算机地址。
 
 ## 传输方式支持
 
@@ -60,7 +60,7 @@ CLI 充当监听器。iPhone 会连接到 Direct CLI 访问中填写的计算机
 healthmd direct pair --transport manual-ip
 ```
 
-该命令会把六位配对码、候选计算机地址和监听端口写入 stderr，将 stdout 保留给最终 JSON 结果。
+可移植 Rust 客户端会把六位 iPhone 配对码、单独的 20 位 Android 配对码、候选计算机地址和监听端口写入 stderr；内置 macOS 辅助程序只会输出六位 iPhone 配对码。stdout 始终保留给最终 JSON 结果。
 
 在 iPhone 上：
 
@@ -72,7 +72,18 @@ healthmd direct pair --transport manual-ip
 6. 输入配对码并轻点“配对”。
 7. 保持应用打开，直到双方都报告成功。
 
-配对码会在 10 分钟后过期，绝不会通过网络发送或持久保存。
+iPhone 配对码会在 10 分钟后过期，绝不会通过网络发送或持久保存。
+
+## 配对 Android 手机
+
+Android 配对使用可移植 Rust 客户端，以及 `healthmd direct pair` 输出的单独 20 位（约 66 比特）一次性配对码。Android 绝不会降级到 iPhone 协议。
+
+1. 在 Android 手机上打开 **Health.md > 设置 → Direct CLI**。
+2. 输入计算机的 LAN 或 Tailscale 地址，以及端口 `17647`。
+3. 输入 20 位配对码并确认配对。
+4. 保持应用打开；在活动的直连会话期间，Android 会运行一个由用户启动且可见的数据同步前台服务。
+
+一次性配对码使用完毕后，重连信任将由 Android Keystore 保护。
 
 需要时可以改用其他端口：
 
@@ -102,15 +113,15 @@ healthmd direct devices
 healthmd direct unpair DEVICE_UUID
 ```
 
-这些命令只读取或修改本地信任，不会联系 iPhone。在 iPhone 上，可使用**忘记已配对的 CLI**删除另一端的配对。
+这些命令只读取或修改本地信任，不会联系手机。在 iPhone 上，可使用**忘记已配对的 CLI**删除另一端的配对；在 Android 上，请在**设置 → Direct CLI**中移除配对。
 
-如果信任了多台 iPhone，请明确选择目标安装：
+如果信任了多台手机，请明确选择目标安装：
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID status
 ```
 
-仅当本地信任已损坏或属于被替换的安装时，才使用 `healthmd direct reset-trust --confirm`。该命令会删除所有本地直连配对。重新配对前，也请在 iPhone 上忘记这些配对。
+仅当本地信任已损坏或属于被替换的安装时，才使用 `healthmd direct reset-trust --confirm`。该命令会删除所有本地直连配对。重新配对前，也请在手机上忘记这些配对。
 
 ## 检查实时就绪状态
 
@@ -118,7 +129,7 @@ healthmd --backend direct --device DEVICE_UUID status
 healthmd --backend direct --transport manual-ip status
 ```
 
-直连状态响应只报告连接和安全状态，不包含健康数值。开始作业前，请检查以下字段：
+直连状态响应只报告连接和安全状态，不包含健康数值。可移植客户端会在 `source` 下报告数据来源，其 `platform` 为 `ios` 或 `android`；内置辅助程序则提供下方的 `iphone` 字段。开始作业前，请检查以下字段（以 iPhone 来源为例）：
 
 | 字段 | 就绪值 |
 |---|---|
@@ -133,7 +144,9 @@ healthmd --backend direct --transport manual-ip status
 
 直连状态中的目标位置始终保持未选择。文件模式只使用命令明确提供的 `--destination`。
 
-## 严格原始导出
+Android 来源会报告 `platform: "android"`，并提供 `app_active`、`protected_data_available`、`export_in_progress` 及其可用的原始产品，以替代上述 iPhone 触发标志。
+
+## 严格原始导出（iPhone）
 
 请选择一种日期范围选择器：
 
@@ -147,13 +160,26 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 省略 `--output` 时，经过验证的 JSON 会流式写入 stdout。对于敏感或大型响应，写入输出文件更安全。
 
-严格原始导出返回 `healthmd.raw_result` v1，其中包含普通 schema-v7 `healthmd.health_data` 每日数据及其规范来源归档。它会临时请求无损详情，但不会更改 iPhone 中已保存的设置。CLI 会先验证精确日期、配置、架构、归档、清单、摘要链、最终正文摘要和完成状态，再公开结果。
+iPhone 严格原始导出返回 `healthmd.raw_result` v1，其中包含普通 schema-v7 `healthmd.health_data` 每日数据及其规范来源归档。它会临时请求无损详情，但不会更改 iPhone 中已保存的设置。CLI 会先验证精确日期、配置、架构、归档、清单、摘要链、最终正文摘要和完成状态，再公开结果。
 
 完全为空的日期也属于成功。请求的数据如果存在缺失、部分完成、失败、取消、不支持或跳过，则会产生 `partial_success` 和非零退出状态；只有明确使用 `--allow-partial` 时例外。
 
+## 提供方原生原始导出（Android）
+
+可移植 Rust 客户端默认即使用直连模式，因此 Android 原始导出命令可以省略 `--backend` 标志：
+
+```bash
+healthmd export --last 7 --raw --provider health_connect \
+  --raw-format ndjson --output health-connect.ndjson
+```
+
+`--provider` 指定唯一且明确的提供方，默认为 `health_connect`。`--raw-format` 默认为 NDJSON，这是大型快照推荐采用的格式；内存中的 JSON 验证上限为 64 MiB。指标选择支持 `--metric` 和 `--all-metrics`，但不支持规范提取或生成文件选择器——这些仍是 iPhone 功能。
+
+Android 原始快照保持其 Health Connect 提供方原生契约，绝不会转换为 HealthKit 形态的 `healthmd.health_data` 每日数据，相关但不同的统计指标也保持各自独立的身份。
+
 ## 规范提取
 
-直连提取使用相同的持久原始传输，但返回所选的来源结构数据，而不是传输封装：
+直连提取使用相同的持久原始传输，但返回所选的来源结构数据，而不是传输封装。这是 iPhone 专属功能：
 
 ```bash
 healthmd --backend direct extract \
@@ -168,7 +194,7 @@ healthmd --backend direct extract \
 
 ## 生产导出器生成的文件
 
-直连文件模式会要求 iPhone 运行 Health.md 的生产导出器，然后把生成的文件传输到明确指定的计算机目标位置。
+直连文件模式会要求手机运行 Health.md 的生产导出器，然后把生成的文件传输到明确指定的计算机目标位置。
 
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
@@ -190,15 +216,19 @@ healthmd --backend direct export --yesterday --use-iphone-settings \
 
 iPhone 可以暂存 JSON、CSV、Markdown、ZIP、数据字典、周期汇总、单条记录、每日笔记和提供方辅助文件。CLI 会先验证每个相对路径、字节数、摘要、文件清单、目标身份和请求指纹，再提交文件。它会拒绝路径遍历、符号链接祖先、根目录变更、路径冲突和摘要变化。覆盖操作采用原子写入；追加和 Markdown 合并使用持久计划，重放时不会重复内容。
 
-macOS 和 Linux 支持生成文件目标位置。协议 v1 会在 Windows 上拒绝此模式；Windows 直连用户仍可使用原始导出和提取。
+对于 iPhone 协议 v1，生成文件目标位置在 macOS 和 Linux 上可用，但会在 Windows 上被拒绝。Android 协议 v2 则在所有 CLI 操作系统——macOS、Linux 和 Windows——上都能提交文件目标位置，并将每个生成作业限制在最多 4,096 个文件。
+
+Android 协议 v2 的文件作业范围取自设备上已保存的导出选择，或来自 `--profile PROFILE_ID`；配置文件拥有冻结的设置和目标位置。Android 文件作业会拒绝 CLI 的指标、类别和详细程度选择器。
 
 ## 前台与后台行为
 
-配对和启动新作业时，iPhone 应用必须位于前台。Direct CLI 访问不会把 iOS 变成无人值守的导出服务器，也无法按需唤醒应用。
+配对和启动新作业时，手机应用必须位于前台。Direct CLI 访问不会把手机变成无人值守的导出服务器，也无法按需唤醒应用。
 
-如果导出已建立连接后应用进入后台，Health.md 会申请有限的 iOS 后台执行时间。导出可能在这段时间内完成；如果 iOS 终止后台执行，连接会关闭，持久作业则会暂停。请重新打开 Health.md，并恢复同一作业。
+在 iPhone 上，如果导出已建立连接后应用进入后台，Health.md 会申请有限的 iOS 后台执行时间。导出可能在这段时间内完成；如果 iOS 终止后台执行，连接会关闭，持久作业则会暂停。请重新打开 Health.md，并恢复同一作业。
 
-执行直连作业时，iPhone 会显示全局活动横幅，其中包含采集和传输阶段、已完成天数、字节进度，以及暂停或完成状态，但不会显示健康数值。
+在 Android 上，活动的直连会话会运行一个由用户启动且可见的数据同步前台服务。请在配对和启动新作业时让应用保持前台。
+
+在 iPhone 上，执行直连作业时显示的全局活动横幅包含采集和传输阶段、已完成天数、字节进度，以及暂停或完成状态，但不会显示健康数值。
 
 ## 持久恢复与取消
 
@@ -216,12 +246,12 @@ healthmd --backend direct cancel JOB_UUID
 
 ## 安全模型
 
-- 配对使用临时 Curve25519 密钥协商，以及与六位配对码绑定的握手记录证明。
+- 配对使用临时密钥协商以及与平台配对码绑定的握手记录证明——即 iPhone 的六位配对流程，或 Android 单独的高熵 20 位（约 66 比特）一次性配对码。
 - 重连时会验证随机保存的密钥和两端安装身份。
 - 每次连接都会派生新的密钥和 nonce。
 - 消息和二进制帧使用 ChaCha20-Poly1305，并检查单调递增的序列号。
 - 分区使用 SHA-256 清单和链式摘要边界。
-- iPhone 端信任信息存储在钥匙串中。
+- iPhone 端信任信息存储在钥匙串中；Android 的重连信任由 Keystore 保护。
 - 可移植客户端使用钥匙串、Secret Service 或 Windows Credential Manager 存储信任信息，绝不会回退到明文。
 - 暂存区和恢复日志位于应用私有存储中，并在平台支持时排除备份。
 
@@ -247,7 +277,8 @@ healthmd --backend direct cancel JOB_UUID
 
 <div class="related">
   <a href="/zh-hans/docs/cli/"><span>概览</span>Health.md CLI：安装内置辅助程序并选择正确的后端。</a>
-  <a href="/zh-hans/docs/cli-extract/"><span>数据</span>规范提取：选择并输出与来源结构一致的 Health.md 数据。</a>
+  <a href="/zh-hans/docs/android/"><span>Android</span>Health.md Android 版：Health Connect 来源、文件夹目标位置和设备端自动化。</a>
+  <a href="/zh-hans/docs/cli-extract/"><span>数据</span>规范提取：选择并输出与来源结构一致的 Health.md 数据（iPhone）。</a>
   <a href="/zh-hans/docs/cli-jobs/"><span>可靠性</span>持久作业与自动化：恢复、取消、部分结果和脚本。</a>
   <a href="/zh-hans/docs/reference/connected-mac-iphone-protocol/"><span>协议</span>Mac–iPhone 连接参考：能力、有界传输和结果状态。</a>
 </div>
