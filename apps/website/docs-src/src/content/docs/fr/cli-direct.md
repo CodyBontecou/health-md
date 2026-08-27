@@ -1,46 +1,46 @@
 ---
-title: "CLI iPhone directe"
-description: "Jumelez healthmd avec un iPhone via Manual IP, Tailscale ou un transport Nearby pris en charge, puis exportez sans exécuter Health.md for Mac."
+title: "CLI téléphone directe"
+description: "Jumelez healthmd avec un iPhone ou un téléphone Android via Manual IP ou Tailscale, puis exportez sans exécuter Health.md for Mac."
 ---
 
-Le back-end direct connecte `healthmd` à Health.md for iPhone, qui doit être ouverte, sans faire passer la commande par Health.md for Mac. L’iPhone lit HealthKit, prépare le résultat dans un stockage protégé et transfère des partitions validées vers la CLI.
+Le back-end direct connecte `healthmd` à une app Health.md ouverte sur un iPhone ou un téléphone Android, sans faire passer la commande par Health.md for Mac. Le téléphone lit le magasin de santé de sa plateforme — HealthKit sur iPhone, Health Connect sur Android —, prépare le résultat dans un stockage protégé et transfère des partitions validées vers la CLI.
 
 ```text
 healthmd on the computer
   <-> authenticated encrypted Manual IP, Tailscale, or supported Nearby channel
-Health.md on iPhone -> HealthKit -> protected bounded spool / typed query evaluator
-  -> canonical JSON, production-generated files, or bounded MCP query pages
+Health.md on iPhone or Android -> HealthKit / Health Connect -> protected bounded spool
+  -> raw snapshots, production-generated files, or (iPhone) canonical and typed query data
 ```
 
 <div class="availability preview">
 <strong>Aperçu · CLI directe portable</strong>
-<p>Le back-end Swift direct intégré est disponible sur macOS. Le client Rust multiplateforme est une alpha qui attend les tests QA de publication sur iPhone physique et son premier paquet public ; les commandes Linux et Windows décrivent le flux de travail préparé.</p>
+<p>Le back-end Swift direct intégré est disponible sur macOS et se jumelle avec l’iPhone. Le jumelage Android (protocole v2) fait partie du client Rust multiplateforme, une alpha qui attend les tests QA de publication sur iPhone et Android physiques ainsi que son premier paquet public ; les commandes Linux et Windows décrivent le flux de travail préparé.</p>
 </div>
 
 ## Ce que le mode direct prend en charge
 
-- le jumelage unique et la reconnexion de confiance ;
+- le jumelage unique et la reconnexion de confiance avec des sources iPhone (protocole v1) ou Android (protocole v2) ;
 - l’inspection locale des appareils de confiance et la suppression du jumelage ;
-- l’état de préparation iPhone en direct ;
-- l’export brut strict au schéma v7 ;
-- l’extraction canonique sélectionnée ;
-- l’export de fichiers générés en production ;
+- l’état de préparation du téléphone en direct ;
+- l’export brut strict — `healthmd.health_data` au schéma v7 sur iPhone, instantanés Health Connect natifs du fournisseur sur Android ;
+- l’extraction canonique sélectionnée (iPhone uniquement) ;
+- l’export de fichiers générés en production sur les deux plateformes de téléphone ;
 - l’état et la reprise des tâches locales persistantes ;
 - l’annulation explicite ;
-- le serveur stdio `healthmd mcp serve` dans le même exécutable, avec requêtes typées directes, catalogue de métriques, preuves, interface MCP Apps et repli PNG.
+- le serveur stdio `healthmd mcp serve` dans le même exécutable, avec requêtes typées directes, catalogue de métriques, preuves, interface MCP Apps et repli PNG (iPhone uniquement).
 
 Le back-end direct de la commande `healthmd` n’émule pas les routes HTTP de contexte chiffré de l’app Mac ; les sous-commandes orientées Mac `doctor`, query, evidence et refresh renvoient donc toujours `backend_unsupported` au lieu de changer de back-end. Utilisez `healthmd mcp serve` pour une analyse typée à partir de données actualisées provenant directement de l’iPhone, ou exécutez `healthmd setup codex` pour configurer et jumeler Codex automatiquement. `healthmd mcp schema [TOOL]` affiche localement le schéma d’entrée MCP imbriqué exact et des exemples ; utilisez directement `healthmd_sleep_sessions` pour le sommeil au lieu de traiter la sortie canonique de `extract` comme l’API de requête typée.
 
 ## Prérequis
 
-- Un binaire `healthmd` compatible direct et une version Health.md iPhone correspondante.
-- Health.md ouverte au premier plan sur un iPhone pour le jumelage et les nouvelles commandes.
-- **Settings > Mac Sync > Direct CLI Access** activé sur l’iPhone.
-- Autorisation HealthKit, données protégées, autorisation réseau local et quota d’export disponibles.
+- Un binaire `healthmd` compatible direct et une version Health.md correspondante : iPhone (protocole v1) ou Android (protocole v2). Le jumelage Android exige le client Rust portable ; l’utilitaire macOS intégré ne se jumelle qu’avec l’iPhone.
+- Health.md ouverte au premier plan sur le téléphone pour le jumelage et les nouvelles commandes.
+- **Settings > Mac Sync > Direct CLI Access** activé sur l’iPhone, ou **Settings → Direct CLI** sur Android.
+- Autorisation de santé de la plateforme (HealthKit ou Health Connect), données protégées, autorisation réseau local et quota d’export disponibles.
 - Une adresse d’ordinateur joignable et le port TCP `17647` pour Manual IP. Une adresse Tailscale fonctionne.
 - Une destination absolue existante pour le mode fichiers générés.
 
-La CLI est l’écouteur. L’iPhone se connecte à l’adresse de l’ordinateur saisie dans Direct CLI Access.
+La CLI est l’écouteur. Le téléphone se connecte à l’adresse de l’ordinateur saisie dans Direct CLI Access.
 
 ## Prise en charge des transports
 
@@ -60,7 +60,7 @@ Démarrez l’écouteur sur l’ordinateur :
 healthmd direct pair --transport manual-ip
 ```
 
-La commande écrit un code à six chiffres, des adresses candidates pour l’ordinateur et le port de l’écouteur sur stderr, tout en réservant stdout au résultat JSON final.
+Le client Rust portable écrit sur stderr un code iPhone à six chiffres, un code Android distinct à 20 chiffres, des adresses candidates pour l’ordinateur et le port de l’écouteur ; l’utilitaire macOS intégré n’affiche que le code iPhone à six chiffres. stdout reste réservé au résultat JSON final.
 
 Sur l’iPhone :
 
@@ -72,7 +72,18 @@ Sur l’iPhone :
 6. Saisissez le code de jumelage et touchez Pair.
 7. Gardez l’app ouverte jusqu’à ce que les deux côtés indiquent la réussite.
 
-Les codes de jumelage expirent au bout de 10 minutes. Ils ne sont jamais envoyés sur le réseau ni conservés.
+Les codes de jumelage iPhone expirent au bout de 10 minutes. Ils ne sont jamais envoyés sur le réseau ni conservés.
+
+## Jumeler un téléphone Android
+
+Le jumelage Android utilise le client Rust portable et le code unique distinct à 20 chiffres (~66 bits) affiché par `healthmd direct pair`. Android ne retombe jamais sur le protocole iPhone.
+
+1. Ouvrez **Health.md > Settings → Direct CLI** sur le téléphone Android.
+2. Saisissez l’adresse LAN ou Tailscale de l’ordinateur et le port `17647`.
+3. Saisissez le code à 20 chiffres et confirmez le jumelage.
+4. Gardez l’app ouverte ; Android exécute un service de premier plan de synchronisation de données, visible et démarré par l’utilisateur, pour une session directe active.
+
+Une fois le code unique consommé, la confiance de reconnexion s’appuie sur le Keystore.
 
 Utilisez un autre port si nécessaire :
 
@@ -102,15 +113,15 @@ healthmd direct devices
 healthmd direct unpair DEVICE_UUID
 ```
 
-Ces commandes lisent ou modifient la confiance locale et ne contactent pas l’iPhone. Sur l’iPhone, utilisez **Forget Paired CLI** pour supprimer l’autre côté.
+Ces commandes lisent ou modifient la confiance locale et ne contactent pas le téléphone. Sur l’iPhone, utilisez **Forget Paired CLI** pour supprimer l’autre côté ; sur Android, supprimez le jumelage depuis **Settings → Direct CLI**.
 
-Lorsque plusieurs iPhone sont de confiance, sélectionnez explicitement l’installation voulue :
+Lorsque plusieurs téléphones sont de confiance, sélectionnez explicitement l’installation voulue :
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID status
 ```
 
-Utilisez `healthmd direct reset-trust --confirm` uniquement lorsque la confiance locale est corrompue ou appartient à une installation remplacée. Cette commande supprime tous les jumelages directs locaux. Oubliez ces jumelages sur l’iPhone avant de recommencer.
+Utilisez `healthmd direct reset-trust --confirm` uniquement lorsque la confiance locale est corrompue ou appartient à une installation remplacée. Cette commande supprime tous les jumelages directs locaux. Oubliez ces jumelages sur le téléphone avant de recommencer.
 
 ## Vérifier l’état de préparation en direct
 
@@ -118,7 +129,7 @@ Utilisez `healthmd direct reset-trust --confirm` uniquement lorsque la confiance
 healthmd --backend direct --transport manual-ip status
 ```
 
-Une réponse d’état direct indique l’état de connexion et de sécurité sans valeurs de santé. Vérifiez ces champs avant de commencer :
+Une réponse d’état direct indique l’état de connexion et de sécurité sans valeurs de santé. Le client portable signale la source sous `source` avec une `platform` valant `ios` ou `android` ; l’utilitaire intégré expose les champs `iphone` ci-dessous. Vérifiez ces champs avant de commencer (source iPhone affichée) :
 
 | Champ | État prêt |
 |---|---|
@@ -133,7 +144,9 @@ Une réponse d’état direct indique l’état de connexion et de sécurité sa
 
 La destination de l’état direct reste non sélectionnée. Le mode fichier utilise uniquement le `--destination` explicite fourni à la commande.
 
-## Export brut strict
+Une source Android signale `platform: "android"` avec `app_active`, `protected_data_available`, `export_in_progress` et ses produits bruts disponibles, à la place des indicateurs de déclenchement iPhone.
+
+## Export brut strict (iPhone)
 
 Choisissez un seul sélecteur de plage :
 
@@ -147,13 +160,26 @@ healthmd --backend direct export --all --raw --output complete-health-corpus.jso
 
 Omettez `--output` pour diffuser le JSON validé vers stdout. Un fichier de sortie est plus sûr pour les réponses sensibles ou volumineuses.
 
-L’export brut strict renvoie `healthmd.raw_result` v1 contenant des journées ordinaires `healthmd.health_data` au schéma v7 et leurs archives sources canoniques. Il demande temporairement le détail sans perte sans modifier les réglages iPhone enregistrés. La CLI valide les dates exactes, le profil, le schéma, l’archive, les manifestes, la chaîne d’empreintes, l’empreinte finale du corps et l’état d’achèvement avant d’exposer le résultat.
+L’export brut strict iPhone renvoie `healthmd.raw_result` v1 contenant des journées ordinaires `healthmd.health_data` au schéma v7 et leurs archives sources canoniques. Il demande temporairement le détail sans perte sans modifier les réglages iPhone enregistrés. La CLI valide les dates exactes, le profil, le schéma, l’archive, les manifestes, la chaîne d’empreintes, l’empreinte finale du corps et l’état d’achèvement avant d’exposer le résultat.
 
 Une journée complète-vide est réussie. Les données demandées manquantes, partielles, échouées, annulées, non prises en charge ou ignorées produisent `partial_success` et une sortie non nulle, sauf si `--allow-partial` est explicite.
 
+## Export brut natif du fournisseur (Android)
+
+Le client Rust portable est direct par défaut ; les commandes brutes Android omettent donc l’indicateur `--backend` :
+
+```bash
+healthmd export --last 7 --raw --provider health_connect \
+  --raw-format ndjson --output health-connect.ndjson
+```
+
+`--provider` désigne un fournisseur explicite unique et vaut `health_connect` par défaut. `--raw-format` vaut NDJSON par défaut, la forme recommandée pour les instantanés volumineux ; la validation JSON en mémoire est plafonnée à 64 Mio. La sélection de métriques prend en charge `--metric` et `--all-metrics`, mais pas les sélecteurs canoniques ou de fichiers générés — ceux-ci restent des capacités iPhone.
+
+Les instantanés bruts Android conservent leur contrat natif Health Connect du fournisseur. Ils ne sont jamais convertis en journées `healthmd.health_data` façon HealthKit, et les statistiques liées mais différentes conservent leurs propres identités.
+
 ## Extraction canonique
 
-L’extraction directe utilise le même transport brut persistant, mais renvoie des données structurées comme la source sélectionnée au lieu de l’enveloppe de transport :
+L’extraction directe utilise le même transport brut persistant, mais renvoie des données structurées comme la source sélectionnée au lieu de l’enveloppe de transport. C’est une capacité iPhone :
 
 ```bash
 healthmd --backend direct extract \
@@ -168,7 +194,7 @@ La sélection de métrique, catégorie, source et détail atteint l’iPhone ava
 
 ## Fichiers générés en production
 
-Le mode fichier direct demande à l’iPhone d’exécuter les exportateurs de production de Health.md, puis transfère les fichiers résultants vers une destination explicite sur l’ordinateur.
+Le mode fichier direct demande au téléphone d’exécuter les exportateurs de production de Health.md, puis transfère les fichiers résultants vers une destination explicite sur l’ordinateur.
 
 ```bash
 mkdir -p "$HOME/Documents/HealthVault"
@@ -190,15 +216,19 @@ Par défaut, une requête conserve les formats enregistrés, le sous-dossier Hea
 
 L’iPhone peut préparer JSON, CSV, Markdown, ZIP, dictionnaires de données, agrégations, enregistrements individuels, notes quotidiennes et fichiers annexes de fournisseurs. La CLI valide chaque chemin relatif, nombre d’octets, empreinte et manifeste de fichiers, identité de destination et empreinte de requête avant validation. Elle rejette les traversées, les ancêtres sous forme de liens symboliques, les mutations de racine, les collisions de chemins et les changements d’empreinte. L’écrasement est atomique. L’ajout et la fusion Markdown utilisent des plans persistés afin qu’une relecture ne duplique pas le contenu.
 
-Les destinations de fichiers générés fonctionnent sur macOS et Linux. Protocol v1 les rejette sur Windows. Les utilisateurs Windows en direct peuvent utiliser l’export brut et l’extraction.
+Les destinations de fichiers générés fonctionnent sur macOS et Linux pour le protocole iPhone v1, qui les rejette sur Windows. Le protocole Android v2 valide les destinations de fichiers sur tous les systèmes d’exploitation de la CLI — macOS, Linux et Windows — et plafonne chaque tâche générée à 4 096 fichiers.
+
+Les tâches de fichiers du protocole Android v2 tirent leur portée des sélections d’export enregistrées sur l’appareil ou de `--profile PROFILE_ID` ; le profil possède les réglages figés et la destination. Les sélecteurs CLI de métrique, de catégorie et de détail sont rejetés pour les tâches de fichiers Android.
 
 ## Comportement au premier plan et en arrière-plan
 
-Le jumelage et les nouveaux travaux exigent que l’app iPhone soit au premier plan. Direct CLI Access ne transforme pas iOS en serveur d’export sans interface et ne peut pas réveiller l’app à la demande.
+Le jumelage et les nouveaux travaux exigent que l’app du téléphone soit au premier plan. Direct CLI Access ne transforme pas le téléphone en serveur d’export sans interface et ne peut pas réveiller l’app à la demande.
 
-Si un export est déjà connecté lorsque l’app passe en arrière-plan, Health.md demande un temps d’exécution iOS en arrière-plan limité. L’export peut se terminer pendant cette allocation. Si iOS l’expire, la connexion se ferme et la tâche persistante se met en pause. Rouvrez Health.md et reprenez la même tâche.
+Sur l’iPhone, si un export est déjà connecté lorsque l’app passe en arrière-plan, Health.md demande un temps d’exécution iOS en arrière-plan limité. L’export peut se terminer pendant cette allocation. Si iOS l’expire, la connexion se ferme et la tâche persistante se met en pause. Rouvrez Health.md et reprenez la même tâche.
 
-L’iPhone affiche une bannière d’activité globale pendant le travail direct. Elle comprend la phase de capture et de transfert, les jours terminés, la progression en octets et l’état en pause ou terminé, sans afficher de valeurs de santé.
+Sur Android, une session directe active exécute un service de premier plan de synchronisation de données, visible et démarré par l’utilisateur. Gardez l’app au premier plan pour le jumelage et les nouveaux travaux.
+
+Sur l’iPhone, une bannière d’activité globale pendant le travail direct comprend la phase de capture et de transfert, les jours terminés, la progression en octets et l’état en pause ou terminé, sans afficher de valeurs de santé.
 
 ## Reprise d’une tâche persistante et annulation
 
@@ -216,12 +246,12 @@ La commande d’annulation enregistre une requête persistante, mais l’annulat
 
 ## Modèle de sécurité
 
-- Le jumelage utilise un accord de clés Curve25519 éphémère et des preuves de transcription liées au code à six chiffres.
+- Le jumelage utilise un accord de clés éphémère et des preuves de transcription liés au code de jumelage de la plateforme — le flux iPhone à six chiffres ou le code unique Android distinct à haute entropie de 20 chiffres (~66 bits).
 - La reconnexion prouve un secret aléatoire stocké et les deux identités d’installation.
 - Chaque connexion dérive de nouvelles clés et de nouveaux nonces.
 - Les messages et trames binaires utilisent ChaCha20-Poly1305 avec des contrôles de séquence monotones.
 - Les partitions utilisent des manifestes SHA-256 et une chaîne d’empreintes entre les partitions.
-- La confiance iPhone est stockée dans Keychain.
+- La confiance iPhone est stockée dans Keychain ; la confiance de reconnexion Android s’appuie sur le Keystore.
 - La confiance portable utilise Keychain, Secret Service ou Windows Credential Manager et ne retombe jamais sur du texte brut.
 - Les spools et journaux utilisent le stockage privé de l’application et excluent les sauvegardes lorsque la plateforme le permet.
 
@@ -247,7 +277,8 @@ Manual IP reste chiffré sur un réseau local ou Tailscale. Tailscale protège a
 
 <div class="related">
   <a href="/fr/docs/cli/"><span>Vue d’ensemble</span>CLI Health.md : installez les utilitaires intégrés et choisissez le bon back-end.</a>
-  <a href="/fr/docs/cli-extract/"><span>Données</span>Extraction canonique : sélectionnez et émettez des données Health.md structurées comme la source.</a>
+  <a href="/fr/docs/android/"><span>Android</span>Health.md pour Android : sources Health Connect, destinations de dossiers et automatisation sur l’appareil.</a>
+  <a href="/fr/docs/cli-extract/"><span>Données</span>Extraction canonique : sélectionnez et émettez des données Health.md structurées comme la source (iPhone).</a>
   <a href="/fr/docs/cli-jobs/"><span>Fiabilité</span>Tâches persistantes et automatisation : reprise, annulation, résultats partiels et scripts.</a>
   <a href="/fr/docs/reference/connected-mac-iphone-protocol/"><span>Protocole</span>Référence Mac et iPhone connectés : capacités, transfert borné et états de résultat.</a>
 </div>

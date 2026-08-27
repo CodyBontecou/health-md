@@ -16,11 +16,11 @@ The released Mac app includes two signed local helpers: `healthmd-mcp` for typed
 |---|---|---|
 | Let Codex or Claude query and chart health data on Mac | Bundled `healthmd-mcp` over stdio | [MCP server & tools](/docs/mcp/) |
 | Export canonical JSON or generated files in a Mac script | Bundled `healthmd` CLI | [CLI](/docs/cli/) |
-| Connect directly to an open iPhone without the Mac app | Portable direct CLI (**preview**) | [Direct iPhone access](/docs/cli-direct/) |
+| Connect directly to an open iPhone or Android phone without the Mac app | Portable direct CLI (**preview**) | [Direct phone access](/docs/cli-direct/) |
 | Build against exact request and response envelopes | Loopback API or public contracts | [Loopback API](/docs/agent-api/) |
 | Parse schemas, records, evidence, or generated fixtures | Versioned reference | [Data contracts](/docs/reference/) |
 
-Backend and transport choices are explicit; Health.md does not silently fall back from direct iPhone access to the Mac app.
+Backend and transport choices are explicit; Health.md does not silently fall back from direct phone access to the Mac app.
 
 ## Codex with the Mac app
 
@@ -78,7 +78,7 @@ The host owns stdin and the process lifecycle. Do not launch the helper as an or
 <p>The cross-platform Rust CLI, <code>healthmd setup codex</code>, same-binary <code>healthmd mcp serve</code>, and Linux/Windows direct pairing are implemented but await their first qualified public release.</p>
 </div>
 
-After publication, `healthmd setup codex` will configure Codex idempotently and start direct iPhone pairing. Until then, do not rely on unpublished Homebrew, crates.io, installer, or GitHub release URLs. The [Direct iPhone CLI](/docs/cli-direct/) page documents the staged transport and protocol behavior.
+After publication, `healthmd setup codex` will configure Codex idempotently and start direct iPhone pairing. Until then, do not rely on unpublished Homebrew, crates.io, installer, or GitHub release URLs. The [Direct phone CLI](/docs/cli-direct/) page documents the staged transport and protocol behavior.
 
 ## Explicit CLI workflows
 

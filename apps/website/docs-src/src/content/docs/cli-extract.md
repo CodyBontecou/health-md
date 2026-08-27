@@ -5,6 +5,8 @@ description: "Use healthmd extract to acquire selected Apple Health metrics and 
 
 `healthmd extract` is the source-data command for scripts and agents. It asks iPhone to acquire only the selected metrics and detail, validates the durable transfer, removes the transport envelope, and emits canonical `healthmd.health_data` v7 documents or clearly labeled projections.
 
+Canonical extraction is an iPhone capability backed by the Mac app backend and the iOS v1 direct protocol. Android direct sources return provider-native Health Connect snapshots through [raw export](/docs/cli-direct/) instead.
+
 Use extraction when you need original Health.md data. Use [typed queries](/docs/agent-queries/) when you need sessions, comparisons, workout alignment, coverage, or evidence packets.
 
 ## Basic shape
@@ -227,7 +229,7 @@ healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-Both paths use the same public daily schema and strict validation. The transport, pairing, storage, and job records differ.
+Both paths use the same public daily schema and strict validation. The transport, pairing, storage, and job records differ. Both paths require an iPhone source; the Android direct backend does not implement canonical extraction.
 
 ## Large history
 

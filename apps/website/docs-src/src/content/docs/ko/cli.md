@@ -1,26 +1,27 @@
 ---
 title: "Health.md CLI"
-description: "Mac 앱 또는 직접 iPhone 백엔드를 선택하고, healthmd를 설치하며, 준비 상태를 확인하고, 파일을 내보내고, 정규 Apple Health 데이터를 추출하고, 타입 지정 쿼리와 영속 작업 자동화를 실행합니다."
+description: "Mac 앱 또는 직접 휴대전화 백엔드를 선택하고, healthmd를 iPhone 또는 Android 기기와 페어링하며, 준비 상태를 확인하고, 파일을 내보내고, 정규 Apple Health 데이터를 추출하고, 타입 지정 쿼리와 영속 작업 자동화를 실행합니다."
 ---
 
-`healthmd` 명령에는 두 가지 작동 모드가 있습니다. 암호화된 로컬 쿼리, MCP 도구 또는 Mac용 Health.md에서 이미 선택한 대상 폴더가 필요하면 Mac 앱 백엔드를 사용하세요. Mac 앱을 실행하지 않고 원시 데이터나 생성된 파일이 필요하면 직접 iPhone 백엔드를 사용하세요.
+`healthmd` 명령에는 두 가지 작동 모드가 있습니다. 암호화된 로컬 쿼리, MCP 도구 또는 Mac용 Health.md에서 이미 선택한 대상 폴더가 필요하면 Mac 앱 백엔드를 사용하세요. Mac 앱을 실행하지 않고 원시 데이터나 생성된 파일이 필요하면 직접 휴대전화 백엔드를 사용하세요. 직접 모드는 iPhone(프로토콜 v1) 또는 Android(프로토콜 v2)에서 열린 Health.md 앱과 페어링합니다.
 
 <div class="callout">
-<strong>HealthKit은 iPhone에 유지됩니다.</strong>
-<p style="margin-top:6px;">어느 CLI 백엔드도 컴퓨터에서 Apple Health를 읽지 않습니다. 현재 열려 있는 Health.md iPhone 앱이 새로운 HealthKit 읽기를 수행합니다. CLI는 검증된 결과 또는 파일을 받습니다.</p>
+<strong>건강 데이터는 휴대전화에 유지됩니다.</strong>
+<p style="margin-top:6px;">어느 CLI 백엔드도 컴퓨터에서 Apple Health 또는 Health Connect를 읽지 않습니다. iPhone 또는 Android에서 현재 열려 있는 Health.md 앱이 새로운 플랫폼 건강 읽기를 수행합니다. CLI는 검증된 결과 또는 파일을 받습니다.</p>
 </div>
 
 ## 백엔드 선택
 
-| 기능 | Mac 앱 백엔드 | 직접 iPhone 백엔드 |
+| 기능 | Mac 앱 백엔드 | 직접 휴대전화 백엔드 |
 |---|---|---|
 | 번들 Mac 도우미의 기본값 | 예 | 아니요, `--backend direct`로 선택 |
+| 소스 기기 | iPhone | iPhone(프로토콜 v1) 또는 Android(프로토콜 v2) |
 | Mac용 Health.md를 열어야 함 | 예 | 아니요 |
-| 새 데이터를 위해 iPhone에서 Health.md를 열어야 함 | 예 | 예 |
+| 새 데이터를 위해 휴대전화에서 Health.md 앱을 열어야 함 | 예 | 예 |
 | 파일 대상 | Mac 앱에서 선택한 폴더 | 기존 절대 경로 `--destination` |
-| 엄격한 원시 내보내기 | 예 | 예 |
-| 정규 `healthmd extract` | 예 | 예 |
-| 암호화된 컨텍스트, 타입 지정 쿼리 및 증거 | 예 | 아니요 |
+| 엄격한 원시 내보내기 | 예 | 예. Android에서는 제공자 고유의 Health Connect 스냅샷 |
+| 정규 `healthmd extract` | 예 | iPhone 전용 |
+| 암호화된 컨텍스트, 타입 지정 쿼리 및 증거 | 예 | iPhone 전용, 이식 가능한 클라이언트 |
 | `healthmd-mcp` | 예 | 아니요 |
 | 수동 IP 또는 Tailscale | Mac 동기화 또는 명시적 직접 모드 | 예 |
 | 근거리 직접 전송 | 번들 Swift 도우미만 | 이식 가능한 Rust 클라이언트에서는 지원하지 않음 |
@@ -80,11 +81,11 @@ healthmd doctor
 <p>크로스 플랫폼 Rust CLI는 실물 iPhone 출시 QA와 첫 번째 적격 패키지를 기다리고 있습니다.</p>
 </div>
 
-독립 실행형 Rust CLI는 `0.1.0-alpha.1`로 개발 중입니다. macOS, Linux 및 Windows에서 실행되고 기본적으로 직접 수동 IP 또는 Tailscale 연결을 사용하며 Mac 앱이 필요하지 않습니다. 프로토콜 호환성과 언어 간 픽스처는 구현되었지만 첫 공개 출시 전에 실물 iPhone 출시 QA와 공개 패키징을 완료해야 합니다.
+독립 실행형 Rust CLI는 `0.1.0-alpha.1`로 개발 중입니다. macOS, Linux 및 Windows에서 실행되고 기본적으로 직접 수동 IP 또는 Tailscale 연결을 사용하며 Mac 앱이 필요하지 않습니다. 프로토콜 v1으로 iPhone 소스와, 프로토콜 v2로 Android 소스와 페어링하며 자동화된 Swift↔Rust 및 Kotlin↔Rust 호환성 게이트를 갖추고 있습니다. 프로토콜 호환성은 구현되었지만 첫 공개 출시 전에 실물 기기 출시 QA와 공개 패키징을 완료해야 합니다.
 
 출시되기 전까지는 번들 Mac 도우미를 사용하세요. 공개되지 않은 Homebrew, crates.io, GitHub 설치 프로그램 또는 다운로드 URL에 의존하지 마세요.
 
-이식 가능한 클라이언트는 세 플랫폼 모두에서 원시 내보내기, 정규 추출, 페어링, 상태, 재개, 취소 및 생성 파일 대상을 지원합니다. 프로토콜 v1 파일 내보내기에서 iPhone은 대상을 불투명한 대상 레이블로 취급하고, 수신 CLI는 호스트 파일 시스템에서 이를 검증해 영속적으로 결합합니다.
+이식 가능한 클라이언트는 세 데스크톱 플랫폼 모두에서 iPhone 및 Android 소스의 페어링, 상태, 원시 내보내기, 생성 파일 대상, 재개 및 취소를 지원합니다. 정규 추출과 타입 지정 MCP 쿼리는 iPhone 기능입니다. Android 원시 스냅샷은 HealthKit 형태 데이터로 변환되지 않고 Health Connect 제공자 고유 계약을 유지하며, Android 타입 지정 쿼리는 구현되지 않았습니다. 생성 파일 내보내기에서 휴대전화는 대상을 불투명한 대상 레이블로 취급하고 수신 CLI는 호스트 파일 시스템에서 이를 검증해 영속적으로 결합합니다. Android 프로토콜 v2는 모든 CLI 운영 체제에서 파일 대상을 커밋하며 생성 작업당 파일 수를 4,096개로 제한합니다. iOS 프로토콜 v1은 Windows에서 파일 대상을 거부합니다.
 
 ## 명령 목록
 
@@ -93,7 +94,7 @@ healthmd doctor
 | `healthmd status` | 실시간 준비 상태 또는 로컬 영속 작업 하나 확인 | 둘 다 |
 | `healthmd doctor` | Mac, 암호화된 컨텍스트 및 iPhone 준비 상태 설명 | Mac 앱 |
 | `healthmd metrics list` | 쿼리 가능한 정규 측정 항목 카탈로그 반환 | Mac 앱 |
-| `healthmd extract` | 선택한 정규 `healthmd.health_data` 객체 가져오기 | 둘 다 |
+| `healthmd extract` | 선택한 정규 `healthmd.health_data` 객체 가져오기 | 둘 다, iPhone 소스 |
 | `healthmd query` | 선택한 타입 지정 측정 항목을 가져와 쿼리 | Mac 앱 |
 | `healthmd sleep sessions` | 일급 객체인 수면 세션 및 고정 구간 반환 | Mac 앱 |
 | `healthmd training align` | 운동을 직전 및 직후 수면과 시간순으로 대조 | Mac 앱 |
@@ -105,7 +106,9 @@ healthmd doctor
 | `healthmd resume` | 변경 불가능한 영속 내보내기 작업 재개 | 둘 다 |
 | `healthmd cancel` | 명시적 취소 요청 | 둘 다 |
 | `healthmd agent ...` | 저수준 루프백 쿼리 및 작업 API 호출 | Mac 앱 |
-| `healthmd direct ...` | 직접 iPhone 신뢰 페어링, 목록 표시 및 제거 | 직접 |
+| `healthmd direct ...` | 직접 휴대전화 신뢰 페어링, 목록 표시 및 제거 | 직접 |
+
+직접 명령은 iPhone(프로토콜 v1) 또는 Android(프로토콜 v2) 소스와 페어링합니다. 정규 `extract`와 모든 타입 지정 쿼리 명령은 iPhone 기능입니다. Android 직접 백엔드는 제공자 고유의 Health Connect 원시 스냅샷과 생성 파일을 반환합니다.
 
 ## 첫 번째 Mac 앱 워크플로
 
@@ -170,7 +173,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7은 공개 소스 계약입니다. 쿼리, 증거, 작업 및 수신 확인 스키마는 전송 또는 파생 보기를 설명합니다. 소스 스키마를 대체하지 않습니다.
+`healthmd.health_data` v7은 공개 소스 계약입니다. 쿼리, 증거, 작업 및 수신 확인 스키마는 전송 또는 파생 보기를 설명합니다. 소스 스키마를 대체하지 않습니다. 정규 추출은 iPhone 기능이며, Android 직접 소스는 대신 원시 내보내기를 통해 제공자 고유의 Health Connect 스냅샷을 노출합니다.
 
 ## 기계 판독 가능 동작
 
@@ -217,7 +220,7 @@ iPhone의 확인 응답이 있어야만 취소가 최종 상태가 됩니다.
 ## 다음 가이드
 
 <div class="related">
-  <a href="/ko/docs/cli-direct/"><span>Mac 앱 불필요</span>직접 iPhone CLI: 페어링, 전송, 원시 및 파일 내보내기, 백그라운드 동작, 플랫폼 지원.</a>
+  <a href="/ko/docs/cli-direct/"><span>Mac 앱 불필요</span>직접 휴대전화 CLI: iPhone 또는 Android와 페어링하고 전송, 원시 및 파일 내보내기, 백그라운드 동작, 플랫폼 지원을 살펴봅니다.</a>
   <a href="/ko/docs/cli-extract/"><span>소스 데이터</span>정규 추출: 측정 항목, 객체, 세부 정보, JSON Pointer, JSONL 및 수신 확인을 선택합니다.</a>
   <a href="/ko/docs/cli-jobs/"><span>자동화</span>영속 작업: 시간 초과, 재개, 취소, 부분 결과 및 안전한 스크립팅.</a>
   <a href="/ko/docs/agents/"><span>에이전트</span>로컬 에이전트 워크플로: 암호화된 컨텍스트, 직접 범위, 타입 지정 명령 및 증거.</a>

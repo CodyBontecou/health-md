@@ -1,26 +1,27 @@
 ---
 title: "Health.md CLI"
-description: "选择 Mac 应用或 iPhone 直连后端，安装 healthmd，检查就绪状态，导出文件，提取规范 Apple Health 数据，运行类型化查询并自动执行持久作业。"
+description: "选择 Mac 应用或手机直连后端，将 healthmd 与 iPhone 或 Android 设备配对，检查就绪状态，导出文件，提取规范 Apple Health 数据，运行类型化查询并自动执行持久作业。"
 ---
 
-`healthmd` 命令有两种运行模式。如果需要加密本地查询、MCP 工具，或使用已在 Health.md Mac 版中选择的目标文件夹，请使用 Mac 应用后端。如果希望在不运行 Mac 应用的情况下获取原始数据或生成文件，请使用 iPhone 直连后端。
+`healthmd` 命令有两种运行模式。如果需要加密本地查询、MCP 工具，或使用已在 Health.md Mac 版中选择的目标文件夹，请使用 Mac 应用后端。如果希望在不运行 Mac 应用的情况下获取原始数据或生成文件，请使用手机直连后端。直连模式可与 iPhone（协议 v1）或 Android（协议 v2）上已打开的 Health.md 应用配对。
 
 <div class="callout">
-<strong>HealthKit 始终保留在 iPhone 上。</strong>
-<p style="margin-top:6px;">两种 CLI 后端都不会从计算机读取 Apple Health。每次获取全新 HealthKit 数据时，都由当前已打开的 Health.md iPhone 应用执行读取；CLI 只接收经过验证的结果或文件。</p>
+<strong>健康数据始终保留在手机上。</strong>
+<p style="margin-top:6px;">两种 CLI 后端都不会从计算机读取 Apple Health 或 Health Connect。每次获取全新的平台健康数据时，都由 iPhone 或 Android 上当前已打开的 Health.md 应用执行读取；CLI 只接收经过验证的结果或文件。</p>
 </div>
 
 ## 选择后端
 
-| 功能 | Mac 应用后端 | iPhone 直连后端 |
+| 功能 | Mac 应用后端 | 手机直连后端 |
 |---|---|---|
 | 内置 Mac 辅助程序的默认后端 | 是 | 否，使用 `--backend direct` 选择 |
+| 来源设备 | iPhone | iPhone（协议 v1）或 Android（协议 v2） |
 | 需要 Health.md Mac 版保持打开 | 是 | 否 |
-| 获取新数据时需要在 iPhone 上打开 Health.md | 是 | 是 |
+| 获取新数据时需要在手机上打开 Health.md | 是 | 是 |
 | 文件目标位置 | Mac 应用中选择的文件夹 | 已存在的绝对 `--destination` |
-| 严格原始导出 | 支持 | 支持 |
-| 规范 `healthmd extract` | 支持 | 支持 |
-| 加密上下文、类型化查询和证据 | 支持 | 不支持 |
+| 严格原始导出 | 支持 | 支持；Android 上为提供方原生的 Health Connect 快照 |
+| 规范 `healthmd extract` | 支持 | 仅限 iPhone |
+| 加密上下文、类型化查询和证据 | 支持 | 仅限 iPhone，可移植客户端 |
 | `healthmd-mcp` | 支持 | 不支持 |
 | 手动 IP 或 Tailscale | Mac 同步或明确的直连模式 | 支持 |
 | “附近”直连传输 | 仅内置 Swift 辅助程序 | 可移植 Rust 客户端不支持 |
@@ -80,11 +81,11 @@ healthmd doctor
 <p>跨平台 Rust CLI 仍在等待实体 iPhone 发布质量验证和首个合格软件包。</p>
 </div>
 
-独立 Rust CLI 正以 `0.1.0-alpha.1` 版本开发。它可在 macOS、Linux 和 Windows 上运行，默认通过手动 IP 或 Tailscale 直连，不需要 Mac 应用。协议兼容性和跨语言测试样例已经实现，但在首次公开发布前，仍需完成实体 iPhone 发布质量验证和公开打包。
+独立 Rust CLI 正以 `0.1.0-alpha.1` 版本开发。它可在 macOS、Linux 和 Windows 上运行，默认通过手动 IP 或 Tailscale 直连，不需要 Mac 应用。它通过协议 v1 与 iPhone 来源配对，通过协议 v2 与 Android 来源配对，并配有自动化的 Swift↔Rust 和 Kotlin↔Rust 兼容性门禁。协议兼容性已经实现，但在首次公开发布前，仍需完成实体设备发布质量验证和公开打包。
 
 正式版本发布前，请使用内置 Mac 辅助程序。不要依赖尚未发布的 Homebrew、crates.io、GitHub 安装程序或下载 URL。
 
-可移植客户端在三个平台上都支持原始导出、规范提取、配对、状态、恢复、取消和生成文件目标位置。使用协议 v1 导出文件时，iPhone 会将目标位置视为不透明的目标标签，接收端 CLI 则会验证该标签，并将其持久绑定到主机文件系统中的目标位置。
+对于 iPhone 和 Android 来源，可移植客户端在三个桌面平台上都支持配对、状态检查、原始导出、生成文件目标位置、恢复和取消。规范提取和类型化 MCP 查询属于 iPhone 功能；Android 原始快照保持其 Health Connect 提供方原生契约，不会被转换为 HealthKit 形态的数据，Android 类型化查询尚未实现。生成文件导出时，手机会把目标位置视为不透明的目标标签，接收端 CLI 则会验证该标签，并将其持久绑定到主机文件系统中的目标位置。Android 协议 v2 在所有 CLI 操作系统上都能提交文件目标位置，并将每个生成作业限制在最多 4,096 个文件；iOS 协议 v1 会在 Windows 上拒绝文件目标位置。
 
 ## 命令索引
 
@@ -93,7 +94,7 @@ healthmd doctor
 | `healthmd status` | 检查实时就绪状态或一项本地持久作业 | 两者 |
 | `healthmd doctor` | 说明 Mac、加密上下文和 iPhone 就绪状态 | Mac 应用 |
 | `healthmd metrics list` | 返回可查询指标的规范目录 | Mac 应用 |
-| `healthmd extract` | 获取所选的规范 `healthmd.health_data` 对象 | 两者 |
+| `healthmd extract` | 获取所选的规范 `healthmd.health_data` 对象 | 两者，iPhone 来源 |
 | `healthmd query` | 获取并查询所选类型化指标 | Mac 应用 |
 | `healthmd sleep sessions` | 返回一等的睡眠时段和固定窗口 | Mac 应用 |
 | `healthmd training align` | 将锻炼与前后睡眠对齐 | Mac 应用 |
@@ -105,7 +106,9 @@ healthmd doctor
 | `healthmd resume` | 恢复不可变的持久导出作业 | 两者 |
 | `healthmd cancel` | 明确请求取消 | 两者 |
 | `healthmd agent ...` | 调用底层环回查询与作业 API | Mac 应用 |
-| `healthmd direct ...` | 配对、列出和删除 iPhone 直连信任 | 直连 |
+| `healthmd direct ...` | 配对、列出和删除手机直连信任 | 直连 |
+
+直连命令可与 iPhone（协议 v1）或 Android（协议 v2）来源配对。规范 `extract` 和所有类型化查询命令均为 iPhone 功能；Android 直连后端返回提供方原生的 Health Connect 原始快照和生成文件。
 
 ## 首次使用 Mac 应用后端
 
@@ -170,7 +173,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7 是公开来源契约。查询、证据、作业和回执架构描述传输或派生视图，不能替代来源架构。
+`healthmd.health_data` v7 是公开来源契约。查询、证据、作业和回执架构描述传输或派生视图，不能替代来源架构。规范提取是 iPhone 功能；Android 直连来源则通过原始导出提供提供方原生的 Health Connect 快照。
 
 ## 机器可读行为
 
@@ -217,7 +220,7 @@ healthmd cancel JOB_UUID
 ## 后续指南
 
 <div class="related">
-  <a href="/zh-hans/docs/cli-direct/"><span>无需 Mac 应用</span>iPhone 直连 CLI：配对、传输方式、原始与文件导出、后台行为和平台支持。</a>
+  <a href="/zh-hans/docs/cli-direct/"><span>无需 Mac 应用</span>手机直连 CLI：与 iPhone 或 Android 配对，了解传输方式、原始与文件导出、后台行为和平台支持。</a>
   <a href="/zh-hans/docs/cli-extract/"><span>来源数据</span>规范提取：选择指标、对象、详细程度、JSON Pointer、JSONL 和回执。</a>
   <a href="/zh-hans/docs/cli-jobs/"><span>自动化</span>持久作业：超时、恢复、取消、部分结果和安全脚本。</a>
   <a href="/zh-hans/docs/agents/"><span>智能体</span>本地智能体工作流：加密上下文、直连范围、类型化命令和证据。</a>

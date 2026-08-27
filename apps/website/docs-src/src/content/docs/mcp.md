@@ -79,7 +79,7 @@ Claude Desktop versions that advertise the stable MCP Apps extension render Heal
 
 After the standalone release, `healthmd setup codex` will pair a foreground iPhone and safely create a same-binary `healthmd mcp serve` entry. That topology uses authenticated encrypted Manual IP or Tailscale transport on port `17647`, native credential storage, and explicit per-request iPhone reads. Linux additionally requires an unlocked Secret Service provider; Windows uses Credential Manager.
 
-Until a `healthmd-cli/v<version>` release exists, do not rely on unpublished package or installer URLs. See [Direct iPhone CLI](/docs/cli-direct/) for the staged pairing and transport contract.
+Until a `healthmd-cli/v<version>` release exists, do not rely on unpublished package or installer URLs. See [Direct phone CLI](/docs/cli-direct/) for the staged pairing and transport contract.
 
 ## Native MCP App visualizations
 
