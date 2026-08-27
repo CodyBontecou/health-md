@@ -105,6 +105,7 @@ Folder organization supports the same date placeholders except it is used as a p
 - Use the path preview before exporting a large date range.
 - If Files access is temporarily unavailable, Health.md retains the saved folder name and retries once when the app becomes active. Reconnect the provider or re-select the folder if access does not recover.
 - If a bookmark resolves at a different path, Health.md accepts it when persistent identity proves it is the same folder, or when neither the saved selection nor the resolved folder offers any identity evidence — which is common for cloud file providers like iCloud Drive and Dropbox. In that case the resolved bookmark plus granted security-scoped access is the strongest same-folder evidence the provider can offer, so Health.md rebinds to the new path and refreshes the saved metadata instead of demanding re-selection on every launch. A different confirmed identity is blocked; identity evidence that appears on only one side of a move still requires review and blocks writes.
+- Export profiles store the folder's persistent identity evidence alongside the bookmark. When a profile destination is activated — at launch, on profile switch, or for Shortcuts and scheduled runs — that evidence is used for verification, and rows saved before identity capture heal their evidence through the bookmark round-trip. Local "On My iPhone" folders therefore keep working across restarts exactly like cloud folders instead of asking for re-selection every launch.
 
 ## Troubleshooting
 
@@ -135,6 +136,7 @@ Folder organization supports the same date placeholders except it is used as a p
 ## Implementation notes
 
 - `VaultManager.setVaultFolder(_:)` starts security-scoped access, saves bookmark data, optional persistent identity evidence, and stores `vaultURL`/`vaultName`. The trusted path and identity are captured through the same bookmark round-trip that later verifies them, so picker-URL and bookmark-URL normalization differences (common with file providers) cannot cause spurious verification failures.
+- `VaultManager.adoptPersistedVault(_:standardizedPath:displayName:identity:)` loads a profile-bound destination into the shared vault keys and re-runs verified load. `ProfileDestinationStore` rows persist the folder's identity evidence next to the bookmark; rows saved without it heal their evidence through adoption's own bookmark round-trip, and callers persist the healed identity back into the row.
 - The selected folder bookmark key is `obsidianVaultBookmark`; selection metadata v2 is stored separately and v1 path/name metadata migrates only after a safe same-path resolution.
 - `healthSubfolder` defaults to empty and is persisted separately.
 - `VaultManager.exportHealthData(...)` creates directories as needed before writing files.

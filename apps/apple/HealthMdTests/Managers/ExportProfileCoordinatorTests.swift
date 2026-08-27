@@ -64,11 +64,15 @@ final class ExportProfileCoordinatorTests: XCTestCase {
     }
 
     private func makeVaultManager() -> VaultManager {
+        makeVaultManager(identityProbe: FakeVaultFolderIdentityProbe())
+    }
+
+    private func makeVaultManager(identityProbe: VaultFolderIdentityProbing) -> VaultManager {
         guard let defaults else { fatalError("test defaults missing") }
         return VaultManager(
             defaults: SystemUserDefaults(defaults: defaults),
             bookmarkResolver: bookmarkResolver,
-            identityProbe: FakeVaultFolderIdentityProbe()
+            identityProbe: identityProbe
         )
     }
 
@@ -270,6 +274,117 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         )
         XCTAssertEqual(apiSettings.endpointURLString, "https://second.example.com")
         XCTAssertEqual(apiSettings.bearerToken, "second-token")
+    }
+
+    // MARK: - Destination identity evidence (issue #143)
+
+    func testVaultFolderSelectionStoresIdentityEvidence() throws {
+        // Local "On My iPhone" volumes report persistent IDs; the destination
+        // row must carry that evidence so later adoptions can verify through
+        // an identity match instead of exact path matching alone.
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 7)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        coordinator.vaultFolderWasSelected()
+
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        let binding = try XCTUnwrap(coordinator.destinationStore.vault(id: profile.folderVaultID))
+        XCTAssertEqual(binding.identity, folderIdentity)
+    }
+
+    func testImportFolderSelectionStoresIdentityEvidence() throws {
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 9)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+
+        let imported = try XCTUnwrap(
+            coordinator.importFolderSelection(URL(fileURLWithPath: "/Users/x/EditorVault"))
+        )
+
+        let destination = try XCTUnwrap(coordinator.destinationStore.vault(id: imported))
+        XCTAssertEqual(destination.identity, folderIdentity)
+    }
+
+    func testActivationHealsLegacyDestinationRowWithoutIdentity() throws {
+        // Rows saved before identity capture carry none; activation must heal
+        // the row so identity-bearing local folders stop requiring reselection
+        // on every launch (issue #143).
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 11)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        let bindingID = try XCTUnwrap(profile.folderVaultID)
+
+        // Simulate a legacy row saved without identity evidence.
+        let legacyRow = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        coordinator.destinationStore.updateVault(
+            id: bindingID,
+            name: legacyRow.name,
+            standardizedPath: legacyRow.standardizedPath,
+            bookmarkData: legacyRow.bookmarkData,
+            identity: nil
+        )
+        XCTAssertNil(coordinator.destinationStore.vault(id: bindingID)?.identity)
+
+        coordinator.activate(profileID: profile.id)
+
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/Health"
+        )
+        XCTAssertEqual(coordinator.destinationStore.vault(id: bindingID)?.identity, folderIdentity)
+    }
+
+    func testActivationPersistsRefreshedBookmarkAndPathIntoRow() throws {
+        // When adoption resolves the row's bookmark to a moved path, the
+        // verified load refreshes the shared defaults; the destination row
+        // must receive the refreshed bookmark, path, and name too, or every
+        // launch re-adopts the stale bookmark (issue #143 review finding).
+        let probe = FakeVaultFolderIdentityProbe()
+        probe.defaultIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 13)
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+
+        // Seed a row whose stale bookmark encodes a different folder than its
+        // stored path (the state a provider move leaves behind).
+        let staleBookmark = Data("fake-bookmark-WeeklyVault".utf8)
+        coordinator.destinationStore.upsertVault(
+            name: "Health",
+            standardizedPath: "/Users/x/Health",
+            bookmarkData: staleBookmark
+        )
+        let bindingID = try XCTUnwrap(
+            coordinator.destinationStore.vault(standardizedPath: "/Users/x/Health")?.id
+        )
+        coordinator.profileStore.setFolderBinding(profileID: profile.id, destinationID: bindingID)
+
+        coordinator.activate(profileID: profile.id)
+
+        // The bookmark resolved to /Users/x/WeeklyVault — a moved path with
+        // matching identity — and the row now carries the rebind durably.
+        // (The path-mapping fake's bookmark bytes are path-deterministic, so
+        // the refreshed bookmark equals the verified folder's own encoding.)
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/WeeklyVault"
+        )
+        let row = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        XCTAssertEqual(row.standardizedPath, "/Users/x/WeeklyVault")
+        XCTAssertEqual(row.name, "WeeklyVault")
+        XCTAssertEqual(row.bookmarkData, staleBookmark)
+        XCTAssertEqual(row.identity, probe.defaultIdentity)
     }
 
     // MARK: - Profile management
