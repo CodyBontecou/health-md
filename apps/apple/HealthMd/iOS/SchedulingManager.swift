@@ -2200,11 +2200,15 @@ class SchedulingManager: ObservableObject {
         if let profile,
            let bindingID = profile.folderVaultID,
            let destination = destinationStore.vault(id: bindingID) {
-            VaultManager().adoptPersistedVault(
+            let healedIdentity = VaultManager().adoptPersistedVault(
                 bookmarkData: destination.bookmarkData,
                 standardizedPath: destination.standardizedPath,
-                displayName: destination.name
+                displayName: destination.name,
+                identity: destination.identity
             )
+            if let healedIdentity, healedIdentity != destination.identity {
+                destinationStore.updateVaultIdentity(id: destination.id, identity: healedIdentity)
+            }
         }
         if let profile,
            let endpointID = profile.apiEndpointID,

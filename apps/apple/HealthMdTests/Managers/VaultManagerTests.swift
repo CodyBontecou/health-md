@@ -1146,6 +1146,114 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(bookmarkResolver.createBookmarkCalls.isEmpty)
     }
 
+    // MARK: - Profile adoption (issue #143)
+
+    func testAdoptPersistedVault_identityBearingRowMovedPathRebindsViaIdentity() throws {
+        // Local "On My iPhone" folders live on a volume that reports persistent
+        // IDs, so their destination rows carry identity evidence. Adoption must
+        // carry that evidence into the trusted selection so a moved path rebinds
+        // through an identity match — the same rigor the single-vault flow keeps
+        // — instead of demanding reselection on every launch (issue #143).
+        let savedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/OnMyiPhone/Health")
+        let folderIdentity = identity("local-folder")
+        bookmarkResolver.resolvedURL = movedURL
+        identityProbe.defaultIdentity = folderIdentity
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        let healed = manager.adoptPersistedVault(
+            bookmarkData: Data("old-bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Health",
+            identity: folderIdentity
+        )
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(manager.vaultName, "Health")
+        XCTAssertEqual(healed, folderIdentity)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), movedURL.standardizedFileURL.path)
+
+        // The rebind is durable: the next launch resolves the same path with
+        // the same identity and needs no further bookmark refresh.
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+        manager.refreshVaultAccess()
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+    }
+
+    func testAdoptPersistedVault_identityMismatchAcrossMovedPathStillFailsClosed() throws {
+        let savedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health")
+        let changedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health(1)")
+        bookmarkResolver.resolvedURL = changedURL
+        identityProbe.defaultIdentity = identity("different-folder")
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        manager.adoptPersistedVault(
+            bookmarkData: Data("bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Health",
+            identity: identity("original-folder")
+        )
+
+        XCTAssertEqual(manager.destinationState, .requiresReselectionDestinationChanged)
+        XCTAssertNil(manager.vaultURL)
+    }
+
+    func testAdoptPersistedVault_legacyRowWithoutIdentityHealsThroughBookmarkRoundTrip() throws {
+        // Destination rows saved before identity capture (or by earlier app
+        // versions) carry no identity evidence. Adoption must re-capture it
+        // through the row's own bookmark round-trip so identity-bearing local
+        // volumes stop falling into one-sided "identity appeared" review on
+        // every launch (issue #143).
+        let savedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/OnMyiPhone/Health")
+        let folderIdentity = identity("healed-folder")
+        bookmarkResolver.resolvedURL = movedURL
+        identityProbe.defaultIdentity = folderIdentity
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        let healed = manager.adoptPersistedVault(
+            bookmarkData: Data("old-bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Health",
+            identity: nil
+        )
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(healed, folderIdentity)
+
+        // The healed identity is durable: the refreshed selection stores it,
+        // so the next adoption of the (still identity-less) row trusts it.
+        let selectionData = try XCTUnwrap(defaults.data(forKey: "obsidianVaultSelectionV2"))
+        let selection = try JSONSerialization.jsonObject(with: selectionData) as? [String: Any]
+        XCTAssertNotNil(selection?["identity"])
+    }
+
+    func testAdoptPersistedVault_identitylessRowRebindsWithoutEvidence() throws {
+        // Cloud file-provider rows never report persistent IDs; adoption keeps
+        // the identity-less rebind the 3.1.1 fix introduced (issue #140).
+        let savedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/Provider/Healthmd")
+        bookmarkResolver.resolvedURL = movedURL
+        identityProbe.defaultIdentity = nil
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        let healed = manager.adoptPersistedVault(
+            bookmarkData: Data("old-bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Healthmd",
+            identity: nil
+        )
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(manager.vaultName, "Healthmd")
+        XCTAssertNil(healed)
+    }
+
     func testInit_v1SamePathUpgradesIdentity() throws {
         let url = URL(fileURLWithPath: "/tmp/LegacyVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)

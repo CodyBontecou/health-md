@@ -91,6 +91,78 @@ final class ProfileDestinationStoreTests: XCTestCase {
         XCTAssertNil(second.vault(id: UUID()))
     }
 
+    func testVaultUpsertPersistsAndUpdatesIdentity() {
+        let store = makeStore()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "volume", fileIdentifier: 42)
+
+        let created = store.upsertVault(
+            name: "Health",
+            standardizedPath: "/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("bookmark-1".utf8),
+            identity: folderIdentity
+        )
+        XCTAssertEqual(created.identity, folderIdentity)
+
+        // Same path, refreshed bookmark with new evidence: identity updates in place.
+        let refreshedIdentity = VaultFolderIdentity(volumeUUIDString: "volume", fileIdentifier: 99)
+        let refreshed = store.upsertVault(
+            name: "Health",
+            standardizedPath: "/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("bookmark-2".utf8),
+            identity: refreshedIdentity
+        )
+        XCTAssertEqual(refreshed.id, created.id)
+        XCTAssertEqual(refreshed.identity, refreshedIdentity)
+
+        // Healed evidence survives a store reload.
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.vault(id: created.id)?.identity, refreshedIdentity)
+    }
+
+    func testVaultRowsDecodeWithoutIdentity() throws {
+        // Rows persisted before identity capture (issue #143 fix) have no
+        // "identity" key; decoding must yield nil instead of failing.
+        let legacyPayload = try JSONSerialization.data(withJSONObject: [[
+            "id": UUID().uuidString,
+            "name": "Health",
+            "standardizedPath": "/tmp/OnMyiPhone/Health",
+            "bookmarkData": Data("bookmark".utf8).base64EncodedString(),
+            "createdAt": 0.0
+        ]])
+        defaults.set(legacyPayload, forKey: "exportProfileDestinations.vaults")
+
+        let store = makeStore()
+
+        XCTAssertEqual(store.vaults.count, 1)
+        XCTAssertNil(store.vaults[0].identity)
+        XCTAssertEqual(store.vaults[0].name, "Health")
+    }
+
+    func testUpdateVaultIdentityUpdatesRowInPlaceWithoutRebinding() {
+        let store = makeStore()
+        let row = store.upsertVault(
+            name: "Health",
+            standardizedPath: "/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("bookmark".utf8)
+        )
+        XCTAssertNil(row.identity)
+
+        let healed = VaultFolderIdentity(volumeUUIDString: "volume", fileIdentifier: 42)
+        store.updateVaultIdentity(id: row.id, identity: healed)
+
+        XCTAssertEqual(store.vault(id: row.id)?.identity, healed)
+        XCTAssertEqual(store.vaults.count, 1)
+        XCTAssertEqual(store.vault(id: row.id)?.standardizedPath, "/tmp/OnMyiPhone/Health")
+
+        // No-op updates leave persisted state untouched.
+        store.updateVaultIdentity(id: row.id, identity: healed)
+        XCTAssertEqual(store.vaults.count, 1)
+
+        // Unknown ids are ignored.
+        store.updateVaultIdentity(id: UUID(), identity: healed)
+        XCTAssertEqual(store.vaults.count, 1)
+    }
+
     func testCorruptedVaultDataStartsEmpty() {
         defaults.set(Data("not json".utf8), forKey: "exportProfileDestinations.vaults")
         let store = makeStore()

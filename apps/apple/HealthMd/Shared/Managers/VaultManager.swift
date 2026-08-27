@@ -1919,6 +1919,7 @@ final class VaultManager: ObservableObject {
         let bookmarkData: Data
         let standardizedPath: String
         let displayName: String
+        let identity: VaultFolderIdentity?
     }
 
     /// Returns the persisted bookmark and trusted selection when a complete,
@@ -1933,7 +1934,8 @@ final class VaultManager: ObservableObject {
             return PersistedVaultSnapshot(
                 bookmarkData: bookmarkData,
                 standardizedPath: decoded.standardizedPath,
-                displayName: decoded.displayName
+                displayName: decoded.displayName,
+                identity: decoded.identity
             )
         }
 
@@ -1944,7 +1946,8 @@ final class VaultManager: ObservableObject {
             bookmarkData: bookmarkData,
             standardizedPath: URL(fileURLWithPath: legacyPath).standardizedFileURL.path,
             displayName: defaults.string(forKey: vaultNameKey)
-                ?? URL(fileURLWithPath: legacyPath).lastPathComponent
+                ?? URL(fileURLWithPath: legacyPath).lastPathComponent,
+            identity: nil
         )
     }
 
@@ -1953,17 +1956,34 @@ final class VaultManager: ObservableObject {
     /// single-vault flow uses, then re-running the verified load path. The
     /// destination-store row is authoritative only for storage; resolution,
     /// staleness, and expected-path verification remain VaultManager's.
+    ///
+    /// `identity` is the persistent identity evidence stored with the row.
+    /// Rows saved before identity capture (and identity-less file providers)
+    /// pass nil; the trusted identity is then re-captured through the row's
+    /// own bookmark round-trip — the same round-trip that verified it at
+    /// selection time — so identity-bearing volumes (local "On My iPhone"
+    /// folders) keep durable evidence across profile adoption and a moved
+    /// path can rebind through an identity match instead of demanding
+    /// reselection on every launch (issue #143).
+    ///
+    /// Returns the identity this adoption now trusts — healed through the
+    /// bookmark round-trip when the stored row had none — so callers can
+    /// persist it back into the destination row.
+    @discardableResult
     func adoptPersistedVault(
         bookmarkData: Data,
         standardizedPath: String,
-        displayName: String
-    ) {
+        displayName: String,
+        identity: VaultFolderIdentity? = nil
+    ) -> VaultFolderIdentity? {
+        let trustedIdentity = identity
+            ?? adoptableIdentity(fromBookmarkData: bookmarkData)
         defaults.set(bookmarkData, forKey: bookmarkKey)
         let selection = SavedVaultSelection(
             version: Self.savedSelectionVersion,
             standardizedPath: standardizedPath,
             displayName: displayName,
-            identity: nil
+            identity: trustedIdentity
         )
         if let encoded = try? JSONEncoder().encode(selection) {
             defaults.set(encoded, forKey: vaultSelectionKey)
@@ -1971,6 +1991,21 @@ final class VaultManager: ObservableObject {
         defaults.set(displayName, forKey: vaultNameKey)
         defaults.set(standardizedPath, forKey: vaultPathKey)
         loadSavedSettings()
+        return persistedVaultSnapshot()?.identity
+    }
+
+    /// Captures identity evidence for a destination row through its own
+    /// bookmark round-trip while security scope is acquired. Mirrors
+    /// `makeSavedSelection`'s round-trip capture so adoption-time and
+    /// selection-time evidence agree. Any failure leaves the row without
+    /// identity evidence; the verified load then applies its own rules.
+    private func adoptableIdentity(fromBookmarkData bookmarkData: Data) -> VaultFolderIdentity? {
+        guard let (resolvedURL, _) = try? bookmarkResolver.resolveBookmark(data: bookmarkData),
+              bookmarkResolver.startAccessing(resolvedURL) else {
+            return nil
+        }
+        defer { bookmarkResolver.stopAccessing(resolvedURL) }
+        return try? identityProbe.persistentIdentity(for: resolvedURL)
     }
 
     // MARK: - Folder Selection
@@ -1979,7 +2014,9 @@ final class VaultManager: ObservableObject {
     /// (for example the profile editor's destination picker). Creates the
     /// security-scoped bookmark without changing the live shared vault
     /// selection — callers own where the resulting binding is applied.
-    func selectionMetadata(for url: URL) -> (bookmarkData: Data, standardizedPath: String, displayName: String)? {
+    func selectionMetadata(
+        for url: URL
+    ) -> (bookmarkData: Data, standardizedPath: String, displayName: String, identity: VaultFolderIdentity?)? {
         guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = "Failed to access folder"
             return nil
@@ -1991,7 +2028,8 @@ final class VaultManager: ObservableObject {
             return (
                 bookmarkData,
                 selection.standardizedPath,
-                selection.displayName
+                selection.displayName,
+                selection.identity
             )
         } catch {
             lastExportStatus = error.localizedDescription

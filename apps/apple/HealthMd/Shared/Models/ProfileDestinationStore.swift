@@ -10,6 +10,11 @@ struct SavedVaultDestination: Codable, Identifiable, Equatable {
     var name: String
     var standardizedPath: String
     var bookmarkData: Data
+    /// Persistent identity evidence (volume UUID + file identifier) captured
+    /// through the bookmark round-trip when the volume reports persistent IDs.
+    /// Nil for legacy rows saved before identity capture and for identity-less
+    /// file providers; adoption re-captures and heals it.
+    var identity: VaultFolderIdentity?
     var createdAt: Date
 
     init(
@@ -17,12 +22,14 @@ struct SavedVaultDestination: Codable, Identifiable, Equatable {
         name: String,
         standardizedPath: String,
         bookmarkData: Data,
+        identity: VaultFolderIdentity? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
         self.name = name
         self.standardizedPath = standardizedPath
         self.bookmarkData = bookmarkData
+        self.identity = identity
         self.createdAt = createdAt
     }
 }
@@ -129,15 +136,17 @@ final class ProfileDestinationStore: ObservableObject {
     func upsertVault(
         name: String,
         standardizedPath: String,
-        bookmarkData: Data
+        bookmarkData: Data,
+        identity: VaultFolderIdentity? = nil
     ) -> SavedVaultDestination {
         if let existing = vault(standardizedPath: standardizedPath) {
-            guard existing.bookmarkData != bookmarkData || existing.name != name else {
+            guard existing.bookmarkData != bookmarkData || existing.name != name || existing.identity != identity else {
                 return existing
             }
             var updated = existing
             updated.name = name
             updated.bookmarkData = bookmarkData
+            updated.identity = identity
             if let index = vaults.firstIndex(where: { $0.id == existing.id }) {
                 vaults[index] = updated
                 persistVaults()
@@ -148,11 +157,24 @@ final class ProfileDestinationStore: ObservableObject {
         let destination = SavedVaultDestination(
             name: name,
             standardizedPath: standardizedPath,
-            bookmarkData: bookmarkData
+            bookmarkData: bookmarkData,
+            identity: identity
         )
         vaults.append(destination)
         persistVaults()
         return destination
+    }
+
+    /// Persists identity evidence for a destination row in place, without
+    /// changing its path keying or any profile binding. Used after profile
+    /// adoption when a row was saved without identity evidence (legacy rows,
+    /// pre-identity-capture app versions) and the verified bookmark round-trip
+    /// now supplies it, so later adoptions trust the healed evidence (issue #143).
+    func updateVaultIdentity(id: UUID, identity: VaultFolderIdentity?) {
+        guard let index = vaults.firstIndex(where: { $0.id == id }),
+              vaults[index].identity != identity else { return }
+        vaults[index].identity = identity
+        persistVaults()
     }
 
     /// Removes a vault destination. Profiles still referencing its id resolve

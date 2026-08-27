@@ -98,7 +98,8 @@ final class ExportProfileCoordinator: ObservableObject {
             let destination = destinationStore.upsertVault(
                 name: persisted.displayName,
                 standardizedPath: persisted.standardizedPath,
-                bookmarkData: persisted.bookmarkData
+                bookmarkData: persisted.bookmarkData,
+                identity: persisted.identity
             )
             folderVaultID = destination.id
         }
@@ -169,11 +170,19 @@ final class ExportProfileCoordinator: ObservableObject {
     private func adoptVaultDestination(for profile: ExportProfile) {
         guard let bindingID = profile.folderVaultID,
               let destination = destinationStore.vault(id: bindingID) else { return }
-        vaultManager.adoptPersistedVault(
+        let healedIdentity = vaultManager.adoptPersistedVault(
             bookmarkData: destination.bookmarkData,
             standardizedPath: destination.standardizedPath,
-            displayName: destination.name
+            displayName: destination.name,
+            identity: destination.identity
         )
+        // Rows saved without identity evidence (legacy rows, older app
+        // versions) heal it through adoption's bookmark round-trip; persist the
+        // healed evidence back so the row stops relying on path-only
+        // verification (issue #143).
+        if let healedIdentity, healedIdentity != destination.identity {
+            destinationStore.updateVaultIdentity(id: destination.id, identity: healedIdentity)
+        }
     }
 
     private func adoptAPIEndpoint(for profile: ExportProfile) {
@@ -229,7 +238,8 @@ final class ExportProfileCoordinator: ObservableObject {
         let destination = destinationStore.upsertVault(
             name: persisted.displayName,
             standardizedPath: persisted.standardizedPath,
-            bookmarkData: persisted.bookmarkData
+            bookmarkData: persisted.bookmarkData,
+            identity: persisted.identity
         )
         profileStore.setFolderBinding(profileID: activeID, destinationID: destination.id)
     }
@@ -245,7 +255,8 @@ final class ExportProfileCoordinator: ObservableObject {
         let destination = destinationStore.upsertVault(
             name: selection.displayName,
             standardizedPath: selection.standardizedPath,
-            bookmarkData: selection.bookmarkData
+            bookmarkData: selection.bookmarkData,
+            identity: selection.identity
         )
         return destination.id
     }

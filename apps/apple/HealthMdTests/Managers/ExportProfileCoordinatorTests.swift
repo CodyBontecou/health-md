@@ -64,11 +64,15 @@ final class ExportProfileCoordinatorTests: XCTestCase {
     }
 
     private func makeVaultManager() -> VaultManager {
+        makeVaultManager(identityProbe: FakeVaultFolderIdentityProbe())
+    }
+
+    private func makeVaultManager(identityProbe: VaultFolderIdentityProbing) -> VaultManager {
         guard let defaults else { fatalError("test defaults missing") }
         return VaultManager(
             defaults: SystemUserDefaults(defaults: defaults),
             bookmarkResolver: bookmarkResolver,
-            identityProbe: FakeVaultFolderIdentityProbe()
+            identityProbe: identityProbe
         )
     }
 
@@ -270,6 +274,68 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         )
         XCTAssertEqual(apiSettings.endpointURLString, "https://second.example.com")
         XCTAssertEqual(apiSettings.bearerToken, "second-token")
+    }
+
+    // MARK: - Destination identity evidence (issue #143)
+
+    func testVaultFolderSelectionStoresIdentityEvidence() throws {
+        // Local "On My iPhone" volumes report persistent IDs; the destination
+        // row must carry that evidence so later adoptions can verify through
+        // an identity match instead of exact path matching alone.
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 7)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        coordinator.vaultFolderWasSelected()
+
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        let binding = try XCTUnwrap(coordinator.destinationStore.vault(id: profile.folderVaultID))
+        XCTAssertEqual(binding.identity, folderIdentity)
+    }
+
+    func testImportFolderSelectionStoresIdentityEvidence() throws {
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 9)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+
+        let imported = try XCTUnwrap(
+            coordinator.importFolderSelection(URL(fileURLWithPath: "/Users/x/EditorVault"))
+        )
+
+        let destination = try XCTUnwrap(coordinator.destinationStore.vault(id: imported))
+        XCTAssertEqual(destination.identity, folderIdentity)
+    }
+
+    func testActivationHealsLegacyDestinationRowWithoutIdentity() throws {
+        // Rows saved before identity capture carry none; activation must heal
+        // the row so identity-bearing local folders stop requiring reselection
+        // on every launch (issue #143).
+        let probe = FakeVaultFolderIdentityProbe()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 11)
+        probe.defaultIdentity = folderIdentity
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+        let bindingID = try XCTUnwrap(profile.folderVaultID)
+
+        // Simulate a legacy row saved without identity evidence.
+        coordinator.destinationStore.updateVaultIdentity(id: bindingID, identity: nil)
+        XCTAssertNil(coordinator.destinationStore.vault(id: bindingID)?.identity)
+
+        coordinator.activate(profileID: profile.id)
+
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/Health"
+        )
+        XCTAssertEqual(coordinator.destinationStore.vault(id: bindingID)?.identity, folderIdentity)
     }
 
     // MARK: - Profile management
