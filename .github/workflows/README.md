@@ -48,7 +48,7 @@ The canonical release path starts from a draft GitHub Release whose tag starts w
 - `.github/workflows/release-ios.yml`
 - `.github/workflows/release-macos.yml`
 
-Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`; each workflow fails early if it does not. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it.
+Use `release_tag=v<version>`. The tag version must match `MARKETING_VERSION` in `apps/apple/HealthMd.xcodeproj`; each workflow fails early if it does not. Before building, each workflow resolves the exact release SHA and runs the full Apple CI suite (`apple-ci.yml`) against it — a release cannot build or submit until every Apple test job passes on that exact commit, mirroring the Android release's `qualify` gate. Keep the GitHub Release as a draft while App Store review is in progress. The ASC approval webhook and `apple-announce.yml` publish it.
 
 Publishing a release still triggers both workflows as a legacy fallback, but it is not the canonical path because publication must wait for ASC approval.
 
