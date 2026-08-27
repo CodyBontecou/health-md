@@ -5,6 +5,8 @@ description: "Gebruik healthmd extract om geselecteerde Apple Health-meetwaarden
 
 `healthmd extract` is de opdracht voor brongegevens in scripts en agents. De opdracht laat de iPhone alleen de geselecteerde meetwaarden en het gekozen detailniveau ophalen, valideert de persistente overdracht, verwijdert de transport-envelop en voert canonieke documenten volgens `healthmd.health_data` v7 of duidelijk gelabelde projecties uit.
 
+Canonieke extractie is een iPhone-mogelijkheid, ondersteund door de backend van de Mac-app en het directe iOS v1-protocol. Directe Android-bronnen leveren in plaats daarvan providerspecifieke Health Connect-snapshots via de [raw-export](/nl/docs/cli-direct/).
+
 Gebruik extractie als je de oorspronkelijke Health.md-gegevens nodig hebt. Gebruik [getypeerde queries](/nl/docs/agent-queries/) voor sessies, vergelijkingen, afstemming van work-outs, dekking of bewijsbundels.
 
 ## Basisstructuur
@@ -227,7 +229,7 @@ healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-Beide routes gebruiken hetzelfde openbare dagschema en dezelfde strikte validatie. Transport, koppeling, opslag en taakrecords verschillen.
+Beide routes gebruiken hetzelfde openbare dagschema en dezelfde strikte validatie. Transport, koppeling, opslag en taakrecords verschillen. Beide routes vereisen een iPhone-bron; de directe Android-backend implementeert geen canonieke extractie.
 
 ## Omvangrijke geschiedenis
 
