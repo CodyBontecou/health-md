@@ -675,6 +675,15 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
           cp dist-manifest.json "$BUILD_MANIFEST_NAME"
+      - name: Normalize Homebrew formula before artifact sealing
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+          brew --version
+          scripts/normalize-homebrew-formula.sh \
+            target/distrib/healthmd.rb target/distrib/sha256.sum
+          (cd target/distrib && sha256sum --check sha256.sum)
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: artifacts-build-global
@@ -778,6 +787,13 @@ jobs:
           path: sbom
       - name: Install pinned cosign
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.1
+      - name: Normalize final Homebrew formula with current style rules
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+          brew update
+          apps/cli/scripts/normalize-homebrew-formula.sh global/healthmd.rb
       - name: Recompute and sign exact final checksum manifest
         shell: bash
         run: |
@@ -1112,52 +1128,221 @@ jobs:
           latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)"
           test "$latest" != "$TAG"
 
-  publish-homebrew-formula:
-    name: Publish stable Homebrew formula
+  qualify-homebrew-formula:
+    name: Qualify Homebrew (${{ matrix.target }})
     needs: [identity, plan, finalize-release]
     if: >-
       ${{ needs.finalize-release.result == 'success' &&
           (!fromJson(needs.plan.outputs.val).announcement_is_prerelease ||
            fromJson(needs.plan.outputs.val).publish_prereleases) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-14
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-22.04-arm
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      HOMEBREW_NO_ANALYTICS: '1'
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_ENV_HINTS: '1'
+      TARGET: ${{ matrix.target }}
+      TAG: ${{ needs.identity.outputs.tag }}
+      VERSION: ${{ needs.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-release-candidates
+          path: candidates
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-sealed-global
+          path: sealed
+      - name: Install pinned cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.1
+      - name: Verify and clean-install exact sealed formula
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            test -x /home/linuxbrew/.linuxbrew/bin/brew
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          fi
+          brew update
+          brew --version
+
+          apps/cli/scripts/verify-sealed-homebrew-formula.sh \
+            sealed "$TAG" "$RUNNER_TEMP/verified-healthmd.rb"
+          formula="$RUNNER_TEMP/verified-healthmd.rb"
+
+          tap=healthmd/qualification
+          cleanup() {
+            brew uninstall --force "$tap/healthmd" >/dev/null 2>&1 || true
+            brew untap --force "$tap" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          if brew list --formula healthmd >/dev/null 2>&1; then
+            echo 'runner unexpectedly has healthmd installed before clean-install qualification' >&2
+            exit 1
+          fi
+          brew tap-new "$tap"
+          tap_root="$(brew --repository "$tap")"
+          cp "$formula" "$tap_root/Formula/healthmd.rb"
+          cmp "$formula" "$tap_root/Formula/healthmd.rb"
+          brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict \
+            "$tap_root/Formula/healthmd.rb"
+          brew install "$tap/healthmd"
+          brew linkage --test "$tap/healthmd"
+
+          prefix="$(brew --prefix "$tap/healthmd")"
+          installed_healthmd="$prefix/bin/healthmd"
+          installed_mcp="$prefix/bin/healthmd-mcp"
+          test -x "$installed_healthmd" && test -x "$installed_mcp"
+          archive_count="$(find candidates -type f -name "healthmd-cli-${TARGET}.tar.xz" | wc -l | tr -d ' ')"
+          test "$archive_count" = 1
+          archive="$(find candidates -type f -name "healthmd-cli-${TARGET}.tar.xz" -print)"
+          python3 apps/cli/scripts/safe-extract-release.py "$archive" expected
+          expected_healthmd_count="$(find expected -type f -name healthmd | wc -l | tr -d ' ')"
+          expected_mcp_count="$(find expected -type f -name healthmd-mcp | wc -l | tr -d ' ')"
+          test "$expected_healthmd_count" = 1 && test "$expected_mcp_count" = 1
+          expected_healthmd="$(find expected -type f -name healthmd -print)"
+          expected_mcp="$(find expected -type f -name healthmd-mcp -print)"
+          cmp "$expected_healthmd" "$installed_healthmd"
+          cmp "$expected_mcp" "$installed_mcp"
+
+          "$installed_healthmd" --version | grep -F "$VERSION"
+          "$installed_healthmd" --help >/dev/null
+          "$installed_healthmd" mcp schema healthmd_sleep_sessions > schema.json
+          python3 - <<'PY'
+          import json
+          with open("schema.json", encoding="utf-8") as handle:
+              value = json.load(handle)
+          assert value["schema"] == "healthmd.mcp_tool_schema", value
+          assert value["tool"]["name"] == "healthmd_sleep_sessions", value
+          PY
+          HEALTHMD_CLI_DATA_DIR="$RUNNER_TEMP/healthmd-brew-mcp" \
+            python3 apps/cli/scripts/smoke-mcp-stdio.py "$installed_mcp"
+
+          if [[ "$RUNNER_OS" == macOS ]]; then
+            team_id="$(jq -r .apple.team_id apps/cli/release-identities.json)"
+            healthmd_identifier="$(jq -r .apple.healthmd_identifier apps/cli/release-identities.json)"
+            healthmd_mcp_identifier="$(jq -r .apple.healthmd_mcp_identifier apps/cli/release-identities.json)"
+            for executable in "$installed_healthmd" "$installed_mcp"; do
+              codesign --verify --strict --verbose=2 "$executable"
+              details="$(codesign -dv --verbose=4 "$executable" 2>&1)"
+              grep -F "TeamIdentifier=${team_id}" <<<"$details" >/dev/null
+              expected_identifier="$healthmd_identifier"
+              [[ "$(basename "$executable")" == healthmd-mcp ]] && expected_identifier="$healthmd_mcp_identifier"
+              test "$(sed -n 's/^Identifier=//p' <<<"$details")" = "$expected_identifier"
+              spctl --assess --type execute --verbose=2 "$executable"
+            done
+            codesign -d -r- "$expected_healthmd" 2>&1 | grep '^designated =>' > expected-healthmd.requirement
+            codesign -d -r- "$installed_healthmd" 2>&1 | grep '^designated =>' > installed-healthmd.requirement
+            codesign -d -r- "$expected_mcp" 2>&1 | grep '^designated =>' > expected-mcp.requirement
+            codesign -d -r- "$installed_mcp" 2>&1 | grep '^designated =>' > installed-mcp.requirement
+            cmp expected-healthmd.requirement installed-healthmd.requirement
+            cmp expected-mcp.requirement installed-mcp.requirement
+          else
+            set +e
+            timeout 20 env -u DBUS_SESSION_BUS_ADDRESS \
+              HEALTHMD_CLI_DATA_DIR="$RUNNER_TEMP/healthmd-brew-state" \
+              "$installed_healthmd" --backend direct direct devices > devices.json
+            storage_status=$?
+            set -e
+            test "$storage_status" = 1
+            python3 - <<'PY'
+          import json
+          with open("devices.json", encoding="utf-8") as handle:
+              value = json.load(handle)
+          assert value["error"] == "direct_storage_unavailable", value
+          PY
+          fi
+
+  publish-homebrew-formula:
+    name: Publish stable Homebrew formula
+    needs: [identity, plan, finalize-release, qualify-homebrew-formula]
+    if: >-
+      ${{ needs.qualify-homebrew-formula.result == 'success' &&
+          (!fromJson(needs.plan.outputs.val).announcement_is_prerelease ||
+           fromJson(needs.plan.outputs.val).publish_prereleases) }}
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    concurrency:
+      group: healthmd-homebrew-tap
+      cancel-in-progress: false
     env:
       PLAN: ${{ needs.plan.outputs.val }}
+      TAG: ${{ needs.identity.outputs.tag }}
       GITHUB_USER: healthmd-release-bot
       GITHUB_EMAIL: admin+bot@health.md
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          persist-credentials: true
-          repository: CodyBontecou/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: source
+          persist-credentials: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: artifacts-sealed-global
           path: ${{ runner.temp }}/formula-artifact
-      - name: Commit generated formula idempotently
+      - name: Install pinned cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.1
+      - name: Verify exact sealed formula before obtaining tap credentials
         shell: bash
         run: |
           set -euo pipefail
+          source/apps/cli/scripts/verify-sealed-homebrew-formula.sh \
+            "$RUNNER_TEMP/formula-artifact" "$TAG" "$RUNNER_TEMP/verified-healthmd.rb"
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          path: tap
+          persist-credentials: true
+          repository: CodyBontecou/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: Commit and remotely verify the sealed formula idempotently
+        working-directory: tap
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(jq '[.releases[] | select(.artifacts | index("healthmd.rb"))] | length' <<<"$PLAN")" = 1
+          version="$(jq -r '.releases[] | select(.artifacts | index("healthmd.rb")) | .app_version' <<<"$PLAN")"
+          branch="$(git branch --show-current)"
+          test -n "$branch"
+          python3 ../source/apps/cli/scripts/check-homebrew-formula-freshness.py \
+            "$version" Formula/healthmd.rb "$RUNNER_TEMP/verified-healthmd.rb"
           git config user.name "$GITHUB_USER"
           git config user.email "$GITHUB_EMAIL"
-          while IFS= read -r release; do
-            filename="$(jq -r '.artifacts[] | select(endswith(".rb"))' <<<"$release")"
-            name="${filename%.rb}"
-            version="$(jq -r .app_version <<<"$release")"
-            source_formula="$(find "$RUNNER_TEMP/formula-artifact" -type f -name "$filename" -print -quit)"
-            test -n "$source_formula"
-            mkdir -p Formula
-            cp "$source_formula" "Formula/$filename"
-            export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-            brew update
-            brew style --except-cops FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict \
-              "Formula/$filename"
-            git add "Formula/$filename"
-            if ! git diff --cached --quiet; then
-              git commit -m "$name $version"
+          mkdir -p Formula
+          cp "$RUNNER_TEMP/verified-healthmd.rb" Formula/healthmd.rb
+          cmp "$RUNNER_TEMP/verified-healthmd.rb" Formula/healthmd.rb
+          git add Formula/healthmd.rb
+          if ! git diff --cached --quiet; then
+            test "$(git diff --cached --name-only)" = Formula/healthmd.rb
+            git commit -m "healthmd $version"
+            if ! git push origin "HEAD:refs/heads/$branch"; then
+              echo 'tap push returned an unknown outcome; reconciling remote bytes' >&2
             fi
-          done < <(jq -c '.releases[] | select([.artifacts[] | endswith(".rb")] | any)' <<<"$PLAN")
-          if [[ "$(git rev-list --count '@{upstream}..HEAD')" -gt 0 ]]; then
-            git push
           fi
+          git fetch --force origin \
+            "refs/heads/$branch:refs/remotes/origin/$branch"
+          git show "refs/remotes/origin/$branch:Formula/healthmd.rb" \
+            > "$RUNNER_TEMP/remote-healthmd.rb"
+          cmp "$RUNNER_TEMP/verified-healthmd.rb" "$RUNNER_TEMP/remote-healthmd.rb"
           test -z "$(git status --porcelain)"
+          {
+            echo '## Homebrew publication'
+            echo "- Tap commit: $(git rev-parse "refs/remotes/origin/$branch")"
+            echo '- Remote formula bytes match the Sigstore-authenticated release asset.'
+          } >> "$GITHUB_STEP_SUMMARY"

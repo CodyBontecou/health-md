@@ -88,7 +88,7 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 - `healthmd-mcp --help`: pass/fail
 - `healthmd setup codex --skip-pairing` idempotent isolated run: pass/fail
 - MCP initialize/tools/resources: pass/fail
-- Fixed tool count (`17`): pass/fail
+- Fixed tool count (`19`): pass/fail
 - Same-executable/Windows same-file helper path: pass/fail
 - `direct devices` or readiness result (code/count only):
 - UI resource and PNG dimensions/format: pass/fail
@@ -118,9 +118,15 @@ Record statuses, counts, job/request IDs, durations, and artifact digests only.
 - crates.io `healthmd-client` checksum/index-visible timestamp:
 - crates.io `healthmd-mcp` checksum/index-visible timestamp:
 - crates.io `healthmd-cli` checksum/index-visible timestamp:
+- Sealed Homebrew formula SHA-256:
 - Homebrew tap commit:
-- Homebrew macOS install/upgrade result:
-- Linuxbrew install/upgrade result:
+- Tap freshness/anti-rollback check: pass/fail
+- Remote tap formula equals sealed release formula: pass/fail
+- Homebrew macOS arm64 clean-install/identity/MCP result:
+- Homebrew macOS x86_64 clean-install/identity/MCP result:
+- Linuxbrew arm64 clean-install/MCP result:
+- Linuxbrew x86_64 clean-install/MCP result:
+- Homebrew/Linuxbrew upgrade result (manual until a prior stable formula exists):
 
 ## Recovery actions
 
