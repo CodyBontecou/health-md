@@ -39,6 +39,12 @@
 - Add `healthmd mcp serve` and `healthmd setup codex` so pairing, native credentials, Codex
   configuration, and MCP use the installed `healthmd`; retain `healthmd-mcp` as a compatibility
   launcher that execs `healthmd` on Unix and uses an authenticated same-file helper on Windows.
+- Defer Windows Authenticode behind the signing-identity ledger: while
+  `release-identities.json` records `pending_external_certificate_provisioning`, release tags are
+  permitted, the Windows signing jobs skip, and the Windows archive plus PowerShell installer
+  publish unsigned with integrity carried by the Sigstore-signed checksum closure. Committing a
+  qualified publisher subject re-enables mandatory signing for both Windows executables, the
+  installer, and native post-extraction gates.
 - Expand typed MCP tool discovery with complete nested date/metric/source/page/operation schemas,
   concrete call examples, explicit typed-tool routing, and offline `healthmd mcp schema [TOOL]`
   inspection so agents do not fall back to shell help or canonical extraction to infer query JSON.
