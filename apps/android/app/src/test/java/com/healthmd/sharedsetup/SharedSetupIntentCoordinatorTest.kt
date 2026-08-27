@@ -8,6 +8,7 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.mockk
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -68,7 +69,9 @@ class SharedSetupIntentCoordinatorTest {
             byteArrayOf(1)
         }
         io.mockk.every { store.read(secondUri) } returns byteArrayOf(2)
-        val coordinator = SharedSetupCoordinator(store)
+        // Publish immediately where the read completes so the test observes results
+        // without idling a paused Robolectric main looper.
+        val coordinator = SharedSetupCoordinator(store, publishDispatcher = Dispatchers.Unconfined)
 
         try {
             coordinator.acceptExternalUriAsync(firstUri)
@@ -104,7 +107,9 @@ class SharedSetupIntentCoordinatorTest {
             check(release.await(5, TimeUnit.SECONDS))
             byteArrayOf(9)
         }
-        val coordinator = SharedSetupCoordinator(store)
+        // Publishing unconfined makes this test stronger: a read that wrongly survives
+        // finish() would publish immediately instead of waiting on a paused looper.
+        val coordinator = SharedSetupCoordinator(store, publishDispatcher = Dispatchers.Unconfined)
 
         try {
             coordinator.acceptExternalUriAsync(uri)

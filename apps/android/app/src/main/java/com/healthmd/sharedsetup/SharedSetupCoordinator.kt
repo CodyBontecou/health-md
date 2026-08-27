@@ -5,6 +5,7 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -13,11 +14,25 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Singleton
-class SharedSetupCoordinator @Inject constructor(
+class SharedSetupCoordinator internal constructor(
     private val documentStore: SharedSetupDocumentStore,
+    /**
+     * Dispatcher used to publish import results. A StateFlow resumes suspended
+     * collectors undispatched on the publishing thread, so publishing must land
+     * on the main dispatcher in production to keep collector bodies — navigation
+     * and SavedStateHandle writes — on the main thread. Tests inject an
+     * immediate dispatcher through this constructor.
+     */
+    private val publishDispatcher: CoroutineDispatcher,
 ) {
+    @Inject
+    constructor(documentStore: SharedSetupDocumentStore) : this(
+        documentStore,
+        Dispatchers.Main.immediate,
+    )
     private val ids = AtomicLong()
     private val mutableImport = MutableStateFlow<PendingSharedSetupImport?>(null)
     private val externalReadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -45,8 +60,18 @@ class SharedSetupCoordinator @Inject constructor(
                     // ContentResolver reads are blocking and may ignore coroutine cancellation.
                     // The newest request gets its own IO job; only its generation may publish.
                     val result = readExternal(uri)
-                    result.onSuccess { bytes -> publishExternalBytes(id, bytes) }
-                        .onFailure { error -> publishExternalFailure(id, error) }
+                    // Publish on the main dispatcher. A StateFlow resumes suspended collectors
+                    // undispatched on the publishing thread, so publishing from this IO worker
+                    // would run collector bodies — navigation and SavedStateHandle writes —
+                    // on the IO thread. NavController mutation from a background thread
+                    // half-applies a back-stack entry and later crashes activity destroy with
+                    // "State must be at least CREATED to move to DESTROYED". Main-thread
+                    // publication keeps every consumer on the main thread.
+                    withContext(publishDispatcher) {
+                        result
+                            .onSuccess { bytes -> publishExternalBytes(id, bytes) }
+                            .onFailure { error -> publishExternalFailure(id, error) }
+                    }
                 } finally {
                     synchronized(externalLock) {
                         if (activeExternalRead === requestJob) activeExternalRead = null
