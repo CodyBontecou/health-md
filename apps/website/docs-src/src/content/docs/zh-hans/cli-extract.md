@@ -5,6 +5,8 @@ description: "使用 healthmd extract 获取所选 Apple Health 指标，并输�
 
 `healthmd extract` 是供脚本和智能体使用的来源数据命令。它会要求 iPhone 只获取所选指标和详细程度，验证持久传输，移除传输封装，再输出规范 `healthmd.health_data` v7 文档或明确标记的投影。
 
+规范提取是一项 iPhone 功能，由 Mac 应用后端和 iOS v1 直连协议提供支持。Android 直连来源则改为通过[原始导出](/zh-hans/docs/cli-direct/)返回提供商原生的 Health Connect 快照。
+
 需要 Health.md 原始数据时，请使用提取。需要睡眠时段、比较、锻炼对齐、覆盖范围或证据包时，请使用[类型化查询](/zh-hans/docs/agent-queries/)。
 
 ## 基本形式
@@ -227,7 +229,7 @@ healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-两条路径都使用同一公开每日架构和严格验证。传输、配对、存储和作业记录则有所不同。
+两条路径都使用同一公开每日架构和严格验证。传输、配对、存储和作业记录则有所不同。两条路径都需要 iPhone 来源；Android 直连后端不实现规范提取。
 
 ## 大量历史数据
 

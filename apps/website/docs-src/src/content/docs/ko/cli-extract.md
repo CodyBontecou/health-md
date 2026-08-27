@@ -5,6 +5,8 @@ description: "healthmd extract를 사용하여 선택한 Apple Health 측정 항
 
 `healthmd extract`는 스크립트와 에이전트를 위한 소스 데이터 명령입니다. iPhone에 선택한 측정 항목과 세부 정보만 가져오도록 요청하고, 영속 전송을 검증하며, 전송 엔벨로프를 제거한 뒤 정규 `healthmd.health_data` v7 문서 또는 명확히 표시된 프로젝션을 출력합니다.
 
+정규 추출은 Mac 앱 백엔드와 iOS v1 다이렉트 프로토콜을 기반으로 하는 iPhone 기능입니다. Android 다이렉트 소스는 대신 공급자 고유의 Health Connect 스냅샷을 [raw 내보내기](/ko/docs/cli-direct/)로 반환합니다.
+
 원본 Health.md 데이터가 필요하면 추출을 사용하세요. 세션, 비교, 운동 시점 정렬, 데이터 범위 또는 증거 패킷이 필요하면 [타입 지정 쿼리](/ko/docs/agent-queries/)를 사용하세요.
 
 ## 기본 구조
@@ -227,7 +229,7 @@ healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-두 경로 모두 동일한 공개 일별 스키마와 엄격한 검증을 사용합니다. 전송, 페어링, 저장소 및 작업 레코드는 다릅니다.
+두 경로 모두 동일한 공개 일별 스키마와 엄격한 검증을 사용합니다. 전송, 페어링, 저장소 및 작업 레코드는 다릅니다. 두 경로 모두 iPhone 소스를 필요로 하며, Android 다이렉트 백엔드는 정규 추출을 구현하지 않습니다.
 
 ## 긴 기록
 
