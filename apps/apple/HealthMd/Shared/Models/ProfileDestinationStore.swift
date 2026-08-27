@@ -165,15 +165,28 @@ final class ProfileDestinationStore: ObservableObject {
         return destination
     }
 
-    /// Persists identity evidence for a destination row in place, without
-    /// changing its path keying or any profile binding. Used after profile
-    /// adoption when a row was saved without identity evidence (legacy rows,
-    /// pre-identity-capture app versions) and the verified bookmark round-trip
-    /// now supplies it, so later adoptions trust the healed evidence (issue #143).
-    func updateVaultIdentity(id: UUID, identity: VaultFolderIdentity?) {
-        guard let index = vaults.firstIndex(where: { $0.id == id }),
-              vaults[index].identity != identity else { return }
-        vaults[index].identity = identity
+    /// Persists refreshed destination metadata for a row in place, without
+    /// changing its id or any profile binding. Used after profile adoption:
+    /// rows saved without identity evidence (legacy rows, pre-identity-capture
+    /// app versions) heal their evidence through adoption's bookmark round-trip,
+    /// and moved or stale bookmarks refresh the row's bookmark, standardized
+    /// path, and display name so the next adoption starts from the verified
+    /// state instead of re-resolving a stale bookmark every launch (issue #143).
+    func updateVault(
+        id: UUID,
+        name: String,
+        standardizedPath: String,
+        bookmarkData: Data,
+        identity: VaultFolderIdentity?
+    ) {
+        guard let index = vaults.firstIndex(where: { $0.id == id }) else { return }
+        var updated = vaults[index]
+        updated.name = name
+        updated.standardizedPath = standardizedPath
+        updated.bookmarkData = bookmarkData
+        updated.identity = identity
+        guard updated != vaults[index] else { return }
+        vaults[index] = updated
         persistVaults()
     }
 

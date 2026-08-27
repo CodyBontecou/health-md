@@ -1158,10 +1158,11 @@ final class VaultManagerTests: XCTestCase {
         let movedURL = URL(fileURLWithPath: "/private/tmp/OnMyiPhone/Health")
         let folderIdentity = identity("local-folder")
         bookmarkResolver.resolvedURL = movedURL
+        bookmarkResolver.createdBookmarkData = Data("refreshed-bookmark".utf8)
         identityProbe.defaultIdentity = folderIdentity
 
         let manager = makeManager(seedLegacySelectionIfNeeded: false)
-        let healed = manager.adoptPersistedVault(
+        let refreshed = manager.adoptPersistedVault(
             bookmarkData: Data("old-bookmark".utf8),
             standardizedPath: savedURL.standardizedFileURL.path,
             displayName: "Health",
@@ -1171,8 +1172,14 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(manager.destinationState, .available)
         XCTAssertEqual(manager.vaultURL, movedURL)
         XCTAssertEqual(manager.vaultName, "Health")
-        XCTAssertEqual(healed, folderIdentity)
+        XCTAssertEqual(refreshed?.identity, folderIdentity)
         XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), movedURL.standardizedFileURL.path)
+
+        // The returned snapshot carries every refreshed field, so callers
+        // persist the rebinding into the destination row durably: refreshed
+        // bookmark, moved path, and healed identity.
+        XCTAssertEqual(refreshed?.standardizedPath, movedURL.standardizedFileURL.path)
+        XCTAssertEqual(refreshed?.bookmarkData, bookmarkResolver.createdBookmarkData)
 
         // The rebind is durable: the next launch resolves the same path with
         // the same identity and needs no further bookmark refresh.
@@ -1214,7 +1221,7 @@ final class VaultManagerTests: XCTestCase {
         identityProbe.defaultIdentity = folderIdentity
 
         let manager = makeManager(seedLegacySelectionIfNeeded: false)
-        let healed = manager.adoptPersistedVault(
+        let refreshed = manager.adoptPersistedVault(
             bookmarkData: Data("old-bookmark".utf8),
             standardizedPath: savedURL.standardizedFileURL.path,
             displayName: "Health",
@@ -1223,7 +1230,8 @@ final class VaultManagerTests: XCTestCase {
 
         XCTAssertEqual(manager.destinationState, .available)
         XCTAssertEqual(manager.vaultURL, movedURL)
-        XCTAssertEqual(healed, folderIdentity)
+        XCTAssertEqual(refreshed?.identity, folderIdentity)
+        XCTAssertEqual(refreshed?.standardizedPath, movedURL.standardizedFileURL.path)
 
         // The healed identity is durable: the refreshed selection stores it,
         // so the next adoption of the (still identity-less) row trusts it.
@@ -1241,7 +1249,7 @@ final class VaultManagerTests: XCTestCase {
         identityProbe.defaultIdentity = nil
 
         let manager = makeManager(seedLegacySelectionIfNeeded: false)
-        let healed = manager.adoptPersistedVault(
+        let refreshed = manager.adoptPersistedVault(
             bookmarkData: Data("old-bookmark".utf8),
             standardizedPath: savedURL.standardizedFileURL.path,
             displayName: "Healthmd",
@@ -1251,7 +1259,7 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(manager.destinationState, .available)
         XCTAssertEqual(manager.vaultURL, movedURL)
         XCTAssertEqual(manager.vaultName, "Healthmd")
-        XCTAssertNil(healed)
+        XCTAssertNil(refreshed?.identity)
     }
 
     func testInit_v1SamePathUpgradesIdentity() throws {

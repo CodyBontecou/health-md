@@ -1966,16 +1966,18 @@ final class VaultManager: ObservableObject {
     /// path can rebind through an identity match instead of demanding
     /// reselection on every launch (issue #143).
     ///
-    /// Returns the identity this adoption now trusts — healed through the
-    /// bookmark round-trip when the stored row had none — so callers can
-    /// persist it back into the destination row.
+    /// Returns the post-verification persisted snapshot — healed identity,
+    /// and the refreshed bookmark, standardized path, and display name when
+    /// verification rebound a moved or stale bookmark — so callers persist
+    /// every refreshed field back into the destination row instead of only
+    /// the identity.
     @discardableResult
     func adoptPersistedVault(
         bookmarkData: Data,
         standardizedPath: String,
         displayName: String,
         identity: VaultFolderIdentity? = nil
-    ) -> VaultFolderIdentity? {
+    ) -> PersistedVaultSnapshot? {
         let trustedIdentity = identity
             ?? adoptableIdentity(fromBookmarkData: bookmarkData)
         defaults.set(bookmarkData, forKey: bookmarkKey)
@@ -1991,7 +1993,7 @@ final class VaultManager: ObservableObject {
         defaults.set(displayName, forKey: vaultNameKey)
         defaults.set(standardizedPath, forKey: vaultPathKey)
         loadSavedSettings()
-        return persistedVaultSnapshot()?.identity
+        return persistedVaultSnapshot()
     }
 
     /// Captures identity evidence for a destination row through its own

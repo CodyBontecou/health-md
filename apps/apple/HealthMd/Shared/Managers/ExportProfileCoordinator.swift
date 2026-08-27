@@ -170,19 +170,29 @@ final class ExportProfileCoordinator: ObservableObject {
     private func adoptVaultDestination(for profile: ExportProfile) {
         guard let bindingID = profile.folderVaultID,
               let destination = destinationStore.vault(id: bindingID) else { return }
-        let healedIdentity = vaultManager.adoptPersistedVault(
+        let refreshed = vaultManager.adoptPersistedVault(
             bookmarkData: destination.bookmarkData,
             standardizedPath: destination.standardizedPath,
             displayName: destination.name,
             identity: destination.identity
         )
-        // Rows saved without identity evidence (legacy rows, older app
-        // versions) heal it through adoption's bookmark round-trip; persist the
-        // healed evidence back so the row stops relying on path-only
-        // verification (issue #143).
-        if let healedIdentity, healedIdentity != destination.identity {
-            destinationStore.updateVaultIdentity(id: destination.id, identity: healedIdentity)
-        }
+        // Persist every field the verified load refreshed back into the row:
+        // healed identity evidence for legacy rows, and the refreshed
+        // bookmark/path/name when verification rebound a moved or stale
+        // bookmark — otherwise the row keeps re-adopting a stale bookmark
+        // every launch (issue #143).
+        guard let refreshed,
+              refreshed.standardizedPath != destination.standardizedPath
+                || refreshed.displayName != destination.name
+                || refreshed.bookmarkData != destination.bookmarkData
+                || refreshed.identity != destination.identity else { return }
+        destinationStore.updateVault(
+            id: destination.id,
+            name: refreshed.displayName,
+            standardizedPath: refreshed.standardizedPath,
+            bookmarkData: refreshed.bookmarkData,
+            identity: refreshed.identity
+        )
     }
 
     private func adoptAPIEndpoint(for profile: ExportProfile) {

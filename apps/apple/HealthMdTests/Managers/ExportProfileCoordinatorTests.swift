@@ -325,7 +325,14 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         let bindingID = try XCTUnwrap(profile.folderVaultID)
 
         // Simulate a legacy row saved without identity evidence.
-        coordinator.destinationStore.updateVaultIdentity(id: bindingID, identity: nil)
+        let legacyRow = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        coordinator.destinationStore.updateVault(
+            id: bindingID,
+            name: legacyRow.name,
+            standardizedPath: legacyRow.standardizedPath,
+            bookmarkData: legacyRow.bookmarkData,
+            identity: nil
+        )
         XCTAssertNil(coordinator.destinationStore.vault(id: bindingID)?.identity)
 
         coordinator.activate(profileID: profile.id)
@@ -336,6 +343,48 @@ final class ExportProfileCoordinatorTests: XCTestCase {
             "/Users/x/Health"
         )
         XCTAssertEqual(coordinator.destinationStore.vault(id: bindingID)?.identity, folderIdentity)
+    }
+
+    func testActivationPersistsRefreshedBookmarkAndPathIntoRow() throws {
+        // When adoption resolves the row's bookmark to a moved path, the
+        // verified load refreshes the shared defaults; the destination row
+        // must receive the refreshed bookmark, path, and name too, or every
+        // launch re-adopts the stale bookmark (issue #143 review finding).
+        let probe = FakeVaultFolderIdentityProbe()
+        probe.defaultIdentity = VaultFolderIdentity(volumeUUIDString: "local-volume", fileIdentifier: 13)
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
+
+        // Seed a row whose stale bookmark encodes a different folder than its
+        // stored path (the state a provider move leaves behind).
+        let staleBookmark = Data("fake-bookmark-WeeklyVault".utf8)
+        coordinator.destinationStore.upsertVault(
+            name: "Health",
+            standardizedPath: "/Users/x/Health",
+            bookmarkData: staleBookmark
+        )
+        let bindingID = try XCTUnwrap(
+            coordinator.destinationStore.vault(standardizedPath: "/Users/x/Health")?.id
+        )
+        coordinator.profileStore.setFolderBinding(profileID: profile.id, destinationID: bindingID)
+
+        coordinator.activate(profileID: profile.id)
+
+        // The bookmark resolved to /Users/x/WeeklyVault — a moved path with
+        // matching identity — and the row now carries the rebind durably.
+        // (The path-mapping fake's bookmark bytes are path-deterministic, so
+        // the refreshed bookmark equals the verified folder's own encoding.)
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(
+            vaultManager.vaultURL?.standardizedFileURL.path,
+            "/Users/x/WeeklyVault"
+        )
+        let row = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        XCTAssertEqual(row.standardizedPath, "/Users/x/WeeklyVault")
+        XCTAssertEqual(row.name, "WeeklyVault")
+        XCTAssertEqual(row.bookmarkData, staleBookmark)
+        XCTAssertEqual(row.identity, probe.defaultIdentity)
     }
 
     // MARK: - Profile management

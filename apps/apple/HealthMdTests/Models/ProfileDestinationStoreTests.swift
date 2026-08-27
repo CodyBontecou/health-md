@@ -138,28 +138,53 @@ final class ProfileDestinationStoreTests: XCTestCase {
         XCTAssertEqual(store.vaults[0].name, "Health")
     }
 
-    func testUpdateVaultIdentityUpdatesRowInPlaceWithoutRebinding() {
+    func testUpdateVaultRefreshesRowInPlaceWithoutRebinding() {
         let store = makeStore()
         let row = store.upsertVault(
             name: "Health",
             standardizedPath: "/tmp/OnMyiPhone/Health",
-            bookmarkData: Data("bookmark".utf8)
+            bookmarkData: Data("stale-bookmark".utf8)
         )
         XCTAssertNil(row.identity)
 
         let healed = VaultFolderIdentity(volumeUUIDString: "volume", fileIdentifier: 42)
-        store.updateVaultIdentity(id: row.id, identity: healed)
+        store.updateVault(
+            id: row.id,
+            name: "Health Renamed",
+            standardizedPath: "/private/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("refreshed-bookmark".utf8),
+            identity: healed
+        )
 
-        XCTAssertEqual(store.vault(id: row.id)?.identity, healed)
+        let updated = store.vault(id: row.id)
+        XCTAssertEqual(updated?.name, "Health Renamed")
+        XCTAssertEqual(updated?.standardizedPath, "/private/tmp/OnMyiPhone/Health")
+        XCTAssertEqual(updated?.bookmarkData, Data("refreshed-bookmark".utf8))
+        XCTAssertEqual(updated?.identity, healed)
         XCTAssertEqual(store.vaults.count, 1)
-        XCTAssertEqual(store.vault(id: row.id)?.standardizedPath, "/tmp/OnMyiPhone/Health")
+
+        // The refreshed row survives a store reload.
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.vault(id: row.id), updated)
 
         // No-op updates leave persisted state untouched.
-        store.updateVaultIdentity(id: row.id, identity: healed)
+        store.updateVault(
+            id: row.id,
+            name: "Health Renamed",
+            standardizedPath: "/private/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("refreshed-bookmark".utf8),
+            identity: healed
+        )
         XCTAssertEqual(store.vaults.count, 1)
 
         // Unknown ids are ignored.
-        store.updateVaultIdentity(id: UUID(), identity: healed)
+        store.updateVault(
+            id: UUID(),
+            name: "Health Renamed",
+            standardizedPath: "/private/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("refreshed-bookmark".utf8),
+            identity: healed
+        )
         XCTAssertEqual(store.vaults.count, 1)
     }
 

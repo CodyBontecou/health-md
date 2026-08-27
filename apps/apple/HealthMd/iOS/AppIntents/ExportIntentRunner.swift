@@ -180,14 +180,24 @@ enum ExportIntentRunner {
         if let profile,
            let bindingID = profile.folderVaultID,
            let destination = destinationStore.vault(id: bindingID) {
-            let healedIdentity = VaultManager().adoptPersistedVault(
+            let refreshed = VaultManager().adoptPersistedVault(
                 bookmarkData: destination.bookmarkData,
                 standardizedPath: destination.standardizedPath,
                 displayName: destination.name,
                 identity: destination.identity
             )
-            if let healedIdentity, healedIdentity != destination.identity {
-                destinationStore.updateVaultIdentity(id: destination.id, identity: healedIdentity)
+            if let refreshed,
+               refreshed.standardizedPath != destination.standardizedPath
+                || refreshed.displayName != destination.name
+                || refreshed.bookmarkData != destination.bookmarkData
+                || refreshed.identity != destination.identity {
+                destinationStore.updateVault(
+                    id: destination.id,
+                    name: refreshed.displayName,
+                    standardizedPath: refreshed.standardizedPath,
+                    bookmarkData: refreshed.bookmarkData,
+                    identity: refreshed.identity
+                )
             }
         }
         if let profile,
