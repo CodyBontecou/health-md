@@ -36,7 +36,15 @@ brew install CodyBontecou/tap/healthmd
 
 ## Signing, notarization, and checksum identity
 
-The release workflow does not accept unsigned tag artifacts. It signs the two Mach-O executables,
+macOS release artifacts must always be Developer ID signed and notarized. Windows Authenticode is
+ledger-gated: while `release-identities.json` records
+`windows.status = pending_external_certificate_provisioning`, the release ships the Windows archive
+and PowerShell installer Authenticode-unsigned (SmartScreen will warn; integrity is still covered by
+the Sigstore-signed checksum closure), the signing jobs skip cleanly, and verify-release.py accepts
+the tag. Once a qualified publisher subject is committed, every Windows artifact must carry that
+exact signature and the pipeline never accepts an unsigned Windows artifact again.
+
+When signing is active the workflow signs the two Mach-O executables,
 submits an architecture-specific DMG to Apple's notary service, staples and validates that DMG,
 and then reconstructs the matching tar archive from the byte-identical signed executables. Apple
 publishes tickets for the nested standalone binaries, but Apple does not support stapling a ticket
@@ -72,10 +80,13 @@ Give the Entra principal the **Artifact Signing Certificate Profile Signer** rol
 selected profile. Add a federated credential for the GitHub environment subject
 `repo:CodyBontecou/health-md:environment:cli-signing`; do not create a long-lived Azure client
 secret. Protect `cli-signing` with required reviewers and restrict it to
-`healthmd-cli/v*` tags. Before creating the first tag, commit the exact public certificate subject
-as `windows.publisher_subject` in `release-identities.json`, set its status to `qualified`, and make
-`CLI_WINDOWS_SIGNER_SUBJECT` match exactly. `verify-release.py` blocks tags while that public
-identity remains pending, and native signing jobs compare the committed ledger with the certificate.
+`healthmd-cli/v*` tags. Windows Authenticode may be deferred: while the ledger records
+`pending_external_certificate_provisioning` with a null subject, tags are permitted and the Windows
+archive/installer publish unsigned with checksum-closure integrity only. Before the first release
+whose Windows artifacts must be signed, commit the exact public certificate subject as
+`windows.publisher_subject` in `release-identities.json`, set its status to `qualified`, and make
+`CLI_WINDOWS_SIGNER_SUBJECT` match exactly; a qualified subject must never regress to pending.
+Native signing jobs compare the committed ledger with the certificate.
 The separate `cli-release` environment remains the final publication approval after all signature
 and artifact qualification jobs pass.
 
@@ -111,8 +122,9 @@ and match `SignerCertificate.Subject` to the `qualified` subject in the checksum
 `release-identities.json`; never accept an undocumented publisher.
 
 Native post-extraction gates independently require `codesign` plus Gatekeeper assessment on both
-macOS binaries, `stapler validate` plus Gatekeeper assessment on each DMG, and a valid expected
-Authenticode signer plus timestamp on both Windows executables and the PowerShell installer. A checksum, signing, notarization,
+macOS binaries, `stapler validate` plus Gatekeeper assessment on each DMG, and — only while the
+ledger's Windows identity is `qualified` — a valid expected Authenticode signer plus timestamp on
+both Windows executables and the PowerShell installer. A checksum, signing, notarization,
 stapling, credential-upgrade, or post-extraction failure leaves the GitHub Release in draft state.
 
 ## Release checks
@@ -221,10 +233,12 @@ gate verifies the captured tag/SHA identity, stages the CLI and shared-protocol 
 generates SPDX and CycloneDX source SBOMs, attests them, and adds both SBOMs plus their SHA-256
 file to the draft. A failed SBOM or archive qualification leaves the release in draft state.
 
-Pull-request candidates remain unsigned and must never be described as releases. Tag builds require
-Developer ID/notarization, Authenticode, and a Sigstore-signed checksum closure. Do not call even an
-alpha release complete until the protected signing identities are provisioned and the exact
-candidate's native signature gates have executed successfully.
+Pull-request candidates remain unsigned and must never be described as releases. macOS tag builds
+always require Developer ID/notarization, a Sigstore-signed checksum closure, and (while the
+Windows ledger is `qualified`) Developer-trusted Authenticode with RFC 3161 timestamps. While the
+Windows ledger defers signing, publish the release with an explicit Windows-unsigned note in the
+notes and README so users expect the SmartScreen prompt and verify through the signed checksum
+manifest instead.
 
 Use the [health-free release evidence template](release-evidence-template.md) for every candidate.
 It records exact source/mobile/artifact identity, signatures, qualification, publication, and

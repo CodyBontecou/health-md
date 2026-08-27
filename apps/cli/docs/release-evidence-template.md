@@ -77,10 +77,10 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 - Both DMGs stapled and Gatekeeper-assessed: pass/fail
 - Both extracted Mach-O binaries Gatekeeper-assessed: pass/fail
 - Keychain signed-upgrade synthetic device probe: pass/fail
-- Windows expected publisher subject:
-- Both PE signatures and RFC 3161 timestamps: pass/fail
-- PowerShell installer signature and RFC 3161 timestamp: pass/fail
-- Credential Manager legacy-target synthetic device probe: pass/fail
+- Windows expected publisher subject (or `pending_external_certificate_provisioning` deferred):
+- Both PE signatures and RFC 3161 timestamps (skip when deferred): pass/fail/deferred
+- PowerShell installer signature and RFC 3161 timestamp (skip when deferred): pass/fail/deferred
+- Credential Manager legacy-target synthetic device probe: pass/fail/deferred (signing-gated)
 
 ## CLI/MCP smoke
 

@@ -30,6 +30,7 @@ jobs:
       tag: ${{ steps.identity.outputs.tag }}
       version: ${{ steps.identity.outputs.version }}
       main-sha: ${{ steps.identity.outputs.main-sha }}
+      windows_signing: ${{ steps.identity.outputs.windows_signing }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -62,6 +63,7 @@ jobs:
             echo "main-sha=$main_sha"
             echo "tag=$tag"
             echo "version=$(jq -r .version <<<"$result")"
+            echo "windows_signing=$(jq -r .windows_signing <<<"$result")"
           } >> "$GITHUB_OUTPUT"
 
   qualify-cli:
@@ -333,7 +335,14 @@ jobs:
   sign-windows-artifacts:
     name: Authenticode sign Windows
     needs: [identity, build-local-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-local-artifacts.result == 'success' }}
+    # Skipped only while the committed ledger defers Windows Authenticode
+    # (windows.status = pending_external_certificate_provisioning). The unsigned
+    # Windows archive then flows through build-local artifacts and its integrity
+    # is covered by the Sigstore-signed checksum closure.
+    if: >-
+      ${{ needs.identity.outputs.publishing == 'true' &&
+          needs.build-local-artifacts.result == 'success' &&
+          needs.identity.outputs.windows_signing == 'qualified' }}
     runs-on: windows-2022
     timeout-minutes: 30
     environment: cli-signing
@@ -469,7 +478,9 @@ jobs:
       ${{ always() && needs.identity.outputs.publishing == 'true' &&
           needs.build-local-artifacts.result == 'success' &&
           needs.sign-macos-artifacts.result == 'success' &&
-          needs.sign-windows-artifacts.result == 'success' }}
+          (needs.sign-windows-artifacts.result == 'success' ||
+           (needs.sign-windows-artifacts.result == 'skipped' &&
+            needs.identity.outputs.windows_signing != 'qualified')) }}
     runs-on: ubuntu-24.04
     permissions:
       attestations: write
@@ -488,11 +499,17 @@ jobs:
           merge-multiple: true
       - name: Replace unsigned platform archives exactly
         shell: bash
+        env:
+          WINDOWS_SIGNING: ${{ needs.identity.outputs.windows_signing }}
         run: |
           set -euo pipefail
           mkdir release
           cp -R unsigned/. release/
-          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc; do
+          targets="aarch64-apple-darwin x86_64-apple-darwin"
+          if [[ "$WINDOWS_SIGNING" == qualified ]]; then
+            targets="$targets x86_64-pc-windows-msvc"
+          fi
+          for target in $targets; do
             case "$target" in
               *windows*) extension=zip ;;
               *) extension=tar.xz ;;
@@ -606,7 +623,7 @@ jobs:
           xcrun stapler validate "$dmg"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
       - name: Verify Authenticode after extraction
-        if: ${{ needs.identity.outputs.publishing == 'true' && runner.os == 'Windows' }}
+        if: ${{ needs.identity.outputs.publishing == 'true' && runner.os == 'Windows' && needs.identity.outputs.windows_signing == 'qualified' }}
         shell: pwsh
         env:
           EXPECTED_SIGNER_SUBJECT: ${{ vars.CLI_WINDOWS_SIGNER_SUBJECT }}
@@ -685,7 +702,12 @@ jobs:
   sign-windows-installer:
     name: Authenticode sign PowerShell installer
     needs: [identity, build-global-artifacts]
-    if: ${{ needs.identity.outputs.publishing == 'true' && needs.build-global-artifacts.result == 'success' }}
+    # Skipped only while the committed ledger defers Windows Authenticode; the
+    # unsigned installer then ships with checksum-closure integrity only.
+    if: >-
+      ${{ needs.identity.outputs.publishing == 'true' &&
+          needs.build-global-artifacts.result == 'success' &&
+          needs.identity.outputs.windows_signing == 'qualified' }}
     runs-on: windows-2022
     timeout-minutes: 20
     environment: cli-signing
@@ -753,7 +775,9 @@ jobs:
     if: >-
       ${{ needs.identity.outputs.publishing == 'true' &&
           needs.assemble-release-artifacts.result == 'success' &&
-          needs.sign-windows-installer.result == 'success' &&
+          (needs.sign-windows-installer.result == 'success' ||
+           (needs.sign-windows-installer.result == 'skipped' &&
+            needs.identity.outputs.windows_signing != 'qualified')) &&
           needs.sbom.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
@@ -768,7 +792,15 @@ jobs:
         with:
           name: artifacts-release-candidates
           path: release
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - name: Download unsigned global artifacts
+        if: ${{ needs.identity.outputs.windows_signing != 'qualified' }}
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-build-global
+          path: global
+      - name: Download signed global artifacts
+        if: ${{ needs.identity.outputs.windows_signing == 'qualified' }}
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: artifacts-signed-global
           path: global
@@ -780,6 +812,8 @@ jobs:
         uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.1
       - name: Recompute and sign exact final checksum manifest
         shell: bash
+        env:
+          WINDOWS_SIGNING: ${{ needs.identity.outputs.windows_signing }}
         run: |
           set -euo pipefail
           mapfile -t archives < <(find release -maxdepth 1 -type f \( -name '*.tar.xz' -o -name '*.zip' \) -print | sort)
@@ -798,8 +832,12 @@ jobs:
             dmg_checksums+=("$checksum")
           done
           cp apps/cli/release-identities.json global/release-identities.json
-          test "$(jq -r .windows.status global/release-identities.json)" = qualified
-          test -n "$(jq -r .windows.publisher_subject global/release-identities.json)"
+          test "$(jq -r .windows.status global/release-identities.json)" = "$WINDOWS_SIGNING"
+          if [[ "$WINDOWS_SIGNING" == qualified ]]; then
+            test -n "$(jq -r .windows.publisher_subject global/release-identities.json)"
+          else
+            test "$(jq -r .windows.publisher_subject global/release-identities.json)" = null
+          fi
           payloads=(
             "${archives[@]}"
             "${dmgs[@]}"
