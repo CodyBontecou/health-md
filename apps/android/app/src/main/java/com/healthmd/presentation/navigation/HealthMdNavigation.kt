@@ -60,9 +60,11 @@ import com.healthmd.presentation.theme.GeistRadii
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.LocalGeistColors
 import com.healthmd.presentation.theme.Spacing
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
@@ -114,16 +116,23 @@ fun HealthMdNavigation(
     val shouldSkipOnboarding = requireNotNull(initialShouldSkipOnboarding)
     LaunchedEffect(sharedSetupCoordinator) {
         sharedSetupCoordinator.imports.filterNotNull().collect {
-            // Reuse a retained Shared Setup back-stack entry instead of pushing a second
-            // ViewModel. The coordinator keeps the request until Finish/Cancel, so an inactive
-            // entry cannot consume a warm ACTION_VIEW before navigation observes it.
-            if (navController.currentDestination?.route != SubRoutes.SHARED_SETUP) {
-                val revealedExisting = navController.popBackStack(
-                    route = SubRoutes.SHARED_SETUP,
-                    inclusive = false,
-                )
-                if (!revealedExisting) {
-                    navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true }
+            // A StateFlow resumes a suspended collector undispatched on the publisher's
+            // thread, so this body can run wherever the import was published from.
+            // Pin navigation to the main thread: mutating NavController from a
+            // background thread half-applies a back-stack entry that later crashes
+            // activity destroy ("State must be at least CREATED to move to DESTROYED").
+            withContext(Dispatchers.Main.immediate) {
+                // Reuse a retained Shared Setup back-stack entry instead of pushing a second
+                // ViewModel. The coordinator keeps the request until Finish/Cancel, so an inactive
+                // entry cannot consume a warm ACTION_VIEW before navigation observes it.
+                if (navController.currentDestination?.route != SubRoutes.SHARED_SETUP) {
+                    val revealedExisting = navController.popBackStack(
+                        route = SubRoutes.SHARED_SETUP,
+                        inclusive = false,
+                    )
+                    if (!revealedExisting) {
+                        navController.navigate(SubRoutes.SHARED_SETUP) { launchSingleTop = true }
+                    }
                 }
             }
         }
