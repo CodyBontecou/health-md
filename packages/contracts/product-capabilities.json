@@ -217,6 +217,29 @@
       ]
     },
     {
+      "id": "export.selected-time-series-detail",
+      "name": "Selected detailed time-series",
+      "classification": "shared",
+      "summary": "Export selected timestamped compatibility samples independently from platform-native source archive or raw snapshot products.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/time-series-data.md",
+        "apps/android/docs/features/csv-export.md"
+      ]
+    },
+    {
       "id": "export.completed-workouts",
       "name": "Completed workouts",
       "classification": "shared",
@@ -368,6 +391,28 @@
         "apps/apple/HealthMdUITests/ExportProfilesJourneyUITests.swift",
         "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportProfilesScreen.kt",
         "apps/android/app/src/test/java/com/healthmd/presentation/export/ExportProfilesViewModelTest.kt"
+      ]
+    },
+    {
+      "id": "automation.cancel-active-export",
+      "name": "Cancel an in-progress automated export",
+      "classification": "shared",
+      "summary": "Stop the current automated export attempt without disabling its schedule. Completed dates remain completed, and unresolved dates remain eligible for a later retry.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/Components/NotificationExportActivityBanner.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledExportCancellation.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileExportWorker.kt"
       ]
     },
     {
