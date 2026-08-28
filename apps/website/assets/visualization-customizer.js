@@ -1048,6 +1048,36 @@
     return "iOS / Android";
   }
 
+  // Health.md app file exports each visualization renders from. Source of truth
+  // is the plugin catalog (insert-wizard.ts); this metadata only adds labels.
+  var exportSourceMeta = {
+    "daily-json": { label: "Daily JSON", hint: "Granular daily export — summary fields, samples, sleep stages, GPS routes, dose events, and mood entries." },
+    "daily-csv": { label: "Daily CSV", hint: "Daily export rows — summary fields plus sample, sleep-stage, workout, mood, and medication rows when included." },
+    "daily-markdown": { label: "Markdown & Bases", hint: "Daily note frontmatter / Obsidian Bases summary keys only — no sample arrays or routes." },
+    "rollups": { label: "Roll-ups", hint: "Health/Rollups/ weekly, monthly, yearly, and v9 range summaries in JSON, Markdown, Bases, or CSV." },
+    "workout-notes": { label: "Workout notes", hint: "Individual detailed workout notes with laps, splits, and heart-rate zones." }
+  };
+  var defaultExportSources = ["daily-json", "daily-csv", "daily-markdown"];
+
+  function exportSourcesForVisualization(viz) {
+    var sources = viz.exportSources || (viz.catalog && viz.catalog.exportSources) || defaultExportSources;
+    return Array.isArray(sources) ? sources.filter(function (id) { return exportSourceMeta[id]; }) : defaultExportSources;
+  }
+
+  function exportNoteForVisualization(viz) {
+    return viz.exportNote || (viz.catalog && viz.catalog.exportNote) || null;
+  }
+
+  function exportSourcesBadges(viz) {
+    var badges = exportSourcesForVisualization(viz).map(function (id) {
+      var meta = exportSourceMeta[id];
+      return "<span class=\"export-badge\" title=\"" + escapeHtml(meta.hint) + "\">" + escapeHtml(meta.label) + "</span>";
+    });
+    var note = exportNoteForVisualization(viz);
+    return "<div class=\"export-badges\">" + badges.join("") + "</div>" +
+      (note ? "<p class=\"export-note\">" + escapeHtml(note) + "</p>" : "");
+  }
+
   function optionDescription(option) {
     return option.effect || option.description || "Configures this visualization.";
   }
@@ -1329,8 +1359,10 @@
       "<div><span>HealthKit permissions</span><strong>" + escapeHtml(permissions) + "</strong></div>" +
       "<div><span>Category</span><strong>" + escapeHtml(categoryLabels[viz.category] || viz.category) + "</strong></div>" +
       "<div><span>Data needed</span><strong>" + escapeHtml(docs.dataNeeded) + "</strong></div>" +
+      "<div><span>Works with exports</span><strong>" + escapeHtml(exportSourcesForVisualization(viz).map(function (id) { return exportSourceMeta[id].label; }).join(", ")) + "</strong></div>" +
       "<div><span>Platform</span><strong>" + escapeHtml(platform) + "</strong></div>" +
       "</div>" +
+      "<div class=\"docs-section\"><h4>Works with Health.md exports</h4>" + exportSourcesBadges(viz) + "</div>" +
       "<div class=\"docs-section\"><h4>Visualization options</h4>" + specificOptions + "</div>" +
       "<details class=\"docs-section docs-details\"><summary>Common <code>health-viz</code> block options</summary>" + optionsTable(commonVisualizationOptions) + "</details>" +
       "<div class=\"docs-section docs-code\"><div class=\"docs-code-header\"><h4>Copyable block for this preview</h4><button class=\"copy-icon-button\" type=\"button\" data-copy-block aria-label=\"Copy health-viz block\" title=\"Copy health-viz block\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\"><path class=\"copy-glyph\" d=\"M8 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3h1V7Zm2 1h3a3 3 0 0 1 3 3v3h1a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v1Zm-3 2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H7Z\" fill=\"currentColor\"/><path class=\"check-glyph\" d=\"M9.55 16.6 5.3 12.35l1.4-1.4 2.85 2.85 7.75-7.75 1.4 1.4-9.15 9.15Z\" fill=\"currentColor\"/></svg><span class=\"copy-icon-label\">Copy</span></button></div><pre><code>" + escapeHtml(renderCodeBlock(viz)) + "</code></pre></div>";

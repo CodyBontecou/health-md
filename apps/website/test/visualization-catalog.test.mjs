@@ -39,7 +39,19 @@ test("generated website catalog includes every plugin visualization exactly once
     assert.ok(item.description, item.type);
     assert.ok(item.category, item.type);
     assert.ok(item.renderer === "canvas" || item.renderer === "html", item.type);
+    assert.ok(Array.isArray(item.exportSources) && item.exportSources.length > 0, `${item.type} exportSources`);
+    for (const source of item.exportSources) {
+      assert.ok(
+        ["daily-json", "daily-csv", "daily-markdown", "rollups", "workout-notes"].includes(source),
+        `${item.type} export source ${source}`
+      );
+    }
   }
+  const byId = Object.fromEntries(catalog.visualizations.map((item) => [item.type, item]));
+  assert.deepEqual(byId["rollup-explorer"].exportSources, ["rollups"]);
+  assert.deepEqual(byId["workout-map"].exportSources, ["daily-json"]);
+  assert.ok(byId["heart-terrain"].exportSources.includes("daily-csv"));
+  assert.ok(!byId["heart-terrain"].exportSources.includes("daily-markdown"));
 });
 
 test("Visualization Studio derives availability from the generated plugin catalog", async () => {
