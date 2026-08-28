@@ -383,7 +383,7 @@ struct ExportPreviewView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                if settings.effectiveGranularDataEnabled {
+                if settings.effectiveDetailPolicy.includesCanonicalArchive {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
@@ -589,7 +589,7 @@ struct ExportPreviewView: View {
     private var previewScope: ExportPreviewScope {
         ExportPreviewScope.make(
             selectedFormats: settings.exportFormats,
-            losslessEnabled: settings.effectiveGranularDataEnabled,
+            losslessEnabled: settings.effectiveDetailPolicy.includesCanonicalArchive,
             defaultMaximumRenderedDates: Self.maxRenderedDates
         )
     }

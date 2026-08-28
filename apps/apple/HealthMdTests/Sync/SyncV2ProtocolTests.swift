@@ -127,7 +127,11 @@ final class SyncV2ProtocolTests: XCTestCase {
     }
 
     func testPeerCapabilities_losslessFileJobsRequireBoundedCurrentArchiveSupport() {
-        func peer(bounded: Bool, archiveVersions: [Int]) -> SyncPeerCapabilities {
+        func peer(
+            bounded: Bool,
+            archiveVersions: [Int],
+            supportsSplitDetail: Bool = false
+        ) -> SyncPeerCapabilities {
             SyncPeerCapabilities(
                 protocolVersion: SyncPeerCapabilities.currentProtocolVersion,
                 appVersion: "mixed",
@@ -140,7 +144,8 @@ final class SyncV2ProtocolTests: XCTestCase {
                 supportsRollupSummaries: true,
                 supportsSummaryOnlyExports: true,
                 supportsSizeBoundedConnectedTransfers: bounded,
-                canonicalArchiveSchemaVersions: archiveVersions
+                canonicalArchiveSchemaVersions: archiveVersions,
+                supportsSplitExportDetailPolicy: supportsSplitDetail
             )
         }
 
@@ -177,6 +182,24 @@ final class SyncV2ProtocolTests: XCTestCase {
             rollupSummariesEnabled: false,
             effectiveGranularDataEnabled: false
         ), "A non-granular legacy file job remains compatible")
+
+        XCTAssertFalse(current.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            detailPolicy: .detailedTimeSeries
+        ), "A legacy peer must not silently add an archive or drop requested series")
+        let splitCurrent = peer(
+            bounded: true,
+            archiveVersions: [HealthKitRecordArchive.currentRecordSchemaVersion],
+            supportsSplitDetail: true
+        )
+        XCTAssertTrue(splitCurrent.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            detailPolicy: .detailedTimeSeries
+        ))
+        XCTAssertTrue(splitCurrent.supportsRequestedMacExportFeatures(
+            rollupSummariesEnabled: false,
+            detailPolicy: .archiveOnly
+        ))
     }
 
     func testPeerCapabilities_currentAdvertisesChunkedMacExportJobs() {
@@ -192,6 +215,8 @@ final class SyncV2ProtocolTests: XCTestCase {
         )
         XCTAssertTrue(currentIOS.supportsChunkedMacExportJobs)
         XCTAssertTrue(currentMac.supportsChunkedMacExportJobs)
+        XCTAssertTrue(currentIOS.supportsSplitExportDetailPolicy)
+        XCTAssertTrue(currentMac.supportsSplitExportDetailPolicy)
         XCTAssertTrue(currentIOS.supportsAllAvailableHistoryExportRequests)
         XCTAssertTrue(currentMac.supportsAllAvailableHistoryExportRequests)
         XCTAssertTrue(currentIOS.supportsSizeBoundedConnectedTransfers)

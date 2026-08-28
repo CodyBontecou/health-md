@@ -482,7 +482,7 @@ struct ContentView: View {
                 }
                 if TestMode.useHealthKitExportPreviewFixtures {
                     advancedSettings.exportFormats = [.markdown]
-                    advancedSettings.includeGranularData = true
+                    advancedSettings.detailPolicy = .lossless
                     advancedSettings.metricSelection.selectAll()
                     advancedSettings.generateWeeklyRollups = true
                     advancedSettings.generateMonthlyRollups = true
@@ -531,7 +531,7 @@ struct ContentView: View {
         advancedSettings.individualTracking.globalEnabled = true
         advancedSettings.dailyNoteInjection.enabled = true
         advancedSettings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
-        advancedSettings.includeGranularData = true
+        advancedSettings.detailPolicy = .lossless
         advancedSettings.metricSelection.selectAll()
         advancedSettings.generateWeeklyRollups = true
         advancedSettings.generateMonthlyRollups = true
@@ -1482,10 +1482,10 @@ struct ContentView: View {
                     settings: advancedSettings,
                     healthSubfolder: vaultManager.healthSubfolder,
                     destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
-                    fetchHealthData: { date, includeGranularData in
+                    fetchHealthData: { date, detailPolicy in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: advancedSettings.metricSelection,
                             timeZone: providerTimeZone
                         )
@@ -1712,7 +1712,7 @@ struct ContentView: View {
             for date in chunk.dates {
                 try Task.checkCancellation()
                 let day = sourceCalendar.startOfDay(for: date)
-                let shouldIncludeGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                let detailPolicy = MacExportStreamingJobBuilder.detailPolicy(
                     for: date,
                     metadata: metadata,
                     settings: advancedSettings
@@ -1724,13 +1724,13 @@ struct ContentView: View {
                 do {
                     let fetchedRecord = try await healthKitManager.fetchHealthData(
                         for: date,
-                        includeGranularData: shouldIncludeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: advancedSettings.metricSelection,
                         timeZone: sourceTimeZone
                     )
-                    var record = ConnectedExportGranularMode.sanitized(
+                    var record = ConnectedExportDetailPolicy.sanitized(
                         fetchedRecord,
-                        includesGranularData: shouldIncludeGranularData
+                        detailPolicy: detailPolicy
                     )
 
                     if record.hasAnyData,

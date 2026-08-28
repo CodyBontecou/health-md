@@ -546,9 +546,9 @@ final class IPhoneDirectFileExportProducer {
                 channel: channel
             )
             let isRequested = requestedSet.contains(sourceCalendar.startOfDay(for: date))
-            let includeGranular = requestedSet.contains(
-                sourceCalendar.startOfDay(for: date)
-            ) && ConnectedExportGranularMode.isEnabled(for: settings)
+            let detailPolicy = isRequested
+                ? ConnectedExportDetailPolicy.effective(for: settings)
+                : .summary
             let shouldFetchExternal = isRequested
                 && journal.request.canonicalSelection == nil
                 && settings.writesExternalProviderSidecars
@@ -566,16 +566,16 @@ final class IPhoneDirectFileExportProducer {
             }
             let outcome = try await HealthKitDailyCapture.capture(
                 date: date,
-                includeGranularData: includeGranular,
+                detailPolicy: detailPolicy,
                 metricSelection: settings.metricSelection,
                 transform: .sanitizeGranular,
                 emptyRecordPolicy: .retain,
                 fetchExternalRecords: shouldFetchExternal,
                 failurePolicy: .connectedMac,
-                fetchHealthData: { date, includeGranularData, metricSelection in
+                fetchHealthData: { date, detailPolicy, metricSelection in
                     try await healthKitManager.fetchHealthData(
                         for: date,
-                        includeGranularData: includeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
                         timeZone: TimeZone(
                             identifier: journal.accepted.sourceTimeZoneIdentifier
@@ -608,14 +608,16 @@ final class IPhoneDirectFileExportProducer {
             let partialFailureCount = outcome.record?.partialFailures.count ?? 0
             let integrityWarningCount = archive?.integrityWarnings.count ?? 0
             let hasIncompleteQuery = archive?.queryResults.contains { $0.status != .success } ?? false
-            let hasIncompleteArchive = includeGranular && archive?.captureStatus != .complete
+            let includesCanonicalArchive = detailPolicy.includesCanonicalArchive
+            let hasIncompleteArchive = includesCanonicalArchive
+                && archive?.captureStatus != .complete
             journal.capturedDays.append(IPhoneDirectCapturedDay(
                 sourceDate: date,
                 sourceDateIdentifier: identifier,
                 isRequestedDate: isRequested,
                 relativePath: relativePath,
                 succeeded: outcome.record != nil,
-                includedGranularData: includeGranular,
+                includedGranularData: includesCanonicalArchive,
                 sampleCount: archive?.records.count ?? 0,
                 recordCount: (archive?.records.count ?? 0)
                     + (archive?.externalRecords.count ?? 0)
@@ -672,7 +674,7 @@ final class IPhoneDirectFileExportProducer {
                 throw IPhoneDirectFileProducerError.invalidSpool
             }
             let includeGranular = day.isRequestedDate &&
-                ConnectedExportGranularMode.isEnabled(for: settings)
+                ConnectedExportDetailPolicy.effective(for: settings).includesCanonicalArchive
             let archive = payload.record?.healthKitRecordArchive
             let partialFailureCount = payload.record?.partialFailures.count ?? 0
             let integrityWarningCount = archive?.integrityWarnings.count ?? 0
@@ -1383,10 +1385,9 @@ final class IPhoneDirectFileExportProducer {
         case .exact: dateSelection = "exact_range"
         case .allAvailable: dateSelection = "all_available"
         }
-        let capturedGranularMode = requestedDays.compactMap(\.includedGranularData).first
-        let fallbackSettings = journal.settingsSnapshot.makeAdvancedExportSettings()
-        let usedGranularCapture = capturedGranularMode ??
-            ConnectedExportGranularMode.isEnabled(for: fallbackSettings)
+        let savedDetailLevel = ConnectedExportDetailPolicy.effective(
+            for: journal.settingsSnapshot
+        ).historyDetailLevelToken
         var sourceIDs = selection?.sourceIDs ?? ["apple_health"]
         if requestedDays.contains(where: { $0.externalRecordCount > 0 }) {
             sourceIDs.append("connected_apps")
@@ -1397,8 +1398,7 @@ final class IPhoneDirectFileExportProducer {
             requestID: journal.request.jobID,
             dateSelection: dateSelection,
             settingsPolicy: journal.request.settingsPolicy.rawValue,
-            detailLevel: selection?.detailLevel.rawValue ??
-                (usedGranularCapture ? "lossless" : "summary"),
+            detailLevel: selection?.detailLevel.rawValue ?? savedDetailLevel,
             metricIDs: Array(journal.settingsSnapshot.metricSelection.enabledMetricIDs),
             categoryIDs: Array(journal.settingsSnapshot.metricSelection.enabledCategoryIDs),
             sourceIDs: sourceIDs,

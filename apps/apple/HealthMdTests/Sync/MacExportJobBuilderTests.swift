@@ -84,7 +84,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         settings.includeGranularData = true
         let start = Self.day(2026, 5, 12)
         let end = Self.day(2026, 5, 13)
-        var requestedGranularFlags: [Bool] = []
+        var requestedDetailPolicies: [AppleExportDetailPolicy] = []
 
         let job = try await MacExportJobBuilder.build(
             jobID: UUID(uuidString: "00000000-0000-0000-0000-000000000123")!,
@@ -94,20 +94,54 @@ final class MacExportJobBuilderTests: XCTestCase {
             settings: settings,
             healthSubfolder: "2. Areas/Health",
             destinationDisplayName: "MacVault",
-            fetchHealthData: { date, includeGranularData in
-                requestedGranularFlags.append(includeGranularData)
+            fetchHealthData: { date, detailPolicy in
+                requestedDetailPolicies.append(detailPolicy)
                 var data = HealthData(date: date)
                 data.activity.steps = 123
                 return data
             }
         )
 
-        XCTAssertEqual(requestedGranularFlags, [true, true])
+        XCTAssertEqual(requestedDetailPolicies, [.lossless, .lossless])
         XCTAssertTrue(job.settingsSnapshot.includeGranularData)
         XCTAssertEqual(job.settingsSnapshot.healthSubfolder, "2. Areas/Health")
         XCTAssertEqual(job.records.count, 2)
         XCTAssertEqual(job.requestedTarget?.kind, .connectedMac)
         XCTAssertEqual(job.requestedTarget?.destinationDisplayName, "MacVault")
+    }
+
+    func testBuild_detailedTimeSeriesPreservesSamplesWithoutArchiveMode() async throws {
+        let settings = makeSettings()
+        settings.detailPolicy = .detailedTimeSeries
+        let date = Self.day(2026, 5, 12)
+        var receivedPolicy: AppleExportDetailPolicy?
+
+        let job = try await MacExportJobBuilder.build(
+            sourceDeviceName: "Test iPhone",
+            startDate: date,
+            endDate: date,
+            settings: settings,
+            destinationDisplayName: "MacVault",
+            fetchHealthData: { requestedDate, detailPolicy in
+                receivedPolicy = detailPolicy
+                var data = HealthData(
+                    date: requestedDate,
+                    healthKitRecordCaptureStatus: .complete
+                )
+                data.activity.steps = 123
+                data.heart.heartRateSamples = [
+                    TimeSample(timestamp: requestedDate, value: 60)
+                ]
+                return data
+            }
+        )
+
+        XCTAssertEqual(receivedPolicy, .detailedTimeSeries)
+        XCTAssertEqual(job.settingsSnapshot.detailPolicy, .detailedTimeSeries)
+        XCTAssertFalse(job.settingsSnapshot.includeGranularData)
+        XCTAssertEqual(job.records.first?.heart.heartRateSamples.count, 1)
+        XCTAssertNil(job.records.first?.healthKitRecordArchive)
+        XCTAssertEqual(job.records.first?.healthKitRecordCaptureStatus, .notRequested)
     }
 
     func testBuild_reportsDayProgressOnlyAfterCaptureCompletes() async throws {
@@ -143,7 +177,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let date = Self.day(2026, 5, 12)
-        var requestedGranularFlags: [Bool] = []
+        var requestedDetailPolicies: [AppleExportDetailPolicy] = []
 
         let job = try await MacExportJobBuilder.build(
             sourceDeviceName: "Test iPhone",
@@ -151,8 +185,8 @@ final class MacExportJobBuilderTests: XCTestCase {
             endDate: date,
             settings: settings,
             destinationDisplayName: "MacVault",
-            fetchHealthData: { requestedDate, includeGranularData in
-                requestedGranularFlags.append(includeGranularData)
+            fetchHealthData: { requestedDate, detailPolicy in
+                requestedDetailPolicies.append(detailPolicy)
                 let dayStart = Calendar.current.startOfDay(for: requestedDate)
                 var data = HealthData(
                     date: requestedDate,
@@ -205,8 +239,8 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertTrue(job.settingsSnapshot.includeGranularData, "The saved toggle remains represented")
         XCTAssertTrue(job.settingsSnapshot.summaryOnlyExport)
         XCTAssertFalse(ConnectedExportGranularMode.isEnabled(for: job.settingsSnapshot))
-        XCTAssertFalse(requestedGranularFlags.isEmpty)
-        XCTAssertTrue(requestedGranularFlags.allSatisfy { !$0 })
+        XCTAssertFalse(requestedDetailPolicies.isEmpty)
+        XCTAssertTrue(requestedDetailPolicies.allSatisfy { $0 == .summary })
         XCTAssertFalse(MacExportStreamingJobBuilder.shouldIncludeGranularData(
             for: date,
             metadata: metadata,
@@ -230,7 +264,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         settings.dailyNoteInjection.enabled = true
         settings.dailyNoteInjection.dailyNotesOnly = true
         let date = Self.day(2026, 5, 12)
-        var requestedGranularFlags: [Bool] = []
+        var requestedDetailPolicies: [AppleExportDetailPolicy] = []
         var externalFetchCount = 0
 
         let job = try await MacExportJobBuilder.build(
@@ -239,8 +273,8 @@ final class MacExportJobBuilderTests: XCTestCase {
             endDate: date,
             settings: settings,
             destinationDisplayName: "MacVault",
-            fetchHealthData: { requestedDate, includeGranularData in
-                requestedGranularFlags.append(includeGranularData)
+            fetchHealthData: { requestedDate, detailPolicy in
+                requestedDetailPolicies.append(detailPolicy)
                 var data = HealthData(date: requestedDate)
                 data.activity.steps = 123
                 return data
@@ -251,7 +285,7 @@ final class MacExportJobBuilderTests: XCTestCase {
             }
         )
 
-        XCTAssertEqual(requestedGranularFlags, [false])
+        XCTAssertEqual(requestedDetailPolicies, [.summary])
         XCTAssertEqual(externalFetchCount, 0)
         XCTAssertEqual(job.records.count, 1)
         XCTAssertTrue(job.externalDailyRecords.isEmpty)
@@ -366,7 +400,7 @@ final class MacExportJobBuilderTests: XCTestCase {
         let start = Self.day(2026, 5, 12)
         let end = Self.day(2026, 5, 13)
         var requestedDates: [Date] = []
-        var requestedGranularFlags: [Bool] = []
+        var requestedDetailPolicies: [AppleExportDetailPolicy] = []
         var externalRequestedDates: [Date] = []
 
         let job = try await MacExportJobBuilder.build(
@@ -375,9 +409,9 @@ final class MacExportJobBuilderTests: XCTestCase {
             endDate: end,
             settings: settings,
             destinationDisplayName: "MacVault",
-            fetchHealthData: { date, includeGranularData in
+            fetchHealthData: { date, detailPolicy in
                 requestedDates.append(Calendar.current.startOfDay(for: date))
-                requestedGranularFlags.append(includeGranularData)
+                requestedDetailPolicies.append(detailPolicy)
                 var data = HealthData(date: date)
                 data.activity.steps = 123
                 return data
@@ -400,8 +434,8 @@ final class MacExportJobBuilderTests: XCTestCase {
         XCTAssertEqual(job.records.count, 2)
         XCTAssertEqual(requestedDates.first, Calendar.current.startOfDay(for: start))
         XCTAssertEqual(requestedDates.last, Calendar.current.startOfDay(for: end))
-        XCTAssertEqual(requestedGranularFlags.filter { $0 }.count, 2)
-        XCTAssertTrue(requestedGranularFlags.filter { !$0 }.isEmpty)
+        XCTAssertEqual(requestedDetailPolicies.filter { $0 == .lossless }.count, 2)
+        XCTAssertTrue(requestedDetailPolicies.filter { $0 == .summary }.isEmpty)
         XCTAssertEqual(externalRequestedDates, [
             Calendar.current.startOfDay(for: start),
             Calendar.current.startOfDay(for: end)

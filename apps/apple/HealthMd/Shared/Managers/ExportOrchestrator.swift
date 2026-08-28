@@ -590,7 +590,7 @@ struct ExportOrchestrator {
             do {
                 var healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                    detailPolicy: frozenOperationSettings.effectiveDetailPolicy,
                     metricSelection: frozenOperationSettings.metricSelection,
                     timeZone: sourceTimeZone
                 )
@@ -1285,7 +1285,7 @@ struct ExportOrchestrator {
             do {
                 var healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                    detailPolicy: frozenOperationSettings.effectiveDetailPolicy,
                     metricSelection: frozenOperationSettings.metricSelection,
                     timeZone: frozenOperationSettings.exportTimeZoneOverride
                 )
@@ -1451,7 +1451,7 @@ struct ExportOrchestrator {
                 do {
                     var healthData = try await healthKitManager.fetchHealthData(
                         for: originalDate,
-                        includeGranularData: frozenOperationSettings.effectiveGranularDataEnabled,
+                        detailPolicy: frozenOperationSettings.effectiveDetailPolicy,
                         metricSelection: frozenOperationSettings.metricSelection,
                         timeZone: frozenOperationSettings.exportTimeZoneOverride
                     )
@@ -1581,9 +1581,9 @@ struct ExportOrchestrator {
         guard HealthRollupExporter.isEnabled(settings: settings) else {
             return nil
         }
-        return ConnectedExportGranularMode.sanitized(
+        return ConnectedExportDetailPolicy.sanitized(
             healthData,
-            includesGranularData: false
+            detailPolicy: .summary
         )
     }
 

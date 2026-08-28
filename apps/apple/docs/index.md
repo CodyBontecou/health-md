@@ -8,7 +8,7 @@
 ## Export architecture
 
 - [Export schema contract](./features/export-schema.md): current Apple schema v8 with typed providers, canonical `healthmd.healthkit_records` v1 archive, completeness, ownership, and migration guidance.
-- [Lossless Health Records](./features/time-series-data.md): opt-in source-record capture, format roles, practical limits, and the legacy `includeGranularData` key.
+- [Data Detail and Lossless Health Records](./features/time-series-data.md): summaries, selected timestamped series, canonical source capture, migration, format roles, and practical limits.
 - [JSON export](./features/json-export.md): authoritative embedded canonical archive.
 - [CSV export](./features/csv-export.md): canonical records as RFC 4180-safe JSON rows.
 - [Markdown](./features/markdown-export.md) and [Obsidian Bases](./features/obsidian-bases.md): readable summaries plus capture diagnostics/counts.

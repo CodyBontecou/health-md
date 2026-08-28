@@ -604,10 +604,10 @@ struct ExportProfileDetailView: View {
                         )
                     )
                     factRow(
-                        title: String(localized: "Lossless records", comment: "Profile detail lossless row"),
-                        value: settings.includeGranularData
-                            ? String(localized: "On", comment: "Enabled state")
-                            : String(localized: "Off", comment: "Disabled state")
+                        title: String(localized: "Data Detail", comment: "Profile detail data-detail row"),
+                        value: AppleExportDetailPreset(
+                            policy: settings.detailPolicy
+                        ).localizedTitle
                     )
                     rollupRow(settings)
                     factRow(
@@ -1287,10 +1287,27 @@ struct ExportProfileEditorSheet: View {
                 String(localized: "Data dictionary", comment: "Profile editor data dictionary toggle"),
                 isOn: $draft.includeDataDictionary
             )
-            Toggle(
-                String(localized: "Lossless records", comment: "Profile editor lossless toggle"),
-                isOn: $draft.includeGranularData
-            )
+            Picker(
+                String(localized: "Data Detail", comment: "Profile editor data-detail picker"),
+                selection: Binding(
+                    get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
+                    set: { draft.detailPolicy = $0.policy }
+                )
+            ) {
+                Text(AppleExportDetailPreset.summary.localizedTitle)
+                    .tag(AppleExportDetailPreset.summary)
+                Text(AppleExportDetailPreset.detailedTimeSeries.localizedTitle)
+                    .tag(AppleExportDetailPreset.detailedTimeSeries)
+                Text(AppleExportDetailPreset.losslessHealthRecords.localizedTitle)
+                    .tag(AppleExportDetailPreset.losslessHealthRecords)
+                if draft.detailPolicy == .archiveOnly {
+                    Text(AppleExportDetailPreset.archiveOnly.localizedTitle)
+                        .tag(AppleExportDetailPreset.archiveOnly)
+                }
+            }
+            Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
+                .font(.footnote)
+                .foregroundStyle(Color.textSecondary)
             Toggle(
                 String(localized: "Summary only", comment: "Profile editor summary-only toggle"),
                 isOn: $draft.summaryOnlyExport

@@ -3721,9 +3721,9 @@ final class VaultManager: ObservableObject {
         try Task.checkCancellation()
         let payload = try decodeConnectedHealthDayPayload(from: sourceURL)
         guard let record = payload.record else { return false }
-        let projection = ConnectedExportGranularMode.sanitized(
+        let projection = ConnectedExportDetailPolicy.sanitized(
             record,
-            includesGranularData: false
+            detailPolicy: .summary
         )
         try JSONEncoder().encode(projection).write(to: destinationURL, options: .atomic)
         return true

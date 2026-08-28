@@ -1278,10 +1278,10 @@ class SchedulingManager: ObservableObject {
                 healthSubfolder: VaultManager.savedHealthSubfolder(),
                 destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
                 frozenSettingsSnapshot: settingsSnapshot,
-                fetchHealthData: { date, includeGranularData in
+                fetchHealthData: { date, detailPolicy in
                     try await HealthKitManager.shared.fetchHealthData(
                         for: date,
-                        includeGranularData: includeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: settings.metricSelection,
                         timeZone: providerTimeZone
                     )

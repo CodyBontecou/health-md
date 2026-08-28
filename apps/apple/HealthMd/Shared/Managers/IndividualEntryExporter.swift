@@ -133,8 +133,21 @@ final class IndividualEntryExporter {
                 )
             }
 
-            // Generate content
-            let content = generateEntryContent(for: sample, formatSettings: formatSettings)
+            // Generate content. Workout notes with a GPS route reference a
+            // sidecar file that carries the full coordinate array so the note
+            // stays compact while downstream consumers (e.g. the Obsidian
+            // plugin) can still render route maps.
+            let routeSidecarName: String?
+            if let workout = sample.workout, !workout.route.isEmpty {
+                routeSidecarName = "\(fileURL.deletingPathExtension().lastPathComponent).route.json"
+            } else {
+                routeSidecarName = nil
+            }
+            let content = generateEntryContent(
+                for: sample,
+                formatSettings: formatSettings,
+                routeSidecarName: routeSidecarName
+            )
 
             // Coordinate directory creation and the final atomic replacement as
             // one provider-visible mutation of the selected entry path.
@@ -155,6 +168,23 @@ final class IndividualEntryExporter {
                 }
             } catch FileCoordinationError.destinationChanged {
                 throw ExportError.destinationChanged
+            }
+            if let routeSidecarName,
+               let workout = sample.workout,
+               let sidecarJSON = routeSidecarJSON(for: workout) {
+                let sidecarURL = fileURL.deletingLastPathComponent()
+                    .appendingPathComponent(routeSidecarName)
+                do {
+                    try fileCoordinator.coordinateWriting(
+                        at: sidecarURL,
+                        intent: .replace,
+                        cancellationCheck: { try Task.checkCancellation() }
+                    ) { coordinatedURL in
+                        try fileSystem.writeString(sidecarJSON, to: coordinatedURL, atomically: true)
+                    }
+                } catch FileCoordinationError.destinationChanged {
+                    throw ExportError.destinationChanged
+                }
             }
             filesWritten += 1
         }
@@ -225,12 +255,17 @@ final class IndividualEntryExporter {
     }
 
     /// Generate markdown content for an individual entry
-    private func generateEntryContent(for sample: IndividualHealthSample, formatSettings: FormatCustomization) -> String {
+    private func generateEntryContent(
+        for sample: IndividualHealthSample,
+        formatSettings: FormatCustomization,
+        routeSidecarName: String? = nil
+    ) -> String {
         if sample.metricId == "workouts", let workout = sample.workout {
             return generateWorkoutEntryContent(
                 for: workout,
                 canonicalFields: sample.additionalFields,
-                formatSettings: formatSettings
+                formatSettings: formatSettings,
+                routeSidecarName: routeSidecarName
             )
         }
 
@@ -286,7 +321,8 @@ final class IndividualEntryExporter {
     private func generateWorkoutEntryContent(
         for workout: WorkoutData,
         canonicalFields: [String: Any],
-        formatSettings: FormatCustomization
+        formatSettings: FormatCustomization,
+        routeSidecarName: String? = nil
     ) -> String {
         let converter = UnitConverter(preference: formatSettings.unitPreference)
         let dateString = dateFormatter.string(from: workout.startTime)
@@ -371,6 +407,9 @@ final class IndividualEntryExporter {
         }
         if !workout.route.isEmpty {
             lines.append("route_points: \(workout.route.count)")
+            if let routeSidecarName {
+                lines.append("route_file: \(yamlQuoted(routeSidecarName))")
+            }
         }
         appendSampleCountsFrontmatter(for: workout, lines: &lines)
         if !zones.isEmpty {
@@ -837,6 +876,38 @@ final class IndividualEntryExporter {
 
     private func cadenceUnit(for workoutType: WorkoutType) -> String {
         workoutType == .cycling ? "rpm" : "spm"
+    }
+
+    /// Serializes a workout's GPS route as a standalone sidecar JSON file.
+    /// The envelope mirrors the daily JSON export's `workouts[].route` point
+    /// shape (timestamp/latitude/longitude plus optional altitude, speed,
+    /// course, and horizontal accuracy) so consumers can reuse one parser.
+    private func routeSidecarJSON(for workout: WorkoutData) -> String? {
+        guard !workout.route.isEmpty else { return nil }
+        let routeArray: [[String: Any]] = workout.route.map { point in
+            var dict: [String: Any] = [
+                "timestamp": ExportDateFormatting.utcTimestamp(point.timestamp),
+                "latitude": point.latitude,
+                "longitude": point.longitude
+            ]
+            if let altitude = point.altitudeMeters { dict["altitude"] = altitude }
+            if let speed = point.speedMps { dict["speedMps"] = speed }
+            if let course = point.courseDegrees { dict["courseDegrees"] = course }
+            if let accuracy = point.horizontalAccuracyMeters { dict["horizontalAccuracyMeters"] = accuracy }
+            return dict
+        }
+        let envelope: [String: Any] = [
+            "schema": "healthmd.workout_route",
+            "schema_version": 1,
+            "point_count": routeArray.count,
+            "route": routeArray
+        ]
+        guard JSONSerialization.isValidJSONObject(envelope),
+              let data = try? JSONSerialization.data(
+                withJSONObject: envelope,
+                options: [.sortedKeys, .withoutEscapingSlashes]
+              ) else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 
     private func appendSampleCountsFrontmatter(for workout: WorkoutData, lines: inout [String]) {

@@ -13,18 +13,18 @@ One export action can write Markdown, Obsidian Bases, JSON, and CSV for every se
 
 | Format | Role |
 |---|---|
-| Markdown | Readable summaries plus lossless status/counts/diagnostics. |
-| Obsidian Bases | Queryable summary properties plus lossless status/counts. |
-| JSON | Authoritative complete public `healthkit_record_archive`. |
-| CSV | Same canonical records as JSON, one RFC 4180-safe JSON row per record. |
+| Markdown | Readable summaries and selected sample tables, plus archive status/counts/diagnostics. |
+| Obsidian Bases | Queryable summary properties plus archive status/counts. |
+| JSON | Summaries and selected sample arrays; Lossless additionally embeds the authoritative public `healthkit_record_archive`. |
+| CSV | Summary/sample rows; Lossless additionally emits the same canonical records as JSON as RFC 4180-safe JSON rows. |
 
-**Lossless Health Records** is off by default for new installs, so all selected formats begin on the faster summary-only path. Existing explicit on or off choices are preserved.
+Data Detail defaults to Summary. Detailed Time-Series adds selected timestamped samples without the canonical archive; Lossless Health Records adds both. Historical combined choices migrate unchanged.
 
 ## Setup
 
 1. Open **Export → Export Formats**.
 2. Enable any combination of Markdown, Obsidian Bases, JSON, and CSV.
-3. Choose metrics and review **Lossless Health Records**.
+3. Choose metrics and select Summary, Detailed Time-Series, or Lossless Health Records under **Data Detail**.
 4. Configure paths/format settings and choose iPhone Folder or Connected Mac.
 5. Preview one day, then export.
 

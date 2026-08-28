@@ -1310,7 +1310,7 @@ struct ScheduleSettingsView: View {
             do {
                 healthData = try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: advancedSettings.effectiveGranularDataEnabled,
+                    detailPolicy: advancedSettings.effectiveDetailPolicy,
                     metricSelection: advancedSettings.metricSelection
                 )
             } catch {
@@ -2033,6 +2033,8 @@ struct ExportHistoryDetailView: View {
     private func detailLevelLabel(_ value: String) -> String {
         switch value {
         case "summary": return String(localized: "Summary")
+        case "detailed_time_series": return String(localized: "Detailed Time-Series")
+        case "archive_only": return String(localized: "HealthKit Archive Only")
         case "lossless": return String(localized: "Lossless")
         default: return displayToken(value)
         }

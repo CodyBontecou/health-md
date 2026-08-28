@@ -752,6 +752,11 @@ enum SharedSetupMapper {
         registry: SharedSetupMetricRegistry? = try? .current()
     ) throws -> SharedSetupV1 {
         guard let registry else { throw SharedSetupError.invalid("The metric registry is unavailable.") }
+        guard settings.detailPolicy.isLegacyRepresentable else {
+            throw SharedSetupError.invalid(
+                "Shared Setup v1 cannot represent separate time-series and HealthKit archive choices. Choose Summary or Lossless Health Records before sharing this setup."
+            )
+        }
         let reverse = Dictionary(uniqueKeysWithValues: registry.semanticToApple.map { ($1, $0) })
         let enabledSemantic = settings.metricSelection.enabledMetrics.compactMap { reverse[$0] }.sorted()
         let aliases = enabledSemantic.map { semantic in
@@ -827,8 +832,11 @@ enum SharedSetupMapper {
         let format = document.profile.presentation
         let currentMarkdown = current.formatCustomization.markdownTemplate
         let apple = document.platformExtensions.apple
+        let detailPolicy: AppleExportDetailPolicy = document.profile.export.includeGranularData
+            ? .lossless
+            : .summary
         return SharedSetupPortableSnapshot(
-            exportFormats: Set(document.profile.export.formats.compactMap(nativeFormat)), includeMetadata: document.profile.export.includeMetadata, groupByCategory: document.profile.export.groupByCategory, filenameFormat: document.profile.export.filenameTemplate, folderStructure: document.profile.export.folderTemplate, organizeFormatsIntoFolders: apple?.export.organizeFormatsIntoFolders ?? current.organizeFormatsIntoFolders, archiveExportFiles: apple?.export.archiveFiles ?? current.archiveExportFiles, includeDataDictionary: apple?.export.includeDataDictionary ?? current.includeDataDictionary, summaryOnlyExport: apple?.export.summaryOnly ?? current.summaryOnlyExport, writeMode: nativeWriteMode(document.profile.export.writeMode), includeGranularData: document.profile.export.includeGranularData, generateWeeklyRollups: current.generateRangeSummary, generateMonthlyRollups: current.generateRangeSummary, generateYearlyRollups: current.generateRangeSummary,
+            exportFormats: Set(document.profile.export.formats.compactMap(nativeFormat)), includeMetadata: document.profile.export.includeMetadata, groupByCategory: document.profile.export.groupByCategory, filenameFormat: document.profile.export.filenameTemplate, folderStructure: document.profile.export.folderTemplate, organizeFormatsIntoFolders: apple?.export.organizeFormatsIntoFolders ?? current.organizeFormatsIntoFolders, archiveExportFiles: apple?.export.archiveFiles ?? current.archiveExportFiles, includeDataDictionary: apple?.export.includeDataDictionary ?? current.includeDataDictionary, summaryOnlyExport: apple?.export.summaryOnly ?? current.summaryOnlyExport, writeMode: nativeWriteMode(document.profile.export.writeMode), includeGranularData: document.profile.export.includeGranularData, compatibilityDetail: detailPolicy.compatibilityDetail, healthKitSourceArchivePolicy: detailPolicy.healthKitSourceArchive, generateWeeklyRollups: current.generateRangeSummary, generateMonthlyRollups: current.generateRangeSummary, generateYearlyRollups: current.generateRangeSummary,
             metricSelectionIDs: preview.supportedMetricSelectionIDs,
             dateFormat: nativeDate(format.dateFormat), timeFormat: nativeTime(format.timeFormat), unitPreference: format.units == .metric ? .metric : .imperial,
             frontmatter: .init(fields: format.frontmatter.fields.map { .init(originalKey: $0.sourceKey, customKey: $0.outputKey, isEnabled: $0.enabled) }, customFields: format.frontmatter.customValues, placeholderFields: format.frontmatter.placeholders, includeDate: format.frontmatter.includeDate, includeType: format.frontmatter.includeType, customDateKey: format.frontmatter.dateKey, customTypeKey: format.frontmatter.typeKey, customTypeValue: format.frontmatter.typeValue, keyStyle: format.frontmatter.keyStyle == .snakeCase ? .snakeCase : .camelCase),
@@ -955,6 +963,8 @@ struct SharedSetupPortableSnapshot: Codable, Equatable {
     var summaryOnlyExport: Bool
     var writeMode: WriteMode
     var includeGranularData: Bool
+    var compatibilityDetail: ExportCompatibilityDetail? = nil
+    var healthKitSourceArchivePolicy: HealthKitSourceArchivePolicy? = nil
     var generateWeeklyRollups: Bool
     var generateMonthlyRollups: Bool
     var generateYearlyRollups: Bool
@@ -968,8 +978,18 @@ struct SharedSetupPortableSnapshot: Codable, Equatable {
     var individualTracking: IndividualTrackingSnapshot
     var dailyNotes: DailyNoteInjectionSnapshot
 
+    var detailPolicy: AppleExportDetailPolicy {
+        if let compatibilityDetail, let healthKitSourceArchivePolicy {
+            return AppleExportDetailPolicy(
+                compatibilityDetail: compatibilityDetail,
+                healthKitSourceArchive: healthKitSourceArchivePolicy
+            )
+        }
+        return includeGranularData ? .lossless : .summary
+    }
+
     static func capture(_ settings: AdvancedExportSettings) -> SharedSetupPortableSnapshot {
-        SharedSetupPortableSnapshot(exportFormats: settings.exportFormats, includeMetadata: settings.includeMetadata, groupByCategory: settings.groupByCategory, filenameFormat: settings.filenameFormat, folderStructure: settings.folderStructure, organizeFormatsIntoFolders: settings.organizeFormatsIntoFolders, archiveExportFiles: settings.archiveExportFiles, includeDataDictionary: settings.includeDataDictionary, summaryOnlyExport: settings.summaryOnlyExport, writeMode: settings.writeMode, includeGranularData: settings.includeGranularData, generateWeeklyRollups: settings.generateWeeklyRollups, generateMonthlyRollups: settings.generateMonthlyRollups, generateYearlyRollups: settings.generateYearlyRollups, metricSelectionIDs: settings.metricSelection.enabledMetrics, dateFormat: settings.formatCustomization.dateFormat, timeFormat: settings.formatCustomization.timeFormat, unitPreference: settings.formatCustomization.unitPreference, frontmatter: .from(settings.formatCustomization.frontmatterConfig), frontmatterPreservesExactFieldSet: settings.formatCustomization.frontmatterConfig.preservesExactFieldSet, markdownTemplate: settings.formatCustomization.markdownTemplate, individualTracking: .from(settings.individualTracking), dailyNotes: .from(settings.dailyNoteInjection))
+        SharedSetupPortableSnapshot(exportFormats: settings.exportFormats, includeMetadata: settings.includeMetadata, groupByCategory: settings.groupByCategory, filenameFormat: settings.filenameFormat, folderStructure: settings.folderStructure, organizeFormatsIntoFolders: settings.organizeFormatsIntoFolders, archiveExportFiles: settings.archiveExportFiles, includeDataDictionary: settings.includeDataDictionary, summaryOnlyExport: settings.summaryOnlyExport, writeMode: settings.writeMode, includeGranularData: settings.detailPolicy.legacyIncludeGranularData, compatibilityDetail: settings.compatibilityDetail, healthKitSourceArchivePolicy: settings.healthKitSourceArchivePolicy, generateWeeklyRollups: settings.generateWeeklyRollups, generateMonthlyRollups: settings.generateMonthlyRollups, generateYearlyRollups: settings.generateYearlyRollups, metricSelectionIDs: settings.metricSelection.enabledMetrics, dateFormat: settings.formatCustomization.dateFormat, timeFormat: settings.formatCustomization.timeFormat, unitPreference: settings.formatCustomization.unitPreference, frontmatter: .from(settings.formatCustomization.frontmatterConfig), frontmatterPreservesExactFieldSet: settings.formatCustomization.frontmatterConfig.preservesExactFieldSet, markdownTemplate: settings.formatCustomization.markdownTemplate, individualTracking: .from(settings.individualTracking), dailyNotes: .from(settings.dailyNoteInjection))
     }
 }
 

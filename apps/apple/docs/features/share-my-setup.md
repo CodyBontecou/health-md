@@ -43,6 +43,7 @@ A bounded (≤ 256 KiB) JSON document, `healthmd.shared_setup` v1, listing selec
 - Apply is transactional: either every preference lands or none does; Undo restores the prior state from a local snapshot.
 - Files larger than 256 KiB or with an unknown schema version are rejected before anything is read.
 - Re-exporting an applied profile emits only the allowlisted fields — imported junk never round-trips.
+- Shared Setup v1 has only the historical combined detail Boolean. Summary and Lossless round-trip exactly; a split Detailed Time-Series or archive-only policy is rejected instead of silently enabling a large archive or dropping requested data. A versioned Shared Setup successor will carry the exact two-dimensional policy.
 
 ## Troubleshooting
 

@@ -230,7 +230,8 @@ struct ExportTabView: View {
                     if TestMode.useHealthKitExportPreviewFixtures || MarketingCapture.isActive {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveGranularDataEnabled
+                            includeGranularData: advancedSettings.effectiveDetailPolicy
+                                .includesSelectedTimeSeries
                         )
                     }
                     #endif
@@ -238,7 +239,7 @@ struct ExportTabView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveGranularDataEnabled,
+                            detailPolicy: advancedSettings.effectiveDetailPolicy,
                             metricSelection: advancedSettings.metricSelection,
                             timeZone: advancedSettings.exportTimeZoneOverride ?? .current
                         )
@@ -600,29 +601,69 @@ struct ExportTabView: View {
 
                 rowDivider()
 
-                losslessHealthRecordsInlineRow
+                dataDetailInlineRow
                     .configurationChangesProtected()
             }
         }
     }
 
-    private var losslessHealthRecordsInlineRow: some View {
-        HStack(alignment: .top, spacing: Spacing.s3) {
-            inlineIcon("waveform.path.ecg", isActive: advancedSettings.includeGranularData)
+    private var dataDetailInlineRow: some View {
+        let selectedPreset = AppleExportDetailPreset(policy: advancedSettings.detailPolicy)
+        let presets: [AppleExportDetailPreset] = [
+            .summary,
+            .detailedTimeSeries,
+            .losslessHealthRecords
+        ] + (selectedPreset == .archiveOnly ? [.archiveOnly] : [])
+
+        return HStack(alignment: .top, spacing: Spacing.s3) {
+            inlineIcon(
+                "waveform.path.ecg",
+                isActive: advancedSettings.detailPolicy.hasAnyDetail
+            )
 
             VStack(alignment: .leading, spacing: Spacing.s2) {
-                Toggle("Lossless Health Records", isOn: $advancedSettings.includeGranularData)
-                    .tint(Color.accent)
-                    .font(.body.weight(.semibold))
-                    .accessibilityHint("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.s2) {
+                        Text("Data Detail")
+                            .font(.body.weight(.semibold))
+                        Spacer()
+                        dataDetailPicker(presets: presets)
+                    }
+                    VStack(alignment: .leading, spacing: Spacing.s1) {
+                        Text("Data Detail")
+                            .font(.body.weight(.semibold))
+                        dataDetailPicker(presets: presets)
+                    }
+                }
 
-                Text("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
+                Text(selectedPreset.localizedDescription)
                     .font(.footnote)
                     .foregroundStyle(Color.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.vertical, Spacing.s3)
+        .accessibilityElement(children: .contain)
+        .accessibilityHint(selectedPreset.localizedDescription)
+    }
+
+    private func dataDetailPicker(
+        presets: [AppleExportDetailPreset]
+    ) -> some View {
+        Picker(
+            "Data Detail",
+            selection: Binding(
+                get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
+                set: { advancedSettings.detailPolicy = $0.policy }
+            )
+        ) {
+            ForEach(presets) { preset in
+                Text(preset.localizedTitle).tag(preset)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .tint(Color.accent)
     }
 
     // MARK: - Export Formats
@@ -1177,7 +1218,8 @@ struct ExportTabView: View {
             formatCustomization: FormatCustomizationSnapshot.from(
                 advancedSettings.formatCustomization
             ),
-            includesLosslessRecords: advancedSettings.effectiveGranularDataEnabled,
+            includesLosslessRecords: advancedSettings.effectiveDetailPolicy
+                .includesCanonicalArchive,
             includesIndividualEntries: advancedSettings.writesIndividualEntryFiles,
             updatesDailyNotes: advancedSettings.dailyNoteInjection.enabled,
             dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
@@ -1191,68 +1233,6 @@ struct ExportTabView: View {
     private var sampledExportSizeEstimate: ExportPreviewSizeEstimate? {
         guard previewSizeEstimateConfiguration == exportSizeEstimateConfiguration else { return nil }
         return previewSizeEstimate
-    }
-
-    private var statusExportSizeEstimate: ExportPreviewSizeEstimate? {
-        if let sampledExportSizeEstimate {
-            return sampledExportSizeEstimate
-        }
-
-        let rollupProjection = projectedRollupOutputProjection
-        return ExportStatusSizeEstimator.estimate(
-            totalDateCount: exportDateCount,
-            selectedFormats: advancedSettings.exportFormats,
-            enabledMetricCount: advancedSettings.metricSelection.totalEnabledCount,
-            includesLosslessRecords: advancedSettings.effectiveGranularDataEnabled,
-            includesIndividualEntries: advancedSettings.writesIndividualEntryFiles,
-            updatesDailyNotes: advancedSettings.dailyNoteInjection.enabled,
-            dailyNotesOnly: advancedSettings.dailyNotesOnlyModeEnabled,
-            summaryOnly: advancedSettings.summaryOnlyModeEnabled,
-            archiveMode: advancedSettings.archiveModeEnabled,
-            projectedRollupFileCount: rollupProjection.fileCount,
-            projectedRollupByteCount: rollupProjection.byteCount,
-            fixedByteCount: projectedFixedExportByteCount,
-            projectedProcessingDayCount: max(exportDateCount, rollupProjection.sourceDateCount),
-            isAPIPayload: exportTargetSelection == .apiEndpoint
-        )
-    }
-
-    private func exportSizeSummary(for estimate: ExportPreviewSizeEstimate?) -> String {
-        guard let estimate else { return "Estimating output…" }
-        let prefix = exportTargetSelection == .apiEndpoint ? "Payload" : "Est. output"
-        return "\(prefix) ~\(estimate.sizeLabel)"
-    }
-
-    private func exportSizeAccessibilitySummary(
-        for estimate: ExportPreviewSizeEstimate?
-    ) -> String {
-        guard let estimate else {
-            return "Estimating final export output size"
-        }
-        let isAPI = exportTargetSelection == .apiEndpoint
-        let kind = isAPI ? "payload" : "final export output"
-        let basis: String
-        if isAPI {
-            basis = sampledExportSizeEstimate != nil
-                ? "sampled export data"
-                : "the selected dates and metrics"
-        } else {
-            basis = sampledExportSizeEstimate != nil
-                ? "sampled export data and the configured roll-up scope"
-                : "the selected dates, metrics, formats, and complete roll-up windows"
-        }
-        let processingScope = estimate.projectedProcessingDayCount > exportDateCount
-            ? ". The export processes \(estimate.projectedProcessingDayCount) source days"
-            : ""
-        return "Estimated \(kind), approximately \(estimate.sizeLabel), based on \(basis)\(processingScope)"
-    }
-
-    private var projectedFixedExportByteCount: Int {
-        guard exportTargetSelection != .apiEndpoint,
-              advancedSettings.writesDataDictionary else { return 0 }
-        return ExportDataDictionarySizeEstimator.byteCount(
-            using: advancedSettings.formatCustomization
-        )
     }
 
     private var projectedRollupOutputProjection: ExportRollupOutputProjection {
@@ -1447,7 +1427,8 @@ struct ExportTabView: View {
         let verdict = ExportScaleGuard.verdict(
             startDate: startDate,
             endDate: endDate,
-            granularDataEnabled: advancedSettings.effectiveGranularDataEnabled,
+            granularDataEnabled: advancedSettings.effectiveDetailPolicy
+                .includesCanonicalArchive,
             formatCount: advancedSettings.exportFormats.count,
             dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
         )
@@ -1483,7 +1464,7 @@ struct ExportTabView: View {
 
         guard scale.includesGranularData else { return scaleSummary }
 
-        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.")
+        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export.")
         return scaleSummary + "\n\n" + granularWarning
     }
 
@@ -2127,7 +2108,7 @@ struct APIExportSettingsSheet: View {
                         Text(settings.isConfigured ? "Ready to export to API" : "Enter a valid HTTP or HTTPS URL")
                     }
                 } footer: {
-                    Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Lossless Health Records setting.")
+                    Text("Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.")
                 }
             }
             .navigationTitle("API Export")

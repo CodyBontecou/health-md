@@ -68,6 +68,61 @@ struct iPadExportView: View {
         }
     }
 
+    private var dataDetailPickerRow: some View {
+        let selectedPreset = AppleExportDetailPreset(policy: advancedSettings.detailPolicy)
+        let presets: [AppleExportDetailPreset] = [
+            .summary,
+            .detailedTimeSeries,
+            .losslessHealthRecords
+        ] + (selectedPreset == .archiveOnly ? [.archiveOnly] : [])
+
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: Spacing.s3) {
+                dataDetailLabel(selectedPreset)
+                Spacer()
+                dataDetailPicker(presets)
+            }
+            VStack(alignment: .leading, spacing: Spacing.s2) {
+                dataDetailLabel(selectedPreset)
+                dataDetailPicker(presets)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityHint(selectedPreset.localizedDescription)
+    }
+
+    private func dataDetailLabel(
+        _ selectedPreset: AppleExportDetailPreset
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s1) {
+            Text("Data Detail")
+                .font(Typography.bodyEmphasis())
+                .foregroundStyle(Color.textPrimary)
+            Text(selectedPreset.localizedDescription)
+                .font(Typography.caption())
+                .foregroundStyle(Color.textMuted)
+        }
+    }
+
+    private func dataDetailPicker(
+        _ presets: [AppleExportDetailPreset]
+    ) -> some View {
+        Picker(
+            "Data Detail",
+            selection: Binding(
+                get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
+                set: { advancedSettings.detailPolicy = $0.policy }
+            )
+        ) {
+            ForEach(presets) { preset in
+                Text(preset.localizedTitle).tag(preset)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .tint(Color.accent)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.s4) {
@@ -260,20 +315,8 @@ struct iPadExportView: View {
 
                     Divider().background(Color.borderSubtle)
 
-                    Toggle(isOn: $advancedSettings.includeGranularData) {
-                        VStack(alignment: .leading, spacing: Spacing.s1) {
-                            Text("Lossless Health Records")
-                                .font(Typography.bodyEmphasis())
-                                .foregroundStyle(Color.textPrimary)
-                            Text("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
-                                .font(Typography.caption())
-                                .foregroundStyle(Color.textMuted)
-                        }
-                    }
-                    .tint(Color.accent)
-                    .accessibilityLabel("Lossless Health Records")
-                    .accessibilityHint("Retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn this off for summary-only exports.")
-                    .configurationChangesProtected()
+                    dataDetailPickerRow
+                        .configurationChangesProtected()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.s4)
@@ -685,7 +728,8 @@ struct iPadExportView: View {
                     if TestMode.useHealthKitExportPreviewFixtures {
                         return UITestHealthKitFixtures.exportPreviewHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveGranularDataEnabled
+                            includeGranularData: advancedSettings.effectiveDetailPolicy
+                                .includesSelectedTimeSeries
                         )
                     }
                     #endif
@@ -693,7 +737,7 @@ struct iPadExportView: View {
                     do {
                         return try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: advancedSettings.effectiveGranularDataEnabled,
+                            detailPolicy: advancedSettings.effectiveDetailPolicy,
                             metricSelection: advancedSettings.metricSelection
                         )
                     } catch {
@@ -804,7 +848,8 @@ struct iPadExportView: View {
         let verdict = ExportScaleGuard.verdict(
             startDate: startDate,
             endDate: endDate,
-            granularDataEnabled: advancedSettings.effectiveGranularDataEnabled,
+            granularDataEnabled: advancedSettings.effectiveDetailPolicy
+                .includesCanonicalArchive,
             formatCount: advancedSettings.exportFormats.count,
             dailyNotesOnlyMode: advancedSettings.dailyNotesOnlyModeEnabled
         )
@@ -840,7 +885,7 @@ struct iPadExportView: View {
 
         guard scale.includesGranularData else { return scaleSummary }
 
-        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export.")
+        let granularWarning = String(localized: "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export.")
         return scaleSummary + "\n\n" + granularWarning
     }
 

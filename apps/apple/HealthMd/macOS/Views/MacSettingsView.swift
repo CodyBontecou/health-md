@@ -163,12 +163,12 @@ struct MacGeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Lossless Health Records on iPhone, then send the export to this Mac.")
+                Text("Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Data Detail on iPhone, then send the export to this Mac.")
                     .font(BrandTypography.body())
                     .foregroundStyle(Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Lossless Health Records retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn it off on iPhone for summary-only exports.")
+                Text("Detailed Time-Series keeps selected timestamped samples without the canonical archive. Lossless Health Records adds the complete selected HealthKit source representation and can create much larger files.")
                     .font(BrandTypography.caption())
                     .foregroundStyle(Color.textMuted)
                     .fixedSize(horizontal: false, vertical: true)

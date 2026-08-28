@@ -226,7 +226,7 @@ struct iPadContentView: View {
                     }
                     if TestMode.useHealthKitExportPreviewFixtures {
                         advancedSettings.exportFormats = [.markdown]
-                        advancedSettings.includeGranularData = true
+                        advancedSettings.detailPolicy = .lossless
                         advancedSettings.metricSelection.selectAll()
                         advancedSettings.generateWeeklyRollups = true
                         advancedSettings.generateMonthlyRollups = true

@@ -1,6 +1,183 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Summary": {
+      "comment": "Export data-detail preset",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Summary"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Zusammenfassung"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Resumen"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Résumé"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Riepilogo"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "サマリー"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "요약"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Samenvatting"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Resumo"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "摘要"}}
+      }
+    },
+    "Detailed Time-Series": {
+      "comment": "Export data-detail preset",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Detailed Time-Series"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Detaillierte Zeitreihen"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Series temporales detalladas"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Séries chronologiques détaillées"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Serie temporali dettagliate"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "詳細な時系列"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "상세 시계열"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Gedetailleerde tijdreeksen"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Séries temporais detalhadas"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "详细时间序列"}}
+      }
+    },
+    "HealthKit Archive Only": {
+      "comment": "Advanced export data-detail preset",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "HealthKit Archive Only"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Nur HealthKit-Archiv"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Solo archivo de HealthKit"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Archive HealthKit uniquement"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Solo archivio HealthKit"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "HealthKitアーカイブのみ"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "HealthKit 아카이브만"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Alleen HealthKit-archief"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Somente arquivo do HealthKit"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "仅 HealthKit 归档"}}
+      }
+    },
+    "Data Detail": {
+      "comment": "Export data-detail setting",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Data Detail"}},
+        "de": {"stringUnit": {"state": "translated", "value": "Datendetails"}},
+        "es": {"stringUnit": {"state": "translated", "value": "Nivel de detalle"}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Niveau de détail"}},
+        "it": {"stringUnit": {"state": "translated", "value": "Dettaglio dati"}},
+        "ja": {"stringUnit": {"state": "translated", "value": "データの詳細度"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "데이터 상세 수준"}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Gegevensdetail"}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Nível de detalhe"}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "数据详细程度"}}
+      }
+    },
+    "Daily aggregates such as averages, minimums, and maximums.": {
+      "comment": "Export data-detail preset description",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Daily aggregates such as averages, minimums, and maximums."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Tägliche Aggregate wie Durchschnitts-, Mindest- und Höchstwerte."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Agregados diarios, como promedios, mínimos y máximos."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Agrégats quotidiens tels que moyennes, minimums et maximums."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Aggregati giornalieri come medie, minimi e massimi."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "平均、最小、最大などの日次集計。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "평균, 최솟값, 최댓값과 같은 일일 집계입니다."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Dagelijkse totalen, zoals gemiddelden, minima en maxima."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Agregados diários, como médias, mínimos e máximos."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "每日汇总，例如平均值、最小值和最大值。"}}
+      }
+    },
+    "Adds selected timestamped samples such as heart rate, HRV, blood oxygen, respiratory rate, and sleep stages without the canonical source archive.": {
+      "comment": "Export data-detail preset description",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Adds selected timestamped samples such as heart rate, HRV, blood oxygen, respiratory rate, and sleep stages without the canonical source archive."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Fügt ausgewählte Messwerte mit Zeitstempel hinzu, etwa Herzfrequenz, HRV, Blutsauerstoff, Atemfrequenz und Schlafphasen, ohne das kanonische Quellarchiv."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Añade muestras seleccionadas con marca de tiempo, como frecuencia cardíaca, VFC, oxígeno en sangre, frecuencia respiratoria y fases del sueño, sin el archivo de origen canónico."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Ajoute des mesures horodatées sélectionnées, comme la fréquence cardiaque, la VFC, l’oxygène sanguin, la fréquence respiratoire et les phases de sommeil, sans l’archive source canonique."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Aggiunge campioni selezionati con data e ora, come frequenza cardiaca, HRV, ossigeno nel sangue, frequenza respiratoria e fasi del sonno, senza l’archivio sorgente canonico."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "心拍数、HRV、血中酸素、呼吸数、睡眠ステージなど、選択したタイムスタンプ付きサンプルを、正規ソースアーカイブなしで追加します。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "표준 소스 아카이브 없이 심박수, HRV, 혈중 산소, 호흡수, 수면 단계 등의 선택된 타임스탬프 샘플을 추가합니다."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Voegt geselecteerde metingen met tijdstempel toe, zoals hartslag, HRV, zuurstofsaturatie, ademhalingsfrequentie en slaapfasen, zonder het canonieke bronarchief."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Adiciona amostras selecionadas com data e hora, como frequência cardíaca, VFC, oxigênio no sangue, frequência respiratória e estágios do sono, sem o arquivo de origem canônico."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "添加所选的带时间戳样本，例如心率、HRV、血氧、呼吸频率和睡眠阶段，而不包含规范源归档。"}}
+      }
+    },
+    "Adds detailed time-series and the canonical HealthKit source archive with identities, provenance, metadata, and relationships. Files may be much larger.": {
+      "comment": "Export data-detail preset description",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Adds detailed time-series and the canonical HealthKit source archive with identities, provenance, metadata, and relationships. Files may be much larger."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Fügt detaillierte Zeitreihen und das kanonische HealthKit-Quellarchiv mit Identitäten, Herkunft, Metadaten und Beziehungen hinzu. Dateien können deutlich größer sein."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Añade series temporales detalladas y el archivo de origen canónico de HealthKit con identidades, procedencia, metadatos y relaciones. Los archivos pueden ser mucho más grandes."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Ajoute des séries chronologiques détaillées et l’archive source HealthKit canonique avec les identités, la provenance, les métadonnées et les relations. Les fichiers peuvent être beaucoup plus volumineux."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Aggiunge serie temporali dettagliate e l’archivio sorgente HealthKit canonico con identità, provenienza, metadati e relazioni. I file possono essere molto più grandi."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "詳細な時系列に加え、ID、出所、メタデータ、関連性を保持する正規HealthKitソースアーカイブを追加します。ファイルが大幅に大きくなる場合があります。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "상세 시계열과 함께 ID, 출처, 메타데이터 및 관계를 포함하는 표준 HealthKit 소스 아카이브를 추가합니다. 파일이 훨씬 커질 수 있습니다."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Voegt gedetailleerde tijdreeksen en het canonieke HealthKit-bronarchief met identiteiten, herkomst, metadata en relaties toe. Bestanden kunnen veel groter worden."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Adiciona séries temporais detalhadas e o arquivo de origem canônico do HealthKit com identidades, procedência, metadados e relações. Os arquivos podem ficar muito maiores."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "添加详细时间序列以及包含身份、来源、元数据和关系的规范 HealthKit 源归档。文件可能会大得多。"}}
+      }
+    },
+    "Adds the canonical HealthKit source archive without duplicate compatibility time-series projections.": {
+      "comment": "Advanced export data-detail preset description",
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Adds the canonical HealthKit source archive without duplicate compatibility time-series projections."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Fügt das kanonische HealthKit-Quellarchiv ohne doppelte kompatible Zeitreihenprojektionen hinzu."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Añade el archivo de origen canónico de HealthKit sin duplicar las proyecciones de series temporales de compatibilidad."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Ajoute l’archive source HealthKit canonique sans dupliquer les projections de séries chronologiques de compatibilité."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Aggiunge l’archivio sorgente HealthKit canonico senza duplicare le proiezioni delle serie temporali di compatibilità."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "互換用時系列プロジェクションを重複させずに、正規HealthKitソースアーカイブを追加します。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "호환성 시계열 프로젝션을 중복하지 않고 표준 HealthKit 소스 아카이브를 추가합니다."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Voegt het canonieke HealthKit-bronarchief toe zonder dubbele compatibiliteitstijdreeksen."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Adiciona o arquivo de origem canônico do HealthKit sem duplicar as projeções de séries temporais de compatibilidade."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "添加规范 HealthKit 源归档，而不重复兼容性时间序列投影。"}}
+      }
+    },
+    "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Lossless Health Records is enabled. An export this large with the canonical archive can run for hours and may run out of memory before it finishes. Choose Detailed Time-Series or Summary for a smaller export."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Lossless Health Records ist aktiviert. Ein Export dieser Größe mit dem kanonischen Archiv kann Stunden dauern und möglicherweise nicht genügend Arbeitsspeicher haben. Wähle Detaillierte Zeitreihen oder Zusammenfassung für einen kleineren Export."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Lossless Health Records está activado. Una exportación de este tamaño con el archivo canónico puede tardar horas y quedarse sin memoria. Elige Series temporales detalladas o Resumen para obtener una exportación más pequeña."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Lossless Health Records est activé. Une exportation de cette taille avec l’archive canonique peut prendre des heures et manquer de mémoire. Choisissez Séries chronologiques détaillées ou Résumé pour réduire la taille de l’exportation."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Lossless Health Records è attivo. Un’esportazione di queste dimensioni con l’archivio canonico può richiedere ore ed esaurire la memoria. Scegli Serie temporali dettagliate o Riepilogo per un’esportazione più piccola."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "Lossless Health Records が有効です。この規模で正規アーカイブを含むエクスポートは数時間かかり、メモリ不足になる場合があります。小さくするには「詳細な時系列」または「サマリー」を選択してください。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "Lossless Health Records가 활성화되어 있습니다. 이 크기의 내보내기에 표준 아카이브가 포함되면 몇 시간이 걸리거나 메모리가 부족할 수 있습니다. 더 작은 내보내기를 위해 상세 시계열 또는 요약을 선택하세요."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Lossless Health Records is ingeschakeld. Een export van deze omvang met het canonieke archief kan uren duren en onvoldoende geheugen hebben. Kies Gedetailleerde tijdreeksen of Samenvatting voor een kleinere export."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Lossless Health Records está ativado. Uma exportação desse tamanho com o arquivo canônico pode levar horas e ficar sem memória. Escolha Séries temporais detalhadas ou Resumo para uma exportação menor."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "已启用 Lossless Health Records。包含规范归档的此类大型导出可能需要数小时，并可能耗尽内存。请选择“详细时间序列”或“摘要”以减小导出大小。"}}
+      }
+    },
+    "Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Only send Apple Health data to endpoints you control or trust. API exports use your selected metrics and Data Detail setting."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Sende Apple Health-Daten nur an Endpunkte, die du kontrollierst oder denen du vertraust. API-Exporte verwenden deine ausgewählten Messwerte und die Einstellung Datendetails."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Envía datos de Apple Health solo a endpoints que controles o en los que confíes. Las exportaciones por API usan las métricas seleccionadas y el ajuste Nivel de detalle."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "N’envoyez les données Apple Health qu’à des points de terminaison que vous contrôlez ou auxquels vous faites confiance. Les exportations API utilisent les mesures sélectionnées et le réglage Niveau de détail."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Invia i dati di Apple Health solo a endpoint che controlli o di cui ti fidi. Le esportazioni API usano le metriche selezionate e l’impostazione Dettaglio dati."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "Apple Healthデータは、管理している、または信頼できるエンドポイントにのみ送信してください。APIエクスポートでは、選択した指標とデータの詳細度設定が使用されます。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "Apple Health 데이터는 직접 관리하거나 신뢰하는 엔드포인트에만 보내세요. API 내보내기는 선택한 지표와 데이터 상세 수준 설정을 사용합니다."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Stuur Apple Health-gegevens alleen naar eindpunten die je beheert of vertrouwt. API-exports gebruiken de geselecteerde metingen en de instelling Gegevensdetail."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Envie dados do Apple Health apenas para endpoints que você controla ou nos quais confia. As exportações por API usam as métricas selecionadas e a configuração Nível de detalhe."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "仅将 Apple Health 数据发送到您控制或信任的端点。API 导出会使用您选择的指标和“数据详细程度”设置。"}}
+      }
+    },
+    "Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Data Detail on iPhone, then send the export to this Mac.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Data Detail on iPhone, then send the export to this Mac."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Health.md für Mac dient als lokales Exportziel. Konfiguriere Formate, Messwerte, Datumsbereiche, Dateinamen, Schreibmodi und Datendetails auf dem iPhone und sende den Export anschließend an diesen Mac."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Health.md para Mac funciona como destino de exportación local. Configura formatos, métricas, intervalos de fechas, nombres de archivo, modos de escritura y el nivel de detalle en el iPhone y, después, envía la exportación a este Mac."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Health.md pour Mac sert de destination d’exportation locale. Configurez les formats, les mesures, les plages de dates, les noms de fichiers, les modes d’écriture et le niveau de détail sur l’iPhone, puis envoyez l’exportation vers ce Mac."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Health.md per Mac funziona come destinazione di esportazione locale. Configura formati, metriche, intervalli di date, nomi file, modalità di scrittura e dettaglio dati su iPhone, quindi invia l’esportazione a questo Mac."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "Health.md for Macはローカルのエクスポート先として機能します。iPhoneで形式、指標、日付範囲、ファイル名、書き込みモード、データの詳細度を設定してから、このMacに送信します。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "Mac용 Health.md는 로컬 내보내기 대상으로 작동합니다. iPhone에서 형식, 지표, 날짜 범위, 파일 이름, 쓰기 모드 및 데이터 상세 수준을 설정한 다음 이 Mac으로 내보내세요."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Health.md voor Mac werkt als lokale exportbestemming. Configureer indelingen, metingen, datumbereiken, bestandsnamen, schrijfmodi en Gegevensdetail op de iPhone en stuur de export daarna naar deze Mac."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "O Health.md para Mac funciona como destino de exportação local. Configure formatos, métricas, intervalos de datas, nomes de arquivo, modos de gravação e nível de detalhe no iPhone e envie a exportação para este Mac."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "Health.md for Mac 可作为本地导出目标。在 iPhone 上配置格式、指标、日期范围、文件名、写入模式和数据详细程度，然后将导出发送到这台 Mac。"}}
+      }
+    },
+    "Detailed Time-Series keeps selected timestamped samples without the canonical archive. Lossless Health Records adds the complete selected HealthKit source representation and can create much larger files.": {
+      "localizations": {
+        "en": {"stringUnit": {"state": "translated", "value": "Detailed Time-Series keeps selected timestamped samples without the canonical archive. Lossless Health Records adds the complete selected HealthKit source representation and can create much larger files."}},
+        "de": {"stringUnit": {"state": "translated", "value": "Detaillierte Zeitreihen behalten ausgewählte Messwerte mit Zeitstempel ohne das kanonische Archiv. Lossless Health Records fügt die vollständige ausgewählte HealthKit-Quelldarstellung hinzu und kann deutlich größere Dateien erzeugen."}},
+        "es": {"stringUnit": {"state": "translated", "value": "Series temporales detalladas conserva las muestras seleccionadas con marca de tiempo sin el archivo canónico. Lossless Health Records añade la representación completa de los datos de origen de HealthKit seleccionados y puede crear archivos mucho más grandes."}},
+        "fr": {"stringUnit": {"state": "translated", "value": "Séries chronologiques détaillées conserve les mesures horodatées sélectionnées sans l’archive canonique. Lossless Health Records ajoute la représentation source HealthKit sélectionnée complète et peut créer des fichiers beaucoup plus volumineux."}},
+        "it": {"stringUnit": {"state": "translated", "value": "Serie temporali dettagliate conserva i campioni selezionati con data e ora senza l’archivio canonico. Lossless Health Records aggiunge la rappresentazione completa dei dati sorgente HealthKit selezionati e può creare file molto più grandi."}},
+        "ja": {"stringUnit": {"state": "translated", "value": "詳細な時系列は、正規アーカイブを含めずに選択したタイムスタンプ付きサンプルを保持します。Lossless Health Recordsは、選択したHealthKitソースの完全な表現を追加するため、ファイルが大幅に大きくなる場合があります。"}},
+        "ko": {"stringUnit": {"state": "translated", "value": "상세 시계열은 표준 아카이브 없이 선택한 타임스탬프 샘플을 유지합니다. Lossless Health Records는 선택한 HealthKit 소스의 전체 표현을 추가하므로 파일이 훨씬 커질 수 있습니다."}},
+        "nl": {"stringUnit": {"state": "translated", "value": "Gedetailleerde tijdreeksen behouden geselecteerde metingen met tijdstempel zonder het canonieke archief. Lossless Health Records voegt de volledige geselecteerde HealthKit-bronweergave toe en kan veel grotere bestanden maken."}},
+        "pt-BR": {"stringUnit": {"state": "translated", "value": "Séries temporais detalhadas mantém as amostras selecionadas com data e hora sem o arquivo canônico. Lossless Health Records adiciona a representação completa dos dados de origem selecionados do HealthKit e pode criar arquivos muito maiores."}},
+        "zh-Hans": {"stringUnit": {"state": "translated", "value": "详细时间序列会保留所选的带时间戳样本，但不包含规范归档。Lossless Health Records 会添加所选 HealthKit 源数据的完整表示，因此可能生成大得多的文件。"}}
+      }
+    },
+
     "Generate one summary for the requested date range in every selected export format.": {
       "comment": "Apple range-summary UI",
       "localizations": {
@@ -46357,71 +46534,6 @@
         }
       }
     },
-    "Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Lossless Health Records on iPhone, then send the export to this Mac.": {
-      "comment": "macOS production UI",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md for Mac works as a local export destination. Configure formats, metrics, date ranges, filenames, write modes, and Lossless Health Records on iPhone, then send the export to this Mac."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md für Mac fungiert als lokales Exportziel. Konfigurieren Sie Formate, Metriken, Datumsbereiche, Dateinamen, Schreibmodi und verlustfreie Gesundheitsdatensätze auf iPhone und senden Sie dann den Export an diesen Mac."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md para Mac funciona como destino de exportación local. Configure formatos, métricas, rangos de fechas, nombres de archivos, modos de escritura y registros de salud sin pérdida en iPhone, luego envíe la exportación a este Mac."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md pour Mac fonctionne comme une destination d'exportation locale. Configurez les formats, les mesures, les plages de dates, les noms de fichiers, les modes d'écriture et les dossiers de santé sans perte sur iPhone, puis envoyez l'exportation vers ce Mac."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md per Mac funziona come destinazione di esportazione locale. Configura formati, metriche, intervalli di date, nomi di file, modalità di scrittura e record sanitari senza perdita di dati su iPhone, quindi invia l'esportazione a questo Mac."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac の Health.md は、ローカルのエクスポート先として機能します。 iPhone で形式、メトリクス、日付範囲、ファイル名、書き込みモード、およびロスレス ヘルス レコードを構成し、エクスポートをこの Mac に送信します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md(Mac용)는 로컬 내보내기 대상으로 작동합니다. iPhone에서 형식, 지표, 날짜 범위, 파일 이름, 쓰기 모드 및 무손실 건강 기록을 구성한 다음 내보내기를 이 Mac로 보냅니다."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md voor Mac werkt als lokale exportbestemming. Configureer formaten, statistieken, datumbereiken, bestandsnamen, schrijfmodi en Lossless Health Records op iPhone en stuur de export vervolgens naar deze Mac."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Health.md para Mac funciona como destino de exportação local. Configure formatos, métricas, intervalos de datas, nomes de arquivos, modos de gravação e registros de integridade sem perdas em iPhone e, em seguida, envie a exportação para este Mac."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac 的 Health.md 作为本地导出目的地。在 iPhone 上配置格式、指标、日期范围、文件名、写入模式和无损健康记录，然后将导出发送到此 Mac。"
-          }
-        }
-      }
-    },
     "Health.md for macOS": {
       "localizations": {
         "de": {
@@ -55800,71 +55912,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lossless Health Records is enabled. An export this large with lossless records can run for hours and may run out of memory before it finishes. Turn off Lossless Health Records first for a faster summary-only export."
-          }
-        }
-      }
-    },
-    "Lossless Health Records retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn it off on iPhone for summary-only exports.": {
-      "comment": "macOS production UI",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lossless Health Records retains every selected HealthKit source record alongside daily summaries, including source UUIDs, exact timestamps, provenance, metadata, and detailed series. Files may be much larger. Turn it off on iPhone for summary-only exports."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lossless Health Records speichert jeden ausgewählten HealthKit-Quelldatensatz zusammen mit täglichen Zusammenfassungen, einschließlich Quell-UUIDs, genauen Zeitstempeln, Herkunft, Metadaten und detaillierten Serien. Dateien können viel größer sein. Deaktivieren Sie es auf iPhone für reine Zusammenfassungsexporte."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los registros de salud sin pérdida conservan cada registro de origen de HealthKit seleccionado junto con los resúmenes diarios, incluidos los UUID de origen, las marcas de tiempo exactas, la procedencia, los metadatos y las series detalladas. Los archivos pueden ser mucho más grandes. Desactívelos en el iPhone para exportar solo resúmenes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lossless Health Records conserve chaque enregistrement source HealthKit sélectionné ainsi que des résumés quotidiens, y compris la source UUIDs, les horodatages exacts, la provenance, les métadonnées et les séries détaillées. Les fichiers peuvent être beaucoup plus volumineux. Désactivez-le sur iPhone pour les exportations de résumé uniquement."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lossless Health Records conserva ogni record di origine HealthKit selezionato insieme a riepiloghi giornalieri, inclusa la fonte UUIDs, timestamp esatti, provenienza, metadati e serie dettagliate. I file potrebbero essere molto più grandi. Disattivalo su iPhone per le esportazioni di solo riepilogo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lossless Health Records は、選択されたすべての HealthKit ソース レコードを、ソース UUIDs、正確なタイムスタンプ、来歴、メタデータ、詳細なシリーズなどの毎日の概要とともに保持します。ファイルはさらに大きくなる可能性があります。概要のみのエクスポートの場合は、iPhone でオフにします。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "무손실 건강 기록은 소스 UUIDs, 정확한 타임스탬프, 출처, 메타데이터 및 세부 시리즈를 포함하여 일일 요약과 함께 선택된 모든 HealthKit 소스 기록을 유지합니다. 파일 크기가 훨씬 커질 수 있습니다. 요약 전용 내보내기의 경우 iPhone에서 이 기능을 끄십시오."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lossless Health Records bewaart elk geselecteerd HealthKit-bronrecord naast dagelijkse samenvattingen, inclusief bron UUIDs, exacte tijdstempels, herkomst, metagegevens en gedetailleerde reeksen. Bestanden kunnen veel groter zijn. Schakel dit uit op iPhone voor exports met alleen samenvattingen."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lossless Health Records retém todos os registros de origem HealthKit selecionados junto com resumos diários, incluindo origem UUIDs, carimbos de data/hora exatos, procedência, metadados e séries detalhadas. Os arquivos podem ser muito maiores. Desative-o em iPhone para exportações apenas de resumo."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无损健康记录保留每条选定的 HealthKit 源记录以及每日摘要，包括源 UUIDs、确切的时间戳、出处、元数据和详细系列。文件可能会大得多。在 iPhone 上将其关闭以进行仅摘要导出。"
           }
         }
       }

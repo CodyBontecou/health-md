@@ -9,16 +9,16 @@
 
 ## What it does
 
-API Endpoint export POSTs selected daily JSON records directly from iPhone to a user-configured HTTP(S) endpoint. Each record follows current Apple `healthmd.health_data` schema v8. With **Lossless Health Records** on, it includes the authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1) alongside daily summaries.
+API Endpoint export POSTs selected daily JSON records directly from iPhone to a user-configured HTTP(S) endpoint. Each record follows current Apple `healthmd.health_data` schema v8. **Detailed Time-Series** adds selected timestamped sample arrays without the canonical archive; **Lossless Health Records** also includes the authoritative `healthkit_record_archive` (`healthmd.healthkit_records` v1).
 
-Lossless Health Records is off by default for new installs; existing explicit on or off choices are preserved. API export respects the selected metrics and this setting. The exhaustive envelope, request/response, sidecar, and parser contract is in [API and CLI](../reference/api-and-cli.md), with complete generated JSON fixtures.
+Data Detail defaults to Summary for new installs; historical combined choices migrate unchanged. API export respects selected metrics and the exact Data Detail policy. The exhaustive envelope, request/response, sidecar, and parser contract is in [API and CLI](../reference/api-and-cli.md), with complete generated JSON fixtures.
 
 ## Setup
 
 1. Open **Export → Export Target → API Endpoint**.
 2. Enter a URL such as `https://api.example.com/healthmd/ingest`.
 3. Optionally enter an access token; Health.md stores it in Keychain.
-4. Choose metrics and review **Lossless Health Records**.
+4. Choose metrics and select Summary, Detailed Time-Series, or Lossless Health Records under **Data Detail**.
 5. Export one day before sending a long range.
 
 Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `Basic ` are sent as entered.
@@ -95,7 +95,7 @@ API Endpoint intentionally sends health data to the service you configure. Lossl
 - Use an endpoint you control or trust.
 - Prefer HTTPS for real data.
 - Select only required metrics.
-- Turn Lossless Health Records off if the receiver needs summaries only.
+- Choose Summary if the receiver needs aggregates only, or Detailed Time-Series if it needs samples without the canonical archive.
 - Apply retention, encryption, and access controls appropriate for sensitive health data.
 - Rotate/remove tokens when no longer needed.
 
@@ -103,7 +103,7 @@ Health.md preserves source URLs as data but never fetches them. Your receiver sh
 
 ## Scheduled API exports
 
-Scheduled API exports use the same selected metrics and Lossless Health Records setting. Completed-day runs send the configured lookback ending yesterday; optional Today Refresh runs re-fetch and resend the current day's complete snapshot. Both preserve pending work when HealthKit is locked or upload fails.
+Scheduled API exports use the same selected metrics and Data Detail setting. Completed-day runs send the configured lookback ending yesterday; optional Today Refresh runs re-fetch and resend the current day's complete snapshot. Both preserve pending work when HealthKit is locked or upload fails.
 
 ## Practical limits
 
@@ -115,7 +115,7 @@ Batches upload one at a time, in date order; each batch has its own `date_range`
 
 Scheduled retries persist only unresolved dates. Successfully uploaded records and successfully reported terminal no-data dates are removed from pending work, while device-lock, HealthKit, transport, cancellation, and unattempted dates remain retryable. Your endpoint may still receive a repeated date when its earlier outcome was not durably accepted, so it should retain the latest revision for a given day.
 
-If a single-day payload is larger than your endpoint accepts, reducing the selected range will not make that day smaller. Turn off Lossless Health Records, select fewer metrics, or raise the receiver's request limit.
+If a single-day payload is larger than your endpoint accepts, reducing the selected range will not make that day smaller. Choose Detailed Time-Series or Summary instead of Lossless, select fewer metrics, or raise the receiver's request limit.
 
 ## Troubleshooting
 

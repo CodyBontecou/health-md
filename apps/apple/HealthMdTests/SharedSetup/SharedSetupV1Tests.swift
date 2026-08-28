@@ -41,6 +41,20 @@ final class SharedSetupV1Tests: XCTestCase {
         XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("yearly"))
     }
 
+    func testSharedSetupV1RejectsSplitDetailPolicyInsteadOfDroppingIt() throws {
+        let settings = AdvancedExportSettings(userDefaults: isolatedDefaults())
+        settings.detailPolicy = .detailedTimeSeries
+
+        XCTAssertThrowsError(try SharedSetupMapper.exportDocument(
+            settings: settings,
+            schedule: ExportSchedule(),
+            appVersion: "split-detail-test",
+            registry: fixtureRegistry()
+        )) { error in
+            XCTAssertTrue(error.localizedDescription.contains("Shared Setup v1"))
+        }
+    }
+
     func testAndroidOriginFixtureMapsExactSharedFieldsAndLeavesDistinctMetricUnsupported() throws {
         let document = try SharedSetupCodec.decode(Data(contentsOf: fixtureURL("android-shared-setup-v1.json")))
         let preview = SharedSetupMapper.preview(document, registry: fixtureRegistry())

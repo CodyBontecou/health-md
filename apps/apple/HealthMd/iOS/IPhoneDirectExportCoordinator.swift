@@ -530,19 +530,20 @@ final class IPhoneDirectExportCoordinator {
                 phase: .capturing,
                 channel: channel
             )
-            let expectsLosslessArchive = settings.includeGranularData
+            let detailPolicy = settings.effectiveDetailPolicy
+            let expectsLosslessArchive = detailPolicy.includesCanonicalArchive
             let outcome = try await HealthKitDailyCapture.capture(
                 date: date,
-                includeGranularData: expectsLosslessArchive,
+                detailPolicy: detailPolicy,
                 metricSelection: settings.metricSelection,
                 transform: .sanitizeGranularAndFilter,
                 emptyRecordPolicy: .retain,
                 fetchExternalRecords: false,
                 failurePolicy: .connectedMac,
-                fetchHealthData: { date, includeGranularData, metricSelection in
+                fetchHealthData: { date, detailPolicy, metricSelection in
                     try await healthKitManager.fetchHealthData(
                         for: date,
-                        includeGranularData: includeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
                         timeZone: TimeZone(
                             identifier: journal.accepted.sourceTimeZoneIdentifier

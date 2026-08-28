@@ -707,7 +707,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               (!settingsSnapshot.summaryOnlyExport
                 || (isSummaryOnly && isRangeSurface)
                 || (!hasConfiguredRollups && isRangeSurface)),
-              !settingsSnapshot.includeGranularData,
+              !settingsSnapshot.detailPolicy.hasAnyDetail,
               (!hasConfiguredRollups || isRangeSurface),
               !settingsSnapshot.dailyNoteInjection.enabled,
               !settingsSnapshot.individualTracking.globalEnabled else {
