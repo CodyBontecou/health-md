@@ -26,7 +26,7 @@ class ReleaseReadinessTest {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
         assertTrue(buildGradle.contains("versionCode = 29"))
-        assertTrue(buildGradle.contains("versionName = \"1.7.1\""))
+        assertTrue(buildGradle.contains("versionName = \"1.8.0\""))
     }
 
     @Test
@@ -41,7 +41,7 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.7.1"))
+            assertTrue(releaseNotes.contains("v1.8.0"))
             assertTrue(releaseNotes.contains("Wear OS"))
             assertTrue(releaseNotes.contains("Health Connect"))
             assertTrue(releaseNotes.contains("Tiles"))
@@ -138,7 +138,7 @@ class ReleaseReadinessTest {
         assertTrue(smoke.contains("mismatch marker stores the rejected Data Layer sequence"))
         assertTrue("A Data Layer sequence must not be derived from an app version code", !smoke.contains("mismatch_version_code"))
         assertTrue("Evidence tooling must not silently pin the current Wear code", !smoke.contains("1000029"))
-        assertTrue("Evidence tooling must not silently pin the current semantic version", !smoke.contains("1.7.1"))
+        assertTrue("Evidence tooling must not silently pin the current semantic version", !smoke.contains("1.8.0"))
     }
 
     @Test
