@@ -28,6 +28,7 @@ secrecy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+socket2 = { version = "0.6", features = ["all"] }
 thiserror.workspace = true
 sysinfo.workspace = true
 tempfile.workspace = true

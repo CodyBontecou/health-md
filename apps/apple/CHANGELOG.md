@@ -5,6 +5,7 @@ All notable changes to Health.md will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- Direct CLI Access now detects half-open connections left by computer sleep, process termination, or network changes and reconnects automatically while Health.md remains foregrounded, instead of requiring a manual disconnect or repeated Pair tap before later commands.
 - Local folders on "On My iPhone" storage no longer lose their saved selection on every restart. Export-profile destinations now persist the folder's persistent identity evidence (volume UUID + file identifier) alongside the bookmark and use it when adopting a profile at launch, on profile switch, and for Shortcuts and scheduled runs — so identity-bearing local volumes rebind across path drift through an identity match, exactly like the cloud-provider behavior fixed in 3.1.1, instead of failing verification and demanding re-selection (which had broken automatic exports and Shortcuts until the folder was re-picked). Destination rows saved before this fix heal their identity evidence automatically through the bookmark round-trip on first adoption; a confirmed identity mismatch still fails closed.
 
 ## [3.1.1] - 2026-08-25

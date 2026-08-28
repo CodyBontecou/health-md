@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Detect silently dead direct-device channels with bounded heartbeat/TCP keepalive handling so a
+  foreground paired iPhone can redial later one-shot CLI listeners without a manual disconnect.
+  The CLI now answers heartbeat pings in every v1 receive path while preserving command deadlines.
+
 ## 0.1.0-alpha.1
 
 - Establish the standalone Rust workspace and portable CLI architecture.

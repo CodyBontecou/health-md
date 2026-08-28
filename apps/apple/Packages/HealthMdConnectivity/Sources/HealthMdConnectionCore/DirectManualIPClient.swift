@@ -32,10 +32,19 @@ public final class DirectManualIPClient: @unchecked Sendable {
               let endpointPort = NWEndpoint.Port(rawValue: port) else {
             throw DirectChannelError.connectionFailed("The direct CLI host or port is invalid.")
         }
+        // A CLI listener that silently disappears (Mac sleep, network roam, process death
+        // without a clean close) leaves this socket half-open forever without kernel probes.
+        // Keepalives bound that state so a wedged channel fails and the reconnect loop dials
+        // again instead of reporting a stale "connected" state.
+        let tcpOptions = NWProtocolTCP.Options()
+        tcpOptions.noDelay = true
+        tcpOptions.keepaliveIdle = DirectPairingSecurity.tcpKeepaliveIdleSeconds
+        tcpOptions.keepaliveInterval = DirectPairingSecurity.tcpKeepaliveIntervalSeconds
+        tcpOptions.keepaliveCount = DirectPairingSecurity.tcpKeepaliveCount
         let connection = NWConnection(
             host: NWEndpoint.Host(normalizedHost),
             port: endpointPort,
-            using: .tcp
+            using: NWParameters(tls: nil, tcp: tcpOptions)
         )
         let packetConnection = DirectPacketConnection(
             connection: connection,
