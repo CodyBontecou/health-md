@@ -10,6 +10,18 @@ Health.md exporte un jeu de données local à schéma versionné pour Markdown, 
 <p style="margin-top:6px;">Cette page est organisée à partir du schéma d’export et du dictionnaire de données de Health.md : activité, sommeil, cœur, signes vitaux, corps, nutrition, pleine conscience, médicaments, entraînements, santé reproductive, symptômes, audition et métriques liées au mode de vie et à l’environnement.</p>
 </div>
 
+## Remplacements d’unités par visualisation
+
+Ajoutez `units` dans un bloc `health-viz` individuel lorsqu’un graphique doit utiliser un système d’affichage différent de la préférence globale de l’extension :
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+Utilisez `auto` pour suivre le système d’unités déclaré par l’exportation, `metric` pour afficher les kilomètres, kilogrammes, mètres et degrés Celsius, ou `imperial` pour afficher les miles, livres, pieds et degrés Fahrenheit. Le remplacement s’applique uniquement à cette visualisation et prend le pas sur le réglage global Units. Il modifie uniquement les valeurs affichées ; les fichiers Health.md exportés restent inchangés. Les métriques non convertibles, comme les pas, les BPM, les pourcentages et les calories, ne changent pas.
+
 ## Couverture actuelle des visualisations
 
 <div class="reference-stats">

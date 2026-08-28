@@ -10,6 +10,18 @@ Health.md 可将带有架构版本的数据集以本地方式导出为 Markdown�
 <p style="margin-top:6px;">本页依据 Health.md 的导出架构和数据字典整理，涵盖活动、睡眠、心脏、生命体征、身体、营养、正念、药物、锻炼、生殖健康、症状、听力以及生活方式/环境指标。</p>
 </div>
 
+## 按可视化覆盖单位
+
+如果某个图表需要使用与插件全局偏好不同的显示单位，请将 `units` 设置在单独的 `health-viz` 代码块中：
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+使用 `auto` 可遵循导出文件声明的单位系统，使用 `metric` 显示千米、千克、米和摄氏度，使用 `imperial` 显示英里、磅、英尺和华氏度。该覆盖仅应用于当前可视化，并优先于全局 Units 设置。它只改变显示值，不会修改已导出的 Health.md 文件。步数、BPM、百分比和卡路里等不可转换的指标不会改变。
+
 ## 当前可视化覆盖范围
 
 <div class="reference-stats">

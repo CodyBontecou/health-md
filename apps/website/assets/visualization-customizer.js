@@ -152,6 +152,7 @@
     option("from", "date or datetime", "none", "Start of the filtered data window, inclusive."),
     option("to", "date or datetime", "none", "End of the filtered data window, inclusive. Also anchors last."),
     option("last", "number of days", "none", "Calendar-day window ending at to, or today when to is omitted."),
+    option("units", "auto, metric, imperial", "plugin setting", "Overrides the global unit preference for this visualization. Auto follows each export's declared unit system; metric or imperial force display units for distance, pace, speed, elevation, and convertible body measurements."),
     option("theme", "auto, dark, light", "plugin setting", "Controls whether the block follows Obsidian or forces a light/dark theme."),
     option("colorScheme / palette", "theme, default, ocean, forest, sunset, aurora, monochrome", "plugin setting", "Chooses the semantic color palette for the block."),
     option("background / bg, foreground / fg, muted", "CSS color", "resolved theme", "Overrides the chart surface and label colors for one block."),

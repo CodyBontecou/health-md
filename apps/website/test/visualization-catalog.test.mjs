@@ -63,6 +63,7 @@ test("Visualization Studio derives availability from the generated plugin catalo
   assert.match(customizer, /buildVisualizationsFromPluginCatalog/);
   assert.match(customizer, /Array\.isArray\(api\.catalog\)/);
   assert.match(customizer, /Object\.assign\(\{\}, curated\?\.config \|\| \{\}, generatedConfig\)/);
+  assert.match(customizer, /option\("units", "auto, metric, imperial"/);
   assert.match(pageGenerator, /visualizations-catalog\.json/);
   assert.doesNotMatch(pageGenerator, /extractVisualizations\(source\)/);
   assert.match(bundleGenerator, /VISUALIZATION_CATALOG/);
