@@ -8,7 +8,9 @@ import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.data.isHealthConnectRateLimit
 import com.healthmd.rawexport.allowsInteractiveRouteConsent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import kotlin.coroutines.coroutineContext
 
@@ -79,9 +81,27 @@ class ExportOrchestrator(
         }
 
         var successCount = 0
+        val successfulDates = linkedSetOf<LocalDate>()
         val failedDateDetails = mutableListOf<FailedDateDetail>()
         var processedDays = 0
         val effectiveSelection = settings.effectiveDataTypeSelection()
+
+        suspend fun cancelledResult(): ExportResult {
+            val cancelled = ExportResult(
+                successCount = successCount,
+                totalCount = totalDays,
+                failedDateDetails = failedDateDetails,
+                wasCancelled = true,
+                remainingDates = dates.filterNotTo(linkedSetOf()) { it in successfulDates },
+            )
+            return if (durableFolderOperationId == null) {
+                cancelled
+            } else {
+                // Discard/finalize the staging journal after cancellation without allowing the
+                // cancelled exporter child to strand an in-memory operation.
+                withContext(NonCancellable) { finalizeResult(cancelled) }
+            }
+        }
 
         // Manual interactive runs select route-consent candidates across the complete date scope
         // before canonical chunk capture. The repository is a no-op for every noninteractive path.
@@ -96,14 +116,7 @@ class ExportOrchestrator(
                     includeGranularData = settings.shouldFetchGranularData(),
                 )
             } catch (_: CancellationException) {
-                return finalizeResult(
-                    ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
-                        wasCancelled = true,
-                    ),
-                )
+                return cancelledResult()
             } catch (_: Exception) {
                 // Consent is optional; canonical capture retains the established failure behavior.
             }
@@ -113,14 +126,7 @@ class ExportOrchestrator(
             try {
                 coroutineContext.ensureActive()
             } catch (_: CancellationException) {
-                return finalizeResult(
-                    ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
-                        wasCancelled = true,
-                    ),
-                )
+                return cancelledResult()
             }
 
             if (healthRepository.isBeforeFirstUnlock()) {
@@ -139,14 +145,7 @@ class ExportOrchestrator(
                     includeGranularData = settings.shouldFetchGranularData(),
                 ).associateBy { it.date }
             } catch (e: CancellationException) {
-                return finalizeResult(
-                    ExportResult(
-                        successCount = successCount,
-                        totalCount = totalDays,
-                        failedDateDetails = failedDateDetails,
-                        wasCancelled = true,
-                    ),
-                )
+                return cancelledResult()
             } catch (e: SecurityException) {
                 val reason = classifySecurityException(e)
                 if (reason == ExportFailureReason.RATE_LIMITED) {
@@ -208,14 +207,7 @@ class ExportOrchestrator(
                 try {
                     coroutineContext.ensureActive()
                 } catch (_: CancellationException) {
-                    return finalizeResult(
-                        ExportResult(
-                            successCount = successCount,
-                            totalCount = totalDays,
-                            failedDateDetails = failedDateDetails,
-                            wasCancelled = true,
-                        ),
-                    )
+                    return cancelledResult()
                 }
 
                 onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
@@ -226,14 +218,7 @@ class ExportOrchestrator(
                     val fallbackData = try {
                         healthRepository.fetchHealthData(date)
                     } catch (e: CancellationException) {
-                        return finalizeResult(
-                            ExportResult(
-                                successCount = successCount,
-                                totalCount = totalDays,
-                                failedDateDetails = failedDateDetails,
-                                wasCancelled = true,
-                            ),
-                        )
+                        return cancelledResult()
                     } catch (e: SecurityException) {
                         val reason = classifySecurityException(e)
                         if (reason == ExportFailureReason.RATE_LIMITED) {
@@ -300,6 +285,7 @@ class ExportOrchestrator(
                 }
                 if (success) {
                     successCount++
+                    successfulDates += date
                 } else {
                     failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.FILE_WRITE_ERROR))
                 }
@@ -324,19 +310,23 @@ class ExportOrchestrator(
     ): ExportResult {
         val totalDays = dates.size
         var successCount = 0
+        val successfulDates = linkedSetOf<LocalDate>()
         val failedDateDetails = mutableListOf<FailedDateDetail>()
+
+        fun cancelledResult() = ExportResult(
+            successCount = successCount,
+            totalCount = totalDays,
+            failedDateDetails = failedDateDetails,
+            wasCancelled = true,
+            remainingDates = dates.filterNotTo(linkedSetOf()) { it in successfulDates },
+        )
 
         for ((index, date) in dates.withIndex()) {
             // Check for cancellation
             try {
                 coroutineContext.ensureActive()
             } catch (_: CancellationException) {
-                return ExportResult(
-                    successCount = successCount,
-                    totalCount = totalDays,
-                    failedDateDetails = failedDateDetails,
-                    wasCancelled = true,
-                )
+                return cancelledResult()
             }
 
             onProgress?.invoke(index + 1, totalDays, date.toString())
@@ -366,16 +356,12 @@ class ExportOrchestrator(
 
                 if (success) {
                     successCount++
+                    successfulDates += date
                 } else {
                     failedDateDetails.add(FailedDateDetail(date, ExportFailureReason.FILE_WRITE_ERROR))
                 }
             } catch (e: CancellationException) {
-                return ExportResult(
-                    successCount = successCount,
-                    totalCount = totalDays,
-                    failedDateDetails = failedDateDetails,
-                    wasCancelled = true,
-                )
+                return cancelledResult()
             } catch (e: SecurityException) {
                 // Health Connect throws SecurityException when the device is locked or when
                 // Health Connect permissions are missing/incomplete, or background workers

@@ -505,7 +505,7 @@ private fun ProfileDetailDialog(
                     )
                     FactRow("Metrics", "${snapshot.enabledMetricCount} enabled")
                     FactRow(
-                        "Lossless records",
+                        "Detailed time-series",
                         if (snapshot.includeGranularData == true) "On" else "Off",
                     )
                     snapshot.filenameFormat?.let { FactRow("Filename format", it) }

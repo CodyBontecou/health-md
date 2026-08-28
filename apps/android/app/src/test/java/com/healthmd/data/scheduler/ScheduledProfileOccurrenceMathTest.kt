@@ -1,5 +1,6 @@
 package com.healthmd.data.scheduler
 
+import com.healthmd.domain.model.ExportTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -53,6 +54,32 @@ class ScheduledProfileOccurrenceMathTest {
         assertNotNull(due)
         assertEquals(listOf(LocalDate.of(2026, 8, 9)), due!!.exportDates)
         assertEquals(millisOf(LocalDate.of(2026, 8, 10)), due.fireAtMillis)
+    }
+
+    @Test
+    fun `frozen cancellation residual is prioritized over a newer occurrence window`() {
+        val now = millisOf(LocalDate.of(2026, 8, 10), LocalTime.of(12, 0))
+        val residualDate = LocalDate.of(2026, 8, 2)
+        val residual = ScheduledProfilePendingExport(
+            id = "residual-1",
+            ownerEpochDays = listOf(residualDate.toEpochDay()),
+            fireAtMillis = millisOf(LocalDate.of(2026, 8, 3)),
+            settingsSnapshotJson = "frozen-settings",
+            target = ExportTarget.DEVICE_FOLDER,
+            profileName = "Morning",
+        )
+
+        val due = ScheduledProfileOccurrenceMath.dueOccurrence(
+            entry(lastSuccessEpochMillis = millisOf(LocalDate.of(2026, 8, 9))).copy(
+                pendingExports = listOf(residual),
+            ),
+            now,
+        )
+
+        assertNotNull(due)
+        assertEquals(listOf(residualDate), due!!.exportDates)
+        assertEquals(residual.fireAtMillis, due.fireAtMillis)
+        assertEquals(residual, due.pendingExport)
     }
 
     @Test

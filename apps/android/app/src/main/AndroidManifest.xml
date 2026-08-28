@@ -238,6 +238,11 @@
             android:name=".data.scheduler.ScheduledProfileAlarmReceiver"
             android:exported="false" />
 
+        <!-- Exact, operation-scoped foreground export cancellation action. -->
+        <receiver
+            android:name=".data.scheduler.ScheduledExportCancelReceiver"
+            android:exported="false" />
+
         <!-- Restore one-shot alarms after reboot, app update, clock changes, and access changes. -->
         <receiver
             android:name=".data.scheduler.BootReceiver"

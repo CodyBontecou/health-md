@@ -70,6 +70,9 @@ class ScheduledProfileEntryStore @Inject constructor(
                     previous?.lastRefreshSuccessEpochMillis,
                     entry.lastRefreshSuccessEpochMillis,
                 ),
+                // A configuration draft may predate a worker's cancellation checkpoint. Preserve
+                // exact residual groups until the worker clears them individually.
+                pendingExports = previous?.pendingExports ?: entry.pendingExports,
             )
             val updated = existing.filterNot { it.profileId == entry.profileId } + merged
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
@@ -106,13 +109,47 @@ class ScheduledProfileEntryStore @Inject constructor(
         }
     }
 
-    /** Records a successful occurrence for catch-up math; no-op when the entry is unknown. */
-    suspend fun recordSuccess(profileId: String, fireAtMillis: Long) {
+    /** Records a successful occurrence and clears only the residual group it completed. */
+    suspend fun recordSuccess(
+        profileId: String,
+        fireAtMillis: Long,
+        completedPendingID: String? = null,
+    ) {
         update(profileId) { current ->
             current.copy(
                 lastSuccessEpochMillis = latest(current.lastSuccessEpochMillis, fireAtMillis),
+                pendingExports = completedPendingID?.let { completedID ->
+                    current.pendingExports.filterNot { it.id == completedID }
+                } ?: current.pendingExports,
             )
         }
+    }
+
+    /**
+     * Advances the occurrence frontier while replacing only the attempted residual group with the
+     * exact unresolved owner-date groups. This prevents completed dates from being re-exported.
+     */
+    suspend fun recordCancellation(
+        profileId: String,
+        fireAtMillis: Long,
+        attemptedPendingID: String?,
+        replacements: List<ScheduledProfilePendingExport>,
+    ): Boolean = update(profileId) { current ->
+        val retained = attemptedPendingID?.let { attemptedID ->
+            current.pendingExports.filterNot { it.id == attemptedID }
+        } ?: current.pendingExports
+        val normalized = (retained + replacements)
+            .filter { it.ownerEpochDays.isNotEmpty() }
+            .distinctBy { it.id }
+            .sortedWith(
+                compareBy<ScheduledProfilePendingExport> { it.fireAtMillis }
+                    .thenBy { it.ownerEpochDays.minOrNull() ?: Long.MAX_VALUE }
+                    .thenBy { it.id },
+            )
+        current.copy(
+            lastSuccessEpochMillis = latest(current.lastSuccessEpochMillis, fireAtMillis),
+            pendingExports = normalized,
+        )
     }
 
     /** Atomically writes the migrated entry plus a durable completion marker. */

@@ -10,6 +10,18 @@ interface SettingsRepository {
     suspend fun updateExportSettings(settings: ExportSettings)
     suspend fun getExportSettings(): ExportSettings
 
+    /**
+     * Atomically transforms the latest persisted settings. Production storage overrides this so a
+     * cancellation checkpoint cannot restore stale schedule/configuration fields after a race.
+     */
+    suspend fun updateExportSettingsAtomically(
+        transform: (ExportSettings) -> ExportSettings,
+    ): ExportSettings {
+        val updated = transform(getExportSettings()).normalized()
+        updateExportSettings(updated)
+        return updated
+    }
+
     // One bounded, non-secret shared-setup rollback snapshot and pending endpoint hint.
     suspend fun applySharedSetupTransaction(
         expectedCurrent: ExportSettings,

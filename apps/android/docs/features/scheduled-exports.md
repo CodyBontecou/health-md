@@ -44,6 +44,7 @@ A notification per run with a day count (e.g. "Raw snapshot range ending …"), 
 - **Exact timing vs fallback:** with Alarms & reminders access, each occurrence runs from a one-shot exact alarm with a durable WorkManager backup; without it, WorkManager becomes primary and the time is a target, not a guarantee.
 - Occurrences carry their intended local date, so a delayed start after midnight still exports the correct day.
 - Missed dates are recoverable: if the phone was locked after reboot, background access was missing, or Health Connect was unavailable, the Schedule screen offers to retry those exact dates while the app is open and unlocked.
+- **Active-run cancellation:** Tap **Cancel Export** in the foreground scheduled-export notification to stop only that in-progress attempt. Health.md leaves the schedule enabled, keeps completed owner dates completed, and freezes exact unresolved dates plus their destination/settings identity for a later retry. Cancellation itself is not recorded as a failed export. On Android 13 and later, allow Health.md notifications so this drawer action is visible.
 
 ## Troubleshooting
 

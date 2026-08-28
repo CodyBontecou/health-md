@@ -1,5 +1,6 @@
 package com.healthmd.data.scheduler
 
+import com.healthmd.domain.model.ExportTarget
 import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
 import java.time.Instant
@@ -24,11 +25,32 @@ enum class ScheduledProfileDateWindow {
 }
 
 /**
+ * Frozen exact residual work from one cancelled profile occurrence. Separate groups keep durable
+ * operation identities from mixing with dates that require a fresh capture.
+ */
+@Serializable
+data class ScheduledProfilePendingExport(
+    val id: String,
+    val ownerEpochDays: List<Long>,
+    val fireAtMillis: Long,
+    val settingsSnapshotJson: String,
+    val target: ExportTarget,
+    val profileName: String,
+    val apiEndpointUrl: String? = null,
+    val folderUri: String? = null,
+    val folderDisplayName: String? = null,
+    val durableOperationId: String? = null,
+) {
+    val ownerDates: List<LocalDate>
+        get() = ownerEpochDays.distinct().sorted().map(LocalDate::ofEpochDay)
+}
+
+/**
  * One scheduled-export configuration bound to exactly one export profile (Android phase 6).
  *
  * Mirrors iOS `ScheduledExportEntry`: cadence fields plus per-entry progress state so occurrence
- * math works independently per profile. The frozen snapshot lives on the referenced profile; this
- * entry never duplicates it.
+ * math works independently per profile. Cancellation residuals freeze the original profile
+ * destination and output snapshot until their exact owner dates are resolved.
  */
 @Serializable
 data class ScheduledProfileEntry(
@@ -50,6 +72,8 @@ data class ScheduledProfileEntry(
     val lastSuccessEpochMillis: Long? = null,
     /** Epoch millis of the most recent successful Today Refresh occurrence. */
     val lastRefreshSuccessEpochMillis: Long? = null,
+    /** Exact frozen residual groups left by cancelled automated export attempts. */
+    val pendingExports: List<ScheduledProfilePendingExport> = emptyList(),
 ) {
     init {
         require(lookbackDays in 1..30) { "Lookback must stay within 1..30." }
@@ -67,6 +91,8 @@ data class ScheduledProfileEntry(
         val fireAtMillis: Long,
         /** Data days to export; empty means nothing actionable at this boundary. */
         val exportDates: List<LocalDate>,
+        /** Non-null when this run is retrying one exact frozen cancellation residual group. */
+        val pendingExport: ScheduledProfilePendingExport? = null,
     )
 }
 
@@ -109,6 +135,28 @@ object ScheduledProfileOccurrenceMath {
         // A successful occurrence at time T covered the window ending the day before T.
         val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         val yesterday = today.minusDays(1)
+
+        // Finish one frozen cancellation residual group before admitting newer profile settings or
+        // owner dates. Exact dates and durable operation identity therefore survive profile edits.
+        entry.pendingExports
+            .sortedWith(
+                compareBy<ScheduledProfilePendingExport> { it.fireAtMillis }
+                    .thenBy { it.ownerEpochDays.minOrNull() ?: Long.MAX_VALUE }
+                    .thenBy { it.id },
+            )
+            .firstNotNullOfOrNull { pending ->
+                val dates = pending.ownerDates.filterNot { it.isAfter(yesterday) }
+                dates.takeIf { it.isNotEmpty() }?.let {
+                    ScheduledProfileEntry.DueOccurrence(
+                        entry = entry,
+                        fireAtMillis = pending.fireAtMillis,
+                        exportDates = it,
+                        pendingExport = pending,
+                    )
+                }
+            }
+            ?.let { return it }
+
         val oldest = yesterday.minusDays((entry.lookbackDays - 1).toLong())
 
         val coveredThrough: LocalDate? = entry.lastSuccessEpochMillis?.let { successMillis ->

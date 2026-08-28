@@ -261,8 +261,9 @@ class ExportViewModel @Inject constructor(
 
     fun setExportFormat(format: ExportFormat) {
         viewModelScope.launch {
-            val settings = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(settings.copy(exportFormat = format, exportFormats = setOf(format)))
+            settingsRepository.updateExportSettingsAtomically { settings ->
+                settings.copy(exportFormat = format, exportFormats = setOf(format))
+            }
         }
     }
 
@@ -327,10 +328,9 @@ class ExportViewModel @Inject constructor(
             try {
                 authorization?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveAuthorization(it) }
                 requestHeaders?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveRequestHeaders(it) }
-                val current = settingsRepository.getExportSettings()
-                settingsRepository.updateExportSettings(
+                settingsRepository.updateExportSettingsAtomically { current ->
                     current.copy(apiEndpointUrl = normalized, exportTarget = ExportTarget.API_ENDPOINT)
-                )
+                }
                 _uiState.update { it.copy(apiConfigurationError = null) }
                 refreshAPIAuthorizationStatus()
                 rescheduleAPIExportIfNeeded()
@@ -364,21 +364,21 @@ class ExportViewModel @Inject constructor(
 
     fun resetSettings() {
         viewModelScope.launch {
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(
+            settingsRepository.updateExportSettingsAtomically { current ->
                 ExportSettings.newInstallDefaults().copy(
                     exportTarget = current.exportTarget,
                     scheduledExportTarget = current.scheduledExportTarget,
                     apiEndpointUrl = current.apiEndpointUrl,
+                    pendingScheduledRetryDates = current.pendingScheduledRetryDates,
+                    pendingScheduledExportRequests = current.pendingScheduledExportRequests,
                 )
-            )
+            }
         }
     }
 
     private fun updateSettings(transform: (ExportSettings) -> ExportSettings) {
         viewModelScope.launch {
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(transform(current))
+            settingsRepository.updateExportSettingsAtomically(transform)
         }
     }
 

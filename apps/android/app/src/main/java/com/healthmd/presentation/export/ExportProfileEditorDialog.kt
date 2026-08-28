@@ -265,7 +265,7 @@ fun ExportProfileEditorDialog(
                     onCheckedChange = { value -> updateSettings { it.copy(groupByCategory = value) } },
                 )
                 EditorToggleRow(
-                    label = "Lossless records",
+                    label = "Detailed time-series",
                     checked = draft.settings.includeGranularData,
                     onCheckedChange = { value -> updateSettings { it.copy(includeGranularData = value) } },
                 )

@@ -200,8 +200,7 @@ class SettingsViewModel @Inject constructor(
 
     private fun update(transform: (ExportSettings) -> ExportSettings) {
         viewModelScope.launch {
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(transform(current))
+            settingsRepository.updateExportSettingsAtomically(transform)
         }
     }
 

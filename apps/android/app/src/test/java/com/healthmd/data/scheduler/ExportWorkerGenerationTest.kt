@@ -31,16 +31,63 @@ import io.mockk.slot
 import io.mockk.verify
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.UUID
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ExportWorkerGenerationTest {
+    @Test
+    fun foregroundNotificationCarriesAnExactPrivateCancelAction() = runTest {
+        val occurrence = occurrence(ExportTarget.DEVICE_FOLDER, "generation-notification")
+        val stateStore = mockk<ScheduledExportStateStore>(relaxed = true)
+        val worker = worker(occurrence, stateStore, mockk(relaxed = true))
+
+        val foregroundInfo = worker.getForegroundInfo()
+        val action = foregroundInfo.notification.actions.single()
+        val actionIntent = shadowOf(action.actionIntent).savedIntent
+
+        assertThat(action.title.toString()).isEqualTo("Cancel Export")
+        assertThat(actionIntent.action)
+            .isEqualTo(ScheduledExportCancelReceiver.ACTION_CANCEL_SCHEDULED_EXPORT)
+        assertThat(actionIntent.component?.className)
+            .isEqualTo(ScheduledExportCancelReceiver::class.java.name)
+        assertThat(actionIntent.getStringExtra(ScheduledExportCancelReceiver.EXTRA_OPERATION_ID))
+            .isEqualTo(worker.id.toString())
+        ScheduledExportCancellationCoordinator.finish(worker.id)
+    }
+
+    @Test
+    fun cancelPendingIntentsKeepExactUuidIdentityEvenWhenRequestCodeHashesCollide() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val firstOperationID = UUID(0L, 0L)
+        val secondOperationID = UUID(1L shl 32, 1L)
+        assertThat(firstOperationID).isNotEqualTo(secondOperationID)
+        assertThat(firstOperationID.hashCode()).isEqualTo(secondOperationID.hashCode())
+
+        val first = ScheduledExportCancelReceiver.pendingIntent(context, firstOperationID)
+        val second = ScheduledExportCancelReceiver.pendingIntent(context, secondOperationID)
+        val firstIntent = shadowOf(first).savedIntent
+        val secondIntent = shadowOf(second).savedIntent
+
+        assertThat(first).isNotEqualTo(second)
+        assertThat(firstIntent.action)
+            .isEqualTo(ScheduledExportCancelReceiver.ACTION_CANCEL_SCHEDULED_EXPORT)
+        assertThat(secondIntent.action)
+            .isEqualTo(ScheduledExportCancelReceiver.ACTION_CANCEL_SCHEDULED_EXPORT)
+        assertThat(firstIntent.getStringExtra(ScheduledExportCancelReceiver.EXTRA_OPERATION_ID))
+            .isEqualTo(firstOperationID.toString())
+        assertThat(secondIntent.getStringExtra(ScheduledExportCancelReceiver.EXTRA_OPERATION_ID))
+            .isEqualTo(secondOperationID.toString())
+        assertThat(firstIntent.data).isNotEqualTo(secondIntent.data)
+    }
+
     @Test
     fun queuedOfflineApiGenerationCannotReviveAfterFolderAndSameApiGenerations() = runTest {
         val apiGenerationA = occurrence(ExportTarget.API_ENDPOINT, "generation-api-a")
@@ -335,6 +382,165 @@ class ExportWorkerGenerationTest {
     }
 
     @Test
+    fun zeroProgressCancellationQueuesExactDatesWithoutHistoryOrScheduleMutation() = runTest {
+        val settings = ExportSettings(
+            exportTarget = ExportTarget.API_ENDPOINT,
+            scheduledExportTarget = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://example.test/health",
+            scheduleEnabled = true,
+            scheduleHour = 7,
+            scheduleCadenceValue = 15,
+            scheduleCadenceUnit = ScheduleCadenceUnit.MINUTES,
+        )
+        val admitted = frozenOccurrence(settings, "generation-zero-cancel")
+        val stateStore = mockk<ScheduledExportStateStore>()
+        every { stateStore.isGenerationMigrationComplete() } returns true
+        every { stateStore.load() } returns admitted
+        val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+        coEvery { settingsRepository.getExportSettings() } returns settings
+        every { settingsRepository.isPurchased } returns flowOf(true)
+        var updatedSettings: ExportSettings? = null
+        coEvery { settingsRepository.updateExportSettingsAtomically(any()) } coAnswers {
+            firstArg<(ExportSettings) -> ExportSettings>()(settings).also { updatedSettings = it }
+        }
+        val healthRepository = mockk<HealthRepository>(relaxed = true)
+        coEvery { healthRepository.hasBackgroundReadPermission() } returns true
+        val credentialStore = mockk<APIExportCredentialStore>(relaxed = true)
+        coEvery { credentialStore.destinationFingerprint(any()) } returns API_FINGERPRINT
+        val apiRunner = mockk<APIEndpointExportRunner>(relaxed = true)
+        val exportedDates = slot<List<LocalDate>>()
+        coEvery {
+            apiRunner.exportDates(
+                dates = capture(exportedDates),
+                settings = any(),
+                onProgress = null,
+                expectedDestinationFingerprint = API_FINGERPRINT,
+                durableOperationId = any(),
+                durableSettingsSnapshotJson = any(),
+            )
+        } answers {
+            ExportResult(
+                successCount = 0,
+                totalCount = exportedDates.captured.size,
+                wasCancelled = true,
+                target = ExportTarget.API_ENDPOINT,
+                remainingDates = exportedDates.captured.toSet(),
+            )
+        }
+        val historyRepository = mockk<ExportHistoryRepository>(relaxed = true)
+        val scheduler = mockk<ExportScheduler>(relaxed = true)
+        val worker = worker(
+            occurrence = admitted,
+            stateStore = stateStore,
+            apiRunner = apiRunner,
+            settingsRepository = settingsRepository,
+            healthRepository = healthRepository,
+            apiCredentialStore = credentialStore,
+            exportScheduler = scheduler,
+            exportHistoryRepository = historyRepository,
+        )
+
+        val workerResult = worker.doWork()
+
+        assertThat(workerResult).isEqualTo(ListenableWorker.Result.success())
+        assertThat(requireNotNull(updatedSettings).scheduleEnabled).isTrue()
+        assertThat(requireNotNull(updatedSettings).scheduleHour).isEqualTo(7)
+        assertThat(
+            ScheduledExportPendingRequests.pendingRequests(requireNotNull(updatedSettings)).map { it.date },
+        ).containsExactlyElementsIn(exportedDates.captured)
+        coVerify(exactly = 0) { historyRepository.insertEntry(any()) }
+        verify(exactly = 1) { stateStore.completeAdmission(any(), any(), any()) }
+        coVerify(exactly = 1) { scheduler.reconcile() }
+    }
+
+    @Test
+    fun cancelledPartialRunPersistsOnlyResidualDatesWithoutFailureHistory() = runTest {
+        val settings = ExportSettings(
+            exportTarget = ExportTarget.API_ENDPOINT,
+            scheduledExportTarget = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://example.test/health",
+            scheduleEnabled = true,
+            scheduleLookbackDays = 2,
+            scheduleCadenceValue = 15,
+            scheduleCadenceUnit = ScheduleCadenceUnit.MINUTES,
+        )
+        val admitted = frozenOccurrence(settings, "generation-cancelled")
+        val stateStore = mockk<ScheduledExportStateStore>()
+        every { stateStore.isGenerationMigrationComplete() } returns true
+        every { stateStore.load() } returns admitted
+        val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+        coEvery { settingsRepository.getExportSettings() } returns settings
+        every { settingsRepository.isPurchased } returns flowOf(true)
+        val concurrentlyEditedSettings = settings.copy(
+            scheduleEnabled = false,
+            scheduleHour = 22,
+            scheduleMinute = 45,
+        )
+        var updatedSettings: ExportSettings? = null
+        coEvery { settingsRepository.updateExportSettingsAtomically(any()) } coAnswers {
+            firstArg<(ExportSettings) -> ExportSettings>()(concurrentlyEditedSettings)
+                .also { updatedSettings = it }
+        }
+        val healthRepository = mockk<HealthRepository>(relaxed = true)
+        coEvery { healthRepository.hasBackgroundReadPermission() } returns true
+        val credentialStore = mockk<APIExportCredentialStore>(relaxed = true)
+        coEvery { credentialStore.destinationFingerprint(any()) } returns API_FINGERPRINT
+        val apiRunner = mockk<APIEndpointExportRunner>(relaxed = true)
+        val exportedDates = slot<List<LocalDate>>()
+        coEvery {
+            apiRunner.exportDates(
+                dates = capture(exportedDates),
+                settings = any(),
+                onProgress = null,
+                expectedDestinationFingerprint = API_FINGERPRINT,
+                durableOperationId = any(),
+                durableSettingsSnapshotJson = any(),
+            )
+        } answers {
+            val dates = exportedDates.captured
+            ExportResult(
+                successCount = 1,
+                totalCount = dates.size,
+                wasCancelled = true,
+                target = ExportTarget.API_ENDPOINT,
+                retryOperationIds = mapOf(dates.last() to "durable-residual"),
+                remainingDates = setOf(dates.last()),
+            )
+        }
+        val historyRepository = mockk<ExportHistoryRepository>(relaxed = true)
+        val history = slot<com.healthmd.domain.model.ExportHistoryEntry>()
+        coEvery { historyRepository.insertEntry(capture(history)) } returns Unit
+        val scheduler = mockk<ExportScheduler>(relaxed = true)
+        val worker = worker(
+            occurrence = admitted,
+            stateStore = stateStore,
+            apiRunner = apiRunner,
+            settingsRepository = settingsRepository,
+            healthRepository = healthRepository,
+            apiCredentialStore = credentialStore,
+            exportScheduler = scheduler,
+            exportHistoryRepository = historyRepository,
+        )
+
+        val workerResult = worker.doWork()
+
+        assertThat(workerResult).isEqualTo(ListenableWorker.Result.success())
+        val reconciledSettings = requireNotNull(updatedSettings)
+        assertThat(reconciledSettings.scheduleEnabled).isFalse()
+        assertThat(reconciledSettings.scheduleHour).isEqualTo(22)
+        assertThat(reconciledSettings.scheduleMinute).isEqualTo(45)
+        val pending = ScheduledExportPendingRequests.pendingRequests(reconciledSettings)
+        assertThat(pending.map { it.date }).containsExactly(exportedDates.captured.last())
+        assertThat(pending.single().apiOperationId).isEqualTo("durable-residual")
+        assertThat(pending.single().lastFailureReason).isNull()
+        assertThat(history.captured.successCount).isEqualTo(1)
+        assertThat(history.captured.failureReason).isNull()
+        assertThat(history.captured.failedDateDetails).isEmpty()
+        verify(exactly = 1) { stateStore.completeAdmission(any(), any(), any()) }
+        coVerify(exactly = 1) { scheduler.reconcile() }
+    }
+
+    @Test
     fun admittedRunStillFailsClosedWhenEndpointIdentityChanges() = runTest {
         val frozenSettings = ExportSettings(
             exportTarget = ExportTarget.API_ENDPOINT,
@@ -379,6 +585,7 @@ class ExportWorkerGenerationTest {
         admissionMatches: Boolean = true,
         runCoordinator: ScheduledExportRunCoordinator = ScheduledExportRunCoordinator(),
         exportScheduler: ExportScheduler = mockk(relaxed = true),
+        exportHistoryRepository: ExportHistoryRepository = mockk(relaxed = true),
         runAttemptCount: Int = 0,
     ): ExportWorker {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -405,7 +612,7 @@ class ExportWorkerGenerationTest {
                 healthRepository = healthRepository,
                 exportRepository = mockk<ExportRepository>(relaxed = true),
                 settingsRepository = settingsRepository,
-                exportHistoryRepository = mockk<ExportHistoryRepository>(relaxed = true),
+                exportHistoryRepository = exportHistoryRepository,
                 apiEndpointExportRunner = apiRunner,
                 rawSnapshotExportRunner = mockk<RawSnapshotService>(relaxed = true),
                 apiCredentialStore = apiCredentialStore,

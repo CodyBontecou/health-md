@@ -298,7 +298,6 @@ class ScheduledExportRecoveryManager @Inject constructor(
 
                 // Merge only this attempt's pending-date result into the latest settings so a
                 // concurrent endpoint/schedule edit is never overwritten by the recovery snapshot.
-                val currentSettings = settingsRepository.getExportSettings()
                 val retryDetails = if (targetSettings.exportMode == ExportMode.RAW_SNAPSHOT && !targetResult.isFullSuccess) {
                     val failure = targetResult.failedDateDetails.firstOrNull() ?: FailedDateDetail(
                         targetDates.first(),
@@ -308,19 +307,20 @@ class ScheduledExportRecoveryManager @Inject constructor(
                 } else {
                     targetResult.failedDateDetails
                 }
-                latestSettings = ScheduledExportPendingRequests.applyAttemptResult(
-                    settings = currentSettings,
-                    attemptedDates = targetDates,
-                    failedDateDetails = retryDetails,
-                    target = target,
-                    destinationFingerprint = destinationFingerprint,
-                    enginePin = enginePin,
-                    settingsSnapshotJson = settingsSnapshotJson,
-                    apiOperationIds = targetResult.retryOperationIds,
-                    folderOperationIds = targetResult.retryFolderOperationIds,
-                    freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
-                )
-                settingsRepository.updateExportSettings(latestSettings)
+                latestSettings = settingsRepository.updateExportSettingsAtomically { currentSettings ->
+                    ScheduledExportPendingRequests.applyAttemptResult(
+                        settings = currentSettings,
+                        attemptedDates = targetDates,
+                        failedDateDetails = retryDetails,
+                        target = target,
+                        destinationFingerprint = destinationFingerprint,
+                        enginePin = enginePin,
+                        settingsSnapshotJson = settingsSnapshotJson,
+                        apiOperationIds = targetResult.retryOperationIds,
+                        folderOperationIds = targetResult.retryFolderOperationIds,
+                        freshCaptureRetryDates = targetResult.freshCaptureRetryDates,
+                    )
+                }
                 val allFailuresDetachedForFreshCapture =
                     targetResult.failedDateDetails.all { failure ->
                         failure.date in targetResult.freshCaptureRetryDates

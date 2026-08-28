@@ -3,7 +3,10 @@ package com.healthmd.data.settings
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.model.ExportSettings
+import com.healthmd.domain.model.PendingScheduledExportRequest
 import io.mockk.mockk
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -40,6 +43,31 @@ class ConfigurationProtectionRepositoryTest {
     @After
     fun tearDown() {
         dataStoreScope.cancel()
+    }
+
+    @Test
+    fun `atomic settings transform applies to latest schedule configuration`() = runTest {
+        val edited = ExportSettings.newInstallDefaults().copy(
+            scheduleEnabled = false,
+            scheduleHour = 22,
+            scheduleMinute = 45,
+        )
+        repository.updateExportSettings(edited)
+        val residualDate = LocalDate.parse("2026-08-20")
+
+        val updated = repository.updateExportSettingsAtomically { latest ->
+            latest.copy(
+                pendingScheduledExportRequests = listOf(
+                    PendingScheduledExportRequest(date = residualDate),
+                ),
+            )
+        }
+
+        assertThat(updated.scheduleEnabled).isFalse()
+        assertThat(updated.scheduleHour).isEqualTo(22)
+        assertThat(updated.scheduleMinute).isEqualTo(45)
+        assertThat(repository.getExportSettings().pendingScheduledExportRequests.single().date)
+            .isEqualTo(residualDate)
     }
 
     @Test

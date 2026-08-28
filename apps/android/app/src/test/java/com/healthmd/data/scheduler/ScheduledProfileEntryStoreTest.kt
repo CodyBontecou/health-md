@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.domain.model.ExportTarget
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -109,6 +110,61 @@ class ScheduledProfileEntryStoreTest {
         val stored = store.entry("alpha")!!
         assertThat(stored.hour).isEqualTo(10)
         assertThat(stored.lastSuccessEpochMillis).isEqualTo(5678L)
+    }
+
+    @Test
+    fun `cancellation checkpoint survives configuration upsert and clears individually`() = runTest {
+        store.upsert(entry("alpha").copy(isEnabled = true))
+        val first = ScheduledProfilePendingExport(
+            id = "pending-first",
+            ownerEpochDays = listOf(20_001L),
+            fireAtMillis = 1_000L,
+            settingsSnapshotJson = "snapshot-a",
+            target = ExportTarget.DEVICE_FOLDER,
+            profileName = "Alpha",
+        )
+        val second = first.copy(id = "pending-second", ownerEpochDays = listOf(20_002L))
+
+        store.recordCancellation(
+            profileId = "alpha",
+            fireAtMillis = 1_000L,
+            attemptedPendingID = null,
+            replacements = listOf(first, second),
+        )
+        // A stale settings draft must not erase worker-owned retry state.
+        store.upsert(entry("alpha", hour = 10))
+
+        val checkpoint = store.entry("alpha")!!
+        assertThat(checkpoint.lastSuccessEpochMillis).isEqualTo(1_000L)
+        assertThat(checkpoint.pendingExports).containsExactly(first, second).inOrder()
+
+        store.recordSuccess(
+            profileId = "alpha",
+            fireAtMillis = 1_000L,
+            completedPendingID = first.id,
+        )
+        assertThat(store.entry("alpha")!!.pendingExports).containsExactly(second)
+    }
+
+    @Test
+    fun `cancellation checkpoint fails closed when the profile row is missing`() = runTest {
+        val residual = ScheduledProfilePendingExport(
+            id = "missing-residual",
+            ownerEpochDays = listOf(20_001L),
+            fireAtMillis = 1_000L,
+            settingsSnapshotJson = "snapshot",
+            target = ExportTarget.DEVICE_FOLDER,
+            profileName = "Missing",
+        )
+
+        assertThat(
+            store.recordCancellation(
+                profileId = "missing",
+                fireAtMillis = 1_000L,
+                attemptedPendingID = null,
+                replacements = listOf(residual),
+            ),
+        ).isFalse()
     }
 
     @Test
