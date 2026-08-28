@@ -1,7 +1,9 @@
-Health.md 3.1.1 fixes export reliability issues.
+Health.md 3.2 gives you more control over exports.
+
+New
+• Stop running exports — one banner owns export progress, and Stop cancels the running scheduled, Shortcut, or manual export while completed dates stay completed and schedules remain enabled.
+• Export Data Detail now separates Detailed Time-Series from Lossless Health Records, so you can export per-sample data without the much larger canonical archive. Summary, Detailed Time-Series, and Lossless presets live in the Export tab and export profiles.
 
 Fixed
-• Export folders on iCloud Drive, Dropbox, and similar cloud locations no longer lose their selection when the app restarts. Previously the folder had to be re-selected before automatic exports and Shortcuts would run again.
-• A completed export no longer shows a red error toast — the success toast is back, with its Preview and Browse actions.
-• Choosing the iCloud Drive root now shows it as "iCloud Drive" instead of a technical folder name.
-• Scheduled exports targeting an API endpoint with no configured URL now explain exactly what to fix, instead of a generic unknown error.
+• Direct CLI Access reconnects automatically after your computer sleeps, the Mac app quits, or the network changes.
+• Folders on "On My iPhone" storage keep their saved selection across restarts, so automatic exports and Shortcuts keep working.

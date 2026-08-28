@@ -27,6 +27,36 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.2",
+            items: [
+                .list(
+                    title: "Exports you can stop",
+                    rows: [
+                        .init(
+                            symbolSystemName: "stop.circle.fill",
+                            title: "Stop running exports",
+                            description: "A single banner now owns export progress. Stop cancels the running scheduled, Shortcut, or manual export — completed dates stay completed, and schedules remain enabled."
+                        ),
+                        .init(
+                            symbolSystemName: "list.bullet.rectangle.fill",
+                            title: "Detailed Time-Series, separated",
+                            description: "Export Data Detail now separates Detailed Time-Series from Lossless Health Records, so per-sample data no longer drags along the much larger canonical archive. New presets are available in the Export tab and export profiles."
+                        ),
+                        .init(
+                            symbolSystemName: "arrow.triangle.2.circlepath",
+                            title: "Self-healing Direct CLI Access",
+                            description: "Connections recover automatically after your Mac sleeps, the app quits, or the network changes — no manual disconnect or repeated Pair tap required."
+                        ),
+                        .init(
+                            symbolSystemName: "internaldrive.fill",
+                            title: "Local folders stay selected",
+                            description: "Folders on “On My iPhone” storage keep their saved selection across restarts, so automatic exports and Shortcuts keep working."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.1.1",
             items: [
                 .list(

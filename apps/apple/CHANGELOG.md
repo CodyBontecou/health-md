@@ -4,7 +4,10 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.2] - 2026-08-28
+
 ### Added
+- Exports can now be cancelled while running. One top activity banner owns export progress and cancellation for scheduled, Shortcut, and manual exports: Stop cancels only the running attempt, so completed dates stay completed, unresolved dates stay retryable, and schedules remain enabled. Concurrent exports cannot finish or cancel each other because cancellation is operation-scoped and results are matched by operation ID. Scheduled Mac exports cancel over the wire (macExportCancel) with a grace window that preserves exact completed dates before the conservative fallback queues the full unresolved range, and Shortcut residual dates keep their original calendar timezone. Cancelling with zero progress records neither failure nor export quota; partially completed work records neutral history exactly once. Manual export progress moved into the same banner, replacing the duplicate bottom progress bar and stop button.
 - Export Data Detail now separates **Detailed Time-Series** from **Lossless Health Records**. Detailed Time-Series restores selected per-sample heart rate, HRV, blood oxygen, respiratory rate, blood pressure, blood glucose, and sleep-stage output without capturing the much larger canonical HealthKit source archive. Summary, Detailed Time-Series, and Lossless presets are available in the Export tab and editable export profiles; existing on/off settings and queued work migrate without changing behavior.
 
 ### Fixed
