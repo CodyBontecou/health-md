@@ -17,7 +17,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "3f21e560d2d27a4ec1055327b97bc194b847d64ca5ff250d1216e94a71a2586f",
+      "sha256": "da1ef4f1dd2c9117e5922ae64207510c743c8b14624a792bab93f98494ccb070",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
@@ -173,7 +173,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
-          "sha256": "f543c5a8025461df2a75789cf88a9f85283642d4f4e100caeb04c9e9a1f2d20c",
+          "sha256": "11f5f83e6e1b384a123bc8bd1459755c2c6051edfa17e2b6c8cd18daed552010",
           "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
@@ -260,7 +260,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "024f43390ec74151ea278f2347d48312e66142816dfcfc16d0ad56655a281c92",
+          "sha256": "438f1b7c4a9e5fe108edd70d2d479b17f1f4696af5611eb68b0ee4bfde452eb2",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
@@ -290,7 +290,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "18e4399a91ef66eac00f52fd6bf365e828f4f2bb2e5c8b607f3d68cc6969ac5c",
+          "sha256": "9bc0accd3ea2ba7ba0ecf961dee92a005f9e0434c0bfec1538e926b5fdbab8d1",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -298,7 +298,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "2ba2b00a052dcdd9246a1f90caa691cddb98c28407517dbd1571161770696990",
+          "sha256": "95ef77902f2e2d98069fc1c88ce09e3fc35a261e3966481f2e0f6c3b455e0635",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
@@ -338,13 +338,13 @@
       "fixtures": [
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
-          "sha256": "13a0c9ea7bac48075d81396cc5f3bd56840922f7ef59c51cda8ace8331a7f079",
+          "sha256": "b2a675cbfb214b1260e1df3a2dd4c2c59866560028b8ed1fd3f98cd9a4db1649",
           "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
-          "sha256": "7eea91a92af78279d8f2a9ee9eaf8fb16c1b5e6968e6e5d2a8ca4f26b48b5974",
+          "sha256": "e62117e7627fa1fbce392e0e886b5ceef295a78a429e896031b0c497ec51aed6",
           "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         }
