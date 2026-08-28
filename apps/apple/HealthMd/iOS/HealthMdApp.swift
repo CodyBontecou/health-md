@@ -349,7 +349,12 @@ struct HealthMdApp: App {
             .safeAreaInset(edge: .top, spacing: 0) {
                 Group {
                     if let snapshot = notificationExportActivity.snapshot {
-                        NotificationExportActivityBanner(snapshot: snapshot)
+                        NotificationExportActivityBanner(
+                            snapshot: snapshot,
+                            onCancel: snapshot.phase.allowsCancellation
+                                ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
+                                : nil
+                        )
                     } else if let snapshot = cliExportActivity.snapshot {
                         CLIExportActivityBanner(snapshot: snapshot)
                     }

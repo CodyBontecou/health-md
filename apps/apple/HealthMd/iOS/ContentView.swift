@@ -150,12 +150,10 @@ struct ContentView: View {
                         endDate: $endDate,
                         dateRangePreset: $dateRangePreset,
                         isExporting: $isExporting,
-                        exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
                         showFolderPicker: $showFolderPicker,
                         presentFirstExportPreview: $presentFirstExportPreview,
                         canExport: canExport,
-                        onCancelExport: cancelExport,
                         onExportTapped: exportData
                     )
                     .tabItem {
@@ -275,7 +273,8 @@ struct ContentView: View {
                 ManualExportActivityBanner(
                     target: exportTargetSelection,
                     progress: exportProgress,
-                    message: exportStatusMessage
+                    message: exportStatusMessage,
+                    onCancel: cancelExport
                 )
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.s2)

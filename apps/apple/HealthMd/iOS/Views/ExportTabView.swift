@@ -37,12 +37,10 @@ struct ExportTabView: View {
     @Binding var endDate: Date
     @Binding var dateRangePreset: ExportDateRangePreset
     @Binding var isExporting: Bool
-    @Binding var exportProgress: Double
     @Binding var exportStatusMessage: String
     @Binding var showFolderPicker: Bool
     @Binding var presentFirstExportPreview: Bool
     let canExport: Bool
-    var onCancelExport: (() -> Void)?
     let onExportTapped: () -> Void
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
@@ -105,8 +103,11 @@ struct ExportTabView: View {
             }
             .scrollIndicators(.hidden)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                floatingExportBar
-                    .zIndex(1)
+                if !isExporting {
+                    floatingExportBar
+                        .zIndex(1)
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .onChange(of: exportStatusMessage) { oldValue, newValue in
@@ -1011,15 +1012,7 @@ struct ExportTabView: View {
 
     private var floatingExportBar: some View {
         VStack(spacing: Spacing.s2) {
-            if isExporting {
-                exportProgressPanel
-                    .transition(.opacity)
-
-                Divider()
-                    .overlay(Color.borderSubtle)
-            }
-
-            if !purchaseManager.isUnlocked && canExport && !isExporting {
+            if !purchaseManager.isUnlocked && canExport {
                 let remaining = purchaseManager.freeExportsRemaining
                 Text(remaining == 1
                      ? "1 free export remaining"
@@ -1067,99 +1060,6 @@ struct ExportTabView: View {
         )
     }
 
-    private var exportProgressPanel: some View {
-        let sizeEstimate = statusExportSizeEstimate
-        let sizeSummary = exportSizeSummary(for: sizeEstimate)
-        let sizeAccessibilitySummary = exportSizeAccessibilitySummary(for: sizeEstimate)
-        let outputSummary = exportOutputSummary
-
-        return VStack(alignment: .leading, spacing: Spacing.s2) {
-            HStack(alignment: .firstTextBaseline, spacing: Spacing.s2) {
-                Text(exportStatusMessage.isEmpty ? "Preparing export…" : exportStatusMessage)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(usesAccessibilityLayout ? nil : 2)
-                    .truncationMode(.middle)
-                    .accessibilityIdentifier(AccessibilityID.Export.statusMessage)
-
-                Spacer(minLength: Spacing.s2)
-
-                Text("\(exportProgressPercentage)%")
-                    .font(.caption2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(Color.accent)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.accentSubtle))
-                    .accessibilityHidden(true)
-            }
-
-            ProgressView(value: min(max(exportProgress, 0), 1))
-                .progressViewStyle(.linear)
-                .tint(Color.accent)
-                .accessibilityIdentifier(AccessibilityID.Export.exportProgress)
-                .accessibilityLabel("Export progress")
-                .accessibilityValue("\(exportProgressPercentage) percent complete")
-
-            LazyVGrid(
-                columns: Array(
-                    repeating: GridItem(.flexible(), alignment: .leading),
-                    count: usesAccessibilityLayout ? 1 : 2
-                ),
-                alignment: .leading,
-                spacing: 7
-            ) {
-                exportMetadataItem(
-                    icon: "calendar",
-                    text: exportDateRangeSummary,
-                    accessibilityLabel: "Export date range, \(exportDateRangeAccessibilitySummary)"
-                )
-                exportMetadataItem(
-                    icon: "externaldrive",
-                    text: sizeSummary,
-                    accessibilityLabel: sizeAccessibilitySummary
-                )
-                exportMetadataItem(
-                    icon: "doc.on.doc",
-                    text: outputSummary,
-                    accessibilityLabel: "Expected output, \(outputSummary)"
-                )
-                exportMetadataItem(
-                    icon: exportTargetIcon,
-                    text: exportTargetSummary,
-                    accessibilityLabel: "Export destination, \(exportTargetSummary)"
-                )
-            }
-        }
-        .padding(.horizontal, Spacing.s2)
-        .padding(.top, Spacing.s2)
-    }
-
-    private func exportMetadataItem(
-        icon: String,
-        text: String,
-        accessibilityLabel: String
-    ) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.accent)
-                .frame(width: 14)
-                .accessibilityHidden(true)
-
-            Text(text)
-                .font(.caption2)
-                .foregroundStyle(Color.textSecondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var exportProgressPercentage: Int {
-        Int((min(max(exportProgress, 0), 1) * 100).rounded())
-    }
-
     private var exportDateCount: Int {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: min(startDate, endDate))
@@ -1175,36 +1075,6 @@ struct ExportTabView: View {
             to: max(startDate, endDate),
             calendar: calendar
         )
-    }
-
-    private var exportDateRangeSummary: String {
-        let calendar = Calendar.current
-        let start = min(startDate, endDate)
-        let end = max(startDate, endDate)
-        let startComponents = calendar.dateComponents([.year, .month], from: start)
-        let endComponents = calendar.dateComponents([.year, .month], from: end)
-        let dayLabel = exportDateCount == 1 ? "1 day" : "\(exportDateCount) days"
-
-        if exportDateCount == 1 {
-            return "\(start.formatted(.dateTime.month(.abbreviated).day())) · \(dayLabel)"
-        }
-        if startComponents.year == endComponents.year,
-           startComponents.month == endComponents.month {
-            return "\(start.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.day())) · \(dayLabel)"
-        }
-        if startComponents.year == endComponents.year {
-            return "\(start.formatted(.dateTime.month(.abbreviated).day()))–\(end.formatted(.dateTime.month(.abbreviated).day())) · \(dayLabel)"
-        }
-        return "\(start.formatted(.dateTime.year()))–\(end.formatted(.dateTime.year())) · \(dayLabel)"
-    }
-
-    private var exportDateRangeAccessibilitySummary: String {
-        let start = min(startDate, endDate).formatted(date: .long, time: .omitted)
-        let end = max(startDate, endDate).formatted(date: .long, time: .omitted)
-        if exportDateCount == 1 {
-            return "\(start), 1 day"
-        }
-        return "\(start) through \(end), \(exportDateCount) days"
     }
 
     private var exportSizeEstimateConfiguration: ExportSizeEstimateConfiguration {
@@ -1273,83 +1143,18 @@ struct ExportTabView: View {
         )
     }
 
-    private var exportOutputSummary: String {
-        let formatCount = advancedSettings.exportFormats.count
-        let formatLabel = formatCount == 1 ? "1 format" : "\(formatCount) formats"
-
-        if exportTargetSelection == .apiEndpoint {
-            return exportDateCount == 1 ? "1 JSON record" : "\(exportDateCount) JSON records"
-        }
-        if advancedSettings.dailyNotesOnlyModeEnabled {
-            return exportDateCount == 1 ? "1 note update" : "\(exportDateCount) note updates"
-        }
-        if advancedSettings.archiveModeEnabled {
-            return "1 ZIP · \(formatLabel)"
-        }
-        if advancedSettings.summaryOnlyModeEnabled {
-            let fileLabel = projectedRollupFileCount == 1
-                ? "1 summary"
-                : "\(projectedRollupFileCount) summaries"
-            return "\(fileLabel) · \(projectedRollupSourceDateCount) source days"
-        }
-
-        let baseFileCount = exportDateCount * formatCount + projectedRollupFileCount
-        let variableSuffix = advancedSettings.writesIndividualEntryFiles ? "+" : ""
-        if advancedSettings.dailyNoteInjection.enabled {
-            return "\(baseFileCount)\(variableSuffix) files + notes"
-        }
-        return "\(baseFileCount)\(variableSuffix) files · \(formatLabel)"
-    }
-
-    private var exportTargetIcon: String {
-        switch exportTargetSelection {
-        case .localIPhoneFolder: return "folder"
-        case .connectedMac: return "desktopcomputer"
-        case .apiEndpoint: return "network"
-        }
-    }
-
-    private var exportTargetSummary: String {
-        switch exportTargetSelection {
-        case .localIPhoneFolder:
-            return vaultManager.hasVaultSelection ? vaultManager.vaultName : "iPhone folder"
-        case .connectedMac:
-            return syncService.macDestinationStatus?.destinationDisplayName
-                ?? syncService.connectedPeerName
-                ?? "Connected Mac"
-        case .apiEndpoint:
-            return apiExportSettings.displayName
-        }
-    }
-
     @ViewBuilder
     private var floatingBarButtons: some View {
-        if !isExporting {
-            previewPillButton
-                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-        }
-
+        previewPillButton
         pearlExportButton
-
-        if isExporting {
-            pearlStopButton
-                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
-        }
     }
 
     private var pearlExportButton: some View {
         Button(action: handleExportButtonTapped) {
             HStack(spacing: Spacing.s2) {
-                if isExporting {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color.bgPrimary))
-                        .scaleEffect(0.7)
-                        .frame(width: 13, height: 13)
-                } else {
-                    Image(systemName: "arrow.up")
-                        .font(.footnote.weight(.semibold))
-                }
-                Text(LocalizedStringKey(isExporting ? "Exporting…" : "Export Data"))
+                Image(systemName: "arrow.up")
+                    .font(.footnote.weight(.semibold))
+                Text("Export Data")
                     .font(.callout.weight(.semibold))
             }
             .foregroundStyle(Color.bgPrimary)
@@ -1365,12 +1170,10 @@ struct ExportTabView: View {
                     .strokeBorder(Color.textPrimary.opacity(0.08), lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .opacity(isExporting ? 0.45 : 1)
         }
         .buttonStyle(.plain)
-        .disabled(isExporting)
         .accessibilityIdentifier(AccessibilityID.Export.exportButton)
-        .accessibilityLabel(isExporting ? "Exporting" : "Export Health Data")
+        .accessibilityLabel("Export Health Data")
         .accessibilityHint(canExport
             ? "Exports the selected health data"
             : "Opens the setup step required before exporting")
@@ -1528,31 +1331,6 @@ struct ExportTabView: View {
         case .apiEndpoint:
             return .apiEndpoint
         }
-    }
-
-    private var pearlStopButton: some View {
-        Button {
-            onCancelExport?()
-        } label: {
-            HStack(spacing: Spacing.s2) {
-                Image(systemName: "stop.fill")
-                    .font(.footnote.weight(.semibold))
-                Text("Stop")
-                    .font(.callout.weight(.semibold))
-            }
-            .foregroundStyle(Color.white)
-            .padding(.horizontal, Spacing.s4)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
-                    .fill(Color.error)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
-            .shadow(color: Color.error.opacity(0.18), radius: 10, x: 0, y: 4)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(AccessibilityID.Export.cancelExportButton)
-        .accessibilityLabel("Stop export")
     }
 
     // MARK: - Reset
