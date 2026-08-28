@@ -300,6 +300,16 @@ Focused commands:
   -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.directcli.DirectCliScreenTest
 ```
 
+The scheduled-export notification cancellation tests are manual, host-driven QA and are skipped by
+ordinary instrumentation runs. They require a slow endpoint exposed through `adb reverse`, a real
+notification-action tap, and (for profile cancellation) Health Connect background-read permission.
+Enable them only while driving that setup explicitly:
+
+```bash
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.scheduledExportCancellationQa=true
+```
+
 The opt-in Direct CLI network E2E drives the real **Settings → Direct CLI** UI, foreground service,
 Android Keystore trust, Rust pairing/authenticated transport, v2 negotiation, the foreground
 notification and its Disconnect action, status, forget, and code-based re-pair. It deliberately

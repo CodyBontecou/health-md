@@ -21,6 +21,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -37,6 +39,14 @@ import org.junit.runner.RunWith
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class ScheduledProfileCancelActionRuntimeTest {
+
+    @Before
+    fun requireInteractiveQaDriver() {
+        assumeTrue(
+            "Scheduled profile cancellation QA requires the opt-in host driver.",
+            InstrumentationRegistry.getArguments().getString(ARG_ENABLED) == "true",
+        )
+    }
 
     @Test
     fun notificationCancelStopsOnlyCurrentProfileAttemptAndKeepsScheduleEnabled() {
@@ -222,6 +232,7 @@ class ScheduledProfileCancelActionRuntimeTest {
 
     companion object {
         private const val TAG = "HealthMdCancelQA"
+        private const val ARG_ENABLED = "scheduledExportCancellationQa"
         private const val QA_ENDPOINT_URL = "http://127.0.0.1:8931/healthmd-qa"
         private const val PROFILE_NAME = "QA Cancel Profile"
         private const val FIRE_DELAY_MILLIS = 70_000L

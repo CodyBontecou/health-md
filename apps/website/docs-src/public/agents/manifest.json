@@ -83,8 +83,8 @@
       "manifest_version": 1,
       "path": "/docs/reference/source-manifest.json",
       "media_type": "application/json",
-      "bytes": 80287,
-      "sha256": "31ce3ba5a73154a8339de19c8376bea3965e127938ad12f0cfd1cfafa368e421"
+      "bytes": 80288,
+      "sha256": "3653e3e30a579dc7283f324da489ddcab7e6e87008be427b501b8f02cd99e8f7"
     }
   ]
 }
