@@ -69,5 +69,6 @@
   does not store users' health data for later queries. The hosted experiment had no production
   endpoint or production OAuth client and accepted no user data, so no server corpus migration is required.
 
-Physical-iPhone release QA and provisioning the protected external signing/publishing identities
-remain before the first public release.
+Windows artifacts publish Authenticode-unsigned until a signing identity is qualified in
+`release-identities.json`; verify Windows downloads against the Sigstore-signed checksum manifest
+until then. The mobile compatibility ledger records the qualified iPhone and Android release pair.

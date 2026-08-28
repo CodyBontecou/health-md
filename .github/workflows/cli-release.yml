@@ -162,6 +162,7 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       VERSION: ${{ needs.identity.outputs.version }}
       PLAN: ${{ needs.plan.outputs.val }}
@@ -976,6 +977,7 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       RELEASE_SHA: ${{ github.sha }}
     steps:
@@ -1012,6 +1014,7 @@ jobs:
       contents: read
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       RELEASE_SHA: ${{ github.sha }}
     steps:
@@ -1067,6 +1070,7 @@ jobs:
       contents: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       TAG: ${{ needs.identity.outputs.tag }}
       RELEASE_SHA: ${{ github.sha }}
       VERSION: ${{ needs.identity.outputs.version }}
