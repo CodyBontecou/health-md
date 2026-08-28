@@ -243,10 +243,10 @@ jobs:
           curl --proto '=https' --tlsv1.2 -LsSf \
             https://github.com/axodotdev/cargo-dist/releases/download/v0.31.0/cargo-dist-installer.sh \
             -o "$installer"
-          if command -v sha256sum >/dev/null 2>&1; then
-            checksum=(sha256sum)
-          else
+          if command -v shasum >/dev/null 2>&1; then
             checksum=(shasum -a 256)
+          else
+            checksum=(sha256sum)
           fi
           echo 'e79d87e418b9d2cbe992d014985457c28a5a7c553add3da4ed1047e161c928f4  '"$installer" | "${checksum[@]}" --check
           sh "$installer"
