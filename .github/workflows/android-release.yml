@@ -108,6 +108,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # actions/checkout fetches the tagged commit into refs/tags/<name>
+          # ("+<sha>:refs/tags/<name>"), which flattens an annotated tag to a
+          # commit-shaped ref in the runner checkout. Re-fetch the published
+          # tag object from origin so the guards below verify the real tag.
+          git fetch --force --no-tags origin \
+            "+refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
           version="${GITHUB_REF_NAME#android/v}"
           version_name="$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
           version_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)"
