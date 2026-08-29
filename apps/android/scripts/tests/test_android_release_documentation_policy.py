@@ -7,7 +7,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
 ANDROID = ROOT / "apps/android"
-DOCS = sorted(ANDROID.rglob("*.md")) + [
+# Vendored third-party gems (vendor/bundle) are dependencies, not release
+# documentation; their READMEs legitimately describe fastlane mutation commands.
+DOCS = sorted(
+    path
+    for path in ANDROID.rglob("*.md")
+    if ANDROID / "vendor" not in path.parents
+) + [
     ROOT / ".github/workflows/README.md",
     ROOT / "docs/migration/cutover-audit.md",
 ]
