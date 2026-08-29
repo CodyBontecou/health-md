@@ -126,7 +126,7 @@ final class OnboardingJourneyUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(
-            app.staticTexts["Cloud folders stay selected"].waitForExistence(timeout: 8),
+            app.staticTexts["Exports you can stop"].waitForExistence(timeout: 8),
             "Returning users should still receive the current release notes for an unseen app version."
         )
     }
