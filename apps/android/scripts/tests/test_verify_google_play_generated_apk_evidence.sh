@@ -24,8 +24,8 @@ wear_sha=$(shasum -a 256 "$wear_source" | awk '{print $1}')
 jq -n --arg signer "$signer" --arg phone "$phone_sha" --arg wear "$wear_sha" '{
   schemaVersion:1,capturedAtUtc:"2026-08-13T00:00:00Z",package:"com.healthmd.android",
   expectedPlayAppSigningCertSha256:$signer,
-  phone:{versionCode:29,versionName:"1.7.1",apkSha256:$phone,certSha256:$signer,downloadId:"phone-id"},
-  wear:{versionCode:1000029,versionName:"1.7.1",apkSha256:$wear,certSha256:$signer,downloadId:"wear-id"}
+  phone:{versionCode:29,versionName:"1.8.0",apkSha256:$phone,certSha256:$signer,downloadId:"phone-id"},
+  wear:{versionCode:1000029,versionName:"1.8.0",apkSha256:$wear,certSha256:$signer,downloadId:"wear-id"}
 }' >"$fixture/play-app-signing.json"
 checksums() {
   (cd "$fixture" && shasum -a 256 \
@@ -34,7 +34,7 @@ checksums() {
 }
 checksums
 EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
-  EXPECTED_VERSION_NAME=1.7.1 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$signer" \
+  EXPECTED_VERSION_NAME=1.8.0 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$signer" \
   "$verifier" "$fixture/play-app-signing.json" >/dev/null
 
 expect_failure() {
@@ -44,7 +44,7 @@ expect_failure() {
   "$@"
   checksums
   if EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
-    EXPECTED_VERSION_NAME=1.7.1 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$signer" \
+    EXPECTED_VERSION_NAME=1.8.0 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$signer" \
     "$verifier" "$fixture/play-app-signing.json" >"$tmp/out" 2>"$tmp/err"; then
     echo "negative generated-APK fixture unexpectedly passed: $name" >&2; exit 1
   fi
@@ -65,7 +65,7 @@ expect_failure wrong-inventory 'wear raw inventory lacks authorized signing-key 
 expect_failure wrong-download 'wear receipt downloadId absent' wrong_download
 expect_failure wrong-apk-class 'wear receipt downloadId absent' wrong_apk_class
 if EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
-  EXPECTED_VERSION_NAME=1.7.1 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$(printf 'f%.0s' {1..64})" \
+  EXPECTED_VERSION_NAME=1.8.0 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$(printf 'f%.0s' {1..64})" \
   "$verifier" "$tmp/pristine/play-app-signing.json" >"$tmp/out" 2>"$tmp/err"; then
   echo 'wrong independently supplied signer unexpectedly passed' >&2; exit 1
 fi

@@ -20,7 +20,7 @@ def verify_fixture(*args, **kwargs):
     if len(args) < 5:
         kwargs.setdefault("expected_wear_version_code", "1000029")
     if len(args) < 6:
-        kwargs.setdefault("expected_version_name", "1.7.1")
+        kwargs.setdefault("expected_version_name", "1.8.0")
     kwargs.setdefault("expected_reviewer", "release-reviewer")
     kwargs.setdefault("expected_review_ticket", "https://example.invalid/review/123")
     return _raw_verify(*args, **kwargs)
@@ -48,7 +48,7 @@ class WearScreenshotEvidencePolicyTest(unittest.TestCase):
             directory.mkdir(parents=True)
             receipt = (
                 f"captured_utc=2026-08-13T00:00:00Z\nkind={kind}\nwatch_serial=watch\n"
-                f"version_code=1000029\nversion_name=1.7.1\nwear_base_apk_sha256={self.apk}\n"
+                f"version_code=1000029\nversion_name=1.8.0\nwear_base_apk_sha256={self.apk}\n"
                 f"play_app_signing_cert_sha256={self.signer}\n"
                 f"image_sha256={hashlib.sha256(image.read_bytes()).hexdigest()}\n"
                 "exact_release_ui_confirmed=yes\nno_production_health_values_confirmed=yes\n"
@@ -59,7 +59,7 @@ class WearScreenshotEvidencePolicyTest(unittest.TestCase):
                 f"Signer #1 certificate SHA-256 digest: {self.signer}\n"
             )
             (directory / "package.txt").write_text(
-                "versionCode=1000029 minSdk=30 targetSdk=35\nversionName=1.7.1\n"
+                "versionCode=1000029 minSdk=30 targetSdk=35\nversionName=1.8.0\n"
             )
             sums = "".join(
                 f"{hashlib.sha256((directory / name).read_bytes()).hexdigest()}  {name}\n"
@@ -83,7 +83,7 @@ class WearScreenshotEvidencePolicyTest(unittest.TestCase):
                     self.apk,
                     self.signer,
                     "1000029",
-                    "1.7.1",
+                    "1.8.0",
                 )
 
     def test_capture_checksum_command_emits_verifier_compatible_basenames(self) -> None:

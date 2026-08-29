@@ -58,7 +58,7 @@ grep -q 'EXPECTED_VERSION_NAME' "$verifier" || fail 'retained APK verifier versi
 for stale_default in \
   '${EXPECTED_PHONE_VERSION_CODE:-29}' \
   '${EXPECTED_WEAR_VERSION_CODE:-1000029}' \
-  '${EXPECTED_VERSION_NAME:-1.7.1}'; do
+  '${EXPECTED_VERSION_NAME:-1.8.0}'; do
   if grep -Fq "$stale_default" "$verifier"; then
     fail "retained APK verifier has stale release default: $stale_default"
   fi

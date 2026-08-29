@@ -8,7 +8,7 @@ app=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 tile=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 jq -n --arg sha "$sha" --arg app "$app" --arg tile "$tile" '{
   schemaVersion:1,repository:"owner/repo",workflow:".github/workflows/android-promote-production.yml",
-  runId:123,runAttempt:1,evidenceRunId:88,evidenceRunAttempt:3,releaseSha:$sha,versionName:"1.7.1",
+  runId:123,runAttempt:1,evidenceRunId:88,evidenceRunAttempt:3,releaseSha:$sha,versionName:"1.8.0",
   phoneVersionCode:29,wearVersionCode:1000029,sourceTracks:["qa","wear:qa"],
   destinationTracks:["production","wear:production"],wearAppScreenshotSha256:$app,
   wearTileScreenshotSha256:$tile,promotionPrepared:true,preparedAtUtc:"2026-08-14T00:00:00Z"
@@ -30,13 +30,13 @@ printf '{"images":[{"sha256":"%s"},{"sha256":"%s"}]}\n' "$app" "$tile" >"$root/g
 jq -n --arg sha "$sha" --arg app "$app" --arg tile "$tile" '{
   schemaVersion:1,repository:"owner/repo",workflow:".github/workflows/android-promote-production-recover.yml",
   recoveryRunId:456,recoveryRunAttempt:1,originalPromotionRunId:123,originalPromotionRunAttempt:1,
-  evidenceRunId:88,evidenceRunAttempt:3,releaseSha:$sha,versionName:"1.7.1",
+  evidenceRunId:88,evidenceRunAttempt:3,releaseSha:$sha,versionName:"1.8.0",
   phoneVersionCode:29,wearVersionCode:1000029,wearAppScreenshotSha256:$app,wearTileScreenshotSha256:$tile,
   originalPairedEditStepSucceeded:true,currentProductionPairVerified:true,currentScreenshotsVerified:true,
   recoveryOnly:true,recoveredAtUtc:"2026-08-14T01:00:00Z"
 }' >"$root/receipt.json"
 seal(){ (cd "$root" && find . -maxdepth 1 -type f ! -name SHA256SUMS -print | sed 's#^./##' | LC_ALL=C sort | while IFS= read -r file; do sha256sum "$file"; done >SHA256SUMS); }
-verify(){ EXPECTED_RELEASE_SHA="$sha" EXPECTED_VERSION_NAME=1.7.1 EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 EXPECTED_WEAR_APP_SCREENSHOT_SHA256="$app" EXPECTED_WEAR_TILE_SCREENSHOT_SHA256="$tile" ./scripts/verify-android-production-promotion-recovery-evidence.sh "$root" >/dev/null; }
+verify(){ EXPECTED_RELEASE_SHA="$sha" EXPECTED_VERSION_NAME=1.8.0 EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 EXPECTED_WEAR_APP_SCREENSHOT_SHA256="$app" EXPECTED_WEAR_TILE_SCREENSHOT_SHA256="$tile" ./scripts/verify-android-production-promotion-recovery-evidence.sh "$root" >/dev/null; }
 seal; verify; cp -R "$root" "$tmp/good"
 jq '.originalPromotionRunAttempt=2' "$root/receipt.json" >"$tmp/receipt"; mv "$tmp/receipt" "$root/receipt.json"; seal
 if verify 2>/dev/null; then echo 'accepted recovery receipt for a different original run attempt' >&2; exit 1; fi
