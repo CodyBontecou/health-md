@@ -7,33 +7,38 @@ import java.io.File
 class BillingLifecycleContractTest {
 
     @Test
-    fun featureViewModelsCannotCloseTheApplicationScopedBillingClient() {
+    fun applicationScopedClientUsesBillingManagedReconnection() {
         val module = readSource("di/BillingModule.kt")
         val contract = readSource("domain/repository/BillingRepository.kt")
         val implementation = readSource("data/billing/BillingRepositoryImpl.kt")
         val paywallViewModel = readSource("presentation/paywall/PaywallViewModel.kt")
         val scheduleViewModel = readSource("presentation/schedule/ScheduleViewModel.kt")
+        val disconnectedCallback = implementation
+            .substringAfter("override fun onBillingServiceDisconnected()")
+            .substringBefore("        })")
 
         assertThat(module).contains("@Singleton")
         assertThat(contract).doesNotContain("fun endConnection(")
         assertThat(implementation).doesNotContain("billingClient.endConnection()")
         assertThat(implementation).contains(".enableAutoServiceReconnection()")
+        assertThat(implementation).doesNotContain("if (!billingClient.isReady)")
+        assertThat(disconnectedCallback).doesNotContain("startConnection()")
+        assertThat(implementation).contains("_productDetails.value = null")
         assertThat(paywallViewModel).doesNotContain("billingRepository.endConnection()")
         assertThat(scheduleViewModel).doesNotContain("billingRepository.endConnection()")
     }
 
     @Test
-    fun playBillingDependencyMeetsGooglePlayMinimum() {
+    fun playBillingDependencyIsAtLeastVersionEight() {
         val catalog = File(androidProjectRoot(), "gradle/libs.versions.toml").readText()
-        val version = Regex("""(?m)^billing = \"(\d+)\.(\d+)\.(\d+)\"$""")
+        val version = Regex("""(?m)^billing = "(\d+)\.(\d+)\.(\d+)"$""")
             .find(catalog)
             ?.groupValues
             ?.drop(1)
             ?.map(String::toInt)
 
         assertThat(version).isNotNull()
-        val (major, minor, patch) = requireNotNull(version)
-        assertThat(major > 8 || (major == 8 && (minor > 0 || (minor == 0 && patch >= 0)))).isTrue()
+        assertThat(requireNotNull(version).first()).isAtLeast(8)
     }
 
     private fun readSource(relativePath: String): String =
