@@ -217,6 +217,22 @@ assert value.get("id"), value
 PY
 }
 
+# Ticket propagation for code nested inside an accepted submission lags the acceptance by
+# seconds to minutes; stapler reports a missing ticket (error 73) until it has propagated.
+staple_with_retry() {
+  local item="$1" attempt
+  for attempt in $(seq 1 10); do
+    if xcrun stapler staple "$item"; then
+      xcrun stapler validate "$item"
+      return 0
+    fi
+    echo "staple attempt ${attempt} for $(basename "$item") failed; waiting for ticket propagation" >&2
+    sleep 45
+  done
+  echo "staple for $(basename "$item") never succeeded" >&2
+  return 1
+}
+
 printf '%s' "$APPLE_NOTARY_KEY_P8_BASE64" | base64 --decode > "$notary_key"
 chmod 600 "$notary_key"
 
@@ -229,10 +245,8 @@ codesign --verify --strict --verbose=2 "$dmg"
 
 # First submission publishes the notarization tickets for the wrapped executables.
 submit_and_wait "$dmg"
-xcrun stapler staple "$healthmd"
-xcrun stapler staple "$mcp"
-xcrun stapler validate "$healthmd"
-xcrun stapler validate "$mcp"
+staple_with_retry "$healthmd"
+staple_with_retry "$mcp"
 
 # Rebuild the DMG from the stapled executables and notarize the final installation artifact.
 rm -f "$dmg"
@@ -241,8 +255,7 @@ COPYFILE_DISABLE=1 hdiutil create \
 codesign --force --timestamp --sign "$signing_identity" "$dmg"
 codesign --verify --strict --verbose=2 "$dmg"
 submit_and_wait "$dmg"
-xcrun stapler staple "$dmg"
-xcrun stapler validate "$dmg"
+staple_with_retry "$dmg"
 
 # Repack the tar archive from the same stapled executables the DMG carries.
 rm -f "$archive"
