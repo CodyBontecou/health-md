@@ -121,8 +121,10 @@ SHA-256 with its exact manifest row as shown in the README. On Windows, also req
 and match `SignerCertificate.Subject` to the `qualified` subject in the checksum-covered
 `release-identities.json`; never accept an undocumented publisher.
 
-Native post-extraction gates independently require `codesign` plus Gatekeeper assessment on both
-macOS binaries, `stapler validate` plus Gatekeeper assessment on each DMG, and — only while the
+Native post-extraction gates independently require strict `codesign` verification of both macOS
+binaries, `stapler validate` plus Gatekeeper assessment on each DMG (Apple supports neither
+stapling a ticket to, nor Gatekeeper assessment of, a bare executable — the binaries' notarization
+evidence is the accepted, stapled DMG carrying byte-identical copies), and — only while the
 ledger's Windows identity is `qualified` — a valid expected Authenticode signer plus timestamp on
 both Windows executables and the PowerShell installer. A checksum, signing, notarization,
 stapling, credential-upgrade, or post-extraction failure leaves the GitHub Release in draft state.

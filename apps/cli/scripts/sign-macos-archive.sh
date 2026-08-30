@@ -194,70 +194,38 @@ security delete-generic-password \
   -s com.codybontecou.obsidianhealth.direct-cli-trust \
   "$keychain" >/dev/null
 
-# Apple's documented custom workflow for staple-able command-line tools submits the
-# executables inside a zip archive, waits for acceptance, and staples the tickets onto the
-# unzipped binaries. Tickets are not retrievable for executables that were only submitted
-# inside a DMG (stapler reports a missing ticket indefinitely), so the binaries get their own
-# zip submission and the DMG is assembled afterwards from the stapled executables.
+# Notarize the DMG built from the signed executables. Apple publishes Gatekeeper coverage for
+# the wrapped executables through this acceptance, but it does not support stapling a ticket to
+# a standalone executable, so spctl's execute assessment is not run on the bare binaries: their
+# notarization evidence is the accepted DMG record plus the stapled DMG carrying byte-identical
+# copies of the same executables this tar archive ships.
 root_name="$(basename "$root")"
+rm -f "$archive"
+COPYFILE_DISABLE=1 tar -cJf "$archive" -C "$unpacked" "$root_name"
 
-submit_and_wait() {
-  xcrun notarytool submit "$1" \
-    --key "$notary_key" \
-    --key-id "$APPLE_NOTARY_KEY_ID" \
-    --issuer "$APPLE_NOTARY_ISSUER_ID" \
-    --wait --output-format json > "$work/notary-result.json"
-  python3 - "$work/notary-result.json" <<'PY'
-import json, sys
-with open(sys.argv[1], encoding="utf-8") as handle:
-    value = json.load(handle)
-assert value.get("status") == "Accepted", value
-assert value.get("id"), value
-PY
-}
-
-# Ticket propagation for code nested inside an accepted submission lags the acceptance by
-# seconds to minutes; stapler reports a missing ticket (error 73) until it has propagated.
-staple_with_retry() {
-  local item="$1" attempt
-  for attempt in $(seq 1 10); do
-    if xcrun stapler staple "$item"; then
-      xcrun stapler validate "$item"
-      return 0
-    fi
-    echo "staple attempt ${attempt} for $(basename "$item") failed; waiting for ticket propagation" >&2
-    sleep 45
-  done
-  echo "staple for $(basename "$item") never succeeded" >&2
-  return 1
-}
-
-printf '%s' "$APPLE_NOTARY_KEY_P8_BASE64" | base64 --decode > "$notary_key"
-chmod 600 "$notary_key"
-
-binaries_zip="$work/healthmd-cli-${TARGET}-binaries.zip"
-rm -f "$binaries_zip"
-( cd "$root" && zip -q -X "$binaries_zip" "$(basename "$healthmd")" "$(basename "$mcp")" )
-submit_and_wait "$binaries_zip"
-staple_with_retry "$healthmd"
-staple_with_retry "$mcp"
-
-# Assemble the DMG from the stapled executables, notarize it, and staple it.
 dmg="${archive%.tar.xz}.dmg"
 rm -f "$dmg"
 COPYFILE_DISABLE=1 hdiutil create \
   -quiet -format UDZO -fs HFS+ -volname "Health.md CLI" -srcfolder "$root" "$dmg"
 codesign --force --timestamp --sign "$signing_identity" "$dmg"
 codesign --verify --strict --verbose=2 "$dmg"
-submit_and_wait "$dmg"
-staple_with_retry "$dmg"
 
-# Repack the tar archive from the same stapled executables the DMG carries.
-rm -f "$archive"
-COPYFILE_DISABLE=1 tar -cJf "$archive" -C "$unpacked" "$root_name"
-
+printf '%s' "$APPLE_NOTARY_KEY_P8_BASE64" | base64 --decode > "$notary_key"
+chmod 600 "$notary_key"
+xcrun notarytool submit "$dmg" \
+  --key "$notary_key" \
+  --key-id "$APPLE_NOTARY_KEY_ID" \
+  --issuer "$APPLE_NOTARY_ISSUER_ID" \
+  --wait --output-format json > "$work/notary-result.json"
+python3 - "$work/notary-result.json" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = json.load(handle)
+assert value.get("status") == "Accepted", value
+assert value.get("id"), value
+PY
+xcrun stapler staple "$dmg"
+xcrun stapler validate "$dmg"
 spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
-spctl --assess --type execute --verbose=2 "$healthmd"
-spctl --assess --type execute --verbose=2 "$mcp"
 
 printf 'signed_archive=%s\nstapled_dmg=%s\n' "$archive" "$dmg"

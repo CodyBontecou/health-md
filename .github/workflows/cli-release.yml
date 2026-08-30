@@ -621,7 +621,9 @@ jobs:
             expected_identifier="$healthmd_identifier"
             [[ "$(basename "$executable")" == healthmd-mcp ]] && expected_identifier="$healthmd_mcp_identifier"
             test "$(sed -n 's/^Identifier=//p' <<<"$details")" = "$expected_identifier"
-            spctl --assess --type execute --verbose=2 "$executable"
+            # Apple does not support stapling a ticket to, or Gatekeeper assessment of, a bare
+            # executable; notarization evidence for these binaries is the accepted, stapled DMG
+            # carrying byte-identical copies.
           done
           dmg="$(find candidate -type f -name "healthmd-cli-${TARGET}.dmg" -print -quit)"
           test -n "$dmg"
