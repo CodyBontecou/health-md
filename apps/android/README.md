@@ -146,7 +146,7 @@ The free counter tracks export actions, not files: exporting Markdown + JSON + C
 - **Minimum Android:** 9.0 / API 28
 - **Compile SDK:** 36
 - **Health data:** AndroidX Health Connect Client 1.2.0-alpha02
-- **Purchases:** Google Play Billing 7
+- **Purchases:** Google Play Billing 8.3
 - **Automation:** WorkManager, boot recovery, launcher shortcuts, explicit broadcast intents
 - **Storage:** Storage Access Framework, DataStore Preferences, Room, private Direct CLI spools
 - **Dependency injection:** Hilt + KSP

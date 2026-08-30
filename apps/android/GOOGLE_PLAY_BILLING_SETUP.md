@@ -28,8 +28,9 @@ Google Play Billing Client
    - `startConnection()`: Idempotently connects the application-scoped billing client
 
 2. **BillingRepositoryImpl** (`data/billing/BillingRepositoryImpl.kt`)
-   - Concrete implementation using Google Play Billing Client v7.1+
+   - Concrete implementation using Google Play Billing Client v8.3+
    - Handles product queries, purchase flow, and acknowledgment
+   - Uses Billing-managed service reconnection with bounded transient-operation retries
    - Automatically acknowledges purchases (required for security)
 
 3. **PaywallViewModel** (`presentation/paywall/PaywallViewModel.kt`)
@@ -43,9 +44,13 @@ Google Play Billing Client
    - Error messaging support
 
 The repository and `BillingClient` are Hilt singletons with process lifetime. Screen
-ViewModels may call `startConnection()` but must never call `BillingClient.endConnection()`:
-Google marks a closed client as terminal, and closing it when onboarding or the schedule
-screen is removed would break purchases elsewhere until the app process restarted.
+ViewModels may call `startConnection()` for initial setup but must never call
+`BillingClient.endConnection()`: Google marks a closed client as terminal, and closing it
+when onboarding or the schedule screen is removed would break purchases elsewhere until the
+app process restarted. After initial setup, later `startConnection()` calls request one
+deduplicated product-and-purchase refresh rather than opening another manual connection. After
+a service disconnect, those normal Billing API calls trigger Billing 8 reconnection; the
+disconnect callback clears stale product details while preserving cached entitlement state.
 
 ## Setup Instructions
 
