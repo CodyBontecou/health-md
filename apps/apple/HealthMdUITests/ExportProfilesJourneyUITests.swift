@@ -4,7 +4,7 @@ import XCTest
 /// Covers: first-launch migration to the Default profile, the Settings→
 /// Export Profiles management surface (duplicate/rename/delete + last-profile
 /// guard), and per-profile schedules (enable toggle, cadence editor,
-/// projected-usage footer). Screenshots are written to /tmp/qa-shots for
+/// empty-schedule footer). Screenshots are written to /tmp/qa-shots for
 /// manual review.
 final class ExportProfilesJourneyUITests: XCTestCase {
     override func setUpWithError() throws {
@@ -155,7 +155,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
 
     // MARK: - Journey C: per-profile schedules
 
-    func testQA_ProfileSchedulesToggleCadenceAndUsageFooter() {
+    func testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter() {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
 
@@ -172,24 +172,29 @@ final class ExportProfilesJourneyUITests: XCTestCase {
 
         XCTAssertTrue(
             app.staticTexts["No profile schedules enabled."].waitForExistence(timeout: 5),
-            "usage footer should start empty"
+            "empty-state footer should appear when no profile schedules are enabled"
         )
         XCTAssertTrue(
             app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5),
             "each profile should have a schedule row"
         )
 
-        // Enable the Default profile's schedule.
+        // Enable the Default profile's schedule. The row should immediately
+        // reflect its seeded daily cadence and replace the empty-state footer.
         let toggle = app.switches["Schedule Default"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         toggle.tap()
         XCTAssertTrue(
             app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS 'about 30 export actions per month across 1 scheduled profile'")
+                NSPredicate(format: "label BEGINSWITH 'Daily at'")
             ).firstMatch.waitForExistence(timeout: 5),
-            "daily cadence should project 30 actions/month"
+            "enabled schedule should show its seeded daily cadence"
         )
-        snap("08-schedule-enabled-usage")
+        XCTAssertTrue(
+            app.staticTexts["No profile schedules enabled."].waitForNonExistence(timeout: 5),
+            "empty-state footer should disappear when a schedule is enabled"
+        )
+        snap("08-schedule-enabled-daily")
 
         // Open the cadence editor by tapping the row.
         app.staticTexts["Default"].firstMatch.tap()
@@ -213,13 +218,6 @@ final class ExportProfilesJourneyUITests: XCTestCase {
                 NSPredicate(format: "label CONTAINS 'Weekly on'")
             ).firstMatch.waitForExistence(timeout: 5),
             "row summary should reflect the weekly cadence"
-        )
-        // Weekly projects ceil(30/7) = 5 actions/month.
-        XCTAssertTrue(
-            app.staticTexts.matching(
-                NSPredicate(format: "label CONTAINS 'about 5 export actions per month'")
-            ).firstMatch.waitForExistence(timeout: 5),
-            "weekly cadence should project 5 actions/month"
         )
         snap("10-weekly-cadence-saved")
     }
