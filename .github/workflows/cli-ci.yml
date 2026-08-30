@@ -338,8 +338,10 @@ jobs:
           workspaces: |
             apps/cli -> target
             packages/healthmd-core-rust -> target
-      - name: Verify release version closure
-        run: python3 apps/cli/scripts/verify-release.py
+      - name: Verify release version closure and channel policy
+        run: |
+          python3 -m unittest apps/cli/scripts/test_verify_release.py
+          python3 apps/cli/scripts/verify-release.py
       - name: Build and execute packaged source archives
         run: |
           version="$(cargo metadata --manifest-path apps/cli/Cargo.toml --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"

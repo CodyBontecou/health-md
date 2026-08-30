@@ -27,11 +27,11 @@ reserved aliases, alternate data streams, symlinks, junctions, reparse points, a
 
 ## Mobile protocol compatibility
 
-| Mobile source | Protocol | Conservative source floor | Portable Rust behavior | Public status |
+| Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust behavior | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | selector 1 / v1 | iOS 3.0.3 at exact candidate SHA | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.0.3 at exact candidate SHA | V1 plus bounded MCP queries | Pending physical qualification |
-| Android | selector 2 / v2 | Android 1.5.4 (25) at exact candidate SHA | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus bounded MCP queries | Pending physical qualification |
+| Android | selector 2 / v2 | Android 1.8.1 (30) / Android 1.5.4 (25) | Status, native raw, files, resume, cancel | Pending physical qualification |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
 No public CLI/mobile pair is qualified yet. V3 is additive to v1 pairing and transport, not a

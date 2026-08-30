@@ -1162,7 +1162,7 @@ jobs:
           test "$latest" != "$TAG"
 
   publish-homebrew-formula:
-    name: Publish stable Homebrew formula
+    name: Publish Homebrew formula
     needs: [identity, plan, finalize-release]
     if: >-
       ${{ always() && needs.finalize-release.result == 'success' &&

@@ -12,10 +12,14 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+SEMVER_PRERELEASE_IDENTIFIER = (
+    r"(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+)
 TAG_RE = re.compile(
     r"^healthmd-cli/v(?P<version>"
     r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
-    r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+    rf"(?P<prerelease>-(?:{SEMVER_PRERELEASE_IDENTIFIER})"
+    rf"(?:\.(?:{SEMVER_PRERELEASE_IDENTIFIER}))*)?"
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
     r")$"
 )
@@ -37,7 +41,7 @@ PENDING_MOBILE_QUALIFICATION = "**Pending; no public CLI/mobile pair qualified y
 QUALIFIED_MOBILE_RE = re.compile(
     r"^\*\*Qualified:\*\* "
     r"mobile_build=[^;|]{1,128}; "
-    r"source_commit=[0-9a-f]{40}; "
+    r"source_commit=(?P<source_commit>[0-9a-f]{40}); "
     r"device_os=[^;|]{1,128}; "
     r"lan=pass; tailscale=pass; "
     r"evidence_sha256=[0-9a-f]{64}$"
@@ -84,14 +88,22 @@ def lock_versions(lockfile: Path) -> dict[str, str]:
     }
 
 
-def validate_mobile_qualification(path: Path, require_qualified: bool) -> None:
+def validate_mobile_qualification(
+    path: Path,
+    require_qualified: bool,
+    expected_source_commit: str | None = None,
+) -> None:
+    if require_qualified and expected_source_commit is None:
+        fail("stable mobile qualification requires the expected release candidate commit")
     rows: dict[str, str] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.startswith("|"):
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if len(cells) != 4 or cells[0] not in MOBILE_QUALIFICATION_LABELS:
+        if not cells or cells[0] not in MOBILE_QUALIFICATION_LABELS:
             continue
+        if len(cells) != 4:
+            fail(f"malformed mobile compatibility row: {cells[0]}")
         if cells[0] in rows:
             fail(f"duplicate mobile compatibility row: {cells[0]}")
         rows[cells[0]] = cells[3]
@@ -103,8 +115,14 @@ def validate_mobile_qualification(path: Path, require_qualified: bool) -> None:
             if require_qualified:
                 fail(f"mobile compatibility remains pending for {label}")
             continue
-        if QUALIFIED_MOBILE_RE.fullmatch(result) is None:
+        qualified = QUALIFIED_MOBILE_RE.fullmatch(result)
+        if qualified is None:
             fail(f"mobile compatibility result has an invalid qualified record for {label}")
+        if (
+            expected_source_commit is not None
+            and qualified.group("source_commit") != expected_source_commit
+        ):
+            fail(f"mobile compatibility source commit does not match release candidate for {label}")
 
 
 def main() -> int:
@@ -174,10 +192,6 @@ def main() -> int:
         if match is None:
             fail("tag must be exact healthmd-cli/v<Cargo-SemVer>")
         version = match.group("version")
-        validate_mobile_qualification(
-            root / "apps/cli/docs/mobile-compatibility.md",
-            require_qualified=True,
-        )
         if not arguments.sha or not arguments.main_sha:
             fail("--tag requires --sha and --main-sha")
         tag_sha = run("git", "rev-parse", f"refs/tags/{arguments.tag}^{{commit}}", cwd=root)
@@ -185,6 +199,14 @@ def main() -> int:
             fail(f"tag commit {tag_sha} does not equal workflow SHA {arguments.sha}")
         if arguments.main_sha != arguments.sha:
             fail(f"main commit {arguments.main_sha} does not equal tag SHA {arguments.sha}")
+        # Preview tags may publish while their exact mobile matrix remains explicitly pending.
+        # Stable tags still require every supported mobile row to carry retained physical evidence.
+        is_prerelease = match.group("prerelease") is not None
+        validate_mobile_qualification(
+            root / "apps/cli/docs/mobile-compatibility.md",
+            require_qualified=not is_prerelease,
+            expected_source_commit=arguments.sha,
+        )
         windows_identity = signing_identities.get("windows", {})
         # Windows Authenticode may be deferred: a pending ledger with no publisher subject is a
         # deliberate unsigned-release state (Windows archives ship Authenticode-unsigned with

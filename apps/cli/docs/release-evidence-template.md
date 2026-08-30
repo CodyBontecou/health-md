@@ -30,9 +30,11 @@ metadata. Do not attach command stdout that may contain health payloads.
 
 ## Exact mobile candidates
 
-- [`mobile-compatibility.md`](mobile-compatibility.md) has machine-checked qualified records for all three supported rows: pass/fail
-- Each ledger `evidence_sha256` matches this retained health-free evidence record: pass/fail
-- Exact qualified records are copied to the release notes without weakening or substituting marketing versions: pass/fail
+- Release channel: preview/stable
+- Stable: [`mobile-compatibility.md`](mobile-compatibility.md) has machine-checked qualified records for all three supported rows: pass/fail/N/A
+- Stable: each ledger `evidence_sha256` matches this retained health-free evidence record: pass/fail/N/A
+- Preview: pending rows remain exact and the release notes explicitly say unqualified preview: pass/fail/N/A
+- Exact qualified records, when present, are copied without weakening or substituting marketing versions: pass/fail/N/A
 
 | Source | App version | Build ID/commit | Device/OS | LAN | Tailscale | Result |
 |---|---|---|---|---|---|---|
@@ -88,7 +90,7 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 - `healthmd-mcp --help`: pass/fail
 - `healthmd setup codex --skip-pairing` idempotent isolated run: pass/fail
 - MCP initialize/tools/resources: pass/fail
-- Fixed tool count (`17`): pass/fail
+- Fixed tool count (`19`): pass/fail
 - Same-executable/Windows same-file helper path: pass/fail
 - `direct devices` or readiness result (code/count only):
 - UI resource and PNG dimensions/format: pass/fail

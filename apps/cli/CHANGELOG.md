@@ -8,8 +8,11 @@
   foreground paired iPhone can redial later one-shot CLI listeners without a manual disconnect.
   The CLI now answers heartbeat pings in every v1 receive path while preserving command deadlines.
 - Prepare the portable release against the latest shared iOS and Android source while preserving
-  the deployed protocol-v1, Android application-v2, and iPhone query-v3 contracts. Publication
-  remains blocked until fresh physical-device qualification is recorded for this candidate.
+  the deployed protocol-v1, Android application-v2, and iPhone query-v3 contracts. Publish this
+  explicitly unqualified preview through the checksummed GitHub release and Homebrew tap while
+  keeping stable publication blocked until fresh physical-device qualification is recorded.
+- Windows artifacts remain Authenticode-unsigned while the release identity ledger records pending
+  external certificate provisioning; verify them through the Sigstore-signed checksum closure.
 
 ## 0.1.0-alpha.1
 
@@ -82,4 +85,6 @@
 
 Windows artifacts publish Authenticode-unsigned until a signing identity is qualified in
 `release-identities.json`; verify Windows downloads against the Sigstore-signed checksum manifest
-until then. The mobile compatibility ledger records the qualified iPhone and Android release pair.
+until then. The mobile compatibility ledger is authoritative: explicitly unqualified previews may
+retain exact pending rows, while stable releases require the exact qualified iPhone and Android
+records.

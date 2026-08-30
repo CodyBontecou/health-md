@@ -3,10 +3,10 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.2`. Deployed iOS export protocol v1, Android application protocol
-> v2, and capability-gated iPhone query protocol v3 are implemented with automated Swift↔Rust and
-> Kotlin↔Rust compatibility gates.
-> Complete physical-device release QA is still required before the first public release.
+> **Status:** `0.1.0-alpha.2` public preview. Deployed iOS export protocol v1, Android
+> application protocol v2, and capability-gated iPhone query protocol v3 are implemented with
+> automated Swift↔Rust and Kotlin↔Rust compatibility gates. Complete physical-device release QA is
+> still required before the first qualified stable release.
 
 ## How it works
 
@@ -43,11 +43,11 @@ in-memory JSON validation is capped at 64 MiB.
 
 ## Mobile compatibility
 
-| Mobile source | Protocol | Conservative source floor | Portable Rust operations | Public status |
+| Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | selector 1 / v1 | iOS 3.0.3 from exact candidate SHA | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.0.3 from exact candidate SHA | V1 plus 19-tool local MCP/query | Pending physical qualification |
-| Android | selector 2 / v2 | Android 1.5.4 (`versionCode 25`) from exact candidate SHA | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | selector 1 / v1 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | selector 1 / v1 + query v3 | iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | V1 plus 19-tool local MCP/query | Pending physical qualification |
+| Android | selector 2 / v2 | Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Pending physical qualification |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
 No public CLI/mobile pair is qualified yet. V3 does not replace v1 pairing, transport, exports, or
@@ -57,27 +57,29 @@ build IDs because matching marketing versions or protocol numbers alone is insuf
 
 ## Installation
 
-Checksummed archives and direct installers become available when the first GitHub release is
-published. Homebrew formula publishing begins with the first stable (non-prerelease) release:
+The `0.1.0-alpha.2` workflow is configured to publish a checksummed, explicitly unqualified
+preview. After the exact GitHub prerelease and tap formula are public, install it with:
 
 ```bash
-# macOS or Linux with Homebrew/Linuxbrew, after the first stable release
 brew install CodyBontecou/tap/healthmd
-
-# Rust users on macOS, Linux, or Windows
-cargo install healthmd-cli --locked
+healthmd --version
 ```
 
+The formula will install both `healthmd` and its `healthmd-mcp` compatibility launcher from the
+same versioned release. This preview does not qualify a CLI/mobile pair; use the exact matching
+mobile build named by release evidence. The tap tracks preview releases until the first qualified
+stable release.
+
 PowerShell installer and checksummed `.zip`/`.tar.xz` archives for Windows, Linux, and macOS are
-attached to each release. Rust users can also install a published version from crates.io:
+attached to each release. After an exact version reaches crates.io, Rust users can install it with:
 
 ```bash
 cargo install healthmd-cli --locked
-# Or use the matching prebuilt GitHub archive after installing cargo-binstall:
+# Or, after installing cargo-binstall:
 cargo binstall healthmd-cli
 ```
 
-Until the first release, build from the monorepo source:
+For unreleased development source, clone the monorepo and install from the CLI workspace:
 
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git

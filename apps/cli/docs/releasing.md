@@ -27,12 +27,19 @@ manifests have been accepted. crates.io publication is a separate staged process
    release as a draft. Pull requests continue to build and smoke unsigned candidates without access
    to signing credentials.
 
-Homebrew publishing is intentionally disabled for prereleases by dist. Stable release formulae are
-installed with:
+The project tap is explicitly preview-capable before the first qualified stable release, so dist
+publishes SemVer prerelease formulae as well as stable formulae. Preview tags may retain pending
+mobile qualification only when release notes and the compatibility ledger identify them as
+unqualified previews; stable tags still require complete retained physical evidence. Install the
+current formula with:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
 ```
+
+Before publishing the first stable release, decide whether the tap should continue tracking
+prereleases. Set `publish-prereleases = false` first if stable users must not receive later preview
+upgrades.
 
 ## Signing, notarization, and checksum identity
 
@@ -156,11 +163,11 @@ cargo test --workspace --all-features --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 rustup run 1.85.0 cargo check -p healthmd-cli --all-targets \
   --no-default-features --features streamable-http --locked
+python3 -m unittest scripts/test_verify_release.py
 python3 scripts/verify-release.py
 version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[] | select(.name == "healthmd-cli") | .version')"
 python3 scripts/smoke-crate-packages.py --version "$version"
 cargo deny --manifest-path Cargo.toml --config ../../deny.toml check
-dist generate --check
 dist plan --allow-dirty
 dist build --allow-dirty --artifacts=local --target="$(rustc -vV | awk '/host:/ {print $2}')"
 ```
@@ -172,19 +179,23 @@ transport is source-build-only and is never added to release archives implicitly
 synchronized remote health-data corpus command.
 
 Review generated artifacts and checksums under `apps/cli/target/distrib`, and review the
-[mobile compatibility ledger](mobile-compatibility.md). The first public release remains blocked
-until every supported row contains the exact machine-checked qualified record and evidence digest
-documented there. `verify-release.py` rejects a `healthmd-cli/v<version>` tag while any row is
-pending or malformed. The tag must point to the exact current `main` commit. It triggers
+[mobile compatibility ledger](mobile-compatibility.md). The first qualified stable release remains
+blocked until every supported row contains the exact machine-checked qualified record and evidence
+digest documented there. `verify-release.py` allows
+an explicitly labeled SemVer prerelease tag to retain pending rows, rejects malformed rows for every
+channel, and rejects a stable `healthmd-cli/v<version>` tag while any required row is pending. The
+tag must point to the exact current `main` commit. It triggers
 `.github/workflows/cli-release.yml`, which creates a draft, reruns CLI/core/Apple/Android gates at
 the tag SHA, executes every packaged binary on its native runner, validates installers and
 checksums, builds SBOMs, and then waits for approval on the protected `cli-release` environment.
 Only that final job changes the draft to public, with `make_latest=false` so Apple remains the
 repository-wide latest release. Never publish an artifact built from uncommitted source.
 
-The root workflow is a path-adjusted version of cargo-dist's generated workflow. After changing
-`dist-workspace.toml`, generate into a temporary checkout and port relevant changes into
-`.github/workflows/cli-release.yml`; do not replace its monorepo working directories and tag filter.
+The root workflow is a path-adjusted version of cargo-dist's generated workflow, so `dist generate
+--check` is not a release gate: it reports the intentionally absent generated root `release.yml`.
+After changing `dist-workspace.toml`, run `dist plan --allow-dirty`, then generate in a temporary
+checkout and port relevant changes into `.github/workflows/cli-release.yml`; do not replace its
+monorepo working directories, custom qualification jobs, signing closure, or tag filter.
 
 ## crates.io staging
 

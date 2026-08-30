@@ -32,8 +32,9 @@ rustup run 1.85.0 cargo check --workspace --locked
 rustup run 1.85.0 cargo check --workspace --all-features --locked
 rustup run 1.85.0 cargo check -p healthmd-cli --all-targets \
   --no-default-features --features streamable-http --locked
-dist generate --check
-dist plan
+python3 -m unittest scripts/test_verify_release.py
+python3 scripts/verify-release.py
+dist plan --allow-dirty
 ```
 
 Do not run either workspace's Cargo command from the other directory or combine their lockfiles. CI must pass on macOS, Ubuntu, and Windows. The Android repository must also pass

@@ -6,15 +6,16 @@ release matrix.
 
 ## `healthmd-cli` 0.1.0-alpha.2 candidate
 
-| Mobile source and feature | Protocol | Conservative source floor | Public qualification |
+| Mobile source and feature | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Public qualification |
 |---|---|---|---|
-| iPhone status/raw/extract/generated files/resume/cancel | selector 1, application v1 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Pending; no public CLI/mobile pair qualified yet** |
-| iPhone portable typed MCP queries | selector 1, application v1 + query v3 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Pending; no public CLI/mobile pair qualified yet** |
-| Android status/provider-native raw/generated files/resume/cancel | selector 2, application v2 | Health.md Android 1.5.4 (`versionCode 25`) built from the exact CLI candidate SHA | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone status/raw/extract/generated files/resume/cancel | selector 1, application v1 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone portable typed MCP queries | selector 1, application v1 + query v3 | Health.md iOS 3.2.1 (build 202608300209) / iOS 3.0.3 | **Pending; no public CLI/mobile pair qualified yet** |
+| Android status/provider-native raw/generated files/resume/cancel | selector 2, application v2 | Health.md Android 1.8.1 (`versionCode 30`) / Android 1.5.4 (`versionCode 25`) | **Pending; no public CLI/mobile pair qualified yet** |
 | Android typed MCP queries | N/A | Not implemented | Unsupported |
 
-The floors above describe the current monorepo source that implements the contracts. They are not a
-claim that an App Store or Play build with the same marketing version contains the candidate code.
+The exact counterparts above are the mobile versions present at the CLI tag SHA. The lower floors
+identify source versions that implement the protocol, but are not qualification claims or proof
+that an App Store or Play build with the same marketing version contains the candidate code.
 Each qualified cell must keep this exact field order and remain backed by one health-free,
 separately retained physical release record whose SHA-256 matches `evidence_sha256`. When a new
 mobile build or CLI candidate SHA is qualified, update both the record and the ledger digest
@@ -26,10 +27,13 @@ together — never reuse an old digest for new evidence:
 
 The evidence digest identifies the separately retained health-free physical release record. Do not
 put health values, owner dates, routes, credentials, user paths, or raw payloads in this ledger or
-evidence. `verify-release.py` permits pending rows for ordinary source CI but rejects every
-`healthmd-cli/v*` tag until all three supported mobile rows contain the exact qualified shape. If the
-first qualified store build has a later version/build, update this ledger and release notes before
-tagging.
+evidence. `verify-release.py` permits pending rows for ordinary source CI and explicitly labeled
+SemVer prerelease tags. A prerelease with pending rows is an unqualified preview, not evidence of a
+supported CLI/mobile pair. Stable `healthmd-cli/v*` tags remain blocked until all three supported
+mobile rows contain the exact qualified shape, and every `source_commit` must equal the tag SHA.
+Before approving the protected `cli-release` environment, the reviewer must compare every
+`evidence_sha256` with its separately retained health-free physical record. If the first qualified
+store build has a later version/build, update this ledger and release notes before tagging.
 
 ## Compatibility rules
 
