@@ -194,12 +194,31 @@ security delete-generic-password \
   -s com.codybontecou.obsidianhealth.direct-cli-trust \
   "$keychain" >/dev/null
 
-# Repack the signed binaries. The notarized DMG below contains byte-identical copies, so Apple also
-# publishes tickets for the standalone binaries in this tarball. Apple does not support stapling a
-# ticket directly to a standalone executable or tar/ZIP archive.
+# Notarize an initial DMG containing the signed binaries so Apple publishes tickets for both
+# standalone executables, then staple those tickets into the executables themselves. Stapling a
+# standalone Mach-O executable has been supported since macOS 12, and spctl's execute assessment
+# is only deterministic offline when the ticket is embedded in the binary. The DMG is then rebuilt
+# from the stapled executables and notarized again so the DMG and the tar archive carry
+# byte-identical, independently verifiable copies.
 root_name="$(basename "$root")"
-rm -f "$archive"
-COPYFILE_DISABLE=1 tar -cJf "$archive" -C "$unpacked" "$root_name"
+
+submit_and_wait() {
+  xcrun notarytool submit "$1" \
+    --key "$notary_key" \
+    --key-id "$APPLE_NOTARY_KEY_ID" \
+    --issuer "$APPLE_NOTARY_ISSUER_ID" \
+    --wait --output-format json > "$work/notary-result.json"
+  python3 - "$work/notary-result.json" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = json.load(handle)
+assert value.get("status") == "Accepted", value
+assert value.get("id"), value
+PY
+}
+
+printf '%s' "$APPLE_NOTARY_KEY_P8_BASE64" | base64 --decode > "$notary_key"
+chmod 600 "$notary_key"
 
 dmg="${archive%.tar.xz}.dmg"
 rm -f "$dmg"
@@ -208,22 +227,27 @@ COPYFILE_DISABLE=1 hdiutil create \
 codesign --force --timestamp --sign "$signing_identity" "$dmg"
 codesign --verify --strict --verbose=2 "$dmg"
 
-printf '%s' "$APPLE_NOTARY_KEY_P8_BASE64" | base64 --decode > "$notary_key"
-chmod 600 "$notary_key"
-xcrun notarytool submit "$dmg" \
-  --key "$notary_key" \
-  --key-id "$APPLE_NOTARY_KEY_ID" \
-  --issuer "$APPLE_NOTARY_ISSUER_ID" \
-  --wait --output-format json > "$work/notary-result.json"
-python3 - "$work/notary-result.json" <<'PY'
-import json, sys
-with open(sys.argv[1], encoding="utf-8") as handle:
-    value = json.load(handle)
-assert value.get("status") == "Accepted", value
-assert value.get("id"), value
-PY
+# First submission publishes the notarization tickets for the wrapped executables.
+submit_and_wait "$dmg"
+xcrun stapler staple "$healthmd"
+xcrun stapler staple "$mcp"
+xcrun stapler validate "$healthmd"
+xcrun stapler validate "$mcp"
+
+# Rebuild the DMG from the stapled executables and notarize the final installation artifact.
+rm -f "$dmg"
+COPYFILE_DISABLE=1 hdiutil create \
+  -quiet -format UDZO -fs HFS+ -volname "Health.md CLI" -srcfolder "$root" "$dmg"
+codesign --force --timestamp --sign "$signing_identity" "$dmg"
+codesign --verify --strict --verbose=2 "$dmg"
+submit_and_wait "$dmg"
 xcrun stapler staple "$dmg"
 xcrun stapler validate "$dmg"
+
+# Repack the tar archive from the same stapled executables the DMG carries.
+rm -f "$archive"
+COPYFILE_DISABLE=1 tar -cJf "$archive" -C "$unpacked" "$root_name"
+
 spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
 spctl --assess --type execute --verbose=2 "$healthmd"
 spctl --assess --type execute --verbose=2 "$mcp"
