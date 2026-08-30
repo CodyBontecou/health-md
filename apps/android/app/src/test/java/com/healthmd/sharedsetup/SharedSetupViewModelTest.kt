@@ -9,6 +9,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -85,7 +86,50 @@ class SharedSetupViewModelTest {
 
         assertThat(viewModel.state.value).isInstanceOf(SharedSetupUiState.Success::class.java)
         coVerify(exactly = 1) { service.preview(any()) }
-        verify(exactly = 1) { coordinator.consume(9) }
+        assertThat(imports.value?.id).isEqualTo(9)
+    }
+
+    @Test
+    fun `new retained import wins over slower saved-state restoration`() = runTest {
+        val restoredBytes = byteArrayOf(1)
+        val newerBytes = byteArrayOf(2)
+        val restoredPreview = mockk<SharedSetupPreview>(name = "restored")
+        val newerPreview = mockk<SharedSetupPreview>(name = "newer")
+        val restoredStarted = CompletableDeferred<Unit>()
+        val releaseRestored = CompletableDeferred<SharedSetupPreview>()
+        val service = mockk<SharedSetupService>()
+        val store = mockk<SharedSetupDocumentStore>(relaxed = true)
+        val coordinator = mockk<SharedSetupCoordinator>(relaxUnitFun = true)
+        val imports = MutableStateFlow<PendingSharedSetupImport?>(null)
+        every { coordinator.imports } returns imports
+        coEvery { service.preview(match { it.contentEquals(restoredBytes) }) } coAnswers {
+            restoredStarted.complete(Unit)
+            Result.success(releaseRestored.await())
+        }
+        coEvery { service.preview(match { it.contentEquals(newerBytes) }) } returns
+            Result.success(newerPreview)
+        val viewModel = SharedSetupViewModel(
+            service,
+            store,
+            coordinator,
+            SavedStateHandle(
+                mapOf(
+                    "sharedSetup.restorableDocumentBytes" to restoredBytes,
+                    "sharedSetup.restorablePhase" to "review",
+                ),
+            ),
+        )
+        restoredStarted.await()
+
+        imports.value = PendingSharedSetupImport(id = 42, bytes = newerBytes)
+        advanceUntilIdle()
+        assertThat((viewModel.state.value as SharedSetupUiState.Review).preview)
+            .isSameInstanceAs(newerPreview)
+
+        releaseRestored.complete(restoredPreview)
+        advanceUntilIdle()
+        assertThat((viewModel.state.value as SharedSetupUiState.Review).preview)
+            .isSameInstanceAs(newerPreview)
     }
 
     @Test

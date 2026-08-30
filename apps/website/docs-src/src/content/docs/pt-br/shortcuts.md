@@ -1,6 +1,6 @@
 ---
 title: "Atalhos e App Intents"
-description: "Oito App Intents permitem acionar exportações, obter resumos e alternar o agendamento pela Siri, pelo app Atalhos, por filtros de Foco, automações e qualquer host compatível com AppIntent."
+description: "Sete App Intents permitem acionar exportações, obter resumos e alternar o agendamento pela Siri, pelo app Atalhos, por filtros de Foco, automações e qualquer host compatível com AppIntent."
 ---
 
 ## Intents disponíveis
@@ -12,12 +12,12 @@ description: "Oito App Intents permitem acionar exportações, obter resumos e a
 <div class="option"><strong>Obter resumo de saúde de uma data</strong><p>Retorna uma captura estruturada — passos, calorias ativas, sono e frequência cardíaca — sem gravar no cofre.</p></div>
 <div class="option"><strong>Obter status da última exportação</strong><p>Retorna data e hora, sucesso, número de dias e motivo de falha da exportação registrada mais recente. Uma solicitação com o dispositivo bloqueado permanece pendente até ser repetida e não aparece como status atual.</p></div>
 <div class="option"><strong>Ativar ou desativar exportação agendada</strong><p>Parâmetro booleano. Suspenda o agendamento, por exemplo durante o Foco Férias, e retome depois.</p></div>
-<div class="option"><strong>Exportar dados de saúde</strong><p>Exportação genérica que usa o último intervalo do modal Exportar no app. As variantes com intervalo costumam ser mais claras. Parâmetro opcional <em>Perfil</em>.</p></div>
 </div>
 
 <a id="profiles"></a>
 ## Perfis de exportação
-<p>Os cinco intents de exportação aceitam um parâmetro opcional <em>Perfil</em>. Deixe-o vazio para executar com as configurações de exportação atuais do app; passe o nome de um perfil salvo para executar a configuração congelada desse perfil — seleção de métricas, formatos e destino — independentemente do que o app mostra no momento.</p>
+<p>Crie e gerencie perfis de exportação salvos no Health.md para iPhone ou Android. Nas plataformas Apple, o gerenciamento de perfis está documentado atualmente apenas para iPhone; não se afirma a disponibilidade no iPad nem no macOS.</p>
+<p>Os quatro intents de exportação aceitam um parâmetro opcional <em>Perfil</em>. Quando há perfis, deixá-lo vazio usa o perfil ativo; no modo legado sem perfis, usa as configurações de exportação atuais do app. Passe o nome de um perfil salvo para executar a configuração congelada desse perfil — seleção de métricas, formatos e destino — independentemente do que o app mostra no momento.</p>
 <div class="callout">
 <strong>Atenção para atalhos existentes sem parâmetro.</strong>
 <p style="margin-top:6px;">Assim que você criar seu primeiro perfil de exportação no app, um atalho sem <em>Perfil</em> definido exporta usando as configurações salvas do perfil <em>ativo</em> em vez das configurações atuais do app. Se você depende do comportamento antigo, fixe o atalho em um perfil específico (ou mantenha zero perfis) para continuar explícito. Um nome de perfil que não existe mais falha com um erro claro em vez de exportar a coisa errada.</p>

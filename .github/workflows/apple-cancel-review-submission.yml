@@ -1,0 +1,106 @@
+# Cancel an in-flight App Store review submission.
+#
+# Operational tool for release synchronization: a submitted platform version
+# keeps a second (editable) app info record alive in ASC, which blocks the
+# other platform's `asc validate` until both platforms are approved. Cancelling
+# the in-flight submission returns its version to PREPARE_FOR_SUBMISSION and
+# lets ASC consolidate app info records again.
+#
+# Requires confirm=CANCEL. Read-only unless exactly one active submission is
+# found; ambiguity fails closed.
+
+name: Apple Cancel Review Submission
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform of the review submission to cancel'
+        required: true
+        type: choice
+        options: [IOS, MAC_OS]
+      confirm:
+        description: "Type CANCEL to confirm"
+        required: true
+        type: string
+
+permissions: {}
+
+env:
+  ASC_APP_ID: ${{ secrets.HEALTHMD_ASC_APP_ID }}
+
+jobs:
+  cancel:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Verify confirmation
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.inputs.platform }}" == "MACOS" ]]; then
+            echo "::error::Use platform MAC_OS (workflow value), not MACOS"; exit 1
+          fi
+          if [[ "${{ github.event.inputs.confirm }}" != "CANCEL" ]]; then
+            echo "::error::confirm must be exactly CANCEL"; exit 1
+          fi
+
+      - name: Install asc
+        run: |
+          set -euo pipefail
+          if ! command -v asc >/dev/null 2>&1; then
+            brew install asc
+          fi
+          asc --version
+
+      - name: Setup App Store Connect key
+        env:
+          ASC_KEY_ID_SECRET: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID_SECRET: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          ASC_KEY_DIR="$RUNNER_TEMP/.asc-keys"
+          mkdir -p "$ASC_KEY_DIR"
+          chmod 700 "$ASC_KEY_DIR"
+          ASC_KEY_PATH="$ASC_KEY_DIR/AuthKey_${ASC_KEY_ID_SECRET}.p8"
+          echo "$ASC_API_KEY_P8" | base64 --decode > "$ASC_KEY_PATH"
+          chmod 600 "$ASC_KEY_PATH"
+          {
+            echo "ASC_KEY_ID=$ASC_KEY_ID_SECRET"
+            echo "ASC_ISSUER_ID=$ASC_ISSUER_ID_SECRET"
+            echo "ASC_PRIVATE_KEY_PATH=$ASC_KEY_PATH"
+            echo "ASC_BYPASS_KEYCHAIN=1"
+          } >> "$GITHUB_ENV"
+
+      - name: Cancel active submission
+        run: |
+          set -euo pipefail
+          PLATFORM="${{ github.event.inputs.platform }}"
+          SUBMISSION_JSON=$(asc review submissions-list --app "$ASC_APP_ID" --output json)
+          ACTIVE_IDS=$(printf '%s' "$SUBMISSION_JSON" | python3 -c '
+          import sys, json
+          records = json.load(sys.stdin)["data"]
+          active = [r for r in records if r["attributes"]["state"] in ("WAITING_FOR_REVIEW", "READY_FOR_REVIEW")]
+          for r in active:
+              print(r["id"], r["attributes"]["platform"], r["attributes"]["state"])
+          ')
+          COUNT=$(printf '%s\n' "$ACTIVE_IDS" | grep -c . || true)
+          if [[ "$COUNT" -eq 0 ]]; then
+            echo "::notice::No active $PLATFORM review submission found; nothing to cancel"
+            exit 0
+          fi
+          MATCHING=$(printf '%s\n' "$ACTIVE_IDS" | awk -v p="$PLATFORM" '$2 == p {print $1}')
+          MATCH_COUNT=$(printf '%s\n' "$MATCHING" | grep -c . || true)
+          if [[ "$MATCH_COUNT" -ne 1 ]]; then
+            echo "::error::Expected exactly one active $PLATFORM submission, found $MATCH_COUNT:"
+            printf '%s\n' "$ACTIVE_IDS"
+            exit 1
+          fi
+          SUBMISSION_ID=$(printf '%s' "$MATCHING")
+          echo "Cancelling $PLATFORM review submission $SUBMISSION_ID"
+          asc review submissions-update --id "$SUBMISSION_ID" --canceled=true --confirm
+
+      - name: Show resulting app info records
+        run: |
+          set -euo pipefail
+          asc apps info list --app "$ASC_APP_ID" --output table

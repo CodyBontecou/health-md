@@ -139,11 +139,17 @@ nonisolated private final class SlowRecordingFileSystem: FileSystemAccessing, @u
 nonisolated private final class SecureCommitHookProbe: @unchecked Sendable {
     private let lock = NSLock()
     private var executionCountStorage = 0
+    private var cancellationRequestedStorage = false
 
     var executionCount: Int { lock.withLock { executionCountStorage } }
+    var cancellationRequested: Bool { lock.withLock { cancellationRequestedStorage } }
 
     func record() {
         lock.withLock { executionCountStorage += 1 }
+    }
+
+    func requestCancellation() {
+        lock.withLock { cancellationRequestedStorage = true }
     }
 }
 
@@ -200,18 +206,21 @@ final class VaultManagerTests: XCTestCase {
 
     private func seedV2Selection(
         for url: URL,
-        identity: VaultFolderIdentity,
+        identity: VaultFolderIdentity?,
         name: String? = nil
     ) throws {
-        defaults.storage["obsidianVaultSelectionV2"] = try JSONSerialization.data(withJSONObject: [
+        var selection: [String: Any] = [
             "version": 2,
             "standardizedPath": url.standardizedFileURL.path,
-            "displayName": name ?? url.lastPathComponent,
-            "identity": [
+            "displayName": name ?? url.lastPathComponent
+        ]
+        if let identity {
+            selection["identity"] = [
                 "volumeUUIDString": identity.volumeUUIDString,
                 "fileIdentifier": identity.fileIdentifier
             ]
-        ])
+        }
+        defaults.storage["obsidianVaultSelectionV2"] = try JSONSerialization.data(withJSONObject: selection)
         defaults.storage["obsidianVaultPath"] = url.standardizedFileURL.path
         defaults.storage["obsidianVaultName"] = name ?? url.lastPathComponent
     }
@@ -236,6 +245,7 @@ final class VaultManagerTests: XCTestCase {
 
     private func makeSettings() -> AdvancedExportSettings {
         let settings = AdvancedExportSettings()
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
         Self.retainedSettings.append(settings)
         return settings
     }
@@ -245,6 +255,7 @@ final class VaultManagerTests: XCTestCase {
         let userDefaults = UserDefaults(suiteName: suiteName)!
         userDefaults.removePersistentDomain(forName: suiteName)
         let settings = AdvancedExportSettings(userDefaults: userDefaults)
+        settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
         Self.retainedSettings.append(settings)
         return settings
     }
@@ -401,7 +412,10 @@ final class VaultManagerTests: XCTestCase {
         }
         XCTAssertEqual(error as? ExportError, .destinationChanged)
         XCTAssertEqual(probe.executionCount, 1)
-        let filename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        let filename = settings.dailyNoteInjection.formatFilename(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        ) + ".md"
         XCTAssertEqual(
             coordinator.calls,
             [.init(url: parent.appendingPathComponent(filename), intent: .replace)],
@@ -445,6 +459,7 @@ final class VaultManagerTests: XCTestCase {
 
         let start = ExportFixtures.referenceDate
         let formatter = DateFormatter()
+        formatter.timeZone = settings.exportTimeZoneOverride
         formatter.dateFormat = "yyyy-MM-dd"
         let archiveName = "Health.md Export \(formatter.string(from: start)).zip"
         do {
@@ -522,6 +537,36 @@ final class VaultManagerTests: XCTestCase {
                 return XCTFail("Expected invalidExportPath, got \(error)")
             }
         }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    func testRangePreflightKeepsTenThousandOneDailyDestinationsWhenSummaryIsUnavailable() throws {
+        let root = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = makeRealFileSystemManager(vaultURL: root)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2000,
+            month: 1,
+            day: 1
+        )))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2027,
+            month: 5,
+            day: 19
+        )))
+        let dates = ExportOrchestrator.dateRange(from: start, to: end, calendar: calendar)
+        XCTAssertEqual(dates.count, 10_001)
+
+        XCTAssertNoThrow(try manager.preflightExportDestinations(
+            settings: settings,
+            dates: dates
+        ))
         XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: root.path).isEmpty)
     }
 
@@ -1046,6 +1091,177 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(bookmarkResolver.createBookmarkCalls.isEmpty)
     }
 
+    func testInit_identitylessProviderMovedPathRebindsAndRefreshesDurableSelection() throws {
+        // Cloud file-provider volumes (iCloud Drive, Dropbox, and similar) never
+        // report persistent IDs, so both the trusted selection and the resolved
+        // URL carry nil identity. A bookmark that resolves with acquired security
+        // scope is the strongest same-resource evidence such providers offer;
+        // the destination must rebind across provider path drift instead of
+        // demanding reselection on every launch (issue #140).
+        let savedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/Provider/Healthmd")
+        defaults.storage["obsidianVaultBookmark"] = Data("old-bookmark".utf8)
+        try seedV2Selection(for: savedURL, identity: nil)
+        bookmarkResolver.resolvedURL = movedURL
+        bookmarkResolver.createdBookmarkData = Data("refreshed-bookmark".utf8)
+        identityProbe.defaultIdentity = nil
+
+        let manager = makeManager()
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(manager.vaultName, "Healthmd")
+        XCTAssertFalse(manager.requiresVaultReselection)
+        XCTAssertTrue(manager.isVaultDestinationUsable)
+        XCTAssertEqual(defaults.data(forKey: "obsidianVaultBookmark"), Data("refreshed-bookmark".utf8))
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), movedURL.standardizedFileURL.path)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultName"), "Healthmd")
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+
+        // The rebound selection is durable: the next launch resolves the same
+        // path and needs no further bookmark refresh.
+        manager.refreshVaultAccess()
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+    }
+
+    func testInit_identityEvidenceAppearingAcrossMovedPathStillRequiresReview() throws {
+        // A selection saved without identity evidence that later resolves with
+        // identity evidence at a moved path keeps one-sided verification: the
+        // volume became identity-capable, so the move cannot be proven safe.
+        let savedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd")
+        let movedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd-moved")
+        defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
+        try seedV2Selection(for: savedURL, identity: nil)
+        let before = defaults.storage
+        bookmarkResolver.resolvedURL = movedURL
+        identityProbe.defaultIdentity = identity("newly-visible")
+
+        let manager = makeManager()
+
+        XCTAssertEqual(manager.destinationState, .requiresReviewIdentityUnavailable)
+        XCTAssertNil(manager.vaultURL)
+        XCTAssertEqual(defaults.storage as NSDictionary, before as NSDictionary)
+        XCTAssertTrue(bookmarkResolver.createBookmarkCalls.isEmpty)
+    }
+
+    // MARK: - Profile adoption (issue #143)
+
+    func testAdoptPersistedVault_identityBearingRowMovedPathRebindsViaIdentity() throws {
+        // Local "On My iPhone" folders live on a volume that reports persistent
+        // IDs, so their destination rows carry identity evidence. Adoption must
+        // carry that evidence into the trusted selection so a moved path rebinds
+        // through an identity match — the same rigor the single-vault flow keeps
+        // — instead of demanding reselection on every launch (issue #143).
+        let savedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/OnMyiPhone/Health")
+        let folderIdentity = identity("local-folder")
+        bookmarkResolver.resolvedURL = movedURL
+        bookmarkResolver.createdBookmarkData = Data("refreshed-bookmark".utf8)
+        identityProbe.defaultIdentity = folderIdentity
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        let refreshed = manager.adoptPersistedVault(
+            bookmarkData: Data("old-bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Health",
+            identity: folderIdentity
+        )
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(manager.vaultName, "Health")
+        XCTAssertEqual(refreshed?.identity, folderIdentity)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), movedURL.standardizedFileURL.path)
+
+        // The returned snapshot carries every refreshed field, so callers
+        // persist the rebinding into the destination row durably: refreshed
+        // bookmark, moved path, and healed identity.
+        XCTAssertEqual(refreshed?.standardizedPath, movedURL.standardizedFileURL.path)
+        XCTAssertEqual(refreshed?.bookmarkData, bookmarkResolver.createdBookmarkData)
+
+        // The rebind is durable: the next launch resolves the same path with
+        // the same identity and needs no further bookmark refresh.
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+        manager.refreshVaultAccess()
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [movedURL])
+    }
+
+    func testAdoptPersistedVault_identityMismatchAcrossMovedPathStillFailsClosed() throws {
+        let savedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health")
+        let changedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health(1)")
+        bookmarkResolver.resolvedURL = changedURL
+        identityProbe.defaultIdentity = identity("different-folder")
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        manager.adoptPersistedVault(
+            bookmarkData: Data("bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Health",
+            identity: identity("original-folder")
+        )
+
+        XCTAssertEqual(manager.destinationState, .requiresReselectionDestinationChanged)
+        XCTAssertNil(manager.vaultURL)
+    }
+
+    func testAdoptPersistedVault_legacyRowWithoutIdentityHealsThroughBookmarkRoundTrip() throws {
+        // Destination rows saved before identity capture (or by earlier app
+        // versions) carry no identity evidence. Adoption must re-capture it
+        // through the row's own bookmark round-trip so identity-bearing local
+        // volumes stop falling into one-sided "identity appeared" review on
+        // every launch (issue #143).
+        let savedURL = URL(fileURLWithPath: "/tmp/OnMyiPhone/Health")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/OnMyiPhone/Health")
+        let folderIdentity = identity("healed-folder")
+        bookmarkResolver.resolvedURL = movedURL
+        identityProbe.defaultIdentity = folderIdentity
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        let refreshed = manager.adoptPersistedVault(
+            bookmarkData: Data("old-bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Health",
+            identity: nil
+        )
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(refreshed?.identity, folderIdentity)
+        XCTAssertEqual(refreshed?.standardizedPath, movedURL.standardizedFileURL.path)
+
+        // The healed identity is durable: the refreshed selection stores it,
+        // so the next adoption of the (still identity-less) row trusts it.
+        let selectionData = try XCTUnwrap(defaults.data(forKey: "obsidianVaultSelectionV2"))
+        let selection = try JSONSerialization.jsonObject(with: selectionData) as? [String: Any]
+        XCTAssertNotNil(selection?["identity"])
+    }
+
+    func testAdoptPersistedVault_identitylessRowRebindsWithoutEvidence() throws {
+        // Cloud file-provider rows never report persistent IDs; adoption keeps
+        // the identity-less rebind the 3.1.1 fix introduced (issue #140).
+        let savedURL = URL(fileURLWithPath: "/tmp/Provider/Healthmd")
+        let movedURL = URL(fileURLWithPath: "/private/tmp/Provider/Healthmd")
+        bookmarkResolver.resolvedURL = movedURL
+        identityProbe.defaultIdentity = nil
+
+        let manager = makeManager(seedLegacySelectionIfNeeded: false)
+        let refreshed = manager.adoptPersistedVault(
+            bookmarkData: Data("old-bookmark".utf8),
+            standardizedPath: savedURL.standardizedFileURL.path,
+            displayName: "Healthmd",
+            identity: nil
+        )
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, movedURL)
+        XCTAssertEqual(manager.vaultName, "Healthmd")
+        XCTAssertNil(refreshed?.identity)
+    }
+
     func testInit_v1SamePathUpgradesIdentity() throws {
         let url = URL(fileURLWithPath: "/tmp/LegacyVault")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
@@ -1175,6 +1391,58 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertNil(manager.lastExportStatus)
     }
 
+    func testSetVaultFolder_storesRoundTrippedSelectionMetadata() throws {
+        // File-provider destinations can normalize the picker URL differently
+        // from the bookmark-resolved URL. The trusted path and identity must be
+        // captured through the same resolution pipeline that verifies them on
+        // later launches, so the next cold start matches instead of failing
+        // verification (issue #140).
+        let pickedURL = URL(fileURLWithPath: "/tmp/Picked/Healthmd")
+        let canonicalURL = URL(fileURLWithPath: "/private/tmp/Picked/Healthmd")
+        let canonicalIdentity = identity("canonical")
+        bookmarkResolver.resolvedURL = canonicalURL
+        identityProbe.identitiesByPath[canonicalURL.standardizedFileURL.path] = canonicalIdentity
+        let manager = makeManager()
+
+        manager.setVaultFolder(pickedURL)
+
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(defaults.string(forKey: "obsidianVaultPath"), canonicalURL.standardizedFileURL.path)
+        let selectionData = try XCTUnwrap(defaults.data(forKey: "obsidianVaultSelectionV2"))
+        let selection = try JSONSerialization.jsonObject(with: selectionData) as? [String: Any]
+        XCTAssertEqual(selection?["standardizedPath"] as? String, canonicalURL.standardizedFileURL.path)
+        let identityObject = try XCTUnwrap(selection?["identity"] as? [String: Any])
+        XCTAssertEqual(identityObject["volumeUUIDString"] as? String, canonicalIdentity.volumeUUIDString)
+        XCTAssertTrue(identityProbe.calls.contains(canonicalURL))
+
+        // The stored selection already describes the bookmark-resolved URL, so
+        // the next launch accepts it without any launch-time bookmark refresh
+        // (only the selection-time creation is recorded).
+        manager.refreshVaultAccess()
+        XCTAssertEqual(manager.destinationState, .available)
+        XCTAssertEqual(manager.vaultURL, canonicalURL)
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls, [pickedURL])
+    }
+
+    func testRecordSuccessfulExportStatusMarksOutcomeUntilReassigned() {
+        let manager = makeManager()
+        XCTAssertFalse(manager.lastExportStatusIsSuccess)
+
+        // The local-export full-success status carries no success prefix;
+        // only the recorded outcome may mark it successful.
+        manager.recordSuccessfulExportStatus("≥ 1 generated file(s) · 1 of 1 data day(s)")
+        XCTAssertTrue(manager.lastExportStatusIsSuccess)
+
+        // Re-recording an identical success keeps the marking.
+        manager.recordSuccessfulExportStatus("≥ 1 generated file(s) · 1 of 1 data day(s)")
+        XCTAssertTrue(manager.lastExportStatusIsSuccess)
+
+        // Any direct status assignment resets the outcome flag so a stale
+        // success cannot recolor a later destination-error status.
+        manager.lastExportStatus = "Saved folder unavailable. Reconnect the location in Files or re-select the folder."
+        XCTAssertFalse(manager.lastExportStatusIsSuccess)
+    }
+
     func testSetVaultFolder_accessDenied_setsErrorStatus() {
         bookmarkResolver.accessGranted = false
         let manager = makeManager()
@@ -1232,12 +1500,15 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(manager.lastExportStatus?.contains("Failed to save folder access") == true)
     }
 
-    func testExplicitReselectionAuthorizesChangedPathAndClearsIssue() {
+    func testExplicitReselectionAuthorizesChangedPathAndClearsIssue() throws {
         let originalURL = URL(fileURLWithPath: "/tmp/Healthmd")
         let changedURL = URL(fileURLWithPath: "/tmp/Healthmd(1)")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
-        seedLegacySelection(for: originalURL)
+        // A confirmed identity mismatch is what forces reselection under the
+        // identity-evidence contract; identity-less provider drift now rebinds.
+        try seedV2Selection(for: originalURL, identity: identity("original"))
         bookmarkResolver.resolvedURL = changedURL
+        identityProbe.defaultIdentity = identity("replacement")
         let manager = makeManager()
         XCTAssertTrue(manager.requiresVaultReselection)
 
@@ -1607,11 +1878,14 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertEqual(sharedFileSystem.maximumConcurrentWrites, 1)
     }
 
-    func testDirectExportReportsDestinationChangedWithoutFilesystemWork() {
+    func testDirectExportReportsDestinationChangedWithoutFilesystemWork() throws {
         let expectedURL = URL(fileURLWithPath: "/tmp/Healthmd")
         defaults.storage["obsidianVaultBookmark"] = Data("bookmark".utf8)
-        seedLegacySelection(for: expectedURL)
+        // Confirmed identity mismatch (not identity-less provider drift, which
+        // now rebinds) is what must stop an export before any filesystem work.
+        try seedV2Selection(for: expectedURL, identity: identity("original"))
         bookmarkResolver.resolvedURL = URL(fileURLWithPath: "/tmp/Healthmd(1)")
+        identityProbe.defaultIdentity = identity("replacement")
         let manager = makeManager()
 
         XCTAssertThrowsError(try manager.exportHealthDataResult(
@@ -1736,6 +2010,53 @@ final class VaultManagerTests: XCTestCase {
     #endif
 
     #if os(macOS)
+    func testArchiveCancellationAfterFinalValidationPreservesPriorZIPAndRecordsNoSuccess() async throws {
+        let vaultURL = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: vaultURL) }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        let archiveURL = healthURL.appendingPathComponent("Health.md Export 2026-03-15.zip")
+        let priorArchive = Data("prior archive remains authoritative".utf8)
+        try priorArchive.write(to: archiveURL)
+
+        let probe = SecureCommitHookProbe()
+        manager.productionDestinationDidValidateForTesting = {
+            probe.record()
+            probe.requestCancellation()
+        }
+
+        do {
+            _ = try await manager.exportArchive(
+                from: [ExportFixtures.fullDay],
+                settings: settings,
+                startDate: ExportFixtures.referenceDate,
+                endDate: ExportFixtures.referenceDate,
+                cancellationCheck: { probe.cancellationRequested }
+            )
+            XCTFail("Cancellation at the final pre-rename boundary must stop archive publication")
+        } catch is CancellationError {
+            // Expected: the prior archive remains authoritative.
+        } catch {
+            XCTFail("Expected CancellationError, got \(error)")
+        }
+
+        XCTAssertEqual(probe.executionCount, 1)
+        XCTAssertEqual(try Data(contentsOf: archiveURL), priorArchive)
+        XCTAssertNil(manager.lastExportPresentationTarget)
+        XCTAssertNil(manager.lastExportStatus)
+    }
+
     func testArchiveDictionaryDisabledKeepsSelectedArtifactsWithoutDictionaryEntry() async throws {
         let vaultURL = makeTempDir()
         defer { try? FileManager.default.removeItem(at: vaultURL) }
@@ -1833,6 +2154,278 @@ final class VaultManagerTests: XCTestCase {
         })
     }
 
+    func testRollupSummaryPreflightUsesAuthoritativeRangeWhenBoundaryRecordIsUnavailable() throws {
+        let vaultURL = makeTempDir()
+        let outsideURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: outsideURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.includeDataDictionary = true
+        settings.exportTimeZoneOverride = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let endDate = ExportFixtures.referenceDate
+        let startDate = endDate.addingTimeInterval(-86_400)
+        let requestedRange = try HealthRollupRangeRequest(
+            startDate: startDate,
+            endDate: endDate,
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        let rollupFolder = vaultURL.appendingPathComponent(
+            "Health/Rollups/Range",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: rollupFolder, withIntermediateDirectories: true)
+        let outsideFile = outsideURL.appendingPathComponent("escaped.json")
+        let originalOutsideData = Data("must remain unchanged".utf8)
+        try originalOutsideData.write(to: outsideFile)
+        try FileManager.default.createSymbolicLink(
+            at: rollupFolder.appendingPathComponent("2026-03-14_to_2026-03-15.json"),
+            withDestinationURL: outsideFile
+        )
+
+        XCTAssertThrowsError(try manager.exportRollupSummaries(
+            from: [ExportFixtures.fullDay],
+            requestedRange: requestedRange,
+            settings: settings
+        ))
+
+        XCTAssertEqual(try Data(contentsOf: outsideFile), originalOutsideData)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: vaultURL.appendingPathComponent(
+                "Health/\(HealthMdExportSchema.dataDictionaryFilename)"
+            ).path
+        ), "authoritative range admission must fail before the first export write")
+    }
+
+    func testLegacyCorpusFinalizationUsesOriginalRangeIdentityAndTimezone() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        let settings = makeIsolatedSettings()
+        settings.exportFormats = [.json]
+        settings.generateRangeSummary = true
+        settings.exportTimeZoneOverride = TimeZone(identifier: "Asia/Tokyo")
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let record = ExportFixtures.fullDay
+        let originalEnd = record.date
+        let originalStart = try XCTUnwrap(utc.date(byAdding: .day, value: -1, to: originalEnd))
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: originalEnd,
+            isRequestedDate: true,
+            record: record,
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let streamablePayload = try ConnectedCorpusApplicationItemCodec.encode(
+            payload,
+            kind: .macHealthDay
+        )
+        defer { streamablePayload.remove() }
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: [streamablePayload.url],
+            recordSourceDates: [originalEnd],
+            settings: settings,
+            requestedDates: [originalEnd],
+            rollupRequestedDates: [originalStart, originalEnd],
+            rollupCalendarTimeZoneIdentifier: "UTC",
+            startDate: originalEnd,
+            endDate: originalEnd,
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertEqual(result.rollupFileCount, 1)
+        let rollupURL = vaultURL
+            .appendingPathComponent("Rollups/Range/2026-03-14_to_2026-03-15.json")
+        let rollup = try String(contentsOf: rollupURL, encoding: .utf8)
+        XCTAssertTrue(rollup.contains("\"period_id\" : \"2026-03-14_to_2026-03-15\""))
+        XCTAssertTrue(rollup.contains("\"days_expected\" : 2"))
+        XCTAssertTrue(rollup.contains("\"days_counted\" : 1"))
+    }
+
+    func testDirectResidualRetryUsesOriginalRangeZipNameAndCompleteArchiveScopeInFrozenTimezone() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
+        let frozenIdentifier = TimeZone.current.identifier == "America/Los_Angeles"
+            ? "Asia/Tokyo"
+            : "America/Los_Angeles"
+        let frozenTimeZone = try XCTUnwrap(TimeZone(identifier: frozenIdentifier))
+        settings.exportTimeZoneOverride = frozenTimeZone
+        var frozenCalendar = Calendar(identifier: .gregorian)
+        frozenCalendar.timeZone = frozenTimeZone
+        let originalEnd = try XCTUnwrap(frozenCalendar.date(from: DateComponents(
+            timeZone: frozenTimeZone,
+            year: 2026,
+            month: 3,
+            day: 15
+        )))
+        let originalStart = try XCTUnwrap(
+            frozenCalendar.date(byAdding: .day, value: -1, to: originalEnd)
+        )
+        let firstRecord = HealthData(
+            date: originalStart,
+            timeContext: ExportFixtures.fullDay.timeContext
+        )
+        var residualRecord = HealthData(
+            date: originalEnd,
+            timeContext: ExportFixtures.fullDay.timeContext
+        )
+        residualRecord.activity = ActivityData(steps: 1_234)
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalStart,
+                isRequestedDate: false,
+                record: firstRecord,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalEnd,
+                isRequestedDate: true,
+                record: residualRecord,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+        ]
+        let payloadURLs = try payloads.enumerated().map { index, payload in
+            let url = workURL.appendingPathComponent("direct-\(index).json")
+            try JSONEncoder().encode(payload).write(to: url)
+            return url
+        }
+        let startIdentifier = HealthRollupDateFormatting.dayString(
+            originalStart,
+            timeZone: frozenTimeZone
+        )
+        let endIdentifier = HealthRollupDateFormatting.dayString(
+            originalEnd,
+            timeZone: frozenTimeZone
+        )
+        let periodID = "\(startIdentifier)_to_\(endIdentifier)"
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: payloadURLs,
+            recordSourceDates: [originalStart, originalEnd],
+            settings: settings,
+            requestedDates: [originalEnd],
+            rollupRequestedDates: [originalStart, originalEnd],
+            rollupCalendarTimeZoneIdentifier: frozenIdentifier,
+            startDate: originalStart,
+            endDate: originalEnd,
+            healthSubfolder: "Health",
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertEqual(result.archiveFileCount, 1)
+        let archiveURL = vaultURL.appendingPathComponent(
+            "Health/Health.md Export \(periodID).zip"
+        )
+        XCTAssertEqual(manager.lastExportPresentationTarget?.fileURL, archiveURL)
+        let archiveData = try Data(contentsOf: archiveURL)
+        XCTAssertNotNil(archiveData.range(of: Data("\(startIdentifier).json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data("\(endIdentifier).json".utf8)))
+        XCTAssertNotNil(archiveData.range(of: Data(
+            "Rollups/Range/\(periodID).json".utf8
+        )))
+    }
+
+    func testDirectResidualArchiveCollisionFailsBeforeAnyWrite() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.filenameFormat = "health"
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+        let frozenTimeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        settings.exportTimeZoneOverride = frozenTimeZone
+        var frozenCalendar = Calendar(identifier: .gregorian)
+        frozenCalendar.timeZone = frozenTimeZone
+        let originalEnd = ExportFixtures.referenceDate
+        let originalStart = try XCTUnwrap(
+            frozenCalendar.date(byAdding: .day, value: -1, to: originalEnd)
+        )
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalStart,
+                isRequestedDate: false,
+                record: HealthData(
+                    date: originalStart,
+                    timeContext: ExportFixtures.fullDay.timeContext
+                ),
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: originalEnd,
+                isRequestedDate: true,
+                record: ExportFixtures.fullDay,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+        ]
+        let payloadURLs = try payloads.enumerated().map { index, payload in
+            let url = workURL.appendingPathComponent("collision-\(index).json")
+            try JSONEncoder().encode(payload).write(to: url)
+            return url
+        }
+
+        do {
+            _ = try await manager.finalizeCorpusDerivedOutputs(
+                recordPayloadFiles: payloadURLs,
+                recordSourceDates: [originalStart, originalEnd],
+                settings: settings,
+                requestedDates: [originalEnd],
+                rollupRequestedDates: [originalStart, originalEnd],
+                rollupCalendarTimeZoneIdentifier: frozenTimeZone.identifier,
+                startDate: originalStart,
+                endDate: originalEnd,
+                healthSubfolder: "Health",
+                archiveWorkDirectoryURL: workURL
+            )
+            XCTFail("Original archive entry collisions must fail preflight")
+        } catch let error as ExportError {
+            guard case .invalidExportPath = error else {
+                return XCTFail("Expected invalidExportPath, got \(error)")
+            }
+        }
+        XCTAssertTrue(try FileManager.default.subpathsOfDirectory(atPath: vaultURL.path).isEmpty)
+        XCTAssertNil(manager.lastExportPresentationTarget)
+    }
+
     #if os(macOS)
     func testFinalizeCorpusDerivedArchiveRetainsStreamedArtifactsThroughZIPAppend() async throws {
         let vaultURL = makeTempDir()
@@ -1881,6 +2474,134 @@ final class VaultManagerTests: XCTestCase {
         XCTAssertTrue(files.contains { $0.hasSuffix(".json") })
         XCTAssertTrue(files.contains { $0.hasSuffix(".csv") })
         XCTAssertFalse(files.contains(HealthMdExportSchema.dataDictionaryFilename))
+    }
+
+    func testFinalizeCorpusArchiveResidualRetryUsesImmutableOriginalDailyEntryScope() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let secondDate = ExportFixtures.referenceDate
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: secondDate))
+        let firstRecord = HealthData(
+            date: firstDate,
+            timeContext: ExportFixtures.fullDay.timeContext
+        )
+        let payloads = [
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: firstDate,
+                isRequestedDate: false,
+                record: firstRecord,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+            ConnectedCorpusHealthDayPayload(
+                sourceDate: secondDate,
+                isRequestedDate: true,
+                record: ExportFixtures.fullDay,
+                externalDailyRecords: [],
+                failure: nil
+            ),
+        ]
+        let payloadURLs = try payloads.enumerated().map { index, payload in
+            let url = workURL.appendingPathComponent("\(index).json")
+            try JSONEncoder().encode(payload).write(to: url)
+            return url
+        }
+
+        let result = try await manager.finalizeCorpusDerivedOutputs(
+            recordPayloadFiles: payloadURLs,
+            recordSourceDates: [firstDate, secondDate],
+            settings: settings,
+            requestedDates: [secondDate],
+            rollupRequestedDates: [firstDate, secondDate],
+            rollupCalendarTimeZoneIdentifier: "UTC",
+            startDate: secondDate,
+            endDate: secondDate,
+            healthSubfolder: "Health",
+            archiveWorkDirectoryURL: workURL
+        )
+
+        XCTAssertEqual(result.archiveFileCount, 1)
+        let archiveURL = try XCTUnwrap(manager.lastExportPresentationTarget?.fileURL)
+        let extracted = makeTempDir()
+        defer { try? FileManager.default.removeItem(at: extracted) }
+        try extractZIP(archiveURL, to: extracted)
+        let paths = try FileManager.default.subpathsOfDirectory(atPath: extracted.path)
+        XCTAssertTrue(paths.contains("2026-03-14.json"), paths.joined(separator: "\n"))
+        XCTAssertTrue(paths.contains("2026-03-15.json"), paths.joined(separator: "\n"))
+    }
+
+    func testFinalizeCorpusArchiveMissingOriginalSourcePreservesExistingZIP() async throws {
+        let vaultURL = makeTempDir()
+        let workURL = makeTempDir()
+        defer {
+            try? FileManager.default.removeItem(at: vaultURL)
+            try? FileManager.default.removeItem(at: workURL)
+        }
+        let manager = makeRealFileSystemManager(vaultURL: vaultURL)
+        manager.healthSubfolder = "Health"
+        let settings = makeIsolatedSettings()
+        settings.archiveExportFiles = true
+        settings.exportFormats = [.json]
+        settings.includeDataDictionary = false
+        settings.generateWeeklyRollups = false
+        settings.generateMonthlyRollups = false
+        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let secondDate = ExportFixtures.referenceDate
+        let firstDate = try XCTUnwrap(calendar.date(byAdding: .day, value: -1, to: secondDate))
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: secondDate,
+            isRequestedDate: true,
+            record: ExportFixtures.fullDay,
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let payloadURL = workURL.appendingPathComponent("residual.json")
+        try JSONEncoder().encode(payload).write(to: payloadURL)
+        let healthURL = vaultURL.appendingPathComponent("Health", isDirectory: true)
+        try FileManager.default.createDirectory(at: healthURL, withIntermediateDirectories: true)
+        let archiveURL = healthURL.appendingPathComponent(
+            "Health.md Export 2026-03-14_to_2026-03-15.zip"
+        )
+        let originalArchive = Data("existing archive must survive".utf8)
+        try originalArchive.write(to: archiveURL)
+
+        do {
+            _ = try await manager.finalizeCorpusDerivedOutputs(
+                recordPayloadFiles: [payloadURL],
+                recordSourceDates: [secondDate],
+                settings: settings,
+                requestedDates: [secondDate],
+                rollupRequestedDates: [firstDate, secondDate],
+                rollupCalendarTimeZoneIdentifier: "UTC",
+                startDate: secondDate,
+                endDate: secondDate,
+                healthSubfolder: "Health",
+                archiveWorkDirectoryURL: workURL
+            )
+            XCTFail("Archive rebuild must fail when an immutable original source is unavailable")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("existing ZIP preserved"))
+        }
+        XCTAssertEqual(try Data(contentsOf: archiveURL), originalArchive)
     }
     #endif
 
@@ -2160,7 +2881,10 @@ final class VaultManagerTests: XCTestCase {
         )
 
         XCTAssertTrue(result)
-        let dailyFilename = settings.dailyNoteInjection.formatFilename(for: ExportFixtures.referenceDate) + ".md"
+        let dailyFilename = settings.dailyNoteInjection.formatFilename(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        ) + ".md"
         let rootDailyNote = vaultURL
             .appendingPathComponent("Daily")
             .appendingPathComponent(dailyFilename)
@@ -2187,8 +2911,7 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeIsolatedSettings()
         settings.exportFormats = Set(ExportFormat.allCases)
         settings.archiveExportFiles = true
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         settings.individualTracking.globalEnabled = true
         settings.individualTracking.setTrackIndividually("weight", enabled: true)
@@ -2202,7 +2925,8 @@ final class VaultManagerTests: XCTestCase {
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: ExportFixtures.referenceDate
+            date: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         let rootItems = try FileManager.default.contentsOfDirectory(atPath: vaultURL.path)
         let dailyItems = try FileManager.default.contentsOfDirectory(
@@ -2270,11 +2994,15 @@ final class VaultManagerTests: XCTestCase {
 
         try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
 
-        let dailyRelativePath = settings.dailyNoteInjection.previewPath(for: ExportFixtures.referenceDate)
+        let dailyRelativePath = settings.dailyNoteInjection.previewPath(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        )
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: ExportFixtures.referenceDate
+            date: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         let aggregateURL = vaultURL
             .appendingPathComponent("Health")
@@ -2347,7 +3075,10 @@ final class VaultManagerTests: XCTestCase {
         let settings = makeCollidingDailyNoteSettings(format: format)
         let dailyNoteURL = try precreateCollidingDailyNote(in: vaultURL, settings: settings)
         let originalContent = try String(contentsOf: dailyNoteURL, encoding: .utf8)
-        let expectedPath = settings.dailyNoteInjection.previewPath(for: ExportFixtures.referenceDate)
+        let expectedPath = settings.dailyNoteInjection.previewPath(
+            for: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
+        )
 
         do {
             try await manager.exportHealthData(ExportFixtures.fullDay, settings: settings)
@@ -2381,7 +3112,8 @@ final class VaultManagerTests: XCTestCase {
         let dailyNoteURL = ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: ExportFixtures.referenceDate
+            date: ExportFixtures.referenceDate,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         try FileManager.default.createDirectory(
             at: dailyNoteURL.deletingLastPathComponent(),

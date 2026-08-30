@@ -182,6 +182,7 @@ class ExportOrchestratorReliabilityTest {
         assertThat(result.successCount).isEqualTo(0)
         assertThat(result.totalCount).isEqualTo(3)
         assertThat(result.failedDateDetails).isEmpty()
+        assertThat(result.remainingDates).containsExactlyElementsIn(dates)
         assertThat(exportRepository.exportedDates).isEmpty()
     }
 

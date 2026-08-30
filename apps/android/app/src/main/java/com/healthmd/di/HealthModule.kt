@@ -19,6 +19,7 @@ import com.healthmd.data.health.providers.direct.SamsungHealthDirectDataProvider
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.DefaultRawHealthRepository
+import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.HealthConnectRawDataProvider
 import com.healthmd.rawexport.RawHealthRepository
 import com.healthmd.rawexport.RawHealthRepositoryRegistry
@@ -42,18 +43,21 @@ object HealthModule {
     @Singleton
     fun provideHealthConnectManager(
         @ApplicationContext context: Context,
-    ): HealthConnectManager = HealthConnectManager(context)
+        routeConsentCoordinator: ExerciseRouteConsentCoordinator,
+    ): HealthConnectManager = HealthConnectManager(context, routeConsentGateway = routeConsentCoordinator)
 
     @Provides
     @Singleton
     fun provideHealthConnectRawDataProvider(
         @ApplicationContext context: Context,
         settingsRepository: SettingsRepository,
+        routeConsentCoordinator: ExerciseRouteConsentCoordinator,
     ): HealthConnectRawDataProvider = HealthConnectRawDataProvider(
         context = context,
         historyAccessBoundary = com.healthmd.rawexport.HistoryAccessBoundary {
             settingsRepository.getFirstHealthPermissionGrantDate()
         },
+        routeConsentGateway = routeConsentCoordinator,
     )
 
     @Provides

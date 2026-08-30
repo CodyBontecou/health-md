@@ -90,17 +90,22 @@ Never attach raw output to an issue or CI log.
 3. Repeat status and a raw export through a Tailscale IPv4 address.
 4. Exercise protected-data unavailable, app backgrounding, local-network denial, timeout, and
    reconnect behavior.
-5. Export one day, seven days, complete-empty data, warning-only data, and an honest partial result.
-6. Run summary and lossless extraction with category, metric, object, and JSON Pointer selectors;
+5. Verify silent channel death self-heals without a manual in-app disconnect: keep Health.md
+   foreground and connected, put the Mac to sleep (or toggle airplane mode on the phone) for at
+   least 30 seconds, then run `healthmd status` on the Mac after waking it. The iPhone must
+   redial on its own within roughly 20 seconds of its heartbeat/reconnect window (no toggle of
+   Direct CLI Access, no QR re-scan), and the command must succeed. Repeat once over Tailscale.
+6. Export one day, seven days, complete-empty data, warning-only data, and an honest partial result.
+7. Run summary and lossless extraction with category, metric, object, and JSON Pointer selectors;
    confirm partial extraction emits no retained values without `--allow-partial`.
-7. Interrupt during a multi-partition raw job, inspect `status --job`, resume, compare the final
+8. Interrupt during a multi-partition raw job, inspect `status --job`, resume, compare the final
    digest/result, and test explicit cancellation plus cancellation-pending delivery.
-8. On macOS and Linux, test overwrite, append, both Markdown merge modes, nested directories,
+9. On macOS and Linux, test overwrite, append, both Markdown merge modes, nested directories,
    duplicate/case/Unicode-alias paths, symlink ancestors/files, destination mutation, low disk, and
    interruption between destination commit and final confirmation.
-9. On Windows, verify status/raw/extract/resume/cancel plus protocol-v1 generated-file export into
+10. On Windows, verify status/raw/extract/resume/cancel plus protocol-v1 generated-file export into
    an existing NTFS destination, including drive-root and UNC-path validation where available.
-10. Run `healthmd setup codex` and verify first-pair, idempotent rerun, safe preservation of existing
+11. Run `healthmd setup codex` and verify first-pair, idempotent rerun, safe preservation of existing
     Codex settings, explicit multi-iPhone selection, export approval policy, and that the generated
     command uses the same `healthmd` executable with `mcp serve`. Then test status, metric catalog,
     metric chart, sleep, workouts, comparison, coverage, evidence, explicit raw query, multipage
@@ -110,7 +115,7 @@ Never attach raw output to an issue or CI log.
     the sibling `healthmd` on Unix and, on Windows, serves in-process while successfully supervising
     its own same-file helper against the fixed Credential Manager service/account. Repeat on macOS,
     Linux, and Windows without Health.md for Mac installed.
-11. Confirm stdout contains only the documented JSON/result stream, stderr contains no health
+12. Confirm stdout contains only the documented JSON/result stream, stderr contains no health
     payload, and private state/output permissions are appropriate on each platform.
 
 ## Physical Android gate

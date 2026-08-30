@@ -32,7 +32,7 @@ final class AppleClinicianReportDataSource {
 
             return try await healthKitManager.fetchHealthData(
                 for: date,
-                includeGranularData: true,
+                detailPolicy: .detailedTimeSeries,
                 metricSelection: selection,
                 timeZone: timeZone
             )

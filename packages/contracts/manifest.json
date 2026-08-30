@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "75658b049816fb19bcb37c2128a39effcd10ac4ec256f947c37d986387ab3025",
+      "sha256": "4e54c746cd0e3cfb3d2f19f90a5a600072a57c845453c1f867a518675d67aa00",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -17,7 +17,7 @@
       "id": "healthmd.metric_registry",
       "version": 1,
       "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
-      "sha256": "9ed4fc3a75c3a03d569cd733e24617c9bf028c9cd3f718e5d85a67c47d7aca65",
+      "sha256": "da1ef4f1dd2c9117e5922ae64207510c743c8b14624a792bab93f98494ccb070",
       "implementations": [
         "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
         "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
@@ -122,7 +122,9 @@
       ],
       "consumers": [
         "packages/healthmd-core-rust/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/v2_profile_vectors.rs",
         "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/ProfilePolicyInteropTest.kt",
         "apps/android/app/src/test/java/com/healthmd/direct/AndroidDirectProtocolAuthorityTest.kt",
         "apps/android/healthmd-core/src/androidTest/kotlin/com/healthmd/core/HealthMdCoreInstrumentationTest.kt"
       ],
@@ -133,6 +135,14 @@
           "provenance": "The former Rust and Kotlin reference copies were byte-identical when centralized; both implementations verify this shared vector.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json"
+          ]
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "provenance": "Reviewed synthetic Android v2 profile-policy request with byte-exact canonical request, envelope, fingerprint, and unnamed-reference omission vectors; contains no credentials, grants, or health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json"
           ]
         }
       ]
@@ -163,11 +173,63 @@
       "fixtures": [
         {
           "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
-          "sha256": "e6d3d9550442b2e5c73bcf0d2c9ef9a4ef2a8d715ab4c5eecd32f8c64987928b",
+          "sha256": "11f5f83e6e1b384a123bc8bd1459755c2c6051edfa17e2b6c8cd18daed552010",
           "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
           ]
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json",
+          "sha256": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+          "provenance": "Reviewed internal capability fixture proving calendar revision 1 remains stable while range requires revision 2.",
+          "mirrors": []
+        }
+      ]
+    },
+    {
+      "id": "healthmd.rollup_summary",
+      "version": 9,
+      "status": "canonical",
+      "summary": "Public Apple range-summary grammar independently versioned from daily health data v8.",
+      "specification": "packages/contracts/rollup-summary/v9/contract.md",
+      "authorities": [
+        "packages/contracts/rollup-summary/v9/contract.md",
+        "packages/contracts/rollup-summary/v9/rollup-summary.schema.json"
+      ],
+      "implementations": [
+        "apps/apple/HealthMd/Shared/Export/HealthRollupModels.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthRollupGenerator.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs"
+      ],
+      "consumers": [
+        "apps/apple/HealthMdTests/Export/HealthRollupExporterTests.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.json",
+          "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+          "provenance": "Generated directly by the production Swift range generator and JSON renderer from the canonical synthetic partial-range corpus; Rust reconstructs and verifies the same public contract semantics.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv",
+          "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+          "provenance": "Generated directly by the production Swift range generator and CSV renderer from the canonical synthetic partial-range corpus.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.md",
+          "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+          "provenance": "Generated directly by the production Swift range generator and Markdown renderer from the canonical synthetic partial-range corpus.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md",
+          "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+          "provenance": "Generated directly by the production Swift range generator and Obsidian Bases renderer from the canonical synthetic partial-range corpus.",
+          "mirrors": []
         }
       ]
     },
@@ -198,7 +260,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
-          "sha256": "7c394c1aeda97c597afc1d1a6a3890671b1fc2f4b49b036bc060456b73e074d6",
+          "sha256": "438f1b7c4a9e5fe108edd70d2d479b17f1f4696af5611eb68b0ee4bfde452eb2",
           "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
@@ -228,7 +290,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
-          "sha256": "ca2ae035f280801c60e4bb6e3fff9f03a2c88022ce567ceed579b2ec49c3eb75",
+          "sha256": "9bc0accd3ea2ba7ba0ecf961dee92a005f9e0434c0bfec1538e926b5fdbab8d1",
           "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
@@ -236,7 +298,7 @@
         },
         {
           "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
-          "sha256": "4bdea95a034887e0869049537fbed77210fd2a619033bbdad37de2e4b7a72e67",
+          "sha256": "95ef77902f2e2d98069fc1c88ce09e3fc35a261e3966481f2e0f6c3b455e0635",
           "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
           "mirrors": [
             "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
@@ -276,13 +338,13 @@
       "fixtures": [
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/shared-setup-v1.json",
-          "sha256": "ad1b4570facba92d6a64cab859e660d2b9b2f4641b0f894a52fc71e83e0cc380",
+          "sha256": "b2a675cbfb214b1260e1df3a2dd4c2c59866560028b8ed1fd3f98cd9a4db1649",
           "provenance": "Reviewed synthetic Apple-origin setup profile with registry-backed shared aliases plus an Apple-only HRV row that Android must preserve as unavailable; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         },
         {
           "path": "packages/contracts/shared-setup/v1/fixtures/android-shared-setup-v1.json",
-          "sha256": "bb24e26aa0fe62675564cfbd518db293a6feca70f73b57499bb4b5a8b1382206",
+          "sha256": "e62117e7627fa1fbce392e0e886b5ceef295a78a429e896031b0c497ec51aed6",
           "provenance": "Reviewed synthetic Android-origin setup profile covering explicit Android defaults and an Android-distinct HRV RMSSD metric; contains no health records, account or device identity, credentials, tokens, grants, permissions, purchases, or runtime state.",
           "mirrors": []
         }

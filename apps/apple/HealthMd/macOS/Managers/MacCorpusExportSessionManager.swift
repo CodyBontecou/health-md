@@ -191,6 +191,9 @@ final class MacCorpusExportSessionManager {
         /// records) collected across the session and replayed in the terminal
         /// result payload. Optional so earlier journals decode unchanged.
         var individualEntryCoverageGaps: [ExportPartialFailure]? = nil
+        /// Derived-output warnings that are not tied to individual-entry extraction. Optional so
+        /// earlier journals decode unchanged and terminal results can replay the exact warning.
+        var derivedOutputPartialFailures: [ExportPartialFailure]? = nil
         /// Canonical strict-raw retained-day result survives payload spool cleanup and restart.
         var strictRawRetainedDayCount: Int? = nil
         /// Optional so journals created before one-time dictionary tracking decode unchanged.
@@ -459,7 +462,8 @@ final class MacCorpusExportSessionManager {
                     supportsRangePlan: open.session.protocolVersion
                         >= ConnectedCorpusTransferCapabilities.rangePlanProtocolVersion
                 )
-                guard !operation.usesRangePlan || exportManifest.transferDates.count <= 400 else {
+                guard !operation.usesRangePlan
+                        || exportManifest.transferDates.count <= HealthRollupRangeRequest.maximumDays else {
                     return rejected("Received-range authority exceeds the bounded semantic owner-date limit.")
                 }
             }
@@ -984,6 +988,9 @@ final class MacCorpusExportSessionManager {
             if !unavailableRollupDates.isEmpty && derivedSettings.rollupSummariesEnabled {
                 for requestedDate in journal.exportManifest.requestedDates {
                     let affectsRequestedDate = derivedSettings.enabledRollupPeriods.contains { period in
+                        // Range v9 reports partial coverage from the immutable request. Missing
+                        // source days must not suppress or fail the range artifact.
+                        guard period != .range else { return false }
                         let window = HealthRollupPeriodWindow.window(
                             containing: requestedDate,
                             period: period,
@@ -1015,30 +1022,23 @@ final class MacCorpusExportSessionManager {
                     || successfulRequestedDates.contains($0.sourceDate)
             }
             let usesRangePlan = session.dailyExportOperation?.usesRangePlan == true
+            var effectiveRangeSettingsSnapshot = journal.exportManifest.settingsSnapshot
+            if usesRangePlan {
+                let rangeAvailability = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+                    effectiveRangeSettingsSnapshot,
+                    requestedDates: journal.exportManifest.effectiveOriginalRequestedDates,
+                    calendarTimeZone: sourceCalendar.timeZone
+                )
+                effectiveRangeSettingsSnapshot = rangeAvailability.snapshot
+                derivedSettings.generateRangeSummary = effectiveRangeSettingsSnapshot.generateRangeSummary
+                if let warning = rangeAvailability.warning,
+                   !(session.journal.derivedOutputPartialFailures ?? []).contains(warning) {
+                    session.journal.derivedOutputPartialFailures =
+                        (session.journal.derivedOutputPartialFailures ?? []) + [warning]
+                }
+            }
             let derived: MacCorpusDerivedOutputResult
             if usesRangePlan {
-                if !unavailableRollupDates.isEmpty {
-                    // Native finalization suppresses every window with a missing source day. A
-                    // pinned operation cannot safely produce only a subset of its immutable plan,
-                    // so withhold the complete range before any destination write.
-                    let sourceDays = unavailableRollupDates
-                        .map { Self.sourceDateString($0, timeZone: sourceCalendar.timeZone) }
-                        .sorted()
-                        .joined(separator: ", ")
-                    for requestedDate in journal.exportManifest.requestedDates {
-                        if !session.journal.failedDateDetails.contains(where: { $0.date == requestedDate }) {
-                            session.journal.failedDateDetails.append(FailedDateDetail(
-                                date: requestedDate,
-                                reason: .healthKitError,
-                                errorDetails: "Pinned range withheld because roll-up source capture failed for: \(sourceDays)."
-                            ))
-                        }
-                    }
-                    session.journal.successfulRequestedDates.removeAll()
-                    session.journal.completedDates.removeAll { requestedDates.contains($0) }
-                    rollupBlockedRequestedDates = requestedDates
-                    derived = MacCorpusDerivedOutputResult(rollupFileCount: 0, archiveFileCount: 0)
-                } else {
                     guard let calendarTimeZoneIdentifier = journal.exportManifest
                         .settingsSnapshot.calendarTimeZoneIdentifier else {
                         throw ConnectedMacDailyExportOperation.ResolutionError.unsupportedPinnedOperation
@@ -1063,9 +1063,12 @@ final class MacCorpusExportSessionManager {
                         guard session.journal.receivedRangePlanPersisted == false else {
                             throw ConnectedCorpusTransferModelError.invalidJournal
                         }
+                        let effectiveRecordItems = effectiveRangeSettingsSnapshot.generateRangeSummary
+                            ? derivedRecordItems
+                            : derivedRecordItems.filter { requestedDates.contains($0.sourceDate) }
                         let rangeInput = try receivedRangeInput(
                             session: session,
-                            items: derivedRecordItems,
+                            items: effectiveRecordItems,
                             settings: derivedSettings,
                             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
                         )
@@ -1080,6 +1083,9 @@ final class MacCorpusExportSessionManager {
                                         reason: .noHealthData
                                     ))
                                 }
+                                if !session.journal.completedDates.contains(date) {
+                                    session.journal.completedDates.append(date)
+                                }
                             }
                             session.journal.successfulRequestedDates.removeAll {
                                 emptyRequestedDates.contains($0)
@@ -1091,11 +1097,27 @@ final class MacCorpusExportSessionManager {
                                 rollupFileCount: 0
                             )
                         } else {
+                            let requestedRange = try effectiveRangeSettingsSnapshot.generateRangeSummary
+                                ? HealthRollupRangeRequest(
+                                    ownerDateIdentifiers: Set(journal.exportManifest.effectiveOriginalRequestedDates.map {
+                                        HealthKitDailyOwnershipMetadata.ownerDate(
+                                            for: $0,
+                                            calendarTimeZoneIdentifier: journal.exportManifest
+                                                .effectiveOriginalCalendarTimeZoneIdentifier
+                                                ?? calendarTimeZoneIdentifier
+                                        )
+                                    }),
+                                    calendarTimeZoneIdentifier: journal.exportManifest
+                                        .effectiveOriginalCalendarTimeZoneIdentifier
+                                        ?? calendarTimeZoneIdentifier
+                                )
+                                : nil
                             guard let materialized = try await vaultManager.materializeHealthDataRange(
                                 rangeInput.records,
-                                settingsSnapshot: journal.exportManifest.settingsSnapshot,
+                                settingsSnapshot: effectiveRangeSettingsSnapshot,
                                 operationSurface: .connectedReceivedRangeWithoutSideEffects,
                                 dailyOutputOwnerDates: rangeInput.dailyOutputOwnerDates,
+                                requestedRange: requestedRange,
                                 operationIdentity: AppleExportOperationIdentity(
                                     requestID: journal.session.jobID.uuidString.lowercased(),
                                     sessionID: journal.session.sessionID.uuidString.lowercased(),
@@ -1148,8 +1170,49 @@ final class MacCorpusExportSessionManager {
                         rollupFileCount: rangeResult.rollupFileCount,
                         archiveFileCount: 0
                     )
-                }
             } else {
+                if derivedSettings.generateRangeSummary,
+                   let originalTimeZoneIdentifier = journal.exportManifest
+                    .effectiveOriginalCalendarTimeZoneIdentifier,
+                   let originalTimeZone = TimeZone(identifier: originalTimeZoneIdentifier) {
+                    do {
+                        _ = try HealthRollupRangeRequest(
+                            ownerDateIdentifiers: Set(
+                                journal.exportManifest.effectiveOriginalRequestedDates.map {
+                                    HealthKitDailyOwnershipMetadata.ownerDate(
+                                        for: $0,
+                                        calendarTimeZoneIdentifier: originalTimeZoneIdentifier
+                                    )
+                                }
+                            ),
+                            calendarTimeZoneIdentifier: originalTimeZoneIdentifier
+                        )
+                    } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+                        let originalDates = journal.exportManifest.effectiveOriginalRequestedDates
+                        let firstDate = originalDates.first
+                            ?? journal.exportManifest.dateRangeStart
+                        let lastDate = originalDates.last ?? firstDate
+                        let formatter = DateFormatter()
+                        formatter.calendar = Calendar(identifier: .gregorian)
+                        formatter.locale = Locale(identifier: "en_US_POSIX")
+                        formatter.timeZone = originalTimeZone
+                        formatter.dateFormat = "yyyy-MM-dd"
+                        let first = formatter.string(from: firstDate)
+                        let last = formatter.string(from: lastDate)
+                        let warning = ExportPartialFailure(
+                            date: firstDate,
+                            dataType: "Range Summary",
+                            dateRangeDescription: first == last ? first : "\(first) – \(last)",
+                            errorDescription: HealthRollupRangeRequest.dayLimitUnavailableMessage
+                        )
+                        if !(session.journal.derivedOutputPartialFailures ?? []).contains(warning) {
+                            session.journal.derivedOutputPartialFailures =
+                                (session.journal.derivedOutputPartialFailures ?? []) + [warning]
+                        }
+                    } catch {
+                        // Other invalid authority remains a finalization failure below.
+                    }
+                }
                 let archiveWorkDirectoryURL = vaultManager.vaultURL.map {
                     Self.archiveWorkDirectoryURL(vaultURL: $0, sessionID: journal.session.sessionID)
                 }
@@ -1160,6 +1223,9 @@ final class MacCorpusExportSessionManager {
                     recordSourceDates: derivedRecordItems.map(\.sourceDate),
                     settings: derivedSettings,
                     requestedDates: journal.exportManifest.requestedDates,
+                    rollupRequestedDates: journal.exportManifest.effectiveOriginalRequestedDates,
+                    rollupCalendarTimeZoneIdentifier: journal.exportManifest
+                        .effectiveOriginalCalendarTimeZoneIdentifier,
                     startDate: journal.exportManifest.dateRangeStart,
                     endDate: journal.exportManifest.dateRangeEnd,
                     healthSubfolder: journal.exportManifest.settingsSnapshot.healthSubfolder,
@@ -1184,14 +1250,23 @@ final class MacCorpusExportSessionManager {
                 }
             }
 
-            let settings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+            let settings = usesRangePlan
+                ? derivedSettings
+                : journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
             if settings.summaryOnlyModeEnabled && derived.rollupFileCount == 0
                 && (!usesRangePlan || session.journal.failedDateDetails.isEmpty) {
-                session.journal.failedDateDetails.append(FailedDateDetail(
-                    date: journal.exportManifest.requestedDates.first ?? journal.exportManifest.dateRangeStart,
-                    reason: .noHealthData,
-                    errorDetails: "No roll-up summary data was available for the selected period."
-                ))
+                let terminalFailures = ExportOrchestrator.terminalNoDataFailures(
+                    for: journal.exportManifest.requestedDates,
+                    calendar: sourceCalendar
+                )
+                session.journal.failedDateDetails.append(contentsOf: terminalFailures.filter { failure in
+                    !session.journal.failedDateDetails.contains(where: { existing in
+                        sourceCalendar.isDate(existing.date, inSameDayAs: failure.date)
+                    })
+                })
+                session.journal.completedDates = Array(Set(
+                    session.journal.completedDates + journal.exportManifest.requestedDates
+                )).sorted()
             }
             let failedRequestedDates = Set(session.journal.failedDateDetails.map(\.date))
             if settings.archiveModeEnabled && derived.archiveFileCount > 0 {
@@ -1608,10 +1683,11 @@ final class MacCorpusExportSessionManager {
         }
         suspendedExpiryTasks.removeValue(forKey: sessionID)?.cancel()
         let journalBeforeCancellation = session.journal
-        session.journal.state = .cancelled
-        session.journal.receivedRangePlan = nil
-        session.journal.updatedAt = Date()
         do {
+            try recordDurableRangePlanProgressForCancellation(session: session)
+            session.journal.state = .cancelled
+            session.journal.receivedRangePlan = nil
+            session.journal.updatedAt = Date()
             try persist(session)
         } catch {
             session.journal = journalBeforeCancellation
@@ -1643,6 +1719,46 @@ final class MacCorpusExportSessionManager {
             ),
             session.journal.exportManifest.mode == .strictRaw ? nil : result
         )
+    }
+
+    private func recordDurableRangePlanProgressForCancellation(session: Session) throws {
+        guard session.dailyExportOperation?.usesRangePlan == true,
+              let plan = session.journal.receivedRangePlan else { return }
+        let committedArtifacts = plan.artifacts.prefix(plan.nextArtifactIndex)
+        let fileCount = session.journal.totalFilesWritten.addingReportingOverflow(
+            committedArtifacts.count
+        )
+        guard !fileCount.overflow else {
+            throw ConnectedCorpusTransferModelError.invalidJournal
+        }
+
+        let settings = session.journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+        var completedDates = Set(session.journal.completedDates)
+        if settings.summaryOnlyModeEnabled {
+            // A summary date represents the complete immutable range, not one
+            // format within it. Only the fully committed plan completes those dates.
+            if plan.nextArtifactIndex == plan.artifacts.count, plan.rollupFileCount > 0 {
+                completedDates.formUnion(plan.requestedRecordDatesWithData)
+            }
+        } else {
+            let formatsPerDate = settings.looseFormatsPerDate
+            guard formatsPerDate > 0 else {
+                throw ConnectedCorpusTransferModelError.invalidJournal
+            }
+            // Daily artifacts are materialized date-major and precede roll-ups.
+            // A date becomes durable only after every configured format crossed
+            // the persisted artifact frontier.
+            let committedDailyFileCount = committedArtifacts.count(where: { $0.kind == .daily })
+            let completedDailyDateCount = min(
+                committedDailyFileCount / formatsPerDate,
+                plan.requestedRecordDatesWithData.count
+            )
+            completedDates.formUnion(
+                plan.requestedRecordDatesWithData.prefix(completedDailyDateCount)
+            )
+        }
+        session.journal.totalFilesWritten = fileCount.partialValue
+        session.journal.completedDates = Array(completedDates).sorted()
     }
 
     private func validateItemContinuity(
@@ -3704,12 +3820,31 @@ final class MacCorpusExportSessionManager {
         forcedStatus: MacExportResultStatus? = nil
     ) -> MacExportResultPayload {
         let requestedDates = session.journal.exportManifest.requestedDates
-        let settings = session.journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+        var effectiveSnapshot = session.journal.exportManifest.settingsSnapshot
+        if let timeZoneIdentifier = session.journal.exportManifest.effectiveOriginalCalendarTimeZoneIdentifier,
+           let timeZone = TimeZone(identifier: timeZoneIdentifier) {
+            effectiveSnapshot = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+                effectiveSnapshot,
+                requestedDates: session.journal.exportManifest.effectiveOriginalRequestedDates,
+                calendarTimeZone: timeZone
+            ).snapshot
+        }
+        let settings = effectiveSnapshot.makeAdvancedExportSettings()
         let successfulDates = Set(session.journal.successfulRequestedDates)
         let durableDates = Set(session.journal.completedDates)
+        let terminalNoDataDates = Set(session.journal.failedDateDetails.compactMap { detail in
+            detail.reason == .noHealthData
+                && detail.errorDetails == "No roll-up summary data was available for the selected period."
+                ? detail.date
+                : nil
+        })
+        let requiresDurableDate = settings.archiveModeEnabled
+            || settings.summaryOnlyModeEnabled
+            || session.dailyExportOperation?.usesRangePlan == true
         let successCount = requestedDates.filter {
             successfulDates.contains($0)
-                && (!settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled || durableDates.contains($0))
+                && !terminalNoDataDates.contains($0)
+                && (!requiresDurableDate || durableDates.contains($0))
         }.count
         let status: MacExportResultStatus = forcedStatus ?? {
             if successCount == requestedDates.count && session.journal.failedDateDetails.isEmpty { return .success }
@@ -3728,7 +3863,8 @@ final class MacCorpusExportSessionManager {
             dailyNoteUpdateCount: session.journal.dailyNoteUpdateCount ?? 0,
             dailyNoteSkipCount: session.journal.dailyNoteSkipCount ?? 0,
             failedDateDetails: session.journal.failedDateDetails,
-            partialFailures: session.journal.individualEntryCoverageGaps ?? [],
+            partialFailures: (session.journal.individualEntryCoverageGaps ?? [])
+                + (session.journal.derivedOutputPartialFailures ?? []),
             completedDates: Array(Set(session.journal.completedDates)).sorted(),
             destinationDisplayName: nil,
             destinationPathForDisplay: nil,
@@ -4266,7 +4402,7 @@ final class MacCorpusExportSessionManager {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         if usesRangePlan,
-           journal.exportManifest.transferDates.count > 400 {
+           journal.exportManifest.transferDates.count > HealthRollupRangeRequest.maximumDays {
             throw ConnectedCorpusTransferModelError.invalidJournal
         }
         if journal.state == .open,
@@ -4350,11 +4486,27 @@ final class MacCorpusExportSessionManager {
                 throw ConnectedCorpusTransferModelError.invalidJournal
             }
             let requestedDates = journal.exportManifest.requestedDates
-            let settings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
+            var effectiveSnapshot = journal.exportManifest.settingsSnapshot
+            if let timeZoneIdentifier = journal.exportManifest.effectiveOriginalCalendarTimeZoneIdentifier,
+               let timeZone = TimeZone(identifier: timeZoneIdentifier) {
+                effectiveSnapshot = ExportOrchestrator.settingsByDisablingUnavailableRangeSummary(
+                    effectiveSnapshot,
+                    requestedDates: journal.exportManifest.effectiveOriginalRequestedDates,
+                    calendarTimeZone: timeZone
+                ).snapshot
+            }
+            let settings = effectiveSnapshot.makeAdvancedExportSettings()
             let successfulDates = Set(journal.successfulRequestedDates)
             let durableDates = Set(journal.completedDates)
+            let terminalNoDataDates = Set(journal.failedDateDetails.compactMap { detail in
+                detail.reason == .noHealthData
+                    && detail.errorDetails == "No roll-up summary data was available for the selected period."
+                    ? detail.date
+                    : nil
+            })
             let successCount = requestedDates.count {
                 successfulDates.contains($0)
+                    && !terminalNoDataDates.contains($0)
                     && (!settings.archiveModeEnabled && !settings.summaryOnlyModeEnabled
                         || durableDates.contains($0))
             }
@@ -4743,7 +4895,8 @@ final class MacCorpusExportSessionManager {
                 ExportPathPlanner.dailyNoteURL(
                     vaultURL: vaultURL,
                     settings: settings.dailyNoteInjection,
-                    date: $0
+                    date: $0,
+                    timeZone: settings.exportTimeZoneOverride ?? .current
                 )
             })
         }

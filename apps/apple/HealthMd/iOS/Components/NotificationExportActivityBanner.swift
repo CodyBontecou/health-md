@@ -30,14 +30,23 @@ final class NotificationExportActivityTracker: ObservableObject {
         case preparing
         case capturing
         case transferring
+        case cancelling
         case completed
         case completedWithWarnings
         case failed
+        case cancelled
 
         var isTerminal: Bool {
             switch self {
-            case .completed, .completedWithWarnings, .failed: return true
-            case .preparing, .capturing, .transferring: return false
+            case .completed, .completedWithWarnings, .failed, .cancelled: return true
+            case .preparing, .capturing, .transferring, .cancelling: return false
+            }
+        }
+
+        var allowsCancellation: Bool {
+            switch self {
+            case .preparing, .capturing, .transferring: return true
+            case .cancelling, .completed, .completedWithWarnings, .failed, .cancelled: return false
             }
         }
 
@@ -64,6 +73,7 @@ final class NotificationExportActivityTracker: ObservableObject {
 
     private var dismissalTask: Task<Void, Never>?
     private var handledResultTimestamp: Date?
+    private var handledResultOperationID: UUID?
 
     var keepsScreenAwake: Bool {
         snapshot?.phase.keepsScreenAwake == true
@@ -81,6 +91,7 @@ final class NotificationExportActivityTracker: ObservableObject {
                 || snapshot?.phase.isTerminal == true else { return }
         dismissalTask?.cancel()
         handledResultTimestamp = nil
+        handledResultOperationID = nil
         snapshot = Snapshot(
             operationID: operationID,
             source: source,
@@ -101,7 +112,8 @@ final class NotificationExportActivityTracker: ObservableObject {
     ) {
         guard let current = snapshot,
               current.operationID == operationID,
-              !current.phase.isTerminal else { return }
+              !current.phase.isTerminal,
+              current.phase != .cancelling else { return }
         dismissalTask?.cancel()
         snapshot = Snapshot(
             operationID: current.operationID,
@@ -114,8 +126,28 @@ final class NotificationExportActivityTracker: ObservableObject {
         )
     }
 
+    @discardableResult
+    func requestCancellation(operationID: UUID) -> Bool {
+        guard let current = snapshot,
+              current.operationID == operationID,
+              current.phase.allowsCancellation else { return false }
+        dismissalTask?.cancel()
+        snapshot = Snapshot(
+            operationID: current.operationID,
+            source: current.source,
+            targetLabel: current.targetLabel,
+            phase: .cancelling,
+            processedDays: current.processedDays,
+            totalDays: current.totalDays,
+            message: String(localized: "Cancelling export…")
+        )
+        return true
+    }
+
     func finish(with result: NotificationExportResult) {
-        guard let current = snapshot, !current.phase.isTerminal else { return }
+        guard let current = snapshot,
+              result.operationID == current.operationID,
+              !current.phase.isTerminal else { return }
         let phase: Phase
         switch result.status {
         case .success, .dailyNotesCompleted, .noExportNeeded:
@@ -124,9 +156,12 @@ final class NotificationExportActivityTracker: ObservableObject {
             phase = .completedWithWarnings
         case .failure:
             phase = .failed
+        case .cancelled:
+            phase = .cancelled
         }
 
         handledResultTimestamp = result.timestamp
+        handledResultOperationID = result.operationID
         snapshot = Snapshot(
             operationID: current.operationID,
             source: current.source,
@@ -151,18 +186,21 @@ final class NotificationExportActivityTracker: ObservableObject {
 
     func handles(_ result: NotificationExportResult) -> Bool {
         handledResultTimestamp == result.timestamp
+            && handledResultOperationID == result.operationID
     }
 
     func clear() {
         dismissalTask?.cancel()
         dismissalTask = nil
         handledResultTimestamp = nil
+        handledResultOperationID = nil
         snapshot = nil
     }
 }
 
 struct NotificationExportActivityBanner: View {
     let snapshot: NotificationExportActivityTracker.Snapshot
+    let onCancel: (() -> Void)?
 
     var body: some View {
         ExportActivityBanner(
@@ -181,7 +219,18 @@ struct NotificationExportActivityBanner: View {
             trailingText: snapshot.phase.keepsScreenAwake
                 ? String(localized: "Keep Health.md open")
                 : nil,
-            accessibilityIdentifier: AccessibilityID.Notification.exportActivity
+            accessibilityIdentifier: AccessibilityID.Notification.exportActivity,
+            action: cancelAction
+        )
+    }
+
+    private var cancelAction: ExportActivityBannerAction? {
+        guard snapshot.phase.allowsCancellation, let onCancel else { return nil }
+        return ExportActivityBannerAction(
+            title: String(localized: "Cancel Export"),
+            systemImage: "xmark",
+            accessibilityIdentifier: AccessibilityID.Notification.cancelExportButton,
+            perform: onCancel
         )
     }
 
@@ -198,8 +247,10 @@ struct NotificationExportActivityBanner: View {
         case .preparing: return "\(snapshot.source.operationLabel) starting"
         case .capturing: return "\(snapshot.source.operationLabel) in progress"
         case .transferring: return "Sending \(snapshot.source.operationLabel.lowercased())"
+        case .cancelling: return "Cancelling \(snapshot.source.operationLabel.lowercased())"
         case .completed, .completedWithWarnings: return "\(snapshot.source.operationLabel) completed"
         case .failed: return "\(snapshot.source.operationLabel) failed"
+        case .cancelled: return "\(snapshot.source.operationLabel) cancelled"
         }
     }
 
@@ -207,17 +258,19 @@ struct NotificationExportActivityBanner: View {
         switch snapshot.phase {
         case .preparing, .capturing: return "waveform.path.ecg"
         case .transferring: return "arrow.up.doc.fill"
+        case .cancelling: return "xmark.circle"
         case .completed: return "checkmark.circle.fill"
         case .completedWithWarnings: return "exclamationmark.circle.fill"
         case .failed: return "exclamationmark.triangle.fill"
+        case .cancelled: return "xmark.circle.fill"
         }
     }
 
     private var phaseColor: Color {
         switch snapshot.phase {
-        case .failed: return Color.error
+        case .failed, .cancelled: return Color.error
         case .completed: return Color.success
-        case .completedWithWarnings: return Color.warning
+        case .completedWithWarnings, .cancelling: return Color.warning
         case .preparing, .capturing, .transferring: return Color.accent
         }
     }

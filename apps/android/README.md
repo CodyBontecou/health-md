@@ -300,6 +300,16 @@ Focused commands:
   -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.directcli.DirectCliScreenTest
 ```
 
+The scheduled-export notification cancellation tests are manual, host-driven QA and are skipped by
+ordinary instrumentation runs. They require a slow endpoint exposed through `adb reverse`, a real
+notification-action tap, and (for profile cancellation) Health Connect background-read permission.
+Enable them only while driving that setup explicitly:
+
+```bash
+./gradlew :app:connectedDebugAndroidTest \
+  -Pandroid.testInstrumentationRunnerArguments.scheduledExportCancellationQa=true
+```
+
 The opt-in Direct CLI network E2E drives the real **Settings → Direct CLI** UI, foreground service,
 Android Keystore trust, Rust pairing/authenticated transport, v2 negotiation, the foreground
 notification and its Disconnect action, status, forget, and code-based re-pair. It deliberately
@@ -354,6 +364,7 @@ If you want the strictest local setup, use manual Device Folder exports, choose 
 
 ## Documentation
 
+- [Feature documentation index](docs/features/index.md) — the canonical per-feature page inventory (mirrors the Apple feature docs tree), with setup, export, formats, automation, devices, purchase, and privacy guides
 - [API Endpoint export](docs/api-endpoint-export.md) — compatibility HTTP(S) JSON uploads, encrypted custom headers, scheduling, and privacy
 - [Raw snapshot v1](docs/export-contract/raw-snapshot-v1.md) — API-complete snapshot semantics, manifests, checksums, and limitations
 - [Raw record v1](docs/export-contract/raw-record-v1.md) — native record and provider-payload wire contract

@@ -186,12 +186,15 @@ def main() -> int:
         if arguments.main_sha != arguments.sha:
             fail(f"main commit {arguments.main_sha} does not equal tag SHA {arguments.sha}")
         windows_identity = signing_identities.get("windows", {})
-        if (
-            windows_identity.get("status") != "qualified"
-            or not isinstance(windows_identity.get("publisher_subject"), str)
-            or not windows_identity["publisher_subject"].strip()
+        # Windows Authenticode may be deferred: a pending ledger with no publisher subject is a
+        # deliberate unsigned-release state (Windows archives ship Authenticode-unsigned with
+        # integrity covered by the Sigstore-signed checksum closure). Once the ledger records a
+        # qualified subject, never regress it to pending for a later release.
+        if windows_identity.get("status") == "qualified" and not (
+            isinstance(windows_identity.get("publisher_subject"), str)
+            and windows_identity["publisher_subject"].strip()
         ):
-            fail("Windows publisher identity must be committed as qualified before tagging")
+            fail("qualified Windows publisher identity must carry a non-empty subject")
     else:
         if arguments.sha or arguments.main_sha:
             fail("--sha and --main-sha are valid only with --tag")
@@ -242,6 +245,7 @@ def main() -> int:
                 "publication_order": list(PUBLISHED),
                 "tag": arguments.tag,
                 "sha": arguments.sha,
+                "windows_signing": windows_identity.get("status"),
             },
             separators=(",", ":"),
             sort_keys=True,

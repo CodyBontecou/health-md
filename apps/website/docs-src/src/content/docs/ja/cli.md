@@ -1,26 +1,27 @@
 ---
 title: "Health.md CLI"
-description: "MacアプリまたはiPhone直接接続バックエンドを選択し、healthmdをインストールして、準備状況の確認、ファイルのエクスポート、正規Apple Healthデータの抽出、型付きクエリ、永続ジョブの自動化を行います。"
+description: "Macアプリまたはスマートフォン直接接続バックエンドを選択し、healthmdをiPhoneまたはAndroidデバイスとペアリングして、準備状況の確認、ファイルのエクスポート、正規Apple Healthデータの抽出、型付きクエリ、永続ジョブの自動化を行います。"
 ---
 
-`healthmd`コマンドには2つの動作モードがあります。暗号化されたローカルクエリ、MCPツール、Health.md for Macで選択済みの保存先フォルダを使用する場合は、Macアプリのバックエンドを選びます。Macアプリを起動せずに生データや生成ファイルを取得する場合は、iPhone直接接続バックエンドを選びます。
+`healthmd`コマンドには2つの動作モードがあります。暗号化されたローカルクエリ、MCPツール、Health.md for Macで選択済みの保存先フォルダを使用する場合は、Macアプリのバックエンドを選びます。Macアプリを起動せずに生データや生成ファイルを取得する場合は、スマートフォン直接接続バックエンドを選びます。直接接続モードは、iPhone（プロトコルv1）またはAndroid（プロトコルv2）で開いているHealth.mdアプリとペアリングします。
 
 <div class="callout">
-<strong>HealthKitはiPhone内にとどまります</strong>
-<p style="margin-top:6px;">どちらのCLIバックエンドも、コンピューターからApple Healthを読み取りません。新しいHealthKitデータを読み取るたびに、現在のiPhone版Health.mdを開いておく必要があります。CLIが受け取るのは、検証済みの結果またはファイルです。</p>
+<strong>ヘルスデータはスマートフォン内にとどまります</strong>
+<p style="margin-top:6px;">どちらのCLIバックエンドも、コンピューターからApple HealthやHealth Connectを読み取ることはありません。新しいプラットフォームのヘルスデータを読み取るのは、そのたびに開いているiPhoneまたはAndroidのHealth.mdアプリです。CLIが受け取るのは、検証済みの結果またはファイルです。</p>
 </div>
 
 ## バックエンドを選ぶ
 
-| 機能 | Macアプリのバックエンド | iPhone直接接続バックエンド |
+| 機能 | Macアプリのバックエンド | スマートフォン直接接続バックエンド |
 |---|---|---|
 | 同梱Macヘルパーの既定値 | はい | いいえ。`--backend direct`で選択 |
+| 接続先デバイス | iPhone | iPhone（プロトコルv1）またはAndroid（プロトコルv2） |
 | Health.md for Macを開く必要がある | はい | いいえ |
-| 新しいデータの取得時にiPhone版Health.mdを開く必要がある | はい | はい |
+| 新しいデータの取得時にスマートフォン版Health.mdアプリを開く必要がある | はい | はい |
 | ファイル保存先 | Macアプリで選択したフォルダ | 既存の絶対パス`--destination` |
-| 厳密な生データエクスポート | 対応 | 対応 |
-| 正規`healthmd extract` | 対応 | 対応 |
-| 暗号化コンテキスト、型付きクエリ、エビデンス | 対応 | 非対応 |
+| 厳密な生データエクスポート | 対応 | 対応。AndroidではプロバイダネイティブなHealth Connectスナップショット |
+| 正規`healthmd extract` | 対応 | iPhoneのみ |
+| 暗号化コンテキスト、型付きクエリ、エビデンス | 対応 | iPhoneのみ（ポータブルクライアント） |
 | `healthmd-mcp` | 対応 | 非対応 |
 | Manual IPまたはTailscale | Mac同期または明示的な直接接続モード | 対応 |
 | Nearby直接転送 | 同梱のSwiftヘルパーのみ | ポータブルRustクライアントでは非対応 |
@@ -80,11 +81,11 @@ healthmd doctor
 <p>クロスプラットフォームのRust CLIは、実機iPhoneでのリリースQAと、最初の品質確認済みパッケージの公開を待っています。</p>
 </div>
 
-スタンドアロンのRust CLIは、`0.1.0-alpha.1`として開発中です。macOS、Linux、Windowsで動作し、既定ではManual IPまたはTailscaleによる直接接続を使用するため、Macアプリは不要です。プロトコル互換性とクロス言語フィクスチャは実装済みですが、最初の公開リリースまでに、実機iPhoneでのリリースQAと公開パッケージの準備を完了する必要があります。
+スタンドアロンのRust CLIは、`0.1.0-alpha.1`として開発中です。macOS、Linux、Windowsで動作し、既定ではManual IPまたはTailscaleによる直接接続を使用するため、Macアプリは不要です。プロトコルv1でiPhoneソースと、プロトコルv2でAndroidソースとペアリングし、Swift↔RustとKotlin↔Rustの自動互換性ゲートを備えています。プロトコル互換性は実装済みですが、最初の公開リリースまでに、実機デバイスでのリリースQAと公開パッケージの準備を完了する必要があります。
 
 リリースされるまでは、同梱のMacヘルパーを使用してください。未公開のHomebrew、crates.io、GitHubインストーラー、ダウンロードURLに依存しないでください。
 
-ポータブルクライアントは、3つのプラットフォームすべてで、生データエクスポート、正規抽出、ペアリング、status、resume、cancel、生成ファイルの保存先に対応します。プロトコルv1のファイルエクスポートでは、iPhoneは保存先を不透明な対象ラベルとして扱い、受信側CLIがホストのファイルシステム上で検証し、永続的に紐づけます。
+ポータブルクライアントは、iPhoneとAndroidの両方のソースについて、3つのデスクトッププラットフォームすべてで、ペアリング、status、生データエクスポート、生成ファイルの保存先、resume、cancelに対応します。正規抽出と型付きMCPクエリはiPhoneの機能です。Androidの生スナップショットはHealthKit形式のデータへ変換されず、プロバイダネイティブなHealth Connectコントラクトを維持します。Androidの型付きクエリは未実装です。生成ファイルのエクスポートでは、スマートフォンは保存先を不透明な対象ラベルとして扱い、受信側CLIがホストのファイルシステム上で検証し、永続的に紐づけます。Androidプロトコルv2は、すべてのCLIオペレーティングシステムでファイル保存先をコミットし、各生成ジョブの上限は4,096ファイルです。iOSプロトコルv1はWindows上でファイル保存先を拒否します。
 
 ## コマンド一覧
 
@@ -93,7 +94,7 @@ healthmd doctor
 | `healthmd status` | リアルタイムの準備状況またはローカル永続ジョブ1件を確認 | 両方 |
 | `healthmd doctor` | Mac、暗号化コンテキスト、iPhoneの準備状況を説明 | Macアプリ |
 | `healthmd metrics list` | クエリ可能な正規指標カタログを返す | Macアプリ |
-| `healthmd extract` | 選択した正規`healthmd.health_data`オブジェクトを取得 | 両方 |
+| `healthmd extract` | 選択した正規`healthmd.health_data`オブジェクトを取得 | 両方（iPhoneソース） |
 | `healthmd query` | 選択した型付き指標を取得して照会 | Macアプリ |
 | `healthmd sleep sessions` | 第1級オブジェクトの睡眠セッションと固定時間枠を返す | Macアプリ |
 | `healthmd training align` | ワークアウトを前後の睡眠セッションと対応付け | Macアプリ |
@@ -105,7 +106,9 @@ healthmd doctor
 | `healthmd resume` | 変更不能な永続エクスポートジョブを再開 | 両方 |
 | `healthmd cancel` | 明示的なキャンセルを要求 | 両方 |
 | `healthmd agent ...` | 低レベルのループバッククエリAPIとジョブAPIを呼び出す | Macアプリ |
-| `healthmd direct ...` | iPhone直接接続の信頼情報をペアリング、一覧表示、削除 | 直接接続 |
+| `healthmd direct ...` | スマートフォン直接接続の信頼情報をペアリング、一覧表示、削除 | 直接接続 |
+
+直接接続コマンドは、iPhone（プロトコルv1）またはAndroid（プロトコルv2）のソースとペアリングします。正規`extract`とすべての型付きクエリコマンドはiPhoneの機能です。Androidの直接接続バックエンドは、プロバイダネイティブなHealth Connectの生スナップショットと生成ファイルを返します。
 
 ## 最初のMacアプリワークフロー
 
@@ -170,7 +173,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7が公開ソースコントラクトです。クエリ、エビデンス、ジョブ、レシートの各スキーマは、転送または派生ビューを記述します。ソーススキーマを置き換えるものではありません。
+`healthmd.health_data` v7が公開ソースコントラクトです。クエリ、エビデンス、ジョブ、レシートの各スキーマは、転送または派生ビューを記述します。ソーススキーマを置き換えるものではありません。正規抽出はiPhoneの機能です。Androidの直接接続ソースでは、代わりに生データエクスポートを通じてプロバイダネイティブなHealth Connectスナップショットが提供されます。
 
 ## 機械可読動作
 
@@ -217,7 +220,7 @@ iPhoneの確認応答があった場合にだけ、キャンセルが終端状�
 ## 次のガイド
 
 <div class="related">
-  <a href="/ja/docs/cli-direct/"><span>Macアプリ不要</span>iPhone直接接続CLI：ペアリング、転送方式、生データとファイルのエクスポート、バックグラウンド動作、対応プラットフォーム。</a>
+  <a href="/ja/docs/cli-direct/"><span>Macアプリ不要</span>スマートフォン直接接続CLI：iPhoneまたはAndroidとペアリングし、転送方式、生データとファイルのエクスポート、バックグラウンド動作、対応プラットフォームを確認します。</a>
   <a href="/ja/docs/cli-extract/"><span>ソースデータ</span>正規抽出：指標、オブジェクト、詳細、JSON Pointer、JSONL、レシートを選択。</a>
   <a href="/ja/docs/cli-jobs/"><span>自動化</span>永続ジョブ：タイムアウト、再開、キャンセル、部分的な結果、安全なスクリプト処理。</a>
   <a href="/ja/docs/agents/"><span>エージェント</span>ローカルエージェントのワークフロー：暗号化コンテキスト、直接指定するスコープ、型付きコマンド、エビデンス。</a>

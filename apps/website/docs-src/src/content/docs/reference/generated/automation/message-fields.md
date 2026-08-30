@@ -330,9 +330,11 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsManualIPSync` | boolean |
 | `$.hello._0.supportsPartitionedConnectedExports` | boolean |
 | `$.hello._0.supportsPerDateExportCompletion` | boolean |
+| `$.hello._0.supportsRangeV9Summaries` | boolean |
 | `$.hello._0.supportsRequestScopedContextAcquisition` | boolean |
 | `$.hello._0.supportsRollupSummaries` | boolean |
 | `$.hello._0.supportsSizeBoundedConnectedTransfers` | boolean |
+| `$.hello._0.supportsSplitExportDetailPolicy` | boolean |
 | `$.hello._0.supportsStrictRawStreaming` | boolean |
 | `$.hello._0.supportsSummaryOnlyExports` | boolean |
 
@@ -475,6 +477,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRawData._0.settingsSnapshot` | object |
 | `$.iphoneExportRawData._0.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.archiveExportFiles` | boolean |
+| `$.iphoneExportRawData._0.settingsSnapshot.compatibilityDetail` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
@@ -511,10 +514,9 @@ This inventory is generated from production API/control serialization and every 
 | `$.iphoneExportRawData._0.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.iphoneExportRawData._0.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.iphoneExportRawData._0.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.iphoneExportRawData._0.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.iphoneExportRawData._0.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.groupByCategory` | boolean |
+| `$.iphoneExportRawData._0.settingsSnapshot.healthKitSourceArchivePolicy` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.healthSubfolder` | string |
 | `$.iphoneExportRawData._0.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.iphoneExportRawData._0.settingsSnapshot.includeGranularData` | boolean |
@@ -737,6 +739,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.settingsSnapshot` | object |
 | `$.macExportRequest._0.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.archiveExportFiles` | boolean |
+| `$.macExportRequest._0.settingsSnapshot.compatibilityDetail` | string |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
@@ -773,10 +776,9 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportRequest._0.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.macExportRequest._0.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.macExportRequest._0.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.macExportRequest._0.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.macExportRequest._0.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.macExportRequest._0.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.groupByCategory` | boolean |
+| `$.macExportRequest._0.settingsSnapshot.healthKitSourceArchivePolicy` | string |
 | `$.macExportRequest._0.settingsSnapshot.healthSubfolder` | string |
 | `$.macExportRequest._0.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.macExportRequest._0.settingsSnapshot.includeGranularData` | boolean |
@@ -993,6 +995,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.settingsSnapshot` | object |
 | `$.macExportStreamStart._0.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.archiveExportFiles` | boolean |
+| `$.macExportStreamStart._0.settingsSnapshot.compatibilityDetail` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection` | object |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
@@ -1029,10 +1032,9 @@ This inventory is generated from production API/control serialization and every 
 | `$.macExportStreamStart._0.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.macExportStreamStart._0.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.macExportStreamStart._0.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.macExportStreamStart._0.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.macExportStreamStart._0.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.groupByCategory` | boolean |
+| `$.macExportStreamStart._0.settingsSnapshot.healthKitSourceArchivePolicy` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.healthSubfolder` | string |
 | `$.macExportStreamStart._0.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.macExportStreamStart._0.settingsSnapshot.includeGranularData` | boolean |
@@ -1099,9 +1101,11 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsManualIPSync` | boolean |
 | `$.macStatus._0.capabilities.supportsPartitionedConnectedExports` | boolean |
 | `$.macStatus._0.capabilities.supportsPerDateExportCompletion` | boolean |
+| `$.macStatus._0.capabilities.supportsRangeV9Summaries` | boolean |
 | `$.macStatus._0.capabilities.supportsRequestScopedContextAcquisition` | boolean |
 | `$.macStatus._0.capabilities.supportsRollupSummaries` | boolean |
 | `$.macStatus._0.capabilities.supportsSizeBoundedConnectedTransfers` | boolean |
+| `$.macStatus._0.capabilities.supportsSplitExportDetailPolicy` | boolean |
 | `$.macStatus._0.capabilities.supportsStrictRawStreaming` | boolean |
 | `$.macStatus._0.capabilities.supportsSummaryOnlyExports` | boolean |
 | `$.macStatus._0.destinationDisplayName` | string |
@@ -1987,6 +1991,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.settingsSnapshot` | object |
 | `$.settingsSnapshot.appleExportEngineAuthorityIsFrozen` | boolean |
 | `$.settingsSnapshot.archiveExportFiles` | boolean |
+| `$.settingsSnapshot.compatibilityDetail` | string |
 | `$.settingsSnapshot.dailyNoteInjection` | object |
 | `$.settingsSnapshot.dailyNoteInjection.createIfMissing` | boolean |
 | `$.settingsSnapshot.dailyNoteInjection.dailyNotesOnly` | boolean |
@@ -2023,10 +2028,9 @@ This inventory is generated from production API/control serialization and every 
 | `$.settingsSnapshot.formatCustomization.markdownTemplate.useEmoji` | boolean |
 | `$.settingsSnapshot.formatCustomization.timeFormat` | string |
 | `$.settingsSnapshot.formatCustomization.unitPreference` | string |
-| `$.settingsSnapshot.generateMonthlyRollups` | boolean |
-| `$.settingsSnapshot.generateWeeklyRollups` | boolean |
-| `$.settingsSnapshot.generateYearlyRollups` | boolean |
+| `$.settingsSnapshot.generateRangeSummary` | boolean |
 | `$.settingsSnapshot.groupByCategory` | boolean |
+| `$.settingsSnapshot.healthKitSourceArchivePolicy` | string |
 | `$.settingsSnapshot.healthSubfolder` | string |
 | `$.settingsSnapshot.includeDataDictionary` | boolean |
 | `$.settingsSnapshot.includeGranularData` | boolean |
@@ -2143,9 +2147,11 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsManualIPSync` | boolean |
 | `$.supportsPartitionedConnectedExports` | boolean |
 | `$.supportsPerDateExportCompletion` | boolean |
+| `$.supportsRangeV9Summaries` | boolean |
 | `$.supportsRequestScopedContextAcquisition` | boolean |
 | `$.supportsRollupSummaries` | boolean |
 | `$.supportsSizeBoundedConnectedTransfers` | boolean |
+| `$.supportsSplitExportDetailPolicy` | boolean |
 | `$.supportsStrictRawStreaming` | boolean |
 | `$.supportsSummaryOnlyExports` | boolean |
 

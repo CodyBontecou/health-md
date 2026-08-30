@@ -5,7 +5,7 @@
 
 use chrono::{TimeZone as _, Utc};
 use healthmd_protocol::v2::{
-    self, ArtifactSchema, ArtifactFormat, DateSelection, DestinationBinding, ExportProduct,
+    self, ArtifactFormat, ArtifactSchema, DateSelection, DestinationBinding, ExportProduct,
     ExportRequest, ProductCapability, ProfileReference, ProtocolLimits, SettingsPolicy,
     SourceIdentity, SourcePlatform,
 };
@@ -125,7 +125,7 @@ fn old_peer_fails_closed_on_unknown_profile_policy() {
         settings_policy: LegacySettingsPolicy,
     }
 
-    let json = serde_json::to_value(&profile_request()).unwrap();
+    let json = serde_json::to_value(profile_request()).unwrap();
     let legacy: Result<LegacyProduct, _> = serde_json::from_value(json["product"].clone());
     assert!(legacy.is_err());
 }
@@ -141,7 +141,7 @@ fn old_peer_fails_closed_on_unknown_profile_reference_field() {
         settings_policy: String,
     }
 
-    let json = serde_json::to_value(&profile_request()).unwrap();
+    let json = serde_json::to_value(profile_request()).unwrap();
     let legacy: Result<LegacyProduct, _> = serde_json::from_value(json["product"].clone());
     assert!(legacy.is_err());
 }
@@ -156,10 +156,7 @@ fn capability_advertisement_serializes_the_profile_policy() {
         },
         formats: vec![ArtifactFormat::Markdown],
         providers: Vec::new(),
-        settings_policies: vec![
-            SettingsPolicy::SavedDeviceSettings,
-            SettingsPolicy::Profile,
-        ],
+        settings_policies: vec![SettingsPolicy::SavedDeviceSettings, SettingsPolicy::Profile],
         supports_resume: true,
     };
     let hello = healthmd_protocol::v2::SourceHello {
@@ -186,9 +183,6 @@ fn capability_advertisement_serializes_the_profile_policy() {
     let decoded: healthmd_protocol::v2::SourceHello = serde_json::from_value(json).unwrap();
     assert_eq!(
         decoded.products[0].settings_policies,
-        vec![
-            SettingsPolicy::SavedDeviceSettings,
-            SettingsPolicy::Profile,
-        ]
+        vec![SettingsPolicy::SavedDeviceSettings, SettingsPolicy::Profile,]
     );
 }

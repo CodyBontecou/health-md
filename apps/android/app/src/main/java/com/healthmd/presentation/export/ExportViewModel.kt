@@ -22,8 +22,10 @@ import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.rawexport.ExportMode
+import com.healthmd.rawexport.ExerciseRouteConsentCoordinator
 import com.healthmd.rawexport.RawExportFormat
 import com.healthmd.rawexport.RawSnapshotScope
+import com.healthmd.rawexport.withInteractiveRouteConsent
 import com.healthmd.presentation.common.HealthConnectActionError
 import com.healthmd.util.runCatchingCancellable
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -148,6 +150,8 @@ class ExportViewModel @Inject constructor(
     private val rawSnapshotExportRunner: RawSnapshotService? = null,
     private val apiCredentialStore: APIExportCredentialStore? = null,
     private val exportScheduler: ExportScheduler? = null,
+    /** Attached by the export screen so manual runs can prompt Health Connect route consent. */
+    val routeConsentCoordinator: ExerciseRouteConsentCoordinator = ExerciseRouteConsentCoordinator(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExportUiState())
@@ -257,8 +261,9 @@ class ExportViewModel @Inject constructor(
 
     fun setExportFormat(format: ExportFormat) {
         viewModelScope.launch {
-            val settings = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(settings.copy(exportFormat = format, exportFormats = setOf(format)))
+            settingsRepository.updateExportSettingsAtomically { settings ->
+                settings.copy(exportFormat = format, exportFormats = setOf(format))
+            }
         }
     }
 
@@ -323,10 +328,9 @@ class ExportViewModel @Inject constructor(
             try {
                 authorization?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveAuthorization(it) }
                 requestHeaders?.takeIf { it.isNotBlank() }?.let { apiCredentialStore?.saveRequestHeaders(it) }
-                val current = settingsRepository.getExportSettings()
-                settingsRepository.updateExportSettings(
+                settingsRepository.updateExportSettingsAtomically { current ->
                     current.copy(apiEndpointUrl = normalized, exportTarget = ExportTarget.API_ENDPOINT)
-                )
+                }
                 _uiState.update { it.copy(apiConfigurationError = null) }
                 refreshAPIAuthorizationStatus()
                 rescheduleAPIExportIfNeeded()
@@ -360,21 +364,21 @@ class ExportViewModel @Inject constructor(
 
     fun resetSettings() {
         viewModelScope.launch {
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(
+            settingsRepository.updateExportSettingsAtomically { current ->
                 ExportSettings.newInstallDefaults().copy(
                     exportTarget = current.exportTarget,
                     scheduledExportTarget = current.scheduledExportTarget,
                     apiEndpointUrl = current.apiEndpointUrl,
+                    pendingScheduledRetryDates = current.pendingScheduledRetryDates,
+                    pendingScheduledExportRequests = current.pendingScheduledExportRequests,
                 )
-            )
+            }
         }
     }
 
     private fun updateSettings(transform: (ExportSettings) -> ExportSettings) {
         viewModelScope.launch {
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(transform(current))
+            settingsRepository.updateExportSettingsAtomically(transform)
         }
     }
 
@@ -434,10 +438,13 @@ class ExportViewModel @Inject constructor(
             }
             val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
                 _uiState.update { it.copy(exportProgress = 0, exportTotal = 1, exportProgressDate = _uiState.value.startDate) }
+                // Manual export runs are interactive: Health Connect may show per-session exercise
+                // route consent prompts for third-party sessions during the read.
                 (rawSnapshotExportRunner?.exportRange(
                     startDate = _uiState.value.startDate,
                     endDate = _uiState.value.endDate,
                     settings = settings,
+                    allowInteractiveRouteConsent = true,
                 ) ?: ExportResult(
                     successCount = 0,
                     totalCount = 1,
@@ -446,18 +453,22 @@ class ExportViewModel @Inject constructor(
                     exportMode = ExportMode.RAW_SNAPSHOT,
                 )).also { _uiState.update { state -> state.copy(exportProgress = 1) } }
             } else when (settings.exportTarget) {
-                ExportTarget.DEVICE_FOLDER -> ExportOrchestrator(healthRepository, exportRepository)
-                    .exportDates(dates, settings, progress)
-                    .copy(target = ExportTarget.DEVICE_FOLDER)
-                ExportTarget.API_ENDPOINT -> apiEndpointExportRunner?.exportDates(dates, settings, progress)
-                    ?: ExportResult(
-                        successCount = 0,
-                        totalCount = dates.size,
-                        failedDateDetails = dates.map {
-                            FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
-                        },
-                        target = ExportTarget.API_ENDPOINT,
-                    )
+                ExportTarget.DEVICE_FOLDER -> withInteractiveRouteConsent {
+                    ExportOrchestrator(healthRepository, exportRepository)
+                        .exportDates(dates, settings, progress)
+                        .copy(target = ExportTarget.DEVICE_FOLDER)
+                }
+                ExportTarget.API_ENDPOINT -> withInteractiveRouteConsent {
+                    apiEndpointExportRunner?.exportDates(dates, settings, progress)
+                        ?: ExportResult(
+                            successCount = 0,
+                            totalCount = dates.size,
+                            failedDateDetails = dates.map {
+                                FailedDateDetail(it, ExportFailureReason.NETWORK_ERROR, "API export service unavailable")
+                            },
+                            target = ExportTarget.API_ENDPOINT,
+                        )
+                }
             }
 
             // UI and local history consume typed failure reasons, never arbitrary producer text.
@@ -593,6 +604,9 @@ class ExportViewModel @Inject constructor(
                         startDate = _uiState.value.startDate,
                         endDate = _uiState.value.endDate,
                         settings = settings,
+                        // Preview must not persist a precise-route grant without an explicit
+                        // disclosure/authorization step. Consent remains export-only.
+                        allowInteractiveRouteConsent = false,
                     ) ?: ExportPreview(
                         requestedDateCount = dates.size,
                         previewedDateCount = 0,

@@ -8,6 +8,13 @@ struct ExportActivityBannerDetail: Equatable, Identifiable {
     var id: String { "\(systemImage):\(text)" }
 }
 
+struct ExportActivityBannerAction {
+    let title: String
+    let systemImage: String
+    let accessibilityIdentifier: String
+    let perform: () -> Void
+}
+
 /// Shared visual shell for export activity presented at the top of the iOS app.
 /// Lifecycle ownership stays with each caller so manual exports do not affect
 /// CLI tracking or Live Activities.
@@ -24,6 +31,38 @@ struct ExportActivityBanner: View {
     let details: [ExportActivityBannerDetail]
     let trailingText: String?
     let accessibilityIdentifier: String
+    let action: ExportActivityBannerAction?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    init(
+        title: String,
+        systemImage: String,
+        tint: Color,
+        sourceLabel: String,
+        targetLabel: String,
+        message: String,
+        progress: Double?,
+        showsIndeterminateProgress: Bool,
+        progressAccessibilityLabel: String,
+        details: [ExportActivityBannerDetail],
+        trailingText: String?,
+        accessibilityIdentifier: String,
+        action: ExportActivityBannerAction? = nil
+    ) {
+        self.title = title
+        self.systemImage = systemImage
+        self.tint = tint
+        self.sourceLabel = sourceLabel
+        self.targetLabel = targetLabel
+        self.message = message
+        self.progress = progress
+        self.showsIndeterminateProgress = showsIndeterminateProgress
+        self.progressAccessibilityLabel = progressAccessibilityLabel
+        self.details = details
+        self.trailingText = trailingText
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.action = action
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s2) {
@@ -75,18 +114,8 @@ struct ExportActivityBanner: View {
                     .accessibilityLabel(progressAccessibilityLabel)
             }
 
-            if !details.isEmpty || trailingText != nil {
-                HStack(spacing: Spacing.s3) {
-                    ForEach(details) { detail in
-                        Label(detail.text, systemImage: detail.systemImage)
-                    }
-                    Spacer(minLength: 0)
-                    if let trailingText {
-                        Text(trailingText)
-                    }
-                }
-                .font(.caption2)
-                .foregroundStyle(Color.textMuted)
+            if !details.isEmpty || trailingText != nil || action != nil {
+                activityFooter
             }
         }
         .padding(.horizontal, Spacing.s3)
@@ -103,12 +132,83 @@ struct ExportActivityBanner: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
+
+    @ViewBuilder
+    private var activityFooter: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            verticalFooter
+        } else {
+            ViewThatFits(in: .horizontal) {
+                horizontalFooter
+                verticalFooter
+            }
+        }
+    }
+
+    private var horizontalFooter: some View {
+        HStack(spacing: Spacing.s3) {
+            ForEach(details) { detail in
+                Label(detail.text, systemImage: detail.systemImage)
+            }
+            Spacer(minLength: 0)
+            if let trailingText {
+                Text(trailingText)
+            }
+            if let action {
+                actionButton(action)
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(Color.textMuted)
+    }
+
+    private var verticalFooter: some View {
+        VStack(alignment: .leading, spacing: Spacing.s2) {
+            ForEach(details) { detail in
+                Label(detail.text, systemImage: detail.systemImage)
+            }
+            if let trailingText {
+                Text(trailingText)
+            }
+            if let action {
+                HStack {
+                    Spacer(minLength: 0)
+                    actionButton(action)
+                }
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(Color.textMuted)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func actionButton(_ action: ExportActivityBannerAction) -> some View {
+        Button(role: .destructive, action: action.perform) {
+            Label(action.title, systemImage: action.systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.error)
+                .padding(.horizontal, Spacing.s2)
+                .frame(minWidth: 44, minHeight: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                        .fill(Color.error.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous)
+                        .strokeBorder(Color.error.opacity(0.22), lineWidth: 1)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: GeistRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(action.accessibilityIdentifier)
+    }
 }
 
 struct ManualExportActivityBanner: View {
     let target: ExportTargetSelection
     let progress: Double
     let message: String
+    let onCancel: () -> Void
 
     var body: some View {
         ExportActivityBanner(
@@ -123,7 +223,13 @@ struct ManualExportActivityBanner: View {
             progressAccessibilityLabel: String(localized: "Export progress"),
             details: [],
             trailingText: nil,
-            accessibilityIdentifier: AccessibilityID.Export.activityBanner
+            accessibilityIdentifier: AccessibilityID.Export.activityBanner,
+            action: ExportActivityBannerAction(
+                title: String(localized: "Stop Export"),
+                systemImage: "stop.fill",
+                accessibilityIdentifier: AccessibilityID.Export.cancelExportButton,
+                perform: onCancel
+            )
         )
     }
 

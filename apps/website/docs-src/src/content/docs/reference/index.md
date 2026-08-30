@@ -31,7 +31,7 @@ The generated artifacts are rebuilt by running the real production code against 
 | Daily record | `healthmd.health_data` | 8 | Apple daily summaries, optional typed provider sections, diagnostics, and optional canonical archive. |
 | Typed WHOOP day | `healthmd.provider.whoop_daily` | 1 | Provider-namespaced WHOOP cycles, recovery, sleep, workouts, body snapshot, and safe resource status. |
 | Canonical Apple Health archive | `healthmd.healthkit_records` | 1 | Source records, provenance, relationships, query results, and external records. |
-| Roll-up summary | `healthmd.rollup_summary` | 8 | Weekly, monthly, and yearly projections derived from daily summaries. |
+| Roll-up summary | `healthmd.rollup_summary` | 9 | One immutable requested-range projection derived from successful daily summaries; historical weekly/monthly/yearly v8 files remain valid. |
 | API Endpoint envelope | `healthmd.api_export` | 1 or 2 | One or more daily records sent to a configured endpoint; v2 adds provider sidecars. |
 | Strict CLI raw result | `healthmd.raw_result` | 1 | Canonical daily records returned through the Mac CLI without writing files. |
 | Compact context day | `healthmd.query_context_day` | 1 | Portable typed query input with coverage and evidence locators. |
@@ -53,7 +53,7 @@ Versions advance independently. A newer API or connected-protocol envelope does 
 | Send to your own service | API Endpoint | Yes when lossless capture is enabled | No |
 | Terminal automation | Mac CLI strict raw | Yes | No |
 | Local queries and evidence | Loopback query API/CLI/MCP | Directly scoped | Typed JSON |
-| Weekly/monthly/yearly trends | Roll-ups | No; summary projections | Yes |
+| Requested-range trends | Roll-ups | No; summary projections | Yes |
 
 ## Reference map
 
@@ -76,7 +76,7 @@ The generated directory contains complete, copyable fixtures rather than shorten
 
 - [`generated/core/`](/docs/reference/generated/core/): daily exports, canonical records, data dictionary, metric catalog, path/type inventories, and CSV contracts.
 - [`generated/individual/`](/docs/reference/generated/individual/): canonical and compatibility entry notes, filename/path behavior, and recursive frontmatter inventory.
-- [`generated/rollups/`](/docs/reference/generated/rollups/): production weekly JSON/CSV/Markdown/Bases output and the complete aggregation matrix.
+- [`generated/rollups/`](/docs/reference/generated/rollups/): production range-v9 JSON/CSV/Markdown/Bases output, historical weekly-v8 examples, and the complete aggregation matrix.
 - [`generated/automation/`](/docs/reference/generated/automation/): API, localhost control, strict raw, sync-message, connected-transfer, and Mac job/result contracts.
 - [`generated/cli/`](/docs/reference/generated/cli/): executable CLI requests, responses, diagnostics, and exit-code behavior.
 

@@ -139,6 +139,54 @@ class ScheduledExportPendingRequestsTest {
     }
 
     @Test
+    fun cancellationClearsCompletedDatesAndQueuesResidualsWithoutFailureAccounting() {
+        val completed = LocalDate.parse("2026-06-01")
+        val existingResidual = completed.plusDays(1)
+        val newResidual = completed.plusDays(2)
+        val operationId = "11111111-2222-3333-4444-555555555555"
+        val settings = ExportSettings(
+            scheduledExportTarget = ExportTarget.API_ENDPOINT,
+            pendingScheduledExportRequests = listOf(
+                PendingScheduledExportRequest(
+                    date = completed,
+                    exportTarget = ExportTarget.API_ENDPOINT,
+                    destinationFingerprint = "fingerprint",
+                    lastFailureReason = ExportFailureReason.NETWORK_ERROR,
+                    attemptCount = 2,
+                ),
+                PendingScheduledExportRequest(
+                    date = existingResidual,
+                    exportTarget = ExportTarget.API_ENDPOINT,
+                    destinationFingerprint = "fingerprint",
+                    lastFailureReason = ExportFailureReason.DEVICE_LOCKED,
+                    attemptCount = 3,
+                ),
+            ),
+        )
+
+        val updated = ScheduledExportPendingRequests.applyCancellationResult(
+            settings = settings,
+            attemptedDates = listOf(completed, existingResidual, newResidual),
+            remainingDates = setOf(existingResidual, newResidual),
+            nowMillis = 500L,
+            target = ExportTarget.API_ENDPOINT,
+            destinationFingerprint = "fingerprint",
+            apiOperationIds = mapOf(existingResidual to operationId),
+            freshCaptureRetryDates = setOf(newResidual),
+        )
+
+        val requests = ScheduledExportPendingRequests.pendingRequests(updated).associateBy { it.date }
+        assertThat(requests.keys).containsExactly(existingResidual, newResidual)
+        assertThat(requests.getValue(existingResidual).lastFailureReason)
+            .isEqualTo(ExportFailureReason.DEVICE_LOCKED)
+        assertThat(requests.getValue(existingResidual).attemptCount).isEqualTo(3)
+        assertThat(requests.getValue(existingResidual).apiOperationId).isEqualTo(operationId)
+        assertThat(requests.getValue(newResidual).lastFailureReason).isNull()
+        assertThat(requests.getValue(newResidual).attemptCount).isEqualTo(0)
+        assertThat(requests.getValue(newResidual).apiOperationId).isNull()
+    }
+
+    @Test
     fun apiRetriesFromDifferentEndpointsRemainSeparate() {
         val date = LocalDate.parse("2026-06-01")
         val oldFingerprint = "old-endpoint"

@@ -88,6 +88,10 @@ class DirectPacketConnection private constructor(
             require(host.isNotBlank() && port in 1..65_535)
             val socket = Socket()
             socket.tcpNoDelay = true
+            // Enable kernel probes as a fallback for half-open peers. Android's bounded
+            // application read/poll timeouts remain the reconnect authority because the
+            // platform Socket API does not expose portable keepalive timing controls.
+            socket.keepAlive = true
             socket.connect(InetSocketAddress(host.trim(), port), timeoutMillis)
             socket.soTimeout = timeoutMillis
             return DirectPacketConnection(socket, timeoutMillis)

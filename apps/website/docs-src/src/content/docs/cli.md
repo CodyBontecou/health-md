@@ -1,26 +1,27 @@
 ---
 title: "Health.md CLI"
-description: "Choose the Mac app or direct iPhone backend, install healthmd, inspect readiness, export files, extract canonical Apple Health data, run typed queries, and automate durable jobs."
+description: "Choose the Mac app or direct phone backend, pair healthmd with an iPhone or Android device, inspect readiness, export files, extract canonical Apple Health data, run typed queries, and automate durable jobs."
 ---
 
-The `healthmd` command has two operating modes. Use the Mac app backend when you want encrypted local queries, MCP tools, or the destination folder already selected in Health.md for Mac. Use the direct iPhone backend when you want raw data or generated files without running the Mac app.
+The `healthmd` command has two operating modes. Use the Mac app backend when you want encrypted local queries, MCP tools, or the destination folder already selected in Health.md for Mac. Use the direct phone backend when you want raw data or generated files without running the Mac app. Direct mode pairs with an open Health.md app on iPhone (protocol v1) or Android (protocol v2).
 
 <div class="callout">
-<strong>HealthKit stays on iPhone.</strong>
-<p style="margin-top:6px;">Neither CLI backend reads Apple Health from the computer. A current, open Health.md iPhone app performs each fresh HealthKit read. The CLI receives validated results or files.</p>
+<strong>Health data stays on your phone.</strong>
+<p style="margin-top:6px;">Neither CLI backend reads Apple Health or Health Connect from the computer. A current, open Health.md app on iPhone or Android performs each fresh platform health read. The CLI receives validated results or files.</p>
 </div>
 
 ## Pick a backend
 
-| Capability | Mac app backend | Direct iPhone backend |
+| Capability | Mac app backend | Direct phone backend |
 |---|---|---|
 | Default in the bundled Mac helper | Yes | No, select with `--backend direct` |
+| Source devices | iPhone | iPhone (protocol v1) or Android (protocol v2) |
 | Needs Health.md for Mac open | Yes | No |
-| Needs Health.md on iPhone open for new data | Yes | Yes |
+| Needs the Health.md phone app open for new data | Yes | Yes |
 | File destination | Folder selected in the Mac app | Existing absolute `--destination` |
-| Strict raw export | Yes | Yes |
-| Canonical `healthmd extract` | Yes | Yes |
-| Encrypted context, typed queries, and evidence | Yes | No |
+| Strict raw export | Yes | Yes; provider-native Health Connect snapshots on Android |
+| Canonical `healthmd extract` | Yes | iPhone only |
+| Encrypted context, typed queries, and evidence | Yes | iPhone only, portable client |
 | `healthmd-mcp` | Yes | No |
 | Manual IP or Tailscale | Mac sync or explicit direct mode | Yes |
 | Nearby direct transport | Bundled Swift helper only | Not in the portable Rust client |
@@ -80,11 +81,11 @@ healthmd doctor
 <p>The cross-platform Rust CLI awaits physical iPhone release QA and its first qualified package.</p>
 </div>
 
-A standalone Rust CLI is in `0.1.0-alpha.1` development. It runs on macOS, Linux, and Windows, uses direct Manual IP or Tailscale connections by default, and does not need the Mac app. Protocol compatibility and cross-language fixtures are implemented, but physical iPhone release QA and public packaging still need to finish before the first public release.
+A standalone Rust CLI is in `0.1.0-alpha.1` development. It runs on macOS, Linux, and Windows, uses direct Manual IP or Tailscale connections by default, and does not need the Mac app. It pairs with iPhone sources through protocol v1 and Android sources through protocol v2, with automated Swift↔Rust and Kotlin↔Rust compatibility gates. Protocol compatibility is implemented, but physical-device release QA and public packaging still need to finish before the first public release.
 
 Until that release exists, use the bundled Mac helper. Do not rely on unpublished Homebrew, crates.io, GitHub installer, or download URLs.
 
-The portable client supports raw export, canonical extraction, pairing, status, resume, cancel, and generated-file destinations on all three platforms. For protocol-v1 file export, iPhone treats the destination as an opaque target label while the receiving CLI validates and durably binds it under the host filesystem.
+The portable client supports pairing, status, raw export, generated-file destinations, resume, and cancel on all three desktop platforms for both iPhone and Android sources. Canonical extraction and typed MCP queries are iPhone capabilities; Android raw snapshots keep their provider-native Health Connect contract instead of being converted into HealthKit-shaped data, and Android typed queries are not implemented. For generated-file export, the phone treats the destination as an opaque target label while the receiving CLI validates and durably binds it under the host filesystem. Android protocol v2 commits file destinations on every CLI operating system and caps each generated job at 4,096 files; iOS protocol v1 rejects file destinations on Windows.
 
 ## Command map
 
@@ -93,7 +94,7 @@ The portable client supports raw export, canonical extraction, pairing, status, 
 | `healthmd status` | Inspect live readiness or one local durable job | Both |
 | `healthmd doctor` | Explain Mac, encrypted context, and iPhone readiness | Mac app |
 | `healthmd metrics list` | Return the canonical queryable metric catalog | Mac app |
-| `healthmd extract` | Acquire selected canonical `healthmd.health_data` objects | Both |
+| `healthmd extract` | Acquire selected canonical `healthmd.health_data` objects | Both, iPhone source |
 | `healthmd query` | Acquire and query selected typed metrics | Mac app |
 | `healthmd sleep sessions` | Return first-class sleep sessions and fixed windows | Mac app |
 | `healthmd training align` | Align workouts with preceding and following sleep | Mac app |
@@ -105,7 +106,9 @@ The portable client supports raw export, canonical extraction, pairing, status, 
 | `healthmd resume` | Resume an immutable durable export job | Both |
 | `healthmd cancel` | Request explicit cancellation | Both |
 | `healthmd agent ...` | Call the low-level loopback query and job API | Mac app |
-| `healthmd direct ...` | Pair, list, and remove direct iPhone trust | Direct |
+| `healthmd direct ...` | Pair, list, and remove direct phone trust | Direct |
+
+Direct commands pair with iPhone (protocol v1) or Android (protocol v2) sources. Canonical `extract` and every typed query command are iPhone capabilities; the Android direct backend returns provider-native Health Connect raw snapshots and generated files.
 
 ## First Mac app workflow
 
@@ -170,7 +173,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7 is the public source contract. Query, evidence, job, and receipt schemas describe transport or derived views. They do not replace the source schema.
+`healthmd.health_data` v7 is the public source contract. Query, evidence, job, and receipt schemas describe transport or derived views. They do not replace the source schema. Canonical extraction is an iPhone capability; Android direct sources expose provider-native Health Connect snapshots through raw export instead.
 
 ## Machine-readable behavior
 
@@ -217,7 +220,7 @@ The local query API has no bearer token, registration, access profile, or grant 
 ## Next guides
 
 <div class="related">
-  <a href="/docs/cli-direct/"><span>No Mac app</span>Direct iPhone CLI: pairing, transports, raw and file exports, background behavior, and platform support.</a>
+  <a href="/docs/cli-direct/"><span>No Mac app</span>Direct phone CLI: pair with iPhone or Android, review transports, raw and file exports, background behavior, and platform support.</a>
   <a href="/docs/cli-extract/"><span>Source data</span>Canonical extraction: select metrics, objects, detail, JSON Pointers, JSONL, and receipts.</a>
   <a href="/docs/cli-jobs/"><span>Automation</span>Durable jobs: timeouts, resume, cancellation, partial results, and safe scripting.</a>
   <a href="/docs/agents/"><span>Agents</span>Local agent workflows: encrypted context, direct scope, typed commands, and evidence.</a>

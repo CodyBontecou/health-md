@@ -951,8 +951,9 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let secondTask = Task { @MainActor in
             await manager.performPendingExport(requestId: secondRetry.id, source: .scheduled)
         }
-        await Task.yield()
-        await Task.yield()
+        for _ in 0..<20 where harness.runnerDates.count < 2 {
+            await Task.yield()
+        }
 
         XCTAssertEqual(
             harness.runnerDates.count,

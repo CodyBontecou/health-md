@@ -98,11 +98,11 @@ function normalizeImage(value) {
   }
 }
 
-function formatDate(date) {
+function formatDate(date, { shortMonth = false } = {}) {
   return new Intl.DateTimeFormat('en-US', {
     timeZone: 'UTC',
     year: 'numeric',
-    month: 'long',
+    month: shortMonth ? 'short' : 'long',
     day: 'numeric',
   }).format(date);
 }
@@ -248,18 +248,16 @@ function documentHead({ title, socialTitle = title, description, canonical, imag
 }
 
 function renderIndex(posts) {
-  const cards = posts.map((post) => {
-    const image = post.image
-      ? `<img src="${escapeHtml(post.image)}" loading="lazy" decoding="async" alt="${escapeHtml(post.imageAlt)}">`
+  const items = posts.map((post) => {
+    const tags = post.tags.length
+      ? `\n            <div class="post-item__tags">${post.tags.map((tag) => `#${escapeHtml(tag)}`).join(' ')}</div>`
       : '';
-    return `<a class="post-card${post.image ? '' : ' post-card--text'}" href="${escapeHtml(post.slug)}/">
-          <div>
-            <span class="post-meta">${escapeHtml(formatDate(post.date))} · ${escapeHtml(post.category)}</span>
-            <h2>${escapeHtml(post.title)}</h2>
-            <p>${escapeHtml(post.description)}</p>
+    return `<li class="post-item">
+          <div class="post-item__main">
+            <a class="post-item__title" href="${escapeHtml(post.slug)}/">${escapeHtml(post.title)}</a>${tags}
           </div>
-          ${image}
-        </a>`;
+          <time class="post-item__date" datetime="${isoDate(post.date)}">${escapeHtml(formatDate(post.date, { shortMonth: true }))}</time>
+        </li>`;
   }).join('\n        ');
 
   const title = 'Health.md Blog — Product Updates and Workflows';
@@ -280,15 +278,12 @@ function renderIndex(posts) {
           <h1>Release notes and workflow ideas for Health.md.</h1>
           <p>New app features, workflow changes, and practical examples for Apple Health, Obsidian, and local data export systems.</p>
         </div>
-        <figure class="hero-shot">
-          <img src="../assets/screenshots/optimized/macos-track-every-export-1200.webp" width="1200" height="750" loading="eager" decoding="async" alt="Health.md export history on Mac">
-        </figure>
       </div>
     </section>
     <section class="posts">
-      <div class="container post-list">
-        ${cards || '<p>No posts have been published yet.</p>'}
-      </div>
+      <ul class="container post-list">
+        ${items || '<li class="post-item">No posts have been published yet.</li>'}
+      </ul>
     </section>
   </main>
   ${footerHtml()}

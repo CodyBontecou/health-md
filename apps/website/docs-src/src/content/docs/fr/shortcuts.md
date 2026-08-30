@@ -1,6 +1,6 @@
 ---
 title: "Shortcuts et App Intents"
-description: "Huit App Intents permettent de déclencher des exports, d’obtenir des résumés et d’activer la planification depuis Siri, l’app Shortcuts, les filtres de concentration, les automatisations et tout hôte compatible AppIntent."
+description: "Sept App Intents permettent de déclencher des exports, d’obtenir des résumés et d’activer la planification depuis Siri, l’app Shortcuts, les filtres de concentration, les automatisations et tout hôte compatible AppIntent."
 ---
 
 ## App Intents disponibles
@@ -12,12 +12,12 @@ description: "Huit App Intents permettent de déclencher des exports, d’obteni
 <div class="option"><strong>Get Health Summary for a Date</strong><p>Renvoie un instantané structuré — nombre de pas, calories actives, sommeil, fréquence cardiaque — sans rien écrire dans le coffre. Utilisez-le dans Shortcuts pour transmettre des valeurs à d’autres apps.</p></div>
 <div class="option"><strong>Get Last Export Status</strong><p>Renvoie l’horodatage, l’état de réussite, le nombre de jours et le motif éventuel d’échec du dernier export enregistré. Une demande effectuée lorsque l’appareil est verrouillé reste en attente jusqu’à une nouvelle tentative et n’est donc pas renvoyée comme état actuel.</p></div>
 <div class="option"><strong>Turn Scheduled Export On or Off</strong><p>Paramètre booléen. Suspendez la planification, par exemple avec le mode de concentration Vacances, puis reprenez-la.</p></div>
-<div class="option"><strong>Export Health Data</strong><p>Export générique qui reprend la dernière plage de dates choisie dans la fenêtre Export de l’app. Moins courant ; les variantes par plage sont généralement plus claires. Paramètre facultatif <em>Profil</em>.</p></div>
 </div>
 
 <a id="profiles"></a>
 ## Profils d'export
-<p>Les cinq intents d'export acceptent un paramètre facultatif <em>Profil</em>. Laissez-le vide pour utiliser vos réglages d'export actuels de l'app ; indiquez le nom d'un profil enregistré pour exécuter la configuration figée de ce profil — sélection de métriques, formats et destination — quel que soit l'état actuel de l'app.</p>
+<p>Créez et gérez des profils d'export enregistrés dans Health.md sur iPhone ou Android. Sur les plateformes Apple, la gestion des profils est actuellement documentée uniquement pour l'iPhone ; aucune disponibilité sur iPad ou macOS n'est revendiquée.</p>
+<p>Les quatre intents d'export acceptent un paramètre facultatif <em>Profil</em>. Dès que des profils existent, laisser le paramètre vide utilise le profil actif ; en mode historique sans profil, les réglages d'export actuels de l'app sont utilisés. Indiquez le nom d'un profil enregistré pour exécuter la configuration figée de ce profil — sélection de métriques, formats et destination — quel que soit l'état actuel de l'app.</p>
 <div class="callout">
 <strong>Avertissement pour les raccourcis existants sans paramètre.</strong>
 <p style="margin-top:6px;">Dès que vous créez votre premier profil d'export dans l'app, un raccourci sans <em>Profil</em> défini exporte avec les réglages enregistrés du profil <em>actif</em> plutôt qu'avec les réglages actifs de l'app. Si vous comptez sur l'ancien comportement, épinglez le raccourci sur un profil précis (ou n'utilisez aucun profil) pour rester explicite. Un nom de profil qui n'existe plus échoue avec une erreur claire au lieu d'exporter la mauvaise chose.</p>

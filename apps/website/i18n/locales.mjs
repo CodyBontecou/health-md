@@ -4,6 +4,9 @@ export const defaultLocale = 'en';
 // routes while their translated editions are pending. Fallback pages stay noindex.
 export const canonicalEnglishDocSlugs = Object.freeze([
   'docs/guides/connect-agent',
+  'docs/guides/platform-features',
+  'docs/guides/raw-snapshots',
+  'docs/guides/wear-os',
 ]);
 
 // Authored user guides are translated. Generated contract/reference pages remain

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Detect silently dead direct-device channels with bounded heartbeat/TCP keepalive handling so a
+  foreground paired iPhone can redial later one-shot CLI listeners without a manual disconnect.
+  The CLI now answers heartbeat pings in every v1 receive path while preserving command deadlines.
+
 ## 0.1.0-alpha.1
 
 - Establish the standalone Rust workspace and portable CLI architecture.
@@ -39,6 +45,12 @@
 - Add `healthmd mcp serve` and `healthmd setup codex` so pairing, native credentials, Codex
   configuration, and MCP use the installed `healthmd`; retain `healthmd-mcp` as a compatibility
   launcher that execs `healthmd` on Unix and uses an authenticated same-file helper on Windows.
+- Defer Windows Authenticode behind the signing-identity ledger: while
+  `release-identities.json` records `pending_external_certificate_provisioning`, release tags are
+  permitted, the Windows signing jobs skip, and the Windows archive plus PowerShell installer
+  publish unsigned with integrity carried by the Sigstore-signed checksum closure. Committing a
+  qualified publisher subject re-enables mandatory signing for both Windows executables, the
+  installer, and native post-extraction gates.
 - Expand typed MCP tool discovery with complete nested date/metric/source/page/operation schemas,
   concrete call examples, explicit typed-tool routing, and offline `healthmd mcp schema [TOOL]`
   inspection so agents do not fall back to shell help or canonical extraction to infer query JSON.
@@ -63,5 +75,6 @@
   does not store users' health data for later queries. The hosted experiment had no production
   endpoint or production OAuth client and accepted no user data, so no server corpus migration is required.
 
-Physical-iPhone release QA and provisioning the protected external signing/publishing identities
-remain before the first public release.
+Windows artifacts publish Authenticode-unsigned until a signing identity is qualified in
+`release-identities.json`; verify Windows downloads against the Sigstore-signed checksum manifest
+until then. The mobile compatibility ledger records the qualified iPhone and Android release pair.

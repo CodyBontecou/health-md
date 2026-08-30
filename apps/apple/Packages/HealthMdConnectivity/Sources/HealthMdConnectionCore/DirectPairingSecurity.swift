@@ -9,6 +9,13 @@ public enum DirectPairingSecurity {
     public static let pairingCodeLifetime: TimeInterval = 10 * 60
     public static let reconnectSecretByteCount = 32
 
+    /// TCP keepalive bounds for the direct CLI channel. A silently dead peer must fail
+    /// within a bounded window instead of leaving a half-open socket that blocks the
+    /// reconnect loop. These mirror the Rust listener-side socket options.
+    public static let tcpKeepaliveIdleSeconds = 10
+    public static let tcpKeepaliveIntervalSeconds = 5
+    public static let tcpKeepaliveCount = 3
+
     private static let pairingDomain = Data("HealthMd.DirectCLI.PairingVerifier.v1".utf8)
     private static let sessionDomain = Data("HealthMd.DirectCLI.SessionKey.v1".utf8)
     private static let trustedClientDomain = Data("HealthMd.DirectCLI.TrustedClient.v1".utf8)

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,7 @@ class SharedSetupViewModel @Inject constructor(
     }
 
     private val shareLaunchMutex = Mutex()
+    private val previewRequestIDs = AtomicLong()
     private val mutableState = MutableStateFlow<SharedSetupUiState>(SharedSetupUiState.Idle())
     val state: StateFlow<SharedSetupUiState> = mutableState.asStateFlow()
 
@@ -55,7 +57,9 @@ class SharedSetupViewModel @Inject constructor(
         viewModelScope.launch {
             coordinator.imports.collect { pending ->
                 if (pending != null) {
-                    coordinator.consume(pending.id)
+                    // The process coordinator retains this request until the user finishes the
+                    // external flow. Hidden back-stack ViewModels must never destructively consume
+                    // a warm intent before navigation can reveal the active destination.
                     val bytes = pending.bytes
                     val restorableBytes = savedStateHandle.get<ByteArray>(RESTORABLE_DOCUMENT_BYTES)
                     val isRestoredReplay =
@@ -63,10 +67,13 @@ class SharedSetupViewModel @Inject constructor(
                             bytes != null && restorableBytes != null &&
                             bytes.contentEquals(restorableBytes)
                     if (isRestoredReplay) return@collect
+                    val requestID = previewRequestIDs.incrementAndGet()
                     if (pending.errorMessage != null) {
-                        mutableState.value = SharedSetupUiState.Error(pending.errorMessage)
+                        if (previewRequestIDs.get() == requestID) {
+                            mutableState.value = SharedSetupUiState.Error(pending.errorMessage)
+                        }
                     } else {
-                        preview(requireNotNull(bytes))
+                        preview(requireNotNull(bytes), requestID)
                     }
                 }
             }
@@ -74,11 +81,17 @@ class SharedSetupViewModel @Inject constructor(
     }
 
     fun import(uri: Uri) {
+        val requestID = previewRequestIDs.incrementAndGet()
         viewModelScope.launch {
+            if (previewRequestIDs.get() != requestID) return@launch
             mutableState.value = SharedSetupUiState.Loading
             runCatching { withContext(Dispatchers.IO) { documentStore.read(uri) } }
-                .onSuccess { preview(it) }
-                .onFailure { mutableState.value = SharedSetupUiState.Error(it.safeMessage()) }
+                .onSuccess { preview(it, requestID) }
+                .onFailure {
+                    if (previewRequestIDs.get() == requestID) {
+                        mutableState.value = SharedSetupUiState.Error(it.safeMessage())
+                    }
+                }
         }
     }
 
@@ -185,6 +198,7 @@ class SharedSetupViewModel @Inject constructor(
     }
 
     fun dismiss() {
+        previewRequestIDs.incrementAndGet()
         clearRestorableImport()
         mutableState.value = SharedSetupUiState.Idle()
         refreshPendingEndpointIfIdle(force = true)
@@ -200,10 +214,13 @@ class SharedSetupViewModel @Inject constructor(
     }
 
     private fun restore(bytes: ByteArray, phase: String) {
+        val requestID = previewRequestIDs.incrementAndGet()
         viewModelScope.launch {
+            if (previewRequestIDs.get() != requestID) return@launch
             mutableState.value = SharedSetupUiState.Loading
             service.preview(bytes)
                 .onSuccess { preview ->
+                    if (previewRequestIDs.get() != requestID) return@onSuccess
                     mutableState.value = if (phase == PHASE_SUCCESS) {
                         SharedSetupUiState.Success(
                             SharedSetupApplyResult(preview.review, canUndo = true),
@@ -214,21 +231,25 @@ class SharedSetupViewModel @Inject constructor(
                     }
                 }
                 .onFailure {
+                    if (previewRequestIDs.get() != requestID) return@onFailure
                     clearRestorableImport()
                     mutableState.value = SharedSetupUiState.Error(it.safeMessage())
                 }
         }
     }
 
-    private suspend fun preview(bytes: ByteArray) {
+    private suspend fun preview(bytes: ByteArray, requestID: Long) {
+        if (previewRequestIDs.get() != requestID) return
         mutableState.value = SharedSetupUiState.Loading
         service.preview(bytes)
             .onSuccess {
+                if (previewRequestIDs.get() != requestID) return@onSuccess
                 savedStateHandle[RESTORABLE_DOCUMENT_BYTES] = bytes.copyOf()
                 savedStateHandle[RESTORABLE_PHASE] = PHASE_REVIEW
                 mutableState.value = SharedSetupUiState.Review(it)
             }
             .onFailure {
+                if (previewRequestIDs.get() != requestID) return@onFailure
                 clearRestorableImport()
                 mutableState.value = SharedSetupUiState.Error(it.safeMessage())
             }

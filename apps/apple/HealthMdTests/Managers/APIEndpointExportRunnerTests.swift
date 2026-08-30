@@ -55,6 +55,41 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertTrue(result.failedDateDetails.first?.errorDetails?.contains("Daily Notes Only") == true)
     }
 
+    func testDetailedTimeSeriesPolicyReachesAPICaptureWithoutArchive() async throws {
+        let exportDate = date(year: 2026, month: 5, day: 10)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        settings.detailPolicy = .detailedTimeSeries
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        var receivedPolicy: AppleExportDetailPolicy?
+
+        let result = await APIEndpointExportRunner.export(
+            dates: [exportDate],
+            settings: settings,
+            apiSettings: apiSettings,
+            fetchHealthData: { requestedDate, detailPolicy, _ in
+                receivedPolicy = detailPolicy
+                var data = HealthData(date: requestedDate)
+                data.activity.steps = 1
+                data.heart.heartRateSamples = [
+                    TimeSample(timestamp: requestedDate, value: 60)
+                ]
+                return data
+            },
+            fetchExternalDailyRecords: nil,
+            upload: { records, _, _, _, _, _, _ in
+                XCTAssertEqual(records.first?.heart.heartRateSamples.count, 1)
+                XCTAssertNil(records.first?.healthKitRecordArchive)
+                XCTAssertEqual(records.first?.healthKitRecordCaptureStatus, .notRequested)
+                return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+            }
+        )
+
+        XCTAssertEqual(receivedPolicy, .detailedTimeSeries)
+        XCTAssertEqual(result.successCount, 1)
+    }
+
     func testUploadsOnlyDatesWithDataAndReportsEmptyDates() async throws {
         let first = date(year: 2026, month: 5, day: 10)
         let second = date(year: 2026, month: 5, day: 11)

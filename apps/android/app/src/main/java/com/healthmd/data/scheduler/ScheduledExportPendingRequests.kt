@@ -253,6 +253,65 @@ object ScheduledExportPendingRequests {
         return settings.withPendingRequests(retained.sortedBy { it.date })
     }
 
+    /**
+     * Reconciles a user-cancelled attempt without manufacturing a failure. Successfully completed
+     * owner dates are removed; exact unresolved dates retain their prior failure metadata and any
+     * durable operation identity. Newly pending dates keep a null failure reason and do not
+     * increment the failure-attempt counter.
+     */
+    fun applyCancellationResult(
+        settings: ExportSettings,
+        attemptedDates: List<LocalDate>,
+        remainingDates: Collection<LocalDate>,
+        nowMillis: Long = System.currentTimeMillis(),
+        target: ExportTarget = settings.scheduledExportTarget,
+        destinationFingerprint: String? = target.destinationFingerprint(settings),
+        enginePin: ExportEnginePin? = null,
+        settingsSnapshotJson: String? = null,
+        apiOperationIds: Map<LocalDate, String> = emptyMap(),
+        folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        freshCaptureRetryDates: Set<LocalDate> = emptySet(),
+    ): ExportSettings {
+        val attempted = attemptedDates.toSet()
+        if (attempted.isEmpty()) return settings.withPendingRequests(pendingRequests(settings, nowMillis))
+        val unresolved = remainingDates.filterTo(linkedSetOf()) { it in attempted }
+        val existingByKey = pendingRequests(settings, nowMillis).associateBy {
+            Triple(it.exportTarget, it.date, it.destinationFingerprint)
+        }
+        val retained = existingByKey.values.filterNot { request ->
+            request.exportTarget == target && request.date in attempted &&
+                (target != ExportTarget.API_ENDPOINT ||
+                    request.destinationFingerprint == destinationFingerprint)
+        }.toMutableList()
+
+        unresolved.sorted().forEach { date ->
+            val existing = existingByKey[Triple(target, date, destinationFingerprint)]
+            retained += PendingScheduledExportRequest(
+                date = date,
+                exportTarget = target,
+                destinationFingerprint = existing?.destinationFingerprint ?: destinationFingerprint,
+                enginePin = existing?.enginePin ?: enginePin,
+                settingsSnapshotJson = existing?.settingsSnapshotJson ?: settingsSnapshotJson,
+                apiOperationId = if (date in freshCaptureRetryDates) {
+                    null
+                } else {
+                    apiOperationIds[date] ?: existing?.apiOperationId
+                },
+                folderOperationId = if (date in freshCaptureRetryDates) {
+                    null
+                } else {
+                    folderOperationIds[date] ?: existing?.folderOperationId
+                },
+                firstFailedAtMillis = existing?.firstFailedAtMillis ?: 0L,
+                lastAttemptAtMillis = nowMillis,
+                lastFailureReason = existing?.lastFailureReason,
+                attemptCount = existing?.attemptCount ?: 0,
+            )
+        }
+
+        return settings.withPendingRequests(retained.sortedBy { it.date })
+    }
+
     fun clearDates(
         settings: ExportSettings,
         dates: List<LocalDate>,

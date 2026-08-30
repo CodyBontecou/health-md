@@ -29,6 +29,42 @@ final class HealthMdSemanticInputAdapterTests: XCTestCase {
         )
     }
 
+    func testRangeUsesSemanticProfileRevisionTwoWithoutChangingCalendarRevisionOne() throws {
+        let registry = try HealthMdCoreRegistryAdapter.appleSnapshot()
+        let selection = MetricSelectionState()
+        let request = try HealthRollupRangeRequest(
+            startDate: Date(timeIntervalSince1970: 1_767_225_600),
+            endDate: Date(timeIntervalSince1970: 1_767_312_000),
+            calendarTimeZoneIdentifier: "UTC"
+        )
+        let calendarData = try HealthMdSemanticInputAdapter.sessionConfiguration(
+            sessionID: "calendar-v1",
+            selection: selection,
+            registry: registry,
+            customization: FormatCustomization(),
+            calendarTimeZoneIdentifier: "UTC",
+            retainPlatformExtensions: false,
+            rollupPeriods: [.weekly]
+        )
+        let rangeData = try HealthMdSemanticInputAdapter.sessionConfiguration(
+            sessionID: "range-v2",
+            selection: selection,
+            registry: registry,
+            customization: FormatCustomization(),
+            calendarTimeZoneIdentifier: "UTC",
+            retainPlatformExtensions: false,
+            rollupPeriods: [.range],
+            requestedRange: request
+        )
+        let calendar = try XCTUnwrap(JSONSerialization.jsonObject(with: calendarData) as? [String: Any])
+        let range = try XCTUnwrap(JSONSerialization.jsonObject(with: rangeData) as? [String: Any])
+
+        XCTAssertEqual(calendar["profile_revision"] as? Int, 1)
+        XCTAssertNil(calendar["rollup_range"])
+        XCTAssertEqual(range["profile_revision"] as? Int, 2)
+        XCTAssertNotNil(range["rollup_range"])
+    }
+
     func testCapturedHealthDataProcessesThroughOnePackagedRustSession() throws {
         let service = HealthMdCoreService()
         let registry = try HealthMdCoreRegistryAdapter.appleSnapshot(service: service)

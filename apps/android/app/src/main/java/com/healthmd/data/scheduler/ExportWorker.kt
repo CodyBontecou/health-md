@@ -43,6 +43,7 @@ import com.healthmd.util.runCatchingCancellable
 import dagger.Lazy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.withLock
 import java.nio.charset.StandardCharsets
@@ -69,7 +70,16 @@ class ExportWorker @AssistedInject constructor(
     private val exportScheduler: Lazy<ExportScheduler>,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = try {
+        if (ScheduledExportOccurrence.fromWorkData(inputData) != null) {
+            setForeground(getForegroundInfo())
+        }
+        doWorkManaged()
+    } finally {
+        ScheduledExportCancellationCoordinator.finish(id)
+    }
+
+    private suspend fun doWorkManaged(): Result {
         var admissionCompleted = false
         var admissionCompletionFailed = false
         val occurrence = ScheduledExportOccurrence.fromWorkData(inputData)
@@ -131,13 +141,15 @@ class ExportWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
+        ScheduledExportCancellationCoordinator.prepare(id)
+        val notificationID = ScheduledExportCancellationCoordinator.foregroundNotificationID(id)
         val openAppIntent = Intent(applicationContext, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(MainActivity.EXTRA_START_ROUTE, NavDestination.SCHEDULE.route)
         }
         val contentIntent = PendingIntent.getActivity(
             applicationContext,
-            FOREGROUND_NOTIFICATION_ID,
+            notificationID,
             openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -147,12 +159,17 @@ class ExportWorker @AssistedInject constructor(
             .setContentText(applicationContext.getString(R.string.automatic_export_subtitle))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(contentIntent)
+            .addAction(
+                0,
+                applicationContext.getString(R.string.action_cancel_export),
+                ScheduledExportCancelReceiver.pendingIntent(applicationContext, id),
+            )
             .setOngoing(true)
             .build()
         val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         } else 0
-        return ForegroundInfo(FOREGROUND_NOTIFICATION_ID, notification, foregroundServiceType)
+        return ForegroundInfo(notificationID, notification, foregroundServiceType)
     }
 
     private suspend fun doWorkExclusive(): Result {
@@ -455,37 +472,83 @@ class ExportWorker @AssistedInject constructor(
         }
 
         return try {
-            val result = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
-                rawSnapshotExportRunner.exportRange(
-                    startDate = dates.first(),
-                    endDate = dates.last(),
-                    settings = settings,
-                    target = settings.scheduledExportTarget,
-                    expectedDestinationFingerprint = destinationFingerprint,
-                )
-            } else when (settings.scheduledExportTarget) {
-                ExportTarget.DEVICE_FOLDER -> {
-                    val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
-                    if (durableFolderOperationId != null && capturedSnapshotJson != null) {
-                        orchestrator.exportDatesDurably(
-                            dates = dates,
+            val result = try {
+                ScheduledExportCancellationCoordinator.run(id) {
+                    if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                        rawSnapshotExportRunner.exportRange(
+                            startDate = dates.first(),
+                            endDate = dates.last(),
                             settings = settings,
-                            durableFolderOperationId = durableFolderOperationId,
-                            durableSettingsSnapshotJson = capturedSnapshotJson,
-                            requireExistingJournal = pendingFolderOperationId != null ||
-                                (runAttemptCount > 0 && !hasFreshFolderRetry),
+                            target = settings.scheduledExportTarget,
+                            expectedDestinationFingerprint = destinationFingerprint,
                         )
-                    } else {
-                        orchestrator.exportDates(dates, settings)
-                    }.copy(target = ExportTarget.DEVICE_FOLDER)
+                    } else when (settings.scheduledExportTarget) {
+                        ExportTarget.DEVICE_FOLDER -> {
+                            val orchestrator = ExportOrchestrator(healthRepository, exportRepository)
+                            if (durableFolderOperationId != null && capturedSnapshotJson != null) {
+                                orchestrator.exportDatesDurably(
+                                    dates = dates,
+                                    settings = settings,
+                                    durableFolderOperationId = durableFolderOperationId,
+                                    durableSettingsSnapshotJson = capturedSnapshotJson,
+                                    requireExistingJournal = pendingFolderOperationId != null ||
+                                        (runAttemptCount > 0 && !hasFreshFolderRetry),
+                                )
+                            } else {
+                                orchestrator.exportDates(dates, settings)
+                            }.copy(target = ExportTarget.DEVICE_FOLDER)
+                        }
+                        ExportTarget.API_ENDPOINT -> apiEndpointExportRunner.exportDates(
+                            dates = dates,
+                            settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                            expectedDestinationFingerprint = destinationFingerprint,
+                            durableOperationId = durableApiOperationId,
+                            durableSettingsSnapshotJson = capturedSnapshotJson,
+                        )
+                    }
                 }
-                ExportTarget.API_ENDPOINT -> apiEndpointExportRunner.exportDates(
-                    dates = dates,
-                    settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
-                    expectedDestinationFingerprint = destinationFingerprint,
-                    durableOperationId = durableApiOperationId,
-                    durableSettingsSnapshotJson = capturedSnapshotJson,
+            } catch (_: kotlinx.coroutines.CancellationException) {
+                // A notification action cancels only the exporter child. Parent WorkManager
+                // cancellation (for schedule disable/replacement) must still propagate.
+                kotlin.coroutines.coroutineContext.ensureActive()
+                ExportResult(
+                    successCount = 0,
+                    totalCount = dates.size,
+                    wasCancelled = true,
+                    target = settings.scheduledExportTarget,
+                    exportMode = settings.exportMode,
+                    remainingDates = dates.toSet(),
                 )
+            }
+
+            if (result.wasCancelled) {
+                val remainingDates = cancellationRemainingDates(dates, settings, result)
+                persistCancelledRetryDates(
+                    attemptedDates = dates,
+                    remainingDates = remainingDates,
+                    target = settings.scheduledExportTarget,
+                    destinationFingerprint = destinationFingerprint,
+                    enginePin = enginePin,
+                    settingsSnapshotJson = capturedSnapshotJson,
+                    result = result,
+                )
+                if (result.successCount > 0) {
+                    exportHistoryRepository.insertEntry(
+                        historyEntry(
+                            settings = settings,
+                            dates = dates,
+                            result = result.copy(failedDateDetails = emptyList()),
+                            failureReason = null,
+                            warning = "Export cancelled; ${remainingDates.size} date(s) remain pending",
+                            reconciliationKey = scheduledReconciliationKey(
+                                target = settings.scheduledExportTarget,
+                                operationId = historyOperationId,
+                                dates = dates,
+                            ),
+                        ),
+                    )
+                }
+                return Result.success()
             }
 
             exportHistoryRepository.insertEntry(
@@ -627,6 +690,58 @@ class ExportWorker @AssistedInject constructor(
         resumeExistingFolderOperation = resumeExistingFolderOperation,
     )
 
+    private fun cancellationRemainingDates(
+        attemptedDates: List<LocalDate>,
+        settings: ExportSettings,
+        result: ExportResult,
+    ): Set<LocalDate> {
+        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) return attemptedDates.toSet()
+        val explicit = (
+            result.remainingDates +
+                result.retryOperationIds.keys +
+                result.retryFolderOperationIds.keys +
+                result.freshCaptureRetryDates
+            ).filterTo(linkedSetOf()) { it in attemptedDates }
+        if (explicit.isNotEmpty() || result.successCount >= result.totalCount) return explicit
+        if (result.successCount == 0 || settings.scheduledExportTarget == ExportTarget.API_ENDPOINT) {
+            return attemptedDates.toSet()
+        }
+
+        // Non-durable folder exports process sorted owner dates sequentially. Infer their exact
+        // successful prefix only as a compatibility fallback for older result producers.
+        val failedDates = result.failedDateDetails.mapTo(linkedSetOf()) { it.date }
+        val processedCount = (result.successCount + failedDates.size).coerceAtMost(attemptedDates.size)
+        val successfulDates = attemptedDates.take(processedCount).filterNotTo(linkedSetOf()) {
+            it in failedDates
+        }
+        return attemptedDates.filterNotTo(linkedSetOf()) { it in successfulDates }
+    }
+
+    private suspend fun persistCancelledRetryDates(
+        attemptedDates: List<LocalDate>,
+        remainingDates: Set<LocalDate>,
+        target: ExportTarget,
+        destinationFingerprint: String?,
+        enginePin: ExportEnginePin?,
+        settingsSnapshotJson: String?,
+        result: ExportResult,
+    ) {
+        settingsRepository.updateExportSettingsAtomically { latestSettings ->
+            ScheduledExportPendingRequests.applyCancellationResult(
+                settings = latestSettings,
+                attemptedDates = attemptedDates,
+                remainingDates = remainingDates,
+                target = target,
+                destinationFingerprint = destinationFingerprint,
+                enginePin = enginePin,
+                settingsSnapshotJson = settingsSnapshotJson,
+                apiOperationIds = result.retryOperationIds,
+                folderOperationIds = result.retryFolderOperationIds,
+                freshCaptureRetryDates = result.freshCaptureRetryDates,
+            )
+        }
+    }
+
     private suspend fun persistPendingRetryDates(
         attemptedDates: List<LocalDate>,
         failedDateDetails: List<FailedDateDetail>,
@@ -638,8 +753,7 @@ class ExportWorker @AssistedInject constructor(
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ) {
-        val latestSettings = settingsRepository.getExportSettings()
-        settingsRepository.updateExportSettings(
+        settingsRepository.updateExportSettingsAtomically { latestSettings ->
             ScheduledExportPendingRequests.applyAttemptResult(
                 settings = latestSettings,
                 attemptedDates = attemptedDates,
@@ -652,7 +766,7 @@ class ExportWorker @AssistedInject constructor(
                 folderOperationIds = folderOperationIds,
                 freshCaptureRetryDates = freshCaptureRetryDates,
             )
-        )
+        }
     }
 
     private suspend fun persistPendingRetryDates(
@@ -664,8 +778,7 @@ class ExportWorker @AssistedInject constructor(
         settingsSnapshotJson: String?,
         folderOperationId: String? = null,
     ) {
-        val latestSettings = settingsRepository.getExportSettings()
-        settingsRepository.updateExportSettings(
+        settingsRepository.updateExportSettingsAtomically { latestSettings ->
             ScheduledExportPendingRequests.recordFailedDates(
                 settings = latestSettings,
                 dates = attemptedDates,
@@ -678,7 +791,7 @@ class ExportWorker @AssistedInject constructor(
                     attemptedDates.associateWith { operationId }
                 }.orEmpty(),
             )
-        )
+        }
     }
 
     private fun historyEntry(
@@ -817,7 +930,6 @@ class ExportWorker @AssistedInject constructor(
         const val INPUT_CATCH_UP_THROUGH_MILLIS = ScheduledExportOccurrence.KEY_CATCH_UP_THROUGH_MILLIS
         const val INPUT_INTENDED_RUN_LOCAL_DATE = ScheduledExportOccurrence.KEY_INTENDED_LOCAL_DATE
         const val INPUT_INTENDED_ZONE_ID = ScheduledExportOccurrence.KEY_ZONE_ID
-        private const val FOREGROUND_NOTIFICATION_ID = 6_042
         private const val EXPORT_RESULT_NOTIFICATION_ID = 6_043
         private const val SCHEDULE_RESULT_NOTIFICATION_ID = 6_044
         private const val MAX_WORKER_ATTEMPTS = 3

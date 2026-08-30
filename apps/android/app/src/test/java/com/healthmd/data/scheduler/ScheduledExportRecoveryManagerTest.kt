@@ -450,6 +450,7 @@ class ScheduledExportRecoveryManagerTest {
                 settings: ExportSettings,
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
+                allowInteractiveRouteConsent: Boolean,
             ) = ExportResult(
                 successCount = 1,
                 totalCount = 2,
@@ -463,6 +464,7 @@ class ScheduledExportRecoveryManagerTest {
                 startDate: LocalDate,
                 endDate: LocalDate,
                 settings: ExportSettings,
+                allowInteractiveRouteConsent: Boolean,
             ): ExportPreview = error("Preview is not used by scheduled recovery")
         }
         val manager = manager(

@@ -91,6 +91,103 @@ final class ProfileDestinationStoreTests: XCTestCase {
         XCTAssertNil(second.vault(id: UUID()))
     }
 
+    func testVaultUpsertPersistsAndUpdatesIdentity() {
+        let store = makeStore()
+        let folderIdentity = VaultFolderIdentity(volumeUUIDString: "volume", fileIdentifier: 42)
+
+        let created = store.upsertVault(
+            name: "Health",
+            standardizedPath: "/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("bookmark-1".utf8),
+            identity: folderIdentity
+        )
+        XCTAssertEqual(created.identity, folderIdentity)
+
+        // Same path, refreshed bookmark with new evidence: identity updates in place.
+        let refreshedIdentity = VaultFolderIdentity(volumeUUIDString: "volume", fileIdentifier: 99)
+        let refreshed = store.upsertVault(
+            name: "Health",
+            standardizedPath: "/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("bookmark-2".utf8),
+            identity: refreshedIdentity
+        )
+        XCTAssertEqual(refreshed.id, created.id)
+        XCTAssertEqual(refreshed.identity, refreshedIdentity)
+
+        // Healed evidence survives a store reload.
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.vault(id: created.id)?.identity, refreshedIdentity)
+    }
+
+    func testVaultRowsDecodeWithoutIdentity() throws {
+        // Rows persisted before identity capture (issue #143 fix) have no
+        // "identity" key; decoding must yield nil instead of failing.
+        let legacyPayload = try JSONSerialization.data(withJSONObject: [[
+            "id": UUID().uuidString,
+            "name": "Health",
+            "standardizedPath": "/tmp/OnMyiPhone/Health",
+            "bookmarkData": Data("bookmark".utf8).base64EncodedString(),
+            "createdAt": 0.0
+        ]])
+        defaults.set(legacyPayload, forKey: "exportProfileDestinations.vaults")
+
+        let store = makeStore()
+
+        XCTAssertEqual(store.vaults.count, 1)
+        XCTAssertNil(store.vaults[0].identity)
+        XCTAssertEqual(store.vaults[0].name, "Health")
+    }
+
+    func testUpdateVaultRefreshesRowInPlaceWithoutRebinding() {
+        let store = makeStore()
+        let row = store.upsertVault(
+            name: "Health",
+            standardizedPath: "/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("stale-bookmark".utf8)
+        )
+        XCTAssertNil(row.identity)
+
+        let healed = VaultFolderIdentity(volumeUUIDString: "volume", fileIdentifier: 42)
+        store.updateVault(
+            id: row.id,
+            name: "Health Renamed",
+            standardizedPath: "/private/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("refreshed-bookmark".utf8),
+            identity: healed
+        )
+
+        let updated = store.vault(id: row.id)
+        XCTAssertEqual(updated?.name, "Health Renamed")
+        XCTAssertEqual(updated?.standardizedPath, "/private/tmp/OnMyiPhone/Health")
+        XCTAssertEqual(updated?.bookmarkData, Data("refreshed-bookmark".utf8))
+        XCTAssertEqual(updated?.identity, healed)
+        XCTAssertEqual(store.vaults.count, 1)
+
+        // The refreshed row survives a store reload.
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.vault(id: row.id), updated)
+
+        // No-op updates leave persisted state untouched.
+        store.updateVault(
+            id: row.id,
+            name: "Health Renamed",
+            standardizedPath: "/private/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("refreshed-bookmark".utf8),
+            identity: healed
+        )
+        XCTAssertEqual(store.vaults.count, 1)
+
+        // Unknown ids are ignored.
+        store.updateVault(
+            id: UUID(),
+            name: "Health Renamed",
+            standardizedPath: "/private/tmp/OnMyiPhone/Health",
+            bookmarkData: Data("refreshed-bookmark".utf8),
+            identity: healed
+        )
+        XCTAssertEqual(store.vaults.count, 1)
+    }
+
     func testCorruptedVaultDataStartsEmpty() {
         defaults.set(Data("not json".utf8), forKey: "exportProfileDestinations.vaults")
         let store = makeStore()

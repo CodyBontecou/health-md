@@ -10,6 +10,18 @@ Health.md exporta un conjunto de datos local con un esquema versionado para Mark
 <p style="margin-top:6px;">Esta página está organizada a partir del esquema de exportación y el diccionario de datos de Health.md: actividad, sueño, corazón, signos vitales, cuerpo, nutrición, mindfulness, medicamentos, entrenamientos, salud reproductiva, síntomas, audición y métricas de estilo de vida y entorno.</p>
 </div>
 
+## Anulaciones de unidades por visualización
+
+Añade `units` dentro de un bloque `health-viz` individual cuando un gráfico deba usar un sistema de visualización distinto de la preferencia global del plugin:
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+Usa `auto` para seguir el sistema de unidades declarado por la exportación, `metric` para mostrar kilómetros, kilogramos, metros y Celsius, o `imperial` para mostrar millas, libras, pies y Fahrenheit. La anulación solo se aplica a esa visualización y tiene prioridad sobre el ajuste global Units. Solo cambia los valores mostrados; los archivos Health.md exportados no se modifican. Las métricas no convertibles, como pasos, BPM, porcentajes y calorías, no cambian.
+
 ## Cobertura actual de visualizaciones
 
 <div class="reference-stats">

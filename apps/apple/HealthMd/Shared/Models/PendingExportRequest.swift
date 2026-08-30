@@ -7,7 +7,12 @@ enum PendingExportSource: String, Codable, Equatable {
 
 struct PendingExportRequest: Codable, Equatable, Identifiable {
     let id: UUID
-    let dates: [Date]
+    /// Residual dates still requiring daily work.
+    private(set) var dates: [Date]
+    /// Immutable original owner-date request used to overwrite/regenerate the same range summary.
+    let originalRequestedDates: [Date]
+    /// Frozen calendar authority for the original request. Nil identifies a legacy request.
+    let originalCalendarTimeZoneIdentifier: String?
     let source: PendingExportSource
     let scheduledFireDate: Date?
     let scheduledKind: ScheduledExportKind
@@ -38,7 +43,18 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// exactly. The designated initializer re-normalizes through its calendar
     /// and would shift dates captured under a different timezone.
     func markingAttempted(at timestamp: Date) -> PendingExportRequest {
+        replacingResidualDates(dates, attemptedAt: timestamp)
+    }
+
+    /// Copy with reduced residual work while preserving the immutable original
+    /// owner-date instants byte-for-byte. Callers must compute `dates` with the
+    /// request's frozen timezone authority before using this method.
+    func replacingResidualDates(
+        _ dates: [Date],
+        attemptedAt timestamp: Date
+    ) -> PendingExportRequest {
         var copy = self
+        copy.dates = dates
         copy.attemptedAt = timestamp
         return copy
     }
@@ -48,6 +64,8 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     init(
         id: UUID = UUID(),
         dates: [Date],
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         source: PendingExportSource,
         scheduledFireDate: Date? = nil,
         scheduledKind: ScheduledExportKind = .completedDay,
@@ -62,6 +80,17 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     ) {
         self.id = id
         self.dates = Self.normalizedDates(dates, calendar: calendar)
+        let frozenOriginalTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
+            ?? settingsSnapshot?.calendarTimeZoneIdentifier
+            ?? calendar.timeZone.identifier
+        var originalCalendar = Calendar(identifier: .gregorian)
+        originalCalendar.timeZone = TimeZone(identifier: frozenOriginalTimeZoneIdentifier)
+            ?? calendar.timeZone
+        self.originalRequestedDates = Self.normalizedDates(
+            originalRequestedDates ?? dates,
+            calendar: originalCalendar
+        )
+        self.originalCalendarTimeZoneIdentifier = frozenOriginalTimeZoneIdentifier
         self.source = source
         self.scheduledFireDate = scheduledFireDate
         self.scheduledKind = source == .scheduled ? scheduledKind : .completedDay
@@ -78,6 +107,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         dates = try container.decode([Date].self, forKey: .dates)
+        originalRequestedDates = try container.decodeIfPresent(
+            [Date].self,
+            forKey: .originalRequestedDates
+        ) ?? dates
         source = try container.decode(PendingExportSource.self, forKey: .source)
         scheduledFireDate = try container.decodeIfPresent(Date.self, forKey: .scheduledFireDate)
         scheduledKind = source == .scheduled
@@ -93,6 +126,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
             ExportSettingsSnapshot.self,
             forKey: .settingsSnapshot
         )
+        originalCalendarTimeZoneIdentifier = try container.decodeIfPresent(
+            String.self,
+            forKey: .originalCalendarTimeZoneIdentifier
+        ) ?? settingsSnapshot?.calendarTimeZoneIdentifier
         // Phase-3 identity is additive: legacy persisted requests decode as
         // profile-free and keep their legacy execution path.
         profileID = try container.decodeIfPresent(UUID.self, forKey: .profileID)

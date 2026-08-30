@@ -25,10 +25,9 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.organizeFormatsIntoFolders)
         XCTAssertTrue(snapshot.includeDataDictionary)
         XCTAssertEqual(snapshot.writeMode, .update)
+        XCTAssertEqual(snapshot.detailPolicy, .lossless)
         XCTAssertTrue(snapshot.includeGranularData)
-        XCTAssertTrue(snapshot.generateWeeklyRollups)
-        XCTAssertTrue(snapshot.generateMonthlyRollups)
-        XCTAssertFalse(snapshot.generateYearlyRollups)
+        XCTAssertTrue(snapshot.generateRangeSummary)
         XCTAssertTrue(snapshot.summaryOnlyExport)
         XCTAssertTrue(snapshot.appleExportEngineAuthorityIsFrozen)
 
@@ -85,6 +84,8 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: data)
 
         XCTAssertEqual(encodedObject["includeGranularData"] as? Bool, true)
+        XCTAssertEqual(encodedObject["compatibilityDetail"] as? String, "selected_time_series")
+        XCTAssertEqual(encodedObject["healthKitSourceArchivePolicy"] as? String, "canonical_v1")
         XCTAssertNil(
             encodedObject["includeDataDictionary"],
             "Default-on snapshots must preserve the legacy canonical encoding for durable fingerprints"
@@ -118,13 +119,60 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         let data = try JSONEncoder().encode(snapshot)
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "includeGranularData")
+        object.removeValue(forKey: "compatibilityDetail")
+        object.removeValue(forKey: "healthKitSourceArchivePolicy")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
 
+        XCTAssertEqual(decoded.detailPolicy, .summary)
         XCTAssertFalse(decoded.includeGranularData)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
         XCTAssertEqual(decoded.metricSelection, snapshot.metricSelection)
+    }
+
+    func testSnapshot_decodesLegacyCombinedTrueAsLosslessPolicy() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "compatibilityDetail")
+        object.removeValue(forKey: "healthKitSourceArchivePolicy")
+        object["includeGranularData"] = true
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: legacyData)
+
+        XCTAssertEqual(decoded.detailPolicy, .lossless)
+        XCTAssertTrue(decoded.includeGranularData)
+    }
+
+    func testSnapshot_exactSplitPolicyWinsOverLegacyBridge() throws {
+        let snapshot = ExportSettingsSnapshot.from(makeConfiguredSettings())
+        let data = try JSONEncoder().encode(snapshot)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object["compatibilityDetail"] = "selected_time_series"
+        object["healthKitSourceArchivePolicy"] = "none"
+        object["includeGranularData"] = true
+        let exactData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: exactData)
+        let reencoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded)) as? [String: Any]
+        )
+
+        XCTAssertEqual(decoded.detailPolicy, .detailedTimeSeries)
+        XCTAssertFalse(decoded.includeGranularData)
+        XCTAssertEqual(reencoded["includeGranularData"] as? Bool, false)
+    }
+
+    func testDetailPolicyHistoryTokensCoverAllFourStates() {
+        XCTAssertEqual(AppleExportDetailPolicy.summary.historyDetailLevelToken, "summary")
+        XCTAssertEqual(
+            AppleExportDetailPolicy.detailedTimeSeries.historyDetailLevelToken,
+            "detailed_time_series"
+        )
+        XCTAssertEqual(AppleExportDetailPolicy.archiveOnly.historyDetailLevelToken, "archive_only")
+        XCTAssertEqual(AppleExportDetailPolicy.lossless.historyDetailLevelToken, "lossless")
     }
 
     func testSnapshot_decodesLegacyDailyNoteSettingsWithoutDailyNotesOnly() throws {
@@ -150,9 +198,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         object.removeValue(forKey: "organizeFormatsIntoFolders")
         object.removeValue(forKey: "healthSubfolder")
         object.removeValue(forKey: "includeDataDictionary")
-        object.removeValue(forKey: "generateWeeklyRollups")
-        object.removeValue(forKey: "generateMonthlyRollups")
-        object.removeValue(forKey: "generateYearlyRollups")
+        object.removeValue(forKey: "generateRangeSummary")
         object.removeValue(forKey: "summaryOnlyExport")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
@@ -160,9 +206,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
 
         XCTAssertFalse(decoded.organizeFormatsIntoFolders)
         XCTAssertTrue(decoded.includeDataDictionary)
-        XCTAssertFalse(decoded.generateWeeklyRollups)
-        XCTAssertFalse(decoded.generateMonthlyRollups)
-        XCTAssertFalse(decoded.generateYearlyRollups)
+        XCTAssertFalse(decoded.generateRangeSummary)
         XCTAssertFalse(decoded.summaryOnlyExport)
         XCTAssertNil(decoded.healthSubfolder)
         XCTAssertEqual(decoded.exportFormats, snapshot.exportFormats)
@@ -193,7 +237,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     @MainActor
     func testNewSupportedSummaryRollupOperationCapturesRustPinAfterCapabilityGate() async throws {
         let settings = makeSimpleEngineSettings()
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let snapshot = await ExportSettingsSnapshot.forNewAppleOperation(
             settings,
@@ -241,7 +285,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
     @MainActor
     func testNewRollupOperationCapturesPinForLocalAndDirectRangeSurfaces() async throws {
         let settings = makeSimpleEngineSettings()
-        settings.generateWeeklyRollups = true
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
         let timezone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let resolver = AppleExportEnginePolicyResolver(
@@ -433,9 +477,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         XCTAssertTrue(reconstructed.organizeFormatsIntoFolders)
         XCTAssertEqual(reconstructed.writeMode, .update)
         XCTAssertTrue(reconstructed.includeGranularData)
-        XCTAssertTrue(reconstructed.generateWeeklyRollups)
-        XCTAssertTrue(reconstructed.generateMonthlyRollups)
-        XCTAssertFalse(reconstructed.generateYearlyRollups)
+        XCTAssertTrue(reconstructed.generateRangeSummary)
         XCTAssertTrue(reconstructed.summaryOnlyExport)
         XCTAssertFalse(reconstructed.summaryOnlyModeEnabled)
         XCTAssertEqual(reconstructed.effectiveFileExportMode, .dailyNotesOnly)
@@ -482,9 +524,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.archiveExportFiles = false
         settings.summaryOnlyExport = false
         settings.includeGranularData = false
-        settings.generateWeeklyRollups = false
-        settings.generateMonthlyRollups = false
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = false
         settings.dailyNoteInjection.enabled = false
         settings.individualTracking.globalEnabled = false
         return settings
@@ -506,9 +546,7 @@ final class ExportSettingsSnapshotTests: XCTestCase {
         settings.organizeFormatsIntoFolders = true
         settings.writeMode = .update
         settings.includeGranularData = true
-        settings.generateWeeklyRollups = true
-        settings.generateMonthlyRollups = true
-        settings.generateYearlyRollups = false
+        settings.generateRangeSummary = true
         settings.summaryOnlyExport = true
 
         settings.formatCustomization.dateFormat = .usLong

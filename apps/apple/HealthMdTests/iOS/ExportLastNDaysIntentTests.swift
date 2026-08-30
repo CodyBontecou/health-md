@@ -194,6 +194,63 @@ final class ExportIntentRunnerTests: XCTestCase {
         XCTAssertTrue(harness.recordedResults.isEmpty)
     }
 
+    func testCancelledShortcutWithCommittedDateRecordsQuotaWithoutAdvancingSchedule() async {
+        let firstDate = date(2026, 5, 16)
+        let secondDate = date(2026, 5, 17)
+        let harness = RunnerHarness(
+            result: ExportOrchestrator.ExportResult(
+                successCount: 1,
+                totalCount: 2,
+                failedDateDetails: [FailedDateDetail(date: secondDate, reason: .unknown)],
+                formatsPerDate: 1,
+                wasCancelled: true,
+                completedDates: [firstDate]
+            ),
+            now: date(2026, 5, 18, hour: 9)
+        )
+
+        let outcome = await ExportIntentRunner.run(
+            dates: [firstDate, secondDate],
+            dependencies: harness.dependencies
+        )
+
+        guard case .cancelled(let remainingDates) = outcome else {
+            return XCTFail("Expected cancelled outcome, got \(outcome)")
+        }
+        XCTAssertEqual(remainingDates, [secondDate])
+        XCTAssertEqual(harness.recordedResults.count, 1)
+        XCTAssertEqual(harness.recordExportUseCount, 1)
+        XCTAssertEqual(harness.trackExportSucceededCount, 1)
+        XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
+    }
+
+    func testCancelledShortcutWithoutCommittedDatesDoesNotRecordFailureOrQuota() async {
+        let requestedDate = date(2026, 5, 17)
+        let harness = RunnerHarness(
+            result: ExportOrchestrator.ExportResult(
+                successCount: 0,
+                totalCount: 1,
+                failedDateDetails: [FailedDateDetail(date: requestedDate, reason: .unknown)],
+                wasCancelled: true,
+                completedDates: []
+            )
+        )
+
+        let outcome = await ExportIntentRunner.run(
+            dates: [requestedDate],
+            dependencies: harness.dependencies
+        )
+
+        guard case .cancelled(let remainingDates) = outcome else {
+            return XCTFail("Expected cancelled outcome, got \(outcome)")
+        }
+        XCTAssertEqual(remainingDates, [requestedDate])
+        XCTAssertTrue(harness.recordedResults.isEmpty)
+        XCTAssertEqual(harness.recordExportUseCount, 0)
+        XCTAssertEqual(harness.trackExportSucceededCount, 0)
+        XCTAssertEqual(harness.updateScheduleLastExportCount, 0)
+    }
+
     func testSuccessfulShortcutPathStillRecordsQuotaAnalyticsAndSchedule() async {
         let yesterday = date(2026, 5, 17)
         let harness = RunnerHarness(
@@ -245,7 +302,7 @@ final class ExportIntentRunnerTests: XCTestCase {
             pendingExportStore: pendingStore,
             exportNotificationScheduler: notificationScheduler,
             initialSchedule: ExportSchedule(isEnabled: false, lookbackDays: 30),
-            shortcutExportRunner: { dates in
+            shortcutExportRunner: { dates, _ in
                 retriedDates = dates
                 return .success(daysExported: dates.count, formatsPerDate: 1)
             },

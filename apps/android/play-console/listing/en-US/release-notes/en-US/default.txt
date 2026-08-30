@@ -1,4 +1,4 @@
-v1.7.1 — Health.md on Wear OS
+v1.8.0 — Health.md on Wear OS
 
 • View minimized daily Health Connect aggregates on your watch.
 • Adds Daily Activity and Recovery Tiles plus ten complications.

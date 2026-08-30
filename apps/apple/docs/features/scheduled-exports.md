@@ -9,18 +9,18 @@
 
 ## What it does
 
-Scheduled Exports run recent Apple Health exports daily, weekly, or on a custom calendar cadence using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Lossless Health Records**. Custom schedules can repeat every N days, weeks, or months, covering patterns such as every other day or monthly. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
+Scheduled Exports run recent Apple Health exports daily, weekly, or on a custom calendar cadence using the same iPhone settings as Manual Export, including formats, metrics, paths, write mode, and **Data Detail**. Custom schedules can repeat every N days, weeks, or months, covering patterns such as every other day or monthly. Targets are iPhone Folder, API Endpoint, or an already-open/connected Mac.
 
 Scheduling is available on the free plan. A scheduled request that exports at least one date consumes one of the same 10 free export actions used by manual, Shortcut, and direct exports, regardless of how many dates or files the request contains. Retries of that same durable request do not consume another use. Full Access removes the shared limit.
 
-Lossless Health Records is off by default for new installs, and existing explicit on or off choices are preserved. Scheduled lossless exports can be large; enable it intentionally and start with a short lookback.
+Data Detail defaults to Summary for new installs. Detailed Time-Series adds selected samples without the canonical archive; Lossless Health Records adds both and can be large, so enable it intentionally and start with a short lookback.
 
 ## Setup
 
 1. Open **Schedule** and enable Scheduled Exports.
 2. Grant notification permission for recovery.
 3. Choose Daily, Weekly, or Custom; then set the time, lookback, and destination. Custom schedules also have an interval unit and start date that establishes the repeating phase.
-4. Configure metrics, formats, and Lossless Health Records on Export.
+4. Configure metrics, formats, and Data Detail on Export.
 5. Optional: enable Today Refresh every 3/6/12 hours.
 
 Completed-day runs end yesterday. Today Refresh re-fetches the current day when iOS permits. File targets use Update/Overwrite to replace the daily JSON snapshot; API Endpoint targets resend the complete snapshot so the receiver can replace or upsert that date.
@@ -28,7 +28,8 @@ Completed-day runs end yesterday. Today Refresh re-fetches the current day when 
 ## What gets exported
 
 - selected summary metrics;
-- canonical source archive in JSON/CSV when lossless capture is on;
+- selected compatibility samples when Detailed Time-Series or Lossless is selected;
+- canonical source archive in JSON/CSV when Lossless Health Records is selected;
 - summary + diagnostic Markdown/Bases;
 - daily-note injection and individual entries for file targets, if enabled;
 - roll-ups, if explicitly enabled.
@@ -41,7 +42,7 @@ Scheduled file/upload completion and source-capture completeness are separate. R
 
 - `complete` can include successful empty queries;
 - `partial` retains successful data but records incomplete branches;
-- `not_requested` means the setting was off;
+- `not_requested` means canonical archive capture was off; detailed compatibility series may still be present;
 - `legacy_unavailable` means an older source could not provide it.
 
 A downstream automation should not equate a written file with a complete canonical archive.
@@ -50,7 +51,7 @@ A downstream automation should not equate a written file with a complete canonic
 
 Before a scheduled occurrence, Health.md persists exact requested dates, source, schedule kind, destination snapshot, fire date, and notification routing metadata. It does not store HealthKit samples in the worker.
 
-If HealthKit is protected while locked, the unresolved dates remain pending. Partial runs remove exact terminal dates (successfully written/uploaded days and iPhone HealthKit no-data outcomes) and keep only retryable dates, preventing append-mode duplicates. Missing Mac cache data remains retryable because a later iPhone sync may populate it. The immediate “Health Export Needs Attention” notification carries the stable pending request ID; Health.md does not announce an incomplete run as completed. Open Health.md and tap to retry. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs or re-expansion of completed dates. Whichever trigger actually runs the request — notification tap, app-open catch-up, or Connected Mac handshake resume — the run is presented through the scheduled-export activity banner with live progress; on a cold-launch notification tap the app-open drain may win the race and own the banner, and a result is never surfaced as a standalone alert. The +60s fallback notification armed for a profile occurrence carries that profile's identity (exact dates, destination, frozen settings), so a tap runs the profile's own export while profile scheduling owns the wake-up; legacy-shaped requests are never armed while only profile entries are enabled. A preserved retry and its recovery notification survive wake-up re-arms and profile edits — only not-yet-fired fallback notifications are canceled when automation is re-armed or disabled — and the armed fallback is defused the moment its retry starts running, so it never surfaces mid-run.
+If HealthKit is protected while locked, the unresolved dates remain pending. Partial runs remove exact terminal dates (successfully written/uploaded days and iPhone HealthKit no-data outcomes) and keep only retryable dates, preventing append-mode duplicates. Missing Mac cache data remains retryable because a later iPhone sync may populate it. The immediate “Health Export Needs Attention” notification carries the stable pending request ID; Health.md does not announce an incomplete run as completed. Open Health.md and tap to retry. Duplicate triggers reuse pending identity and in-flight IDs prevent concurrent duplicate runs or re-expansion of completed dates. Whichever trigger actually runs the request — notification tap, app-open catch-up, or Connected Mac handshake resume — the run is presented through the scheduled-export activity banner with live progress; on a cold-launch notification tap the app-open drain may win the race and own the banner, and a result is never surfaced as a standalone alert. **Cancel Export** stops only the current attempt: it does not disable the schedule, completed dates stay completed, and unresolved dates remain queued for a later retry. The +60s fallback notification armed for a profile occurrence carries that profile's identity (exact dates, destination, frozen settings), so a tap runs the profile's own export while profile scheduling owns the wake-up; legacy-shaped requests are never armed while only profile entries are enabled. A preserved retry and its recovery notification survive wake-up re-arms and profile edits — only not-yet-fired fallback notifications are canceled when automation is re-armed or disabled — and the armed fallback is defused the moment its retry starts running, so it never surfaces mid-run.
 
 ## Scheduling/privacy architecture
 
@@ -69,6 +70,8 @@ Decision: no server-visible APNs alert. Health.md uses the client pending reques
 Connected Mac schedules require an open, compatible, ready Mac to begin; they do not wake it. Current peers use peer-bound durable checksum-validated sessions. A disconnect, scheduler wait timeout, or iPhone app suspension pauses rather than cancels the persisted job; reopening Health.md and reconnecting the same Mac resumes from its acknowledged partition frontier until the fixed seven-day expiry. The scheduler invocation may stop waiting while the job continues. Peers without bounded per-date completion capability remain ineligible. Large one-day HealthKit capture/final serialization can still use substantial memory even though aggregate resume storage and frames are bounded.
 
 ## Practical guidance
+
+- Progress is always visible while an export runs: an in-app activity banner for normal exports, a banner plus lock-screen Live Activity for CLI-triggered exports, and local notifications for scheduled results. Manual and scheduled in-app banners include their Stop/Cancel action; banners dismiss automatically when the run finishes.
 
 - Begin with a one-day lookback.
 - Use Update/Overwrite for repeated dates.

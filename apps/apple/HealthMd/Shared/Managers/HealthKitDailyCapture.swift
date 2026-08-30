@@ -11,7 +11,7 @@ import Foundation
 enum HealthKitDailyCapture {
     typealias HealthDataFetcher = (
         _ date: Date,
-        _ includeGranularData: Bool,
+        _ detailPolicy: AppleExportDetailPolicy,
         _ metricSelection: MetricSelectionState
     ) async throws -> HealthData
 
@@ -62,7 +62,7 @@ enum HealthKitDailyCapture {
 
     static func capture(
         date: Date,
-        includeGranularData: Bool,
+        detailPolicy: AppleExportDetailPolicy,
         metricSelection: MetricSelectionState,
         transform: RecordTransform,
         emptyRecordPolicy: EmptyRecordPolicy,
@@ -77,14 +77,14 @@ enum HealthKitDailyCapture {
         do {
             let fetched = try await fetchHealthData(
                 date,
-                includeGranularData,
+                detailPolicy,
                 metricSelection
             )
             try Task.checkCancellation()
 
             var record = transformed(
                 fetched,
-                includeGranularData: includeGranularData,
+                detailPolicy: detailPolicy,
                 metricSelection: metricSelection,
                 transform: transform
             )
@@ -145,6 +145,34 @@ enum HealthKitDailyCapture {
         }
     }
 
+    /// Historical source-compatible capture entry point. The old Boolean maps
+    /// only to the two legacy-representable policies.
+    static func capture(
+        date: Date,
+        includeGranularData: Bool,
+        metricSelection: MetricSelectionState,
+        transform: RecordTransform,
+        emptyRecordPolicy: EmptyRecordPolicy,
+        fetchExternalRecords: Bool,
+        filterExternalRecords: Bool = true,
+        failurePolicy: FailurePolicy,
+        fetchHealthData: HealthDataFetcher,
+        fetchExternalDailyRecords: ExternalDailyRecordFetcher?
+    ) async throws -> Outcome {
+        try await capture(
+            date: date,
+            detailPolicy: includeGranularData ? .lossless : .summary,
+            metricSelection: metricSelection,
+            transform: transform,
+            emptyRecordPolicy: emptyRecordPolicy,
+            fetchExternalRecords: fetchExternalRecords,
+            filterExternalRecords: filterExternalRecords,
+            failurePolicy: failurePolicy,
+            fetchHealthData: fetchHealthData,
+            fetchExternalDailyRecords: fetchExternalDailyRecords
+        )
+    }
+
     static func failedDateDetail(
         for error: HealthKitManager.HealthKitError,
         date: Date,
@@ -202,7 +230,7 @@ enum HealthKitDailyCapture {
 
     private static func transformed(
         _ record: HealthData,
-        includeGranularData: Bool,
+        detailPolicy: AppleExportDetailPolicy,
         metricSelection: MetricSelectionState,
         transform: RecordTransform
     ) -> HealthData {
@@ -212,14 +240,14 @@ enum HealthKitDailyCapture {
         case .filterToSelection:
             return record.filtered(by: metricSelection)
         case .sanitizeGranular:
-            return ConnectedExportGranularMode.sanitized(
+            return ConnectedExportDetailPolicy.sanitized(
                 record,
-                includesGranularData: includeGranularData
+                detailPolicy: detailPolicy
             )
         case .sanitizeGranularAndFilter:
-            return ConnectedExportGranularMode.sanitized(
+            return ConnectedExportDetailPolicy.sanitized(
                 record,
-                includesGranularData: includeGranularData
+                detailPolicy: detailPolicy
             ).filtered(by: metricSelection)
         }
     }

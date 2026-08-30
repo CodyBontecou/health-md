@@ -5,7 +5,7 @@ import Foundation
 final class ClinicianReportViewModel: ObservableObject {
     private static let selectedMetricsDefaultsKey = "clinicianReport.selectedMetrics.v1"
 
-    @Published var configuration: ReportConfiguration
+    @Published private(set) var configuration: ReportConfiguration
     @Published private(set) var selectedPreset: ReportDateRangePreset = .days30
     @Published private(set) var report: ClinicianReportData?
     @Published private(set) var artifact: ExportArtifactFile?
@@ -46,15 +46,24 @@ final class ClinicianReportViewModel: ObservableObject {
         )
     }
 
+    var isBusy: Bool {
+        isLoading || isRendering
+    }
+
+    var isConfigurationEditable: Bool {
+        !isBusy
+    }
+
     var canGenerateReport: Bool {
-        !configuration.selectedMetrics.isEmpty && !isLoading && !isRendering
+        !configuration.selectedMetrics.isEmpty && isConfigurationEditable
     }
 
     var canGeneratePDF: Bool {
-        report?.hasReportableData == true && !isLoading && !isRendering
+        report?.hasReportableData == true && isConfigurationEditable
     }
 
     func selectPreset(_ preset: ReportDateRangePreset) {
+        guard isConfigurationEditable else { return }
         selectedPreset = preset
         guard preset != .custom else {
             invalidateOutput()
@@ -66,6 +75,7 @@ final class ClinicianReportViewModel: ObservableObject {
     }
 
     func setCustomRange(start: Date, end: Date) {
+        guard isConfigurationEditable else { return }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone()
         selectedPreset = .custom
@@ -102,6 +112,7 @@ final class ClinicianReportViewModel: ObservableObject {
     }
 
     func editConfiguration() {
+        guard isConfigurationEditable else { return }
         invalidateOutput()
     }
 
@@ -220,14 +231,17 @@ final class ClinicianReportViewModel: ObservableObject {
         isRendering = false
     }
 
-    private func updateConfiguration(_ change: (inout ReportConfiguration) -> Void) {
+    @discardableResult
+    private func updateConfiguration(_ change: (inout ReportConfiguration) -> Void) -> Bool {
+        guard isConfigurationEditable else { return false }
         cancelOperation(resetOutput: true)
         change(&configuration)
         errorMessage = nil
+        return true
     }
 
     private func updateMetricSelection(_ change: (inout Set<ReportMetric>) -> Void) {
-        updateConfiguration { change(&$0.selectedMetrics) }
+        guard updateConfiguration({ change(&$0.selectedMetrics) }) else { return }
         persistSelectedMetrics()
     }
 
@@ -248,6 +262,7 @@ final class ClinicianReportViewModel: ObservableObject {
     }
 
     private func invalidateOutput() {
+        guard isConfigurationEditable else { return }
         cancelOperation(resetOutput: true)
         errorMessage = nil
     }

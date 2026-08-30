@@ -9,8 +9,10 @@ import com.healthmd.data.scheduler.ExportScheduler
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.repository.SettingsRepository
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -69,6 +71,10 @@ class SharedSetupService private constructor(
     }
 
     suspend fun apply(preview: SharedSetupPreview): Result<SharedSetupApplyResult> = transactionMutex.withLock {
+        withContext(NonCancellable) { applyTransaction(preview) }
+    }
+
+    private suspend fun applyTransaction(preview: SharedSetupPreview): Result<SharedSetupApplyResult> {
         var committedCandidate: ExportSettings? = null
         var previousSettings: ExportSettings? = null
         var previousEndpoint: String? = null
@@ -133,7 +139,7 @@ class SharedSetupService private constructor(
             }
             runCatching { scheduler.reconcile() }
             if (rollback.isFailure) {
-                return@withLock Result.failure(
+                return Result.failure(
                     IllegalStateException(
                         "The shared setup failed and the previous setup could not be verified as restored.",
                         rollback.exceptionOrNull(),
@@ -143,7 +149,7 @@ class SharedSetupService private constructor(
         } else if (outcome.isFailure) {
             runCatching { scheduler.reconcile() }
         }
-        outcome
+        return outcome
     }
 
     suspend fun confirmPendingEndpoint(authorization: String): Result<Unit> = transactionMutex.withLock {

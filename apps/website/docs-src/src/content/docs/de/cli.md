@@ -1,26 +1,27 @@
 ---
 title: "Health.md CLI"
-description: "Wählen Sie die Mac-App oder das direkte iPhone-Backend, installieren Sie healthmd, prüfen Sie die Bereitschaft, exportieren Sie Dateien, extrahieren Sie kanonische Apple Health-Daten, führen Sie typisierte Abfragen aus und automatisieren Sie persistente Aufträge."
+description: "Wählen Sie die Mac-App oder das direkte Telefon-Backend, koppeln Sie healthmd mit einem iPhone oder Android-Gerät, prüfen Sie die Bereitschaft, exportieren Sie Dateien, extrahieren Sie kanonische Apple Health-Daten, führen Sie typisierte Abfragen aus und automatisieren Sie persistente Aufträge."
 ---
 
-Der Befehl `healthmd` bietet zwei Betriebsarten. Verwenden Sie das Backend der Mac-App für verschlüsselte lokale Abfragen, MCP-Tools oder den bereits in Health.md für Mac ausgewählten Zielordner. Verwenden Sie das direkte iPhone-Backend, wenn Sie Rohdaten oder generierte Dateien ohne laufende Mac-App benötigen.
+Der Befehl `healthmd` bietet zwei Betriebsarten. Verwenden Sie das Backend der Mac-App für verschlüsselte lokale Abfragen, MCP-Tools oder den bereits in Health.md für Mac ausgewählten Zielordner. Verwenden Sie das direkte Telefon-Backend, wenn Sie Rohdaten oder generierte Dateien ohne laufende Mac-App benötigen. Der Direktmodus koppelt sich mit einer geöffneten Health.md-App auf dem iPhone (Protokoll v1) oder Android (Protokoll v2).
 
 <div class="callout">
-<strong>HealthKit bleibt auf dem iPhone.</strong>
-<p style="margin-top:6px;">Keines der CLI-Backends liest Apple Health auf dem Computer. Die aktuell geöffnete Health.md-App auf dem iPhone führt jeden neuen HealthKit-Lesevorgang aus. Die CLI empfängt validierte Ergebnisse oder Dateien.</p>
+<strong>Gesundheitsdaten bleiben auf dem Telefon.</strong>
+<p style="margin-top:6px;">Keines der CLI-Backends liest Apple Health oder Health Connect auf dem Computer. Die aktuell geöffnete Health.md-App auf dem iPhone oder Android führt jeden neuen Gesundheitslesevorgang der Plattform aus. Die CLI empfängt validierte Ergebnisse oder Dateien.</p>
 </div>
 
 ## Backend auswählen
 
-| Funktion | Backend der Mac-App | Direktes iPhone-Backend |
+| Funktion | Backend der Mac-App | Direktes Telefon-Backend |
 |---|---|---|
 | Standard im mitgelieferten Mac-Helfer | Ja | Nein, mit `--backend direct` auswählen |
+| Quellgeräte | iPhone | iPhone (Protokoll v1) oder Android (Protokoll v2) |
 | Health.md für Mac muss geöffnet sein | Ja | Nein |
-| Health.md auf dem iPhone muss für neue Daten geöffnet sein | Ja | Ja |
+| Health.md-Telefon-App muss für neue Daten geöffnet sein | Ja | Ja |
 | Dateiziel | In der Mac-App ausgewählter Ordner | Vorhandenes absolutes `--destination` |
-| Strikter Rohdatenexport | Ja | Ja |
-| Kanonisches `healthmd extract` | Ja | Ja |
-| Verschlüsselter Kontext, typisierte Abfragen und Nachweise | Ja | Nein |
+| Strikter Rohdatenexport | Ja | Ja; provider-native Health-Connect-Snapshots auf Android |
+| Kanonisches `healthmd extract` | Ja | Nur iPhone |
+| Verschlüsselter Kontext, typisierte Abfragen und Nachweise | Ja | Nur iPhone, portabler Client |
 | `healthmd-mcp` | Ja | Nein |
 | Manual IP oder Tailscale | Mac-Synchronisierung oder ausdrücklicher Direktmodus | Ja |
 | Direkter Transport in der Nähe | Nur mitgelieferter Swift-Helfer | Nicht im portablen Rust-Client |
@@ -80,11 +81,11 @@ healthmd doctor
 <p>Die plattformübergreifende Rust-CLI wartet auf die Release-QA mit einem physischen iPhone und ihr erstes qualifiziertes Paket.</p>
 </div>
 
-Eine eigenständige Rust-CLI befindet sich als `0.1.0-alpha.1` in Entwicklung. Sie läuft unter macOS, Linux und Windows, verwendet standardmäßig direkte Verbindungen über Manual IP oder Tailscale und benötigt die Mac-App nicht. Protokollkompatibilität und sprachübergreifende Fixtures sind implementiert; vor der ersten öffentlichen Veröffentlichung müssen jedoch noch die Release-QA auf einem physischen iPhone und die öffentliche Paketierung abgeschlossen werden.
+Eine eigenständige Rust-CLI befindet sich als `0.1.0-alpha.1` in Entwicklung. Sie läuft unter macOS, Linux und Windows, verwendet standardmäßig direkte Verbindungen über Manual IP oder Tailscale und benötigt die Mac-App nicht. Sie koppelt sich über Protokoll v1 mit iPhone-Quellen und über Protokoll v2 mit Android-Quellen, mit automatisierten Kompatibilitätsgates für Swift↔Rust und Kotlin↔Rust. Die Protokollkompatibilität ist implementiert; vor der ersten öffentlichen Veröffentlichung müssen jedoch noch die Release-QA auf physischen Geräten und die öffentliche Paketierung abgeschlossen werden.
 
 Verwenden Sie bis dahin den mitgelieferten Mac-Helfer. Verlassen Sie sich nicht auf unveröffentlichte Homebrew-, crates.io-, GitHub-Installationsprogramm- oder Download-URLs.
 
-Der portable Client unterstützt auf allen drei Plattformen Rohdatenexport, kanonische Extraktion, Kopplung, Status, Fortsetzung, Abbruch und Ziele für generierte Dateien. Beim Dateiexport mit Protokoll v1 behandelt das iPhone das Ziel als opake Zielbezeichnung; die empfangende CLI validiert es und bindet es dauerhaft an das Dateisystem des Hosts.
+Der portable Client unterstützt auf allen drei Desktop-Plattformen für iPhone- und Android-Quellen Kopplung, Status, Rohdatenexport, Ziele für generierte Dateien, Fortsetzung und Abbruch. Kanonische Extraktion und typisierte MCP-Abfragen sind iPhone-Funktionen; Android-Rohdaten-Snapshots bewahren ihren provider-nativen Health-Connect-Vertrag, statt in HealthKit-strukturierte Daten umgewandelt zu werden, und typisierte Android-Abfragen sind nicht implementiert. Beim Export generierter Dateien behandelt das Telefon das Ziel als opake Zielbezeichnung, während die empfangende CLI es validiert und dauerhaft an das Dateisystem des Hosts bindet. Android-Protokoll v2 schreibt Dateiziele unter jedem CLI-Betriebssystem fest und begrenzt jeden generierten Auftrag auf 4.096 Dateien; iOS-Protokoll v1 weist Dateiziele unter Windows zurück.
 
 ## Befehlsübersicht
 
@@ -93,7 +94,7 @@ Der portable Client unterstützt auf allen drei Plattformen Rohdatenexport, kano
 | `healthmd status` | Live-Bereitschaft oder einen lokalen persistenten Auftrag prüfen | Beide |
 | `healthmd doctor` | Bereitschaft von Mac, verschlüsseltem Kontext und iPhone erläutern | Mac-App |
 | `healthmd metrics list` | Den kanonischen Katalog abfragbarer Metriken zurückgeben | Mac-App |
-| `healthmd extract` | Ausgewählte kanonische `healthmd.health_data`-Objekte erfassen | Beide |
+| `healthmd extract` | Ausgewählte kanonische `healthmd.health_data`-Objekte erfassen | Beide, iPhone-Quelle |
 | `healthmd query` | Ausgewählte typisierte Metriken erfassen und abfragen | Mac-App |
 | `healthmd sleep sessions` | Eigenständige Schlafsitzungen und feste Zeitfenster zurückgeben | Mac-App |
 | `healthmd training align` | Trainingseinheiten dem vorherigen und nachfolgenden Schlaf zuordnen | Mac-App |
@@ -105,7 +106,9 @@ Der portable Client unterstützt auf allen drei Plattformen Rohdatenexport, kano
 | `healthmd resume` | Einen unveränderlichen persistenten Exportauftrag fortsetzen | Beide |
 | `healthmd cancel` | Einen ausdrücklichen Abbruch anfordern | Beide |
 | `healthmd agent ...` | Die Low-Level-Loopback-API für Abfragen und Aufträge aufrufen | Mac-App |
-| `healthmd direct ...` | Direkte iPhone-Vertrauensstellungen koppeln, auflisten und entfernen | Direkt |
+| `healthmd direct ...` | Direkte Telefon-Vertrauensstellungen koppeln, auflisten und entfernen | Direkt |
+
+Direkte Befehle koppeln sich mit iPhone-Quellen (Protokoll v1) oder Android-Quellen (Protokoll v2). Das kanonische `extract` und jeder typisierte Abfragebefehl sind iPhone-Funktionen; das direkte Android-Backend gibt provider-native Health-Connect-Rohdaten-Snapshots und generierte Dateien zurück.
 
 ## Erster Arbeitsablauf mit der Mac-App
 
@@ -170,7 +173,7 @@ healthmd compare --metric steps:sum \
   --second-from 2026-07-08 --second-to 2026-07-14
 ```
 
-`healthmd.health_data` v7 ist der öffentliche Quellvertrag. Abfrage-, Nachweis-, Auftrags- und Belegschemas beschreiben die Übertragung oder abgeleitete Ansichten. Sie ersetzen das Quellschema nicht.
+`healthmd.health_data` v7 ist der öffentliche Quellvertrag. Abfrage-, Nachweis-, Auftrags- und Belegschemas beschreiben die Übertragung oder abgeleitete Ansichten. Sie ersetzen das Quellschema nicht. Die kanonische Extraktion ist eine iPhone-Funktion; direkte Android-Quellen stellen stattdessen provider-native Health-Connect-Snapshots über den Rohdatenexport bereit.
 
 ## Maschinenlesbares Verhalten
 
@@ -217,7 +220,7 @@ Die lokale Abfrage-API besitzt weder Bearer-Token noch Registrierung, Zugriffspr
 ## Nächste Anleitungen
 
 <div class="related">
-  <a href="/de/docs/cli-direct/"><span>Ohne Mac-App</span>Direkte iPhone-CLI: Kopplung, Übertragungswege, Rohdaten- und Dateiexporte, Hintergrundverhalten und Plattformunterstützung.</a>
+  <a href="/de/docs/cli-direct/"><span>Ohne Mac-App</span>Direkte Telefon-CLI: Kopplung mit iPhone oder Android, Übertragungswege, Rohdaten- und Dateiexporte, Hintergrundverhalten und Plattformunterstützung.</a>
   <a href="/de/docs/cli-extract/"><span>Quelldaten</span>Kanonische Extraktion: Metriken, Objekte, Details, JSON Pointer, JSONL und Belege auswählen.</a>
   <a href="/de/docs/cli-jobs/"><span>Automatisierung</span>Persistente Aufträge: Zeitlimits, Fortsetzung, Abbruch, Teilergebnisse und sichere Skripte.</a>
   <a href="/de/docs/agents/"><span>Agenten</span>Lokale Agenten-Workflows: verschlüsselter Kontext, direkter Umfang, typisierte Befehle und Nachweise.</a>

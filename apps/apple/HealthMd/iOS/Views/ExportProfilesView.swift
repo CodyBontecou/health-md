@@ -604,10 +604,10 @@ struct ExportProfileDetailView: View {
                         )
                     )
                     factRow(
-                        title: String(localized: "Lossless records", comment: "Profile detail lossless row"),
-                        value: settings.includeGranularData
-                            ? String(localized: "On", comment: "Enabled state")
-                            : String(localized: "Off", comment: "Disabled state")
+                        title: String(localized: "Data Detail", comment: "Profile detail data-detail row"),
+                        value: AppleExportDetailPreset(
+                            policy: settings.detailPolicy
+                        ).localizedTitle
                     )
                     rollupRow(settings)
                     factRow(
@@ -658,11 +658,9 @@ struct ExportProfileDetailView: View {
     }
 
     private func rollupRow(_ settings: ExportSettingsSnapshot) -> some View {
-        let periods: [String] = [
-            settings.generateWeeklyRollups ? String(localized: "Weekly", comment: "Roll-up period") : nil,
-            settings.generateMonthlyRollups ? String(localized: "Monthly", comment: "Roll-up period") : nil,
-            settings.generateYearlyRollups ? String(localized: "Yearly", comment: "Roll-up period") : nil
-        ].compactMap { $0 }
+        let periods: [String] = settings.generateRangeSummary
+            ? [String(localized: "Range", comment: "Roll-up period")]
+            : []
         let value = periods.isEmpty
             ? String(localized: "Off", comment: "Disabled state")
             : (settings.summaryOnlyExport
@@ -765,7 +763,7 @@ struct ExportProfileDetailView: View {
                     Button {
                         UIPasteboard.general.string = profile.id.uuidString
                         idCopied = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                             idCopied = false
                         }
                     } label: {
@@ -780,6 +778,11 @@ struct ExportProfileDetailView: View {
                     .buttonStyle(.borderless)
                     .accessibilityIdentifier(AccessibilityID.ExportProfiles.copyIDButton)
                     .accessibilityLabel(String(localized: "Copy profile ID", comment: "Accessibility label for the copy ID button"))
+                    .accessibilityValue(
+                        idCopied
+                            ? String(localized: "Copied", comment: "Accessibility value after copying the profile ID")
+                            : String(localized: "Not copied", comment: "Accessibility value before copying the profile ID")
+                    )
                 }
             }
         }
@@ -1284,10 +1287,27 @@ struct ExportProfileEditorSheet: View {
                 String(localized: "Data dictionary", comment: "Profile editor data dictionary toggle"),
                 isOn: $draft.includeDataDictionary
             )
-            Toggle(
-                String(localized: "Lossless records", comment: "Profile editor lossless toggle"),
-                isOn: $draft.includeGranularData
-            )
+            Picker(
+                String(localized: "Data Detail", comment: "Profile editor data-detail picker"),
+                selection: Binding(
+                    get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
+                    set: { draft.detailPolicy = $0.policy }
+                )
+            ) {
+                Text(AppleExportDetailPreset.summary.localizedTitle)
+                    .tag(AppleExportDetailPreset.summary)
+                Text(AppleExportDetailPreset.detailedTimeSeries.localizedTitle)
+                    .tag(AppleExportDetailPreset.detailedTimeSeries)
+                Text(AppleExportDetailPreset.losslessHealthRecords.localizedTitle)
+                    .tag(AppleExportDetailPreset.losslessHealthRecords)
+                if draft.detailPolicy == .archiveOnly {
+                    Text(AppleExportDetailPreset.archiveOnly.localizedTitle)
+                        .tag(AppleExportDetailPreset.archiveOnly)
+                }
+            }
+            Text(AppleExportDetailPreset(policy: draft.detailPolicy).localizedDescription)
+                .font(.footnote)
+                .foregroundStyle(Color.textSecondary)
             Toggle(
                 String(localized: "Summary only", comment: "Profile editor summary-only toggle"),
                 isOn: $draft.summaryOnlyExport
@@ -1302,16 +1322,8 @@ struct ExportProfileEditorSheet: View {
     private var rollupSection: some View {
         Section {
             Toggle(
-                String(localized: "Weekly roll-ups", comment: "Profile editor weekly rollup toggle"),
-                isOn: $draft.generateWeeklyRollups
-            )
-            Toggle(
-                String(localized: "Monthly roll-ups", comment: "Profile editor monthly rollup toggle"),
-                isOn: $draft.generateMonthlyRollups
-            )
-            Toggle(
-                String(localized: "Yearly roll-ups", comment: "Profile editor yearly rollup toggle"),
-                isOn: $draft.generateYearlyRollups
+                String(localized: "Range summary", comment: "Profile editor range-summary toggle"),
+                isOn: $draft.generateRangeSummary
             )
         } header: {
             Text("Roll-Ups")

@@ -18,7 +18,7 @@ _raw_verify = validator.verify
 
 def verify_fixture(*args, **kwargs):
     kwargs.setdefault("expected_version_code", "1000029")
-    kwargs.setdefault("expected_version_name", "1.7.1")
+    kwargs.setdefault("expected_version_name", "1.8.0")
     kwargs.setdefault("expected_reviewer", "reviewer@example.test")
     kwargs.setdefault("expected_review_ticket", "QA-1234")
     kwargs.setdefault("expected_control_profile", "wear-battery-profile-v1")
@@ -45,7 +45,7 @@ FILES = {
     "power.txt": "Wake Locks: size=0\nSuspend Blockers: size=0\n",
     "alarm.txt": "Alarm Stats\n",
     "jobscheduler.txt": "JOB CONTROLLER STATE\n",
-    "package.txt": "versionCode=1000029 minSdk=30 targetSdk=35\nversionName=1.7.1\n",
+    "package.txt": "versionCode=1000029 minSdk=30 targetSdk=35\nversionName=1.8.0\n",
     "logcat.txt": "08-13 00:00:00 I HealthMd: ordinary lifecycle\n",
 }
 
@@ -58,7 +58,7 @@ class WearBatteryEvidencePolicyTest(unittest.TestCase):
     def test_exact_play_artifact_and_signer_are_required(self) -> None:
         common = {
             "expected_version_code": "1000029",
-            "expected_version_name": "1.7.1",
+            "expected_version_name": "1.8.0",
             "expected_reviewer": "reviewer@example.test",
             "expected_review_ticket": "QA-1234",
             "expected_control_profile": "wear-battery-profile-v1",
@@ -75,7 +75,7 @@ class WearBatteryEvidencePolicyTest(unittest.TestCase):
                 APK,
                 SIGNER,
                 expected_version_code="1000029",
-                expected_version_name="1.7.1",
+                expected_version_name="1.8.0",
             )
 
     def test_history_accepts_changing_headers_and_appended_records(self) -> None:
@@ -153,7 +153,7 @@ class WearBatteryEvidencePolicyTest(unittest.TestCase):
             "package=com.healthmd.android",
             "uid=10234",
             "version_code=1000029",
-            "version_name=1.7.1",
+            "version_name=1.8.0",
             f"wear_base_apk_sha256={APK}",
             f"play_app_signing_cert_sha256={SIGNER}",
             "reviewer_id=reviewer@example.test",

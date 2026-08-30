@@ -1,6 +1,6 @@
 ---
 title: "Comandi Rapidi e App Intent"
-description: "Otto App Intent consentono di avviare esportazioni, ottenere riepiloghi e attivare o disattivare la programmazione tramite Siri, l'app Comandi Rapidi, i filtri delle modalità Full immersion, le automazioni e qualsiasi altro host compatibile con AppIntent."
+description: "Sette App Intent consentono di avviare esportazioni, ottenere riepiloghi e attivare o disattivare la programmazione tramite Siri, l'app Comandi Rapidi, i filtri delle modalità Full immersion, le automazioni e qualsiasi altro host compatibile con AppIntent."
 ---
 
 ## Intent disponibili
@@ -12,12 +12,12 @@ description: "Otto App Intent consentono di avviare esportazioni, ottenere riepi
 <div class="option"><strong>Ottieni il riepilogo sanitario per una data</strong><p>Restituisce un'istantanea strutturata — passi, calorie attive, sonno, frequenza cardiaca — senza scrivere nulla nella cartella. Puoi usarla in Comandi Rapidi per passare i valori ad altre app.</p></div>
 <div class="option"><strong>Ottieni lo stato dell'ultima esportazione</strong><p>Restituisce la data e l'ora, lo stato di riuscita, il numero di giorni e l'eventuale motivo dell'errore dell'esportazione registrata più recente. Una richiesta effettuata con il dispositivo bloccato rimane in sospeso fino a un nuovo tentativo e, finché è in sospeso, non viene restituita come stato corrente.</p></div>
 <div class="option"><strong>Attiva o disattiva l'esportazione programmata</strong><p>Parametro booleano. Consente di sospendere la programmazione, ad esempio durante la modalità Full immersion Vacanza, e di riattivarla in seguito.</p></div>
-<div class="option"><strong>Esporta i dati sanitari</strong><p>Esportazione generica: usa l'intervallo di date dell'ultimo stato della finestra modale Esporta nell'app. È usata meno frequentemente; le varianti con intervallo di date sono in genere più chiare. Parametro opzionale <em>Profilo</em>.</p></div>
 </div>
 
 <a id="profiles"></a>
 ## Profili di esportazione
-<p>I cinque intent di esportazione accettano un parametro opzionale <em>Profilo</em>. Lascialo vuoto per eseguire con le impostazioni di esportazione attuali dell'app; indica il nome di un profilo salvato per eseguire la configurazione congelata di quel profilo — selezione delle metriche, formati e destinazione — indipendentemente da ciò che l'app mostra al momento.</p>
+<p>Crea e gestisci profili di esportazione salvati in Health.md su iPhone o Android. Sulle piattaforme Apple, la gestione dei profili è attualmente documentata solo per iPhone; non viene dichiarata la disponibilità su iPad o macOS.</p>
+<p>I quattro intent di esportazione accettano un parametro opzionale <em>Profilo</em>. Quando esistono profili, lasciarlo vuoto usa il profilo attivo; nella modalità legacy senza profili, usa le impostazioni di esportazione attuali dell'app. Indica il nome di un profilo salvato per eseguire la configurazione congelata di quel profilo — selezione delle metriche, formati e destinazione — indipendentemente da ciò che l'app mostra al momento.</p>
 <div class="callout">
 <strong>Attenzione per i collegamenti esistenti senza parametri.</strong>
 <p style="margin-top:6px;">Dopo aver creato il primo profilo di esportazione nell'app, un collegamento senza <em>Profilo</em> impostato esporta usando le impostazioni salvate del profilo <em>attivo</em> anziché le impostazioni attive dell'app. Se ti affidi al comportamento precedente, fissa il collegamento a un profilo specifico (oppure mantieni zero profili) per restare esplicito. Un nome profilo inesistente fallisce con un errore chiaro invece di esportare la cosa sbagliata.</p>

@@ -7,9 +7,13 @@ import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.export.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.Rule
@@ -68,6 +72,28 @@ class ProfileFolderAdoptionScopeTest {
         }.exceptionOrNull()
 
         assertThat(error).hasMessageThat().isEqualTo("run failed")
+        assertThat(live).isEqualTo("content://vault-a")
+    }
+
+    @Test
+    fun `restores the previous value when the run is cancelled`() = runTest {
+        var live = "content://vault-a"
+        val repository = mockk<SettingsRepository> {
+            coEvery { getExportFolderUri() } answers { live }
+            coEvery { saveExportFolderUri(any()) } answers { live = firstArg() }
+        }
+        val scope = ProfileFolderAdoptionScope(repository)
+        val adopted = CompletableDeferred<Unit>()
+        val run = launch {
+            scope.withProfileFolder(profile()) {
+                adopted.complete(Unit)
+                awaitCancellation()
+            }
+        }
+        adopted.await()
+
+        run.cancelAndJoin()
+
         assertThat(live).isEqualTo("content://vault-a")
     }
 

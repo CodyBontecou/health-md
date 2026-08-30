@@ -27,6 +27,91 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.2",
+            items: [
+                .list(
+                    title: "Exports you can stop",
+                    rows: [
+                        .init(
+                            symbolSystemName: "stop.circle.fill",
+                            title: "Stop running exports",
+                            description: "A single banner now owns export progress. Stop cancels the running scheduled, Shortcut, or manual export — completed dates stay completed, and schedules remain enabled."
+                        ),
+                        .init(
+                            symbolSystemName: "list.bullet.rectangle.fill",
+                            title: "Detailed Time-Series, separated",
+                            description: "Export Data Detail now separates Detailed Time-Series from Lossless Health Records, so per-sample data no longer drags along the much larger canonical archive. New presets are available in the Export tab and export profiles."
+                        ),
+                        .init(
+                            symbolSystemName: "arrow.triangle.2.circlepath",
+                            title: "Self-healing Direct CLI Access",
+                            description: "Connections recover automatically after your Mac sleeps, the app quits, or the network changes — no manual disconnect or repeated Pair tap required."
+                        ),
+                        .init(
+                            symbolSystemName: "internaldrive.fill",
+                            title: "Local folders stay selected",
+                            description: "Folders on “On My iPhone” storage keep their saved selection across restarts, so automatic exports and Shortcuts keep working."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.1.1",
+            items: [
+                .list(
+                    title: "Cloud folders stay selected",
+                    rows: [
+                        .init(
+                            symbolSystemName: "icloud.fill",
+                            title: "Cloud folders stay selected",
+                            description: "Export folders on iCloud Drive, Dropbox, and similar cloud locations no longer lose their selection when the app restarts, so automatic exports and Shortcuts keep working without re-selecting the folder."
+                        ),
+                        .init(
+                            symbolSystemName: "checkmark.circle.fill",
+                            title: "Honest export toasts",
+                            description: "A completed export shows the success toast with its Preview and Browse actions again instead of a red error."
+                        ),
+                        .init(
+                            symbolSystemName: "text.badge.checkmark",
+                            title: "Clearer failure reasons",
+                            description: "Scheduled exports targeting an API endpoint with no configured URL now say exactly what to fix, and choosing the iCloud Drive root shows its real name."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
+            version: "3.1",
+            items: [
+                .list(
+                    title: "Profiles, fully editable",
+                    rows: [
+                        .init(
+                            symbolSystemName: "slider.horizontal.3",
+                            title: "One-place profile editor",
+                            description: "Edit every export profile setting — target, destination folder or endpoint, formats, write mode, templates, and metrics — from a single editor with a system folder picker and inline endpoint creation."
+                        ),
+                        .init(
+                            symbolSystemName: "exclamationmark.triangle",
+                            title: "Overlap warnings",
+                            description: "Health.md warns live when a new profile would write the same files as an existing one, before your data lands in the wrong place."
+                        ),
+                        .init(
+                            symbolSystemName: "clock.badge.checkmark",
+                            title: "Dependable scheduled exports",
+                            description: "Profile schedules and the classic schedule run side by side, preserved retries survive interruptions, and notification taps resume the exact export."
+                        ),
+                        .init(
+                            symbolSystemName: "figure.run",
+                            title: "Clearer workout warnings",
+                            description: "When a workout's structured plan can't be read on your device you'll see plain-language detail, and partial-export warnings can now be copied for bug reports."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.0.5",
             items: [
                 .list(

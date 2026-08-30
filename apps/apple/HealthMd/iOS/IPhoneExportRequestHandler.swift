@@ -205,7 +205,11 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     return
                 }
             } else {
-                dates = ExportOrchestrator.dateRange(from: request.dateRangeStart, to: request.dateRangeEnd)
+                dates = ExportOrchestrator.dateRange(
+                    from: request.dateRangeStart,
+                    to: request.dateRangeEnd,
+                    calendar: sourceCalendar
+                )
             }
         case .allAvailable:
             guard request.requestedDateIdentifiers == nil,
@@ -265,10 +269,13 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         earliestCandidates.append(earliestDate)
                     }
                 }
-                let calendar = Calendar.current
-                let end = calendar.startOfDay(for: Date())
-                let start = earliestCandidates.min().map(calendar.startOfDay(for:)) ?? end
-                dates = ExportOrchestrator.dateRange(from: start, to: end)
+                let end = sourceCalendar.startOfDay(for: Date())
+                let start = earliestCandidates.min().map(sourceCalendar.startOfDay(for:)) ?? end
+                dates = ExportOrchestrator.dateRange(
+                    from: start,
+                    to: end,
+                    calendar: sourceCalendar
+                )
             }
         }
         guard !dates.isEmpty else {
@@ -441,14 +448,14 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     settings: settings,
                     healthSubfolder: healthSubfolder,
                     destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
-                    fetchHealthData: { date, includeGranularData in
+                    fetchHealthData: { date, detailPolicy in
                         guard !self.cancelledRequestIDs.contains(request.jobID),
                               self.activeRequestID == request.jobID else {
                             throw CancellationError()
                         }
                         let record = try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: settings.metricSelection,
                             timeZone: sourceTimeZone
                         )
@@ -598,6 +605,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
+        guard payload.hasConsistentFileAccounting else { return false }
         guard let pending = pendingRequests.removeValue(forKey: payload.jobID) else { return false }
         streamAbortMessages.removeValue(forKey: payload.jobID)
         activeRequestID = nil
@@ -623,7 +631,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             dateRangeStart: pending.request.dateRangeStart,
             dateRangeEnd: pending.request.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.isTotalFilesWrittenAuthoritative
+            fileCount: payload.hasAuthoritativeFileCount
                 ? payload.totalFilesWritten : nil
         )
 
@@ -658,9 +666,15 @@ final class IPhoneExportRequestHandler: ObservableObject {
             reason: exportFailureReason(for: failure.reason),
             errorDetails: failure.underlyingError ?? failure.message
         )
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = pending.settings.exportTimeZoneOverride ?? .gmt
         let result = ExportOrchestrator.ExportResult(
             successCount: 0,
-            totalCount: max(ExportOrchestrator.dateRange(from: pending.request.dateRangeStart, to: pending.request.dateRangeEnd).count, 1),
+            totalCount: max(ExportOrchestrator.dateRange(
+                from: pending.request.dateRangeStart,
+                to: pending.request.dateRangeEnd,
+                calendar: calendar
+            ).count, 1),
             failedDateDetails: [failedDetail],
             formatsPerDate: pending.settings.looseFormatsPerDate,
             wasCancelled: failure.reason == .cancelled
@@ -920,26 +934,26 @@ final class IPhoneExportRequestHandler: ObservableObject {
             case .writeFiles:
                 let day = sourceCalendar.startOfDay(for: date)
                 let isRequested = requestedDaySet.contains(day)
-                let shouldIncludeGranular = metadata.map {
-                    MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                let detailPolicy = metadata.map {
+                    MacExportStreamingJobBuilder.detailPolicy(
                         for: date,
                         metadata: $0,
                         settings: settings
                     )
-                } ?? false
+                } ?? .summary
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: shouldIncludeGranular,
+                    detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: request.canonicalSelection == nil
                         && isRequested && settings.writesExternalProviderSidecars,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, metricSelection in
+                    fetchHealthData: { date, detailPolicy, metricSelection in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
                             timeZone: sourceTimeZone
                         )
@@ -976,17 +990,17 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 }
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: settings.includeGranularData,
+                    detailPolicy: settings.effectiveDetailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: scopedExternalFetcher != nil,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, metricSelection in
+                    fetchHealthData: { date, detailPolicy, metricSelection in
                         if includesAppleHealth {
                             return try await healthKitManager.fetchHealthData(
                                 for: date,
-                                includeGranularData: includeGranularData,
+                                detailPolicy: detailPolicy,
                                 metricSelection: metricSelection,
                                 timeZone: sourceTimeZone
                             )
@@ -1013,19 +1027,20 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
             case .strictRaw:
                 let dateString = dateFormatter.string(from: date)
-                let expectsLosslessArchive = settings.includeGranularData
+                let detailPolicy = settings.effectiveDetailPolicy
+                let expectsLosslessArchive = detailPolicy.includesCanonicalArchive
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: expectsLosslessArchive,
+                    detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranularAndFilter,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: false,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, metricSelection in
+                    fetchHealthData: { date, detailPolicy, metricSelection in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
                             timeZone: sourceTimeZone
                         )
@@ -1237,12 +1252,12 @@ final class IPhoneExportRequestHandler: ObservableObject {
             settings: settings,
             healthSubfolder: healthSubfolder,
             destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
-            fetchHealthData: { date, includeGranularData in
+            fetchHealthData: { date, detailPolicy in
                 guard !self.cancelledRequestIDs.contains(request.jobID),
                       self.activeRequestID == request.jobID else { throw CancellationError() }
                 return try await healthKitManager.fetchHealthData(
                     for: date,
-                    includeGranularData: includeGranularData,
+                    detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
                     timeZone: sourceTimeZone
                 )
@@ -1320,6 +1335,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
             requestedDates: metadata.requestedDates,
+            originalRequestedDates: metadata.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: metadata.originalCalendarTimeZoneIdentifier,
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,
@@ -1368,7 +1385,7 @@ final class IPhoneExportRequestHandler: ObservableObject {
             for date in chunk.dates {
                 try Task.checkCancellation()
                 let day = sourceCalendar.startOfDay(for: date)
-                let shouldIncludeGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                let detailPolicy = MacExportStreamingJobBuilder.detailPolicy(
                     for: date,
                     metadata: metadata,
                     settings: settings
@@ -1385,17 +1402,17 @@ final class IPhoneExportRequestHandler: ObservableObject {
 
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: shouldIncludeGranularData,
+                    detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: metadata.requestedDays.contains(day)
                         && settings.writesExternalProviderSidecars,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, metricSelection in
+                    fetchHealthData: { date, detailPolicy, metricSelection in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
                             timeZone: sourceTimeZone
                         )
@@ -1530,19 +1547,19 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 syncService: syncService
             )
 
-            let includesGranularData = ConnectedExportGranularMode.isEnabled(for: settings)
+            let detailPolicy = ConnectedExportDetailPolicy.effective(for: settings)
             let outcome = try await HealthKitDailyCapture.capture(
                 date: date,
-                includeGranularData: includesGranularData,
+                detailPolicy: detailPolicy,
                 metricSelection: settings.metricSelection,
                 transform: .sanitizeGranularAndFilter,
                 emptyRecordPolicy: isStrict ? .retain : .reportNoData,
                 fetchExternalRecords: !isStrict && (externalIntegrations?.connectedProviderCount ?? 0) > 0,
                 failurePolicy: .connectedMac,
-                fetchHealthData: { date, includeGranularData, metricSelection in
+                fetchHealthData: { date, detailPolicy, metricSelection in
                     try await healthKitManager.fetchHealthData(
                         for: date,
-                        includeGranularData: includeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
                         timeZone: sourceTimeZone
                     )

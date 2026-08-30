@@ -150,12 +150,10 @@ struct ContentView: View {
                         endDate: $endDate,
                         dateRangePreset: $dateRangePreset,
                         isExporting: $isExporting,
-                        exportProgress: $exportProgress,
                         exportStatusMessage: $exportStatusMessage,
                         showFolderPicker: $showFolderPicker,
                         presentFirstExportPreview: $presentFirstExportPreview,
                         canExport: canExport,
-                        onCancelExport: cancelExport,
                         onExportTapped: exportData
                     )
                     .tabItem {
@@ -243,7 +241,14 @@ struct ContentView: View {
                 if !isExporting,
                    partialExportNotice == nil,
                    let status = vaultManager.lastExportStatus {
-                    let isSuccess = status.starts(with: "Exported") || status.starts(with: "Updated")
+                    // Success cannot be derived from the status copy: the local
+                    // full-success status is the generated-file/data-day
+                    // description, and prefix sniffing breaks under localization.
+                    // The recorded outcome flag is authoritative; the prefixes
+                    // remain as a fallback for assignment sites not yet migrated.
+                    let isSuccess = vaultManager.lastExportStatusIsSuccess
+                        || status.starts(with: "Exported")
+                        || status.starts(with: "Updated")
                     let presentationTarget = isSuccess
                         ? vaultManager.lastExportPresentationTarget
                         : nil
@@ -268,7 +273,8 @@ struct ContentView: View {
                 ManualExportActivityBanner(
                     target: exportTargetSelection,
                     progress: exportProgress,
-                    message: exportStatusMessage
+                    message: exportStatusMessage,
+                    onCancel: cancelExport
                 )
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.s2)
@@ -475,7 +481,7 @@ struct ContentView: View {
                 }
                 if TestMode.useHealthKitExportPreviewFixtures {
                     advancedSettings.exportFormats = [.markdown]
-                    advancedSettings.includeGranularData = true
+                    advancedSettings.detailPolicy = .lossless
                     advancedSettings.metricSelection.selectAll()
                     advancedSettings.generateWeeklyRollups = true
                     advancedSettings.generateMonthlyRollups = true
@@ -524,7 +530,7 @@ struct ContentView: View {
         advancedSettings.individualTracking.globalEnabled = true
         advancedSettings.dailyNoteInjection.enabled = true
         advancedSettings.exportFormats = [.markdown, .obsidianBases, .json, .csv]
-        advancedSettings.includeGranularData = true
+        advancedSettings.detailPolicy = .lossless
         advancedSettings.metricSelection.selectAll()
         advancedSettings.generateWeeklyRollups = true
         advancedSettings.generateMonthlyRollups = true
@@ -731,8 +737,10 @@ struct ContentView: View {
     private func startStatusDismissTimer() {
         statusDismissTimer?.invalidate()
         let status = vaultManager.lastExportStatus ?? ""
-        let hasExportActions = vaultManager.lastExportPresentationTarget != nil
-            && (status.starts(with: "Exported") || status.starts(with: "Updated"))
+        let isSuccess = vaultManager.lastExportStatusIsSuccess
+            || status.starts(with: "Exported")
+            || status.starts(with: "Updated")
+        let hasExportActions = vaultManager.lastExportPresentationTarget != nil && isSuccess
         guard !hasExportActions else { return }
 
         statusDismissTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
@@ -1131,7 +1139,15 @@ struct ContentView: View {
             let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
-            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: dateRange.startDate,
+                to: dateRange.endDate,
+                calendar: calendar
+            )
             let externalIntegrations: ExternalIntegrationDailyRecordProviding? = ConnectedAppsFeature.isEnabled ? externalIntegrationManager : nil
 
             let result = await ExportOrchestrator.exportDates(
@@ -1183,13 +1199,13 @@ struct ContentView: View {
             } else if result.isFullSuccess {
                 if advancedSettings.dailyNotesOnlyModeEnabled {
                     exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s")"
-                    vaultManager.lastExportStatus = exportStatusMessage
+                    vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
                 } else if result.formatsPerDate > 1 || result.rollupFileCount > 0 || result.archiveCount > 0 {
                     exportStatusMessage = "\(result.localizedGeneratedFileAndDataDayDescription) (\(result.fileBreakdownDescription))"
-                    vaultManager.lastExportStatus = result.localizedGeneratedFileAndDataDayDescription
+                    vaultManager.recordSuccessfulExportStatus(result.localizedGeneratedFileAndDataDayDescription)
                 } else {
                     exportStatusMessage = result.localizedGeneratedFileAndDataDayDescription
-                    vaultManager.lastExportStatus = exportStatusMessage
+                    vaultManager.recordSuccessfulExportStatus(exportStatusMessage)
                 }
                 startStatusDismissTimer()
 
@@ -1260,7 +1276,15 @@ struct ContentView: View {
             let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
-            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: dateRange.startDate,
+                to: dateRange.endDate,
+                calendar: calendar
+            )
             let normalizedStartDate = dates.first ?? dateRange.startDate
             let normalizedEndDate = dates.last ?? dateRange.endDate
             let totalDays = dates.count
@@ -1457,10 +1481,10 @@ struct ContentView: View {
                     settings: advancedSettings,
                     healthSubfolder: vaultManager.healthSubfolder,
                     destinationDisplayName: syncService.macDestinationStatus?.destinationDisplayName,
-                    fetchHealthData: { date, includeGranularData in
+                    fetchHealthData: { date, detailPolicy in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: advancedSettings.metricSelection,
                             timeZone: providerTimeZone
                         )
@@ -1636,6 +1660,8 @@ struct ContentView: View {
             dateRangeStart: metadata.dateRangeStart,
             dateRangeEnd: metadata.dateRangeEnd,
             requestedDates: metadata.requestedDates,
+            originalRequestedDates: metadata.originalRequestedDates,
+            originalCalendarTimeZoneIdentifier: metadata.originalCalendarTimeZoneIdentifier,
             totalRequestedDays: metadata.totalRequestedDays,
             totalTransferDays: metadata.totalTransferDays,
             settingsSnapshot: metadata.settingsSnapshot,
@@ -1685,7 +1711,7 @@ struct ContentView: View {
             for date in chunk.dates {
                 try Task.checkCancellation()
                 let day = sourceCalendar.startOfDay(for: date)
-                let shouldIncludeGranularData = MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                let detailPolicy = MacExportStreamingJobBuilder.detailPolicy(
                     for: date,
                     metadata: metadata,
                     settings: advancedSettings
@@ -1697,13 +1723,13 @@ struct ContentView: View {
                 do {
                     let fetchedRecord = try await healthKitManager.fetchHealthData(
                         for: date,
-                        includeGranularData: shouldIncludeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: advancedSettings.metricSelection,
                         timeZone: sourceTimeZone
                     )
-                    var record = ConnectedExportGranularMode.sanitized(
+                    var record = ConnectedExportDetailPolicy.sanitized(
                         fetchedRecord,
-                        includesGranularData: shouldIncludeGranularData
+                        detailPolicy: detailPolicy
                     )
 
                     if record.hasAnyData,
@@ -2024,6 +2050,7 @@ struct ContentView: View {
     }
 
     private func completeMacExport(with result: MacExportResultPayload) {
+        guard result.hasConsistentFileAccounting else { return }
         let durableJournal = corpusRecoveryManager.journal(jobID: result.jobID)
         let completionSettings = durableJournal?.exportManifest.settingsSnapshot
             .makeAdvancedExportSettings() ?? advancedSettings
@@ -2053,7 +2080,7 @@ struct ContentView: View {
                 dateRangeStart: normalizedStartDate,
                 dateRangeEnd: normalizedEndDate,
                 targetLabel: destinationName,
-                fileCount: result.isTotalFilesWrittenAuthoritative
+                fileCount: result.hasAuthoritativeFileCount
                     ? result.totalFilesWritten : nil
             )
 
@@ -2078,7 +2105,7 @@ struct ContentView: View {
             syncService.isSyncing = false
         }
 
-        let generatedFileCountText: String = if result.isTotalFilesWrittenAuthoritative {
+        let generatedFileCountText: String = if result.hasAuthoritativeFileCount {
             "\(result.totalFilesWritten) files"
         } else if result.totalFilesWritten > 0 {
             "at least \(result.totalFilesWritten) files"
@@ -2095,7 +2122,7 @@ struct ContentView: View {
             if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount) daily note\(result.dailyNoteUpdateCount == 1 ? "" : "s") on \(destinationName)\(warningSuffix)"
                 vaultManager.lastExportStatus = exportStatusMessage
-            } else if !result.isTotalFilesWrittenAuthoritative
+            } else if !result.hasAuthoritativeFileCount
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {
@@ -2129,7 +2156,7 @@ struct ContentView: View {
             } else if completionSettings.dailyNotesOnlyModeEnabled {
                 exportStatusMessage = "Updated \(result.dailyNoteUpdateCount)/\(result.totalCount) daily notes on \(destinationName). \(suffix)"
                 vaultManager.lastExportStatus = "Partial daily note update: \(result.dailyNoteUpdateCount)/\(result.totalCount)"
-            } else if !result.isTotalFilesWrittenAuthoritative
+            } else if !result.hasAuthoritativeFileCount
                         || result.formatsPerDate > 1
                         || derivedFileCount > 0
                         || externalRecordFileCount > 0 {
@@ -2167,9 +2194,15 @@ struct ContentView: View {
     private func completeMacExport(with failure: MacExportFailure) {
         let hasDurableJournal = activeMacExportJobID
             .flatMap { corpusRecoveryManager.journal(jobID: $0) } != nil
-        let normalizedStartDate = activeMacExportStartDate ?? Calendar.current.startOfDay(for: startDate)
-        let normalizedEndDate = activeMacExportEndDate ?? Calendar.current.startOfDay(for: endDate)
-        let totalCount = max(ExportOrchestrator.dateRange(from: normalizedStartDate, to: normalizedEndDate).count, 1)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .gmt
+        let normalizedStartDate = activeMacExportStartDate ?? calendar.startOfDay(for: startDate)
+        let normalizedEndDate = activeMacExportEndDate ?? calendar.startOfDay(for: endDate)
+        let totalCount = max(ExportOrchestrator.dateRange(
+            from: normalizedStartDate,
+            to: normalizedEndDate,
+            calendar: calendar
+        ).count, 1)
         let reason = exportFailureReason(for: failure.reason)
         let failedDetail = FailedDateDetail(
             date: normalizedStartDate,
@@ -2496,8 +2529,8 @@ struct SettingsTabView: View {
     @ObservedObject var vaultManager: VaultManager
     @ObservedObject var advancedSettings: AdvancedExportSettings
     @ObservedObject var externalIntegrationManager: ExternalIntegrationManager
-    /// Built by ContentView when the main UI appears; observed inside
-    /// `ExportProfilesSettingsRow` so the active-profile status stays live.
+    /// Built by ContentView when the main UI appears; used to gate the
+    /// profile-management row while remaining optional at the call site.
     var profileCoordinator: ExportProfileCoordinator?
     @EnvironmentObject private var sharedSetupCoordinator: SharedSetupCoordinator
         @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
@@ -2710,8 +2743,8 @@ struct SettingsTabView: View {
             title: "Profiles & Reports",
             subtitle: "Manage saved export configurations and clinician-ready summaries."
         ) {
-            if let profileCoordinator {
-                ExportProfilesSettingsRow(coordinator: profileCoordinator) {
+            if profileCoordinator != nil {
+                ExportProfilesSettingsRow {
                     showExportProfiles = true
                 }
 
@@ -3091,11 +3124,9 @@ private struct SettingsRowIdentifier: ViewModifier {
     }
 }
 
-/// Export Profiles entry row. Isolated from `SettingsTabView` so the
-/// coordinator (which ContentView builds just after first render) can be
-/// observed here while remaining optional at the call site.
+/// Export Profiles entry row. Isolated from `SettingsTabView` to keep the
+/// profile-management entry's layout independent from the surrounding section.
 private struct ExportProfilesSettingsRow: View {
-    @ObservedObject var coordinator: ExportProfileCoordinator
     let action: () -> Void
 
     var body: some View {
@@ -3103,8 +3134,6 @@ private struct ExportProfilesSettingsRow: View {
             icon: "square.and.arrow.down.on.square",
             title: "Export Profiles",
             subtitle: "Save multiple export configurations and run them on their own schedules.",
-            status: coordinator.activeProfileName,
-            statusTone: .accent,
             isActive: true,
             accessibilityHint: "Double tap to manage export profiles",
             accessibilityIdentifier: AccessibilityID.ExportProfiles.entry,

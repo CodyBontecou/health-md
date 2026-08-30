@@ -84,6 +84,18 @@ class SettingsRepositoryImpl(
     override suspend fun getExportSettings(): ExportSettings =
         exportSettings.first()
 
+    override suspend fun updateExportSettingsAtomically(
+        transform: (ExportSettings) -> ExportSettings,
+    ): ExportSettings {
+        var updated: ExportSettings? = null
+        dataStore.edit { prefs ->
+            val next = transform(storedExportSettings(prefs)).normalized()
+            prefs[Keys.EXPORT_SETTINGS] = json.encodeToString(ExportSettings.serializer(), next)
+            updated = next
+        }
+        return checkNotNull(updated) { "Export settings atomic update did not commit." }
+    }
+
     override suspend fun applySharedSetupTransaction(
         expectedCurrent: ExportSettings,
         candidate: ExportSettings,

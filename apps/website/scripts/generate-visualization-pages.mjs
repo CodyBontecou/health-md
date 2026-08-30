@@ -67,6 +67,18 @@ const colorSchemeLabels = {
 const colorSchemeSlugs = Object.fromEntries(colorSchemes.map((scheme) => [scheme, `${scheme}-colors`]));
 colorSchemeSlugs.theme = "theme-colors";
 
+const exportSourceLabels = {
+  "daily-json": "Daily JSON",
+  "daily-csv": "Daily CSV",
+  "daily-markdown": "Markdown & Bases",
+  "rollups": "Roll-ups",
+  "workout-notes": "Workout notes"
+};
+
+function visualizationExportSources(item) {
+  return Array.isArray(item.exportSources) ? item.exportSources.filter((id) => exportSourceLabels[id]) : Object.keys(exportSourceLabels).slice(0, 3);
+}
+
 function visualizationsFromCatalog(document) {
   if (document?.schema !== "healthmd.visualization_catalog" || !Array.isArray(document.visualizations)) {
     throw new Error("assets/visualizations-catalog.json is not a generated Health.md visualization catalog");
@@ -77,6 +89,7 @@ function visualizationsFromCatalog(document) {
     category: item.category,
     renderer: item.renderer,
     description: item.description,
+    exportSources: visualizationExportSources(item),
   }));
   if (!items.length) throw new Error("Generated plugin visualization catalog is empty");
   for (const item of items) {
@@ -106,7 +119,8 @@ function pageTitle(viz) {
 
 function pageDescription(viz, dataFilter, colorScheme) {
   const themeDescription = colorScheme === "theme" ? "current theme" : `the ${colorSchemeLabels[colorScheme] || colorScheme} theme`;
-  return `${viz.description} Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${themeDescription}.`;
+  const exportDescription = `Works with Health.md ${viz.exportSources.map((id) => exportSourceLabels[id]).join(", ")} exports.`;
+  return `${viz.description} ${exportDescription} Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact ${categoryLabels[dataFilter] || dataFilter} preview with ${themeDescription}.`;
 }
 
 function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
@@ -121,6 +135,7 @@ function replaceHead(template, viz, dataFilter, colorScheme, ogImageUrl) {
     operatingSystem: "iOS, macOS, Obsidian",
     url,
     description,
+    featureList: viz.exportSources.map((id) => `Works with Health.md ${exportSourceLabels[id]} exports`),
     isPartOf: {
       "@type": "WebSite",
       name: "Health.md",

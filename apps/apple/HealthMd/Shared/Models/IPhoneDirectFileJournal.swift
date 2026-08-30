@@ -79,13 +79,16 @@ struct IPhoneDirectGeneratedFile: Codable, Equatable {
 
 /// Durable state for generated-file direct exports only. Raw and canonical direct journals retain
 /// their independent models. V1 is fully legacy, v2 may carry an export-engine pin, v3 may
-/// carry a direct-protocol pin, and v4 stores captured days as bounded application-item streams.
+/// carry a direct-protocol pin, v4 stores captured days as bounded application-item streams, v5
+/// freezes original range authority, and v6 persists terminal derived-output reconciliation.
 struct IPhoneDirectFileJournal: Codable {
     static let legacyVersion = 1
     static let exportEnginePinVersion = 2
     static let directProtocolPinVersion = 3
     static let fileBackedCaptureVersion = 4
-    static let currentVersion = fileBackedCaptureVersion
+    static let immutableRangeRequestVersion = 5
+    static let derivedOutputReconciliationVersion = 6
+    static let currentVersion = derivedOutputReconciliationVersion
 
     let version: Int
     let request: DirectExportRequest
@@ -96,12 +99,19 @@ struct IPhoneDirectFileJournal: Codable {
     let appleDirectProtocolPin: AppleDirectProtocolPin?
     let healthSubfolder: String
     let requestedDates: [Date]
+    /// Original requested owner dates remain stable while capture resumes residual transfer work.
+    let originalRequestedDates: [Date]
+    /// Original timezone authority used to regenerate/overwrite the same range path.
+    let originalCalendarTimeZoneIdentifier: String?
     let transferDates: [Date]
     var capturedDays: [IPhoneDirectCapturedDay]
     var generatedFiles: [IPhoneDirectGeneratedFile]
     var partitions: [DirectTransferPartition]
     var committedPartitionCount: Int
     var committedBytes: Int64
+    var derivedOutputPartialFailures: [ExportPartialFailure]
+    var terminalNoDataDateIdentifiers: [String]
+    var generationCompleted: Bool
     var state: String
     var completionRecorded: Bool
     var updatedAt: Date
@@ -120,12 +130,17 @@ struct IPhoneDirectFileJournal: Codable {
         appleDirectProtocolPin: AppleDirectProtocolPin? = nil,
         healthSubfolder: String,
         requestedDates: [Date],
+        originalRequestedDates: [Date]? = nil,
+        originalCalendarTimeZoneIdentifier: String? = nil,
         transferDates: [Date],
         capturedDays: [IPhoneDirectCapturedDay],
         generatedFiles: [IPhoneDirectGeneratedFile],
         partitions: [DirectTransferPartition],
         committedPartitionCount: Int,
         committedBytes: Int64,
+        derivedOutputPartialFailures: [ExportPartialFailure] = [],
+        terminalNoDataDateIdentifiers: [String] = [],
+        generationCompleted: Bool = false,
         state: String,
         completionRecorded: Bool,
         updatedAt: Date
@@ -143,12 +158,19 @@ struct IPhoneDirectFileJournal: Codable {
             : nil
         self.healthSubfolder = healthSubfolder
         self.requestedDates = requestedDates
+        self.originalRequestedDates = originalRequestedDates ?? requestedDates
+        self.originalCalendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
+            ?? settingsSnapshot.calendarTimeZoneIdentifier
+            ?? accepted.sourceTimeZoneIdentifier
         self.transferDates = transferDates
         self.capturedDays = capturedDays
         self.generatedFiles = generatedFiles
         self.partitions = partitions
         self.committedPartitionCount = committedPartitionCount
         self.committedBytes = committedBytes
+        self.derivedOutputPartialFailures = derivedOutputPartialFailures
+        self.terminalNoDataDateIdentifiers = terminalNoDataDateIdentifiers
+        self.generationCompleted = generationCompleted
         self.state = state
         self.completionRecorded = completionRecorded
         self.updatedAt = updatedAt
@@ -174,12 +196,32 @@ struct IPhoneDirectFileJournal: Codable {
             : nil
         healthSubfolder = try container.decode(String.self, forKey: .healthSubfolder)
         requestedDates = try container.decode([Date].self, forKey: .requestedDates)
+        originalRequestedDates = try container.decodeIfPresent(
+            [Date].self,
+            forKey: .originalRequestedDates
+        ) ?? requestedDates
+        originalCalendarTimeZoneIdentifier = try container.decodeIfPresent(
+            String.self,
+            forKey: .originalCalendarTimeZoneIdentifier
+        ) ?? settingsSnapshot.calendarTimeZoneIdentifier ?? accepted.sourceTimeZoneIdentifier
         transferDates = try container.decode([Date].self, forKey: .transferDates)
         capturedDays = try container.decode([IPhoneDirectCapturedDay].self, forKey: .capturedDays)
         generatedFiles = try container.decode([IPhoneDirectGeneratedFile].self, forKey: .generatedFiles)
         partitions = try container.decode([DirectTransferPartition].self, forKey: .partitions)
         committedPartitionCount = try container.decode(Int.self, forKey: .committedPartitionCount)
         committedBytes = try container.decode(Int64.self, forKey: .committedBytes)
+        derivedOutputPartialFailures = try container.decodeIfPresent(
+            [ExportPartialFailure].self,
+            forKey: .derivedOutputPartialFailures
+        ) ?? []
+        terminalNoDataDateIdentifiers = try container.decodeIfPresent(
+            [String].self,
+            forKey: .terminalNoDataDateIdentifiers
+        ) ?? []
+        generationCompleted = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .generationCompleted
+        ) ?? false
         state = try container.decode(String.self, forKey: .state)
         completionRecorded = try container.decodeIfPresent(Bool.self, forKey: .completionRecorded) ?? false
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)

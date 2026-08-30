@@ -73,7 +73,7 @@ Current peers use one stable, durable corpus session instead of preparing a whol
 - aggregate corpus bytes use 64-bit counters with no 2 GiB session cap;
 - available-storage checks, inactivity timeouts, cancellation, and protected-spool cleanup remain enforced.
 
-Archive mode uses a checkpointed streaming ZIP64 writer. Mac first converts each dense day to a disk-backed aggregate-only projection, then loads one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses canonical daily disk spools and a streamed checksummed loopback response rather than whole-item `JSONEncoder`/`Data` or one in-memory result object.
+Archive mode uses a checkpointed streaming ZIP64 writer with standard per-entry DEFLATE (method 8). CRCs remain over the original bytes, and interrupted work resumes only from fully finalized entry boundaries; legacy store-mode checkpoints continue in store mode. Mac first converts each dense day to a disk-backed aggregate-only projection, then loads one weekly/monthly/yearly window at a time across partition boundaries. Strict CLI raw uses canonical daily disk spools and a streamed checksummed loopback response rather than whole-item `JSONEncoder`/`Data` or one in-memory result object.
 
 Mixed-version peers use the legacy single-payload protocol, which remains capped at 2 GiB and 8,192 chunks.
 
@@ -82,6 +82,8 @@ Mixed-version peers use the legacy single-payload protocol, which remains capped
 Older versions stored one Mac cache record per date. Current exports do not require it. **Delete Legacy Cache** removes only that cache, not Apple Health or already exported files.
 
 ## Tips
+
+- The **menu-bar popup** (menu-bar icon → Health.md) is a compact destination agent: it shows iPhone connection status, the Mac destination folder, readiness, and the last export result, and can open full settings — without switching to the app window.
 
 - Keep both apps foregrounded and devices nearby during large jobs.
 - Start with one lossless day to verify permissions/paths, then use a multi-year partitioned backfill.
@@ -115,5 +117,6 @@ Older versions stored one Mac cache record per date. Current exports do not requ
 - `ConnectedTransfer` carries each physical partition in 512 KiB frames; `ConnectedCorpusTransfer` defines stable sessions, negotiation, partition chains, finalization, and cancellation.
 - `MacCorpusExportSessionManager` journals partition commits and applies daily items without retaining the corpus. Protected raw/source spools reconcile exact interrupted publishes, terminal journal failures restore resumable state, and setup/cleanup traverse the bound session descriptor. A strict-raw terminal result remains in an exact protected, journal-bound spool across process death and lost final acknowledgements for the fixed recovery window. Each replay revalidates or repairs the durable control-response bytes and terminal record; transient installation failures remain unacknowledged and retryable. For admitted protocol-v3 ranges the manager also owns the protected exact selected-plan spool, destination binding, per-file frontier, corruption checks, and terminal acknowledgement replay.
 - `SyncPeerCapabilities` prevents unsupported peers from receiving strict jobs. Scheduled Connected Mac exports additionally require per-date completion support so retries contain only unresolved dates.
-- `MacExportJob` carries iPhone settings and per-date HealthData; Mac does not query HealthKit. `MacExportResultPayload.completedDates` reports exact terminal days back to iPhone for residual scheduling.
+- `MacExportJob` and streamed-start metadata carry both residual daily dates and the immutable original range dates/timezone. Missing additive fields decode for backward compatibility, while range-v9 transfer is separately capability-gated from historical roll-up support. Mac does not query HealthKit. `MacExportResultPayload.completedDates` reports exact terminal days back to iPhone for residual scheduling.
+- A residual ZIP retry recaptures or reuses every original-range source before rebuilding the same archive. If any original source is unavailable, finalization fails safely and preserves the existing ZIP instead of replacing it with a residual-only archive.
 - Manual IP uses pairing, Curve25519 key agreement, and ChaChaPoly-encrypted frames on port `17646`.

@@ -41,9 +41,13 @@ final class ExportProfileStoreTests: XCTestCase {
         return store
     }
 
-    private func makeSnapshot(filenameFormat: String = "health-{date}") -> ExportSettingsSnapshot {
+    private func makeSnapshot(
+        filenameFormat: String = "health-{date}",
+        detailPolicy: AppleExportDetailPolicy = .summary
+    ) -> ExportSettingsSnapshot {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         settings.filenameFormat = filenameFormat
+        settings.detailPolicy = detailPolicy
         Self.retainedSettings.append(settings)
         return ExportSettingsSnapshot.from(settings)
     }
@@ -130,6 +134,42 @@ final class ExportProfileStoreTests: XCTestCase {
         XCTAssertEqual(second.profiles, [sleep, weekly])
         XCTAssertEqual(second.activeProfileID, weekly.id)
         XCTAssertEqual(second.activeProfile?.name, "Weekly")
+    }
+
+    func testProfilePersistsDetailedTimeSeriesWithoutLosslessArchive() throws {
+        let first = makeStore()
+        let snapshot = makeSnapshot(detailPolicy: .detailedTimeSeries)
+        let profile = first.add(
+            name: "Charts",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+
+        let reloaded = makeStore()
+        let persisted = try XCTUnwrap(reloaded.profile(id: profile.id))
+
+        XCTAssertEqual(persisted.settings.detailPolicy, .detailedTimeSeries)
+        XCTAssertFalse(persisted.settings.includeGranularData)
+    }
+
+    func testProfilePersistsArchiveOnlyPolicyWithoutExposingLegacyLosslessBridge() throws {
+        let first = makeStore()
+        let snapshot = makeSnapshot(detailPolicy: .archiveOnly)
+        let profile = first.add(
+            name: "Canonical archive",
+            settings: snapshot,
+            target: .localIPhoneFolder
+        )
+
+        let reloaded = makeStore()
+        let persisted = try XCTUnwrap(reloaded.profile(id: profile.id))
+
+        XCTAssertEqual(persisted.settings.detailPolicy, .archiveOnly)
+        XCTAssertFalse(persisted.settings.includeGranularData)
+        XCTAssertEqual(
+            AppleExportDetailPreset(policy: persisted.settings.detailPolicy),
+            .archiveOnly
+        )
     }
 
     func testProfileCodableRoundTripPreservesSnapshot() throws {

@@ -19,7 +19,7 @@ use healthmd_protocol::{
     },
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{Value, json, value::RawValue};
 use sha2::{Digest as _, Sha256};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
@@ -1194,6 +1194,7 @@ fn validate_android_snapshot(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn validate_android_ndjson(
     path: &Path,
     artifact: &ArtifactManifest,
@@ -1230,28 +1231,30 @@ fn validate_android_ndjson(
         {
             return Err(invalid("Android NDJSON snapshot framing is invalid"));
         }
-        let value: Value = serde_json::from_str(line.trim_end_matches('\n'))
-            .map_err(|_| invalid("Android NDJSON snapshot contains malformed JSON"))?;
-        let kind = value
+        let envelope: BTreeMap<String, Box<RawValue>> =
+            serde_json::from_str(line.trim_end_matches('\n'))
+                .map_err(|_| invalid("Android NDJSON snapshot contains malformed JSON"))?;
+        let kind = envelope
             .get("kind")
-            .and_then(Value::as_str)
+            .and_then(|raw| serde_json::from_str::<String>(raw.get()).ok())
             .ok_or_else(|| invalid("Android NDJSON item has no kind"))?;
-        match (line_index, kind) {
-            (0, "header") if exact_object_keys(&value, &["kind", "header"]) => {
-                let item = value
+        match (line_index, kind.as_str()) {
+            (0, "header") if exact_raw_object_keys(&envelope, &["kind", "header"]) => {
+                let item_raw = envelope
                     .get("header")
-                    .cloned()
                     .ok_or_else(|| invalid("snapshot header is missing"))?;
+                let item = parse_raw_value(item_raw, "Android snapshot header is malformed")?;
                 update_logical_digest(&mut logical, "header", &normalized_logical_header(&item)?)?;
                 header = Some(item);
             }
-            (_, "record") if exact_object_keys(&value, &["kind", "record"]) => {
-                let record = value
+            (_, "record") if exact_raw_object_keys(&envelope, &["kind", "record"]) => {
+                let record_raw = envelope
                     .get("record")
                     .ok_or_else(|| invalid("Android raw record is missing"))?;
-                validate_raw_record(record)?;
-                validate_route_policy(record, request)?;
-                update_logical_digest(&mut logical, "record", record)?;
+                let record = parse_raw_value(record_raw, "Android raw record is malformed")?;
+                validate_raw_record_with_raw(&record, record_raw)?;
+                validate_route_policy(&record, request)?;
+                update_logical_digest_raw(&mut logical, "record", record_raw)?;
                 let wire_type = record
                     .get("wireType")
                     .and_then(Value::as_str)
@@ -1264,18 +1267,25 @@ fn validate_android_ndjson(
                     .checked_add(1)
                     .ok_or_else(|| invalid("Android record count overflow"))?;
             }
-            (_, "issue") if exact_object_keys(&value, &["kind", "issue"]) => {
-                let issue = value
+            (_, "issue") if exact_raw_object_keys(&envelope, &["kind", "issue"]) => {
+                let issue_raw = envelope
                     .get("issue")
                     .ok_or_else(|| invalid("Android raw issue is missing"))?;
-                validate_raw_issue(issue)?;
-                update_logical_digest(&mut logical, "issue", issue)?;
+                let issue = parse_raw_value(issue_raw, "Android raw issue is malformed")?;
+                validate_raw_issue(&issue)?;
+                update_logical_digest_raw(&mut logical, "issue", issue_raw)?;
                 issue_count = issue_count
                     .checked_add(1)
                     .ok_or_else(|| invalid("Android issue count overflow"))?;
             }
-            (_, "manifest") if exact_object_keys(&value, &["kind", "manifest"]) => {
-                manifest = value.get("manifest").cloned();
+            (_, "manifest") if exact_raw_object_keys(&envelope, &["kind", "manifest"]) => {
+                let manifest_raw = envelope
+                    .get("manifest")
+                    .ok_or_else(|| invalid("snapshot manifest is missing"))?;
+                manifest = Some(parse_raw_value(
+                    manifest_raw,
+                    "Android raw manifest is malformed",
+                )?);
                 saw_manifest = true;
             }
             _ => return Err(invalid("Android NDJSON snapshot item order is invalid")),
@@ -1315,33 +1325,46 @@ fn validate_android_json(
     }
     ensure_deadline(deadline)?;
     let input = File::open(path).map_err(storage_error)?;
-    let snapshot: Value = serde_json::from_reader(BufReader::new(input))
+    let snapshot: BTreeMap<String, Box<RawValue>> = serde_json::from_reader(BufReader::new(input))
         .map_err(|_| invalid("Android JSON snapshot is malformed or incomplete"))?;
     ensure_deadline(deadline)?;
-    if !exact_object_keys(&snapshot, &["header", "records", "issues", "manifest"]) {
+    if !exact_raw_object_keys(&snapshot, &["header", "records", "issues", "manifest"]) {
         return Err(invalid("Android JSON snapshot envelope is invalid"));
     }
-    let header = snapshot
-        .get("header")
-        .ok_or_else(|| invalid("snapshot header is missing"))?;
-    let records = snapshot
-        .get("records")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("Android snapshot records are invalid"))?;
-    let issues = snapshot
-        .get("issues")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("Android snapshot issues are invalid"))?;
-    let manifest = snapshot
-        .get("manifest")
-        .ok_or_else(|| invalid("snapshot manifest is missing"))?;
+    let header = parse_raw_value(
+        snapshot
+            .get("header")
+            .ok_or_else(|| invalid("snapshot header is missing"))?,
+        "Android snapshot header is malformed",
+    )?;
+    let records: Vec<Box<RawValue>> = serde_json::from_str(
+        snapshot
+            .get("records")
+            .ok_or_else(|| invalid("Android snapshot records are invalid"))?
+            .get(),
+    )
+    .map_err(|_| invalid("Android snapshot records are invalid"))?;
+    let issues: Vec<Box<RawValue>> = serde_json::from_str(
+        snapshot
+            .get("issues")
+            .ok_or_else(|| invalid("Android snapshot issues are invalid"))?
+            .get(),
+    )
+    .map_err(|_| invalid("Android snapshot issues are invalid"))?;
+    let manifest = parse_raw_value(
+        snapshot
+            .get("manifest")
+            .ok_or_else(|| invalid("snapshot manifest is missing"))?,
+        "Android raw manifest is malformed",
+    )?;
     let mut logical = Sha256::new();
     let mut type_counts = BTreeMap::<String, u64>::new();
-    update_logical_digest(&mut logical, "header", &normalized_logical_header(header)?)?;
-    for record in records {
-        validate_raw_record(record)?;
-        validate_route_policy(record, request)?;
-        update_logical_digest(&mut logical, "record", record)?;
+    update_logical_digest(&mut logical, "header", &normalized_logical_header(&header)?)?;
+    for record_raw in &records {
+        let record = parse_raw_value(record_raw, "Android raw record is malformed")?;
+        validate_raw_record_with_raw(&record, record_raw)?;
+        validate_route_policy(&record, request)?;
+        update_logical_digest_raw(&mut logical, "record", record_raw)?;
         let wire_type = record
             .get("wireType")
             .and_then(Value::as_str)
@@ -1351,13 +1374,14 @@ fn validate_android_json(
             .checked_add(1)
             .ok_or_else(|| invalid("Android type count overflow"))?;
     }
-    for issue in issues {
-        validate_raw_issue(issue)?;
-        update_logical_digest(&mut logical, "issue", issue)?;
+    for issue_raw in &issues {
+        let issue = parse_raw_value(issue_raw, "Android raw issue is malformed")?;
+        validate_raw_issue(&issue)?;
+        update_logical_digest_raw(&mut logical, "issue", issue_raw)?;
     }
     validate_snapshot_integrity(
-        header,
-        manifest,
+        &header,
+        &manifest,
         artifact,
         u64::try_from(records.len()).map_err(|_| invalid("Android record count overflow"))?,
         u64::try_from(issues.len()).map_err(|_| invalid("Android issue count overflow"))?,
@@ -1751,13 +1775,28 @@ fn update_logical_digest(
     kind: &str,
     value: &Value,
 ) -> Result<(), ClientError> {
+    let canonical =
+        canonical_json(value).map_err(|_| invalid("Android raw item canonicalization failed"))?;
+    update_logical_digest_bytes(digest, kind, &canonical);
+    Ok(())
+}
+
+fn update_logical_digest_raw(
+    digest: &mut Sha256,
+    kind: &str,
+    value: &RawValue,
+) -> Result<(), ClientError> {
+    let canonical = canonical_raw_json(value)
+        .map_err(|_| invalid("Android raw item canonicalization failed"))?;
+    update_logical_digest_bytes(digest, kind, &canonical);
+    Ok(())
+}
+
+fn update_logical_digest_bytes(digest: &mut Sha256, kind: &str, canonical: &[u8]) {
     digest.update(kind.as_bytes());
     digest.update([0]);
-    digest.update(
-        canonical_json(value).map_err(|_| invalid("Android raw item canonicalization failed"))?,
-    );
+    digest.update(canonical);
     digest.update(b"\n");
-    Ok(())
 }
 
 fn normalized_logical_header(header: &Value) -> Result<Value, ClientError> {
@@ -1770,7 +1809,89 @@ fn normalized_logical_header(header: &Value) -> Result<Value, ClientError> {
     Ok(normalized)
 }
 
-fn validate_raw_record(value: &Value) -> Result<(), ClientError> {
+fn parse_raw_value(raw: &RawValue, message: &str) -> Result<Value, ClientError> {
+    serde_json::from_str(raw.get()).map_err(|_| invalid(message))
+}
+
+fn exact_raw_object_keys(value: &BTreeMap<String, Box<RawValue>>, expected: &[&str]) -> bool {
+    value.len() == expected.len() && expected.iter().all(|key| value.contains_key(*key))
+}
+
+// Android's Kotlin JSON encoder and Rust's serde_json can serialize the same finite
+// Double with different lexical spellings (for example, `1.0E-6` versus `1e-6`).
+// RawValue keeps those number tokens intact while the surrounding object/array structure
+// is canonicalized. This is required for the v1 record and logical checksums.
+fn canonical_raw_json(raw: &RawValue) -> Result<Vec<u8>, serde_json::Error> {
+    let text = raw.get().trim();
+    match text.as_bytes().first().copied() {
+        Some(b'{') => {
+            let object: BTreeMap<String, Box<RawValue>> = serde_json::from_str(text)?;
+            canonical_raw_object(&object, None)
+        }
+        Some(b'[') => {
+            let values: Vec<Box<RawValue>> = serde_json::from_str(text)?;
+            let mut output = Vec::with_capacity(text.len());
+            output.push(b'[');
+            for (index, value) in values.iter().enumerate() {
+                if index != 0 {
+                    output.push(b',');
+                }
+                output.extend(canonical_raw_json(value)?);
+            }
+            output.push(b']');
+            Ok(output)
+        }
+        Some(b'"') => {
+            let value: String = serde_json::from_str(text)?;
+            serde_json::to_vec(&value)
+        }
+        Some(_) => {
+            let _: Value = serde_json::from_str(text)?;
+            Ok(text.as_bytes().to_vec())
+        }
+        None => {
+            let _: Value = serde_json::from_str(text)?;
+            Ok(Vec::new())
+        }
+    }
+}
+
+fn canonical_raw_object(
+    object: &BTreeMap<String, Box<RawValue>>,
+    omitted_key: Option<&str>,
+) -> Result<Vec<u8>, serde_json::Error> {
+    let mut output = Vec::new();
+    output.push(b'{');
+    let mut first = true;
+    for (key, value) in object {
+        if omitted_key == Some(key.as_str()) {
+            continue;
+        }
+        if !first {
+            output.push(b',');
+        }
+        first = false;
+        output.extend(serde_json::to_vec(key)?);
+        output.push(b':');
+        output.extend(canonical_raw_json(value)?);
+    }
+    output.push(b'}');
+    Ok(output)
+}
+
+fn canonical_raw_object_without(
+    raw: &RawValue,
+    omitted_key: &str,
+) -> Result<Vec<u8>, serde_json::Error> {
+    let object: BTreeMap<String, Box<RawValue>> = serde_json::from_str(raw.get())?;
+    canonical_raw_object(&object, Some(omitted_key))
+}
+
+fn validate_raw_record_with_raw(value: &Value, raw: &RawValue) -> Result<(), ClientError> {
+    validate_raw_record_inner(value, Some(raw))
+}
+
+fn validate_raw_record_inner(value: &Value, raw: Option<&RawValue>) -> Result<(), ClientError> {
     let object = value
         .as_object()
         .ok_or_else(|| invalid("Android raw record is not an object"))?;
@@ -1825,15 +1946,19 @@ fn validate_raw_record(value: &Value) -> Result<(), ClientError> {
         }
         response_sha256
     } else {
-        let mut unhashed = value.clone();
-        unhashed
-            .as_object_mut()
-            .expect("validated record object")
-            .remove("hash");
-        sha256_hex(
-            &canonical_json(&unhashed)
-                .map_err(|_| invalid("Android raw record canonicalization failed"))?,
-        )
+        let canonical = if let Some(raw) = raw {
+            canonical_raw_object_without(raw, "hash")
+                .map_err(|_| invalid("Android raw record canonicalization failed"))?
+        } else {
+            let mut unhashed = value.clone();
+            unhashed
+                .as_object_mut()
+                .expect("validated record object")
+                .remove("hash");
+            canonical_json(&unhashed)
+                .map_err(|_| invalid("Android raw record canonicalization failed"))?
+        };
+        sha256_hex(&canonical)
     };
     if declared_hash != Some(expected_hash.as_str()) {
         return Err(invalid("Android raw record checksum is invalid"));
@@ -1882,12 +2007,6 @@ fn validate_raw_issue(value: &Value) -> Result<(), ClientError> {
         return Err(invalid("Android raw issue metadata has invalid types"));
     }
     Ok(())
-}
-
-fn exact_object_keys(value: &Value, expected: &[&str]) -> bool {
-    value.as_object().is_some_and(|object| {
-        object.len() == expected.len() && expected.iter().all(|key| object.contains_key(*key))
-    })
 }
 
 fn validate_snapshot_identity(
@@ -2173,6 +2292,173 @@ mod tests {
 
     use super::*;
     use crate::v2_job::V2JobRecord;
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn android_raw_snapshot_validator_accepts_scientific_number_lexemes() {
+        let temporary = TempDir::new().unwrap();
+        let now = Utc::now().with_nanosecond(0).unwrap();
+        let source_id = Uuid::new_v4();
+        let job_id = Uuid::new_v4();
+        let snapshot_id = "0123456789abcdef0123456789abcdef";
+        let unhashed_record = r#"{"endTime":null,"endZoneOffsetSeconds":null,"fields":{"quantity":{"number":1.0E-6}},"metadata":null,"nativeIdentity":"nutrition:1","providerPayload":null,"recordKind":"health_connect_record","source":{},"startTime":null,"startZoneOffsetSeconds":null,"wireType":"nutrition"}"#;
+        let record_hash = sha256_hex(unhashed_record.as_bytes());
+        let record = format!(
+            r#"{{"endTime":null,"endZoneOffsetSeconds":null,"fields":{{"quantity":{{"number":1.0E-6}}}},"hash":"{record_hash}","metadata":null,"nativeIdentity":"nutrition:1","providerPayload":null,"recordKind":"health_connect_record","source":{{}},"startTime":null,"startZoneOffsetSeconds":null,"wireType":"nutrition"}}"#
+        );
+
+        for (format, format_name, media_type, ndjson) in [
+            (
+                RawSnapshotFormat::Json,
+                "JSON",
+                "application/vnd.healthmd.raw-snapshot+json",
+                false,
+            ),
+            (
+                RawSnapshotFormat::Ndjson,
+                "NDJSON",
+                "application/x-ndjson",
+                true,
+            ),
+        ] {
+            let header = json!({
+                "schema": "healthmd.raw-snapshot",
+                "version": 1,
+                "snapshotId": snapshot_id,
+                "createdAt": {"epochSecond": "1784764800", "nano": 0},
+                "request": {
+                    "format": format_name,
+                    "scope": "ALL_AUTHORIZED_SUPPORTED_DATA",
+                    "startTime": {"epochSecond": "1782864000", "nano": 0},
+                    "endTime": {"epochSecond": "1782950400", "nano": 0},
+                    "selectedMetricIds": [],
+                    "pageSize": 1000,
+                    "includeExerciseRoutes": false,
+                    "calendarZoneId": "UTC"
+                },
+                "capabilities": {
+                    "sdkVersion": "test",
+                    "available": true,
+                    "providerId": "health_connect",
+                    "fidelityLevel": "HEALTH_CONNECT_API_PROJECTED",
+                    "grantedPermissions": [],
+                    "availableFeatures": [],
+                    "historicalReadGranted": true,
+                    "nonTransactional": true,
+                    "preservesSourceUnits": false,
+                    "preservesUnknownSdkFields": false
+                }
+            });
+            let raw_record: Box<RawValue> = serde_json::from_str(&record).unwrap();
+            let mut logical = Sha256::new();
+            update_logical_digest(
+                &mut logical,
+                "header",
+                &normalized_logical_header(&header).unwrap(),
+            )
+            .unwrap();
+            update_logical_digest_raw(&mut logical, "record", &raw_record).unwrap();
+            let logical_checksum = encode_hex(&logical.finalize());
+            let mut raw_manifest = json!({
+                "schema": "healthmd.raw-snapshot.manifest",
+                "version": 1,
+                "snapshotId": snapshot_id,
+                "status": "COMPLETE",
+                "completedAt": {"epochSecond": "1784764801", "nano": 0},
+                "recordCount": 1,
+                "issueCount": 0,
+                "duplicateCount": 0,
+                "identityCollisionCount": 0,
+                "typeCounts": [{"wireType": "nutrition", "count": 1}],
+                "typeReports": [{
+                    "typeKey": "nutrition",
+                    "wireType": "nutrition",
+                    "status": "exported",
+                    "recordCount": 1,
+                    "issueCount": 0,
+                    "permission": null,
+                    "feature": null,
+                    "rangeBehavior": "overlap",
+                    "message": null
+                }],
+                "logicalChecksumSha256": logical_checksum
+            });
+            let manifest_checksum = sha256_hex(&canonical_json(&raw_manifest).unwrap());
+            let manifest_object = raw_manifest.as_object_mut().unwrap();
+            manifest_object.insert("manifestChecksumSha256".into(), json!(manifest_checksum));
+            manifest_object.insert("artifactChecksumSha256".into(), Value::Null);
+            let header_text = String::from_utf8(serde_json::to_vec(&header).unwrap()).unwrap();
+            let manifest_text = String::from_utf8(canonical_json(&raw_manifest).unwrap()).unwrap();
+            let snapshot = if ndjson {
+                format!(
+                    "{{\"header\":{header_text},\"kind\":\"header\"}}\n{{\"kind\":\"record\",\"record\":{record}}}\n{{\"kind\":\"manifest\",\"manifest\":{manifest_text}}}\n"
+                )
+            } else {
+                format!(
+                    r#"{{"header":{header_text},"records":[{record}],"issues":[],"manifest":{manifest_text}}}"#
+                )
+            };
+            let path = temporary.path().join(if ndjson {
+                "snapshot.ndjson"
+            } else {
+                "snapshot.json"
+            });
+            fs::write(&path, snapshot.as_bytes()).unwrap();
+            let request = v2::ExportRequest {
+                job_id,
+                created_at: now,
+                expires_at: now + Duration::days(7),
+                source_installation_id: source_id,
+                date_selection: DateSelection::Exact {
+                    start_date: "2026-07-01".into(),
+                    end_date: "2026-07-01".into(),
+                },
+                product: ExportProduct::AndroidProviderNativeSnapshotV1 {
+                    provider_id: "health_connect".into(),
+                    format,
+                    scope: RawSnapshotScope::AllAuthorizedSupportedData,
+                    include_exercise_routes: false,
+                },
+                destination: None,
+            };
+            let accepted = v2::ExportAccepted {
+                job_id,
+                accepted_at: now,
+                peer_binding: PeerBinding {
+                    source_installation_id: source_id,
+                    destination_installation_id: Uuid::new_v4(),
+                },
+                product_id: ProductId::AndroidProviderNativeSnapshotV1,
+                resolved_range: ResolvedRange {
+                    start_date: "2026-07-01".into(),
+                    end_date: "2026-07-01".into(),
+                    time_zone_id: "UTC".into(),
+                },
+                provider_id: Some("health_connect".into()),
+                settings_snapshot_sha256: None,
+                request_fingerprint: v2::request_fingerprint(&request).unwrap(),
+            };
+            let bytes = fs::read(&path).unwrap();
+            let artifact = ArtifactManifest {
+                job_id,
+                artifact_id: Uuid::new_v4(),
+                kind: ArtifactKind::RawSnapshot,
+                schema: ArtifactSchema {
+                    id: "healthmd.raw-snapshot".into(),
+                    major: 1,
+                },
+                media_type: media_type.into(),
+                byte_count: u64::try_from(bytes.len()).unwrap(),
+                sha256: sha256_hex(&bytes),
+                logical_checksum_sha256: Some(logical_checksum),
+                relative_path: None,
+                write_mode: None,
+                snapshot_status: Some("COMPLETE".into()),
+                provider_id: Some("health_connect".into()),
+            };
+            validate_android_snapshot(&path, &artifact, &request, &accepted, None).unwrap();
+        }
+    }
 
     #[test]
     #[allow(clippy::too_many_lines)]
@@ -2541,9 +2827,28 @@ mod tests {
     }
 
     #[test]
+    fn android_raw_record_validation_preserves_android_number_lexemes() {
+        let unhashed = r#"{"endTime":null,"endZoneOffsetSeconds":null,"fields":{"quantity":{"number":1.0E-6}},"metadata":null,"nativeIdentity":"nutrition:1","providerPayload":null,"recordKind":"health_connect_record","source":{},"startTime":null,"startZoneOffsetSeconds":null,"wireType":"nutrition"}"#;
+        let hash = sha256_hex(unhashed.as_bytes());
+        let raw = format!(
+            r#"{{"endTime":null,"endZoneOffsetSeconds":null,"fields":{{"quantity":{{"number":1.0E-6}}}},"hash":"{hash}","metadata":null,"nativeIdentity":"nutrition:1","providerPayload":null,"recordKind":"health_connect_record","source":{{}},"startTime":null,"startZoneOffsetSeconds":null,"wireType":"nutrition"}}"#
+        );
+        let raw: Box<RawValue> = serde_json::from_str(&raw).unwrap();
+        let value = parse_raw_value(&raw, "record fixture is malformed").unwrap();
+
+        assert!(validate_raw_record_inner(&value, None).is_err());
+        validate_raw_record_with_raw(&value, &raw).unwrap();
+        assert_eq!(
+            canonical_raw_object_without(&raw, "hash").unwrap(),
+            unhashed.as_bytes()
+        );
+        assert_ne!(canonical_json(&value).unwrap(), unhashed.as_bytes());
+    }
+
+    #[test]
     fn raw_snapshot_validation_rejects_placeholder_records_and_issues() {
-        assert!(validate_raw_record(&Value::Null).is_err());
-        assert!(validate_raw_record(&json!({"wireType": "StepsRecord"})).is_err());
+        assert!(validate_raw_record_inner(&Value::Null, None).is_err());
+        assert!(validate_raw_record_inner(&json!({"wireType": "StepsRecord"}), None).is_err());
         assert!(validate_raw_issue(&json!({"code": "read_error"})).is_err());
     }
 

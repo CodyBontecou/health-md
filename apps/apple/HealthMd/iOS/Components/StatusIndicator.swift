@@ -102,6 +102,7 @@ struct ExportStatusBadge: View {
 
     @State private var isVisible = false
     @State private var offset: CGFloat = 80
+    @State private var isDismissing = false
 
     private var hasExportActions: Bool {
         onPreview != nil || onBrowseFolder != nil
@@ -177,8 +178,10 @@ struct ExportStatusBadge: View {
     private var statusMessage: some View {
         if let onTap {
             Button {
+                // The tapped content may present an in-tree detail overlay. Let that
+                // owner decide when to clear the source state instead of racing the
+                // presentation with this badge's dismissal callback.
                 onTap()
-                dismiss()
             } label: {
                 statusMessageText
             }
@@ -259,6 +262,9 @@ struct ExportStatusBadge: View {
     }
 
     private func dismiss() {
+        guard !isDismissing else { return }
+        isDismissing = true
+
         withOptionalMotionAnimation(AnimationTimings.standard) {
             isVisible = false
             offset = 80
@@ -294,8 +300,7 @@ struct PartialExportNoticeToast: View {
                 ExportStatusBadge(
                     status: .warning(notice.toastMessage),
                     onDismiss: {
-                        self.notice = nil
-                        onDismiss()
+                        clearNotice()
                     },
                     onTap: {
                         presentedNotice = notice
@@ -311,7 +316,11 @@ struct PartialExportNoticeToast: View {
         .geistDialog(
             isPresented: Binding(
                 get: { presentedNotice != nil },
-                set: { if !$0 { presentedNotice = nil } }
+                set: {
+                    guard !$0 else { return }
+                    presentedNotice = nil
+                    clearNotice()
+                }
             ),
             title: Text(presentedNotice?.permissionGuidance != nil ? "Health Permissions Needed" : "Partial Export"),
             message: presentedNotice.map { notice in
@@ -335,9 +344,14 @@ struct PartialExportNoticeToast: View {
             guard notice != nil else { return }
             try? await Task.sleep(for: .seconds(8))
             guard !Task.isCancelled else { return }
-            notice = nil
-            onDismiss()
+            clearNotice()
         }
+    }
+
+    private func clearNotice() {
+        guard notice != nil else { return }
+        notice = nil
+        onDismiss()
     }
 
     private func requestAdditionalHealthAccess() {

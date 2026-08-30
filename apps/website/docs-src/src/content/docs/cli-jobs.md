@@ -5,7 +5,7 @@ description: "Automate healthmd safely with machine-readable output, bounded wai
 
 Health.md treats connected export and context-acquisition work as durable jobs. The job lifetime is separate from the process that started it. A terminal can close or a network connection can fail without discarding completed partitions.
 
-This page applies to file export, strict raw export, canonical extraction, and fresh encrypted-context acquisition unless a command documents a narrower rule.
+This page applies to file export, strict raw export, canonical extraction, and fresh encrypted-context acquisition unless a command documents a narrower rule. Direct jobs from iPhone (protocol v1) and Android (protocol v2) sources follow the same durable lifecycle.
 
 ## The central rule
 
@@ -57,7 +57,7 @@ A job response may include:
 | `state` | Current durable lifecycle state |
 | `job_id` | Stable job identifier |
 | `session_id` | Bound transfer session identifier |
-| `paused` | Whether work needs the same iPhone to reconnect |
+| `paused` | Whether work needs the same phone to reconnect |
 | `processed_days` / `total_days` | Logical owner-day progress |
 | `committed_partitions` | Partitions durably acknowledged by the receiver |
 | `committed_bytes` | Payload bytes safely committed |
@@ -99,7 +99,7 @@ healthmd resume JOB_UUID --output recovered.json
 healthmd resume JOB_UUID --output recovered.json --allow-partial
 ```
 
-For direct mode, select the same backend, device, transport, port, and iPhone used by the original request:
+For direct mode, select the same backend, device, transport, port, and phone used by the original request:
 
 ```bash
 healthmd --backend direct --device DEVICE_UUID \
@@ -126,9 +126,9 @@ healthmd agent job cancel JOB_UUID
 Cancellation has two stages:
 
 1. the CLI records and sends a durable cancellation request;
-2. the iPhone acknowledges cancellation and makes it terminal.
+2. the phone acknowledges cancellation and makes it terminal.
 
-If the iPhone is unavailable, the job remains `cancellation_pending`. Reopen the same iPhone and retry cancel. Do not report a job as cancelled based only on local intent.
+If the phone is unavailable, the job remains `cancellation_pending`. Reopen the same phone and retry cancel. Do not report a job as cancelled based only on local intent.
 
 A process receiving Ctrl-C should exit without fabricating terminal cancellation. Use the explicit cancel command when cancellation is intended.
 
@@ -234,7 +234,7 @@ An agent or scheduler should follow this order:
 1. Read the structured error and job ID.
 2. Run `status --job` locally.
 3. Check whether the job is paused, terminal, expired, or awaiting acknowledgement.
-4. Reopen the same iPhone when fresh work or acknowledgement is needed.
+4. Reopen the same phone when fresh work or acknowledgement is needed.
 5. Resume the existing job with the same backend and device.
 6. Start a new job only after the prior outcome is known or expiration is explicitly accepted.
 
@@ -247,8 +247,8 @@ Retrying a mutation blindly can duplicate source work even when file commits the
 | `timed_out` | The command stopped waiting before the job finished | Inspect the returned job and resume it |
 | `job_not_found` | No local durable record exists for that ID | Confirm backend and state directory before starting over |
 | `job_expired` | The fixed seven-day deadline elapsed | Record the gap and create a new request if appropriate |
-| `direct_export_paused` | Direct work needs the paired iPhone again | Reopen iPhone and resume |
-| `direct_cancellation_pending` | Local cancel intent lacks iPhone acknowledgement | Reopen iPhone and retry cancel |
+| `direct_export_paused` | Direct work needs the paired phone again | Reopen the phone and resume |
+| `direct_cancellation_pending` | Local cancel intent lacks phone acknowledgement | Reopen the phone and retry cancel |
 | `invalid_direct_raw_response` | Strict raw validation failed | Do not consume the output |
 | `invalid_direct_file_receipt` | File manifest or commit receipt failed validation | Do not repair or append files manually |
 | `partial_canonical_extraction` | Requested extraction is incomplete | Inspect receipt; opt into partial only when accepted |
@@ -271,7 +271,7 @@ Progress JSONL can include phase, page count, item count, dates, and safe diagno
 
 <div class="related">
   <a href="/docs/cli/"><span>Setup</span>Health.md CLI: install, choose a backend, and understand command output.</a>
-  <a href="/docs/cli-direct/"><span>Direct</span>Direct iPhone CLI: pairing, finite background time, explicit destination, and trusted resume.</a>
+  <a href="/docs/cli-direct/"><span>Direct</span>Direct phone CLI: pairing, foreground rules, explicit destination, and trusted resume.</a>
   <a href="/docs/agent-queries/"><span>Paging</span>Typed query cookbook: fresh and cached modes, page traversal, coverage, and receipts.</a>
   <a href="/docs/reference/generated/cli/exit-codes/"><span>Generated contract</span>CLI exit codes: production-generated status and error behavior.</a>
 </div>

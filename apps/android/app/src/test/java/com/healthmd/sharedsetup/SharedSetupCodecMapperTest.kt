@@ -318,7 +318,7 @@ class SharedSetupCodecMapperTest {
 
     private class FixtureMetricRegistry : SharedSetupMetricRegistry {
         override val version: Int = 1
-        override val sha256: String = "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319"
+        override val sha256: String = "da1ef4f1dd2c9117e5922ae64207510c743c8b14624a792bab93f98494ccb070"
         private val bindings = listOf(
             SharedSetupRegistryBinding("android.hrv_rmssd", null, "hrv", "platform_distinct"),
             SharedSetupRegistryBinding("active_energy", "active_energy", "active_calories", "mapped_alias"),

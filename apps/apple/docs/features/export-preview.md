@@ -85,11 +85,14 @@ Export Preview currently:
 - renders weekly/monthly/yearly roll-up summary files for the previewed days when roll-up periods are enabled; full exports refresh the complete touched roll-up windows;
 - in summary-only mode, shows the roll-up summary files without daily file rows;
 - hints at daily-note injection and individual entry tracking instead of rendering every side-effect file;
-- may truncate the middle of very large lossless content while preserving a head/tail preview and original/omitted byte counts.
+- may truncate the middle of very large lossless content while preserving a head/tail preview and original/omitted byte counts;
+- applies a rough text-heavy DEFLATE projection when **Zip Export Files** is on; per-entry ZIP overhead and incompressible expansion mean the displayed size is not exact.
 
 The full export still runs on every selected date and queries the complete touched roll-up windows when roll-up summaries are enabled. In summary-only mode, the daily records are used as source snapshots only and are not written.
 
 ## Tips
+
+- After exporting, tap any generated Markdown file in the export result sheet to read it in the built-in **Exported Markdown viewer** — no need to leave Health.md or open your vault app.
 
 - Use Preview after changing filename, folder organization, or export target settings.
 - Tap into a file row to verify schema v8, `raw_capture_status`, frontmatter, and field names.
@@ -128,7 +131,7 @@ The full export still runs on every selected date and queries the complete touch
 ## Implementation notes
 
 - `ExportTabView` presents `ExportPreviewView` as a sheet.
-- Preview calls the same HealthKit fetch path as export; the user-facing Lossless Health Records setting remains `includeGranularData` internally.
+- Preview calls the same HealthKit fetch path as export and preserves the exact compatibility-detail and HealthKit-source-archive policy.
 - `ExportPreviewView.buildPreviews()` uses `ExportOrchestrator.dateRange(from:to:)`, then walks dates in reverse.
 - `maxRenderedDates` is 5 and `maxFetchAttempts` is 14.
 - File content is generated with `healthData.export(format:settings:)`, the same renderer used by real exports.

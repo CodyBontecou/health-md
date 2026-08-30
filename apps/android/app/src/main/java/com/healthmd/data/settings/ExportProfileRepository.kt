@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 /**
  * DataStore-backed repository for export profiles (Android phase 6 parity).
@@ -40,12 +41,12 @@ class ExportProfileRepository @Inject constructor(
     }
 
     val profiles: Flow<List<ExportProfile>> = dataStore.data.map { prefs ->
-        decodeProfiles(prefs[Keys.PROFILES])
+        decodeProfiles(prefs[Keys.PROFILES]).orEmpty()
     }
 
     val activeProfileId: Flow<String?> = dataStore.data.map { prefs ->
         prefs[Keys.ACTIVE_PROFILE_ID]?.takeIf { id ->
-            decodeProfiles(prefs[Keys.PROFILES]).any { it.id == id }
+            decodeProfiles(prefs[Keys.PROFILES])?.any { it.id == id } == true
         }
     }
 
@@ -72,30 +73,31 @@ class ExportProfileRepository @Inject constructor(
         folderDisplayName: String? = null,
     ): ExportProfile {
         require(ExportProfileRules.isValidName(name)) { "Profile name must not be blank." }
-        val existing = getProfiles()
-        require(existing.size < ExportProfileRules.MAX_PROFILES) { "Profile limit reached." }
+        val newId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
-        val profile = ExportProfile(
-            id = UUID.randomUUID().toString(),
-            name = ExportProfileRules.uniquifyName(name, existing),
-            settingsSnapshotJson = settingsSnapshotJson,
-            target = target,
-            apiEndpointUrl = apiEndpointUrl?.takeIf { it.isNotBlank() },
-            folderUri = folderUri?.takeIf { it.isNotBlank() },
-            folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
-            createdAtEpochMillis = now,
-            updatedAtEpochMillis = now,
-        )
+        var added: ExportProfile? = null
         dataStore.edit { prefs ->
-            prefs[Keys.PROFILES] = json.encodeToString(
-                listSerializer,
-                decodeProfiles(prefs[Keys.PROFILES]) + profile,
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            require(existing.size < ExportProfileRules.MAX_PROFILES) { "Profile limit reached." }
+            val profile = ExportProfile(
+                id = newId,
+                name = ExportProfileRules.uniquifyName(name, existing),
+                settingsSnapshotJson = settingsSnapshotJson,
+                target = target,
+                apiEndpointUrl = apiEndpointUrl?.takeIf { it.isNotBlank() },
+                folderUri = folderUri?.takeIf { it.isNotBlank() },
+                folderDisplayName = folderDisplayName?.takeIf { it.isNotBlank() },
+                createdAtEpochMillis = now,
+                updatedAtEpochMillis = now,
             )
-            if (prefs[Keys.ACTIVE_PROFILE_ID] == null) {
+            prefs[Keys.PROFILES] = json.encodeToString(listSerializer, existing + profile)
+            val activeId = prefs[Keys.ACTIVE_PROFILE_ID]
+            if (activeId == null || existing.none { it.id == activeId }) {
                 prefs[Keys.ACTIVE_PROFILE_ID] = profile.id
             }
+            added = profile
         }
-        return profile
+        return checkNotNull(added) { "Export profiles are unavailable because stored data is invalid." }
     }
 
     /** Binds a profile to a SAF folder tree URI (or clears the binding with nulls). */
@@ -106,7 +108,7 @@ class ExportProfileRepository @Inject constructor(
     ): Boolean {
         var applied = false
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES])
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val updated = existing[index].copy(
@@ -133,7 +135,7 @@ class ExportProfileRepository @Inject constructor(
     ): Boolean {
         var applied = false
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES])
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val updated = existing[index].copy(
@@ -170,7 +172,7 @@ class ExportProfileRepository @Inject constructor(
         if (!ExportProfileRules.isValidName(rawName)) return null
         var storedName: String? = null
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES])
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
@@ -207,7 +209,7 @@ class ExportProfileRepository @Inject constructor(
         if (!ExportProfileRules.isValidName(rawName)) return null
         var renamed: String? = null
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES])
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
             val index = existing.indexOfFirst { it.id == id }
             if (index >= 0) {
                 val others = existing.filterIndexed { i, _ -> i != index }
@@ -232,12 +234,10 @@ class ExportProfileRepository @Inject constructor(
      * rejected or unknown.
      */
     suspend fun delete(id: String): Boolean {
-        val current = getProfiles()
-        if (!ExportProfileRules.canDelete(current)) return false
         var deleted = false
         dataStore.edit { prefs ->
-            val existing = decodeProfiles(prefs[Keys.PROFILES])
-            if (existing.any { it.id == id }) {
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            if (ExportProfileRules.canDelete(existing) && existing.any { it.id == id }) {
                 val updated = existing.filterNot { it.id == id }
                 prefs[Keys.PROFILES] = json.encodeToString(listSerializer, updated)
                 if (prefs[Keys.ACTIVE_PROFILE_ID] == id) {
@@ -253,7 +253,8 @@ class ExportProfileRepository @Inject constructor(
     suspend fun activate(id: String): Boolean {
         var activated = false
         dataStore.edit { prefs ->
-            if (decodeProfiles(prefs[Keys.PROFILES]).any { it.id == id }) {
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            if (existing.any { it.id == id }) {
                 prefs[Keys.ACTIVE_PROFILE_ID] = id
                 activated = true
             }
@@ -270,25 +271,29 @@ class ExportProfileRepository @Inject constructor(
         target: ExportTarget,
         apiEndpointUrl: String? = null,
     ): ExportProfile? {
-        if (getProfiles().isNotEmpty()) return null
-        val profile = ExportProfileRules.migrateDefault(
-            existing = emptyList(),
-            snapshotJson = settingsSnapshotJson,
-            target = target,
-            nowEpochMillis = System.currentTimeMillis(),
-            newId = { UUID.randomUUID().toString() },
-            apiEndpointUrl = apiEndpointUrl,
-        ) ?: return null
+        var migrated: ExportProfile? = null
         dataStore.edit { prefs ->
+            val existing = decodeProfiles(prefs[Keys.PROFILES]) ?: return@edit
+            val profile = ExportProfileRules.migrateDefault(
+                existing = existing,
+                snapshotJson = settingsSnapshotJson,
+                target = target,
+                nowEpochMillis = System.currentTimeMillis(),
+                newId = { UUID.randomUUID().toString() },
+                apiEndpointUrl = apiEndpointUrl,
+            ) ?: return@edit
             prefs[Keys.PROFILES] = json.encodeToString(listSerializer, listOf(profile))
             prefs[Keys.ACTIVE_PROFILE_ID] = profile.id
+            migrated = profile
         }
-        return profile
+        return migrated
     }
 
-    private fun decodeProfiles(raw: String?): List<ExportProfile> {
+    private fun decodeProfiles(raw: String?): List<ExportProfile>? {
         if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString(listSerializer, raw) }
-            .getOrDefault(emptyList())
+        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse { error ->
+            Timber.e(error, "Export profiles failed to decode; blocking profile writes")
+            null
+        }
     }
 }

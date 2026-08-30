@@ -62,6 +62,29 @@
       ]
     },
     {
+      "id": "export.range-summary",
+      "name": "Requested-range summary",
+      "classification": "planned",
+      "summary": "Write one independently versioned aggregate for immutable requested owner-date bounds, with explicit coverage and canonical units, while preserving daily export output.",
+      "profiles": [
+        "apple-v8"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "Adopt healthmd.rollup_summary range semantics in the first Android writer for the new unified healthmd.health_data v9 profile; Android frozen v4 and analytical v5 remain byte-immutable."
+        }
+      },
+      "evidence": [
+        "packages/contracts/rollup-summary/v9/contract.md",
+        "apps/apple/docs/features/rollup-summaries.md",
+        "docs/architecture/rfc-0004-unified-health-data-v9.md"
+      ]
+    },
+    {
       "id": "export.sleep-summary",
       "name": "Sleep summaries and stages",
       "classification": "shared",
@@ -191,6 +214,29 @@
       },
       "evidence": [
         "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+      ]
+    },
+    {
+      "id": "export.selected-time-series-detail",
+      "name": "Selected detailed time-series",
+      "classification": "shared",
+      "summary": "Export selected timestamped compatibility samples independently from platform-native source archive or raw snapshot products.",
+      "profiles": [
+        "apple-v8",
+        "android-frozen-v4",
+        "android-analytical-v5"
+      ],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/time-series-data.md",
+        "apps/android/docs/features/csv-export.md"
       ]
     },
     {
@@ -326,7 +372,7 @@
       "id": "export.profiles",
       "name": "Saved export profiles",
       "classification": "shared",
-      "summary": "Save multiple named export configurations with independent metric selection, formats, output options, and destinations, and run any of them manually, from automation, or on independent schedules. Profiles choose which request produces files; they never change the public export schema, which remains healthmd.health_data per output profile.",
+      "summary": "Save multiple named export configurations with independent metric selection, formats, output options, and destinations, and run any of them manually, from automation, or on independent schedules. On Apple, profile management is currently documented and QA-attested on iPhone only; iPad and macOS management availability is not claimed. Profiles choose which request produces files; they never change the public export schema, which remains healthmd.health_data per output profile.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -342,7 +388,31 @@
       },
       "evidence": [
         "apps/apple/docs/features/export-profiles.md",
-        "apps/android/docs/export-contract/migration-plan.md"
+        "apps/apple/HealthMdUITests/ExportProfilesJourneyUITests.swift",
+        "apps/android/app/src/main/java/com/healthmd/presentation/export/ExportProfilesScreen.kt",
+        "apps/android/app/src/test/java/com/healthmd/presentation/export/ExportProfilesViewModelTest.kt"
+      ]
+    },
+    {
+      "id": "automation.cancel-active-export",
+      "name": "Cancel an in-progress automated export",
+      "classification": "shared",
+      "summary": "Stop the current automated export attempt without disabling its schedule. Completed dates remain completed, and unresolved dates remain eligible for a later retry.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/Components/NotificationExportActivityBanner.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledExportCancellation.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileExportWorker.kt"
       ]
     },
     {

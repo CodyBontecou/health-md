@@ -10,6 +10,7 @@ enum ExportIntentRunner {
         case success(daysExported: Int, formatsPerDate: Int, dailyNoteUpdateCount: Int = 0)
         case partial(exported: Int, total: Int, formatsPerDate: Int, dailyNoteUpdateCount: Int = 0, dailyNoteSkipCount: Int = 0, reason: String)
         case pending(reason: String)
+        case cancelled(remainingDates: [Date]?)
         case noVault
         case destinationChanged
         case paywall
@@ -180,11 +181,25 @@ enum ExportIntentRunner {
         if let profile,
            let bindingID = profile.folderVaultID,
            let destination = destinationStore.vault(id: bindingID) {
-            VaultManager().adoptPersistedVault(
+            let refreshed = VaultManager().adoptPersistedVault(
                 bookmarkData: destination.bookmarkData,
                 standardizedPath: destination.standardizedPath,
-                displayName: destination.name
+                displayName: destination.name,
+                identity: destination.identity
             )
+            if let refreshed,
+               refreshed.standardizedPath != destination.standardizedPath
+                || refreshed.displayName != destination.name
+                || refreshed.bookmarkData != destination.bookmarkData
+                || refreshed.identity != destination.identity {
+                destinationStore.updateVault(
+                    id: destination.id,
+                    name: refreshed.displayName,
+                    standardizedPath: refreshed.standardizedPath,
+                    bookmarkData: refreshed.bookmarkData,
+                    identity: refreshed.identity
+                )
+            }
         }
         if let profile,
            let endpointID = profile.apiEndpointID,
@@ -270,6 +285,36 @@ enum ExportIntentRunner {
         }
 
         let sortedDates = dates.sorted()
+
+        if result.wasCancelled {
+            if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
+                dependencies.recordResult(
+                    result,
+                    source,
+                    sortedDates.first!,
+                    sortedDates.last!,
+                    dependencies.targetLabel(),
+                    profileNameForHistory
+                )
+            }
+            if result.successCount > 0 {
+                dependencies.recordExportUse()
+                dependencies.trackExportSucceeded(PricingAnalyticsExportMetadata(
+                    targetType: .localFile,
+                    formatCount: settings.exportFormats.count,
+                    metricCount: settings.metricSelection.totalEnabledCount,
+                    dateRangePreset: PricingAnalyticsDateRangePreset.custom,
+                    startDate: sortedDates.first!,
+                    endDate: sortedDates.last!
+                ))
+            }
+            return .cancelled(
+                remainingDates: result.remainingDates(
+                    from: dates,
+                    calendar: dependencies.calendar
+                )
+            )
+        }
 
         if result.successCount == 0,
            result.dailyNoteSkipCount > 0,
@@ -429,6 +474,8 @@ enum ExportIntentRunner {
             return "Exported \(exported) of \(total) days. \(reason)."
         case .pending:
             return "Pending. Unlock your phone and tap the Health.md notification to export."
+        case .cancelled:
+            return "Export cancelled."
         case .profileNotFound(let name):
             return "No export profile named \(name) was found. Open Health.md to review your profiles."
         case .noVault:

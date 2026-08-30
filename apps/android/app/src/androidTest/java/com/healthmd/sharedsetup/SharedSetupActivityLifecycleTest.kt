@@ -17,7 +17,9 @@ import androidx.test.filters.LargeTest
 import com.healthmd.R
 import com.healthmd.presentation.MainActivity
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Rule
 import org.junit.Test
@@ -70,6 +72,67 @@ class SharedSetupActivityLifecycleTest {
         } finally {
             scenario.close()
             runBlocking { store.discardShareArtifact(share.artifactID) }
+        }
+    }
+
+    @Test
+    fun warmActionViewRoutesExistingActivityDirectlyToReview() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context,
+            SharedSetupInstrumentationEntryPoint::class.java,
+        )
+        val settingsRepository = entryPoint.settingsRepository()
+        val coordinator = entryPoint.sharedSetupCoordinator()
+        val store = entryPoint.sharedSetupDocumentStore()
+        val originalOnboarding = runBlocking { settingsRepository.hasCompletedOnboarding.first() }
+        runBlocking { settingsRepository.setOnboardingCompleted(true) }
+        coordinator.finishExternalImport()
+
+        val share = store.shareIntent(runBlocking { entryPoint.sharedSetupService().exportBytes() })
+        val uri = requireNotNull(
+            IntentCompat.getParcelableExtra(share.intent, Intent.EXTRA_STREAM, Uri::class.java),
+        )
+        val scenario = ActivityScenario.launch<MainActivity>(
+            Intent(context, MainActivity::class.java),
+        )
+        var activityIdentity = 0
+        var originalActivityIntent: Intent? = null
+        try {
+            scenario.onActivity { activity ->
+                activityIdentity = System.identityHashCode(activity)
+                originalActivityIntent = Intent(activity.intent)
+                assertNotNull(activity.wearPhoneSyncScheduler)
+                activity.startActivity(
+                    Intent(Intent.ACTION_VIEW, uri, context, MainActivity::class.java)
+                        .addFlags(
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                        ),
+                )
+            }
+
+            val review = context.getString(R.string.shared_setup_review)
+            waitForText(review)
+            compose.onAllNodesWithText(context.getString(R.string.shared_setup_use))
+                .assertCountEquals(0)
+            scenario.onActivity { activity ->
+                assertEquals(activityIdentity, System.identityHashCode(activity))
+                // ActivityScenario identifies the launched instance by its current Intent. Restore
+                // the original after verifying onNewIntent so close() can observe DESTROYED.
+                activity.intent = requireNotNull(originalActivityIntent)
+            }
+        } finally {
+            originalActivityIntent?.let { original ->
+                runCatching { scenario.onActivity { activity -> activity.intent = original } }
+            }
+            coordinator.finishExternalImport()
+            scenario.close()
+            runBlocking {
+                store.discardShareArtifact(share.artifactID)
+                settingsRepository.setOnboardingCompleted(originalOnboarding)
+            }
         }
     }
 

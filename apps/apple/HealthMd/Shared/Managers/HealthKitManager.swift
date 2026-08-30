@@ -891,27 +891,37 @@ final class HealthKitManager: ObservableObject {
     /// Fetches HealthKit data for the requested date without presenting additional authorization UI.
     func fetchHealthData(
         for date: Date,
-        includeGranularData: Bool = false,
+        detailPolicy: AppleExportDetailPolicy,
         metricSelection: MetricSelectionState? = nil,
         timeZone: TimeZone? = nil
     ) async throws -> HealthData {
         try await Self.pinnedFetchTimeZone.withValue(timeZone) {
             try await HealthKitQueryExecutionController.withController {
                 #if DEBUG
+                let capturePhase: String
+                if detailPolicy.includesCanonicalArchive {
+                    capturePhase = detailPolicy.includesSelectedTimeSeries
+                        ? "daily-capture-lossless"
+                        : "daily-capture-archive"
+                } else {
+                    capturePhase = detailPolicy.includesSelectedTimeSeries
+                        ? "daily-capture-time-series"
+                        : "daily-capture-summary"
+                }
                 return try await ExportPerformanceInstrumentation.measureHealthKitCapture(
-                    phase: includeGranularData ? "daily-capture-granular" : "daily-capture-summary",
+                    phase: capturePhase,
                     itemCount: metricSelection?.enabledMetrics.count ?? HealthMetrics.all.count
                 ) {
                     try await fetchHealthDataCore(
                         for: date,
-                        includeGranularData: includeGranularData,
+                        detailPolicy: detailPolicy,
                         metricSelection: metricSelection
                     )
                 }
                 #else
                 return try await fetchHealthDataCore(
                     for: date,
-                    includeGranularData: includeGranularData,
+                    detailPolicy: detailPolicy,
                     metricSelection: metricSelection
                 )
                 #endif
@@ -919,9 +929,25 @@ final class HealthKitManager: ObservableObject {
         }
     }
 
+    /// Historical source-compatible entry point. The old Boolean always meant
+    /// both readable time-series and the canonical archive.
+    func fetchHealthData(
+        for date: Date,
+        includeGranularData: Bool = false,
+        metricSelection: MetricSelectionState? = nil,
+        timeZone: TimeZone? = nil
+    ) async throws -> HealthData {
+        try await fetchHealthData(
+            for: date,
+            detailPolicy: includeGranularData ? .lossless : .summary,
+            metricSelection: metricSelection,
+            timeZone: timeZone
+        )
+    }
+
     private func fetchHealthDataCore(
         for date: Date,
-        includeGranularData: Bool,
+        detailPolicy: AppleExportDetailPolicy,
         metricSelection: MetricSelectionState?
     ) async throws -> HealthData {
         // Capture the calendar timezone before any asynchronous fetch begins so
@@ -950,7 +976,10 @@ final class HealthKitManager: ObservableObject {
         // prevents one inaccessible/unselected type from blocking the requested
         // metric(s), and keeps preview/export aligned with the metric picker.
         async let sleepTask = fetchIfEnabled(fetchScope.sleep, fallback: SleepData()) {
-            try await fetchSleepData(for: date, includeGranularData: includeGranularData)
+            try await fetchSleepData(
+                for: date,
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries
+            )
         }
         async let activityTask = fetchIfEnabled(fetchScope.activity, fallback: ActivityData()) {
             try await fetchActivityData(for: date, fetchScope: fetchScope)
@@ -958,7 +987,7 @@ final class HealthKitManager: ObservableObject {
         async let heartTask = fetchIfEnabled(fetchScope.heart, fallback: HeartData()) {
             try await fetchHeartData(
                 for: date,
-                includeGranularData: includeGranularData,
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries,
                 fetchScope: fetchScope
             )
         }
@@ -966,7 +995,7 @@ final class HealthKitManager: ObservableObject {
         async let vitalsTask = fetchIfEnabled(shouldFetchVitals, fallback: VitalsFetchResult()) {
             try await fetchVitalsData(
                 for: date,
-                includeGranularData: includeGranularData,
+                includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries,
                 fetchScope: fetchScope
             )
         }
@@ -1119,7 +1148,7 @@ final class HealthKitManager: ObservableObject {
             try handleFetchFailure("workouts", error: error)
         }
 
-        if includeGranularData {
+        if detailPolicy.includesCanonicalArchive {
             let archiveResult = try await fetchHealthKitRecordArchive(
                 for: date,
                 timeContext: timeContext,
@@ -2519,7 +2548,10 @@ final class HealthKitManager: ObservableObject {
         return (start: start, end: end)
     }
 
-    private func fetchSleepData(for date: Date, includeGranularData: Bool = false) async throws -> SleepData {
+    private func fetchSleepData(
+        for date: Date,
+        includeDetailedTimeSeries: Bool = false
+    ) async throws -> SleepData {
         var sleepData = SleepData()
 
         // Get sleep samples for the noon-to-noon sleep day that begins on the selected date.
@@ -2601,7 +2633,7 @@ final class HealthKitManager: ObservableObject {
         // Durations above are de-duplicated by merged intervals; granular JSON
         // keeps matching HealthKit samples clipped to the exported sleep day so
         // boundary-spanning samples are not duplicated across adjacent exports.
-        if includeGranularData {
+        if includeDetailedTimeSeries {
             sleepData.stages = samples.compactMap { sample in
                 guard let stage = Self.sleepStageName(for: sample.value),
                       let interval = Self.clippedInterval(for: sample, to: sleepWindow) else {
@@ -2904,7 +2936,7 @@ final class HealthKitManager: ObservableObject {
 
     private func fetchHeartData(
         for date: Date,
-        includeGranularData: Bool = false,
+        includeDetailedTimeSeries: Bool = false,
         fetchScope: HealthDataFetchScope
     ) async throws -> HeartData {
         var heartData = HeartData()
@@ -2953,7 +2985,7 @@ final class HealthKitManager: ObservableObject {
             heartData.atrialFibrillationBurden = try await store.queryMostRecent(identifier: .atrialFibrillationBurden, predicate: samplePredicate)
         }
 
-        if includeGranularData && fetchScope.includesAnyMetric(
+        if includeDetailedTimeSeries && fetchScope.includesAnyMetric(
             "heart_rate_avg", "heart_rate_min", "heart_rate_max"
         ) {
             let hrSamples = try await store.queryQuantitySamples(
@@ -2965,7 +2997,7 @@ final class HealthKitManager: ObservableObject {
                 TimeSample(timestamp: $0.startDate, value: $0.value, metadata: $0.metadata)
             }
         }
-        if includeGranularData && fetchScope.includesMetric("hrv") {
+        if includeDetailedTimeSeries && fetchScope.includesMetric("hrv") {
             let hrvSamples = try await store.queryQuantitySamples(
                 identifier: .heartRateVariabilitySDNN, predicate: samplePredicate, ascending: true, limit: nil
             ).filter {
@@ -2983,7 +3015,7 @@ final class HealthKitManager: ObservableObject {
 
     private func fetchVitalsData(
         for date: Date,
-        includeGranularData: Bool = false,
+        includeDetailedTimeSeries: Bool = false,
         fetchScope: HealthDataFetchScope
     ) async throws -> VitalsFetchResult {
         var result = VitalsFetchResult()
@@ -3038,7 +3070,7 @@ final class HealthKitManager: ObservableObject {
             vitalsData.respiratoryRateMax = outcome.statistics.maximum
             if let failure = outcome.failure { throw failure }
 
-            if includeGranularData {
+            if includeDetailedTimeSeries {
                 let samples = try await store.queryQuantitySamples(
                     identifier: .respiratoryRate, predicate: samplePredicate, ascending: true, limit: nil
                 ).filter {
@@ -3062,7 +3094,7 @@ final class HealthKitManager: ObservableObject {
             vitalsData.bloodOxygenMax = outcome.statistics.maximum
             if let failure = outcome.failure { throw failure }
 
-            if includeGranularData {
+            if includeDetailedTimeSeries {
                 let samples = try await store.queryQuantitySamples(
                     identifier: .oxygenSaturation, predicate: samplePredicate, ascending: true, limit: nil
                 ).filter {
@@ -3116,7 +3148,7 @@ final class HealthKitManager: ObservableObject {
         // Preserve each actual systolic/diastolic pair when time-series export is enabled.
         // HealthKit correlations keep the two values together and avoid constructing
         // false pairs from independently queried quantity samples.
-        if includeGranularData &&
+        if includeDetailedTimeSeries &&
             (fetchScope.includesMetric("blood_pressure_systolic") ||
              fetchScope.includesMetric("blood_pressure_diastolic")) {
             do {
@@ -3157,7 +3189,7 @@ final class HealthKitManager: ObservableObject {
             vitalsData.bloodGlucoseMax = outcome.statistics.maximum
             if let failure = outcome.failure { throw failure }
 
-            if includeGranularData {
+            if includeDetailedTimeSeries {
                 let samples = try await store.queryQuantitySamples(
                     identifier: .bloodGlucose, predicate: samplePredicate, ascending: true, limit: nil
                 ).filter {

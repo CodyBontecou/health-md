@@ -108,8 +108,8 @@ class ProfileSchedulesViewModel @Inject constructor(
                         zoneId = java.time.ZoneId.systemDefault().id,
                     ),
                 )
-                // Duplicates activate the copy (iOS picker parity): the user edits the
-                // new profile immediately; its snapshot equals the captured current state.
+                // This creation flow activates the new profile so the user edits it immediately;
+                // the separate management Duplicate action intentionally remains non-active.
                 profileCoordinator.activate(profile.id)
             }.onFailure { Timber.e(it, "Could not create profile") }
         }
@@ -156,9 +156,9 @@ class ProfileSchedulesViewModel @Inject constructor(
             runCatching {
                 // Atomic order matters: the last-profile guard can refuse the profile
                 // deletion, and then its scheduled entry must survive too.
-                val deleted = profileRepository.delete(profileId)
+                val deleted = profileCoordinator.delete(profileId)
                 if (deleted || profileRepository.profileById(profileId) == null) {
-                    entryStore.delete(profileId)
+                    profileScheduler.removeEntry(profileId)
                 }
                 profileScheduler.reconcile()
             }.onFailure { Timber.e(it, "Could not delete profile") }

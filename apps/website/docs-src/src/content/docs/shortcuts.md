@@ -1,6 +1,6 @@
 ---
 title: "Shortcuts & App Intents"
-description: "Eight App Intents let you trigger exports, fetch summaries, and toggle the schedule from Siri, the Shortcuts app, Focus filters, automations, and any other AppIntent-aware host."
+description: "Seven App Intents let you trigger exports, fetch summaries, and toggle the schedule from Siri, the Shortcuts app, Focus filters, automations, and any other AppIntent-aware host."
 ---
 
 ## Available intents
@@ -12,12 +12,12 @@ description: "Eight App Intents let you trigger exports, fetch summaries, and to
 <div class="option"><strong>Get Health Summary for a Date</strong><p>Returns a structured snapshot — steps, active calories, sleep, heart rate — without writing anything to the vault. Use this in Shortcuts to feed values into other apps.</p></div>
 <div class="option"><strong>Get Last Export Status</strong><p>Returns the timestamp, success state, day count, and any failure reason from the most recent recorded export. A locked-device request remains pending until retried, so it is not returned as the current status while pending.</p></div>
 <div class="option"><strong>Turn Scheduled Export On or Off</strong><p>Boolean parameter. Use to suspend the schedule (e.g. on vacation Focus) and resume it later.</p></div>
-<div class="option"><strong>Export Health Data</strong><p>Generic export — uses the date range from the in-app Export modal's last state. Less common; the date-range variants are usually clearer. Optional <em>Profile</em> parameter.</p></div>
 </div>
 
 <a id="profiles"></a>
 ## Export profiles
-<p>All five export intents accept an optional <em>Profile</em> parameter. Leave it empty to run with your current in-app export settings; pass a saved profile name to run that profile's frozen configuration — its metric selection, formats, and destination — regardless of what the app currently shows.</p>
+<p>Create and manage saved export profiles in Health.md on iPhone or Android. Apple profile management is currently documented for iPhone only; iPad and macOS management availability is not claimed.</p>
+<p>All four export intents accept an optional <em>Profile</em> parameter. Once profiles exist, leaving it empty uses the active profile; in legacy zero-profile mode, it uses the current in-app export settings. Pass a saved profile name to run that profile's frozen configuration — its metric selection, formats, and destination — regardless of what the app currently shows.</p>
 <div class="callout">
 <strong>Heads-up for existing zero-parameter shortcuts.</strong>
 <p style="margin-top:6px;">Once you create your first export profile in the app, a shortcut with no <em>Profile</em> set exports using the <em>active</em> profile's saved settings instead of the app's live settings. If you rely on the old behavior, pin the shortcut to a specific profile (or keep zero profiles) to stay explicit. A profile name that no longer exists fails with a clear error instead of exporting the wrong thing.</p>

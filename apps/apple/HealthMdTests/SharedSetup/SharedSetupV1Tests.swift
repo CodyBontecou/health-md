@@ -21,6 +21,40 @@ final class SharedSetupV1Tests: XCTestCase {
         XCTAssertEqual(SharedSetupMapper.exactAppleSchedule(document)?.isEnabled, false)
     }
 
+    func testExportOmitsRangeSummaryFromCalendarOnlySharedSetupV1() throws {
+        let settings = AdvancedExportSettings(userDefaults: isolatedDefaults())
+        settings.generateRangeSummary = true
+
+        let document = try SharedSetupMapper.exportDocument(
+            settings: settings,
+            schedule: ExportSchedule(),
+            appVersion: "range-summary-test",
+            registry: fixtureRegistry()
+        )
+        let encoded = try SharedSetupCodec.encode(document)
+        let decoded = try SharedSetupCodec.decode(encoded)
+
+        XCTAssertTrue(settings.generateRangeSummary)
+        XCTAssertEqual(decoded.platformExtensions.apple?.export.rollups, [])
+        XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("weekly"))
+        XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("monthly"))
+        XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("yearly"))
+    }
+
+    func testSharedSetupV1RejectsSplitDetailPolicyInsteadOfDroppingIt() throws {
+        let settings = AdvancedExportSettings(userDefaults: isolatedDefaults())
+        settings.detailPolicy = .detailedTimeSeries
+
+        XCTAssertThrowsError(try SharedSetupMapper.exportDocument(
+            settings: settings,
+            schedule: ExportSchedule(),
+            appVersion: "split-detail-test",
+            registry: fixtureRegistry()
+        )) { error in
+            XCTAssertTrue(error.localizedDescription.contains("Shared Setup v1"))
+        }
+    }
+
     func testAndroidOriginFixtureMapsExactSharedFieldsAndLeavesDistinctMetricUnsupported() throws {
         let document = try SharedSetupCodec.decode(Data(contentsOf: fixtureURL("android-shared-setup-v1.json")))
         let preview = SharedSetupMapper.preview(document, registry: fixtureRegistry())
@@ -653,7 +687,7 @@ final class SharedSetupV1Tests: XCTestCase {
     private func fixtureRegistry() -> SharedSetupMetricRegistry {
         SharedSetupMetricRegistry(
             version: 1,
-            sha256: "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319",
+            sha256: "da1ef4f1dd2c9117e5922ae64207510c743c8b14624a792bab93f98494ccb070",
             semanticToApple: [
                 "active_energy": "active_energy",
                 "blood_pressure_systolic": "blood_pressure_systolic",

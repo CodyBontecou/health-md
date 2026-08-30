@@ -7,14 +7,18 @@ import com.healthmd.data.scheduler.ScheduledProfileScheduler
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.data.settings.ExportProfileCoordinator
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshotCodec
+import com.healthmd.domain.exportengine.ExportEnginePinPlanner
+import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSettingsSnapshotView
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.export.MainDispatcherRule
+import com.healthmd.testing.syntheticExportEnginePin
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -51,13 +55,14 @@ class ExportProfilesViewModelTest {
         id: String = "p1",
         name: String = "Daily",
         target: ExportTarget = ExportTarget.DEVICE_FOLDER,
+        apiEndpointUrl: String? = null,
         snapshotJson: String = this.snapshotJson,
     ) = ExportProfile(
         id = id,
         name = name,
         settingsSnapshotJson = snapshotJson,
         target = target,
-        apiEndpointUrl = null,
+        apiEndpointUrl = apiEndpointUrl,
         isMigrationDefault = false,
         createdAtEpochMillis = 0L,
         updatedAtEpochMillis = 0L,
@@ -76,9 +81,14 @@ class ExportProfilesViewModelTest {
     private fun canonicalSnapshot(
         settings: ExportSettings,
         target: ExportTarget = ExportTarget.DEVICE_FOLDER,
+        apiEndpointUrl: String? = null,
     ): String = AndroidExportSettingsSnapshotCodec.encodeCanonical(
         AndroidExportSettingsSnapshot.capture(
-            settings = settings.copy(exportTarget = target, scheduledExportTarget = target),
+            settings = settings.copy(
+                exportTarget = target,
+                scheduledExportTarget = target,
+                apiEndpointUrl = apiEndpointUrl ?: settings.apiEndpointUrl,
+            ),
             pin = null,
             zone = ZoneId.of("UTC"),
         ),
@@ -128,15 +138,34 @@ class ExportProfilesViewModelTest {
         }
         val entryStore = mockk<ScheduledProfileEntryStore> {
             every { this@mockk.entries } returns entries
-            coEvery { upsert(any()) } just Runs
+            coEvery { upsert(any()) } returns true
             coEvery { delete(any()) } just Runs
         }
         val scheduler = mockk<ScheduledProfileScheduler> {
             coEvery { reconcile(any()) } just Runs
+            coEvery { removeEntry(any()) } just Runs
         }
-        val snapshotFactory = mockk<ScheduledProfileSnapshotFactory> {
-            every { captureFromCurrent(any(), any(), any()) } returns snapshotJson
-        }
+        val snapshotFactory = ScheduledProfileSnapshotFactory(
+            mockk<ExportEnginePinPlanner> {
+                every { forScheduledExport(any(), any(), any()) } answers {
+                    val settings = firstArg<ExportSettings>()
+                    val target = secondArg<ExportTarget>()
+                    syntheticExportEnginePin(
+                        profile = if (target == ExportTarget.API_ENDPOINT) {
+                            AndroidExportProfile.android_frozen_v4
+                        } else {
+                            when (settings.formatCustomization.compatibilitySchemaProfile) {
+                                CompatibilitySchemaProfile.IOS_V4_FROZEN ->
+                                    AndroidExportProfile.android_frozen_v4
+                                CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5 ->
+                                    AndroidExportProfile.android_analytical_v5
+                            }
+                        },
+                        zoneId = thirdArg<ZoneId>().id,
+                    )
+                }
+            },
+        )
         val settingsRepository = mockk<SettingsRepository> {
             coEvery { getExportSettings() } returns currentSettings
             every { exportFolderUri } returns kotlinx.coroutines.flow.flowOf(currentFolderUri)
@@ -146,6 +175,7 @@ class ExportProfilesViewModelTest {
         }
         val profileCoordinator = mockk<ExportProfileCoordinator> {
             coEvery { activate(any()) } returns true
+            coEvery { delete(any()) } returns true
         }
         return Harness(
             profiles,
@@ -158,6 +188,34 @@ class ExportProfilesViewModelTest {
             settingsRepository,
             profileCoordinator,
         )
+    }
+
+    @Test
+    fun `protected detail attempt closes modal before publishing blocked notice`() {
+        val events = mutableListOf<String>()
+
+        attemptExportProfileDetailChange(
+            protectionEnabled = true,
+            closeDetail = { events += "close" },
+            onBlockedChange = { events += "blocked" },
+            action = { events += "mutate" },
+        )
+
+        assertThat(events).containsExactly("close", "blocked").inOrder()
+    }
+
+    @Test
+    fun `unprotected detail attempt performs mutation without closing`() {
+        val events = mutableListOf<String>()
+
+        attemptExportProfileDetailChange(
+            protectionEnabled = false,
+            closeDetail = { events += "close" },
+            onBlockedChange = { events += "blocked" },
+            action = { events += "mutate" },
+        )
+
+        assertThat(events).containsExactly("mutate")
     }
 
     @Test
@@ -203,6 +261,47 @@ class ExportProfilesViewModelTest {
 
         val row = viewModel.uiState.value.rows.single()
         assertThat(row.snapshot).isNull()
+    }
+
+    @Test
+    fun `mixed api endpoints keep every profile row observable`() = runTest {
+        val firstEndpoint = "https://first.invalid/health"
+        val secondEndpoint = "https://second.invalid/health"
+        val harness = harness(
+            initialProfiles = listOf(
+                profile(
+                    id = "api-a",
+                    target = ExportTarget.API_ENDPOINT,
+                    apiEndpointUrl = firstEndpoint,
+                    snapshotJson = canonicalSnapshot(
+                        settings = ExportSettings(),
+                        target = ExportTarget.API_ENDPOINT,
+                        apiEndpointUrl = firstEndpoint,
+                    ),
+                ),
+                profile(
+                    id = "api-b",
+                    target = ExportTarget.API_ENDPOINT,
+                    apiEndpointUrl = secondEndpoint,
+                    snapshotJson = canonicalSnapshot(
+                        settings = ExportSettings(),
+                        target = ExportTarget.API_ENDPOINT,
+                        apiEndpointUrl = secondEndpoint,
+                    ),
+                ),
+            ),
+            initialActiveId = "api-a",
+            currentSettings = ExportSettings(
+                scheduledExportTarget = ExportTarget.API_ENDPOINT,
+                apiEndpointUrl = firstEndpoint,
+            ),
+        )
+        val viewModel = harness.viewModel()
+        advanceUntilIdle()
+
+        assertThat(viewModel.uiState.value.rows.map { it.profile.id })
+            .containsExactly("api-a", "api-b")
+        assertThat(viewModel.uiState.value.rows.flatMap { it.overlappingProfileNames }).isEmpty()
     }
 
     @Test
@@ -279,7 +378,7 @@ class ExportProfilesViewModelTest {
         coVerify { harness.repository.add(any(), capture(jsonSlot), any(), any(), any(), any()) }
         val decoded = AndroidExportSettingsSnapshotCodec.decodeOrNull(jsonSlot.captured)
         assertThat(decoded).isNotNull()
-        assertThat(decoded!!.enginePin).isNull()
+        assertThat(decoded!!.enginePin).isNotNull()
         assertThat(decoded.filenameFormat).isEqualTo("morning-{date}")
         assertThat(decoded.scheduledExportTarget).isEqualTo(ExportTarget.DEVICE_FOLDER)
 
@@ -364,7 +463,7 @@ class ExportProfilesViewModelTest {
         }
         val decoded = AndroidExportSettingsSnapshotCodec.decodeOrNull(jsonSlot.captured)
         assertThat(decoded).isNotNull()
-        assertThat(decoded!!.enginePin).isNull()
+        assertThat(decoded!!.enginePin).isNotNull()
 
         // Editing the ACTIVE profile re-applies the new snapshot onto live settings.
         coVerify(exactly = 1) { harness.profileCoordinator.activate("p1") }
@@ -522,7 +621,7 @@ class ExportProfilesViewModelTest {
     @Test
     fun `delete removes entry and reconciles when repository deletes`() = runTest {
         val harness = harness()
-        coEvery { harness.repository.delete("p2") } returns true
+        coEvery { harness.profileCoordinator.delete("p2") } returns true
         coEvery { harness.repository.profileById("p2") } returns null
         val viewModel = harness.viewModel()
         advanceUntilIdle()
@@ -531,7 +630,9 @@ class ExportProfilesViewModelTest {
         viewModel.delete("p2")
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { harness.entryStore.delete("p2") }
+        coVerify(exactly = 1) { harness.profileCoordinator.delete("p2") }
+        coVerify(exactly = 1) { harness.scheduler.removeEntry("p2") }
+        coVerify(exactly = 0) { harness.entryStore.delete(any()) }
         coVerify(atLeast = 1) { harness.scheduler.reconcile() }
         assertThat(viewModel.uiState.value.pendingDeleteProfileId).isNull()
         assertThat(viewModel.uiState.value.detailProfileId).isNull()
@@ -540,7 +641,7 @@ class ExportProfilesViewModelTest {
     @Test
     fun `delete keeps entry when last-profile guard refuses`() = runTest {
         val harness = harness(initialProfiles = listOf(profile("p1")))
-        coEvery { harness.repository.delete("p1") } returns false
+        coEvery { harness.profileCoordinator.delete("p1") } returns false
         coEvery { harness.repository.profileById("p1") } returns profile("p1")
         val viewModel = harness.viewModel()
         advanceUntilIdle()
@@ -548,6 +649,7 @@ class ExportProfilesViewModelTest {
         viewModel.delete("p1")
         advanceUntilIdle()
 
+        coVerify(exactly = 0) { harness.scheduler.removeEntry(any()) }
         coVerify(exactly = 0) { harness.entryStore.delete(any()) }
     }
 

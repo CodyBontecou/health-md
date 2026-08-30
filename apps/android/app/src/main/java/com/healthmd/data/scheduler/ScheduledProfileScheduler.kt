@@ -86,6 +86,7 @@ class ScheduledProfileScheduler @Inject constructor(
     private val entryStore: ScheduledProfileEntryStore,
     private val profileRepository: ExportProfileRepository,
     private val legacySettings: com.healthmd.domain.repository.SettingsRepository,
+    private val legacyScheduler: ExportScheduler,
 ) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
     private val mutex = Mutex()
@@ -93,7 +94,7 @@ class ScheduledProfileScheduler @Inject constructor(
     /** Re-arms every enabled entry and applies migration/orphan rules. */
     suspend fun reconcile(forceRecalculate: Boolean = false) {
         mutex.withLock {
-            migrateLegacyScheduleIfNeeded()
+            val migrationToFinish = migrateLegacyScheduleIfNeeded()
             val profiles = profileRepository.getProfiles()
             val entries = entryStore.getEntries()
 
@@ -110,45 +111,76 @@ class ScheduledProfileScheduler @Inject constructor(
             // Cancel alarms, fallbacks, and in-flight export work for disabled or removed
             // entries: a disabled schedule must never leave a stale retry running.
             entryStore.getEntries().filter { it.profileId !in armedProfileIds }.forEach { entry ->
-                cancelEntryAlarm(entry.profileId)
-                workManager.cancelUniqueWork(exportWorkName(entry.profileId)).await()
-                workManager.cancelUniqueWork(fallbackName(entry.profileId)).await()
+                cancelEntryRuntimeLocked(entry.profileId)
             }
 
             for (entry in armed) {
                 val next = ScheduledProfileOccurrenceMath.nextOccurrence(entry, System.currentTimeMillis())
                 if (next == null) {
                     Timber.w("No next occurrence for profile schedule profileId=%s", entry.profileId)
-                    cancelEntryAlarm(entry.profileId)
+                    cancelEntryRuntimeLocked(entry.profileId)
                     continue
                 }
                 armEntry(entry, next, force = forceRecalculate)
+            }
+
+            migrationToFinish?.let { profileId ->
+                if (!entryStore.finishLegacyMigration(profileId)) {
+                    Timber.e("Legacy schedule migration marker could not be cleared profileId=%s", profileId)
+                }
             }
         }
     }
 
     /** Called by the alarm receiver: enqueue this entry's durable export work immediately. */
     suspend fun handleAlarm(profileId: String) {
-        Timber.i("Profile schedule alarm delivered profileId=%s", profileId)
-        val entry = entryStore.entry(profileId)
-        if (entry == null) {
-            Timber.w("Profile schedule alarm unknown entry profileId=%s", profileId)
-            return
+        mutex.withLock {
+            Timber.i("Profile schedule alarm delivered profileId=%s", profileId)
+            val entry = entryStore.entry(profileId)
+            if (entry == null) {
+                Timber.w("Profile schedule alarm unknown entry profileId=%s", profileId)
+                return@withLock
+            }
+            if (!entry.isEnabled) {
+                Timber.i("Profile schedule alarm entry disabled profileId=%s", profileId)
+                return@withLock
+            }
+            enqueueExportWork(entry, expedited = true)
         }
-        if (!entry.isEnabled) {
-            Timber.i("Profile schedule alarm entry disabled profileId=%s", profileId)
-            return
-        }
-        enqueueExportWork(entry, expedited = true)
     }
 
     /** Re-arms one entry after its worker finished; safe to call repeatedly. */
     suspend fun reconcileEntry(profileId: String) {
-        val entry = entryStore.entry(profileId) ?: return cancelEntryAlarm(profileId)
-        if (!entry.isEnabled) return cancelEntryAlarm(profileId)
-        val next = ScheduledProfileOccurrenceMath.nextOccurrence(entry, System.currentTimeMillis())
-        if (next == null) return cancelEntryAlarm(profileId)
-        armEntry(entry, next, force = false)
+        mutex.withLock {
+            val entry = entryStore.entry(profileId)
+            if (entry == null || !entry.isEnabled) {
+                cancelEntryRuntimeLocked(profileId)
+                return@withLock
+            }
+            val next = ScheduledProfileOccurrenceMath.nextOccurrence(entry, System.currentTimeMillis())
+            if (next == null) {
+                cancelEntryRuntimeLocked(profileId)
+                return@withLock
+            }
+            armEntry(entry, next, force = false)
+        }
+    }
+
+    /**
+     * Cancels every runtime artifact for a known profile id even when its persisted entry has
+     * already disappeared. Callers removing a profile use this explicit-id path before deleting
+     * the entry row, because a later global reconcile cannot enumerate deleted ids.
+     */
+    suspend fun cancelProfileRuntime(profileId: String) {
+        mutex.withLock { cancelEntryRuntimeLocked(profileId) }
+    }
+
+    /** Cancels runtime work and removes the persisted row without an alarm-admission gap. */
+    suspend fun removeEntry(profileId: String) {
+        mutex.withLock {
+            cancelEntryRuntimeLocked(profileId)
+            entryStore.delete(profileId)
+        }
     }
 
     private suspend fun armEntry(
@@ -156,7 +188,9 @@ class ScheduledProfileScheduler @Inject constructor(
         next: Instant,
         force: Boolean,
     ) {
-        val pendingIntent = entryAlarmPendingIntent(entry.profileId, create = true)
+        val pendingIntent = requireNotNull(
+            entryAlarmPendingIntent(entry.profileId, create = true),
+        )
         val triggerAtMillis = next.toEpochMilli()
         val exactSet = canScheduleExactAlarms() && runCatching {
             alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
@@ -182,6 +216,13 @@ class ScheduledProfileScheduler @Inject constructor(
             ExistingWorkPolicy.REPLACE,
             request,
         ).await()
+
+        // Entry writes live in DataStore and can race a reconciliation already inside this mutex.
+        // Re-read after durable enqueue so a concurrent disable cannot leave the just-created
+        // fallback or alarm behind even if its caller disappears before requesting reconciliation.
+        if (entryStore.entry(entry.profileId)?.isEnabled != true) {
+            cancelEntryRuntimeLocked(entry.profileId)
+        }
     }
 
     private suspend fun enqueueExportWork(entry: ScheduledProfileEntry, expedited: Boolean) {
@@ -206,7 +247,7 @@ class ScheduledProfileScheduler @Inject constructor(
         ).await()
     }
 
-    private fun entryAlarmPendingIntent(profileId: String, create: Boolean): PendingIntent {
+    private fun entryAlarmPendingIntent(profileId: String, create: Boolean): PendingIntent? {
         val intent = Intent(context, ScheduledProfileAlarmReceiver::class.java).apply {
             action = ACTION_PROFILE_SCHEDULE_ALARM
             putExtra(ScheduledProfileAlarmReceiver.EXTRA_PROFILE_ID, profileId)
@@ -225,6 +266,12 @@ class ScheduledProfileScheduler @Inject constructor(
         pendingIntent.cancel()
     }
 
+    private suspend fun cancelEntryRuntimeLocked(profileId: String) {
+        cancelEntryAlarm(profileId)
+        workManager.cancelUniqueWork(exportWorkName(profileId)).await()
+        workManager.cancelUniqueWork(fallbackName(profileId)).await()
+    }
+
     fun canScheduleExactAlarms(): Boolean =
         android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S ||
             alarmManager.canScheduleExactAlarms()
@@ -235,7 +282,13 @@ class ScheduledProfileScheduler @Inject constructor(
      * runtime path owns scheduling. iOS applies the same rule in
      * `ExportProfileCoordinator.bootstrapIfNeeded`.
      */
-    private suspend fun migrateLegacyScheduleIfNeeded() {
+    private suspend fun migrateLegacyScheduleIfNeeded(): String? {
+        // A marker and entry are committed in one DataStore edit before legacy state changes.
+        // Process death at any later point resumes this idempotent completion path.
+        entryStore.pendingLegacyMigrationProfileId()?.let { pendingProfileId ->
+            return pendingProfileId.takeIf { completeLegacyMigration(pendingProfileId) }
+        }
+
         val settings = legacySettings.getExportSettings()
         val zone = ZoneId.systemDefault()
         val entry = legacyMigrationEntry(
@@ -244,17 +297,39 @@ class ScheduledProfileScheduler @Inject constructor(
             defaultProfileId = profileRepository.getActiveProfile()?.id,
             zone = zone,
             today = LocalDate.now(zone),
-        ) ?: return
-        entryStore.upsert(entry)
+        ) ?: return null
+        val persisted = entryStore.beginLegacyMigration(entry) &&
+            entryStore.entry(entry.profileId) == entry &&
+            entryStore.pendingLegacyMigrationProfileId() == entry.profileId
+        if (!persisted) {
+            Timber.e(
+                "Profile schedule migration did not persist; keeping legacy schedule enabled profileId=%s",
+                entry.profileId,
+            )
+            return null
+        }
+        return entry.profileId.takeIf { completeLegacyMigration(entry.profileId) }
+    }
 
-        // The migration is only complete once the legacy schedule cannot also fire:
-        // disable the persisted setting and cancel any already-armed legacy work
-        // (alarm + WorkManager). Without this, both runtimes exported independently
-        // after migration — the legacy path via live settings instead of the profile's
-        // destinations.
-        legacySettings.updateExportSettings(settings.copy(scheduleEnabled = false))
-        runCatching { workManager.cancelUniqueWork(ExportWorker.WORK_NAME).await() }
-        Timber.i("Migrated legacy schedule into Default profile entry and disabled the legacy schedule")
+    private suspend fun completeLegacyMigration(profileId: String): Boolean {
+        if (entryStore.entry(profileId) == null) {
+            Timber.e(
+                "Profile schedule migration marker has no entry; keeping legacy schedule profileId=%s",
+                profileId,
+            )
+            return false
+        }
+        val settings = legacySettings.getExportSettings()
+        if (settings.scheduleEnabled) {
+            legacySettings.updateExportSettings(settings.copy(scheduleEnabled = false))
+        }
+        val cleanup = runCatching { legacyScheduler.cancel() }
+        if (cleanup.isFailure) {
+            Timber.e(cleanup.exceptionOrNull(), "Legacy schedule cleanup failed after profile migration")
+            return false
+        }
+        Timber.i("Prepared migrated Default profile schedule; marker clears after runtime arming")
+        return true
     }
 
     companion object {

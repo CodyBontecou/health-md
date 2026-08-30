@@ -70,8 +70,9 @@ class ScheduleViewModel @Inject constructor(
                     )
                 }
                 if (settings.scheduleEnabled && !purchased) {
-                    val current = settingsRepository.getExportSettings()
-                    settingsRepository.updateExportSettings(current.copy(scheduleEnabled = false))
+                    settingsRepository.updateExportSettingsAtomically { current ->
+                        current.copy(scheduleEnabled = false)
+                    }
                     exportScheduler.cancel()
                     _uiState.update { it.copy(requiresUpgrade = true) }
                 }
@@ -190,13 +191,12 @@ class ScheduleViewModel @Inject constructor(
                         configurationError = null,
                     )
                 }
-                val current = settingsRepository.getExportSettings()
-                settingsRepository.updateExportSettings(
+                settingsRepository.updateExportSettingsAtomically { current ->
                     current.copy(
                         apiEndpointUrl = normalized,
                         scheduledExportTarget = ExportTarget.API_ENDPOINT,
                     )
-                )
+                }
                 refreshAPIAuthorizationStatus()
                 persistAndRescheduleIfNeeded()
             } catch (error: IllegalArgumentException) {
@@ -285,8 +285,7 @@ class ScheduleViewModel @Inject constructor(
         updateNextExportDescription()
         viewModelScope.launch {
             val state = _uiState.value
-            val current = settingsRepository.getExportSettings()
-            settingsRepository.updateExportSettings(
+            settingsRepository.updateExportSettingsAtomically { current ->
                 current.copy(
                     scheduleEnabled = state.isEnabled,
                     scheduleCadenceValue = state.cadenceValue,
@@ -297,7 +296,7 @@ class ScheduleViewModel @Inject constructor(
                     scheduleDateWindow = state.dateWindow,
                     scheduledExportTarget = state.selectedTarget,
                 )
-            )
+            }
 
             if (state.isEnabled) {
                 exportScheduler.reconcile()

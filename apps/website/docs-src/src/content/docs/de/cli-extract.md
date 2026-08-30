@@ -5,6 +5,8 @@ description: "Verwenden Sie healthmd extract, um ausgewählte Apple Health-Metri
 
 `healthmd extract` ist der Quelldatenbefehl für Skripte und Agenten. Er lässt das iPhone nur die ausgewählten Metriken und Details erfassen, validiert die dauerhafte Übertragung, entfernt den Transport-Envelope und gibt kanonische `healthmd.health_data`-v7-Dokumente oder eindeutig gekennzeichnete Projektionen aus.
 
+Die kanonische Extraktion ist eine iPhone-Funktion, die vom Backend der Mac-App und dem direkten iOS-v1-Protokoll getragen wird. Direkte Android-Quellen geben stattdessen anbietereigene Health Connect Snapshots über den [Rohexport](/de/docs/cli-direct/) zurück.
+
 Verwenden Sie die Extraktion, wenn Sie Health.md-Daten in der Struktur der Quelle benötigen. Verwenden Sie [typisierte Abfragen](/de/docs/agent-queries/) für Sitzungen, Vergleiche, Trainingszuordnung, Abdeckung oder Nachweispakete.
 
 ## Grundstruktur
@@ -227,7 +229,7 @@ healthmd --backend direct extract \
   --category Sleep --last 7 --output sleep.json
 ```
 
-Beide Wege verwenden dasselbe öffentliche Tagesschema und strikte Validierung. Übertragung, Kopplung, Speicher und Auftragsdatensätze unterscheiden sich.
+Beide Wege verwenden dasselbe öffentliche Tagesschema und strikte Validierung. Übertragung, Kopplung, Speicher und Auftragsdatensätze unterscheiden sich. Beide Wege erfordern eine iPhone-Quelle; das direkte Android-Backend implementiert keine kanonische Extraktion.
 
 ## Gesamter Verlauf
 

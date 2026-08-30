@@ -10,6 +10,18 @@ Health.md exporteert een lokale gegevensverzameling met een schemaversie naar Ma
 <p style="margin-top:6px;">Deze pagina volgt het exportschema en gegevenswoordenboek van Health.md: activiteit, slaap, hart, vitale functies, lichaam, voeding, mindfulness, medicatie, work-outs, reproductieve gezondheid, symptomen, gehoor en meetwaarden voor leefstijl en omgeving.</p>
 </div>
 
+## Eenheden per visualisatie overschrijven
+
+Voeg `units` toe aan een afzonderlijk `health-viz`-blok wanneer een grafiek een ander weergavesysteem moet gebruiken dan de algemene pluginvoorkeur:
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+Gebruik `auto` om het eenhedensysteem van de export te volgen, `metric` om kilometers, kilogrammen, meters en Celsius weer te geven, of `imperial` om mijlen, ponden, feet en Fahrenheit weer te geven. De overschrijving geldt alleen voor deze visualisatie en heeft voorrang op de algemene instelling Units. Alleen de weergegeven waarden veranderen; geëxporteerde Health.md-bestanden blijven ongewijzigd. Niet-converteerbare metrieken zoals stappen, BPM, percentages en calorieën blijven hetzelfde.
+
 ## Huidige visualisatiedekking
 
 <div class="reference-stats">

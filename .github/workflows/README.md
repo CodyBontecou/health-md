@@ -103,12 +103,15 @@ Required repository variable:
 `healthmd-cli/v<version>` tags run `.github/workflows/cli-release.yml`. The workflow rebuilds and
 qualifies the exact tag SHA, then pauses at the protected `cli-signing` environment before it can
 use external signing identities. It Developer ID-signs both macOS executables, notarizes and staples
-per-architecture DMGs, Authenticode-signs both Windows executables and the generated PowerShell
-installer, tests signed Keychain upgrade continuity, publishes the committed qualified signer
+per-architecture DMGs, tests signed Keychain upgrade continuity, publishes the committed signer
 ledger, regenerates all post-signing checksums, and keyless-signs `sha256.sum` with the workflow's
-GitHub OIDC identity. The tag preflight fails while `apps/cli/release-identities.json` has no
-qualified Windows publisher, and native jobs require an exact match with the protected variable. Native runners verify every
-extracted signature. The remote draft assets are then compared byte-for-byte with the qualified
+GitHub OIDC identity. Windows Authenticode is ledger-gated: while
+`apps/cli/release-identities.json` records `pending_external_certificate_provisioning`, the Windows
+signing jobs skip and the archive/installer ship unsigned with Sigstore-checksum integrity only;
+when the ledger records a `qualified` publisher, both Windows executables and the PowerShell
+installer are Authenticode-signed and native jobs require an exact match with the protected
+variable. Native runners verify every extracted macOS signature (and every Windows signature once
+qualified). The remote draft assets are then compared byte-for-byte with the qualified
 workflow artifacts before the separate protected `cli-release` environment can publish them.
 
 The repository variables, `cli-signing` environment secrets, rollback/key-compromise/crates-yank/

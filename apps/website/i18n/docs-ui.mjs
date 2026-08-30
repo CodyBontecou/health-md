@@ -23,6 +23,7 @@ export const docsSidebar = Object.freeze([
       item(text('First iPhone export', 'Primera exportación desde iPhone', 'Erster iPhone-Export', 'Première exportation depuis l’iPhone', 'Primeira exportação no iPhone', 'Prima esportazione da iPhone', 'Eerste iPhone-export', '最初のiPhoneエクスポート', '첫 iPhone 내보내기', '首次从 iPhone 导出'), 'iphone-first-export'),
       item(text('First Android export', 'Primera exportación desde Android', 'Erster Android-Export', 'Première exportation depuis Android', 'Primeira exportação no Android', 'Prima esportazione da Android', 'Eerste Android-export', '初めてのAndroidエクスポート', '첫 Android 내보내기', '首次从 Android 导出'), 'android'),
       item(text('Connect an agent in 10 minutes', 'Conecta un agente en 10 minutos', 'Agenten in 10 Minuten verbinden', 'Connecter un agent en 10 minutes', 'Conecte um agente em 10 minutos', 'Collega un agente in 10 minuti', 'Koppel een agent in 10 minuten', '10分でエージェントを接続', '10분 안에 에이전트 연결', '10 分钟连接智能体'), 'guides/connect-agent'),
+      item(text('Feature overview by platform', 'Funciones por plataforma', 'Funktionen nach Plattform', 'Fonctionnalités par plateforme', 'Recursos por plataforma', 'Funzioni per piattaforma', 'Functies per platform', 'プラットフォーム別の機能', '플랫폼별 기능', '各平台功能概览'), 'guides/platform-features'),
       item(text('Agent configuration reference', 'Referencia de configuración del agente', 'Referenz zur Agentenkonfiguration', 'Référence de configuration de l’agent', 'Referência de configuração do agente', 'Riferimento per la configurazione dell’agente', 'Naslag voor agentconfiguratie', 'エージェント設定リファレンス', '에이전트 구성 참고 자료', '智能体配置参考'), 'configuration'),
       item(text('Mac companion', 'App para Mac', 'Mac-Begleitapp', 'App compagnon pour Mac', 'App complementar para Mac', 'App per Mac', 'macOS-app', 'Macアプリ', 'Mac 앱', 'Mac 配套应用'), 'macos'),
     ]),
@@ -35,7 +36,7 @@ export const docsSidebar = Object.freeze([
       item(text('Bundled & portable CLI', 'CLI incluida y portátil', 'Mitgelieferte & portable CLI', 'CLI intégrée et portable', 'CLI incluída e portátil', 'CLI integrata e portatile', 'Gebundelde en platformonafhankelijke CLI', '同梱CLIとポータブルCLI', '번들 및 이식 가능한 CLI', '内置与可移植 CLI'), 'cli'),
       item(text('Query cookbook', 'Recetas de consultas', 'Abfragebeispiele', 'Recettes de requêtes', 'Guia de consultas', 'Ricette per le query', 'Queryrecepten', '型付きクエリ例', '쿼리 활용법', '查询指南'), 'agent-queries'),
       item(text('Agent architecture', 'Arquitectura de agentes', 'Agentenarchitektur', 'Architecture des agents', 'Arquitetura de agentes', 'Architettura degli agenti', 'Agentarchitectuur', 'エージェントアーキテクチャ', '에이전트 아키텍처', '智能体架构'), 'agents'),
-      item(text('Direct iPhone CLI · Preview', 'CLI directa para iPhone · Vista previa', 'Direkte iPhone-CLI · Vorschau', 'CLI iPhone directe · Aperçu', 'CLI direta para iPhone · Prévia', 'CLI diretta per iPhone · Anteprima', 'CLI rechtstreeks naar de iPhone · Preview', 'iPhone直接接続CLI・プレビュー', '직접 iPhone CLI · 미리보기', 'iPhone 直连 CLI · 预览'), 'cli-direct'),
+      item(text('Direct phone CLI · Preview', 'CLI directa para iPhone · Vista previa', 'Direkte iPhone-CLI · Vorschau', 'CLI iPhone directe · Aperçu', 'CLI direta para iPhone · Prévia', 'CLI diretta per iPhone · Anteprima', 'CLI rechtstreeks naar de iPhone · Preview', 'iPhone直接接続CLI・プレビュー', '직접 iPhone CLI · 미리보기', 'iPhone 直连 CLI · 预览'), 'cli-direct'),
       item(text('Canonical extraction', 'Extracción canónica', 'Kanonische Extraktion', 'Extraction canonique', 'Extração canônica', 'Estrazione canonica', 'Canonieke extractie', '正規抽出', '정규 추출', '规范提取'), 'cli-extract'),
       item(text('Durable jobs', 'Tareas persistentes', 'Persistente Aufträge', 'Tâches persistantes', 'Tarefas persistentes', 'Attività persistenti', 'Persistente taken', '永続ジョブ', '영속 작업', '持久作业'), 'cli-jobs'),
     ]),
@@ -54,6 +55,7 @@ export const docsSidebar = Object.freeze([
       item(text('Shortcuts & App Intents', 'Atajos y App Intents', 'Kurzbefehle & App Intents', 'Raccourcis et App Intents', 'Atalhos e App Intents', 'Comandi rapidi e App Intents', 'Opdrachten en App Intents', 'ショートカットとApp Intents', '단축어 및 App Intents', '快捷指令与 App Intents'), 'shortcuts'),
       item(text('Individual entries', 'Entradas individuales', 'Individuelle Einträge', 'Entrées individuelles', 'Registros individuais', 'Voci singole', 'Individuele vermeldingen', '個別エントリ', '개별 항목', '单条记录'), 'individual-tracking'),
       item(text('Daily notes', 'Notas diarias', 'Tägliche Notizen', 'Notes quotidiennes', 'Notas diárias', 'Note giornaliere', 'Dagelijkse notities', 'デイリーノート', '일일 노트', '每日笔记'), 'daily-notes'),
+      item(text('Raw API snapshots', 'Instantáneas de API sin procesar', 'Rohe API-Snapshots', 'Instantanés d’API brutes', 'Snapshots de API brutas', 'Snapshot API non elaborati', 'Ruwe API-snapshots', 'Raw APIスナップショット', '원시 API 스냅샷', '原始 API 快照'), 'guides/raw-snapshots'),
     ]),
   }),
   Object.freeze({
@@ -88,6 +90,7 @@ export const docsSidebar = Object.freeze([
     items: Object.freeze([
       item(text('Visualization catalog', 'Catálogo de visualizaciones', 'Visualisierungskatalog', 'Catalogue de visualisations', 'Catálogo de visualizações', 'Catalogo delle visualizzazioni', 'Visualisatiecatalogus', '可視化カタログ', '시각화 카탈로그', '可视化目录'), 'visualizations-roadmap'),
       item(text('Unlock & plans', 'Desbloqueo y planes', 'Freischaltung & Pläne', 'Déverrouillage et offres', 'Desbloqueio e planos', 'Sblocco e piani', 'Ontgrendelen en opties', 'ロック解除とプラン', '잠금 해제 및 요금제', '解锁与方案'), 'paywall'),
+      item(text('Wear OS companion', 'Complemento de Wear OS', 'Wear-OS-Begleiter', 'Compagnon Wear OS', 'Complemento Wear OS', 'Compagno Wear OS', 'Wear OS-compagnon', 'Wear OSコンパニオン', 'Wear OS 컴패니언', 'Wear OS 配套应用'), 'guides/wear-os'),
     ]),
   }),
 ]);

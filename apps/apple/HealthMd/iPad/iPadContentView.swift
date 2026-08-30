@@ -226,7 +226,7 @@ struct iPadContentView: View {
                     }
                     if TestMode.useHealthKitExportPreviewFixtures {
                         advancedSettings.exportFormats = [.markdown]
-                        advancedSettings.includeGranularData = true
+                        advancedSettings.detailPolicy = .lossless
                         advancedSettings.metricSelection.selectAll()
                         advancedSettings.generateWeeklyRollups = true
                         advancedSettings.generateMonthlyRollups = true
@@ -476,7 +476,15 @@ struct iPadContentView: View {
             let dateRange = effectiveExportDateRange()
             startDate = dateRange.startDate
             endDate = dateRange.endDate
-            let dates = ExportOrchestrator.dateRange(from: dateRange.startDate, to: dateRange.endDate)
+            let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+            advancedSettings.exportTimeZoneOverride = frozenTimeZone
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = frozenTimeZone
+            let dates = ExportOrchestrator.dateRange(
+                from: dateRange.startDate,
+                to: dateRange.endDate,
+                calendar: calendar
+            )
 
             let result = await ExportOrchestrator.exportDates(
                 dates,

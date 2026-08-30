@@ -857,6 +857,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
                 .init(
                     startDate: date,
                     endDate: date,
+                    requestedDateIdentifiers: ["2027-01-15"],
                     requestedBy: .cli,
                     settingsPolicy: .requestedDatesOnly,
                     responseMode: .rawJSON,
@@ -900,6 +901,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
                 .init(
                     startDate: date,
                     endDate: date,
+                    requestedDateIdentifiers: ["2027-01-15"],
                     requestedBy: .cli,
                     settingsPolicy: .requestedDatesOnly,
                     responseMode: .rawJSON,
@@ -990,6 +992,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
                 .init(
                     startDate: start,
                     endDate: end,
+                    requestedDateIdentifiers: ["2027-01-15", "2027-01-16"],
                     requestedBy: .cli,
                     settingsPolicy: .requestedDatesOnly,
                     responseMode: .rawJSON,
@@ -1124,6 +1127,7 @@ final class CLIRawControlSafetyTests: XCTestCase {
             .init(
                 startDate: date,
                 endDate: date,
+                requestedDateIdentifiers: ["2027-01-15"],
                 requestedBy: .cli,
                 settingsPolicy: .requestedDatesOnly,
                 responseMode: .rawJSON,

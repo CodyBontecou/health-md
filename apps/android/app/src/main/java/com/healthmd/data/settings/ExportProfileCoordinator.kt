@@ -3,6 +3,7 @@ package com.healthmd.data.settings
 import androidx.annotation.VisibleForTesting
 import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
 import com.healthmd.domain.model.ExportProfile
+import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.repository.SettingsRepository
 import javax.inject.Inject
@@ -10,11 +11,13 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -53,18 +56,24 @@ class ExportProfileCoordinator @Inject constructor(
 
     private val mutex = Mutex()
     private val started = AtomicBoolean(false)
+    private val editFlushEnabled = AtomicBoolean(true)
 
     /** Idempotent app bootstrap; call once the main UI process is running. */
     fun ensureStarted() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            runCatching { bootstrapAndApply() }
+            val ready = runCatching { bootstrapAndApply() }
                 .onFailure { Timber.e(it, "Export profile bootstrap failed") }
-            observeEdits()
+                .getOrDefault(false)
+            if (ready) {
+                observeEdits()
+            } else {
+                Timber.e("Export profile editing observer disabled because bootstrap did not validate")
+            }
         }
     }
 
-    private suspend fun bootstrapAndApply() {
+    private suspend fun bootstrapAndApply(): Boolean = mutex.withLock {
         val current = settingsRepository.getExportSettings()
         if (profileRepository.getProfiles().isEmpty()) {
             val target = current.scheduledExportTarget
@@ -75,7 +84,7 @@ class ExportProfileCoordinator @Inject constructor(
                 apiEndpointUrl = endpointUrl,
             )
         }
-        val active = profileRepository.getActiveProfile() ?: return
+        val active = profileRepository.getActiveProfile() ?: return@withLock false
         applyProfile(active, settingsRepository.getExportSettings())
     }
 
@@ -92,10 +101,13 @@ class ExportProfileCoordinator @Inject constructor(
         if (active?.id == profile.id) {
             // Re-applying the already-active profile (editor save, folder rebind): the frozen
             // snapshot refreshes live settings and the binding follows so manual exports
-            // immediately write to the profile's destination.
-            val applied = applyProfile(profile, settingsRepository.getExportSettings())
-            if (applied) adoptFolderBinding(profile)
-            return applied
+            // immediately write to the profile's destination. Once persistence begins, finish
+            // even if the initiating screen leaves.
+            return withContext(NonCancellable) {
+                val applied = applyProfile(profile, settingsRepository.getExportSettings())
+                if (applied) adoptFolderBinding(profile)
+                applied
+            }
         }
 
         // Stage the restore before any persisted change: an invalid snapshot must not move
@@ -105,10 +117,74 @@ class ExportProfileCoordinator @Inject constructor(
             ?: return false
 
         flushEditsLocked()
-        if (!profileRepository.activate(profileId)) return false
-        settingsRepository.updateExportSettings(staged)
-        adoptFolderBinding(profile)
-        return true
+        val outgoingSettings = settingsRepository.getExportSettings()
+        return withContext(NonCancellable) {
+            // Persist the incoming projection before moving the pointer. The mutex hides this
+            // temporary pairing from the edit observer; process death is repaired by bootstrap.
+            settingsRepository.updateExportSettings(staged)
+            val activated = try {
+                profileRepository.activate(profileId)
+            } catch (error: Throwable) {
+                rollbackLiveSettings(outgoingSettings, error)
+                throw error
+            }
+            if (!activated) {
+                if (!rollbackLiveSettings(outgoingSettings)) {
+                    error("Profile activation failed and live settings could not be restored.")
+                }
+                return@withContext false
+            }
+            adoptFolderBinding(profile)
+            true
+        }
+    }
+
+    /**
+     * Deletes a profile through the same editing-authority transaction as activation. When the
+     * active profile is removed, outgoing edits are flushed while it still owns the pointer, the
+     * deterministic successor is validated before destructive work, and the successor is applied
+     * before the mutex is released. A pending debounced flush can therefore never freeze outgoing
+     * live settings into the successor. Invalid successors and the last-profile guard fail closed.
+     */
+    suspend fun delete(profileId: String): Boolean = mutex.withLock {
+        val profiles = profileRepository.getProfiles()
+        val deleting = profiles.firstOrNull { it.id == profileId } ?: return false
+        if (!ExportProfileRules.canDelete(profiles)) return false
+
+        val active = profileRepository.getActiveProfile()
+        if (active?.id != deleting.id) {
+            return profileRepository.delete(profileId)
+        }
+
+        flushEditsLocked()
+        val outgoingSettings = settingsRepository.getExportSettings()
+        val successor = profileRepository.getProfiles().firstOrNull { it.id != profileId }
+            ?: return false
+        val staged = snapshotFactory.applyForActivation(successor, outgoingSettings)
+            ?: return false
+
+        // Once the staged projection begins writing, complete or roll back the authority move even
+        // if the initiating screen leaves and cancels its viewModelScope.
+        withContext(NonCancellable) {
+            // Persist the staged live projection before moving the active pointer. The coordinator
+            // mutex keeps the edit observer from seeing this temporary pairing, while process death
+            // is self-repairing: bootstrap reapplies whichever profile pointer actually committed.
+            settingsRepository.updateExportSettings(staged)
+            val deleted = try {
+                profileRepository.delete(profileId)
+            } catch (error: Throwable) {
+                rollbackLiveSettings(outgoingSettings, error)
+                throw error
+            }
+            if (!deleted) {
+                if (!rollbackLiveSettings(outgoingSettings)) {
+                    error("Profile deletion failed and live settings could not be restored.")
+                }
+                return@withContext false
+            }
+            adoptFolderBinding(successor)
+            true
+        }
     }
 
     /** Adopts the profile's bound folder as the live device folder (nil binding keeps the
@@ -138,6 +214,7 @@ class ExportProfileCoordinator @Inject constructor(
     suspend fun flushEdits(): Unit = mutex.withLock { flushEditsLocked() }
 
     private suspend fun flushEditsLocked() {
+        if (!editFlushEnabled.get()) return
         val active = profileRepository.getActiveProfile() ?: return
         val current = settingsRepository.getExportSettings()
         val target = current.scheduledExportTarget
@@ -157,6 +234,21 @@ class ExportProfileCoordinator @Inject constructor(
             target = target,
             apiEndpointUrl = endpointUrl,
         )
+    }
+
+    private suspend fun rollbackLiveSettings(
+        settings: ExportSettings,
+        primaryError: Throwable? = null,
+    ): Boolean = try {
+        settingsRepository.updateExportSettings(settings)
+        true
+    } catch (rollbackError: Throwable) {
+        // Never let the observer freeze a mismatched live projection into the still-active row.
+        // A process restart will bootstrap from the authoritative profile pointer.
+        editFlushEnabled.set(false)
+        primaryError?.addSuppressed(rollbackError)
+        Timber.e(rollbackError, "Profile authority rollback failed; disabling edit flush")
+        false
     }
 
     private suspend fun applyProfile(profile: ExportProfile, current: ExportSettings): Boolean {

@@ -332,10 +332,19 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         )))
     }
 
-    func recordRecoveredCompletion(_ payload: MacExportResultPayload) {
+    @discardableResult
+    func recordRecoveredMacRequestCompletion(_ payload: MacExportResultPayload) -> Bool {
+        guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
+              journal.origin == .macInitiated else { return false }
+        return recordRecoveredCompletion(payload)
+    }
+
+    @discardableResult
+    func recordRecoveredCompletion(_ payload: MacExportResultPayload) -> Bool {
+        guard payload.hasConsistentFileAccounting else { return false }
         guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
-              (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return }
+              (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return false }
         let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
         ExportOrchestrator.recordResult(
             result,
@@ -343,7 +352,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             dateRangeStart: journal.exportManifest.dateRangeStart,
             dateRangeEnd: journal.exportManifest.dateRangeEnd,
             targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.isTotalFilesWrittenAuthoritative
+            fileCount: payload.hasAuthoritativeFileCount
                 ? payload.totalFilesWritten : nil,
             appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
         )
@@ -367,6 +376,24 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             )
         }
         refreshPublishedSnapshot()
+        return true
+    }
+
+    @discardableResult
+    func rejectRecoveredMacRequestCompletion(jobID: UUID, message: String) -> Bool {
+        guard let journal = try? store.load(jobID: jobID, allowExpired: true),
+              journal.origin == .macInitiated,
+              journal.state == .completed,
+              (try? store.markCompletionRecorded(jobID: jobID)) == true else { return false }
+        if journal.macRequest?.requestedBy == .cli {
+            cliActivityTracker.finish(
+                jobID: jobID,
+                phase: .failed,
+                message: message
+            )
+        }
+        refreshPublishedSnapshot()
+        return true
     }
 
     func markCompletionRecorded(jobID: UUID) {
@@ -615,13 +642,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             let isRequested = requestedDays.contains(sourceCalendar.startOfDay(for: date))
             switch journal.exportManifest.mode {
             case .writeFiles:
-                let includeGranular = metadata.map {
-                    MacExportStreamingJobBuilder.shouldIncludeGranularData(
+                let detailPolicy = metadata.map {
+                    MacExportStreamingJobBuilder.detailPolicy(
                         for: date,
                         metadata: $0,
                         settings: settings
                     )
-                } ?? settings.includeGranularData
+                } ?? settings.effectiveDetailPolicy
                 let externalFetcher: HealthKitDailyCapture.ExternalDailyRecordFetcher?
                 if isRequested,
                    settings.writesExternalProviderSidecars,
@@ -638,16 +665,16 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 }
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: includeGranular,
+                    detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: externalFetcher != nil,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, selection in
+                    fetchHealthData: { date, detailPolicy, selection in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: selection,
                             timeZone: sourceTimeZone
                         )
@@ -688,17 +715,17 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 }
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: settings.includeGranularData,
+                    detailPolicy: settings.effectiveDetailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranular,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: externalFetcher != nil,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, selection in
+                    fetchHealthData: { date, detailPolicy, selection in
                         if includesAppleHealth {
                             return try await healthKitManager.fetchHealthData(
                                 for: date,
-                                includeGranularData: includeGranularData,
+                                detailPolicy: detailPolicy,
                                 metricSelection: selection,
                                 timeZone: sourceTimeZone
                             )
@@ -724,19 +751,20 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 )
 
             case .strictRaw:
-                let expectsLosslessArchive = settings.includeGranularData
+                let detailPolicy = settings.effectiveDetailPolicy
+                let expectsLosslessArchive = detailPolicy.includesCanonicalArchive
                 let outcome = try await HealthKitDailyCapture.capture(
                     date: date,
-                    includeGranularData: expectsLosslessArchive,
+                    detailPolicy: detailPolicy,
                     metricSelection: settings.metricSelection,
                     transform: .sanitizeGranularAndFilter,
                     emptyRecordPolicy: .retain,
                     fetchExternalRecords: false,
                     failurePolicy: .connectedMac,
-                    fetchHealthData: { date, includeGranularData, selection in
+                    fetchHealthData: { date, detailPolicy, selection in
                         try await healthKitManager.fetchHealthData(
                             for: date,
-                            includeGranularData: includeGranularData,
+                            detailPolicy: detailPolicy,
                             metricSelection: selection,
                             timeZone: sourceTimeZone
                         )

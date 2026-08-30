@@ -9,6 +9,8 @@ import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import java.io.File
@@ -30,6 +32,49 @@ class SharedSetupServiceTest {
         assertThat(result.isSuccess).isTrue()
         coVerify(exactly = 0) { repository.updateExportSettings(any()) }
         coVerify(exactly = 0) { repository.applySharedSetupTransaction(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `apply transaction completes after caller cancellation`() = runTest {
+        var stored = ExportSettings.newInstallDefaults().normalized()
+        var pendingEndpoint: String? = null
+        var preservedExtension: String? = null
+        val commitStarted = CompletableDeferred<Unit>()
+        val releaseCommit = CompletableDeferred<Unit>()
+        val repository = mockk<SettingsRepository>()
+        coEvery { repository.getExportSettings() } answers { stored }
+        coEvery { repository.getPendingSharedSetupEndpoint() } answers { pendingEndpoint }
+        coEvery { repository.getPreservedSharedSetupAppleExtension() } answers { preservedExtension }
+        coEvery {
+            repository.applySharedSetupTransaction(any(), any(), any(), any())
+        } coAnswers {
+            commitStarted.complete(Unit)
+            releaseCommit.await()
+            stored = secondArg()
+            pendingEndpoint = thirdArg()
+            preservedExtension = arg(3)
+            true
+        }
+        val scheduler = mockk<ExportScheduler>()
+        coEvery { scheduler.cancel() } returns Unit
+        val service = SharedSetupService(
+            repository,
+            scheduler,
+            InMemoryCredentialStore(null, mutableListOf()),
+            FixtureRegistry,
+        )
+        val preview = service.preview(fixtureFile().readBytes()).getOrThrow()
+        var result: Result<SharedSetupApplyResult>? = null
+        val apply = launch { result = service.apply(preview) }
+        commitStarted.await()
+
+        apply.cancel()
+        releaseCommit.complete(Unit)
+        apply.join()
+
+        assertThat(result?.isSuccess).isTrue()
+        assertThat(stored.scheduleEnabled).isFalse()
+        coVerify(exactly = 1) { scheduler.cancel() }
     }
 
     @Test
@@ -342,7 +387,7 @@ class SharedSetupServiceTest {
 
     private object FixtureRegistry : SharedSetupMetricRegistry {
         override val version = 1
-        override val sha256 = "b78c44bf0feb723bed467da3bbe2471800842bc8a5eb118c4042e57d9e593319"
+        override val sha256 = "da1ef4f1dd2c9117e5922ae64207510c743c8b14624a792bab93f98494ccb070"
         private val bindings = listOf(
             SharedSetupRegistryBinding("active_energy", "active_energy", "active_calories", "mapped_alias"),
             SharedSetupRegistryBinding("blood_pressure_systolic", "blood_pressure_systolic", "bp_systolic", "mapped_alias"),

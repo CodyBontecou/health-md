@@ -89,8 +89,10 @@ Prebuilt archives use `healthmd-cli/v<version>` tags. Do not use the repository-
 `/releases/latest` URL because the Health.md monorepo reserves that release pointer for the Apple apps.
 For a published version, download the installer and `sha256.sum` plus
 `sha256.sum.sigstore.json` from that exact tag, verify the documented Sigstore workflow identity and
-checksums, then run the shell installer on macOS/Linux or the Authenticode-signed PowerShell
-installer on Windows. macOS users may instead use the notarized, stapled DMG. Replace `VERSION`
+checksums, then run the shell installer on macOS/Linux. On Windows, run the PowerShell installer
+when `release-identities.json` records a `qualified` Windows publisher, or — while the ledger
+defers Authenticode — expect one SmartScreen prompt on first run and rely on the signed checksum
+manifest for integrity. macOS users may also use the notarized, stapled DMG. Replace `VERSION`
 with the complete version including any prerelease suffix:
 
 ```bash
@@ -136,8 +138,14 @@ if (!$Line -or !$IdentityLine -or
     (Get-FileHash .\release-identities.json -Algorithm SHA256).Hash.ToLower() -ne $IdentityLine.Substring(0, 64)) { throw 'release asset checksum mismatch' }
 $Identity = Get-Content .\release-identities.json -Raw | ConvertFrom-Json
 $Signature = Get-AuthenticodeSignature .\healthmd-cli-installer.ps1
-if ($Identity.windows.status -ne 'qualified' -or $Signature.Status -ne 'Valid' -or
-    $Signature.SignerCertificate.Subject -cne $Identity.windows.publisher_subject) { throw 'publisher verification failed' }
+if ($Identity.windows.status -eq 'qualified') {
+  if ($Signature.Status -ne 'Valid' -or
+      $Signature.SignerCertificate.Subject -cne $Identity.windows.publisher_subject) { throw 'publisher verification failed' }
+} elseif ($Identity.windows.status -eq 'pending_external_certificate_provisioning') {
+  if ($Signature.Status -eq 'Valid') { throw 'installer is signed by an unrecorded publisher' }
+  Write-Host 'Windows artifacts are Authenticode-unsigned in this release.' -ForegroundColor Yellow
+  Write-Host 'Expect one SmartScreen prompt; integrity is verified by the signed sha256.sum above.' -ForegroundColor Yellow
+} else { throw 'unrecognized Windows signing state in release-identities.json' }
 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\healthmd-cli-installer.ps1
 if ($LASTEXITCODE -ne 0) { throw 'installer failed' }
 ```

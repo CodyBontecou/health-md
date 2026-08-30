@@ -44,7 +44,9 @@ jobs:
 
       - name: Validate shared contracts
         working-directory: ${{ github.workspace }}
-        run: python3 packages/contracts/validate.py
+        run: |
+          python3 packages/contracts/validate.py
+          (cd packages/contracts && python3 -m unittest test_validate_shared_setup.py)
 
       - name: Set up Java
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
@@ -145,8 +147,20 @@ jobs:
       - name: Prepare source-built Rust core
         run: ./gradlew :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
-      - name: Run debug unit, wearable contract, Wear, and protocol tests
-        run: ./gradlew testDebugUnitTest :wearable-contract:test :wear:testDebugUnitTest :direct-protocol:test --stacktrace
+      - name: Run app variant, wearable contract, Wear, and protocol tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Keep Compose compiler peaks bounded and compile one app variant at a time.
+          ./gradlew --no-daemon --max-workers=2 \
+            :app:testDebugUnitTest \
+            :healthmd-core:testDebugUnitTest \
+            :wearable-contract:test \
+            :wear:testDebugUnitTest \
+            :direct-protocol:test \
+            --stacktrace
+          ./gradlew --no-daemon --max-workers=2 :app:testReleaseUnitTest --stacktrace
+          ./gradlew --no-daemon --max-workers=2 :app:testE2eUnitTest --stacktrace
 
       - name: Run Wear lint, assemble, and bundle
         run: ./gradlew :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace

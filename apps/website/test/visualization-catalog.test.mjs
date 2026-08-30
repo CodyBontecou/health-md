@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
+import path from "node:path";
 
 const expectedV7Visualizations = [
   "metric-trend",
@@ -38,7 +39,19 @@ test("generated website catalog includes every plugin visualization exactly once
     assert.ok(item.description, item.type);
     assert.ok(item.category, item.type);
     assert.ok(item.renderer === "canvas" || item.renderer === "html", item.type);
+    assert.ok(Array.isArray(item.exportSources) && item.exportSources.length > 0, `${item.type} exportSources`);
+    for (const source of item.exportSources) {
+      assert.ok(
+        ["daily-json", "daily-csv", "daily-markdown", "rollups", "workout-notes"].includes(source),
+        `${item.type} export source ${source}`
+      );
+    }
   }
+  const byId = Object.fromEntries(catalog.visualizations.map((item) => [item.type, item]));
+  assert.deepEqual(byId["rollup-explorer"].exportSources, ["rollups"]);
+  assert.deepEqual(byId["workout-map"].exportSources, ["daily-json"]);
+  assert.ok(byId["heart-terrain"].exportSources.includes("daily-csv"));
+  assert.ok(!byId["heart-terrain"].exportSources.includes("daily-markdown"));
 });
 
 test("Visualization Studio derives availability from the generated plugin catalog", async () => {
@@ -50,27 +63,102 @@ test("Visualization Studio derives availability from the generated plugin catalo
   assert.match(customizer, /buildVisualizationsFromPluginCatalog/);
   assert.match(customizer, /Array\.isArray\(api\.catalog\)/);
   assert.match(customizer, /Object\.assign\(\{\}, curated\?\.config \|\| \{\}, generatedConfig\)/);
+  assert.match(customizer, /option\("units", "auto, metric, imperial"/);
   assert.match(pageGenerator, /visualizations-catalog\.json/);
   assert.doesNotMatch(pageGenerator, /extractVisualizations\(source\)/);
   assert.match(bundleGenerator, /VISUALIZATION_CATALOG/);
   assert.match(bundleGenerator, /visualizations-catalog\.json/);
 });
 
-test("plugin-generated preview fixtures cover v7 views without Health Records payloads", async () => {
+test("plugin-generated preview fixtures pair daily v8 with range v9 sourced from v8 without Health Records payloads", async () => {
   const [days, rollups] = await Promise.all([
     readJson("../assets/visualizations-data/health-sample.json"),
     readJson("../assets/visualizations-data/health-rollups.json"),
   ]);
   assert.equal(days.length, 30);
+  assert.deepEqual(new Set(days.map((day) => `${day.schema}@${day.schema_version}`)), new Set(["healthmd.health_data@8"]));
+  assert.ok(days.every((day) => day.units.steps === "steps"));
   assert.ok(days.some((day) => day.body && day.nutrition && day.symptoms && day.reproductiveHealth));
-  assert.deepEqual(new Set(days.map((day) => day.raw_capture_status)), new Set(["complete", "partial", "not_requested"]));
-  assert.equal(rollups[0]?.schema, "healthmd.rollup_summary");
-  assert.ok(rollups[0].start_date >= days[0].date);
-  assert.ok(rollups[0].end_date <= days.at(-1).date);
+  assert.deepEqual(new Set(days.map((day) => day.raw_capture_status)), new Set(["not_requested"]));
+  assert.ok(days.every((day) => !("healthkit_record_archive" in day)));
+  assert.deepEqual(rollups.map((rollup) => ({
+    schema: rollup.schema,
+    schemaVersion: rollup.schema_version,
+    period: rollup.rollup_period,
+  })), [
+    { schema: "healthmd.rollup_summary", schemaVersion: 8, period: "weekly" },
+    { schema: "healthmd.rollup_summary", schemaVersion: 9, period: "range" },
+  ]);
+  for (const rollup of rollups) {
+    assert.ok(rollup.start_date >= days[0].date);
+    assert.ok(rollup.end_date <= days.at(-1).date);
+  }
+  const rangeRollup = rollups.find((rollup) => rollup.rollup_period === "range");
+  assert.deepEqual({
+    schema: rangeRollup?.schema,
+    schemaVersion: rangeRollup?.schema_version,
+    sourceSchema: rangeRollup?.source_schema,
+    sourceSchemaVersion: rangeRollup?.source_schema_version,
+  }, {
+    schema: "healthmd.rollup_summary",
+    schemaVersion: 9,
+    sourceSchema: "healthmd.health_data",
+    sourceSchemaVersion: 8,
+  });
+  const dailyDates = new Set(days.map((day) => day.date));
+  assert.ok(rangeRollup.source_dates.every((date) => dailyDates.has(date)));
+  assert.equal(rangeRollup.calendar_timezone, "UTC");
+  assert.equal(rangeRollup.units.steps, "steps");
+  assert.equal(rangeRollup.metrics.find((metric) => metric.key === "steps")?.primary_value, "17,500");
+  for (const [category, metrics] of Object.entries(rangeRollup.categories)) {
+    assert.deepEqual(metrics, rangeRollup.metrics.filter((metric) => metric.category === category));
+  }
 
   const serialized = JSON.stringify({ days, rollups }).toLowerCase();
   for (const forbidden of ["fhir_resource", "clinical_record", "verifiable_clinical", "cda_document", "original_uuid"]) {
     assert.ok(!serialized.includes(forbidden), forbidden);
+  }
+});
+
+test("Apple onboarding resources stay byte-identical to pinned website plugin assets and samples", async () => {
+  const appleResourceRoot = new URL("../../apple/HealthMd/iOS/Resources/PluginVisualization/", import.meta.url);
+  const [externalSources, websiteBundle, appleBundle, websiteDays, websiteRollups, appleDays, appleRollups, previewHTML] = await Promise.all([
+    readJson("../external-sources.json"),
+    readFile(new URL("../assets/healthmd-plugin-visualizations.js", import.meta.url)),
+    readFile(new URL("healthmd-plugin-visualizations.js", appleResourceRoot)),
+    readFile(new URL("../assets/visualizations-data/health-sample.json", import.meta.url), "utf8"),
+    readFile(new URL("../assets/visualizations-data/health-rollups.json", import.meta.url), "utf8"),
+    readFile(new URL("health-sample.js", appleResourceRoot), "utf8"),
+    readFile(new URL("health-rollups.js", appleResourceRoot), "utf8"),
+    readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
+  ]);
+
+  assert.equal(externalSources.obsidian_plugin.revision, "d9bd050949dde067f32ea49381ca58e7ccbcf21d");
+  assert.deepEqual(appleBundle, websiteBundle);
+  assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
+  assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);
+  assert.match(previewHTML, /<script src="health-sample\.js"><\/script>/);
+  assert.match(previewHTML, /<script src="health-rollups\.js"><\/script>/);
+});
+
+test("canonical plugin v9 fixtures are byte-identical to package contract fixtures", {
+  skip: !process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+}, async () => {
+  const pluginFixtureRoot = path.join(
+    path.resolve(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO),
+    "tests",
+    "fixtures",
+    "rollup-summary-v9",
+  );
+  const contractFixtureRoot = new URL("../../../packages/contracts/rollup-summary/v9/fixtures/", import.meta.url);
+  const canonicalFixtureNames = (await readdir(contractFixtureRoot)).sort();
+  assert.deepEqual(canonicalFixtureNames, ["range-v9-bases.md", "range-v9.csv", "range-v9.json", "range-v9.md"]);
+  for (const filename of canonicalFixtureNames) {
+    const [pluginFixture, contractFixture] = await Promise.all([
+      readFile(path.join(pluginFixtureRoot, filename)),
+      readFile(new URL(filename, contractFixtureRoot)),
+    ]);
+    assert.deepEqual(pluginFixture, contractFixture, filename);
   }
 });
 

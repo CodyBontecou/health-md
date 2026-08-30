@@ -78,4 +78,4 @@ Unsupported APIs appear `unsupported`; intentionally unavailable/ungranted speci
 - `MetricSelectionState` persists selected metric IDs and excludes separate-access categories from broad defaults.
 - `HealthKitRecordCatalog` is the reviewed object-type/unit/dependency/authorization graph.
 - `HealthKitManager` filters summaries, records, external identities, relationships, warnings, and manifest entries by selection.
-- New installs enable Lossless Health Records separately; the internal setting remains `includeGranularData`.
+- Data Detail is independent from metric selection. Durable settings use `compatibilityDetail` and `healthKitSourceArchivePolicy`; `includeGranularData` remains only a legacy migration bridge.

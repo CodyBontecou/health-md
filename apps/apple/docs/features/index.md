@@ -5,6 +5,8 @@ This directory is the canonical inventory for documenting Health.md end-to-end. 
 1. a user-facing docs page for the docs site, and
 2. a video outline that can become one episode in the Health.md feature series.
 
+Cross-platform pairings for every Apple/Android capability live in the repository-root [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md).
+
 Use [`_template.md`](./_template.md) for new feature pages. Use [`video-series.md`](./video-series.md) as the running episode roadmap.
 
 ## Technical reference
@@ -41,13 +43,21 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 | Organization | [Folder organization](./folder-organization.md) | Use date-based subfolders like `{year}/{quarter}` or `{year}/{month}`. | Drafted | High | `AdvancedExportSettings.swift`, `VaultManager` |
 | Organization | [Write modes](./write-modes.md) | Choose overwrite, append, or update/merge behavior when a file already exists. | Drafted | Medium | `WriteMode`, `MarkdownMerger.swift` |
 | Obsidian | [Daily note injection](./daily-note-injection.md) | Merge health metrics into existing Obsidian daily notes. | Drafted | High | `DailyNoteInjectionView.swift`, `DailyNoteInjector.swift` |
-| Advanced data | [Lossless Health Records](./time-series-data.md) | Retain every selected public HealthKit source record alongside daily summaries; internal key remains `includeGranularData`. | Drafted | High | `HealthKitRecordCatalog`, `HealthKitRecordArchiveSerializer` |
+| Advanced data | [Data Detail and Lossless Health Records](./time-series-data.md) | Choose daily summaries, selected timestamped series without the canonical archive, or complete selected HealthKit source capture. | Drafted | High | `HealthKitManager`, `HealthKitRecordCatalog`, `HealthKitRecordArchiveSerializer` |
 | Advanced data | [Individual entry tracking](./individual-entry-tracking.md) | Derive separate timestamped notes from canonical source records and UUIDs. | Drafted | High | `IndividualTrackingView.swift`, `IndividualEntryExporter.swift` |
 | Advanced data | [Mood / State of Mind](./mood-state-of-mind.md) | Export iOS State of Mind daily averages plus individual mood entries. | Drafted | High | `HealthData`, `SystemHealthStoreAdapter`, `IndividualEntryExporter` |
 | Advanced data | [Workout details](./workout-details.md) | Preserve complete public workout graphs while keeping Markdown/Bases readable. | Drafted | High | `SystemHealthStoreAdapter+CanonicalWorkouts.swift` |
+| Advanced data | [Clinician Report](./clinician-report.md) | Turn a date range of 11 key metrics into one on-device, accessible PDF to share with a clinician. | Drafted | Medium | `iOS/ClinicianReport/`, `Shared/ClinicianReport/` |
+| Surfaces | [Widgets and Live Activity](./widgets.md) | Four home-screen health widgets plus a CLI-export Live Activity with lock-screen redaction. | Drafted | Low | `HealthMdWidgets/` |
+| Surfaces | [Watch app and watch widgets](./watch-app.md) | Standalone watchOS dashboard plus ten watch-face widgets reading watch HealthKit. | Drafted | Low | `HealthMdWatch*` |
+| Setup | [Share My Setup](./share-my-setup.md) | Move export preferences between devices in one bounded, reviewable file — no health data. | Needs QA | Medium | `Shared/SharedSetup/`, `SharedSetupCoordinator` |
 | Advanced data | [Third-party integrations](./third-party-integrations.md) | WHOOP OAuth and provider sidecars staged behind `CONNECTED_APPS_WHOOP_ENABLED`; other providers remain deferred. | Beta | Medium | `Shared/Integrations`, `ExternalIntegrationManager`, `worker/oauth-broker` |
 | Automation | [Scheduled exports](./scheduled-exports.md) | Run recurring exports at a selected time with notifications and retry handling. | Drafted | High | `ScheduleSettingsView.swift`, `SchedulingManager.swift`, `PushRegistrationManager.swift` |
 | Automation | [Apple Shortcuts](./apple-shortcuts.md) | Trigger exports and retrieve health summaries from Shortcuts/Siri. | Drafted | High | `HealthMd/iOS/AppIntents` |
+| Automation | [Direct iPhone CLI access](./cli-direct-iphone.md) | Serve exports and typed queries from a foreground iPhone to the standalone CLI/MCP. | Drafted | Medium | `IPhoneDirectCLIService.swift`, `DirectCLIPairingScannerView.swift` |
+| Automation | [Agent-local API](./agent-local-api.md) | Loopback `/v1/agent/*` query, evidence, refresh, and job routes on the Mac app. | Drafted | Medium | `HealthMdAgentAPIService.swift`, `HealthMdControlServer.swift` |
+| Automation | [Encrypted query context store](./encrypted-query-context-store.md) | AES-256-GCM per-day encrypted local query context on the Mac. | Drafted | Low | `EncryptedHealthContextStore.swift` |
+| Automation | [Bounded encrypted query executor](./bounded-encrypted-query-executor.md) | Bounded-memory paged queries over the encrypted Mac context store. | Drafted | Low | `EncryptedHealthContextQueryExecutor.swift` |
 | Automation | [Mac CLI iPhone export trigger](./cli-mac-iphone-export.md) | Trigger an export from a connected, open iPhone using the Mac app or CLI. | Drafted | Medium | `SyncPayload.swift`, `HealthMdControlServer.swift`, `scripts/healthmd` |
 | Automation | [API Endpoint export](./api-endpoint-export.md) | Send selected Apple Health JSON directly from iPhone to a user-configured HTTP(S) endpoint. | Drafted | Medium | `APIExportSettings`, `APIExportClient`, `ExportTabView` |
 | Automation | [CLI distribution](./cli-distribution.md) | Bundle the CLI in the Mac app while also supporting standalone terminal installs. | Drafted | Medium | `HealthMdCLI`, `HealthMd-macOS`, `scripts/healthmd` |

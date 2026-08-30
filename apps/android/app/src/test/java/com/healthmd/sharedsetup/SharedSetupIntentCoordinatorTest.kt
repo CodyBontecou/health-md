@@ -6,8 +6,14 @@ import androidx.core.content.IntentCompat
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
 import io.mockk.mockk
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -16,22 +22,23 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 class SharedSetupIntentCoordinatorTest {
     @Test
-    fun `ordinary launch has no pending import and accepted cold or warm bytes are consumed once`() = runTest {
+    fun `ordinary launch has no import and accepted bytes remain until the flow finishes`() = runTest {
         val coordinator = SharedSetupCoordinator(mockk(relaxed = true))
         assertThat(coordinator.imports.first()).isNull()
 
         coordinator.acceptBytes(byteArrayOf(1, 2, 3))
-        val first = coordinator.imports.first()
-        assertThat(first).isNotNull()
-        assertThat(requireNotNull(first!!.bytes)).isEqualTo(byteArrayOf(1, 2, 3))
+        val first = requireNotNull(coordinator.imports.first())
+        assertThat(requireNotNull(first.bytes)).isEqualTo(byteArrayOf(1, 2, 3))
 
-        coordinator.consume(first.id)
-        assertThat(coordinator.imports.first()).isNull()
-
+        // A newer warm request replaces the retained request, but merely observing it from a
+        // hidden ViewModel cannot clear it before navigation reaches Shared Setup.
         coordinator.acceptBytes(byteArrayOf(4))
-        val warm = coordinator.imports.first()
-        assertThat(warm!!.id).isGreaterThan(first.id)
+        val warm = requireNotNull(coordinator.imports.first())
+        assertThat(warm.id).isGreaterThan(first.id)
         assertThat(requireNotNull(warm.bytes)).isEqualTo(byteArrayOf(4))
+
+        coordinator.finishExternalImport()
+        assertThat(coordinator.imports.first()).isNull()
     }
 
     @Test
@@ -46,6 +53,78 @@ class SharedSetupIntentCoordinatorTest {
         val pending = coordinator.imports.first()
         assertThat(pending?.bytes).isNull()
         assertThat(pending?.errorMessage).contains("Synthetic read failure")
+    }
+
+    @Test
+    fun `newer async uri is not blocked by an older stalled provider read`() = runTest {
+        val store = mockk<SharedSetupDocumentStore>()
+        val firstUri = Uri.parse("content://synthetic/first.healthmdconfig")
+        val secondUri = Uri.parse("content://synthetic/second.healthmdconfig")
+        val firstStarted = CountDownLatch(1)
+        val releaseFirst = CountDownLatch(1)
+        io.mockk.every { store.isSharedSetupDocument(any()) } returns true
+        io.mockk.every { store.read(firstUri) } answers {
+            firstStarted.countDown()
+            check(releaseFirst.await(5, TimeUnit.SECONDS))
+            byteArrayOf(1)
+        }
+        io.mockk.every { store.read(secondUri) } returns byteArrayOf(2)
+        // Publish immediately where the read completes so the test observes results
+        // without idling a paused Robolectric main looper.
+        val coordinator = SharedSetupCoordinator(store, publishDispatcher = Dispatchers.Unconfined)
+
+        try {
+            coordinator.acceptExternalUriAsync(firstUri)
+            assertThat(firstStarted.await(5, TimeUnit.SECONDS)).isTrue()
+            coordinator.acceptExternalUriAsync(secondUri)
+
+            val newest = withTimeout(5_000) {
+                coordinator.imports.filterNotNull().first { pending ->
+                    pending.bytes?.contentEquals(byteArrayOf(2)) == true
+                }
+            }
+            assertThat(requireNotNull(newest.bytes)).isEqualTo(byteArrayOf(2))
+
+            releaseFirst.countDown()
+            delay(100)
+            assertThat(requireNotNull(coordinator.imports.first()?.bytes))
+                .isEqualTo(byteArrayOf(2))
+        } finally {
+            releaseFirst.countDown()
+            coordinator.finishExternalImport()
+        }
+    }
+
+    @Test
+    fun `finish prevents a cancelled stalled read from publishing later`() = runTest {
+        val store = mockk<SharedSetupDocumentStore>()
+        val uri = Uri.parse("content://synthetic/stalled.healthmdconfig")
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        io.mockk.every { store.isSharedSetupDocument(uri) } returns true
+        io.mockk.every { store.read(uri) } answers {
+            started.countDown()
+            check(release.await(5, TimeUnit.SECONDS))
+            byteArrayOf(9)
+        }
+        // Publishing unconfined makes this test stronger: a read that wrongly survives
+        // finish() would publish immediately instead of waiting on a paused looper.
+        val coordinator = SharedSetupCoordinator(store, publishDispatcher = Dispatchers.Unconfined)
+
+        try {
+            coordinator.acceptExternalUriAsync(uri)
+            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue()
+            coordinator.finishExternalImport()
+            release.countDown()
+            delay(100)
+
+            assertThat(coordinator.imports.first()).isNull()
+            assertThat(coordinator.restorableExternalBytes()).isNull()
+            assertThat(coordinator.isExternalImportFinished()).isTrue()
+        } finally {
+            release.countDown()
+            coordinator.finishExternalImport()
+        }
     }
 
     @Test

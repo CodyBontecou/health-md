@@ -1,14 +1,9 @@
-Health.md 3.0.5 turns your Apple Health data into a clinician-ready report without sending it anywhere.
+Health.md 3.2 gives you more control over exports.
 
 New
-• Create 7-, 30-, 90-day, or custom-range reports with 11 focused health metrics.
-• Preview summaries and detailed readings, then export an accessible Letter or A4 PDF.
-• Scan a Direct CLI pairing QR in the app to connect more quickly.
-• Use the fully localized Mac app in German, Spanish, French, Italian, Japanese, Korean, Dutch, Brazilian Portuguese, or Simplified Chinese.
+• Stop running exports — one banner owns export progress, and Stop cancels the running scheduled, Shortcut, or manual export while completed dates stay completed and schedules remain enabled.
+• Export Data Detail now separates Detailed Time-Series from Lossless Health Records, so you can export per-sample data without the much larger canonical archive. Summary, Detailed Time-Series, and Lossless presets live in the Export tab and export profiles.
 
-Privacy
-• Report generation stays on your device. Temporary files remain private until you explicitly share or save them.
-
-Improved
-• Missing, partial, and unavailable readings are explained clearly so reports do not imply data that is not there.
-• The Mac dashboard makes connection, destination, export activity, and settings clearer, with localized labels that wrap cleanly.
+Fixed
+• Direct CLI Access reconnects automatically after your computer sleeps, the Mac app quits, or the network changes.
+• Folders on "On My iPhone" storage keep their saved selection across restarts, so automatic exports and Shortcuts keep working.

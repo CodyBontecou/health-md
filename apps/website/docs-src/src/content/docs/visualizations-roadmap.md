@@ -10,6 +10,18 @@ Health.md exports a schema-versioned local data set for Markdown, Obsidian Bases
 <p style="margin-top:6px;">This page is organized from Health.md's export schema and data dictionary: activity, sleep, heart, vitals, body, nutrition, mindfulness, medications, workouts, reproductive health, symptoms, hearing, and lifestyle/environment metrics.</p>
 </div>
 
+## Per-visualization unit overrides
+
+Set `units` inside an individual `health-viz` block when one chart should use a different display system than the plugin-wide preference:
+
+```health-viz
+type: workout-trends
+metric: distance
+units: imperial
+```
+
+Use `auto` to follow the unit system declared by the export, `metric` to display kilometers, kilograms, meters, and Celsius, or `imperial` to display miles, pounds, feet, and Fahrenheit. The override applies only to that visualization and takes precedence over the global Units setting. It changes display values only; the exported Health.md files remain unchanged. Non-convertible metrics such as steps, BPM, percentages, and calories are not changed.
+
 ## Current visualization coverage
 
 <div class="reference-stats">

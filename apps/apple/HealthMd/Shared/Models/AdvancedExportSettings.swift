@@ -372,26 +372,59 @@ class AdvancedExportSettings: ObservableObject {
         }
     }
 
-    /// When enabled, exports include canonical lossless HealthKit source records and
-    /// detailed series alongside daily summaries. The persisted key and public name
-    /// remain unchanged for compatibility with existing settings and integrations.
-    @Published var includeGranularData: Bool {
+    /// Readable selected time-series retained alongside daily aggregates.
+    @Published var compatibilityDetail: ExportCompatibilityDetail {
         didSet { save() }
     }
 
-    /// Generate derived weekly summaries from successful daily snapshots in the export run.
-    @Published var generateWeeklyRollups: Bool {
+    /// Apple-only canonical HealthKit source-record archive preference.
+    @Published var healthKitSourceArchivePolicy: HealthKitSourceArchivePolicy {
         didSet { save() }
     }
 
-    /// Generate derived monthly summaries from successful daily snapshots in the export run.
-    @Published var generateMonthlyRollups: Bool {
+    var detailPolicy: AppleExportDetailPolicy {
+        get {
+            AppleExportDetailPolicy(
+                compatibilityDetail: compatibilityDetail,
+                healthKitSourceArchive: healthKitSourceArchivePolicy
+            )
+        }
+        set {
+            if compatibilityDetail != newValue.compatibilityDetail {
+                compatibilityDetail = newValue.compatibilityDetail
+            }
+            if healthKitSourceArchivePolicy != newValue.healthKitSourceArchive {
+                healthKitSourceArchivePolicy = newValue.healthKitSourceArchive
+            }
+        }
+    }
+
+    /// Source compatibility for historical tests, Shared Setup v1, and direct
+    /// request code while those callers migrate. New runtime decisions must use
+    /// `detailPolicy`; the legacy Boolean represents only Summary/Lossless.
+    var includeGranularData: Bool {
+        get { detailPolicy.legacyIncludeGranularData }
+        set { detailPolicy = newValue ? .lossless : .summary }
+    }
+
+    /// Generate one v9 summary covering the immutable requested export range.
+    @Published var generateRangeSummary: Bool {
         didSet { save() }
     }
 
-    /// Generate derived yearly summaries from successful daily snapshots in the export run.
-    @Published var generateYearlyRollups: Bool {
-        didSet { save() }
+    // Source compatibility for historical Shared Setup v1/profile code. These
+    // aliases are not persisted or encoded by new operation snapshots.
+    var generateWeeklyRollups: Bool {
+        get { generateRangeSummary }
+        set { generateRangeSummary = newValue }
+    }
+    var generateMonthlyRollups: Bool {
+        get { generateRangeSummary }
+        set { if newValue { generateRangeSummary = true } }
+    }
+    var generateYearlyRollups: Bool {
+        get { generateRangeSummary }
+        set { if newValue { generateRangeSummary = true } }
     }
 
     private let userDefaults: UserDefaults
@@ -420,10 +453,14 @@ class AdvancedExportSettings: ObservableObject {
     private let formatCustomizationKey = "advancedExportSettings.formatCustomization"
     private let individualTrackingKey = "advancedExportSettings.individualTracking"
     private let dailyNoteInjectionKey = "advancedExportSettings.dailyNoteInjection"
+    private let compatibilityDetailKey = "advancedExportSettings.compatibilityDetail"
+    private let healthKitSourceArchivePolicyKey =
+        "advancedExportSettings.healthKitSourceArchivePolicy"
     private let includeGranularDataKey = "advancedExportSettings.includeGranularData"
-    private let generateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
-    private let generateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
-    private let generateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
+    private let generateRangeSummaryKey = "advancedExportSettings.generateRangeSummary"
+    private let legacyGenerateWeeklyRollupsKey = "advancedExportSettings.generateWeeklyRollups"
+    private let legacyGenerateMonthlyRollupsKey = "advancedExportSettings.generateMonthlyRollups"
+    private let legacyGenerateYearlyRollupsKey = "advancedExportSettings.generateYearlyRollups"
     private let sharedSetupPortableSettingsKey = "advancedExportSettings.sharedSetupPortableSettings.v1"
     private let medicationAuthorizationRequestedKey = "healthKit.medicationAuthorizationRequested"
     private let verifiableClinicalRecordsOptInMigrationKey =
@@ -569,10 +606,9 @@ class AdvancedExportSettings: ObservableObject {
         self.formatCustomization = formatCustomization
         self.individualTracking = individualTracking
         self.dailyNoteInjection = dailyNoteInjection
-        includeGranularData = snapshot.includeGranularData
-        generateWeeklyRollups = snapshot.generateWeeklyRollups
-        generateMonthlyRollups = snapshot.generateMonthlyRollups
-        generateYearlyRollups = snapshot.generateYearlyRollups
+        compatibilityDetail = snapshot.compatibilityDetail
+        healthKitSourceArchivePolicy = snapshot.healthKitSourceArchivePolicy
+        generateRangeSummary = snapshot.generateRangeSummary
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
         exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
@@ -606,10 +642,8 @@ class AdvancedExportSettings: ObservableObject {
         includeDataDictionary = snapshot.includeDataDictionary
         summaryOnlyExport = snapshot.summaryOnlyExport
         writeMode = snapshot.writeMode
-        includeGranularData = snapshot.includeGranularData
-        generateWeeklyRollups = snapshot.generateWeeklyRollups
-        generateMonthlyRollups = snapshot.generateMonthlyRollups
-        generateYearlyRollups = snapshot.generateYearlyRollups
+        detailPolicy = snapshot.detailPolicy
+        generateRangeSummary = snapshot.generateRangeSummary
         executionAppleExportEnginePin = snapshot.appleExportEnginePin
         executionAppleExportEngineAuthorityIsFrozen = snapshot.appleExportEngineAuthorityIsFrozen
         exportTimeZoneOverride = snapshot.calendarTimeZoneIdentifier.flatMap(TimeZone.init(identifier:))
@@ -744,18 +778,42 @@ class AdvancedExportSettings: ObservableObject {
             self.dailyNoteInjection = DailyNoteInjectionSettings()
         }
 
-        // Preserve any explicit legacy choice exactly. A missing key identifies a fresh
-        // installation and defaults to the faster summary-only capture path.
-        if userDefaults.object(forKey: includeGranularDataKey) == nil {
-            self.includeGranularData = false
-        } else {
-            self.includeGranularData = userDefaults.bool(forKey: includeGranularDataKey)
-        }
+        // Exact split settings win. Otherwise migrate the historical combined
+        // Boolean once: true meant selected time-series plus canonical archive;
+        // false/missing meant summary-only. Never consult a current default when
+        // reconstructing an explicit legacy choice.
+        let legacyDetailPolicy: AppleExportDetailPolicy =
+            userDefaults.bool(forKey: includeGranularDataKey) ? .lossless : .summary
+        let loadedCompatibilityDetail = userDefaults.string(forKey: compatibilityDetailKey)
+            .flatMap(ExportCompatibilityDetail.init(rawValue:))
+            ?? legacyDetailPolicy.compatibilityDetail
+        let loadedHealthKitSourceArchivePolicy = userDefaults.string(
+            forKey: healthKitSourceArchivePolicyKey
+        )
+            .flatMap(HealthKitSourceArchivePolicy.init(rawValue:))
+            ?? legacyDetailPolicy.healthKitSourceArchive
+        self.compatibilityDetail = loadedCompatibilityDetail
+        self.healthKitSourceArchivePolicy = loadedHealthKitSourceArchivePolicy
+        userDefaults.set(loadedCompatibilityDetail.rawValue, forKey: compatibilityDetailKey)
+        userDefaults.set(
+            loadedHealthKitSourceArchivePolicy.rawValue,
+            forKey: healthKitSourceArchivePolicyKey
+        )
 
-        // Load roll-up summary settings (default off to avoid writing derived files unexpectedly)
-        self.generateWeeklyRollups = userDefaults.bool(forKey: generateWeeklyRollupsKey)
-        self.generateMonthlyRollups = userDefaults.bool(forKey: generateMonthlyRollupsKey)
-        self.generateYearlyRollups = userDefaults.bool(forKey: generateYearlyRollupsKey)
+        // The new key is authoritative even when false. Otherwise migrate the
+        // legacy toggles once using OR semantics and remove all old keys in the
+        // same initialization transaction.
+        if userDefaults.object(forKey: generateRangeSummaryKey) != nil {
+            self.generateRangeSummary = userDefaults.bool(forKey: generateRangeSummaryKey)
+        } else {
+            self.generateRangeSummary = userDefaults.bool(forKey: legacyGenerateWeeklyRollupsKey)
+                || userDefaults.bool(forKey: legacyGenerateMonthlyRollupsKey)
+                || userDefaults.bool(forKey: legacyGenerateYearlyRollupsKey)
+            userDefaults.set(self.generateRangeSummary, forKey: generateRangeSummaryKey)
+        }
+        userDefaults.removeObject(forKey: legacyGenerateWeeklyRollupsKey)
+        userDefaults.removeObject(forKey: legacyGenerateMonthlyRollupsKey)
+        userDefaults.removeObject(forKey: legacyGenerateYearlyRollupsKey)
         // Medications use a separate per-object HealthKit authorization flow.
         // If a prior build persisted medication metrics by default before that
         // flow was completed, remove them so users opt in explicitly.
@@ -950,13 +1008,23 @@ class AdvancedExportSettings: ObservableObject {
         // Save write mode
         userDefaults.set(writeMode.rawValue, forKey: writeModeKey)
 
-        // Save granular data setting
-        userDefaults.set(includeGranularData, forKey: includeGranularDataKey)
+        // Persist exact orthogonal detail settings. Keep the historical Boolean
+        // only as a safe downgrade bridge for the two exactly representable states.
+        userDefaults.set(compatibilityDetail.rawValue, forKey: compatibilityDetailKey)
+        userDefaults.set(
+            healthKitSourceArchivePolicy.rawValue,
+            forKey: healthKitSourceArchivePolicyKey
+        )
+        userDefaults.set(
+            detailPolicy.legacyIncludeGranularData,
+            forKey: includeGranularDataKey
+        )
 
-        // Save roll-up summary settings
-        userDefaults.set(generateWeeklyRollups, forKey: generateWeeklyRollupsKey)
-        userDefaults.set(generateMonthlyRollups, forKey: generateMonthlyRollupsKey)
-        userDefaults.set(generateYearlyRollups, forKey: generateYearlyRollupsKey)
+        // New live settings persist only the range-summary key.
+        userDefaults.set(generateRangeSummary, forKey: generateRangeSummaryKey)
+        userDefaults.removeObject(forKey: legacyGenerateWeeklyRollupsKey)
+        userDefaults.removeObject(forKey: legacyGenerateMonthlyRollupsKey)
+        userDefaults.removeObject(forKey: legacyGenerateYearlyRollupsKey)
     }
 
     func reset() {
@@ -975,10 +1043,8 @@ class AdvancedExportSettings: ObservableObject {
         formatCustomization = FormatCustomization()
         individualTracking = IndividualTrackingSettings()
         dailyNoteInjection = DailyNoteInjectionSettings()
-        includeGranularData = false
-        generateWeeklyRollups = false
-        generateMonthlyRollups = false
-        generateYearlyRollups = false
+        detailPolicy = .summary
+        generateRangeSummary = false
     }
 
     /// Applies an already-validated portable settings candidate without replaying every
@@ -986,9 +1052,14 @@ class AdvancedExportSettings: ObservableObject {
     /// keys are persisted and read back before one parent publication. Device-bound settings are
     /// intentionally absent.
     func applySharedSetupBatch(
-        _ snapshot: SharedSetupPortableSnapshot,
+        _ candidate: SharedSetupPortableSnapshot,
         verificationOverride: (() -> Bool)? = nil
     ) throws {
+        var snapshot = candidate
+        let normalizedDetailPolicy = candidate.detailPolicy
+        snapshot.compatibilityDetail = normalizedDetailPolicy.compatibilityDetail
+        snapshot.healthKitSourceArchivePolicy = normalizedDetailPolicy.healthKitSourceArchive
+
         try SharedSetupValidation.validateRelativePath(snapshot.folderStructure)
         try SharedSetupValidation.validateFilename(snapshot.filenameFormat)
         try SharedSetupValidation.validateRelativePath(snapshot.individualTracking.entriesFolder)
@@ -1062,10 +1133,20 @@ class AdvancedExportSettings: ObservableObject {
         _formatCustomization = Published(initialValue: customization)
         _individualTracking = Published(initialValue: individual)
         _dailyNoteInjection = Published(initialValue: dailyNotes)
-        _includeGranularData = Published(initialValue: snapshot.includeGranularData)
-        _generateWeeklyRollups = Published(initialValue: snapshot.generateWeeklyRollups)
-        _generateMonthlyRollups = Published(initialValue: snapshot.generateMonthlyRollups)
-        _generateYearlyRollups = Published(initialValue: snapshot.generateYearlyRollups)
+        let portableDetailPolicy = snapshot.detailPolicy
+        _compatibilityDetail = Published(
+            initialValue: portableDetailPolicy.compatibilityDetail
+        )
+        _healthKitSourceArchivePolicy = Published(
+            initialValue: portableDetailPolicy.healthKitSourceArchive
+        )
+        // Shared Setup v1 cannot represent range summaries losslessly, so its
+        // portable snapshot carries the current local value through unchanged.
+        _generateRangeSummary = Published(initialValue:
+            snapshot.generateWeeklyRollups
+                || snapshot.generateMonthlyRollups
+                || snapshot.generateYearlyRollups
+        )
     }
 
     private static func internalSettingsEncoder() -> JSONEncoder {
@@ -1114,7 +1195,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     var rollupSummariesEnabled: Bool {
-        generateWeeklyRollups || generateMonthlyRollups || generateYearlyRollups
+        generateRangeSummary
     }
 
     var effectiveFileExportMode: EffectiveFileExportMode {
@@ -1219,22 +1300,26 @@ class AdvancedExportSettings: ObservableObject {
         effectiveFileExportMode == .standard
     }
 
-    /// Daily note frontmatter/sections only require aggregate snapshots, not the
-    /// potentially much larger lossless source-record archive.
-    var effectiveGranularDataEnabled: Bool {
-        includeGranularData && effectiveFileExportMode == .standard
+    /// Daily Note and summary-only modes intentionally suppress both detail
+    /// dimensions while preserving the saved preferences for standard exports.
+    var effectiveDetailPolicy: AppleExportDetailPolicy {
+        effectiveFileExportMode == .standard ? detailPolicy : .summary
+    }
+
+    var effectiveCompatibilityDetail: ExportCompatibilityDetail {
+        effectiveDetailPolicy.compatibilityDetail
+    }
+
+    var effectiveHealthKitSourceArchivePolicy: HealthKitSourceArchivePolicy {
+        effectiveDetailPolicy.healthKitSourceArchive
     }
 
     var configuredRollupPeriods: [HealthRollupPeriod] {
-        var periods: [HealthRollupPeriod] = []
-        if generateWeeklyRollups { periods.append(.weekly) }
-        if generateMonthlyRollups { periods.append(.monthly) }
-        if generateYearlyRollups { periods.append(.yearly) }
-        return periods
+        generateRangeSummary ? [.range] : []
     }
 
     /// Runtime periods are empty in Daily Notes Only mode while preserving the
-    /// configured period toggles for when that mode is disabled.
+    /// configured range toggle for when that mode is disabled.
     var enabledRollupPeriods: [HealthRollupPeriod] {
         dailyNotesOnlyModeEnabled ? [] : configuredRollupPeriods
     }

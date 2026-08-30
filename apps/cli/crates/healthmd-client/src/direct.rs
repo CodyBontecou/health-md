@@ -2110,12 +2110,32 @@ async fn receive_message(
     channel: &mut SecureChannel,
     timeout: Duration,
 ) -> Result<DirectMessage, ClientError> {
-    match tokio::time::timeout(timeout, channel.receive())
-        .await
-        .map_err(|_| ClientError::TimedOut)??
-    {
-        SecurePayload::Message(message) => Ok(*message),
-        SecurePayload::BinaryTransferFrame(_) => Err(ClientError::UnexpectedMessage),
+    let deadline = Instant::now() + timeout;
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(ClientError::TimedOut);
+        }
+        match tokio::time::timeout(remaining, channel.receive())
+            .await
+            .map_err(|_| ClientError::TimedOut)??
+        {
+            SecurePayload::Message(message) => match *message {
+                DirectMessage::Ping(Empty {}) => {
+                    let remaining = deadline.saturating_duration_since(Instant::now());
+                    if remaining.is_zero() {
+                        return Err(ClientError::TimedOut);
+                    }
+                    tokio::time::timeout(remaining, channel.send(&DirectMessage::Pong(Empty {})))
+                        .await
+                        .map_err(|_| ClientError::TimedOut)??;
+                }
+                message => return Ok(message),
+            },
+            SecurePayload::BinaryTransferFrame(_) => {
+                return Err(ClientError::UnexpectedMessage);
+            }
+        }
     }
 }
 
@@ -3426,6 +3446,91 @@ mod tests {
         assert!(pairing_protocol_matches_source(2, SourceKind::Android));
         assert!(!pairing_protocol_matches_source(1, SourceKind::Android));
         assert!(!pairing_protocol_matches_platform(1, PeerPlatform::Android));
+    }
+
+    #[tokio::test]
+    async fn receive_message_answers_heartbeat_before_returning_control_message() {
+        use tokio::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let client = tokio::spawn(TcpStream::connect(address));
+        let (server, _) = listener.accept().await.unwrap();
+        let client = client.await.unwrap().unwrap();
+        let peer_id = Uuid::new_v4();
+        let mut source = SecureChannel::new(
+            PacketConnection::new(client),
+            [9; 32],
+            peer_id,
+            "source".into(),
+        );
+        let mut destination = SecureChannel::new(
+            PacketConnection::new(server),
+            [9; 32],
+            peer_id,
+            "destination".into(),
+        );
+        let expected = DirectMessage::Hello(Unlabeled::from(
+            PeerCapabilities::portable_cli_all_versions(SwiftUuid(peer_id)),
+        ));
+        let source_expected = expected.clone();
+        let source_task = tokio::spawn(async move {
+            source.send(&DirectMessage::Ping(Empty {})).await.unwrap();
+            source.send(&source_expected).await.unwrap();
+            assert_eq!(
+                source.receive().await.unwrap(),
+                SecurePayload::Message(Box::new(DirectMessage::Pong(Empty {})))
+            );
+        });
+
+        assert_eq!(
+            receive_message(&mut destination, Duration::from_secs(1))
+                .await
+                .unwrap(),
+            expected
+        );
+        source_task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn repeated_heartbeats_do_not_extend_receive_deadline() {
+        use tokio::net::{TcpListener, TcpStream};
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let client = tokio::spawn(TcpStream::connect(address));
+        let (server, _) = listener.accept().await.unwrap();
+        let client = client.await.unwrap().unwrap();
+        let peer_id = Uuid::new_v4();
+        let mut source = SecureChannel::new(
+            PacketConnection::new(client),
+            [11; 32],
+            peer_id,
+            "source".into(),
+        );
+        let mut destination = SecureChannel::new(
+            PacketConnection::new(server),
+            [11; 32],
+            peer_id,
+            "destination".into(),
+        );
+        let source_task = tokio::spawn(async move {
+            loop {
+                source.send(&DirectMessage::Ping(Empty {})).await.unwrap();
+                assert_eq!(
+                    source.receive().await.unwrap(),
+                    SecurePayload::Message(Box::new(DirectMessage::Pong(Empty {})))
+                );
+                tokio::time::sleep(Duration::from_millis(1)).await;
+            }
+        });
+
+        assert!(matches!(
+            receive_message(&mut destination, Duration::from_millis(25)).await,
+            Err(ClientError::TimedOut)
+        ));
+        source_task.abort();
+        let _ = source_task.await;
     }
 
     #[test]

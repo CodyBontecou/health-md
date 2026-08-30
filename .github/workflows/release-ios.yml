@@ -44,6 +44,11 @@ on:
         required: false
         default: false
         type: boolean
+      app_info:
+        description: 'App Info ID override for asc metadata apply (use when multiple ASC app infos exist, e.g. during a concurrent platform submission)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -517,12 +522,37 @@ jobs:
             --build "${{ steps.asc_upload.outputs.build_id }}"
 
           echo "Applying canonical app-info and $VERSION metadata"
+          if [[ -n "${{ github.event.inputs.app_info }}" ]]; then
+            RESOLVED_APP_INFO="${{ github.event.inputs.app_info }}"
+          else
+            # A concurrent platform submission can leave two app info records
+            # (the live READY_FOR_DISTRIBUTION one plus an editable copy for
+            # in-flight versions). Pin the single editable record so asc does
+            # not fail closed on the ambiguity.
+            RESOLVED_APP_INFO=$(asc apps info list --app "$ASC_APP_ID" --output json | python3 -c '
+          import sys, json
+          records = json.load(sys.stdin)["data"]
+          editable = [r for r in records if r["attributes"]["state"] != "READY_FOR_DISTRIBUTION"]
+          if len(records) <= 1:
+              print("")
+          elif len(editable) == 1:
+              print(editable[0]["id"])
+          else:
+              raise SystemExit("ambiguous app infos: " + ", ".join("{}[{}]".format(r["id"], r["attributes"]["state"]) for r in records))
+          ')
+          fi
+          APP_INFO_ARGS=()
+          if [[ -n "$RESOLVED_APP_INFO" ]]; then
+            APP_INFO_ARGS=(--app-info "$RESOLVED_APP_INFO")
+            echo "Using app-info: $RESOLVED_APP_INFO"
+          fi
           asc metadata apply \
             --app "$ASC_APP_ID" \
             --version "$VERSION" \
             --platform IOS \
             --dir metadata \
             --include localizations \
+            "${APP_INFO_ARGS[@]}" \
             --output table
 
           IAP_VERSION_IDS=()
@@ -540,14 +570,49 @@ jobs:
 
             IAP_VERSIONS=$(asc iap versions list \
               --iap-id "$IAP_ID" \
-              --state PREPARE_FOR_SUBMISSION \
               --paginate \
               --output json)
             IAP_VERSION_ID=$(printf '%s' "$IAP_VERSIONS" \
-              | jq -r '[.data[] | select(.attributes.state == "PREPARE_FOR_SUBMISSION")][0].id // empty')
+              | jq -r '[(.data // [])[] | select(.attributes.state == "PREPARE_FOR_SUBMISSION")][0].id // empty')
+
             if [[ -z "$IAP_VERSION_ID" ]]; then
-              echo "::error::IAP $PRODUCT_ID has no PREPARE_FOR_SUBMISSION version for localized metadata"
-              exit 1
+              # A concurrent platform submission can move the shared IAP past
+              # PREPARE_FOR_SUBMISSION. Verify the canonical localizations
+              # against the waiting/approved version instead of failing.
+              echo "::notice::IAP $PRODUCT_ID has no PREPARE_FOR_SUBMISSION version; verifying existing localized metadata"
+              REFERENCE_VERSION_ID=$(printf '%s' "$IAP_VERSIONS" \
+                | jq -r '[(.data // [])[] | select(.attributes.state == "WAITING_FOR_REVIEW" or .attributes.state == "APPROVED")][0].id // empty')
+              if [[ -z "$REFERENCE_VERSION_ID" ]]; then
+                echo "::error::IAP $PRODUCT_ID has no editable or approved version to compare against"
+                exit 1
+              fi
+              REMOTE_IAP_LOCALIZATIONS=$(asc iap versions localizations list \
+                --version-id "$REFERENCE_VERSION_ID" \
+                --paginate \
+                --output json)
+              IAP_MISMATCH=0
+              while IFS= read -r EXPECTED; do
+                EXPECTED_LOCALE=$(printf '%s' "$EXPECTED" | jq -r '.locale')
+                EXPECTED_NAME=$(printf '%s' "$EXPECTED" | jq -r '.name')
+                EXPECTED_DESCRIPTION=$(printf '%s' "$EXPECTED" | jq -r '.description')
+                MATCH=$(printf '%s' "$REMOTE_IAP_LOCALIZATIONS" \
+                  | jq -r --arg locale "$EXPECTED_LOCALE" --arg name "$EXPECTED_NAME" --arg description "$EXPECTED_DESCRIPTION" \
+                    '[(.data // [])[] | select(.attributes.locale == $locale)][0] as $loc | if $loc == null then "missing" elif $loc.attributes.name != $name or $loc.attributes.description != $description then "differs" else "match" end')
+                if [[ "$MATCH" != "match" ]]; then
+                  echo "::error::IAP $PRODUCT_ID locale $EXPECTED_LOCALE metadata $MATCH on version $REFERENCE_VERSION_ID"
+                  IAP_MISMATCH=1
+                fi
+              done < <(printf '%s' "$PRODUCT" \
+                | jq -c '.localizations | to_entries[] | {
+                    locale: .key,
+                    name: .value.name,
+                    description: .value.description
+                  }')
+              if [[ "$IAP_MISMATCH" -ne 0 ]]; then
+                exit 1
+              fi
+              echo "IAP $PRODUCT_ID existing metadata matches the canonical localizations"
+              continue
             fi
 
             IAP_LOCALIZATIONS=$(asc iap versions localizations list \
@@ -560,7 +625,7 @@ jobs:
               DESCRIPTION=$(printf '%s' "$LOCALIZATION" | jq -r '.description')
               LOCALIZATION_ID=$(printf '%s' "$IAP_LOCALIZATIONS" \
                 | jq -r --arg locale "$LOCALE" \
-                  '[.data[] | select(.attributes.locale == $locale)][0].id // empty')
+                  '[(.data // [])[] | select(.attributes.locale == $locale)][0].id // empty')
 
               if [[ -n "$LOCALIZATION_ID" ]]; then
                 asc iap versions localizations update \

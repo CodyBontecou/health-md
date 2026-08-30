@@ -925,7 +925,7 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
             settings.metricSelection.enabledMetrics = Set(
                 (HealthMetrics.byCategory[.sleep] ?? []).map(\.id)
             )
-            settings.includeGranularData = false
+            settings.detailPolicy = .summary
             settings.summaryOnlyExport = true
             settings.generateWeeklyRollups = false
             settings.generateMonthlyRollups = false
@@ -935,7 +935,7 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
             settings.metricSelection.enabledMetrics = Set(
                 (HealthMetrics.byCategory[.heart] ?? []).map(\.id)
             )
-            settings.includeGranularData = true
+            settings.detailPolicy = .lossless
             settings.summaryOnlyExport = false
         case .savedFullProviderDisabled:
             settings.metricSelection.enabledCategories = Set(
@@ -951,7 +951,7 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
                     }
                     .map(\.id)
             )
-            settings.includeGranularData = true
+            settings.detailPolicy = .lossless
             settings.summaryOnlyExport = false
         case .rawFull, .savedFull, .savedFullProviderEnabled, .multiDay,
              .thirtyDay, .interruptResume, .cancel, .largeFileBackedBlob:

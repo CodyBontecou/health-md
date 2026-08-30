@@ -383,7 +383,7 @@ struct ExportPreviewView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                if settings.effectiveGranularDataEnabled {
+                if settings.effectiveDetailPolicy.includesCanonicalArchive {
                     HStack(alignment: .top, spacing: 6) {
                         Image(systemName: "info.circle")
                             .font(.caption2)
@@ -589,7 +589,7 @@ struct ExportPreviewView: View {
     private var previewScope: ExportPreviewScope {
         ExportPreviewScope.make(
             selectedFormats: settings.exportFormats,
-            losslessEnabled: settings.effectiveGranularDataEnabled,
+            losslessEnabled: settings.effectiveDetailPolicy.includesCanonicalArchive,
             defaultMaximumRenderedDates: Self.maxRenderedDates
         )
     }
@@ -606,7 +606,14 @@ struct ExportPreviewView: View {
         let metadata = analyticsMetadata()
         analytics.trackExportPreviewOpened(metadata: metadata)
 
-        let dates = ExportOrchestrator.dateRange(from: startDate, to: endDate)
+        let frozenTimeZone = settings.exportTimeZoneOverride ?? .current
+        var frozenCalendar = Calendar(identifier: .gregorian)
+        frozenCalendar.timeZone = frozenTimeZone
+        let dates = ExportOrchestrator.dateRange(
+            from: startDate,
+            to: endDate,
+            calendar: frozenCalendar
+        )
         totalDateCount = dates.count
 
         guard settings.hasFileDestinationOutput,
@@ -770,7 +777,7 @@ struct ExportPreviewView: View {
                     records: rollupInputs,
                     settings: settings,
                     destination: apiDestination,
-                    calendarTimeZone: settings.exportTimeZoneOverride ?? .current,
+                    calendarTimeZone: frozenTimeZone,
                     connectedAppsEnabled: connectedAppsEnabled,
                     fetchExternalDailyRecords: fetchExternalDailyRecords
                 ) {
@@ -792,9 +799,37 @@ struct ExportPreviewView: View {
         }
 
         renderedDayPreviewCount = settings.summaryOnlyModeEnabled ? rollupInputs.count : built.count
+        let requestedIdentifiers = Set(dates.map {
+            HealthKitDailyOwnershipMetadata.ownerDate(
+                for: $0,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+        })
+        let requestedRange: HealthRollupRangeRequest?
+        do {
+            requestedRange = try HealthRollupRangeRequest(
+                ownerDateIdentifiers: requestedIdentifiers,
+                calendarTimeZoneIdentifier: frozenTimeZone.identifier
+            )
+        } catch HealthRollupRangeRequest.ValidationError.exceedsDayLimit {
+            requestedRange = nil
+            if settings.generateRangeSummary {
+                warnings.append(ExportPartialFailure(
+                    date: dates.first ?? startDate,
+                    dataType: "Range Summary",
+                    dateRangeDescription: rangeDescription(
+                        dates: dates,
+                        timeZone: frozenTimeZone
+                    ),
+                    errorDescription: HealthRollupRangeRequest.dayLimitUnavailableMessage
+                ))
+            }
+        } catch {
+            requestedRange = nil
+        }
         let rollupSection = targetType == .apiEndpoint
             ? nil
-            : rollupSummaryPreviewSection(for: rollupInputs)
+            : requestedRange.flatMap { rollupSummaryPreviewSection(for: rollupInputs, requestedRange: $0) }
         if scope.includesSupplementalFiles, let rollupSection {
             built.insert(rollupSection, at: 0)
         }
@@ -874,11 +909,29 @@ struct ExportPreviewView: View {
         return ExportDataDictionarySizeEstimator.byteCount(using: settings.formatCustomization)
     }
 
-    private func rollupSummaryPreviewSection(for healthData: [HealthData]) -> DatePreview? {
+    private func rangeDescription(dates: [Date], timeZone: TimeZone) -> String {
+        let sorted = dates.sorted()
+        let firstDate = sorted.first ?? startDate
+        let lastDate = sorted.last ?? firstDate
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        let first = formatter.string(from: firstDate)
+        let last = formatter.string(from: lastDate)
+        return first == last ? first : "\(first) – \(last)"
+    }
+
+    private func rollupSummaryPreviewSection(
+        for healthData: [HealthData],
+        requestedRange: HealthRollupRangeRequest
+    ) -> DatePreview? {
         guard HealthRollupExporter.isEnabled(settings: settings) else { return nil }
 
         let summaries = HealthRollupExporter.makeSummaries(
             from: healthData,
+            requestedRange: requestedRange,
             settings: settings
         )
         guard !summaries.isEmpty else { return nil }
@@ -997,7 +1050,8 @@ struct ExportPreviewView: View {
             base: previewBase,
             settings: dailyNoteSettings,
             customization: settings.formatCustomization,
-            metricSelection: settings.metricSelection
+            metricSelection: settings.metricSelection,
+            calendarTimeZone: settings.exportTimeZoneOverride ?? .current
         )
 
         switch result {
@@ -1046,14 +1100,16 @@ struct ExportPreviewView: View {
         return ExportPathPlanner.dailyNoteURL(
             vaultURL: vaultURL,
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
     }
 
     private func dailyNoteFolderPath(for date: Date) -> String {
         let relativePath = ExportPathPlanner.dailyNoteRelativePath(
             settings: settings.dailyNoteInjection,
-            date: date
+            date: date,
+            timeZone: settings.exportTimeZoneOverride ?? .current
         )
         let folderComponents = relativePath.split(separator: "/").dropLast().map(String.init)
         var components: [String] = [destinationRootName ?? vaultManager.vaultName]
