@@ -194,12 +194,11 @@ security delete-generic-password \
   -s com.codybontecou.obsidianhealth.direct-cli-trust \
   "$keychain" >/dev/null
 
-# Notarize an initial DMG containing the signed binaries so Apple publishes tickets for both
-# standalone executables, then staple those tickets into the executables themselves. Stapling a
-# standalone Mach-O executable has been supported since macOS 12, and spctl's execute assessment
-# is only deterministic offline when the ticket is embedded in the binary. The DMG is then rebuilt
-# from the stapled executables and notarized again so the DMG and the tar archive carry
-# byte-identical, independently verifiable copies.
+# Apple's documented custom workflow for staple-able command-line tools submits the
+# executables inside a zip archive, waits for acceptance, and staples the tickets onto the
+# unzipped binaries. Tickets are not retrievable for executables that were only submitted
+# inside a DMG (stapler reports a missing ticket indefinitely), so the binaries get their own
+# zip submission and the DMG is assembled afterwards from the stapled executables.
 root_name="$(basename "$root")"
 
 submit_and_wait() {
@@ -236,19 +235,15 @@ staple_with_retry() {
 printf '%s' "$APPLE_NOTARY_KEY_P8_BASE64" | base64 --decode > "$notary_key"
 chmod 600 "$notary_key"
 
-dmg="${archive%.tar.xz}.dmg"
-rm -f "$dmg"
-COPYFILE_DISABLE=1 hdiutil create \
-  -quiet -format UDZO -fs HFS+ -volname "Health.md CLI" -srcfolder "$root" "$dmg"
-codesign --force --timestamp --sign "$signing_identity" "$dmg"
-codesign --verify --strict --verbose=2 "$dmg"
-
-# First submission publishes the notarization tickets for the wrapped executables.
-submit_and_wait "$dmg"
+binaries_zip="$work/healthmd-cli-${TARGET}-binaries.zip"
+rm -f "$binaries_zip"
+( cd "$root" && zip -q -X "$binaries_zip" "$(basename "$healthmd")" "$(basename "$mcp")" )
+submit_and_wait "$binaries_zip"
 staple_with_retry "$healthmd"
 staple_with_retry "$mcp"
 
-# Rebuild the DMG from the stapled executables and notarize the final installation artifact.
+# Assemble the DMG from the stapled executables, notarize it, and staple it.
+dmg="${archive%.tar.xz}.dmg"
 rm -f "$dmg"
 COPYFILE_DISABLE=1 hdiutil create \
   -quiet -format UDZO -fs HFS+ -volname "Health.md CLI" -srcfolder "$root" "$dmg"
