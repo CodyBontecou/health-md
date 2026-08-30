@@ -3,7 +3,7 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.1`. Deployed iOS export protocol v1, Android application protocol
+> **Status:** `0.1.0-alpha.2`. Deployed iOS export protocol v1, Android application protocol
 > v2, and capability-gated iPhone query protocol v3 are implemented with automated Swift↔Rust and
 > Kotlin↔Rust compatibility gates.
 > Complete physical-device release QA is still required before the first public release.
@@ -96,7 +96,7 @@ manifest for integrity. macOS users may also use the notarized, stapled DMG. Rep
 with the complete version including any prerelease suffix:
 
 ```bash
-VERSION='0.1.0-alpha.1'
+VERSION='0.1.0-alpha.2'
 TAG="healthmd-cli/v$VERSION"
 BASE="https://github.com/CodyBontecou/health-md/releases/download/$TAG"
 curl -fLO "$BASE/healthmd-cli-installer.sh"
@@ -120,7 +120,7 @@ sh healthmd-cli-installer.sh
 ```
 
 ```powershell
-$Version = '0.1.0-alpha.1'
+$Version = '0.1.0-alpha.2'
 $Tag = "healthmd-cli/v$Version"
 $Base = "https://github.com/CodyBontecou/health-md/releases/download/$Tag"
 Invoke-WebRequest "$Base/healthmd-cli-installer.ps1" -OutFile healthmd-cli-installer.ps1

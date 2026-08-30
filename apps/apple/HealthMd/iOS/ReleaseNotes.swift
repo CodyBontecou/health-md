@@ -27,6 +27,26 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.2.1",
+            items: [
+                .list(
+                    title: "More dependable exports",
+                    rows: [
+                        .init(
+                            symbolSystemName: "clock.badge.checkmark",
+                            title: "History remembers each destination",
+                            description: "Scheduled export history now keeps the exact profile and destination used by every run and retry."
+                        ),
+                        .init(
+                            symbolSystemName: "folder.badge.gearshape",
+                            title: "Folder changes stay saved",
+                            description: "A new local, iCloud Drive, or Dropbox folder becomes active only after access is saved successfully. If access is denied, Health.md keeps your previous valid destination."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.2",
             items: [
                 .list(

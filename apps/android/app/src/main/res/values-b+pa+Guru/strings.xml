@@ -527,10 +527,10 @@
     <string name="release_notes_settings_hint">ਤੁਸੀਂ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਨਿਰਯਾਤ ਫਾਰਮੈਟ, ਕਸਟਮ Markdown ਅਤੇ ਮੈਟ੍ਰਿਕਸ ਨੂੰ ਵਿਵਸਥਿਤ ਕਰ ਸਕਦੇ ਹੋ।</string>
     <string name="release_notes_open_settings">ਸੈਟਿੰਗਾਂ ਖੋਲ੍ਹੋ</string>
     <string name="release_notes_got_it">ਸਮਝ ਲਿਆ</string>
-    <string name="release_notes_highlight_feedback">ਵਿਸਤ੍ਰਿਤ Health Connect ਕਵਰੇਜ ਵਿੱਚ ਗਤੀਵਿਧੀ, ਸਰੀਰ, ਪੋਸ਼ਣ, ਗਤੀਸ਼ੀਲਤਾ, ਸਚੇਤਤਾ, ਪ੍ਰਜਨਨ ਸਿਹਤ ਅਤੇ ਮੈਡੀਕਲ ਸਰੋਤਾਂ ਦੇ ਹੋਰ ਮੈਟ੍ਰਿਕਸ ਸ਼ਾਮਲ ਹਨ।</string>
-    <string name="release_notes_highlight_export_parity">ਨਵੇਂ Android-ਵਿਸ਼ੇਸ਼ ਵੇਰਵਿਆਂ ਵਿੱਚ ਗਤੀਵਿਧੀ ਦੀ ਤੀਬਰਤਾ, ਭੋਜਨ ਦਾ ਪੋਸ਼ਣ ਡੇਟਾ, ਮਾਹਵਾਰੀ ਦੀ ਮਿਆਦ, ਯੋਜਨਾਬੱਧ ਵਰਕਆਉਟ ਅਤੇ ਉਪਲਬਧ ਹੋਣ ’ਤੇ ਟਾਈਮਸਟੈਂਪ ਵਾਲੇ ਵਿਸਤ੍ਰਿਤ ਨਮੂਨੇ ਸ਼ਾਮਲ ਹਨ।</string>
-    <string name="release_notes_highlight_templates">Markdown, JSON, CSV ਅਤੇ Obsidian ਨਿਰਯਾਤਾਂ ਵਿੱਚ ਹੁਣ ਵੱਡੇ ਕੈਟਾਲਾਗ ਦੇ ਹੋਰ ਵਿਸਤ੍ਰਿਤ ਮੈਟ੍ਰਿਕ ਮੁੱਲ ਸ਼ਾਮਲ ਹਨ।</string>
-    <string name="release_notes_highlight_workouts">ਵਿਸਤ੍ਰਿਤ, ਸਿਰਫ਼ ਪੜ੍ਹਨ ਵਾਲੀਆਂ ਨਿਰਯਾਤ ਇਜਾਜ਼ਤਾਂ ਨੂੰ ਸਮਝਾਉਣ ਲਈ Health Connect ਇਜਾਜ਼ਤਾਂ ਦੀ ਜਾਣਕਾਰੀ ਅੱਪਡੇਟ ਕੀਤੀ ਗਈ ਹੈ।</string>
+    <string name="release_notes_highlight_feedback">ਆਟੋਮੇਸ਼ਨ ਕਾਰਵਾਈਆਂ ਹੁਣ ਚੁਣੇ ਹੋਏ ਨਿਰਯਾਤ ਪ੍ਰੋਫਾਈਲ ਨੂੰ ਹੋਰ ਭਰੋਸੇਯੋਗ ਢੰਗ ਨਾਲ ਚਲਾਉਂਦੀਆਂ ਹਨ।</string>
+    <string name="release_notes_highlight_export_parity">ਕਦਮਾਂ ਦੇ ਕੁੱਲ ਮੰਗੀਆਂ ਮਿਤੀ ਰੇਂਜਾਂ ਵਿੱਚ ਸਹੀ ਸਥਾਨਕ ਕੈਲੰਡਰ ਦਿਨਾਂ ਦੀ ਵਰਤੋਂ ਕਰਦੇ ਹਨ।</string>
+    <string name="release_notes_highlight_templates">Play Billing ਦਾ ਕਨੈਕਸ਼ਨ ਟੁੱਟਣ ਤੋਂ ਬਾਅਦ ਖਰੀਦਾਂ ਅਤੇ ਰੀਸਟੋਰ ਆਪਣੇ ਆਪ ਮੁੜ ਚੱਲਦੇ ਹਨ।</string>
+    <string name="release_notes_highlight_workouts">ਫੋਨ ਅਤੇ Wear OS ਲਈ ਭਰੋਸੇਯੋਗਤਾ ਅਤੇ ਅਨੁਕੂਲਤਾ ਸੁਧਾਰ ਸ਼ਾਮਲ ਹਨ।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ</string>
     <string name="notification_channel_scheduled_exports_description">ਅਨੁਸੂਚਿਤ ਸਿਹਤ ਨਿਰਯਾਤ ਪੂਰੇ ਹੋਣ ਜਾਂ ਅਸਫਲ ਹੋਣ ’ਤੇ ਸੂਚਨਾਵਾਂ</string>
@@ -786,7 +786,7 @@
     <string name="disabled">ਬੰਦ</string>
 
     <!-- Canonical localization additions -->
-    <string name="release_notes_highlight_widgets">ਵਿਕਲਪਿਕ ਬੈਕਗ੍ਰਾਊਂਡ ਤਾਜ਼ਗੀ ਨਾਲ ਆਪਣੀ ਹੋਮ ਸਕ੍ਰੀਨ ਉੱਤੇ ਸਿਹਤ ਸੰਖੇਪ, ਗਤੀਵਿਧੀ, ਦਿਲ ਦੀ ਧੜਕਣ ਦੀ ਰੇਂਜ ਅਤੇ ਨੀਂਦ ਦੇ ਵਿਜੇਟ ਜੋੜੋ।</string>
+    <string name="release_notes_highlight_widgets">ਅਨੁਸੂਚਿਤ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਹੁਣ ਹਰ ਚਲਾਉਣ ਅਤੇ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਲਈ ਵਰਤੇ ਗਏ ਸਹੀ ਪ੍ਰੋਫਾਈਲ ਅਤੇ ਮੰਜ਼ਿਲ ਨੂੰ ਸੰਭਾਲਦਾ ਹੈ।</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">ਇੰਕ੍ਰਿਪਟਡ ਡੈਸਕਟੌਪ ਨਿਰਯਾਤ</string>
     <string name="direct_cli_intro_body">CLI ਤੁਹਾਡੇ ਕੰਪਿਊਟਰ ਉੱਤੇ ਕਨੈਕਸ਼ਨ ਦੀ ਉਡੀਕ ਕਰਦਾ ਹੈ। Health.md ਸਿੱਧਾ ਜੁੜ ਕੇ ਕਿਸੇ ਕਲਾਊਡ ਰੀਲੇ ਤੋਂ ਬਿਨਾਂ ਨਿਰਯਾਤ ਭੇਜਦਾ ਹੈ।</string>

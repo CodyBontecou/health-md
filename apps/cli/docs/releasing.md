@@ -107,7 +107,7 @@ keyless Sigstore identity and publishes `sha256.sum.sigstore.json`. Verify a dow
 with the exact tag identity before trusting its checksums:
 
 ```bash
-tag='healthmd-cli/v0.1.0-alpha.1'
+tag='healthmd-cli/v0.1.0-alpha.2'
 cosign verify-blob \
   --bundle sha256.sum.sigstore.json \
   --certificate-identity "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/$tag" \
@@ -289,11 +289,11 @@ logs into issues or release evidence.
 ## crates.io yank and recovery
 
 Yanking prevents new dependency resolution but does not erase the immutable crate archive or break
-existing lockfiles. For a broken coordinated release, review and yank all four exact versions in
+existing lockfiles. For a broken coordinated release, review and yank all five exact versions in
 dependency order from a protected operator environment:
 
 ```bash
-version='0.1.0-alpha.1'
+version='<affected-version>'
 cargo yank --vers "$version" healthmd-cli
 cargo yank --vers "$version" healthmd-mcp
 cargo yank --vers "$version" healthmd-client

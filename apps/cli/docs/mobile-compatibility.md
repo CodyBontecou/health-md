@@ -4,13 +4,13 @@ This is the authoritative mobile compatibility ledger for the portable Rust CLI.
 show wire capability; they are not a substitute for an app version/build that completed the physical
 release matrix.
 
-## `healthmd-cli` 0.1.0-alpha.1 candidate
+## `healthmd-cli` 0.1.0-alpha.2 candidate
 
 | Mobile source and feature | Protocol | Conservative source floor | Public qualification |
 |---|---|---|---|
-| iPhone status/raw/extract/generated files/resume/cancel | selector 1, application v1 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Qualified:** mobile_build=iOS 3.1.1 (App Store, build 202608100207); source_commit=3904f9cbc62c94fdf45fa5202141881fe1017fa7; device_os=iPhone 15 Pro / iOS 18.5; lan=pass; tailscale=pass; evidence_sha256=d641f54a4f1c868794199e73fb50b61be165768869ea9e8048c19a6af1372a67 |
-| iPhone portable typed MCP queries | selector 1, application v1 + query v3 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Qualified:** mobile_build=iOS 3.1.1 (App Store, build 202608100207); source_commit=3904f9cbc62c94fdf45fa5202141881fe1017fa7; device_os=iPhone 15 Pro / iOS 18.5; lan=pass; tailscale=pass; evidence_sha256=338dc989d3af302b079c7ca6d28e7f1835cb5c6c3bfa6d1897ddd9b2292fd5f8 |
-| Android status/provider-native raw/generated files/resume/cancel | selector 2, application v2 | Health.md Android 1.5.4 (`versionCode 25`) built from the exact CLI candidate SHA | **Qualified:** mobile_build=Android 1.7.0 (versionCode 28); source_commit=3904f9cbc62c94fdf45fa5202141881fe1017fa7; device_os=Google Pixel 8 / Android 15; lan=pass; tailscale=pass; evidence_sha256=b68b12e3180095379e0aeb8b16969bfc7ea1f02eeb70590d70d0aecfe7f88f1c |
+| iPhone status/raw/extract/generated files/resume/cancel | selector 1, application v1 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Pending; no public CLI/mobile pair qualified yet** |
+| iPhone portable typed MCP queries | selector 1, application v1 + query v3 | Health.md iOS 3.0.3 built from the exact CLI candidate SHA | **Pending; no public CLI/mobile pair qualified yet** |
+| Android status/provider-native raw/generated files/resume/cancel | selector 2, application v2 | Health.md Android 1.5.4 (`versionCode 25`) built from the exact CLI candidate SHA | **Pending; no public CLI/mobile pair qualified yet** |
 | Android typed MCP queries | N/A | Not implemented | Unsupported |
 
 The floors above describe the current monorepo source that implements the contracts. They are not a

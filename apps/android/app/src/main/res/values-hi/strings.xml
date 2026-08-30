@@ -527,10 +527,10 @@
     <string name="release_notes_settings_hint">आप सेटिंग्स में निर्यात प्रारूप, कस्टम Markdown और मेट्रिक्स को समायोजित कर सकते हैं।</string>
     <string name="release_notes_open_settings">सेटिंग्स खोलें</string>
     <string name="release_notes_got_it">समझ गया</string>
-    <string name="release_notes_highlight_feedback">विस्तारित Health Connect कवरेज में गतिविधि, शरीर, पोषण, गतिशीलता, सचेतनता, प्रजनन स्वास्थ्य और चिकित्सा संसाधनों के और मेट्रिक्स शामिल हैं।</string>
-    <string name="release_notes_highlight_export_parity">नए Android-विशिष्ट विवरणों में गतिविधि की तीव्रता, भोजन का पोषण डेटा, मासिक धर्म की अवधि, नियोजित वर्कआउट और उपलब्ध होने पर टाइमस्टैम्प वाले विस्तृत नमूने शामिल हैं।</string>
-    <string name="release_notes_highlight_templates">Markdown, JSON, CSV और Obsidian निर्यातों में अब बड़े कैटलॉग के ज़्यादा विस्तृत मेट्रिक मान शामिल हैं।</string>
-    <string name="release_notes_highlight_workouts">केवल-पढ़ने वाली विस्तृत निर्यात अनुमतियों को समझाने के लिए Health Connect की अनुमति संबंधी जानकारी अपडेट की गई है।</string>
+    <string name="release_notes_highlight_feedback">ऑटोमेशन कार्रवाइयाँ अब चुनी हुई निर्यात प्रोफ़ाइल को अधिक भरोसेमंद ढंग से चलाती हैं।</string>
+    <string name="release_notes_highlight_export_parity">कदमों के कुल अनुरोधित तारीख़ सीमाओं में सटीक स्थानीय कैलेंडर दिनों का उपयोग करते हैं।</string>
+    <string name="release_notes_highlight_templates">Play Billing का कनेक्शन टूटने के बाद खरीद और रीस्टोर अपने आप फिर काम करने लगते हैं।</string>
+    <string name="release_notes_highlight_workouts">फ़ोन और Wear OS के लिए विश्वसनीयता और अनुकूलता सुधार शामिल हैं।</string>
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">निर्धारित निर्यात</string>
     <string name="notification_channel_scheduled_exports_description">जब निर्धारित स्वास्थ्य निर्यात पूरे हों या विफल हों तो सूचनाएं</string>
@@ -786,7 +786,7 @@
     <string name="disabled">अक्षम</string>
 
     <!-- Canonical localization additions -->
-    <string name="release_notes_highlight_widgets">वैकल्पिक बैकग्राउंड रीफ़्रेश के साथ अपनी होम स्क्रीन पर स्वास्थ्य सारांश, गतिविधि, हृदय गति सीमा और नींद के विजेट जोड़ें।</string>
+    <string name="release_notes_highlight_widgets">शेड्यूल किए गए निर्यात का इतिहास अब हर रन और दोबारा प्रयास में इस्तेमाल की गई सटीक प्रोफ़ाइल और गंतव्य को बनाए रखता है।</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">एन्क्रिप्टेड डेस्कटॉप निर्यात</string>
     <string name="direct_cli_intro_body">CLI आपके कंप्यूटर पर कनेक्शन की प्रतीक्षा करता है। Health.md सीधे कनेक्ट होकर बिना किसी क्लाउड रिले के निर्यात भेजता है।</string>

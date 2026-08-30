@@ -1,9 +1,9 @@
-Health.md 3.2 gives you more control over exports.
+Health.md 3.2.1 makes scheduled exports and folder changes more dependable.
 
-New
-• Stop running exports — one banner owns export progress, and Stop cancels the running scheduled, Shortcut, or manual export while completed dates stay completed and schedules remain enabled.
-• Export Data Detail now separates Detailed Time-Series from Lossless Health Records, so you can export per-sample data without the much larger canonical archive. Summary, Detailed Time-Series, and Lossless presets live in the Export tab and export profiles.
+Improved
+• Schedule Export History now keeps the exact export profile and destination used by each run, including retries.
+• Choosing or replacing an iPhone export folder now activates it only after access is saved successfully.
 
 Fixed
-• Direct CLI Access reconnects automatically after your computer sleeps, the Mac app quits, or the network changes.
-• Folders on "On My iPhone" storage keep their saved selection across restarts, so automatic exports and Shortcuts keep working.
+• Restarting the app no longer restores an older profile destination after a new local, iCloud Drive, or Dropbox folder was selected.
+• If access to a replacement folder is denied, Health.md keeps the previous valid destination instead of disconnecting it.

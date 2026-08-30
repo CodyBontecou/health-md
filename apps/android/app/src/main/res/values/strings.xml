@@ -581,11 +581,11 @@
     <string name="release_notes_settings_hint">You can tune export formats, custom Markdown, and metrics from Settings.</string>
     <string name="release_notes_open_settings">Open Settings</string>
     <string name="release_notes_got_it">Got it</string>
-    <string name="release_notes_highlight_widgets">Add Health Summary, Activity, Heart Range, and Sleep widgets to your home screen, with optional background refresh.</string>
-    <string name="release_notes_highlight_feedback">Expanded Health Connect coverage adds more activity, body, nutrition, mobility, mindfulness, reproductive health, and medical resource metrics.</string>
-    <string name="release_notes_highlight_export_parity">New Android-only details include activity intensity, nutrition meals, menstruation periods, planned workouts, and granular samples when available.</string>
-    <string name="release_notes_highlight_templates">Markdown, JSON, CSV, and Obsidian exports now carry richer metric values across the larger catalog.</string>
-    <string name="release_notes_highlight_workouts">The Health Connect permissions rationale was refreshed to explain the expanded read-only export permissions.</string>
+    <string name="release_notes_highlight_widgets">Scheduled export history keeps the exact profile and destination used by each run and retry.</string>
+    <string name="release_notes_highlight_feedback">Automation actions now run the selected export profile more reliably.</string>
+    <string name="release_notes_highlight_export_parity">Step totals use exact local calendar days across requested date ranges.</string>
+    <string name="release_notes_highlight_templates">Purchases and restores recover automatically after Play Billing disconnects.</string>
+    <string name="release_notes_highlight_workouts">Includes reliability and compatibility fixes for phone and Wear OS.</string>
 
     <!-- Notifications -->
     <string name="notification_channel_scheduled_exports_name">Scheduled Exports</string>

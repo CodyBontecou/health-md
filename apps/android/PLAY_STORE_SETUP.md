@@ -122,7 +122,7 @@ Before a Wear-bearing upload, run the read-only Play preflight (it never creates
 
 ```bash
 PLAY_CONSOLE_KEY_PATH="$HOME/.config/play-console/play-publisher-<project-id>.json" \
-  EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
+  EXPECTED_PHONE_VERSION_CODE=30 EXPECTED_WEAR_VERSION_CODE=1000030 \
   ./scripts/inspect-google-play-wear-readiness.sh .pi/evidence/google-play/readiness.json
 ```
 

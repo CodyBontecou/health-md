@@ -1,7 +1,7 @@
-v1.8.0 — Health.md on Wear OS
+v1.8.1 — More reliable scheduled exports
 
-• View minimized daily Health Connect aggregates on your watch.
-• Adds Daily Activity and Recovery Tiles plus ten complications.
-• Sync manually or in the background while keeping last-good data available offline.
-• Health Connect stays on your phone; the watch performs no health sensing.
-• Includes localized stale-data, permission, setup, and unavailable states.
+• Scheduled export history keeps the exact profile and destination used by each run and retry.
+• Automation actions now run the selected export profile more reliably.
+• Health Connect step totals use exact local calendar days across requested date ranges.
+• Billing actions recover after Play Billing disconnects.
+• Includes reliability and compatibility fixes for phone and Wear OS.

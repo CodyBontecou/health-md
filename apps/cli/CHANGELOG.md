@@ -2,9 +2,14 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.2
+
 - Detect silently dead direct-device channels with bounded heartbeat/TCP keepalive handling so a
   foreground paired iPhone can redial later one-shot CLI listeners without a manual disconnect.
   The CLI now answers heartbeat pings in every v1 receive path while preserving command deadlines.
+- Prepare the portable release against the latest shared iOS and Android source while preserving
+  the deployed protocol-v1, Android application-v2, and iPhone query-v3 contracts. Publication
+  remains blocked until fresh physical-device qualification is recorded for this candidate.
 
 ## 0.1.0-alpha.1
 

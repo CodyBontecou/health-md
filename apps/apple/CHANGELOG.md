@@ -4,6 +4,8 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.2.1] - 2026-08-30
+
 ### Added
 - Schedule Export History now retains and displays the export profile and privacy-safe folder or API destination used by scheduled profile runs, including durable retries, instead of resolving the profile's current destination when the row is opened later.
 

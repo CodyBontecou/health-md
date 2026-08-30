@@ -652,10 +652,10 @@
     <string name="release_notes_settings_hint">Ви можете налаштувати формати експорту, власний Markdown і показники в налаштуваннях.</string>
     <string name="release_notes_open_settings">Відкрийте налаштування</string>
     <string name="release_notes_got_it">Зрозуміло</string>
-    <string name="release_notes_highlight_feedback">Розширене покриття Health Connect додає більше показників активності, тіла, харчування, мобільності, усвідомленості, репродуктивного здоров’я та медичних ресурсів.</string>
-    <string name="release_notes_highlight_export_parity">Нові дані, доступні лише в Android, включають інтенсивність активності, прийоми їжі, менструальні періоди, заплановані тренування та детальні зразки, коли вони доступні.</string>
-    <string name="release_notes_highlight_templates">Експортовані файли Markdown, JSON, CSV та Obsidian тепер містять повніші значення показників у розширеному каталозі.</string>
-    <string name="release_notes_highlight_workouts">Обґрунтування дозволів Health Connect було оновлено, щоб пояснити розширені дозволи на експорт лише для читання.</string>
+    <string name="release_notes_highlight_feedback">Дії автоматизації тепер надійніше запускають вибраний профіль експорту.</string>
+    <string name="release_notes_highlight_export_parity">Підсумки кроків використовують точні локальні календарні дні в запитаних діапазонах дат.</string>
+    <string name="release_notes_highlight_templates">Покупки й відновлення автоматично поновлюються після відключення Play Billing.</string>
+    <string name="release_notes_highlight_workouts">Додано виправлення надійності та сумісності для телефона й Wear OS.</string>
     <string name="export_notification_background_permission_required">Для запланованого експорту потрібен фоновий доступ Health Connect. Відкрийте Health.md &gt; Розклад, щоб увімкнути його.</string>
     <string name="paywall_unlock_button_price">Розблокувати за %s</string>
     <string name="paywall_purchasing">Обробка\u2026</string>
@@ -839,7 +839,7 @@
     <string name="disabled">Вимкнено</string>
 
     <!-- Direct CLI, API export, providers, billing, history, and accessibility -->
-    <string name="release_notes_highlight_widgets">Додайте на головний екран віджети «Огляд здоров’я», «Активність», «Діапазон пульсу» та «Сон» із необов’язковим фоновим оновленням.</string>
+    <string name="release_notes_highlight_widgets">Історія запланованого експорту тепер зберігає точні профіль і призначення для кожного запуску та повтору.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Зашифрований експорт на комп’ютер</string>
     <string name="direct_cli_intro_body">CLI очікує підключення на вашому комп’ютері. Health.md підключається безпосередньо й передає експорт без хмарного посередника.</string>

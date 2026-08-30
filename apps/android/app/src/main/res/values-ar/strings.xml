@@ -674,10 +674,10 @@
     <string name="release_notes_settings_hint">يمكنك ضبط صيغ التصدير وقالب Markdown المخصص والمقاييس من الإعدادات.</string>
     <string name="release_notes_open_settings">افتح الإعدادات</string>
     <string name="release_notes_got_it">حسنًا</string>
-    <string name="release_notes_highlight_feedback">تضيف التغطية الموسّعة في Health Connect مزيدًا من مقاييس النشاط والجسم والتغذية والحركة واليقظة الذهنية والصحة الإنجابية والموارد الطبية.</string>
-    <string name="release_notes_highlight_export_parity">تتضمن التفاصيل الجديدة الخاصة بـ Android شدة النشاط والوجبات الغذائية وفترات الحيض والتمارين المخططة والعينات التفصيلية عند توفرها.</string>
-    <string name="release_notes_highlight_templates">تتضمن الآن عمليات تصدير Markdown وJSON وCSV وObsidian قيمًا أغنى للمقاييس ضمن الفهرس الموسّع.</string>
-    <string name="release_notes_highlight_workouts">حُدّثت مبررات أذونات Health Connect لتوضيح أذونات التصدير الموسّعة والمخصّصة للقراءة فقط.</string>
+    <string name="release_notes_highlight_feedback">تشغّل إجراءات الأتمتة الآن ملف تعريف التصدير المحدد بموثوقية أكبر.</string>
+    <string name="release_notes_highlight_export_parity">تستخدم إجماليات الخطوات أيام التقويم المحلية الدقيقة ضمن النطاقات الزمنية المطلوبة.</string>
+    <string name="release_notes_highlight_templates">تتعافى عمليات الشراء والاستعادة تلقائيًا بعد انقطاع Play Billing.</string>
+    <string name="release_notes_highlight_workouts">يتضمن إصلاحات للموثوقية والتوافق على الهاتف وWear OS.</string>
     <string name="export_notification_background_permission_required">تحتاج عمليات التصدير المجدولة إلى وصول Health Connect في الخلفية. افتح قسم «الجدولة» في Health.md لتفعيله.</string>
     <string name="paywall_unlock_button_price">إلغاء القفل مقابل %s</string>
     <string name="paywall_purchasing">جارٍ إتمام الشراء\u2026</string>
@@ -865,7 +865,7 @@
     <string name="disabled">معطّل</string>
 
     <!-- Canonical localization additions -->
-    <string name="release_notes_highlight_widgets">أضف أدوات ملخص الصحة والنشاط ونطاق نبض القلب والنوم إلى شاشتك الرئيسية، مع خيار التحديث في الخلفية.</string>
+    <string name="release_notes_highlight_widgets">يحتفظ سجل عمليات التصدير المجدولة الآن بملف تعريف التصدير والوجهة المحددين المستخدمين في كل تشغيل وإعادة محاولة.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">عمليات تصدير سطح المكتب المشفّرة</string>
     <string name="direct_cli_intro_body">ينتظر CLI الاتصالات على جهاز الكمبيوتر لديك. يتصل Health.md به مباشرةً ويرسل التصدير من دون وسيط سحابي.</string>

@@ -652,10 +652,10 @@
     <string name="release_notes_settings_hint">Вы можете настроить форматы экспорта, специальные Markdown и метрики в настройках.</string>
     <string name="release_notes_open_settings">Открыть настройки</string>
     <string name="release_notes_got_it">понял</string>
-    <string name="release_notes_highlight_feedback">Расширенное покрытие Health Connect добавляет больше показателей активности, тела, питания, мобильности, осознанности, репродуктивного здоровья и медицинских ресурсов.</string>
-    <string name="release_notes_highlight_export_parity">Новые сведения, доступные только на Android, включают интенсивность активности, приёмы пищи, периоды менструации, запланированные тренировки и подробные образцы, когда они доступны.</string>
-    <string name="release_notes_highlight_templates">Экспорт Markdown, JSON, CSV и Obsidian теперь содержит более полные значения показателей в большом каталоге.</string>
-    <string name="release_notes_highlight_workouts">Обоснование разрешений Health Connect было обновлено, чтобы объяснить расширенные разрешения на экспорт только для чтения.</string>
+    <string name="release_notes_highlight_feedback">Действия автоматизации теперь надёжнее запускают выбранный профиль экспорта.</string>
+    <string name="release_notes_highlight_export_parity">Итоговые значения шагов используют точные локальные календарные дни в запрошенных диапазонах дат.</string>
+    <string name="release_notes_highlight_templates">Покупки и восстановления автоматически возобновляются после отключения Play Billing.</string>
+    <string name="release_notes_highlight_workouts">Включены исправления надёжности и совместимости для телефона и Wear OS.</string>
     <string name="export_notification_background_permission_required">Для запланированного экспорта требуется фоновый доступ Health Connect. Откройте Health.md &gt; Расписание, чтобы включить его.</string>
     <string name="paywall_unlock_button_price">Разблокировать за %s</string>
     <string name="paywall_purchasing">Обработка\u2026</string>
@@ -839,7 +839,7 @@
     <string name="disabled">Отключено</string>
 
     <!-- Direct CLI, API export, providers, billing, history, and accessibility -->
-    <string name="release_notes_highlight_widgets">Добавьте на главный экран виджеты «Сводка здоровья», «Активность», «Диапазон пульса» и «Сон» с необязательным фоновым обновлением.</string>
+    <string name="release_notes_highlight_widgets">История запланированного экспорта теперь сохраняет точные профиль и назначение для каждого запуска и повтора.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Зашифрованный экспорт на компьютер</string>
     <string name="direct_cli_intro_body">CLI ожидает подключения на вашем компьютере. Health.md подключается напрямую и передаёт экспорт без облачного посредника.</string>

@@ -641,10 +641,10 @@
     <string name="release_notes_settings_hint">Puedes ajustar los formatos de exportación, el Markdown personalizado y las métricas desde Configuración.</string>
     <string name="release_notes_open_settings">Abrir configuración</string>
     <string name="release_notes_got_it">Entiendo</string>
-    <string name="release_notes_highlight_feedback">La cobertura ampliada de Health Connect agrega más métricas de actividad, cuerpo, nutrición, movilidad, atención plena, salud reproductiva y recursos médicos.</string>
-    <string name="release_notes_highlight_export_parity">Los nuevos detalles exclusivos de Android incluyen intensidad de actividad, comidas, periodos menstruales, entrenamientos planificados y muestras detalladas cuando estén disponibles.</string>
-    <string name="release_notes_highlight_templates">Las exportaciones Markdown, JSON, CSV y Obsidian ahora incluyen valores de métricas más completos en todo el catálogo ampliado.</string>
-    <string name="release_notes_highlight_workouts">Se actualizó la explicación de los permisos de Health Connect para describir los permisos ampliados de exportación de solo lectura.</string>
+    <string name="release_notes_highlight_feedback">Las acciones de automatización ejecutan ahora el perfil de exportación seleccionado de forma más fiable.</string>
+    <string name="release_notes_highlight_export_parity">Los totales de pasos usan días naturales locales exactos en los intervalos de fechas solicitados.</string>
+    <string name="release_notes_highlight_templates">Las compras y restauraciones se recuperan automáticamente tras una desconexión de Play Billing.</string>
+    <string name="release_notes_highlight_workouts">Incluye correcciones de fiabilidad y compatibilidad para el teléfono y Wear OS.</string>
     <string name="export_notification_background_permission_required">Las exportaciones programadas necesitan acceso en segundo plano a Health Connect. Abra Health.md &gt; Programación para habilitarlo.</string>
     <string name="paywall_unlock_button_price">Desbloquear por %s</string>
     <string name="paywall_purchasing">Procesando\u2026</string>
@@ -825,7 +825,7 @@
     <string name="enabled">Activado</string>
     <string name="disabled">Desactivado</string>
     <!-- Direct CLI, API, provider, history, scheduling, widget, and accessibility additions. -->
-    <string name="release_notes_highlight_widgets">Agregue widgets de Resumen de salud, Actividad, Rango de frecuencia cardíaca y Sueño a su pantalla de inicio, con actualización en segundo plano opcional.</string>
+    <string name="release_notes_highlight_widgets">El historial de exportaciones programadas conserva ahora el perfil y el destino exactos de cada ejecución y reintento.</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">Exportaciones de escritorio cifradas</string>
     <string name="direct_cli_intro_body">La CLI está a la escucha en tu computadora. Health.md se conecta directamente y envía la exportación sin intermediarios en la nube.</string>

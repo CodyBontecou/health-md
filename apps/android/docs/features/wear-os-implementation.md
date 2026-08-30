@@ -40,7 +40,7 @@ Example checkpoint (repeat for all four checkpoints, both scenarios, and both OE
 ```bash
 EXPECTED_WEAR_APK_SHA256=<approved-play-base-apk-sha256> \
 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256=<authorized-play-signing-cert-sha256> \
-EXPECTED_WEAR_VERSION_CODE=1000029 EXPECTED_VERSION_NAME=1.7.1 \
+EXPECTED_WEAR_VERSION_CODE=1000030 EXPECTED_VERSION_NAME=1.8.1 \
 REVIEWER_ID=<independent-reviewer> REVIEW_TICKET=<approval-record> \
 CONTROL_PROFILE_ID=wear-battery-profile-v1 \
 CONFIRM_CONTROLLED_CONDITIONS=yes CONFIRM_NO_USER_REFRESH=yes \
@@ -59,8 +59,8 @@ At each manually reached checkpoint (`installed`, `synced`, `offline`, `reconnec
 ```bash
 EXPECTED_PHONE_APK_SHA256=<approved-play-base-apk-sha256> \
 EXPECTED_WEAR_APK_SHA256=<approved-play-base-apk-sha256> \
-EXPECTED_PHONE_VERSION_CODE=29 EXPECTED_WEAR_VERSION_CODE=1000029 \
-EXPECTED_VERSION_NAME=1.7.1 \
+EXPECTED_PHONE_VERSION_CODE=30 EXPECTED_WEAR_VERSION_CODE=1000030 \
+EXPECTED_VERSION_NAME=1.8.1 \
 EXPECTED_PLAY_APP_SIGNING_CERT_SHA256=<authorized-play-signing-cert-sha256> \
 REVIEWER_ID=<independent-reviewer> REVIEW_TICKET=<approval-record> \
 scripts/capture-wear-paired-qa-evidence.sh \

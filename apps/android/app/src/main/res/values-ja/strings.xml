@@ -496,10 +496,10 @@
     <string name="release_notes_settings_hint">[設定] からエクスポート形式、カスタム Markdown、およびメトリクスを調整できます。</string>
     <string name="release_notes_open_settings">設定を開く</string>
     <string name="release_notes_got_it">わかった</string>
-    <string name="release_notes_highlight_feedback">Health Connect の対象範囲が拡大され、アクティビティ、身体、栄養、モビリティ、マインドフルネス、リプロダクティブ ヘルス、医療リソースの指標がさらに追加されます。</string>
-    <string name="release_notes_highlight_export_parity">Android で新たに対応した項目には、活動強度、食事記録、月経期間、予定されたワークアウトのほか、利用可能な場合は詳細サンプルが含まれます。</string>
-    <string name="release_notes_highlight_templates">Markdown、JSON、CSV、Obsidian の各エクスポートで対象指標が増え、より詳細な値を出力できるようになりました。</string>
-    <string name="release_notes_highlight_workouts">Health Connect の読み取り専用エクスポート権限が増えた理由を説明するため、権限の説明を更新しました。</string>
+    <string name="release_notes_highlight_feedback">自動化アクションで、選択したエクスポートプロファイルがより確実に実行されるようになりました。</string>
+    <string name="release_notes_highlight_export_parity">歩数の合計は、指定した日付範囲の正確なローカル暦日を使用します。</string>
+    <string name="release_notes_highlight_templates">Play Billingの接続が切れた後、購入と復元が自動的に回復するようになりました。</string>
+    <string name="release_notes_highlight_workouts">スマートフォンとWear OSの信頼性および互換性に関する修正が含まれます。</string>
     <string name="notification_channel_scheduled_exports_name">スケジュール済みエクスポート</string>
     <string name="notification_channel_scheduled_exports_description">スケジュール済みヘルスエクスポートの完了または失敗時の通知</string>
     <string name="export_notification_title_complete">エクスポート完了</string>
@@ -735,7 +735,7 @@
     <string name="disabled">無効</string>
 
     <!-- Direct CLI, API exports, providers, history, and export preview -->
-    <string name="release_notes_highlight_widgets">ホーム画面に健康サマリー、アクティビティ、心拍数範囲、睡眠のウィジェットを追加できるようになりました。バックグラウンド更新は任意で有効にできます。</string>
+    <string name="release_notes_highlight_widgets">予約エクスポートの履歴に、各実行と再試行で使用した正確なプロファイルと保存先が保持されるようになりました。</string>
     <string name="direct_cli_title">Direct CLI</string>
     <string name="direct_cli_intro_title">暗号化されたデスクトップ向けエクスポート</string>
     <string name="direct_cli_intro_body">CLI はパソコン上で待機します。Health.md が直接接続し、クラウド中継を使わずにエクスポートを送信します。</string>

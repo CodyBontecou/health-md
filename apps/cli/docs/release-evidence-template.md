@@ -11,7 +11,7 @@ metadata. Do not attach command stdout that may contain health payloads.
 - Captured `origin/main` SHA:
 - Tag peeled to candidate SHA: pass/fail
 - Candidate equals captured main: pass/fail
-- Seven package versions and internal exact requirements aligned: pass/fail
+- Eight package versions and internal exact requirements aligned: pass/fail
 - `apps/cli/Cargo.lock` verified: pass/fail
 - `packages/healthmd-core-rust/Cargo.lock` verified: pass/fail
 - Draft release target SHA/prerelease state verified: pass/fail
