@@ -4,7 +4,7 @@ This is the authoritative mobile compatibility ledger for the portable Rust CLI.
 show wire capability; they are not a substitute for an app version/build that completed the physical
 release matrix.
 
-## `healthmd-cli` 0.1.0-alpha.2 candidate
+## `healthmd-cli` 0.1.0-alpha.3 candidate
 
 | Mobile source and feature | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Public qualification |
 |---|---|---|---|

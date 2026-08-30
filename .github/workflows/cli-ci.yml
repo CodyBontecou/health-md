@@ -87,6 +87,8 @@ jobs:
           cmp LICENSE crates/healthmd-mcp/LICENSE
           cmp LICENSE crates/healthmd-cli/LICENSE
           bash -n .github/workflows/wait-for-crate.sh
+          bash -n scripts/download-draft-release-assets.sh
+          bash scripts/test-download-draft-release-assets.sh
           dist_version="$(awk -F'"' '/cargo-dist-version/ { print $2 }' dist-workspace.toml)"
           test "$dist_version" = 0.31.0
           installer="$(mktemp)"
@@ -340,7 +342,9 @@ jobs:
             packages/healthmd-core-rust -> target
       - name: Verify release version closure and channel policy
         run: |
-          python3 -m unittest apps/cli/scripts/test_verify_release.py
+          python3 -m unittest \
+            apps/cli/scripts/test_verify_generated_release_metadata.py \
+            apps/cli/scripts/test_verify_release.py
           python3 apps/cli/scripts/verify-release.py
       - name: Build and execute packaged source archives
         run: |

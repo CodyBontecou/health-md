@@ -2,7 +2,25 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.3
+
+- Supersede the unpublished `0.1.0-alpha.2` candidate after its release gates found that generated
+  installer and Homebrew metadata retained pre-signing macOS archive hashes. Propagate every final
+  signed archive digest back into the cargo-dist manifests before generating global artifacts, and
+  fail closed unless each manifest, shell installer checksum, PowerShell archive selection, and
+  Homebrew URL/checksum pair matches the exact final archive bytes.
+- Carry forward the bounded heartbeat/TCP keepalive handling and exact iOS/Android source
+  counterparts prepared for the previous candidate. Publish this explicitly unqualified preview
+  through the checksummed GitHub release and Homebrew tap while keeping stable publication blocked
+  until fresh physical-device qualification is recorded.
+- Windows artifacts remain Authenticode-unsigned while the release identity ledger records pending
+  external certificate provisioning; verify them through the Sigstore-signed checksum closure.
+
 ## 0.1.0-alpha.2
+
+- This candidate was never published: final release qualification found stale pre-signing macOS
+  archive hashes in generated installer and Homebrew metadata. It is retained only as failed-release
+  evidence and is superseded by `0.1.0-alpha.3`.
 
 - Detect silently dead direct-device channels with bounded heartbeat/TCP keepalive handling so a
   foreground paired iPhone can redial later one-shot CLI listeners without a manual disconnect.
