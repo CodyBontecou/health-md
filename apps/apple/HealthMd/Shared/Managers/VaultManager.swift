@@ -1996,6 +1996,42 @@ final class VaultManager: ObservableObject {
         return persistedVaultSnapshot()
     }
 
+    /// Adopts a profile-bound folder and writes every verified refresh back to
+    /// the same destination row. Keeping this in one path prevents profile
+    /// activation, Shortcuts, and scheduled exports from drifting on bookmark
+    /// refresh behavior, including identity-less iCloud Drive and Dropbox rows.
+    @discardableResult
+    func adoptPersistedVault(
+        destinationID: UUID?,
+        from destinationStore: ProfileDestinationStore
+    ) -> PersistedVaultSnapshot? {
+        guard let destination = destinationStore.vault(id: destinationID) else {
+            return nil
+        }
+
+        let refreshed = adoptPersistedVault(
+            bookmarkData: destination.bookmarkData,
+            standardizedPath: destination.standardizedPath,
+            displayName: destination.name,
+            identity: destination.identity
+        )
+        guard let refreshed else { return nil }
+
+        if refreshed.standardizedPath != destination.standardizedPath
+            || refreshed.displayName != destination.name
+            || refreshed.bookmarkData != destination.bookmarkData
+            || refreshed.identity != destination.identity {
+            destinationStore.updateVault(
+                id: destination.id,
+                name: refreshed.displayName,
+                standardizedPath: refreshed.standardizedPath,
+                bookmarkData: refreshed.bookmarkData,
+                identity: refreshed.identity
+            )
+        }
+        return refreshed
+    }
+
     /// Captures identity evidence for a destination row through its own
     /// bookmark round-trip while security scope is acquired. Mirrors
     /// `makeSavedSelection`'s round-trip capture so adoption-time and
@@ -2039,10 +2075,15 @@ final class VaultManager: ObservableObject {
         }
     }
 
-    func setVaultFolder(_ url: URL) {
+    /// Saves a user-picked destination. Returns true only after the bookmark
+    /// and trusted selection metadata have both been persisted, allowing the
+    /// profile coordinator to bind the new folder without replacing a valid
+    /// profile destination when provider access or bookmark creation fails.
+    @discardableResult
+    func setVaultFolder(_ url: URL) -> Bool {
         guard bookmarkResolver.startAccessing(url) else {
             lastExportStatus = "Failed to access folder"
-            return
+            return false
         }
 
         defer { bookmarkResolver.stopAccessing(url) }
@@ -2062,8 +2103,10 @@ final class VaultManager: ObservableObject {
             lastExportStatus = nil
             clearLastExportPresentationTarget()
             Self.logger.info("User explicitly selected an export destination")
+            return true
         } catch {
             lastExportStatus = "Failed to save folder access: \(error.localizedDescription)"
+            return false
         }
     }
 

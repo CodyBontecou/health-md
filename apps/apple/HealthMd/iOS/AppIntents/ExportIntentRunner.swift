@@ -178,28 +178,11 @@ enum ExportIntentRunner {
     /// destinations for this run. Mirrors `ExportProfileCoordinator` adoption.
     static func adoptDestinationsForIntentRun(_ profile: ExportProfile?) {
         let destinationStore = ProfileDestinationStore()
-        if let profile,
-           let bindingID = profile.folderVaultID,
-           let destination = destinationStore.vault(id: bindingID) {
-            let refreshed = VaultManager().adoptPersistedVault(
-                bookmarkData: destination.bookmarkData,
-                standardizedPath: destination.standardizedPath,
-                displayName: destination.name,
-                identity: destination.identity
+        if let bindingID = profile?.folderVaultID {
+            VaultManager().adoptPersistedVault(
+                destinationID: bindingID,
+                from: destinationStore
             )
-            if let refreshed,
-               refreshed.standardizedPath != destination.standardizedPath
-                || refreshed.displayName != destination.name
-                || refreshed.bookmarkData != destination.bookmarkData
-                || refreshed.identity != destination.identity {
-                destinationStore.updateVault(
-                    id: destination.id,
-                    name: refreshed.displayName,
-                    standardizedPath: refreshed.standardizedPath,
-                    bookmarkData: refreshed.bookmarkData,
-                    identity: refreshed.identity
-                )
-            }
         }
         if let profile,
            let endpointID = profile.apiEndpointID,

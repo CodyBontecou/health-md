@@ -693,11 +693,13 @@
     <string name="history_clear_title">エクスポート履歴をクリアしますか?</string>
     <string name="history_clear_body">これにより、ローカルのエクスポート履歴エントリがすべて削除されます。エクスポートされたファイルは削除されません。</string>
     <string name="history_target_label">出力先：%1$s</string>
+    <string name="history_profile_label">プロファイル：%1$s</string>
     <plurals name="history_file_count">
         <item quantity="other">ファイル：%1$d件</item>
     </plurals>
     <string name="history_detail_title">エクスポートの詳細</string>
     <string name="history_detail_source">ソース</string>
+    <string name="history_detail_profile">プロファイル</string>
     <string name="history_detail_when">日時</string>
     <string name="history_detail_range">範囲</string>
     <string name="history_detail_counts">日数</string>

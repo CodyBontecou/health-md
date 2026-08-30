@@ -25,8 +25,8 @@ enum class ScheduledProfileDateWindow {
 }
 
 /**
- * Frozen exact residual work from one cancelled profile occurrence. Separate groups keep durable
- * operation identities from mixing with dates that require a fresh capture.
+ * Frozen exact residual work from one interrupted or failed profile occurrence. Separate groups
+ * keep durable operation identities from mixing with dates that require a fresh capture.
  */
 @Serializable
 data class ScheduledProfilePendingExport(
@@ -72,7 +72,7 @@ data class ScheduledProfileEntry(
     val lastSuccessEpochMillis: Long? = null,
     /** Epoch millis of the most recent successful Today Refresh occurrence. */
     val lastRefreshSuccessEpochMillis: Long? = null,
-    /** Exact frozen residual groups left by cancelled automated export attempts. */
+    /** Exact frozen residual groups left by interrupted or failed automated export attempts. */
     val pendingExports: List<ScheduledProfilePendingExport> = emptyList(),
 ) {
     init {
@@ -91,7 +91,7 @@ data class ScheduledProfileEntry(
         val fireAtMillis: Long,
         /** Data days to export; empty means nothing actionable at this boundary. */
         val exportDates: List<LocalDate>,
-        /** Non-null when this run is retrying one exact frozen cancellation residual group. */
+        /** Non-null when this run is retrying one exact frozen residual group. */
         val pendingExport: ScheduledProfilePendingExport? = null,
     )
 }
@@ -136,7 +136,7 @@ object ScheduledProfileOccurrenceMath {
         val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         val yesterday = today.minusDays(1)
 
-        // Finish one frozen cancellation residual group before admitting newer profile settings or
+        // Finish one frozen residual group before admitting newer profile settings or
         // owner dates. Exact dates and durable operation identity therefore survive profile edits.
         entry.pendingExports
             .sortedWith(
@@ -270,26 +270,6 @@ object ScheduledProfileOccurrenceMath {
      */
     private fun withAnchorDayOfMonth(month: LocalDate, anchorDayOfMonth: Int): LocalDate =
         month.withDayOfMonth(minOf(anchorDayOfMonth, month.lengthOfMonth()))
-}
-
-/**
- * Projected monthly exporting requests for an entry list (Android mirror of
- * `ScheduledUsageProjection`): main runs plus Today Refreshes, 30-day approximation.
- */
-object ScheduledProfileUsageProjection {
-
-    fun projectedMonthlyRequests(entry: ScheduledProfileEntry): Int {
-        val cadenceDays = when (entry.cadenceUnit) {
-            ScheduledProfileCadenceUnit.DAY -> entry.cadenceValue.toDouble()
-            ScheduledProfileCadenceUnit.WEEK -> entry.cadenceValue * 7.0
-            ScheduledProfileCadenceUnit.MONTH -> entry.cadenceValue * 30.0
-        }
-        val runsPerDay = 1.0 / cadenceDays
-        return Math.ceil(runsPerDay * 30.0).toInt().coerceAtLeast(1)
-    }
-
-    fun projectedMonthlyTotal(entries: List<ScheduledProfileEntry>): Int =
-        entries.filter { it.isEnabled }.sumOf { projectedMonthlyRequests(it) }
 }
 
 /** Coalescing helper shared with the push scheduler mirror (earliest preferred time wins). */

@@ -18,13 +18,15 @@ import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.settings.ExportProfileRepository
+import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
+import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.FailedDateDetail
-import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
@@ -40,6 +42,22 @@ import timber.log.Timber
 import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import java.util.UUID
+
+internal fun scheduledProfileHistoryTargetLabel(profile: ExportProfile): String =
+    when (profile.target) {
+        ExportTarget.DEVICE_FOLDER ->
+            profile.folderDisplayName?.trim()?.takeIf { it.isNotEmpty() }
+                ?: EXPORT_FOLDER_ROOT_TARGET_LABEL
+        ExportTarget.API_ENDPOINT ->
+            APIExportEndpoint.redactedDescription(profile.apiEndpointUrl.orEmpty())
+    }
+
+internal fun shouldRequireExistingProfileFolderJournal(
+    pendingOperationId: String?,
+    isPendingResidual: Boolean,
+    runAttemptCount: Int,
+): Boolean = pendingOperationId != null ||
+    (runAttemptCount > 0 && !isPendingResidual)
 
 /**
  * Executes one due occurrence for one scheduled export profile (Android phase-6 runtime).
@@ -238,8 +256,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                                         settings = settings,
                                         durableFolderOperationId = durableOperationId,
                                         durableSettingsSnapshotJson = snapshotJson,
-                                        requireExistingJournal = pendingOperationId != null ||
-                                            runAttemptCount > 0,
+                                        requireExistingJournal = shouldRequireExistingProfileFolderJournal(
+                                            pendingOperationId = pendingOperationId,
+                                            isPendingResidual = due.pendingExport != null,
+                                            runAttemptCount = runAttemptCount,
+                                        ),
                                     )
                             } else {
                                 ExportOrchestrator(healthRepository, exportRepository)
@@ -278,7 +299,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
         if (result.wasCancelled) {
             val remainingDates = cancellationRemainingDates(dates, target, result)
-            val replacements = cancellationPendingExports(
+            val replacements = residualPendingExports(
                 profile = profile,
                 due = due,
                 remainingDates = remainingDates,
@@ -329,6 +350,28 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         }
 
         if (!result.isFullSuccess) {
+            val remainingDates = cancellationRemainingDates(dates, target, result)
+            val replacements = residualPendingExports(
+                profile = profile,
+                due = due,
+                remainingDates = remainingDates,
+                result = result,
+                fallbackDurableOperationId = durableOperationId,
+            )
+            val retryPersisted = entryStore.recordRetry(
+                profileId = profileId,
+                fireAtMillis = due.fireAtMillis,
+                attemptedPendingID = due.pendingExport?.id,
+                replacements = replacements,
+            )
+            if (!retryPersisted) {
+                Timber.e(
+                    "Profile retry checkpoint failed profileId=%s operationId=%s",
+                    profileId,
+                    durableOperationId,
+                )
+                return Result.retry()
+            }
             showFailureNotification(profile.name)
             return if (runAttemptCount < MAX_WORKER_ATTEMPTS) Result.retry() else Result.failure()
         }
@@ -380,15 +423,20 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         return attemptedDates.filterNotTo(linkedSetOf()) { it in successfulDates }
     }
 
-    private fun cancellationPendingExports(
+    private fun residualPendingExports(
         profile: ExportProfile,
         due: ScheduledProfileEntry.DueOccurrence,
         remainingDates: Set<LocalDate>,
         result: ExportResult,
+        fallbackDurableOperationId: String? = null,
     ): List<ScheduledProfilePendingExport> {
         val operationByDate = result.retryOperationIds + result.retryFolderOperationIds
         val groups = remainingDates.sorted().groupBy { date ->
-            operationByDate[date].takeUnless { date in result.freshCaptureRetryDates }
+            if (date in result.freshCaptureRetryDates) {
+                null
+            } else {
+                operationByDate[date] ?: fallbackDurableOperationId
+            }
         }
         return groups.entries.map { (operationID, dates) ->
             val stableID = buildString {
@@ -434,7 +482,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                     failureReason = failureReason,
                     failedDateDetails = result.failedDateDetails,
                     target = profile.target,
-                    targetLabel = "${profile.name}",
+                    targetLabel = scheduledProfileHistoryTargetLabel(profile),
                     fileCount = result.artifactCount,
                     warningSummary = warning,
                     exportMode = result.exportMode,

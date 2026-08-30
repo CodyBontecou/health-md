@@ -743,12 +743,14 @@
     <string name="history_clear_title">ਕੀ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਸਾਫ਼ ਕਰਨਾ ਹੈ?</string>
     <string name="history_clear_body">ਇਸ ਨਾਲ ਸਾਰੀਆਂ ਸਥਾਨਕ ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਐਂਟਰੀਆਂ ਹਟ ਜਾਂਦੀਆਂ ਹਨ। ਨਿਰਯਾਤ ਕੀਤੀਆਂ ਫਾਈਲਾਂ ਨਹੀਂ ਮਿਟਾਈਆਂ ਜਾਂਦੀਆਂ।</string>
     <string name="history_target_label">ਟੀਚਾ: %1$s</string>
+    <string name="history_profile_label">ਪ੍ਰੋਫਾਈਲ: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">ਫ਼ਾਈਲ: %1$d</item>
         <item quantity="other">ਫ਼ਾਈਲਾਂ: %1$d</item>
     </plurals>
     <string name="history_detail_title">ਨਿਰਯਾਤ ਦੇ ਵੇਰਵੇ</string>
     <string name="history_detail_source">ਸਰੋਤ</string>
+    <string name="history_detail_profile">ਪ੍ਰੋਫਾਈਲ</string>
     <string name="history_detail_when">ਕਦੋਂ</string>
     <string name="history_detail_range">ਰੇਂਜ</string>
     <string name="history_detail_counts">ਦਿਨ</string>

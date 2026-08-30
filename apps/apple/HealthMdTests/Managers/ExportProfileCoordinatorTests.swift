@@ -5,17 +5,31 @@ import XCTest
 /// test fake creates, so each saved destination resolves back to its own URL
 /// the way real security-scoped bookmarks do.
 final class PathMappingBookmarkResolver: BookmarkResolving {
+    var resolutionsByBookmark: [Data: (url: URL, isStale: Bool)] = [:]
+    var createdBookmarksByPath: [String: Data] = [:]
+    var accessGranted = true
+    var createError: Error?
+    private(set) var resolveCalls: [Data] = []
+    private(set) var createBookmarkCalls: [URL] = []
+
     func resolveBookmark(data: Data) throws -> (url: URL, isStale: Bool) {
+        resolveCalls.append(data)
+        if let configured = resolutionsByBookmark[data] {
+            return configured
+        }
         let name = String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: "fake-bookmark-", with: "")
         return (URL(fileURLWithPath: "/Users/x").appendingPathComponent(name), false)
     }
 
     func createBookmarkData(for url: URL) throws -> Data {
-        Data("fake-bookmark-\(url.lastPathComponent)".utf8)
+        createBookmarkCalls.append(url)
+        if let createError { throw createError }
+        return createdBookmarksByPath[url.standardizedFileURL.path]
+            ?? Data("fake-bookmark-\(url.lastPathComponent)".utf8)
     }
 
-    func startAccessing(_ url: URL) -> Bool { true }
+    func startAccessing(_ url: URL) -> Bool { accessGranted }
     func stopAccessing(_ url: URL) {}
 }
 
@@ -276,7 +290,7 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         XCTAssertEqual(apiSettings.bearerToken, "second-token")
     }
 
-    // MARK: - Destination identity evidence (issue #143)
+    // MARK: - Destination persistence (issues #143 and #150)
 
     func testVaultFolderSelectionStoresIdentityEvidence() throws {
         // Local "On My iPhone" volumes report persistent IDs; the destination
@@ -288,12 +302,115 @@ final class ExportProfileCoordinatorTests: XCTestCase {
         let vaultManager = makeVaultManager(identityProbe: probe)
         let coordinator = makeCoordinator(vaultManager: vaultManager)
 
-        selectVaultFolder(in: vaultManager, path: "/Users/x/Health")
-        coordinator.vaultFolderWasSelected()
+        XCTAssertTrue(
+            coordinator.selectVaultFolder(URL(fileURLWithPath: "/Users/x/Health"))
+        )
 
         let profile = try XCTUnwrap(coordinator.profileStore.activeProfile)
         let binding = try XCTUnwrap(coordinator.destinationStore.vault(id: profile.folderVaultID))
         XCTAssertEqual(binding.identity, folderIdentity)
+    }
+
+    func testCloudSelectionRefreshesProfileRowAndColdStartReusesRefreshedBookmark() throws {
+        // File Provider folders such as iCloud Drive and Dropbox commonly have
+        // no persistent identity. Prove the real picker-selection pipeline
+        // binds nil identity, then persists a provider path/stale-bookmark
+        // rebind into the row that the next cold launch adopts.
+        let probe = FakeVaultFolderIdentityProbe()
+        probe.defaultIdentity = nil
+        let vaultManager = makeVaultManager(identityProbe: probe)
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let profileID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+
+        let pickedURL = URL(fileURLWithPath: "/Picker/iCloud Drive/Health")
+        let canonicalURL = URL(fileURLWithPath: "/ProviderMount/iCloud Drive/Health")
+        let originalBookmark = Data("cloud-bookmark-original".utf8)
+        bookmarkResolver.createdBookmarksByPath[pickedURL.standardizedFileURL.path] = originalBookmark
+        bookmarkResolver.resolutionsByBookmark[originalBookmark] = (canonicalURL, false)
+
+        XCTAssertTrue(coordinator.selectVaultFolder(pickedURL))
+
+        let bindingID = try XCTUnwrap(
+            coordinator.profileStore.profile(id: profileID)?.folderVaultID
+        )
+        let selectedRow = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        XCTAssertEqual(selectedRow.standardizedPath, canonicalURL.standardizedFileURL.path)
+        XCTAssertEqual(selectedRow.bookmarkData, originalBookmark)
+        XCTAssertNil(selectedRow.identity)
+
+        let movedURL = URL(fileURLWithPath: "/private/ProviderMount/iCloud Drive/Health Cloud")
+        let refreshedBookmark = Data("cloud-bookmark-refreshed".utf8)
+        bookmarkResolver.resolutionsByBookmark[originalBookmark] = (movedURL, true)
+        bookmarkResolver.createdBookmarksByPath[movedURL.standardizedFileURL.path] = refreshedBookmark
+        bookmarkResolver.resolutionsByBookmark[refreshedBookmark] = (movedURL, false)
+
+        coordinator.activate(profileID: profileID)
+
+        XCTAssertEqual(vaultManager.destinationState, .available)
+        XCTAssertEqual(vaultManager.vaultURL, movedURL)
+        let refreshedRow = try XCTUnwrap(coordinator.destinationStore.vault(id: bindingID))
+        XCTAssertEqual(refreshedRow.standardizedPath, movedURL.standardizedFileURL.path)
+        XCTAssertEqual(refreshedRow.name, "Health Cloud")
+        XCTAssertEqual(refreshedRow.bookmarkData, refreshedBookmark)
+        XCTAssertNil(refreshedRow.identity)
+
+        let reloadedStore = ProfileDestinationStore(userDefaults: defaults, keychain: keychain)
+        Self.retainedInstances.append(reloadedStore)
+        XCTAssertEqual(reloadedStore.vault(id: bindingID), refreshedRow)
+
+        // Simulate a new process: both VaultManager initialization and profile
+        // activation consume the refreshed row. Neither should create another
+        // bookmark now that path and bytes are current.
+        let createCountAfterRefresh = bookmarkResolver.createBookmarkCalls.count
+        let coldStartVaultManager = makeVaultManager(identityProbe: probe)
+        let coldStartCoordinator = makeCoordinator(vaultManager: coldStartVaultManager)
+
+        XCTAssertEqual(coldStartVaultManager.destinationState, .available)
+        XCTAssertEqual(coldStartVaultManager.vaultURL, movedURL)
+        XCTAssertEqual(
+            coldStartCoordinator.destinationStore.vault(id: bindingID),
+            refreshedRow
+        )
+        XCTAssertEqual(bookmarkResolver.createBookmarkCalls.count, createCountAfterRefresh)
+    }
+
+    func testDeniedOrFailedReplacementSelectionPreservesLiveVaultAndProfileBinding() throws {
+        let vaultManager = makeVaultManager()
+        let coordinator = makeCoordinator(vaultManager: vaultManager)
+        let originalURL = URL(fileURLWithPath: "/Users/x/OriginalVault")
+
+        XCTAssertTrue(coordinator.selectVaultFolder(originalURL))
+        let profileID = try XCTUnwrap(coordinator.profileStore.activeProfileID)
+        let originalBindingID = try XCTUnwrap(
+            coordinator.profileStore.profile(id: profileID)?.folderVaultID
+        )
+        let originalRow = try XCTUnwrap(
+            coordinator.destinationStore.vault(id: originalBindingID)
+        )
+        let originalSnapshot = try XCTUnwrap(vaultManager.persistedVaultSnapshot())
+
+        bookmarkResolver.accessGranted = false
+        XCTAssertFalse(
+            coordinator.selectVaultFolder(URL(fileURLWithPath: "/Users/x/DeniedVault"))
+        )
+
+        bookmarkResolver.accessGranted = true
+        bookmarkResolver.createError = CocoaError(.fileWriteUnknown)
+        XCTAssertFalse(
+            coordinator.selectVaultFolder(URL(fileURLWithPath: "/Users/x/FailedVault"))
+        )
+
+        XCTAssertEqual(
+            coordinator.profileStore.profile(id: profileID)?.folderVaultID,
+            originalBindingID
+        )
+        XCTAssertEqual(coordinator.destinationStore.vault(id: originalBindingID), originalRow)
+        XCTAssertEqual(vaultManager.vaultURL, originalURL)
+        let retainedSnapshot = try XCTUnwrap(vaultManager.persistedVaultSnapshot())
+        XCTAssertEqual(retainedSnapshot.bookmarkData, originalSnapshot.bookmarkData)
+        XCTAssertEqual(retainedSnapshot.standardizedPath, originalSnapshot.standardizedPath)
+        XCTAssertEqual(retainedSnapshot.displayName, originalSnapshot.displayName)
+        XCTAssertEqual(retainedSnapshot.identity, originalSnapshot.identity)
     }
 
     func testImportFolderSelectionStoresIdentityEvidence() throws {

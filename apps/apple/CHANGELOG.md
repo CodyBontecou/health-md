@@ -4,6 +4,12 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Schedule Export History now retains and displays the export profile and privacy-safe folder or API destination used by scheduled profile runs, including durable retries, instead of resolving the profile's current destination when the row is opened later.
+
+### Fixed
+- Choosing or replacing an iPhone export folder now updates the active export profile only after the folder bookmark is saved successfully, so a cold relaunch can no longer restore an older profile destination and make the newly selected folder appear disconnected. Profile activation, scheduled exports, and Shortcuts now share one verified bookmark-refresh path for both local “On My iPhone” folders and identity-less File Provider folders such as iCloud Drive and Dropbox; a denied replacement keeps the prior valid destination.
+
 ## [3.2] - 2026-08-28
 
 ### Added

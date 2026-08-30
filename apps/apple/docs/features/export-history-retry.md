@@ -9,7 +9,7 @@
 
 ## What it does
 
-Export History records recent manual, scheduled, Shortcut, and iPhone→Mac export attempts, including whether the run fully succeeded, partially succeeded, or failed. Failed rows name the cause and show the suggested next step directly in the history list. Details separate **Why it failed**, **What to do**, and any selectable **Technical details**, alongside the source, destination target, days attempted, files written, and failed dates. Failed local iPhone dates can be opened from the Schedule tab and retried without rebuilding the whole export setup.
+Export History records recent manual, scheduled, Shortcut, and iPhone→Mac export attempts, including whether the run fully succeeded, partially succeeded, or failed. Profile-based rows retain the profile name and the human-readable export folder or redacted API destination captured for that run, so later profile edits do not rewrite historical provenance. Failed rows name the cause and show the suggested next step directly in the history list. Details separate **Why it failed**, **What to do**, and any selectable **Technical details**, alongside the source, destination target, days attempted, files written, and failed dates. Failed local iPhone dates can be opened from the Schedule tab and retried without rebuilding the whole export setup.
 
 This is the recovery path for real-world automation issues: locked phones, missing folder permissions, missing HealthKit data, file-write errors, and partial multi-day runs.
 
@@ -99,7 +99,9 @@ History keeps the newest entries first and stores up to 50 recent attempts.
 
 ## Implementation notes
 
-- `ExportHistoryEntry` stores source, optional target label, optional file count, success flag, date range, success count, total count, failure reason, and failed-date details.
+- `ExportHistoryEntry` stores source, optional target label, optional profile name, optional file count, success flag, date range, success count, total count, failure reason, and failed-date details.
+- Folder labels are display names only. History never stores security-scoped bookmarks, credentials, or unnecessary absolute iPhone paths; API labels omit URL user info, query parameters, and fragments.
+- Retry is offered only for local-folder entries. It uses the currently configured local settings and records the folder actually used as a new manual entry; it does not claim that the original profile governed the retry.
 - `ExportFailureReason` maps common failures to short explanations and actionable recovery suggestions.
 - `ExportHistoryEntry` derives a display reason from legacy per-date failures and deduplicates stored error messages for the Technical details section.
 - `ExportHistoryManager` persists history in `UserDefaults` under `exportHistory` and trims to 50 entries.

@@ -693,11 +693,13 @@
     <string name="history_clear_title">清除导出历史记录？</string>
     <string name="history_clear_body">这将删除所有本地导出历史记录条目。导出的文件不会被删除。</string>
     <string name="history_target_label">导出目标：%1$s</string>
+    <string name="history_profile_label">导出配置：%1$s</string>
     <plurals name="history_file_count">
         <item quantity="other">文件：%1$d 个</item>
     </plurals>
     <string name="history_detail_title">导出详情</string>
     <string name="history_detail_source">来源</string>
+    <string name="history_detail_profile">导出配置</string>
     <string name="history_detail_when">日期/时间</string>
     <string name="history_detail_range">范围</string>
     <string name="history_detail_counts">天</string>

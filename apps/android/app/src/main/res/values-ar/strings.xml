@@ -818,6 +818,7 @@
     <string name="history_clear_title">هل تريد محو سجل التصدير؟</string>
     <string name="history_clear_body">يؤدي هذا إلى إزالة كافة إدخالات سجل التصدير المحلي. لا يتم حذف الملفات المصدرة.</string>
     <string name="history_target_label">الوجهة: %1$s</string>
+    <string name="history_profile_label">ملف التصدير: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="zero">لا ملفات (%1$d)</item>
         <item quantity="one">ملف واحد (%1$d)</item>
@@ -828,6 +829,7 @@
     </plurals>
     <string name="history_detail_title">تفاصيل التصدير</string>
     <string name="history_detail_source">المصدر</string>
+    <string name="history_detail_profile">ملف التصدير</string>
     <string name="history_detail_when">الوقت</string>
     <string name="history_detail_range">النطاق</string>
     <string name="history_detail_counts">الأيام</string>

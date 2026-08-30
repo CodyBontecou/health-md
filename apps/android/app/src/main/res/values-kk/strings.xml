@@ -705,12 +705,14 @@
     <string name="history_clear_title">Экспорт тарихын тазалау керек пе?</string>
     <string name="history_clear_body">Бұл барлық жергілікті экспорттық тарих жазбаларын жояды. Экспортталған файлдар жойылмайды.</string>
     <string name="history_target_label">Мақсат: %1$s</string>
+    <string name="history_profile_label">Профиль: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">Файл: %1$d</item>
         <item quantity="other">Файлдар: %1$d</item>
     </plurals>
     <string name="history_detail_title">Экспорт мәліметтері</string>
     <string name="history_detail_source">Дереккөз</string>
+    <string name="history_detail_profile">Профиль</string>
     <string name="history_detail_when">Қашан</string>
     <string name="history_detail_range">Ауқым</string>
     <string name="history_detail_counts">Күндер</string>

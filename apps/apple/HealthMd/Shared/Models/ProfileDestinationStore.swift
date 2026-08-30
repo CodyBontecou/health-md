@@ -112,6 +112,23 @@ final class ProfileDestinationStore: ObservableObject {
 
     // MARK: - Lookup
 
+    /// Other runtime coordinators may refresh a profile destination through a
+    /// separate store instance. Scheduled execution calls this before resolving
+    /// provenance so history uses the destination actually adopted for the run.
+    func reloadPersistedDestinations() {
+        if let data = userDefaults.data(forKey: Key.vaults),
+           let decoded = try? JSONDecoder().decode([SavedVaultDestination].self, from: data),
+           decoded != vaults {
+            vaults = decoded
+        }
+
+        if let data = userDefaults.data(forKey: Key.apiEndpoints),
+           let decoded = try? JSONDecoder().decode([SavedAPIEndpoint].self, from: data),
+           decoded != apiEndpoints {
+            apiEndpoints = decoded
+        }
+    }
+
     func vault(id: UUID?) -> SavedVaultDestination? {
         guard let id else { return nil }
         return vaults.first { $0.id == id }

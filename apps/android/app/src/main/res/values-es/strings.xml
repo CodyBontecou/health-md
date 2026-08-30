@@ -782,6 +782,7 @@
     <string name="history_clear_title">¿Borrar historial de exportaciones?</string>
     <string name="history_clear_body">Esto elimina todas las entradas del historial de exportación local. Los archivos exportados no se eliminan.</string>
     <string name="history_target_label">Destino: %1$s</string>
+    <string name="history_profile_label">Perfil: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">Archivo: %1$d</item>
         <item quantity="many">Archivos: %1$d</item>
@@ -789,6 +790,7 @@
     </plurals>
     <string name="history_detail_title">Detalles de exportación</string>
     <string name="history_detail_source">Fuente</string>
+    <string name="history_detail_profile">Perfil</string>
     <string name="history_detail_when">Cuándo</string>
     <string name="history_detail_range">Rango</string>
     <string name="history_detail_counts">Días</string>

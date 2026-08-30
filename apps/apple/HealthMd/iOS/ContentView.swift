@@ -111,8 +111,7 @@ struct ContentView: View {
             .environmentObject(healthKitManager)
             .sheet(isPresented: $showFolderPicker) {
                 FolderPicker { url in
-                    vaultManager.setVaultFolder(url)
-                    profileCoordinator?.vaultFolderWasSelected()
+                    commitVaultFolderSelection(url)
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -286,7 +285,7 @@ struct ContentView: View {
         .sheet(isPresented: $showFolderPicker) {
             FolderPicker { url in
                 configurationProtection.performConfigurationChange {
-                    vaultManager.setVaultFolder(url)
+                    commitVaultFolderSelection(url)
                 }
             }
             .presentationDetents([.large])
@@ -931,13 +930,23 @@ struct ContentView: View {
 
     // MARK: - Export
 
-    /// Lazily builds the export-profile coordinator after the main UI exists.
-    /// Bootstrapping synthesizes the migration Default profile (bound to the
-    /// current settings, vault, and API endpoint) on first profile-mode
-    /// launch and activates the persisted active profile thereafter.
-    private func ensureProfileCoordinator() {
-        guard profileCoordinator == nil else { return }
-        profileCoordinator = ExportProfileCoordinator(
+    /// Saves every picker result through the profile coordinator, keeping the
+    /// live vault and active profile row on one commit path during onboarding
+    /// and in the main app. Synchronous initialization closes the brief launch
+    /// race and also preserves a new selection when onboarding is replayed with
+    /// existing profile rows (issue #150).
+    private func commitVaultFolderSelection(_ url: URL) {
+        ensureProfileCoordinator().selectVaultFolder(url)
+    }
+
+    /// Lazily builds the export-profile coordinator. Bootstrapping synthesizes
+    /// the migration Default profile (bound to the current settings, vault, and
+    /// API endpoint) on first profile-mode use and activates the persisted
+    /// active profile thereafter.
+    @discardableResult
+    private func ensureProfileCoordinator() -> ExportProfileCoordinator {
+        if let profileCoordinator { return profileCoordinator }
+        let coordinator = ExportProfileCoordinator(
             profileStore: ExportProfileStore(),
             destinationStore: ProfileDestinationStore(),
             scheduledEntryStore: ScheduledExportEntryStore(),
@@ -946,6 +955,8 @@ struct ContentView: View {
             apiExportSettings: apiExportSettings,
             initialTarget: exportTargetSelection
         )
+        profileCoordinator = coordinator
+        return coordinator
     }
 
     private func cancelExport() {

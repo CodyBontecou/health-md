@@ -76,8 +76,167 @@ class ScheduledProfileExportWorkerCancellationTest {
         assertThat(harness.history.captured.successCount).isEqualTo(1)
         assertThat(harness.history.captured.failureReason).isNull()
         assertThat(harness.history.captured.failedDateDetails).isEmpty()
+        assertThat(harness.history.captured.profileName).isEqualTo("Morning API")
+        assertThat(harness.history.captured.targetLabel).isEqualTo("https://example.test/health")
         coVerify(exactly = 0) { harness.entryStore.recordSuccess(any(), any(), any()) }
         coVerify(exactly = 1) { harness.scheduler.reconcile() }
+    }
+
+    @Test
+    fun `history target labels use folder display names and redact API secrets`() {
+        val folderProfile = ExportProfile(
+            id = "folder-profile",
+            name = "Research",
+            settingsSnapshotJson = "snapshot",
+            target = ExportTarget.DEVICE_FOLDER,
+            folderUri = "content://provider/private/document/123",
+            folderDisplayName = "  Research Exports  ",
+            createdAtEpochMillis = 1L,
+            updatedAtEpochMillis = 1L,
+        )
+        val apiProfile = ExportProfile(
+            id = "api-profile",
+            name = "API",
+            settingsSnapshotJson = "snapshot",
+            target = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://example.test/health?token=secret",
+            createdAtEpochMillis = 1L,
+            updatedAtEpochMillis = 1L,
+        )
+
+        assertThat(scheduledProfileHistoryTargetLabel(folderProfile))
+            .isEqualTo("Research Exports")
+        assertThat(scheduledProfileHistoryTargetLabel(folderProfile))
+            .doesNotContain("content://")
+        assertThat(scheduledProfileHistoryTargetLabel(apiProfile))
+            .isEqualTo("https://example.test/health")
+        assertThat(scheduledProfileHistoryTargetLabel(apiProfile))
+            .doesNotContain("secret")
+        assertThat(
+            scheduledProfileHistoryTargetLabel(
+                folderProfile.copy(folderDisplayName = " "),
+            ),
+        ).isEqualTo("Export folder")
+    }
+
+    @Test
+    fun `fresh pending folder capture does not require a nonexistent journal`() {
+        assertThat(
+            shouldRequireExistingProfileFolderJournal(
+                pendingOperationId = null,
+                isPendingResidual = true,
+                runAttemptCount = 1,
+            ),
+        ).isFalse()
+        assertThat(
+            shouldRequireExistingProfileFolderJournal(
+                pendingOperationId = null,
+                isPendingResidual = false,
+                runAttemptCount = 1,
+            ),
+        ).isTrue()
+        assertThat(
+            shouldRequireExistingProfileFolderJournal(
+                pendingOperationId = "folder-operation",
+                isPendingResidual = true,
+                runAttemptCount = 1,
+            ),
+        ).isTrue()
+    }
+
+    @Test
+    fun `failed attempt freezes profile provenance before WorkManager backoff`() = runTest {
+        val profileId = "profile-retry"
+        val profile = ExportProfile(
+            id = profileId,
+            name = "Original API",
+            settingsSnapshotJson = "original-snapshot",
+            target = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://original.example.test/health",
+            createdAtEpochMillis = 1L,
+            updatedAtEpochMillis = 1L,
+        )
+        val entry = ScheduledProfileEntry(
+            profileId = profileId,
+            isEnabled = true,
+            anchorEpochDay = LocalDate.now(ZoneId.of("UTC")).toEpochDay(),
+            hour = 0,
+            minute = 0,
+            lookbackDays = 1,
+            zoneId = "UTC",
+        )
+        val settings = ExportSettings(
+            exportTarget = ExportTarget.API_ENDPOINT,
+            scheduledExportTarget = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = requireNotNull(profile.apiEndpointUrl),
+        )
+        val profileRepository = mockk<ExportProfileRepository>(relaxed = true)
+        coEvery { profileRepository.profileById(profileId) } returns profile
+        val entryStore = mockk<ScheduledProfileEntryStore>(relaxed = true)
+        coEvery { entryStore.entry(profileId) } returns entry
+        val retryGroups = slot<List<ScheduledProfilePendingExport>>()
+        coEvery {
+            entryStore.recordRetry(
+                profileId = profileId,
+                fireAtMillis = any(),
+                attemptedPendingID = null,
+                replacements = capture(retryGroups),
+            )
+        } returns true
+        val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+        coEvery { settingsRepository.getExportSettings() } returns settings
+        every { settingsRepository.isPurchased } returns flowOf(true)
+        val healthRepository = mockk<HealthRepository>(relaxed = true)
+        coEvery { healthRepository.hasBackgroundReadPermission() } returns true
+        val snapshotFactory = mockk<ScheduledProfileSnapshotFactory>(relaxed = true)
+        every { snapshotFactory.restoreForRun(profile, settings, 1) } returns settings
+        val apiRunner = mockk<APIEndpointExportRunner>(relaxed = true)
+        coEvery {
+            apiRunner.exportDates(
+                dates = any(),
+                settings = any(),
+                onProgress = null,
+                expectedDestinationFingerprint = null,
+                durableOperationId = any(),
+                durableSettingsSnapshotJson = profile.settingsSnapshotJson,
+            )
+        } coAnswers {
+            val dates = firstArg<List<LocalDate>>()
+            ExportResult(
+                successCount = 0,
+                totalCount = dates.size,
+                failedDateDetails = dates.map {
+                    com.healthmd.domain.model.FailedDateDetail(
+                        it,
+                        com.healthmd.domain.model.ExportFailureReason.NETWORK_ERROR,
+                    )
+                },
+                target = ExportTarget.API_ENDPOINT,
+            )
+        }
+        val scheduler = mockk<ScheduledProfileScheduler>(relaxed = true)
+        val worker = worker(
+            profileId = profileId,
+            settingsRepository = settingsRepository,
+            healthRepository = healthRepository,
+            exportHistoryRepository = mockk(relaxed = true),
+            apiEndpointExportRunner = apiRunner,
+            profileRepository = profileRepository,
+            entryStore = entryStore,
+            snapshotFactory = snapshotFactory,
+            profileScheduler = scheduler,
+        )
+
+        assertThat(worker.doWork()).isEqualTo(ListenableWorker.Result.retry())
+
+        val frozen = retryGroups.captured.single()
+        assertThat(frozen.profileName).isEqualTo("Original API")
+        assertThat(frozen.settingsSnapshotJson).isEqualTo("original-snapshot")
+        assertThat(frozen.target).isEqualTo(ExportTarget.API_ENDPOINT)
+        assertThat(frozen.apiEndpointUrl).isEqualTo("https://original.example.test/health")
+        assertThat(frozen.durableOperationId).startsWith("profile-api-")
+        coVerify(exactly = 1) { entryStore.recordRetry(any(), any(), null, any()) }
+        coVerify(exactly = 0) { entryStore.recordSuccess(any(), any(), any()) }
     }
 
     @Test

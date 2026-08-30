@@ -124,6 +124,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         now: Date,
         profileName: String = "Daily",
         target: ExportTargetSelection = .apiEndpoint,
+        folderVaultID: UUID? = nil,
         configureEntry: (inout ScheduledExportEntry) -> Void = { _ in }
     ) -> UUID {
         let profileStore = ExportProfileStore(userDefaults: defaults)
@@ -132,7 +133,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         let profile = profileStore.add(
             name: profileName,
             settings: ExportSettingsSnapshot.from(settings),
-            target: target
+            target: target,
+            folderVaultID: folderVaultID
         )
         let entryStore = ScheduledExportEntryStore(userDefaults: defaults)
         var entry = ScheduledExportEntry(
@@ -194,6 +196,69 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         XCTAssertNotNil(entry?.lastExportDate)
         await manager.runDueProfileOccurrences()
         XCTAssertEqual(harness.runnerDates.count, 1, "entry no longer due")
+    }
+
+    func testDueLocalProfileHistoryCapturesProfileAndRefreshedFolderName() async throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let destinationStore = ProfileDestinationStore(
+            userDefaults: defaults,
+            keychain: keychain
+        )
+        let destination = destinationStore.upsertVault(
+            name: "Old Folder Name",
+            standardizedPath: "/private/health-exports",
+            bookmarkData: Data("old-bookmark".utf8)
+        )
+        _ = seedDueDailyProfile(
+            defaults: defaults,
+            keychain: keychain,
+            now: now,
+            profileName: "Research",
+            target: .localIPhoneFolder,
+            folderVaultID: destination.id
+        )
+
+        let harness = ProfileSchedulingHarness()
+        harness.resultProvider = { dates, _ in
+            // Destination adoption can refresh a stale bookmark/name through
+            // a separate store instance while SchedulingManager is alive.
+            let refreshedStore = ProfileDestinationStore(
+                userDefaults: self.defaults,
+                keychain: self.keychain
+            )
+            refreshedStore.updateVault(
+                id: destination.id,
+                name: "Research Exports",
+                standardizedPath: "/private/health-exports",
+                bookmarkData: Data("refreshed-bookmark".utf8),
+                identity: nil
+            )
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count,
+                totalCount: dates.count,
+                failedDateDetails: [],
+                completedDates: dates
+            )
+        }
+        let manager = harness.makeManager(
+            defaults: defaults,
+            keychain: keychain,
+            now: { now }
+        )
+
+        await manager.runDueProfileOccurrences()
+
+        let entry = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(entry.source, .scheduled)
+        XCTAssertEqual(entry.exportTarget, .localIPhoneFolder)
+        XCTAssertEqual(entry.profileName, "Research")
+        XCTAssertEqual(entry.targetLabel, "iPhone: Research Exports")
+        XCTAssertFalse(entry.targetLabel?.contains("/private/") == true)
+        XCTAssertFalse(entry.targetLabel?.contains("bookmark") == true)
     }
 
     func testTwoProfilesAtSameMinuteBothRun() async throws {
@@ -365,6 +430,10 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
     }
 
     func testDrainRunsPendingProfileRequestWithDestinations() async throws {
+        let history = ExportHistoryManager.shared
+        history.clearHistory()
+        defer { history.clearHistory() }
+
         let harness = ProfileSchedulingHarness()
         let now = date(year: 2026, month: 8, day: 10, hour: 12)
         let profileID = seedDueDailyProfile(
@@ -398,6 +467,11 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         XCTAssertEqual(harness.runnerDates.count, 1)
         XCTAssertEqual(harness.adoptedProfiles.first, "Daily")
         XCTAssertEqual(harness.adoptedProfiles.last, "Daily", "active profile restored after drain")
+        let recorded = try XCTUnwrap(history.history.first)
+        XCTAssertEqual(recorded.profileName, "Daily")
+        XCTAssertEqual(recorded.exportTarget, .apiEndpoint)
+        XCTAssertNotNil(recorded.targetLabel)
+        XCTAssertNotEqual(recorded.targetLabel, "Daily", "target provenance is not the profile name")
     }
 
     func testManagerObservesScheduleEditsSavedThroughSeparateStoreInstance() async throws {

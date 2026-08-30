@@ -654,6 +654,7 @@ class SchedulingManager: ObservableObject {
             result,
             request: request,
             target: target,
+            profile: profileForRun,
             completion: completion
         )
     }
@@ -959,10 +960,11 @@ class SchedulingManager: ObservableObject {
         _ result: ExportOrchestrator.ExportResult,
         request: PendingExportRequest,
         target: ExportTargetSelection,
+        profile: ExportProfile? = nil,
         completion: ScheduledExportCompletion?
     ) {
         let range = scheduledExportHistoryRange(for: request)
-        let targetLabel = scheduledTargetLabel(for: target)
+        let targetLabel = scheduledTargetLabel(for: target, profile: profile)
         let didCompleteRequest = completion == .clearedAfterSuccess
             || (completion == nil && result.didCompleteAllRequestedDates)
 
@@ -1077,11 +1079,32 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor
-    private func scheduledTargetLabel(for target: ExportTargetSelection) -> String? {
+    private func scheduledTargetLabel(
+        for target: ExportTargetSelection,
+        profile: ExportProfile? = nil
+    ) -> String? {
+        // A profile destination can be refreshed during adoption by another
+        // store instance. Resolve the persisted row after the run so history
+        // records the folder/endpoint actually used, not whichever destination
+        // happens to be active after profile state is restored.
+        scheduledDestinationStore.reloadPersistedDestinations()
+
         switch target {
         case .localIPhoneFolder:
-            return nil
+            if let destination = scheduledDestinationStore.vault(id: profile?.folderVaultID) {
+                return "iPhone: \(destination.name)"
+            }
+            let vaultManager = VaultManager()
+            return vaultManager.hasSavedVaultFolder
+                ? "iPhone: \(vaultManager.vaultName)"
+                : ExportTargetSelection.localIPhoneFolder.title
         case .apiEndpoint:
+            if let endpoint = scheduledDestinationStore.apiEndpoint(id: profile?.apiEndpointID) {
+                return APIExportSettings.redactedEndpointDescription(
+                    for: endpoint.endpointURLString,
+                    fallback: ExportTargetSelection.apiEndpoint.title
+                )
+            }
             return APIExportSettings().displayName
         case .connectedMac:
             return scheduledSyncService?.macDestinationStatus?.destinationDisplayName
@@ -2388,28 +2411,11 @@ class SchedulingManager: ObservableObject {
     /// restoring the state the UI expects after a profile run.
     @MainActor private static func defaultAdoptProfileDestinations(_ profile: ExportProfile?) {
         let destinationStore = ProfileDestinationStore()
-        if let profile,
-           let bindingID = profile.folderVaultID,
-           let destination = destinationStore.vault(id: bindingID) {
-            let refreshed = VaultManager().adoptPersistedVault(
-                bookmarkData: destination.bookmarkData,
-                standardizedPath: destination.standardizedPath,
-                displayName: destination.name,
-                identity: destination.identity
+        if let bindingID = profile?.folderVaultID {
+            VaultManager().adoptPersistedVault(
+                destinationID: bindingID,
+                from: destinationStore
             )
-            if let refreshed,
-               refreshed.standardizedPath != destination.standardizedPath
-                || refreshed.displayName != destination.name
-                || refreshed.bookmarkData != destination.bookmarkData
-                || refreshed.identity != destination.identity {
-                destinationStore.updateVault(
-                    id: destination.id,
-                    name: refreshed.displayName,
-                    standardizedPath: refreshed.standardizedPath,
-                    bookmarkData: refreshed.bookmarkData,
-                    identity: refreshed.identity
-                )
-            }
         }
         if let profile,
            let endpointID = profile.apiEndpointID,
@@ -2723,7 +2729,7 @@ class SchedulingManager: ObservableObject {
                     source: .scheduled,
                     dateRangeStart: rangeStart,
                     dateRangeEnd: rangeEnd,
-                    targetLabel: scheduledTargetLabel(for: target),
+                    targetLabel: scheduledTargetLabel(for: target, profile: profile),
                     exportTarget: target,
                     appleExportEnginePin: context.settings.appleExportEnginePin,
                     profileName: profile.name
@@ -2735,7 +2741,7 @@ class SchedulingManager: ObservableObject {
                 source: .scheduled,
                 dateRangeStart: rangeStart,
                 dateRangeEnd: rangeEnd,
-                targetLabel: scheduledTargetLabel(for: target),
+                targetLabel: scheduledTargetLabel(for: target, profile: profile),
                 exportTarget: target,
                 appleExportEnginePin: context.settings.appleExportEnginePin,
                 profileName: profile.name

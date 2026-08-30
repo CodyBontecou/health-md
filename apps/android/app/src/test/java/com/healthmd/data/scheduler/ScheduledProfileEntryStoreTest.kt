@@ -113,7 +113,7 @@ class ScheduledProfileEntryStoreTest {
     }
 
     @Test
-    fun `cancellation checkpoint survives configuration upsert and clears individually`() = runTest {
+    fun `backoff retry checkpoint survives configuration upsert and clears individually`() = runTest {
         store.upsert(entry("alpha").copy(isEnabled = true))
         val first = ScheduledProfilePendingExport(
             id = "pending-first",
@@ -125,7 +125,7 @@ class ScheduledProfileEntryStoreTest {
         )
         val second = first.copy(id = "pending-second", ownerEpochDays = listOf(20_002L))
 
-        store.recordCancellation(
+        store.recordRetry(
             profileId = "alpha",
             fireAtMillis = 1_000L,
             attemptedPendingID = null,

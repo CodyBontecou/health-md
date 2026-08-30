@@ -782,6 +782,7 @@
     <string name="history_clear_title">Effacer l\'historique des exportations ?</string>
     <string name="history_clear_body">Cela supprime toutes les entrées locales de l’historique des exportations. Les fichiers exportés ne sont pas supprimés.</string>
     <string name="history_target_label">Cible : %1$s</string>
+    <string name="history_profile_label">Profil : %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">Fichier : %1$d</item>
         <item quantity="many">Fichiers : %1$d</item>
@@ -789,6 +790,7 @@
     </plurals>
     <string name="history_detail_title">Détails de l\'exportation</string>
     <string name="history_detail_source">Source</string>
+    <string name="history_detail_profile">Profil</string>
     <string name="history_detail_when">Quand</string>
     <string name="history_detail_range">Plage</string>
     <string name="history_detail_counts">Jours</string>

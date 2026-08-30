@@ -127,9 +127,35 @@ class ScheduledProfileEntryStore @Inject constructor(
 
     /**
      * Advances the occurrence frontier while replacing only the attempted residual group with the
-     * exact unresolved owner-date groups. This prevents completed dates from being re-exported.
+     * exact unresolved owner-date groups. Cancellation and backoff retries share this checkpoint
+     * so completed dates are not repeated and later profile edits cannot rewrite in-flight work.
      */
     suspend fun recordCancellation(
+        profileId: String,
+        fireAtMillis: Long,
+        attemptedPendingID: String?,
+        replacements: List<ScheduledProfilePendingExport>,
+    ): Boolean = recordResiduals(
+        profileId = profileId,
+        fireAtMillis = fireAtMillis,
+        attemptedPendingID = attemptedPendingID,
+        replacements = replacements,
+    )
+
+    /** Freezes unresolved work before a WorkManager backoff retry can observe profile edits. */
+    suspend fun recordRetry(
+        profileId: String,
+        fireAtMillis: Long,
+        attemptedPendingID: String?,
+        replacements: List<ScheduledProfilePendingExport>,
+    ): Boolean = recordResiduals(
+        profileId = profileId,
+        fireAtMillis = fireAtMillis,
+        attemptedPendingID = attemptedPendingID,
+        replacements = replacements,
+    )
+
+    private suspend fun recordResiduals(
         profileId: String,
         fireAtMillis: Long,
         attemptedPendingID: String?,

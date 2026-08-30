@@ -307,47 +307,6 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
             )
         )
     }
-
-    // MARK: - Usage projection
-
-    func testUsageProjectionCountsMainRunsAndRefreshes() {
-        let dailyWithRefresh = makeEntry {
-            $0.frequency = .daily
-            $0.preferredHour = 8
-            $0.todayRefreshEnabled = true
-            $0.todayRefreshIntervalHours = 3
-        }
-        // Refresh slots from 8: 8, 11, 14, 17, 20, 23 → 6 refreshes + 1 run.
-        let weekly = makeEntry { $0.frequency = .weekly }
-        let disabled = makeEntry(enabled: false) { $0.frequency = .daily }
-
-        let projections = ScheduledUsageProjection.projectedMonthlyActions(
-            entries: [dailyWithRefresh, weekly, disabled]
-        )
-        let byProfile = Dictionary(uniqueKeysWithValues: projections.map { ($0.profileID, $0) })
-
-        XCTAssertEqual(byProfile[dailyWithRefresh.profileID]?.monthlyTotal, 7 * 30)
-        XCTAssertEqual(byProfile[weekly.profileID]?.monthlyTotal, Int((30.0 / 7.0).rounded(.up)))
-        XCTAssertEqual(byProfile[disabled.profileID]?.monthlyTotal, 30)
-
-        XCTAssertEqual(
-            ScheduledUsageProjection.projectedMonthlyTotal(
-                entries: [dailyWithRefresh, weekly, disabled]
-            ),
-            7 * 30 + 5
-        )
-    }
-
-    func testUsageProjectionCustomCadence() {
-        let everyOtherWeek = makeEntry {
-            $0.frequency = .custom
-            $0.customInterval = 2
-            $0.customUnit = .week
-        }
-        // 1 run / 14 days → 30/14 ≈ 2.14 → ceil 3 per month.
-        let projections = ScheduledUsageProjection.projectedMonthlyActions(entries: [everyOtherWeek])
-        XCTAssertEqual(projections.first?.monthlyTotal, 3)
-    }
 }
 
 /// Phase-3 additive identity on durable pending requests: legacy persisted

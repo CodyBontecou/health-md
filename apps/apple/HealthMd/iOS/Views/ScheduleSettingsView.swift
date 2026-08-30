@@ -5,6 +5,17 @@ struct ScheduleRetryExportPolicy {
         currentFileCount == 0
     }
 
+    static func canRetry(_ entry: ExportHistoryEntry) -> Bool {
+        guard !entry.isFullSuccess,
+              entry.source != .macAgent,
+              entry.operationDetails == nil else { return false }
+        if entry.exportTarget == .localIPhoneFolder { return true }
+        // Legacy local-folder entries predate the typed target. They either
+        // had no label or used the established iPhone prefix.
+        return entry.exportTarget == nil
+            && (entry.targetLabel == nil || entry.targetLabel?.hasPrefix("iPhone: ") == true)
+    }
+
     static func failedDateDetail(for date: Date, exportError: ExportError) -> FailedDateDetail {
         let reason: ExportFailureReason
         let details: String?
@@ -1408,6 +1419,7 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
+                    exportTarget: .localIPhoneFolder,
                     fileCount: generatedFileCount,
                     outputBreakdown: outputBreakdown,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
@@ -1428,6 +1440,7 @@ struct ScheduleSettingsView: View {
                     totalCount: totalDays,
                     failedDateDetails: failedDateDetails,
                     targetLabel: "iPhone: \(vaultManager.vaultName)",
+                    exportTarget: .localIPhoneFolder,
                     fileCount: generatedFileCount,
                     outputBreakdown: outputBreakdown,
                     dailyNoteUpdateCount: dailyNoteUpdateCount,
@@ -1570,14 +1583,30 @@ struct ExportHistoryRow: View {
                         .labelStyle(.titleAndIcon)
 
                     Text(formatTimestamp(entry.timestamp))
-
-                    if let targetLabel = entry.targetLabel {
-                        Text("→ \(targetLabel)")
-                            .lineLimit(1)
-                    }
                 }
                 .font(Typography.caption())
                 .foregroundStyle(Color.textMuted)
+
+                if let profileName = entry.profileName, !profileName.isEmpty {
+                    Label {
+                        Text("Export Profile") + Text(verbatim: ": \(profileName)")
+                    } icon: {
+                        Image(systemName: "slider.horizontal.3")
+                    }
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
+                    .lineLimit(1)
+                }
+
+                if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+                    Label(
+                        targetLabel,
+                        systemImage: entry.exportTarget == .localIPhoneFolder ? "folder" : "arrow.right"
+                    )
+                    .font(Typography.caption())
+                    .foregroundStyle(Color.textMuted)
+                    .lineLimit(1)
+                }
             }
 
             Spacer(minLength: Spacing.s2)
@@ -1591,7 +1620,7 @@ struct ExportHistoryRow: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
-        .accessibilityValue("\(entry.sourceLabelForDisplay), \(formatTimestamp(entry.timestamp))")
+        .accessibilityValue(accessibilityMetadataDescription)
         .accessibilityHint("Double tap to view details")
         .accessibilityAddTraits(.isButton)
     }
@@ -1600,6 +1629,20 @@ struct ExportHistoryRow: View {
         let status = "\(entry.localizedStatusDescription): \(entry.summaryDescription)"
         guard let message = entry.failureListMessage else { return status }
         return "\(status). \(message)"
+    }
+
+    private var accessibilityMetadataDescription: String {
+        var parts = [entry.sourceLabelForDisplay, formatTimestamp(entry.timestamp)]
+        if let profileName = entry.profileName, !profileName.isEmpty {
+            parts.append("\(String(localized: "Export Profile")): \(profileName)")
+        }
+        if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+            let title = entry.exportTarget == .localIPhoneFolder
+                ? String(localized: "Export Folder")
+                : String(localized: "Target")
+            parts.append("\(title): \(targetLabel)")
+        }
+        return parts.joined(separator: ", ")
     }
 
     private func formatTimestamp(_ date: Date) -> String {
@@ -1623,7 +1666,7 @@ struct ExportHistoryDetailView: View {
     }
 
     private var canRetry: Bool {
-        !entry.isFullSuccess && entry.source != .macAgent && entry.operationDetails == nil
+        ScheduleRetryExportPolicy.canRetry(entry)
     }
 
     private var statusColor: Color {
@@ -1661,13 +1704,15 @@ struct ExportHistoryDetailView: View {
                         .foregroundStyle(Color.textPrimary)
                     }
 
-                    if let targetLabel = entry.targetLabel {
-                        HStack {
-                            Text("Target")
-                                .foregroundStyle(Color.textSecondary)
-                            Spacer()
-                            Text(targetLabel)
-                                .foregroundStyle(Color.textPrimary)
+                    if let profileName = entry.profileName, !profileName.isEmpty {
+                        historyValueRow("Export Profile", value: profileName)
+                    }
+
+                    if let targetLabel = entry.targetLabel, !targetLabel.isEmpty {
+                        if entry.exportTarget == .localIPhoneFolder {
+                            historyValueRow("Export Folder", value: targetLabel)
+                        } else {
+                            historyValueRow("Target", value: targetLabel)
                         }
                     }
 

@@ -214,19 +214,6 @@ class ScheduledProfileOccurrenceMathTest {
     }
 
     @Test
-    fun `usage projection counts main runs across cadences`() {
-        assertEquals(30, ScheduledProfileUsageProjection.projectedMonthlyRequests(entry()))
-        assertEquals(5, ScheduledProfileUsageProjection.projectedMonthlyRequests(entry(cadenceUnit = ScheduledProfileCadenceUnit.WEEK)))
-        // 30 / 14 ≈ 2.14 → ceil 3, matching the iOS usage-projection test.
-        assertEquals(3, ScheduledProfileUsageProjection.projectedMonthlyRequests(entry(cadenceUnit = ScheduledProfileCadenceUnit.WEEK, cadenceValue = 2)))
-        assertEquals(1, ScheduledProfileUsageProjection.projectedMonthlyRequests(entry(cadenceUnit = ScheduledProfileCadenceUnit.MONTH)))
-
-        val entries = listOf(entry(), entry(enabled = false), entry(cadenceUnit = ScheduledProfileCadenceUnit.WEEK))
-        // Disabled entries never count.
-        assertEquals(35, ScheduledProfileUsageProjection.projectedMonthlyTotal(entries))
-    }
-
-    @Test
     fun `worker coalescing picks the earliest enabled preferred time`() {
         val entries = listOf(entry(hour = 20), entry(hour = 6, minute = 30))
         assertEquals(6 to 30, ScheduledProfileWorkerCoalescing.earliestPreferred(entries, legacyHour = null, legacyMinute = null))

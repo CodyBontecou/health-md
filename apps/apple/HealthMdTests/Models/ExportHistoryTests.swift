@@ -509,7 +509,8 @@ final class ExportHistoryTests: XCTestCase {
             targetLabel: "MacBook Pro",
             exportTarget: .connectedMac,
             fileCount: 6,
-            appleExportEnginePin: pin
+            appleExportEnginePin: pin,
+            profileName: "Morning"
         )
         let data = try JSONEncoder().encode(entry)
         let decoded = try JSONDecoder().decode(ExportHistoryEntry.self, from: data)
@@ -522,15 +523,31 @@ final class ExportHistoryTests: XCTestCase {
         XCTAssertEqual(decoded.exportTarget, .connectedMac)
         XCTAssertEqual(decoded.fileCount, 6)
         XCTAssertEqual(decoded.appleExportEnginePin, pin)
+        XCTAssertEqual(decoded.profileName, "Morning")
         XCTAssertNil(decoded.operationDetails)
 
         var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         legacyObject.removeValue(forKey: "appleExportEnginePin")
+        legacyObject.removeValue(forKey: "profileName")
         let legacy = try JSONDecoder().decode(
             ExportHistoryEntry.self,
             from: JSONSerialization.data(withJSONObject: legacyObject)
         )
         XCTAssertNil(legacy.appleExportEnginePin)
+        XCTAssertNil(legacy.profileName)
+    }
+
+    func testAPIHistoryDestinationDescriptionRedactsCredentialsAndQuery() {
+        let label = APIExportSettings.redactedEndpointDescription(
+            for: "https://user:password@api.example.com:8443/v1/export?token=secret#fragment",
+            fallback: "API Endpoint"
+        )
+
+        XCTAssertEqual(label, "https://api.example.com:8443/v1/export")
+        XCTAssertFalse(label.contains("user"))
+        XCTAssertFalse(label.contains("password"))
+        XCTAssertFalse(label.contains("secret"))
+        XCTAssertFalse(label.contains("fragment"))
     }
 
     func testEntry_codablePreservesCLIOperationDetails() throws {

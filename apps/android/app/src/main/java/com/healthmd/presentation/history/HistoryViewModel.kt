@@ -9,13 +9,15 @@ import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
 import com.healthmd.data.export.RawSnapshotService
+import com.healthmd.data.storage.FileExportManager
+import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.EXPORT_FOLDER_ROOT_TARGET_LABEL
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportResult
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportSource
 import com.healthmd.domain.model.ExportTarget
-import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -40,6 +42,7 @@ class HistoryViewModel @Inject constructor(
     private val healthRepository: HealthRepository,
     private val exportRepository: ExportRepository,
     private val settingsRepository: SettingsRepository,
+    private val fileExportManager: FileExportManager,
     private val apiEndpointExportRunner: APIEndpointExportRunner? = null,
     private val rawSnapshotService: RawSnapshotService? = null,
 ) : ViewModel() {
@@ -81,7 +84,12 @@ class HistoryViewModel @Inject constructor(
             _uiState.update { it.copy(isRetrying = true, retryMessage = null) }
             try {
                 val settings = settingsRepository.getExportSettings().copy(exportMode = entry.exportMode)
-                if (entry.target == ExportTarget.DEVICE_FOLDER && settingsRepository.getExportFolderUri() == null) {
+                val folderUri = if (entry.target == ExportTarget.DEVICE_FOLDER) {
+                    settingsRepository.getExportFolderUri()
+                } else {
+                    null
+                }
+                if (entry.target == ExportTarget.DEVICE_FOLDER && folderUri == null) {
                     _uiState.update {
                         it.copy(retryMessage = HistoryUiMessage.Text(R.string.history_retry_folder_required))
                     }
@@ -152,9 +160,15 @@ class HistoryViewModel @Inject constructor(
                         failureReason = result.primaryFailureReason,
                         failedDateDetails = result.failedDateDetails,
                         target = entry.target,
-                        targetLabel = if (entry.target == ExportTarget.API_ENDPOINT) {
-                            APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
-                        } else entry.targetLabel,
+                        targetLabel = when (entry.target) {
+                            ExportTarget.API_ENDPOINT ->
+                                APIExportEndpoint.redactedDescription(settings.apiEndpointUrl)
+                            ExportTarget.DEVICE_FOLDER ->
+                                folderUri?.let(fileExportManager::getFolderDisplayName)
+                                    ?.trim()
+                                    ?.takeIf { it.isNotEmpty() }
+                                    ?: EXPORT_FOLDER_ROOT_TARGET_LABEL
+                        },
                         fileCount = if (entry.target == ExportTarget.DEVICE_FOLDER) {
                             if (settings.exportMode == ExportMode.RAW_SNAPSHOT) result.artifactCount else estimatedFileCount(result.successCount, settings)
                         } else 0,

@@ -770,12 +770,14 @@
     <string name="history_clear_title">Exportgeschiedenis wissen?</string>
     <string name="history_clear_body">Hiermee verwijder je alle lokale vermeldingen uit de exportgeschiedenis. Geëxporteerde bestanden worden niet verwijderd.</string>
     <string name="history_target_label">Doel: %1$s</string>
+    <string name="history_profile_label">Profiel: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">Bestand: %1$d</item>
         <item quantity="other">Bestanden: %1$d</item>
     </plurals>
     <string name="history_detail_title">Exportdetails</string>
     <string name="history_detail_source">Bron</string>
+    <string name="history_detail_profile">Profiel</string>
     <string name="history_detail_when">Wanneer</string>
     <string name="history_detail_range">Bereik</string>
     <string name="history_detail_counts">Dagen</string>

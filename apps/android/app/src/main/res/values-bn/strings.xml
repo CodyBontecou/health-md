@@ -743,12 +743,14 @@
     <string name="history_clear_title">রপ্তানির ইতিহাস সাফ করবেন?</string>
     <string name="history_clear_body">এটি সমস্ত স্থানীয় রপ্তানি ইতিহাস এন্ট্রি মুছে দেয়। রপ্তানি করা ফাইল মুছে ফেলা হয় না.</string>
     <string name="history_target_label">লক্ষ্য: %1$s</string>
+    <string name="history_profile_label">প্রোফাইল: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">ফাইল: %1$d</item>
         <item quantity="other">ফাইল: %1$d</item>
     </plurals>
     <string name="history_detail_title">রপ্তানি বিবরণ</string>
     <string name="history_detail_source">উৎস</string>
+    <string name="history_detail_profile">প্রোফাইল</string>
     <string name="history_detail_when">কখন</string>
     <string name="history_detail_range">পরিসর</string>
     <string name="history_detail_counts">দিন</string>

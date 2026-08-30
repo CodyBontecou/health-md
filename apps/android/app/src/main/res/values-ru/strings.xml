@@ -794,6 +794,7 @@
     <string name="history_clear_title">Очистить историю экспорта?</string>
     <string name="history_clear_body">При этом будут удалены все записи локальной истории экспорта. Экспортированные файлы не удаляются.</string>
     <string name="history_target_label">Цель: %1$s</string>
+    <string name="history_profile_label">Профиль: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">Файл: %1$d</item>
         <item quantity="few">Файлы: %1$d</item>
@@ -802,6 +803,7 @@
     </plurals>
     <string name="history_detail_title">Детали экспорта</string>
     <string name="history_detail_source">Источник</string>
+    <string name="history_detail_profile">Профиль</string>
     <string name="history_detail_when">Когда</string>
     <string name="history_detail_range">Диапазон</string>
     <string name="history_detail_counts">Дни</string>

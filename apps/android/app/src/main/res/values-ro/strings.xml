@@ -782,6 +782,7 @@
     <string name="history_clear_title">Ștergeți istoricul exporturilor?</string>
     <string name="history_clear_body">Aceasta elimină toate intrările locale din istoricul exporturilor. Fișierele exportate nu sunt șterse.</string>
     <string name="history_target_label">Destinație: %1$s</string>
+    <string name="history_profile_label">Profil: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">Fișier: %1$d</item>
         <item quantity="few">Fișiere: %1$d</item>
@@ -789,6 +790,7 @@
     </plurals>
     <string name="history_detail_title">Detalii despre export</string>
     <string name="history_detail_source">Sursa</string>
+    <string name="history_detail_profile">Profil</string>
     <string name="history_detail_when">Când</string>
     <string name="history_detail_range">Interval</string>
     <string name="history_detail_counts">Zile</string>

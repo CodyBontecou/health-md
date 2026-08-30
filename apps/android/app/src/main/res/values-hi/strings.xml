@@ -743,12 +743,14 @@
     <string name="history_clear_title">निर्यात इतिहास साफ़ करें?</string>
     <string name="history_clear_body">यह सभी स्थानीय निर्यात इतिहास प्रविष्टियाँ हटा देता है। निर्यात की गई फ़ाइलें हटाई नहीं जातीं.</string>
     <string name="history_target_label">लक्ष्यः %1$s</string>
+    <string name="history_profile_label">प्रोफ़ाइल: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">फ़ाइल: %1$d</item>
         <item quantity="other">फ़ाइलें: %1$d</item>
     </plurals>
     <string name="history_detail_title">निर्यात विवरण</string>
     <string name="history_detail_source">स्रोत</string>
+    <string name="history_detail_profile">प्रोफ़ाइल</string>
     <string name="history_detail_when">कब</string>
     <string name="history_detail_range">रेंज</string>
     <string name="history_detail_counts">दिन</string>

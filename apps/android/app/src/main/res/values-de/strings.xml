@@ -770,12 +770,14 @@
     <string name="history_clear_title">Exportverlauf löschen?</string>
     <string name="history_clear_body">Dadurch werden alle lokalen Einträge im Exportverlauf entfernt. Exportierte Dateien werden nicht gelöscht.</string>
     <string name="history_target_label">Ziel: %1$s</string>
+    <string name="history_profile_label">Profil: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">Datei: %1$d</item>
         <item quantity="other">Dateien: %1$d</item>
     </plurals>
     <string name="history_detail_title">Exportdetails</string>
     <string name="history_detail_source">Quelle</string>
+    <string name="history_detail_profile">Profil</string>
     <string name="history_detail_when">Zeitpunkt</string>
     <string name="history_detail_range">Zeitraum</string>
     <string name="history_detail_counts">Tage</string>

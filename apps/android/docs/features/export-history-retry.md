@@ -9,7 +9,7 @@
 
 ## What it does
 
-Every export — manual, scheduled, shortcut, or API — is recorded in a local history database. Each entry shows success/partial/failed status, source, date range, file counts, destination, and any failure details, and failed runs can be retried with one tap.
+Every export — manual, scheduled, shortcut, or API — is recorded in a local history database. Each entry shows success/partial/failed status, source, date range, file counts, destination, and any failure details, and failed runs can be retried with one tap. Profile-based scheduled entries also retain and show the profile name plus the folder display name or privacy-safe API destination captured for that run.
 
 ## Who it is for
 
@@ -34,11 +34,11 @@ Every export — manual, scheduled, shortcut, or API — is recorded in a local 
 
 ## Example output
 
-List rows show status (✓ Success / Partial / Failed), timestamp, and destination. The detail sheet adds source, when, range, counts, destination type, target, files, failure reason, and warnings.
+List rows show status (✓ Success / Partial / Failed), timestamp, profile when present, and destination. The detail sheet adds source, profile, when, range, counts, destination type, export folder or API target, files, failure reason, and warnings.
 
 ## Tips
 
-- Retry uses the currently configured destination settings, so fix the underlying problem (permissions, folder access) before retrying.
+- Retry uses the currently configured destination settings, so fix the underlying problem (permissions, folder access) before retrying. The new retry row records that current destination and does not claim the original profile governed the retry.
 - History entries for automation broadcasts appear with source `SHORTCUT`.
 - Clear History only clears run records — exported files in your folder are untouched.
 
@@ -61,4 +61,4 @@ List rows show status (✓ Success / Partial / Failed), timestamp, and destinati
 
 ## Implementation notes
 
-History persists in Room (`ExportHistoryDatabase` + `ExportHistoryDao`) via `ExportHistoryRepositoryImpl`. `HistoryScreen` maps `ExportHistoryEntry` into success/partial/failed (`isFullSuccess`/`isPartialSuccess`) and renders per-entry failure labels from `ExportFailureReason.localizedLabel()`. Retry re-enters `ExportOrchestrator` for the failed dates only. Guidance copy (`export_guidance_*` strings) pairs each failure reason with a concrete remedy. Entries are local-only and never synced.
+History persists in Room (`ExportHistoryDatabase` + `ExportHistoryDao`) via `ExportHistoryRepositoryImpl`. Database version 6 adds nullable `profileName` provenance without rewriting legacy rows. `HistoryScreen` maps `ExportHistoryEntry` into success/partial/failed (`isFullSuccess`/`isPartialSuccess`) and renders per-entry failure labels from `ExportFailureReason.localizedLabel()`. Retry re-enters `ExportOrchestrator` for the failed dates only. Guidance copy (`export_guidance_*` strings) pairs each failure reason with a concrete remedy. Entries are local-only and never synced; folder URIs and API query parameters are not copied into display labels.

@@ -168,30 +168,9 @@ final class ExportProfileCoordinator: ObservableObject {
     }
 
     private func adoptVaultDestination(for profile: ExportProfile) {
-        guard let bindingID = profile.folderVaultID,
-              let destination = destinationStore.vault(id: bindingID) else { return }
-        let refreshed = vaultManager.adoptPersistedVault(
-            bookmarkData: destination.bookmarkData,
-            standardizedPath: destination.standardizedPath,
-            displayName: destination.name,
-            identity: destination.identity
-        )
-        // Persist every field the verified load refreshed back into the row:
-        // healed identity evidence for legacy rows, and the refreshed
-        // bookmark/path/name when verification rebound a moved or stale
-        // bookmark — otherwise the row keeps re-adopting a stale bookmark
-        // every launch (issue #143).
-        guard let refreshed,
-              refreshed.standardizedPath != destination.standardizedPath
-                || refreshed.displayName != destination.name
-                || refreshed.bookmarkData != destination.bookmarkData
-                || refreshed.identity != destination.identity else { return }
-        destinationStore.updateVault(
-            id: destination.id,
-            name: refreshed.displayName,
-            standardizedPath: refreshed.standardizedPath,
-            bookmarkData: refreshed.bookmarkData,
-            identity: refreshed.identity
+        vaultManager.adoptPersistedVault(
+            destinationID: profile.folderVaultID,
+            from: destinationStore
         )
     }
 
@@ -237,10 +216,19 @@ final class ExportProfileCoordinator: ObservableObject {
 
     // MARK: - Destination changes
 
-    /// Called after the user selects a new folder through the standard folder
-    /// picker (`VaultManager.setVaultFolder`). Persists the newly saved vault
-    /// as a profile-bound destination. Re-selecting a folder already stored
-    /// reuses its destination row.
+    /// Commits a standard folder-picker result into both the live vault state
+    /// and the active profile destination. Binding occurs only after bookmark
+    /// and trusted-selection persistence succeeds, so a denied replacement
+    /// cannot displace the profile's prior valid folder.
+    @discardableResult
+    func selectVaultFolder(_ url: URL) -> Bool {
+        guard vaultManager.setVaultFolder(url) else { return false }
+        vaultFolderWasSelected()
+        return true
+    }
+
+    /// Persists the live vault as the active profile's bound destination.
+    /// Re-selecting a folder already stored reuses its destination row.
     func vaultFolderWasSelected() {
         guard let activeID = profileStore.activeProfileID,
               let persisted = vaultManager.persistedVaultSnapshot() else { return }

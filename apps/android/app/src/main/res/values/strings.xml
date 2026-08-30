@@ -835,12 +835,14 @@
     <string name="history_clear_title">Clear export history?</string>
     <string name="history_clear_body">This removes all local export history entries. Exported files are not deleted.</string>
     <string name="history_target_label">Target: %1$s</string>
+    <string name="history_profile_label">Profile: %1$s</string>
     <plurals name="history_file_count">
         <item quantity="one">File: %1$d</item>
         <item quantity="other">Files: %1$d</item>
     </plurals>
     <string name="history_detail_title">Export details</string>
     <string name="history_detail_source">Source</string>
+    <string name="history_detail_profile">Profile</string>
     <string name="history_detail_when">When</string>
     <string name="history_detail_range">Range</string>
     <string name="history_detail_counts">Days</string>

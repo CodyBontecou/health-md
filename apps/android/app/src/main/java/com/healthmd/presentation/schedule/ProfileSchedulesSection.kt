@@ -103,15 +103,13 @@ fun ProfileSchedulesSection(
                     Text("New Profile From Current Settings")
                 }
 
-                Text(
-                    text = if (uiState.projectedMonthlyRequests > 0) {
-                        "Projected use: about ${uiState.projectedMonthlyRequests} export actions per month across scheduled profiles."
-                    } else {
-                        "No profile schedules enabled."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = AppColors.textSecondary,
-                )
+                if (uiState.rows.none { it.entry?.isEnabled == true }) {
+                    Text(
+                        text = "No profile schedules enabled.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppColors.textSecondary,
+                    )
+                }
             }
         }
     }
