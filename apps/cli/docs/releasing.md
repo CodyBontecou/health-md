@@ -21,7 +21,7 @@ manifests have been accepted. crates.io publication is a separate staged process
 3. Add a write-enabled SSH deploy key scoped only to that tap, and store its private key as the
    `HOMEBREW_TAP_DEPLOY_KEY` Actions secret in `health-md`.
 4. Protect the `cli-release` GitHub environment with required reviewers. Approval is the final evidence gate after exact-candidate CI, native archive smoke tests, checksums, and SBOMs have passed.
-5. Protect the `crates-io` environment. Configure crates.io Trusted Publishing for all five crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
+5. Protect the `crates-io` environment and restrict its deployment branch policy to `main`. Configure crates.io Trusted Publishing for all five crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
 6. Create a protected `cli-signing` environment and configure the Apple and Azure identities in
    the next section. Signing is mandatory on release tags; missing or invalid credentials leave the
    release as a draft. Pull requests continue to build and smoke unsigned candidates without access
@@ -199,11 +199,16 @@ monorepo working directories, custom qualification jobs, signing closure, or tag
 
 ## crates.io staging
 
-After the GitHub release is public, run the protected **CLI Publish crates.io** workflow on the
-exact `healthmd-cli/v<version>` tag and type its explicit confirmation. Use `trusted-publishing`
-unless performing the one-time bootstrap. The workflow validates the tag, public release, `main`
-ancestry, all eight package versions, both lockfiles, exact internal requirements, and publication
-policy before testing both workspaces and their extracted `.crate` archives.
+After the GitHub release is public, run the protected **CLI Publish crates.io** workflow from the
+current clean `main`, supply the exact version and 40-character SHA recorded by the successful
+**CLI Release** run, and type its explicit confirmation. Use `trusted-publishing` unless performing
+the one-time bootstrap. The workflow checks out that exact SHA rather than publishing the current
+branch, requires the version tag and public release to retain the same SHA, and independently checks
+it against the successful immutable release-run record before validating `main` ancestry, all eight
+package versions, both lockfiles, exact internal requirements, and publication policy. It then tests
+both workspaces and their extracted `.crate` archives. Running the workflow definition from `main`
+allows a reviewed publication-workflow fix to recover a failed first attempt without moving or
+replacing the release tag.
 
 Publication is retry-safe. For each crate in protocol → operations → client → MCP → CLI order, the workflow
 packages the local source, checks whether the exact version already exists, and compares the downloaded

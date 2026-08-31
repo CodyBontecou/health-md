@@ -7,6 +7,10 @@ on:
         description: Exact Cargo version to publish
         required: true
         type: string
+      release_sha:
+        description: Exact 40-character SHA retained by the successful CLI Release run
+        required: true
+        type: string
       authentication:
         description: crates.io authentication mode
         required: true
@@ -21,6 +25,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
   id-token: write
 
@@ -30,6 +35,7 @@ env:
 jobs:
   publish:
     name: Publish protocol → operations → client → MCP → CLI
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     environment: crates-io
     defaults:
@@ -40,6 +46,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ inputs.release_sha }}
 
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
         with:
@@ -52,26 +59,45 @@ jobs:
       - name: Validate immutable public release identity
         env:
           GH_TOKEN: ${{ github.token }}
-          BOOTSTRAP_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
         shell: bash
         run: |
           set -euo pipefail
-          test "${{ inputs.confirmation }}" = "publish crates"
-          test "$GITHUB_REF_TYPE" = "tag"
-          test "$GITHUB_REF_NAME" = "healthmd-cli/v$VERSION"
+          test "$CONFIRMATION" = "publish crates"
+          test "$GITHUB_REF_TYPE" = "branch"
+          test "$GITHUB_REF_NAME" = "main"
+          [[ "$EXPECTED_RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          tag="healthmd-cli/v$VERSION"
           git fetch --force origin \
-            "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME" \
+            "refs/tags/$tag:refs/tags/$tag" \
             "+refs/heads/main:refs/remotes/origin/main"
-          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+          test "$(git rev-parse 'HEAD^{commit}')" = "$EXPECTED_RELEASE_SHA"
+          test "$(git rev-parse "refs/tags/$tag^{commit}")" = "$EXPECTED_RELEASE_SHA"
+          release_runs="$(gh api --method GET \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/cli-release.yml/runs" \
+            -f branch="$tag" -f event=push -f status=success -f per_page=100)"
+          retained_release_sha="$(jq -er --arg tag "$tag" '
+            [.workflow_runs[] |
+              select(.head_branch == $tag and .event == "push" and .conclusion == "success")] |
+            if length == 1 then .[0].head_sha
+            else error("expected exactly one successful retained CLI Release run") end
+          ' <<<"$release_runs")"
+          test "$retained_release_sha" = "$EXPECTED_RELEASE_SHA"
+          git merge-base --is-ancestor "$EXPECTED_RELEASE_SHA" refs/remotes/origin/main
           python3 scripts/verify-release.py \
-            --tag "$GITHUB_REF_NAME" --sha "$GITHUB_SHA" --main-sha "$GITHUB_SHA"
-          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME")"
+            --tag "$tag" --sha "$EXPECTED_RELEASE_SHA" --main-sha "$EXPECTED_RELEASE_SHA"
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag")"
           test "$(jq -r .draft <<<"$release")" = false
-          test "$(jq -r .tag_name <<<"$release")" = "$GITHUB_REF_NAME"
-          test "$(jq -r .target_commitish <<<"$release")" = "$GITHUB_SHA"
-          if [[ "${{ inputs.authentication }}" == bootstrap-token ]]; then
-            test -n "$BOOTSTRAP_TOKEN"
-          fi
+          test "$(jq -r .tag_name <<<"$release")" = "$tag"
+          test "$(jq -r .target_commitish <<<"$release")" = "$EXPECTED_RELEASE_SHA"
+
+      - name: Validate one-time bootstrap token
+        if: ${{ inputs.authentication == 'bootstrap-token' }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        shell: bash
+        run: test -n "$CARGO_REGISTRY_TOKEN"
 
       - name: Verify shared-core workspace
         run: |
@@ -96,24 +122,24 @@ jobs:
       - name: Publish protocol
         env:
           CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
-        run: scripts/publish-crate.sh ../../packages/healthmd-core-rust/Cargo.toml healthmd-protocol "$VERSION"
+        run: bash scripts/publish-crate.sh ../../packages/healthmd-core-rust/Cargo.toml healthmd-protocol "$VERSION"
 
       - name: Publish operations
         env:
           CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
-        run: scripts/publish-crate.sh Cargo.toml healthmd-operations "$VERSION"
+        run: bash scripts/publish-crate.sh Cargo.toml healthmd-operations "$VERSION"
 
       - name: Publish client
         env:
           CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
-        run: scripts/publish-crate.sh Cargo.toml healthmd-client "$VERSION"
+        run: bash scripts/publish-crate.sh Cargo.toml healthmd-client "$VERSION"
 
       - name: Publish MCP application
         env:
           CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
-        run: scripts/publish-crate.sh Cargo.toml healthmd-mcp "$VERSION"
+        run: bash scripts/publish-crate.sh Cargo.toml healthmd-mcp "$VERSION"
 
       - name: Publish CLI
         env:
           CARGO_REGISTRY_TOKEN: ${{ inputs.authentication == 'trusted-publishing' && steps.crates-auth.outputs.token || secrets.CARGO_REGISTRY_TOKEN }}
-        run: scripts/publish-crate.sh Cargo.toml healthmd-cli "$VERSION"
+        run: bash scripts/publish-crate.sh Cargo.toml healthmd-cli "$VERSION"
