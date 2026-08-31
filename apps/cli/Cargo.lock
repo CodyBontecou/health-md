@@ -1007,7 +1007,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "healthmd-cli"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1033,7 +1033,7 @@ dependencies = [
 
 [[package]]
 name = "healthmd-client"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "async-trait",
  "base64",
@@ -1067,7 +1067,7 @@ dependencies = [
 
 [[package]]
 name = "healthmd-mcp"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "async-trait",
  "axum",
@@ -1089,7 +1089,7 @@ dependencies = [
 
 [[package]]
 name = "healthmd-operations"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1103,7 +1103,7 @@ dependencies = [
 
 [[package]]
 name = "healthmd-protocol"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 dependencies = [
  "base64",
  "chacha20poly1305",

@@ -12,7 +12,7 @@ default-members = [
 resolver = "3"
 
 [workspace.package]
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.4"
 edition = "2024"
 rust-version = "1.85"
 authors = ["Health.md contributors"]
@@ -43,8 +43,8 @@ uuid = { version = "1.16", features = ["serde", "v4"] }
 x25519-dalek = { version = "2.0", features = ["static_secrets"] }
 zeroize = "1.9"
 
-healthmd-core = { path = "crates/healthmd-core", version = "=0.1.0-alpha.3" }
-healthmd-protocol = { path = "crates/healthmd-protocol", version = "=0.1.0-alpha.3" }
+healthmd-core = { path = "crates/healthmd-core", version = "=0.1.0-alpha.4" }
+healthmd-protocol = { path = "crates/healthmd-protocol", version = "=0.1.0-alpha.4" }
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.1.0-alpha.4
+
+- Show a short, human-readable getting-started screen when `healthmd` is run without a command,
+  instead of wrapping the full help text inside a JSON error.
+- Publish this as an explicitly unqualified preview through the checksummed GitHub release,
+  Homebrew/Linuxbrew tap, and coordinated crates.io packages while keeping stable publication
+  blocked until fresh physical-device qualification is recorded.
+- Windows artifacts remain Authenticode-unsigned while the release identity ledger records pending
+  external certificate provisioning; verify them through the Sigstore-signed checksum closure.
+
 ## 0.1.0-alpha.3
 
 - Supersede the unpublished `0.1.0-alpha.2` candidate after its release gates found that generated

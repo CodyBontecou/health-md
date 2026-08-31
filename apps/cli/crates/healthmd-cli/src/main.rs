@@ -38,6 +38,18 @@ use std::net::SocketAddr;
 use url::Url;
 use uuid::Uuid;
 
+const WELCOME_TEXT: &str = concat!(
+    "Health.md CLI ",
+    env!("CARGO_PKG_VERSION"),
+    "\n\n",
+    "Secure, direct access to Health.md on your iPhone or Android device.\n\n",
+    "Get started:\n",
+    "  healthmd direct pair    Pair a mobile device\n",
+    "  healthmd setup codex    Set up Codex and pair an iPhone\n",
+    "  healthmd status         Check connection readiness\n\n",
+    "Run `healthmd --help` to see all commands.\n",
+);
+
 #[derive(Debug, Parser)]
 #[command(
     name = "healthmd",
@@ -457,6 +469,10 @@ fn main() -> ExitCode {
     std::panic::set_hook(Box::new(|_| eprintln!("healthmd: internal error")));
     if let Some(exit_code) = healthmd_client::credentials::run_credential_helper_if_requested() {
         return ExitCode::from(exit_code);
+    }
+    if std::env::args_os().nth(1).is_none() {
+        print!("{WELCOME_TEXT}");
+        return ExitCode::SUCCESS;
     }
     let Ok(runtime) = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -2254,6 +2270,17 @@ mod tests {
         assert_eq!(pointer, "/healthkit_record_archive");
         assert_eq!(category, None);
         assert!(lossless);
+    }
+
+    #[test]
+    fn fresh_install_welcome_is_concise_and_actionable() {
+        assert!(WELCOME_TEXT.starts_with("Health.md CLI "));
+        assert!(WELCOME_TEXT.contains("healthmd direct pair"));
+        assert!(WELCOME_TEXT.contains("healthmd setup codex"));
+        assert!(WELCOME_TEXT.contains("healthmd status"));
+        assert!(WELCOME_TEXT.contains("healthmd --help"));
+        assert!(!WELCOME_TEXT.contains("Usage:"));
+        assert!(!WELCOME_TEXT.contains("invalid_request"));
     }
 
     #[test]
