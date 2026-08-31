@@ -1243,7 +1243,7 @@ jobs:
         with:
           persist-credentials: true
           repository: CodyBontecou/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: artifacts-sealed-global

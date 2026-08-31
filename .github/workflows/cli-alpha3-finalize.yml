@@ -733,7 +733,7 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: CodyBontecou/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
           ref: 5167b587fc6ae4a79fc89ba457e20ffa21a2969b
           path: tap
           fetch-depth: 0
