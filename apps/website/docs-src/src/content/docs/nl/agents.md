@@ -47,9 +47,30 @@ Health.md stelt geen diagnose, beveelt geen behandeling aan, leidt geen oorzakel
 4. Configureer voor Claude of een handmatig ingestelde host het absolute pad naar `healthmd` met de argumenten `mcp serve`, zoals beschreven in [Health.md MCP-server en App](/nl/docs/mcp/).
 5. Start de host opnieuw als de configuratie volgens de setup is gewijzigd en roep daarna `healthmd_doctor` aan.
 
+## Een agentskill installeren
+
 Voor Mac-gebruikers blijft de Health.md-app op de Mac een optionele installatie- en distributieroute voor de skill. De app is geen vereiste voor platformonafhankelijke MCP.
 
-Het installatieprogramma voor skills maakt `healthmd-cli/SKILL.md` aan in de map die je goedkeurt. Het vervangt uitsluitend de eigen skillmap van Health.md. De skill beschrijft afgebakende opdrachten, verwerking van gestructureerde resultaten, privacyregels en veilig herstel na een onbekende uitkomst.
+De meeste gebruikers installeren alleen de [Health.md CLI-consumentenskill op skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+De openbare repository biedt vier taakspecifieke skills:
+
+| Skill | Bedoeld gebruik |
+|---|---|
+| `healthmd-cli` | Afgebakende, door de gebruiker geautoriseerde CLI- en MCP-query's en exports |
+| `healthmd-cli-operator` | Rechtstreekse iPhone-bewerkingen en herstel van persistente taken |
+| `healthmd-cli-development` | Ontwikkeling van CLI, MCP, protocol en iPhone-service |
+| `healthmd-cli-qa` | Geautomatiseerde validatie en tests op fysieke apparaten |
+
+Installeer een bijdragersskill door de naam na `@` te vervangen; installeer geen ontwikkel- of QA-instructies voor gewone verzoeken om gezondheidsgegevens. Gebruik `npx skills add CodyBontecou/health-md --list` om de repository te bekijken zonder een skill te installeren en `npx skills update healthmd-cli --project --yes` om de projectgebonden consumentenskill bij te werken. De [installatiehandleiding in de repository](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md) documenteert alle opdrachten en het publicatiecontract.
+
+Een skill is een instructiebundel. Deze installeert geen `healthmd` of `healthmd-mcp`, configureert MCP niet, koppelt geen telefoon, verleent geen toegang tot gezondheidsgegevens en werkt zichzelf niet automatisch bij. Controleer voor installatie de broncode.
+
+Het installatieprogramma voor skills maakt `healthmd-cli/SKILL.md` aan in de map die je goedkeurt. Het vervangt uitsluitend de eigen skillmap van Health.md. De skill beschrijft afgebakende opdrachten, verwerking van gestructureerde resultaten, privacyregels, grenzen voor openbaarmaking aan de modelprovider en veilig herstel na een onbekende uitkomst.
 
 Gebruik de configuratieprompt in de Mac-app als je een agent de symbolische koppelingen wilt laten maken. Health.md wijzigt zelf nooit ongemerkt shell-opstartbestanden of `/usr/local/bin`.
 

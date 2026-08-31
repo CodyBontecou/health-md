@@ -47,9 +47,30 @@ O Health.md não diagnostica, recomenda tratamento, infere causalidade nem class
 4. Para o Claude ou uma configuração manual do host, configure o caminho absoluto de `healthmd` com os argumentos `mcp serve` usando [Servidor e App MCP do Health.md](/pt-br/docs/mcp/).
 5. Reinicie o host quando a configuração indicar uma alteração e, em seguida, chame `healthmd_doctor`.
 
+## Instalar uma skill de agente
+
 O app Health.md para Mac continua sendo uma opção de instalação e distribuição de skills para usuários de Mac, não uma dependência portátil do MCP.
 
-O instalador de skills do app cria `healthmd-cli/SKILL.md` no diretório que você aprovar. Ele substitui apenas a pasta de skills do próprio Health.md. A skill ensina comandos limitados, tratamento de resultados estruturados, regras de privacidade e recuperação segura após resultados desconhecidos.
+A maioria dos usuários deve instalar somente a [skill Health.md CLI para consumidores no skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+O repositório público oferece quatro skills específicas para cada tarefa:
+
+| Skill | Uso previsto |
+|---|---|
+| `healthmd-cli` | Consultas e exportações limitadas e autorizadas pelo usuário via CLI e MCP |
+| `healthmd-cli-operator` | Operações diretas com o iPhone e recuperação de tarefas persistentes |
+| `healthmd-cli-development` | Desenvolvimento da CLI, do MCP, do protocolo e do serviço do iPhone |
+| `healthmd-cli-qa` | Validação automatizada e em dispositivos físicos |
+
+Para instalar uma skill de colaborador, substitua o nome depois de `@`; não instale orientações de desenvolvimento ou QA para solicitações comuns de dados de saúde. Use `npx skills add CodyBontecou/health-md --list` para inspecionar o repositório sem instalar uma skill e `npx skills update healthmd-cli --project --yes` para atualizar a skill de consumidor no projeto. O [guia de instalação do repositório](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md) documenta todos os comandos e o contrato de publicação.
+
+Uma skill é um conjunto de instruções. Ela não instala `healthmd` nem `healthmd-mcp`, não configura o MCP, não emparelha um telefone, não concede acesso a dados de saúde e não se mantém atualizada automaticamente. Revise o código-fonte antes da instalação.
+
+O instalador de skills do app cria `healthmd-cli/SKILL.md` no diretório que você aprovar. Ele substitui apenas a pasta de skills do próprio Health.md. A skill ensina comandos limitados, tratamento de resultados estruturados, regras de privacidade, limites de divulgação do provedor do modelo e recuperação segura após resultados desconhecidos.
 
 Use o prompt de configuração no app para Mac se quiser que um agente crie os links simbólicos. O próprio Health.md não modifica silenciosamente arquivos de inicialização do shell nem `/usr/local/bin`.
 

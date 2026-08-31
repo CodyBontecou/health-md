@@ -47,9 +47,30 @@ Health.md ne diagnostique pas, ne recommande pas de traitement, n’infère pas 
 4. Pour Claude ou une configuration manuelle d’hôte, configurez le chemin absolu `healthmd` avec les arguments `mcp serve` à l’aide du [serveur MCP et App Health.md](/fr/docs/mcp/).
 5. Redémarrez l’hôte lorsque la configuration signale une modification, puis appelez `healthmd_doctor`.
 
+## Installer une compétence d’agent
+
 Health.md for Mac reste une installation facultative et un moyen de distribuer les compétences aux utilisateurs Mac ; elle n’est pas une dépendance de MCP portable.
 
-Le programme d’installation de la compétence crée `healthmd-cli/SKILL.md` dans le répertoire que vous approuvez. Il remplace uniquement le dossier de compétence de Health.md. La compétence présente les commandes bornées, le traitement des résultats structurés, les règles de confidentialité et la récupération sûre après des résultats inconnus.
+La plupart des utilisateurs doivent installer uniquement la [compétence Health.md CLI destinée aux utilisateurs sur skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli) :
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+Le dépôt public propose quatre compétences propres à chaque tâche :
+
+| Compétence | Utilisation prévue |
+|---|---|
+| `healthmd-cli` | Requêtes et exports CLI/MCP bornés et autorisés par l’utilisateur |
+| `healthmd-cli-operator` | Opérations directes sur iPhone et reprise des tâches durables |
+| `healthmd-cli-development` | Développement de la CLI, de MCP, du protocole et du service iPhone |
+| `healthmd-cli-qa` | Validation automatisée et sur appareils physiques |
+
+Pour installer une compétence destinée aux contributeurs, remplacez le nom après `@` ; n’installez pas les instructions de développement ou de QA pour des demandes ordinaires de données de santé. Utilisez `npx skills add CodyBontecou/health-md --list` pour inspecter le dépôt sans installer de compétence et `npx skills update healthmd-cli --project --yes` pour mettre à jour la compétence utilisateur du projet. Le [guide d’installation du dépôt](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md) documente toutes les commandes et le contrat de publication.
+
+Une compétence est un ensemble d’instructions. Elle n’installe ni `healthmd` ni `healthmd-mcp`, ne configure pas MCP, ne jumelle pas de téléphone, n’accorde aucun accès aux données de santé et ne se met pas à jour automatiquement. Examinez son code source avant l’installation.
+
+Le programme d’installation de la compétence crée `healthmd-cli/SKILL.md` dans le répertoire que vous approuvez. Il remplace uniquement le dossier de compétence de Health.md. La compétence présente les commandes bornées, le traitement des résultats structurés, les règles de confidentialité, les limites de divulgation liées au fournisseur du modèle et la récupération sûre après des résultats inconnus.
 
 Utilisez l’invite de configuration de l’app Mac si vous voulez qu’un agent crée les liens symboliques. Health.md elle-même ne modifie pas silencieusement les fichiers de démarrage shell ni `/usr/local/bin`.
 

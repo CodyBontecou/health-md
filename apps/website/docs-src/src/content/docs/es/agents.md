@@ -47,9 +47,30 @@ Health.md no diagnostica, recomienda tratamientos, infiere la causalidad ni etiq
 4. Para Claude o la configuración manual del host, configura la ruta absoluta `healthmd` con los argumentos `mcp serve` usando [Servidor y aplicación MCP de Health.md](/es/docs/mcp/).
 5. Reinicia el host cuando la instalación informe un cambio en la configuración, luego llame a `healthmd_doctor`.
 
+## Instalar una habilidad para agentes
+
 La aplicación Health.md para Mac sigue siendo una ruta de instalación y distribución de habilidades opcional para los usuarios de Mac, no una dependencia de MCP portátil.
 
-El instalador de habilidades de la aplicación para Mac crea `healthmd-cli/SKILL.md` en el directorio que apruebes. Reemplaza únicamente la carpeta de habilidades propia de Health.md. La habilidad enseña comandos limitados, manejo estructurado de resultados, reglas de privacidad y recuperación segura después de resultados desconocidos.
+La mayoría de los usuarios debe instalar únicamente la [habilidad Health.md CLI para consumidores en skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+El repositorio público ofrece cuatro habilidades específicas para cada tarea:
+
+| Habilidad | Uso previsto |
+|---|---|
+| `healthmd-cli` | Consultas y exportaciones limitadas y autorizadas por el usuario mediante la CLI y MCP |
+| `healthmd-cli-operator` | Operaciones directas con el iPhone y recuperación de tareas persistentes |
+| `healthmd-cli-development` | Desarrollo de la CLI, MCP, el protocolo y el servicio del iPhone |
+| `healthmd-cli-qa` | Validación automatizada y con dispositivos físicos |
+
+Para instalar una habilidad de colaborador, sustituye el nombre después de `@`; no instales instrucciones de desarrollo o QA para solicitudes normales de datos de salud. Usa `npx skills add CodyBontecou/health-md --list` para inspeccionar el repositorio sin instalar una habilidad y `npx skills update healthmd-cli --project --yes` para actualizar la habilidad de consumidor del proyecto. La [guía de instalación del repositorio](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md) documenta todos los comandos y el contrato de publicación.
+
+Una habilidad es un conjunto de instrucciones. No instala `healthmd` ni `healthmd-mcp`, no configura MCP, no empareja un teléfono, no concede acceso a datos de salud ni se mantiene actualizada automáticamente. Revisa su código fuente antes de instalarla.
+
+El instalador de habilidades de la aplicación para Mac crea `healthmd-cli/SKILL.md` en el directorio que apruebes. Reemplaza únicamente la carpeta de habilidades propia de Health.md. La habilidad enseña comandos limitados, manejo estructurado de resultados, reglas de privacidad, límites de divulgación del proveedor del modelo y recuperación segura después de resultados desconocidos.
 
 Usa el mensaje de configuración en la aplicación Mac si quieres que un agente cree los enlaces simbólicos. Health.md en sí no modifica los archivos de inicio del shell o `/usr/local/bin` de forma silenciosa.
 

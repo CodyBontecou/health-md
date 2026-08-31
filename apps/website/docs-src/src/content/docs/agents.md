@@ -47,15 +47,28 @@ Health.md does not diagnose, recommend treatment, infer causation, or label a re
 4. For Claude or manual host setup, configure the absolute `healthmd` path with arguments `mcp serve` using [Health.md MCP server and App](/docs/mcp/).
 5. Restart the host when setup reports a changed configuration, then call `healthmd_doctor`.
 
+## Install an agent skill
+
 The Health.md Mac app remains an optional installation and skill-distribution path for Mac users, not a portable MCP dependency.
 
-Install the same consumer-facing skill from [skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
+Most users should install only the consumer-facing [Health.md CLI skill on skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
 
 ```bash
 npx skills add CodyBontecou/health-md@healthmd-cli
 ```
 
-This selects only `healthmd-cli`; the repository also contains contributor-focused development and QA skills. Installing the skill does not install the CLI, pair a phone, grant health-data access, or keep the skill updated automatically. Review it before use and run `npx skills update healthmd-cli` when you choose to adopt a later version.
+The public repository exposes four task-specific skills:
+
+| Skill | Intended use |
+|---|---|
+| `healthmd-cli` | Bounded, user-authorized CLI and MCP queries and exports |
+| `healthmd-cli-operator` | Direct iPhone operations and durable-job recovery |
+| `healthmd-cli-development` | CLI, MCP, protocol, and iPhone-service development |
+| `healthmd-cli-qa` | Automated and physical-device validation |
+
+Install one contributor skill by replacing the name after `@`; do not install development or QA guidance for ordinary health-data requests. Use `npx skills add CodyBontecou/health-md --list` to inspect the repository without installing a skill and `npx skills update healthmd-cli --project --yes` to update the project-scoped consumer skill. The [repository installation guide](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md) documents every command and the publishing contract.
+
+A skill is an instruction bundle. It does not install `healthmd` or `healthmd-mcp`, configure MCP, pair a phone, grant health-data access, or keep itself updated automatically. Review its source before installation.
 
 The Mac app's skill installer creates `healthmd-cli/SKILL.md` in the directory you approve. It replaces only Health.md's own skill folder. The skill teaches bounded commands, structured result handling, privacy rules, model-provider disclosure boundaries, and safe recovery after unknown outcomes.
 

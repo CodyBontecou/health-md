@@ -47,9 +47,30 @@ Health.md는 진단하거나, 치료를 권고하거나, 인과관계를 추론�
 4. Claude 또는 수동 호스트 설정의 경우 [Health.md MCP 서버 및 App](/ko/docs/mcp/)을 사용하여 절대 `healthmd` 경로와 인수 `mcp serve`를 구성합니다.
 5. 설정에서 구성이 변경되었다고 보고하면 호스트를 다시 시작한 뒤 `healthmd_doctor`를 호출합니다.
 
+## 에이전트 스킬 설치
+
 Health.md Mac 앱은 Mac 사용자를 위한 선택적 설치 및 스킬 배포 경로이며 이식 가능한 MCP의 의존성이 아닙니다.
 
-앱의 스킬 설치 프로그램은 승인한 디렉터리에 `healthmd-cli/SKILL.md`를 만듭니다. Health.md 자체 스킬 폴더만 대체합니다. 이 스킬은 제한된 명령, 구조화된 결과 처리, 개인정보 보호 규칙 및 결과를 알 수 없을 때의 안전한 복구를 안내합니다.
+대부분의 사용자는 [skills.sh의 소비자용 Health.md CLI 스킬](https://skills.sh/CodyBontecou/health-md/healthmd-cli)만 설치해야 합니다.
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+공개 저장소는 작업별 스킬 4개를 제공합니다.
+
+| 스킬 | 용도 |
+|---|---|
+| `healthmd-cli` | 사용자가 승인한 범위 내의 CLI/MCP 쿼리 및 내보내기 |
+| `healthmd-cli-operator` | 직접 iPhone 작업 및 영속 작업 복구 |
+| `healthmd-cli-development` | CLI, MCP, 프로토콜 및 iPhone 서비스 개발 |
+| `healthmd-cli-qa` | 자동화된 검증 및 실제 기기 검증 |
+
+기여자용 스킬을 설치하려면 `@` 뒤의 이름을 바꾸세요. 일반적인 건강 데이터 요청에는 개발 또는 QA 지침을 설치하지 마세요. `npx skills add CodyBontecou/health-md --list`를 사용하면 스킬을 설치하지 않고 저장소를 확인할 수 있고, `npx skills update healthmd-cli --project --yes`를 사용하면 프로젝트 범위 소비자 스킬을 업데이트할 수 있습니다. 모든 명령과 게시 계약은 [저장소 설치 가이드](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md)에 설명되어 있습니다.
+
+스킬은 지침 모음입니다. `healthmd` 또는 `healthmd-mcp`를 설치하거나 MCP를 구성하거나 휴대폰을 페어링하거나 건강 데이터 접근 권한을 부여하지 않으며 자동으로 업데이트되지도 않습니다. 설치 전에 소스를 검토하세요.
+
+앱의 스킬 설치 프로그램은 승인한 디렉터리에 `healthmd-cli/SKILL.md`를 만듭니다. Health.md 자체 스킬 폴더만 대체합니다. 이 스킬은 제한된 명령, 구조화된 결과 처리, 개인정보 보호 규칙, 모델 공급자 공개 경계 및 결과를 알 수 없을 때의 안전한 복구를 안내합니다.
 
 에이전트가 심볼릭 링크를 만들게 하려면 Mac 앱의 설정 프롬프트를 사용하세요. Health.md 자체는 셸 시작 파일 또는 `/usr/local/bin`을 암묵적으로 수정하지 않습니다.
 

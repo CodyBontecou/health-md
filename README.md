@@ -2,15 +2,24 @@
 
 Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, and website.
 
-## Agent skill
+## Agent skills
 
-Install the [consumer-facing Health.md CLI skill](https://skills.sh/CodyBontecou/health-md/healthmd-cli) for bounded, privacy-aware CLI and MCP workflows:
+Health.md publishes four instruction bundles from [`.agents/skills`](.agents/skills):
+
+| Skill | Use it for |
+| --- | --- |
+| [`healthmd-cli`](.agents/skills/healthmd-cli/SKILL.md) | Consumer CLI and MCP workflows with bounded, user-authorized health access |
+| [`healthmd-cli-operator`](.agents/skills/healthmd-cli-operator/SKILL.md) | Direct iPhone operations and durable-job recovery |
+| [`healthmd-cli-development`](.agents/skills/healthmd-cli-development/SKILL.md) | CLI, MCP, protocol, and iPhone direct-service development |
+| [`healthmd-cli-qa`](.agents/skills/healthmd-cli-qa/SKILL.md) | Automated and physical-device CLI/MCP validation |
+
+Most users should install only the [consumer skill on skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
 
 ```bash
 npx skills add CodyBontecou/health-md@healthmd-cli
 ```
 
-The skill teaches agents to request the smallest user-authorized scope, preserve units and missingness, query typed iPhone data, handle iPhone and Android exports truthfully, and recover durable jobs without exposing raw health records. Installing the skill does not install the `healthmd` binaries or grant access to a phone. Review the [skill source](.agents/skills/healthmd-cli/SKILL.md) and the [CLI preview status](apps/cli/README.md) before use.
+A skill supplies agent instructions; it does not install the `healthmd` binaries, configure MCP, pair a phone, or grant health-data access. See [Agent skills and installation](docs/agents/skills.md) for contributor skill commands, local-checkout installation, updates, privacy boundaries, and the publishing contract. Review the [CLI preview status](apps/cli/README.md) before use.
 
 ## Repository layout
 

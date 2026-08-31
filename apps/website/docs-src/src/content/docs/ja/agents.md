@@ -47,9 +47,30 @@ Health.mdは、診断、治療の推奨、因果関係の推定を行いませ�
 4. Claudeまたは手動でホストを設定する場合は、[Health.md MCPサーバーとApp](/ja/docs/mcp/)を参照し、`healthmd`の絶対パスに引数`mcp serve`を指定します。
 5. 設定が変更されたと表示された場合はホストを再起動し、`healthmd_doctor`を呼び出します。
 
+## エージェントスキルをインストールする
+
 Health.mdのMacアプリは、Macユーザー向けの任意のインストール経路およびスキル配布経路です。ポータブルMCPの依存関係ではありません。
 
-アプリのスキルインストーラーは、承認したディレクトリに`healthmd-cli/SKILL.md`を作成します。置き換えるのはHealth.md自身のスキルフォルダだけです。このスキルは、範囲と上限を明示したコマンド、構造化された結果の扱い、プライバシー規則、結果が不明な場合の安全な復旧方法をエージェントへ伝えます。
+ほとんどのユーザーは、[skills.shの一般ユーザー向けHealth.md CLIスキル](https://skills.sh/CodyBontecou/health-md/healthmd-cli)のみをインストールしてください。
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+公開リポジトリには、タスク別に4つのスキルがあります。
+
+| スキル | 用途 |
+|---|---|
+| `healthmd-cli` | ユーザーが許可した範囲内でのCLI/MCPクエリとエクスポート |
+| `healthmd-cli-operator` | iPhone直接接続の操作と永続ジョブの復旧 |
+| `healthmd-cli-development` | CLI、MCP、プロトコル、iPhoneサービスの開発 |
+| `healthmd-cli-qa` | 自動検証と実機検証 |
+
+コントリビューター向けスキルをインストールするには、`@`以降の名前を置き換えます。通常の健康データの依頼には、開発用またはQA用のガイダンスをインストールしないでください。`npx skills add CodyBontecou/health-md --list`を使用すると、スキルをインストールせずにリポジトリを確認できます。`npx skills update healthmd-cli --project --yes`を使用すると、プロジェクト用の一般ユーザースキルを更新できます。すべてのコマンドと公開契約については、[リポジトリのインストールガイド](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md)を参照してください。
+
+スキルは指示のセットです。`healthmd`や`healthmd-mcp`のインストール、MCPの設定、電話のペアリング、健康データへのアクセス許可は行わず、自動更新もされません。インストール前にソースを確認してください。
+
+アプリのスキルインストーラーは、承認したディレクトリに`healthmd-cli/SKILL.md`を作成します。置き換えるのはHealth.md自身のスキルフォルダだけです。このスキルは、範囲と上限を明示したコマンド、構造化された結果の扱い、プライバシー規則、モデルプロバイダーへの開示境界、結果が不明な場合の安全な復旧方法をエージェントへ伝えます。
 
 エージェントにシンボリックリンクを作成させる場合は、Macアプリ内の設定用プロンプトを使用してください。Health.mdが、シェルの起動ファイルや`/usr/local/bin`を暗黙に変更することはありません。
 

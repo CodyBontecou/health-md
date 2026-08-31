@@ -47,16 +47,27 @@ test('llms.txt is concise discovery metadata with stable authoritative links', a
   assert.ok(Buffer.byteLength(llms) < 4_000);
 });
 
-test('agent docs publish the skills.sh consumer install path', async () => {
-  const [readme, agents] = await Promise.all([
+test('repository, CLI, and website docs publish selective agent-skill installation', async () => {
+  const [readme, cliReadme, repositoryGuide, agents] = await Promise.all([
     readFile(path.join(REPOSITORY_ROOT, 'README.md')),
+    readFile(path.join(REPOSITORY_ROOT, 'apps/cli/README.md')),
+    readFile(path.join(REPOSITORY_ROOT, 'docs/agents/skills.md')),
     read('docs-src/src/content/docs/agents.md'),
   ]).then((buffers) => buffers.map((buffer) => buffer.toString('utf8')));
-  for (const text of [readme, agents]) {
+  for (const text of [readme, cliReadme, repositoryGuide, agents]) {
     assert.match(text, /https:\/\/skills\.sh\/CodyBontecou\/health-md\/healthmd-cli/);
     assert.match(text, /npx skills add CodyBontecou\/health-md@healthmd-cli/);
-    assert.match(text, /Installing the skill does not install (?:the CLI|the `healthmd` binaries)/i);
+    assert.match(text, /does[^.\n]{0,20}not[^.\n]{0,20}install/i);
+    for (const skill of ['healthmd-cli-operator', 'healthmd-cli-development', 'healthmd-cli-qa']) {
+      assert.match(text, new RegExp(skill));
+    }
   }
+  for (const text of [cliReadme, repositoryGuide, agents]) {
+    assert.match(text, /npx skills add CodyBontecou\/health-md --list/);
+    assert.match(text, /npx skills update healthmd-cli --project --yes/);
+  }
+  assert.match(repositoryGuide, /npx skills add \. --skill healthmd-cli/);
+  assert.match(repositoryGuide, /sync-agent-assets\.mjs --write/);
 });
 
 test('published agent assets are byte-exact and checksum-backed', async () => {
@@ -146,6 +157,11 @@ test('localized agent docs preserve released-Mac and portable-preview boundaries
     assert.match(combined, /21/);
     assert.match(combined, /19/);
     assert.doesNotMatch(combined, /17(?:\s|-)*(?:tools|tool|herramient|werkzeug|outil|ferrament|strument|個|개|个)/iu);
+    assert.match(agents, /https:\/\/skills\.sh\/CodyBontecou\/health-md\/healthmd-cli/);
+    assert.match(agents, /npx skills add CodyBontecou\/health-md@healthmd-cli/);
+    assert.match(agents, /healthmd-cli-operator/);
+    assert.match(agents, /healthmd-cli-development/);
+    assert.match(agents, /healthmd-cli-qa/);
     assert.match(mcp, /`tools\/list`/);
     assert.match(mcp, /"destination"\s*:\s*"\/absolute\/existing\/HealthVault"/);
     assert.doesNotMatch(cli, /iOS[^\n]{0,120}Windows|Windows[^\n]{0,120}iOS/iu);

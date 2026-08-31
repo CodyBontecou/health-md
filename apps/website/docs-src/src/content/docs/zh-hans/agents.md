@@ -47,9 +47,30 @@ Health.md 不会诊断、建议治疗、推断因果关系，也不会将结果�
 4. 对于 Claude 或手动主机设置，请按照 [Health.md MCP 服务器与 App](/zh-hans/docs/mcp/)中的说明，配置 `healthmd` 的绝对路径，并传入参数 `mcp serve`。
 5. 如果设置程序报告配置已更改，请重启主机，然后调用 `healthmd_doctor`。
 
+## 安装智能体技能
+
 对于 Mac 用户，Health.md Mac 应用仍可用作可选的安装和技能分发方式，但不是可移植 MCP 的依赖项。
 
-应用中的技能安装程序会在您批准的目录中创建 `healthmd-cli/SKILL.md`，且只替换 Health.md 自己的技能文件夹。该技能介绍有界命令、结构化结果处理、隐私规则，以及结果未知后的安全恢复方法。
+大多数用户只需安装 [skills.sh 上面向用户的 Health.md CLI 技能](https://skills.sh/CodyBontecou/health-md/healthmd-cli)：
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+公开仓库提供四种针对不同任务的技能：
+
+| 技能 | 预期用途 |
+|---|---|
+| `healthmd-cli` | 在用户授权的有限范围内执行 CLI/MCP 查询和导出 |
+| `healthmd-cli-operator` | iPhone 直连操作和持久任务恢复 |
+| `healthmd-cli-development` | 开发 CLI、MCP、协议和 iPhone 服务 |
+| `healthmd-cli-qa` | 自动化验证和真机验证 |
+
+如需安装贡献者技能，请替换 `@` 后的名称；对于普通健康数据请求，请勿安装开发或 QA 指南。使用 `npx skills add CodyBontecou/health-md --list` 可在不安装技能的情况下查看仓库，使用 `npx skills update healthmd-cli --project --yes` 可更新项目范围内的用户技能。[仓库安装指南](https://github.com/CodyBontecou/health-md/blob/main/docs/agents/skills.md)记录了所有命令和发布约定。
+
+技能是一组指令。它不会安装 `healthmd` 或 `healthmd-mcp`，不会配置 MCP、配对手机或授予健康数据访问权限，也不会自动更新。安装前请审阅其源代码。
+
+应用中的技能安装程序会在您批准的目录中创建 `healthmd-cli/SKILL.md`，且只替换 Health.md 自己的技能文件夹。该技能介绍有界命令、结构化结果处理、隐私规则、模型提供商披露边界，以及结果未知后的安全恢复方法。
 
 如果希望智能体创建符号链接，请使用 Mac 应用中的设置提示。Health.md 本身不会在未提示的情况下修改 shell 启动文件或 `/usr/local/bin`。
 

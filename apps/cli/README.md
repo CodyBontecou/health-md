@@ -152,6 +152,34 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .\health
 if ($LASTEXITCODE -ne 0) { throw 'installer failed' }
 ```
 
+## Agent skills
+
+Agent skills provide task-specific instructions to compatible coding agents. They are separate from the CLI and MCP binaries: installing a skill does not install `healthmd`, configure `healthmd-mcp`, pair a mobile source, or grant access to Apple Health or Health Connect.
+
+Most users should install only the public consumer skill:
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+Its [skills.sh page](https://skills.sh/CodyBontecou/health-md/healthmd-cli) and [source](../../.agents/skills/healthmd-cli/SKILL.md) describe bounded CLI/MCP queries, explicit authorization, units and missingness, truthful iPhone/Android capability differences, privacy-safe diagnostics, and durable-job recovery.
+
+The repository also publishes task-specific contributor skills:
+
+| Skill | Intended use |
+|---|---|
+| `healthmd-cli-operator` | Operate and troubleshoot direct iPhone workflows |
+| `healthmd-cli-development` | Change the CLI, MCP server, direct protocol, or iPhone service |
+| `healthmd-cli-qa` | Run compatibility, release, and physical-device validation |
+
+Install one contributor skill by replacing the name after `@`, for example:
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli-qa
+```
+
+Use `npx skills add CodyBontecou/health-md --list` to inspect all discoverable skills without installing them, and `npx skills update healthmd-cli --project --yes` to update the project-scoped consumer skill. Review [Agent skills and installation](../../docs/agents/skills.md) for every install command, local-checkout testing, global versus project scope, and publishing details.
+
 ## Upgrade, uninstall, and support
 
 Upgrade both `healthmd` and `healthmd-mcp` from one release; never mix archive versions. Use
