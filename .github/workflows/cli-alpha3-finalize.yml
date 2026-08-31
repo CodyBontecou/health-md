@@ -434,9 +434,13 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   qualify-homebrew:
-    name: Qualify exact sealed Homebrew formula without write credentials
+    name: Qualify exact sealed Homebrew formula without write credentials (${{ matrix.runner }})
     needs: verify-and-finalize
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-22.04, macos-14]
+    runs-on: ${{ matrix.runner }}
     permissions:
       actions: read
       contents: read
@@ -467,7 +471,12 @@ jobs:
           ' <<<"$release" >/dev/null
           jq -S '[.assets[] | {id, name, size, digest, state}] | sort_by(.name)' \
             <<<"$release" > public-ledger.json
-          test "$(sha256sum public-ledger.json | cut -d ' ' -f 1)" = "$EXPECTED_LEDGER_SHA256"
+          if command -v sha256sum >/dev/null 2>&1; then
+            public_ledger_sha256="$(sha256sum public-ledger.json | cut -d ' ' -f 1)"
+          else
+            public_ledger_sha256="$(shasum -a 256 public-ledger.json | cut -d ' ' -f 1)"
+          fi
+          test "$public_ledger_sha256" = "$EXPECTED_LEDGER_SHA256"
           alpha2="$(gh api "repos/$GITHUB_REPOSITORY/releases/$ALPHA2_RELEASE_ID")"
           jq -e --arg tag "$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" --argjson id "$ALPHA2_RELEASE_ID" '
             .id == $id and .tag_name == $tag and .target_commitish == $sha and
@@ -512,7 +521,12 @@ jobs:
           [[ "$formula_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           gh api -H 'Accept: application/octet-stream' \
             "repos/$GITHUB_REPOSITORY/releases/assets/$formula_id" > "$RUNNER_TEMP/public-healthmd.rb"
-          test "sha256:$(sha256sum "$RUNNER_TEMP/public-healthmd.rb" | cut -d ' ' -f 1)" = "$formula_digest"
+          if command -v sha256sum >/dev/null 2>&1; then
+            public_formula_sha256="$(sha256sum "$RUNNER_TEMP/public-healthmd.rb" | cut -d ' ' -f 1)"
+          else
+            public_formula_sha256="$(shasum -a 256 "$RUNNER_TEMP/public-healthmd.rb" | cut -d ' ' -f 1)"
+          fi
+          test "sha256:$public_formula_sha256" = "$formula_digest"
 
       - name: Download exact sealed formula artifact
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -554,7 +568,9 @@ jobs:
           cp "$source_formula" Formula/healthmd.rb
           cmp Formula/healthmd.rb "$RUNNER_TEMP/public-healthmd.rb"
 
-          export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+          if [[ "$RUNNER_OS" = Linux ]]; then
+            export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+          fi
           brew update
           # Keep the sealed cargo-dist formula byte-exact. Homebrew flags three generator-format
           # cops and a missing `test do`; prefix execution is the functional alpha.3 qualification.
@@ -606,7 +622,7 @@ jobs:
           jq -e --arg ref "refs/tags/$EXPECTED_LATEST_TAG" --arg sha "$EXPECTED_LATEST_SHA" '
             .ref == $ref and .object.type == "commit" and .object.sha == $sha
           ' <<<"$latest_ref" >/dev/null
-          echo "Qualified exact sealed formula without GitHub or tap write credentials during execution." >> "$GITHUB_STEP_SUMMARY"
+          echo "Qualified exact sealed formula on $RUNNER_OS without GitHub or tap write credentials during execution." >> "$GITHUB_STEP_SUMMARY"
 
   publish-homebrew:
     name: Publish qualified exact Homebrew formula
