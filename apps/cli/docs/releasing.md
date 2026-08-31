@@ -18,8 +18,8 @@ manifests have been accepted. crates.io publication is a separate staged process
 
 1. Keep the CLI workspace under `apps/cli` and its shared `healthmd-protocol` dependency under the independently locked `packages/healthmd-core-rust` workspace in `CodyBontecou/health-md`.
 2. Create and initialize `CodyBontecou/homebrew-tap`.
-3. Add a fine-grained token with contents write permission for that tap as the
-   `HOMEBREW_TAP_TOKEN` Actions secret in `health-md`.
+3. Add a write-enabled SSH deploy key scoped only to that tap, and store its private key as the
+   `HOMEBREW_TAP_DEPLOY_KEY` Actions secret in `health-md`.
 4. Protect the `cli-release` GitHub environment with required reviewers. Approval is the final evidence gate after exact-candidate CI, native archive smoke tests, checksums, and SBOMs have passed.
 5. Protect the `crates-io` environment. Configure crates.io Trusted Publishing for all five crates with workflow `cli-publish-crates.yml` and this environment. A short-lived `CARGO_REGISTRY_TOKEN` is allowed only for the first `bootstrap-token` publication; remove it afterward.
 6. Create a protected `cli-signing` environment and configure the Apple and Azure identities in
@@ -283,8 +283,8 @@ Treat suspected key access as an incident, not an ordinary failed release:
 
 1. Disable or freeze the `cli-signing`, `cli-release`, `crates-io`, and Homebrew publication paths.
 2. Revoke/rotate the Developer ID certificate and App Store Connect notary key. Disable the Azure
-   Artifact Signing profile or compromised role/federated credential. Rotate the Homebrew token,
-   bootstrap crates.io token if one exists, and affected GitHub credentials.
+   Artifact Signing profile or compromised role/federated credential. Rotate the Homebrew tap
+   deploy key, bootstrap crates.io token if one exists, and affected GitHub credentials.
 3. Audit GitHub Actions, Apple, Azure, Sigstore transparency, crates.io, and tap history for the
    exposure window. Inventory every tag, archive, DMG, installer, formula, checksum bundle, and crate
    version that may have been signed or published.
