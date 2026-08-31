@@ -47,6 +47,18 @@ test('llms.txt is concise discovery metadata with stable authoritative links', a
   assert.ok(Buffer.byteLength(llms) < 4_000);
 });
 
+test('agent docs publish the skills.sh consumer install path', async () => {
+  const [readme, agents] = await Promise.all([
+    readFile(path.join(REPOSITORY_ROOT, 'README.md')),
+    read('docs-src/src/content/docs/agents.md'),
+  ]).then((buffers) => buffers.map((buffer) => buffer.toString('utf8')));
+  for (const text of [readme, agents]) {
+    assert.match(text, /https:\/\/skills\.sh\/CodyBontecou\/health-md\/healthmd-cli/);
+    assert.match(text, /npx skills add CodyBontecou\/health-md@healthmd-cli/);
+    assert.match(text, /Installing the skill does not install (?:the CLI|the `healthmd` binaries)/i);
+  }
+});
+
 test('published agent assets are byte-exact and checksum-backed', async () => {
   const sourceProvenance = await read('docs-src/reference-source.json');
   assert.deepEqual(await read('docs-src/public/reference/source-manifest.json'), sourceProvenance);
@@ -65,27 +77,34 @@ test('published agent assets are byte-exact and checksum-backed', async () => {
   const skillSource = await readFile(path.join(REPOSITORY_ROOT, '.agents/skills/healthmd-cli/SKILL.md'));
   const skillV1 = await read('docs-src/public/agents/skills/healthmd-cli/v1/SKILL.md');
   const skillV2 = await read('docs-src/public/agents/skills/healthmd-cli/v2/SKILL.md');
-  const publishedSkill = await read('docs-src/public/agents/skills/healthmd-cli/v3/SKILL.md');
+  const skillV3 = await read('docs-src/public/agents/skills/healthmd-cli/v3/SKILL.md');
+  const publishedSkill = await read('docs-src/public/agents/skills/healthmd-cli/v4/SKILL.md');
   assert.equal(skillV1.length, 15_734);
   assert.equal(sha256(skillV1), '6f36d8e479552745ae282a30a8471bc2ce477e7d1d6d8040f6ba72cd75047792');
   assert.equal(sha256(skillV2), '400468f3dd7ddb79e969bea6567db0d3d2b30d64430e0c4295d8e4e04012afd3');
+  assert.equal(sha256(skillV3), '5e77d61461ce2806e3285b8e6794aeb272401db042b869036a45b88e2ed6612f');
   assert.match(skillV2.toString('utf8'), /0\.1\.0-alpha\.2.*public preview/s);
   assert.deepEqual(publishedSkill, skillSource);
-  assert.equal(sha256(publishedSkill), '5e77d61461ce2806e3285b8e6794aeb272401db042b869036a45b88e2ed6612f');
+  assert.equal(sha256(publishedSkill), '1d18de03c162e8ce343b6763986c18f206331371e1b90162d81219f04c99b095');
   const skillManifest = JSON.parse(await read('docs-src/public/agents/skills/healthmd-cli/manifest.json'));
-  assert.equal(skillManifest.latest.version, 3);
-  assert.equal(skillManifest.latest.path, '/agents/skills/healthmd-cli/v3/SKILL.md');
+  assert.equal(skillManifest.latest.version, 4);
+  assert.equal(skillManifest.latest.path, '/agents/skills/healthmd-cli/v4/SKILL.md');
   assert.equal(skillManifest.latest.bytes, publishedSkill.length);
   assert.equal(skillManifest.latest.sha256, sha256(publishedSkill));
-  assert.equal(skillManifest.versions.length, 3);
+  assert.equal(skillManifest.versions.length, 4);
   assert.equal(skillManifest.versions[0].sha256, sha256(skillV1));
   assert.equal(skillManifest.versions[1].sha256, sha256(skillV2));
-  assert.deepEqual(skillManifest.versions[2], skillManifest.latest);
+  assert.equal(skillManifest.versions[2].sha256, sha256(skillV3));
+  assert.deepEqual(skillManifest.versions[3], skillManifest.latest);
   assert.equal(skillManifest.install_as, 'healthmd-cli/SKILL.md');
   assert.equal(skillManifest.availability, 'public_preview');
   const skillText = publishedSkill.toString('utf8');
   assert.match(skillText, /0\.1\.0-alpha\.3.*public preview/s);
-  assert.match(skillText, /explicitly unqualified preview/);
+  assert.match(skillText, /explicitly unqualified public preview/);
+  assert.match(skillText, /schema-v8 `healthmd\.health_data`/);
+  assert.match(skillText, /Android raw remains provider-native/);
+  assert.match(skillText, /mcp serve-read-only/);
+  assert.match(skillText, /local model inference/);
   assert.match(skillText, /brew install CodyBontecou\/tap\/healthmd/);
   assert.match(skillText, /git checkout healthmd-cli\/v0\.1\.0-alpha\.3/);
 
@@ -110,8 +129,8 @@ test('CLI launch post uses runnable preview commands and honest privacy boundari
   assert.doesNotMatch(post, /never a dump of everything/);
   assert.match(post, /complete-corpus operation you explicitly request/);
   assert.match(post, /No Health\.md cloud/);
-  assert.match(cliReadme, /0\.1\.0-alpha\.3` explicitly unqualified public preview/);
-  assert.doesNotMatch(cliReadme, /preview candidate/);
+  assert.match(cliReadme, /0\.1\.0-alpha\.4` explicitly unqualified preview candidate/);
+  assert.match(cliReadme, /After the exact GitHub prerelease and tap formula are public/);
 });
 
 test('localized agent docs preserve released-Mac and portable-preview boundaries', async () => {

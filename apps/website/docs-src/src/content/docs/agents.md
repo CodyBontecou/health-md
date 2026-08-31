@@ -49,7 +49,15 @@ Health.md does not diagnose, recommend treatment, infer causation, or label a re
 
 The Health.md Mac app remains an optional installation and skill-distribution path for Mac users, not a portable MCP dependency.
 
-The app's skill installer creates `healthmd-cli/SKILL.md` in the directory you approve. It replaces only Health.md's own skill folder. The skill teaches bounded commands, structured result handling, privacy rules, and safe recovery after unknown outcomes.
+Install the same consumer-facing skill from [skills.sh](https://skills.sh/CodyBontecou/health-md/healthmd-cli):
+
+```bash
+npx skills add CodyBontecou/health-md@healthmd-cli
+```
+
+This selects only `healthmd-cli`; the repository also contains contributor-focused development and QA skills. Installing the skill does not install the CLI, pair a phone, grant health-data access, or keep the skill updated automatically. Review it before use and run `npx skills update healthmd-cli` when you choose to adopt a later version.
+
+The Mac app's skill installer creates `healthmd-cli/SKILL.md` in the directory you approve. It replaces only Health.md's own skill folder. The skill teaches bounded commands, structured result handling, privacy rules, model-provider disclosure boundaries, and safe recovery after unknown outcomes.
 
 Use the setup prompt in the Mac app if you want an agent to create the symlinks. Health.md itself does not modify shell startup files or `/usr/local/bin` silently.
 

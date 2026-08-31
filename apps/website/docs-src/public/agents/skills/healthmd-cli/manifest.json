@@ -5,11 +5,11 @@
   "availability": "public_preview",
   "install_as": "healthmd-cli/SKILL.md",
   "latest": {
-    "version": 3,
-    "path": "/agents/skills/healthmd-cli/v3/SKILL.md",
+    "version": 4,
+    "path": "/agents/skills/healthmd-cli/v4/SKILL.md",
     "media_type": "text/markdown",
-    "bytes": 15853,
-    "sha256": "5e77d61461ce2806e3285b8e6794aeb272401db042b869036a45b88e2ed6612f"
+    "bytes": 14611,
+    "sha256": "1d18de03c162e8ce343b6763986c18f206331371e1b90162d81219f04c99b095"
   },
   "versions": [
     {
@@ -32,6 +32,13 @@
       "media_type": "text/markdown",
       "bytes": 15853,
       "sha256": "5e77d61461ce2806e3285b8e6794aeb272401db042b869036a45b88e2ed6612f"
+    },
+    {
+      "version": 4,
+      "path": "/agents/skills/healthmd-cli/v4/SKILL.md",
+      "media_type": "text/markdown",
+      "bytes": 14611,
+      "sha256": "1d18de03c162e8ce343b6763986c18f206331371e1b90162d81219f04c99b095"
     }
   ],
   "source": {

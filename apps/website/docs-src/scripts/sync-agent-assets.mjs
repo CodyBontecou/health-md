@@ -12,6 +12,7 @@ const PUBLIC_ROOT = path.join(DOCS_ROOT, 'public');
 const SKILL_V1_SHA256 = '6f36d8e479552745ae282a30a8471bc2ce477e7d1d6d8040f6ba72cd75047792';
 const SKILL_V2_SHA256 = '400468f3dd7ddb79e969bea6567db0d3d2b30d64430e0c4295d8e4e04012afd3';
 const SKILL_V3_SHA256 = '5e77d61461ce2806e3285b8e6794aeb272401db042b869036a45b88e2ed6612f';
+const SKILL_V4_SHA256 = '1d18de03c162e8ce343b6763986c18f206331371e1b90162d81219f04c99b095';
 
 const SOURCES = {
   provenance: path.join(DOCS_ROOT, 'reference-source.json'),
@@ -20,6 +21,7 @@ const SOURCES = {
   skill: path.join(REPOSITORY_ROOT, '.agents/skills/healthmd-cli/SKILL.md'),
   skillV1: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v1/SKILL.md'),
   skillV2: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v2/SKILL.md'),
+  skillV3: path.join(PUBLIC_ROOT, 'agents/skills/healthmd-cli/v3/SKILL.md'),
 };
 
 const OUTPUTS = {
@@ -29,6 +31,7 @@ const OUTPUTS = {
   skillV1: 'agents/skills/healthmd-cli/v1/SKILL.md',
   skillV2: 'agents/skills/healthmd-cli/v2/SKILL.md',
   skillV3: 'agents/skills/healthmd-cli/v3/SKILL.md',
+  skillV4: 'agents/skills/healthmd-cli/v4/SKILL.md',
   skillManifest: 'agents/skills/healthmd-cli/manifest.json',
   agentManifest: 'agents/manifest.json',
 };
@@ -89,13 +92,14 @@ function parseToolCatalog(buffer, label, expectedCount) {
 }
 
 async function expectedOutputs() {
-  const [provenance, macTools, portableTools, skill, skillV1, skillV2] = await Promise.all([
+  const [provenance, macTools, portableTools, skill, skillV1, skillV2, skillV3] = await Promise.all([
     readRequired(SOURCES.provenance, 'reference provenance manifest'),
     readRequired(SOURCES.macTools, 'generated Mac MCP tool catalog'),
     readRequired(SOURCES.portableTools, 'portable MCP tool catalog'),
     readRequired(SOURCES.skill, 'Health.md CLI skill'),
     readRequired(SOURCES.skillV1, 'immutable Health.md CLI skill v1'),
     readRequired(SOURCES.skillV2, 'immutable Health.md CLI skill v2'),
+    readRequired(SOURCES.skillV3, 'immutable Health.md CLI skill v3'),
   ]);
 
   const macToolNames = parseToolCatalog(macTools, 'Mac MCP tool catalog', 21);
@@ -106,8 +110,11 @@ async function expectedOutputs() {
   if (sha256(skillV2) !== SKILL_V2_SHA256) {
     throw new Error('Published Health.md CLI skill v2 was modified; versioned assets are immutable.');
   }
-  if (sha256(skill) !== SKILL_V3_SHA256) {
-    throw new Error('Health.md CLI skill v3 changed; preserve v3 and publish a new version.');
+  if (sha256(skillV3) !== SKILL_V3_SHA256) {
+    throw new Error('Published Health.md CLI skill v3 was modified; versioned assets are immutable.');
+  }
+  if (sha256(skill) !== SKILL_V4_SHA256) {
+    throw new Error('Health.md CLI skill v4 changed; preserve v4 and publish a new version.');
   }
   const skillV1Artifact = artifact('/agents/skills/healthmd-cli/v1/SKILL.md', skillV1, {
     version: 1,
@@ -115,8 +122,11 @@ async function expectedOutputs() {
   const skillV2Artifact = artifact('/agents/skills/healthmd-cli/v2/SKILL.md', skillV2, {
     version: 2,
   });
-  const skillV3Artifact = artifact('/agents/skills/healthmd-cli/v3/SKILL.md', skill, {
+  const skillV3Artifact = artifact('/agents/skills/healthmd-cli/v3/SKILL.md', skillV3, {
     version: 3,
+  });
+  const skillV4Artifact = artifact('/agents/skills/healthmd-cli/v4/SKILL.md', skill, {
+    version: 4,
   });
   const skillManifest = canonicalJSON({
     schema: 'healthmd.agent_skill_manifest',
@@ -124,8 +134,8 @@ async function expectedOutputs() {
     name: 'healthmd-cli',
     availability: 'public_preview',
     install_as: 'healthmd-cli/SKILL.md',
-    latest: skillV3Artifact,
-    versions: [skillV1Artifact, skillV2Artifact, skillV3Artifact],
+    latest: skillV4Artifact,
+    versions: [skillV1Artifact, skillV2Artifact, skillV3Artifact, skillV4Artifact],
     source: {
       repository: 'https://github.com/CodyBontecou/health-md',
       path: '.agents/skills/healthmd-cli/SKILL.md',
@@ -171,7 +181,8 @@ async function expectedOutputs() {
     [OUTPUTS.portableTools, portableTools],
     [OUTPUTS.skillV1, skillV1],
     [OUTPUTS.skillV2, skillV2],
-    [OUTPUTS.skillV3, skill],
+    [OUTPUTS.skillV3, skillV3],
+    [OUTPUTS.skillV4, skill],
     [OUTPUTS.skillManifest, skillManifest],
     [OUTPUTS.agentManifest, agentManifest],
   ]);
