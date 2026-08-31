@@ -1,0 +1,800 @@
+name: CLI alpha.3 one-shot finalization
+
+# One-shot recovery for a fully built alpha.3 draft whose hosted verifier lacked
+# the contents permission GitHub requires to read draft release assets. This
+# workflow cannot select another release and never uploads, replaces, or deletes
+# release assets. Before dispatch, set the protected cli-release environment variable
+# ALPHA3_RECOVERY_COMMIT_SHA to the final reviewed commit and allow only the exact
+# cli-alpha3-finalization branch. Remove the variable, branch policy, and this workflow
+# immediately after the protected recovery completes.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type "publish exact alpha.3 draft without replacing assets"
+        required: true
+        type: string
+      recovery_commit_sha:
+        description: Exact reviewed commit containing this one-shot workflow
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: cli-alpha3-one-shot-finalization
+  cancel-in-progress: false
+
+env:
+  TARGET_TAG: healthmd-cli/v0.1.0-alpha.3
+  TARGET_TAG_PATH: healthmd-cli%2Fv0.1.0-alpha.3
+  TARGET_SHA: 0654a540fd206b8474bdce30586da88379bd4559
+  TARGET_VERSION: 0.1.0-alpha.3
+  SOURCE_RUN_ID: '33340175635'
+  SOURCE_WORKFLOW_ID: '320039704'
+  DRAFT_RELEASE_ID: '379424186'
+  ALPHA2_TAG: healthmd-cli/v0.1.0-alpha.2
+  ALPHA2_TAG_PATH: healthmd-cli%2Fv0.1.0-alpha.2
+  ALPHA2_SHA: b687bae8e45efa0faaf25efbcd7fb4a6e2366d55
+  ALPHA2_RELEASE_ID: '379393297'
+  EXPECTED_LATEST_TAG: v3.2
+  EXPECTED_LATEST_TAG_PATH: v3.2
+  EXPECTED_LATEST_RELEASE_ID: '378818108'
+  EXPECTED_LATEST_SHA: 9136e9c6a471284f97a1fdc02c2d51188aa110e9
+  TAP_BASE_SHA: 5167b587fc6ae4a79fc89ba457e20ffa21a2969b
+
+jobs:
+  verify-and-finalize:
+    name: Reverify and publish exact alpha.3 draft
+    runs-on: ubuntu-24.04
+    environment: cli-release
+    permissions:
+      actions: read
+      # GitHub exposes draft release APIs only to push-level contents tokens.
+      contents: write
+    outputs:
+      asset-ledger-sha256: ${{ steps.finalize.outputs.asset-ledger-sha256 }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: CodyBontecou/health-md
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      INPUT_RECOVERY_COMMIT_SHA: ${{ inputs.recovery_commit_sha }}
+      EXPECTED_RECOVERY_COMMIT_SHA: ${{ vars.ALPHA3_RECOVERY_COMMIT_SHA }}
+    steps:
+      - name: Check out reviewed recovery commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind recovery, tag, source run, jobs, and artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = CodyBontecou/health-md
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REF_TYPE" = branch
+          test "$GITHUB_REF_NAME" = cli-alpha3-finalization
+          test "$INPUT_CONFIRMATION" = "publish exact alpha.3 draft without replacing assets"
+          [[ "$EXPECTED_RECOVERY_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$INPUT_RECOVERY_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$INPUT_RECOVERY_COMMIT_SHA" = "$EXPECTED_RECOVERY_COMMIT_SHA"
+          test "$GITHUB_SHA" = "$EXPECTED_RECOVERY_COMMIT_SHA"
+          test "$TARGET_TAG" != "$ALPHA2_TAG"
+          test "$TARGET_SHA" != "$ALPHA2_SHA"
+          test "$DRAFT_RELEASE_ID" != "$ALPHA2_RELEASE_ID"
+
+          git fetch --force origin \
+            "+refs/heads/main:refs/remotes/origin/main" \
+            "+refs/tags/$TARGET_TAG:refs/tags/$TARGET_TAG" \
+            "+refs/tags/$ALPHA2_TAG:refs/tags/$ALPHA2_TAG"
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = "$GITHUB_SHA"
+          test "$(git rev-parse "refs/tags/$TARGET_TAG^{commit}")" = "$TARGET_SHA"
+          test "$(git rev-parse "refs/tags/$ALPHA2_TAG^{commit}")" = "$ALPHA2_SHA"
+          git merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main
+
+          run="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID")"
+          jq -e \
+            --arg sha "$TARGET_SHA" \
+            --arg tag "$TARGET_TAG" \
+            --arg path .github/workflows/cli-release.yml \
+            --argjson workflow_id "$SOURCE_WORKFLOW_ID" '
+              .id == 33340175635 and
+              .workflow_id == $workflow_id and
+              .path == $path and
+              .event == "push" and
+              .head_branch == $tag and
+              .head_sha == $sha and
+              .head_repository.full_name == "CodyBontecou/health-md" and
+              .status == "completed" and
+              .conclusion == "failure" and
+              .run_attempt == 2
+            ' <<<"$run" >/dev/null
+
+          jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/jobs?filter=latest&per_page=100")"
+          jq -e '.total_count == 48 and (.jobs | length == 48) and all(.jobs[]; .status == "completed")' \
+            <<<"$jobs" >/dev/null
+          jq -r '.jobs[] | "\(.name)|\(.conclusion)"' <<<"$jobs" | LC_ALL=C sort > actual-jobs.txt
+          cat > expected-jobs.txt <<'JOBS'
+          Assemble exact signed candidate set|success
+          Authenticode sign PowerShell installer|skipped
+          Authenticode sign Windows|skipped
+          Build checksums and installers|success
+          Build local artifacts (aarch64-apple-darwin)|success
+          Build local artifacts (aarch64-unknown-linux-gnu)|success
+          Build local artifacts (x86_64-apple-darwin)|success
+          Build local artifacts (x86_64-pc-windows-msvc)|success
+          Build local artifacts (x86_64-unknown-linux-gnu)|success
+          Create or verify draft release|success
+          Distribution plan|success
+          Exact candidate / Android counterpart / Android CI|success
+          Exact candidate / Android counterpart / Rust/Kotlin direct interop|success
+          Exact candidate / Android counterpart / Wear emulator smoke|success
+          Exact candidate / Android counterpart / test|success
+          Exact candidate / Apple counterpart / Apple CI|success
+          Exact candidate / Apple counterpart / HealthMdConnectivity package|success
+          Exact candidate / Apple counterpart / iOS UI regressions|success
+          Exact candidate / Apple counterpart / test-ios|success
+          Exact candidate / Apple counterpart / test-macos|success
+          Exact candidate / CLI / CLI CI|success
+          Exact candidate / CLI / Dependency policy|success
+          Exact candidate / CLI / Packaged crate smoke|success
+          Exact candidate / CLI / Rust 1.85 MSRV|success
+          Exact candidate / CLI / macos-14|success
+          Exact candidate / CLI / ubuntu-24.04|success
+          Exact candidate / CLI / windows-2022|success
+          Exact candidate / shared core / Core Rust CI|success
+          Exact candidate / shared core / Rust 1.85 MSRV|success
+          Exact candidate / shared core / UniFFI host binding generation|success
+          Exact candidate / shared core / macos-14|success
+          Exact candidate / shared core / ubuntu-24.04|success
+          Exact candidate / shared core / windows-2022|success
+          Immutable release identity|success
+          Publish Homebrew formula|skipped
+          Publish qualified release|skipped
+          Qualify checksums and installer URLs|success
+          Qualify release SBOM / build|success
+          Sign and notarize macOS (aarch64-apple-darwin)|success
+          Sign and notarize macOS (x86_64-apple-darwin)|success
+          Sign final checksum closure|success
+          Smoke packaged binaries (aarch64-apple-darwin)|success
+          Smoke packaged binaries (aarch64-unknown-linux-gnu)|success
+          Smoke packaged binaries (x86_64-apple-darwin)|success
+          Smoke packaged binaries (x86_64-pc-windows-msvc)|success
+          Smoke packaged binaries (x86_64-unknown-linux-gnu)|success
+          Upload qualified draft assets|success
+          Verify remote draft bytes|failure
+          JOBS
+          sed -i 's/^          //' expected-jobs.txt
+          LC_ALL=C sort -o expected-jobs.txt expected-jobs.txt
+          cmp expected-jobs.txt actual-jobs.txt
+
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100")"
+          jq -e --arg sha "$TARGET_SHA" '
+            [.artifacts[] | select(
+              .name == "artifacts-release-candidates" or
+              .name == "artifacts-sealed-global" or
+              .name == "artifacts-cli-sbom"
+            )] as $selected |
+            ($selected | length) == 3 and
+            all($selected[]; .expired == false and .workflow_run.head_sha == $sha)
+          ' <<<"$artifacts" >/dev/null
+          jq -r '.artifacts[] | select(
+              .name == "artifacts-release-candidates" or
+              .name == "artifacts-sealed-global" or
+              .name == "artifacts-cli-sbom"
+            ) | "\(.name)|\(.id)|\(.digest)|\(.expired)"' \
+            <<<"$artifacts" | LC_ALL=C sort > actual-artifacts.txt
+          cat > expected-artifacts.txt <<'ARTIFACTS'
+          artifacts-cli-sbom|9740965860|sha256:9c64635ea937737714dc4880188dc6d7cfbe3a3bcad84dd109550eafec771b60|false
+          artifacts-release-candidates|9740945908|sha256:d95693257f64512e1f5745760aee1dd93a0268b3bff3853e8a7edf4575a96aa4|false
+          artifacts-sealed-global|9740973300|sha256:6f1f2ed35a5078c678db05aab41a276e959649afc778547d3ae6d46f67aea8e1|false
+          ARTIFACTS
+          sed -i 's/^          //' expected-artifacts.txt
+          cmp expected-artifacts.txt actual-artifacts.txt
+
+      - name: Check out exact candidate verifier scripts
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: 0654a540fd206b8474bdce30586da88379bd4559
+          path: candidate
+          persist-credentials: false
+
+      - name: Download exact release-candidate artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-release-candidates
+          path: expected
+          github-token: ${{ github.token }}
+          repository: CodyBontecou/health-md
+          run-id: 33340175635
+
+      - name: Download exact sealed-global artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-sealed-global
+          path: expected
+          github-token: ${{ github.token }}
+          repository: CodyBontecou/health-md
+          run-id: 33340175635
+
+      - name: Download exact SBOM artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-cli-sbom
+          path: expected
+          github-token: ${{ github.token }}
+          repository: CodyBontecou/health-md
+          run-id: 33340175635
+
+      - name: Install pinned cosign
+        uses: sigstore/cosign-installer@d7543c93d881b35a8faa02e8e3605f69b7a1ce62 # v3.10.1
+
+      - id: finalize
+        name: Reverify immutable draft and publish without changing latest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          validate_alpha2() {
+            local release
+            release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$ALPHA2_RELEASE_ID")"
+            jq -e --arg tag "$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" --argjson id "$ALPHA2_RELEASE_ID" '
+              .id == $id and .tag_name == $tag and .target_commitish == $sha and
+              .draft == true and .prerelease == true
+            ' <<<"$release" >/dev/null
+          }
+
+          validate_latest() {
+            local release ref
+            release="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")"
+            jq -e \
+              --argjson id "$EXPECTED_LATEST_RELEASE_ID" \
+              --arg tag "$EXPECTED_LATEST_TAG" \
+              --arg sha "$EXPECTED_LATEST_SHA" '
+                .id == $id and .tag_name == $tag and .target_commitish == $sha and
+                .draft == false and .prerelease == false
+              ' <<<"$release" >/dev/null
+            ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$EXPECTED_LATEST_TAG_PATH")"
+            jq -e \
+              --arg ref "refs/tags/$EXPECTED_LATEST_TAG" \
+              --arg sha "$EXPECTED_LATEST_SHA" '
+                .ref == $ref and .object.type == "commit" and .object.sha == $sha
+              ' <<<"$ref" >/dev/null
+          }
+
+          validate_draft() {
+            local file="$1"
+            jq -e --arg tag "$TARGET_TAG" --arg sha "$TARGET_SHA" --arg version "$TARGET_VERSION" \
+              --argjson id "$DRAFT_RELEASE_ID" '
+              .id == $id and .tag_name == $tag and .target_commitish == $sha and
+              .name == $version and .draft == true and .prerelease == true and
+              (.assets | length) == 23 and
+              ([.assets[].name] | length) == ([.assets[].name] | unique | length) and
+              all(.assets[];
+                .state == "uploaded" and
+                (.id | type) == "number" and
+                (.size | type) == "number" and
+                (.digest | test("^sha256:[0-9a-f]{64}$"))
+              )
+            ' "$file" >/dev/null
+          }
+
+          write_ledger() {
+            jq -S '[.assets[] | {id, name, size, digest, state}] | sort_by(.name)' "$1" > "$2"
+          }
+
+          cat > expected-assets.names <<'ASSETS'
+          healthmd-cli-0.1.0-alpha.3.cdx.json
+          healthmd-cli-0.1.0-alpha.3.sbom.sha256
+          healthmd-cli-0.1.0-alpha.3.spdx.json
+          healthmd-cli-aarch64-apple-darwin.dmg
+          healthmd-cli-aarch64-apple-darwin.dmg.sha256
+          healthmd-cli-aarch64-apple-darwin.tar.xz
+          healthmd-cli-aarch64-apple-darwin.tar.xz.sha256
+          healthmd-cli-aarch64-unknown-linux-gnu.tar.xz
+          healthmd-cli-aarch64-unknown-linux-gnu.tar.xz.sha256
+          healthmd-cli-installer.ps1
+          healthmd-cli-installer.sh
+          healthmd-cli-x86_64-apple-darwin.dmg
+          healthmd-cli-x86_64-apple-darwin.dmg.sha256
+          healthmd-cli-x86_64-apple-darwin.tar.xz
+          healthmd-cli-x86_64-apple-darwin.tar.xz.sha256
+          healthmd-cli-x86_64-pc-windows-msvc.zip
+          healthmd-cli-x86_64-pc-windows-msvc.zip.sha256
+          healthmd-cli-x86_64-unknown-linux-gnu.tar.xz
+          healthmd-cli-x86_64-unknown-linux-gnu.tar.xz.sha256
+          healthmd.rb
+          release-identities.json
+          sha256.sum
+          sha256.sum.sigstore.json
+          ASSETS
+          sed -i 's/^          //' expected-assets.names
+          LC_ALL=C sort -o expected-assets.names expected-assets.names
+          test "$(wc -l < expected-assets.names | tr -d ' ')" = 23
+
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID")"
+          printf '%s\n' "$release" > release-initial.json
+          validate_draft release-initial.json
+          jq -r '.assets[].name' release-initial.json | LC_ALL=C sort > api-assets.names
+          cmp expected-assets.names api-assets.names
+          write_ledger release-initial.json release-ledger.json
+
+          validate_alpha2
+          validate_latest
+          test "$(git rev-parse "refs/tags/$TARGET_TAG^{commit}")" = "$TARGET_SHA"
+          test "$(git rev-parse "refs/tags/$ALPHA2_TAG^{commit}")" = "$ALPHA2_SHA"
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main
+
+          bash candidate/apps/cli/scripts/download-draft-release-assets.sh \
+            "$GITHUB_REPOSITORY" "$DRAFT_RELEASE_ID" "$TARGET_TAG" "$TARGET_SHA" remote
+
+          /usr/bin/python3 candidate/apps/cli/scripts/verify-generated-release-metadata.py \
+            --archives remote \
+            --manifests expected \
+            --shell remote/healthmd-cli-installer.sh \
+            --powershell remote/healthmd-cli-installer.ps1 \
+            --formula remote/healthmd.rb
+
+          cp -a expected expected-public
+          find expected-public -type f \( -name '*-dist-manifest.json' -o -name 'plan-dist-manifest.json' \) -delete
+          find expected-public -type f -printf '%f\n' | LC_ALL=C sort > expected-public.names
+          find remote -type f -printf '%f\n' | LC_ALL=C sort > remote.names
+          cmp expected-assets.names expected-public.names
+          cmp expected-assets.names remote.names
+          while IFS= read -r name; do
+            mapfile -t expected_matches < <(find expected-public -type f -name "$name" -print)
+            test "${#expected_matches[@]}" -eq 1
+            cmp "${expected_matches[0]}" "remote/$name"
+          done < expected-assets.names
+
+          grep -vE '^sha256\.sum(\.sigstore\.json)?$' expected-assets.names > expected-checksum.names
+          awk '
+            NF != 2 || $1 !~ /^[0-9a-f]{64}$/ || $2 !~ /^[A-Za-z0-9][A-Za-z0-9._+-]*$/ { exit 1 }
+            { print $2 }
+          ' remote/sha256.sum | LC_ALL=C sort > actual-checksum.names
+          cmp expected-checksum.names actual-checksum.names
+          (cd remote && sha256sum --check sha256.sum)
+
+          cat > expected-sbom.names <<'SBOMS'
+          healthmd-cli-0.1.0-alpha.3.cdx.json
+          healthmd-cli-0.1.0-alpha.3.spdx.json
+          SBOMS
+          sed -i 's/^          //' expected-sbom.names
+          awk '
+            NF != 2 || $1 !~ /^[0-9a-f]{64}$/ || $2 !~ /^[A-Za-z0-9][A-Za-z0-9._+-]*$/ { exit 1 }
+            { print $2 }
+          ' remote/healthmd-cli-0.1.0-alpha.3.sbom.sha256 | LC_ALL=C sort > actual-sbom.names
+          cmp expected-sbom.names actual-sbom.names
+          (cd remote && sha256sum --check healthmd-cli-0.1.0-alpha.3.sbom.sha256)
+
+          cosign verify-blob \
+            --bundle remote/sha256.sum.sigstore.json \
+            --certificate-identity \
+              "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/healthmd-cli/v0.1.0-alpha.3" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            remote/sha256.sum
+
+          jq -e '
+            .schema == "healthmd.cli_release_signing_identities" and
+            .schema_version == 1 and
+            .apple.team_id == "67KC823C9A" and
+            .apple.healthmd_identifier == "md.health.cli.healthmd" and
+            .apple.healthmd_mcp_identifier == "md.health.cli.healthmd-mcp" and
+            .windows.publisher_subject == null and
+            .windows.status == "pending_external_certificate_provisioning" and
+            .sigstore.certificate_identity_template ==
+              "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/healthmd-cli/v<VERSION>" and
+            .sigstore.oidc_issuer == "https://token.actions.githubusercontent.com"
+          ' remote/release-identities.json >/dev/null
+
+          # Complete every other network/ref check before the final draft read so the
+          # immutable ledger comparison is immediately adjacent to the sole mutation.
+          validate_alpha2
+          validate_latest
+          git fetch --force origin \
+            "+refs/heads/main:refs/remotes/origin/main" \
+            "+refs/tags/$TARGET_TAG:refs/tags/$TARGET_TAG" \
+            "+refs/tags/$ALPHA2_TAG:refs/tags/$ALPHA2_TAG"
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = "$GITHUB_SHA"
+          test "$(git rev-parse "refs/tags/$TARGET_TAG^{commit}")" = "$TARGET_SHA"
+          test "$(git rev-parse "refs/tags/$ALPHA2_TAG^{commit}")" = "$ALPHA2_SHA"
+          git merge-base --is-ancestor "$TARGET_SHA" refs/remotes/origin/main
+
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID")"
+          printf '%s\n' "$release" > release-before-patch.json
+          validate_draft release-before-patch.json
+          write_ledger release-before-patch.json release-ledger-before-patch.json
+          cmp release-ledger.json release-ledger-before-patch.json
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID" \
+            -F draft=false -f make_latest=false >/dev/null
+
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID")"
+          printf '%s\n' "$release" > release-public.json
+          jq -e --arg tag "$TARGET_TAG" --arg sha "$TARGET_SHA" --arg version "$TARGET_VERSION" \
+            --argjson id "$DRAFT_RELEASE_ID" '
+            .id == $id and .tag_name == $tag and .target_commitish == $sha and
+            .name == $version and .draft == false and .prerelease == true and
+            (.assets | length) == 23 and
+            ([.assets[].name] | length) == ([.assets[].name] | unique | length) and
+            all(.assets[]; .state == "uploaded" and (.digest | test("^sha256:[0-9a-f]{64}$")))
+          ' release-public.json >/dev/null
+          write_ledger release-public.json release-ledger-public.json
+          cmp release-ledger.json release-ledger-public.json
+          test "$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TARGET_TAG_PATH" --jq .id)" = "$DRAFT_RELEASE_ID"
+          validate_alpha2
+          validate_latest
+
+          ledger_sha="$(sha256sum release-ledger-public.json | cut -d ' ' -f 1)"
+          echo "asset-ledger-sha256=$ledger_sha" >> "$GITHUB_OUTPUT"
+          {
+            echo "Published exact alpha.3 draft without changing its 23-asset ledger."
+            echo "Asset ledger SHA-256: $ledger_sha"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  qualify-homebrew:
+    name: Qualify exact sealed Homebrew formula without write credentials
+    needs: verify-and-finalize
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_REPO: CodyBontecou/health-md
+      EXPECTED_LEDGER_SHA256: ${{ needs.verify-and-finalize.outputs.asset-ledger-sha256 }}
+    steps:
+      - name: Recheck public release, source artifact, and formula bytes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_LEDGER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID")"
+          jq -e --arg tag "$TARGET_TAG" --arg sha "$TARGET_SHA" --arg version "$TARGET_VERSION" \
+            --argjson id "$DRAFT_RELEASE_ID" '
+            .id == $id and .tag_name == $tag and .target_commitish == $sha and
+            .name == $version and .draft == false and .prerelease == true and
+            (.assets | length) == 23 and
+            ([.assets[].name] | length) == ([.assets[].name] | unique | length) and
+            all(.assets[];
+              .state == "uploaded" and
+              (.id | type) == "number" and
+              (.size | type) == "number" and
+              (.digest | test("^sha256:[0-9a-f]{64}$"))
+            )
+          ' <<<"$release" >/dev/null
+          jq -S '[.assets[] | {id, name, size, digest, state}] | sort_by(.name)' \
+            <<<"$release" > public-ledger.json
+          test "$(sha256sum public-ledger.json | cut -d ' ' -f 1)" = "$EXPECTED_LEDGER_SHA256"
+          alpha2="$(gh api "repos/$GITHUB_REPOSITORY/releases/$ALPHA2_RELEASE_ID")"
+          jq -e --arg tag "$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" --argjson id "$ALPHA2_RELEASE_ID" '
+            .id == $id and .tag_name == $tag and .target_commitish == $sha and
+            .draft == true and .prerelease == true
+          ' <<<"$alpha2" >/dev/null
+          target_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TARGET_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$TARGET_TAG" --arg sha "$TARGET_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$target_ref" >/dev/null
+          alpha2_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$ALPHA2_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$alpha2_ref" >/dev/null
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")"
+          jq -e \
+            --argjson id "$EXPECTED_LATEST_RELEASE_ID" \
+            --arg tag "$EXPECTED_LATEST_TAG" \
+            --arg sha "$EXPECTED_LATEST_SHA" '
+              .id == $id and .tag_name == $tag and .target_commitish == $sha and
+              .draft == false and .prerelease == false
+            ' <<<"$latest" >/dev/null
+          latest_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$EXPECTED_LATEST_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$EXPECTED_LATEST_TAG" --arg sha "$EXPECTED_LATEST_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$latest_ref" >/dev/null
+
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100")"
+          jq -e --arg sha "$TARGET_SHA" '
+            [.artifacts[] | select(.name == "artifacts-sealed-global")] as $selected |
+            ($selected | length) == 1 and
+            $selected[0].id == 9740973300 and
+            $selected[0].digest == "sha256:6f1f2ed35a5078c678db05aab41a276e959649afc778547d3ae6d46f67aea8e1" and
+            $selected[0].expired == false and
+            $selected[0].workflow_run.head_sha == $sha
+          ' <<<"$artifacts" >/dev/null
+
+          formula="$(jq -c '.assets[] | select(.name == "healthmd.rb")' <<<"$release")"
+          test "$(jq -s 'length' <<<"$formula")" = 1
+          formula_id="$(jq -r .id <<<"$formula")"
+          formula_digest="$(jq -r .digest <<<"$formula")"
+          [[ "$formula_id" =~ ^[1-9][0-9]*$ ]]
+          [[ "$formula_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          gh api -H 'Accept: application/octet-stream' \
+            "repos/$GITHUB_REPOSITORY/releases/assets/$formula_id" > "$RUNNER_TEMP/public-healthmd.rb"
+          test "sha256:$(sha256sum "$RUNNER_TEMP/public-healthmd.rb" | cut -d ' ' -f 1)" = "$formula_digest"
+
+      - name: Download exact sealed formula artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-sealed-global
+          path: ${{ runner.temp }}/formula-artifact
+          github-token: ${{ github.token }}
+          repository: CodyBontecou/health-md
+          run-id: 33340175635
+
+      - name: Check out public tap at exact base without persisted credentials
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: CodyBontecou/homebrew-tap
+          ref: 5167b587fc6ae4a79fc89ba457e20ffa21a2969b
+          path: tap
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Clean-install and execute exact formula without GitHub credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "${GH_TOKEN:-}"
+          test -z "${GITHUB_TOKEN:-}"
+          test -z "${HOMEBREW_TAP_TOKEN:-}"
+          source_formula="$(find "$RUNNER_TEMP/formula-artifact" -type f -name healthmd.rb -print -quit)"
+          test -n "$source_formula"
+          test "$(find "$RUNNER_TEMP/formula-artifact" -type f -name healthmd.rb | wc -l | tr -d ' ')" = 1
+          cmp "$source_formula" "$RUNNER_TEMP/public-healthmd.rb"
+
+          cd tap
+          test "$(git rev-parse 'HEAD^{commit}')" = "$TAP_BASE_SHA"
+          git fetch origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = "$TAP_BASE_SHA"
+          test -z "$(git status --porcelain)"
+          test ! -e Formula/healthmd.rb
+          mkdir -p Formula
+          cp "$source_formula" Formula/healthmd.rb
+          cmp Formula/healthmd.rb "$RUNNER_TEMP/public-healthmd.rb"
+
+          export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+          brew update
+          # Keep the sealed cargo-dist formula byte-exact. Homebrew flags three generator-format
+          # cops and a missing `test do`; prefix execution is the functional alpha.3 qualification.
+          brew style --except-cops \
+            FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict,Style/MutableConstant,Layout/HashAlignment,Style/TrailingCommaInHashLiteral \
+            Formula/healthmd.rb
+          if brew list --formula healthmd >/dev/null 2>&1; then
+            echo "healthmd was already installed before clean-install qualification" >&2
+            exit 1
+          fi
+          brew install --formula "$PWD/Formula/healthmd.rb"
+          prefix="$(brew --prefix healthmd)"
+          "$prefix/bin/healthmd" --version | grep -F "$TARGET_VERSION"
+          "$prefix/bin/healthmd" --help >/dev/null
+          "$prefix/bin/healthmd-mcp" --help >/dev/null
+          brew uninstall --force healthmd
+          if brew list --formula healthmd >/dev/null 2>&1; then
+            echo "healthmd remains installed after qualification" >&2
+            exit 1
+          fi
+          test ! -e "$prefix/bin/healthmd"
+          test ! -e "$prefix/bin/healthmd-mcp"
+          cmp Formula/healthmd.rb "$source_formula"
+          cmp Formula/healthmd.rb "$RUNNER_TEMP/public-healthmd.rb"
+
+      - name: Recheck immutable identities after token-free qualification
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          target_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TARGET_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$TARGET_TAG" --arg sha "$TARGET_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$target_ref" >/dev/null
+          alpha2_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$ALPHA2_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$alpha2_ref" >/dev/null
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")"
+          jq -e \
+            --argjson id "$EXPECTED_LATEST_RELEASE_ID" \
+            --arg tag "$EXPECTED_LATEST_TAG" \
+            --arg sha "$EXPECTED_LATEST_SHA" '
+              .id == $id and .tag_name == $tag and .target_commitish == $sha and
+              .draft == false and .prerelease == false
+            ' <<<"$latest" >/dev/null
+          latest_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$EXPECTED_LATEST_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$EXPECTED_LATEST_TAG" --arg sha "$EXPECTED_LATEST_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$latest_ref" >/dev/null
+          echo "Qualified exact sealed formula without GitHub or tap write credentials during execution." >> "$GITHUB_STEP_SUMMARY"
+
+  publish-homebrew:
+    name: Publish qualified exact Homebrew formula
+    needs: [verify-and-finalize, qualify-homebrew]
+    runs-on: ubuntu-22.04
+    environment: cli-release
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: CodyBontecou/health-md
+      EXPECTED_LEDGER_SHA256: ${{ needs.verify-and-finalize.outputs.asset-ledger-sha256 }}
+      EXPECTED_RECOVERY_COMMIT_SHA: ${{ vars.ALPHA3_RECOVERY_COMMIT_SHA }}
+      INPUT_CONFIRMATION: ${{ inputs.confirmation }}
+      INPUT_RECOVERY_COMMIT_SHA: ${{ inputs.recovery_commit_sha }}
+      GITHUB_USER: healthmd-release-bot
+      GITHUB_EMAIL: admin+bot@health.md
+    steps:
+      - name: Download exact sealed formula artifact
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: artifacts-sealed-global
+          path: ${{ runner.temp }}/formula-artifact
+          github-token: ${{ github.token }}
+          repository: CodyBontecou/health-md
+          run-id: 33340175635
+
+      - name: Check out exact tap base with publication credential
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: CodyBontecou/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          ref: 5167b587fc6ae4a79fc89ba457e20ffa21a2969b
+          path: tap
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Build exact tap commit and push without force
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_LEDGER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_RECOVERY_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$INPUT_RECOVERY_COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$INPUT_CONFIRMATION" = "publish exact alpha.3 draft without replacing assets"
+          test "$INPUT_RECOVERY_COMMIT_SHA" = "$EXPECTED_RECOVERY_COMMIT_SHA"
+          test "$GITHUB_SHA" = "$EXPECTED_RECOVERY_COMMIT_SHA"
+          test "$GITHUB_REPOSITORY" = CodyBontecou/health-md
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REF_TYPE" = branch
+          test "$GITHUB_REF_NAME" = cli-alpha3-finalization
+
+          source_formula="$(find "$RUNNER_TEMP/formula-artifact" -type f -name healthmd.rb -print -quit)"
+          test -n "$source_formula"
+          test "$(find "$RUNNER_TEMP/formula-artifact" -type f -name healthmd.rb | wc -l | tr -d ' ')" = 1
+
+          cd tap
+          test "$(git rev-parse 'HEAD^{commit}')" = "$TAP_BASE_SHA"
+          test -z "$(git status --porcelain)"
+          test ! -e Formula/healthmd.rb
+          mkdir -p Formula
+          cp "$source_formula" Formula/healthmd.rb
+          git config user.name "$GITHUB_USER"
+          git config user.email "$GITHUB_EMAIL"
+          git add Formula/healthmd.rb
+          test "$(git diff --cached --name-only)" = Formula/healthmd.rb
+          git commit -m "healthmd $TARGET_VERSION"
+          test -z "$(git status --porcelain)"
+
+          # These are the final network and byte checks before the non-force push.
+          git fetch origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = "$TAP_BASE_SHA"
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100")"
+          jq -e --arg sha "$TARGET_SHA" '
+            [.artifacts[] | select(.name == "artifacts-sealed-global")] as $selected |
+            ($selected | length) == 1 and
+            $selected[0].id == 9740973300 and
+            $selected[0].digest == "sha256:6f1f2ed35a5078c678db05aab41a276e959649afc778547d3ae6d46f67aea8e1" and
+            $selected[0].expired == false and
+            $selected[0].workflow_run.head_sha == $sha
+          ' <<<"$artifacts" >/dev/null
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID")"
+          jq -e --arg tag "$TARGET_TAG" --arg sha "$TARGET_SHA" --arg version "$TARGET_VERSION" \
+            --argjson id "$DRAFT_RELEASE_ID" '
+            .id == $id and .tag_name == $tag and .target_commitish == $sha and
+            .name == $version and .draft == false and .prerelease == true and
+            (.assets | length) == 23 and
+            ([.assets[].name] | length) == ([.assets[].name] | unique | length) and
+            all(.assets[];
+              .state == "uploaded" and
+              (.id | type) == "number" and
+              (.size | type) == "number" and
+              (.digest | test("^sha256:[0-9a-f]{64}$"))
+            )
+          ' <<<"$release" >/dev/null
+          jq -S '[.assets[] | {id, name, size, digest, state}] | sort_by(.name)' \
+            <<<"$release" > "$RUNNER_TEMP/public-ledger-before-push.json"
+          test "$(sha256sum "$RUNNER_TEMP/public-ledger-before-push.json" | cut -d ' ' -f 1)" = "$EXPECTED_LEDGER_SHA256"
+          alpha2="$(gh api "repos/$GITHUB_REPOSITORY/releases/$ALPHA2_RELEASE_ID")"
+          jq -e --arg tag "$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" --argjson id "$ALPHA2_RELEASE_ID" '
+            .id == $id and .tag_name == $tag and .target_commitish == $sha and
+            .draft == true and .prerelease == true
+          ' <<<"$alpha2" >/dev/null
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")"
+          jq -e \
+            --argjson id "$EXPECTED_LATEST_RELEASE_ID" \
+            --arg tag "$EXPECTED_LATEST_TAG" \
+            --arg sha "$EXPECTED_LATEST_SHA" '
+              .id == $id and .tag_name == $tag and .target_commitish == $sha and
+              .draft == false and .prerelease == false
+            ' <<<"$latest" >/dev/null
+          latest_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$EXPECTED_LATEST_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$EXPECTED_LATEST_TAG" --arg sha "$EXPECTED_LATEST_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$latest_ref" >/dev/null
+          formula="$(jq -c '.assets[] | select(.name == "healthmd.rb")' <<<"$release")"
+          test "$(jq -s 'length' <<<"$formula")" = 1
+          formula_id="$(jq -r .id <<<"$formula")"
+          formula_digest="$(jq -r .digest <<<"$formula")"
+          [[ "$formula_id" =~ ^[1-9][0-9]*$ ]]
+          [[ "$formula_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          gh api -H 'Accept: application/octet-stream' \
+            "repos/$GITHUB_REPOSITORY/releases/assets/$formula_id" > "$RUNNER_TEMP/public-healthmd-before-push.rb"
+          test "sha256:$(sha256sum "$RUNNER_TEMP/public-healthmd-before-push.rb" | cut -d ' ' -f 1)" = "$formula_digest"
+          git show HEAD:Formula/healthmd.rb > "$RUNNER_TEMP/committed-healthmd.rb"
+          cmp "$source_formula" "$RUNNER_TEMP/public-healthmd-before-push.rb"
+          cmp "$source_formula" Formula/healthmd.rb
+          cmp "$source_formula" "$RUNNER_TEMP/committed-healthmd.rb"
+
+          # Pin both CLI tags and repository-wide latest immediately before the tap mutation.
+          target_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TARGET_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$TARGET_TAG" --arg sha "$TARGET_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$target_ref" >/dev/null
+          alpha2_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$ALPHA2_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$alpha2_ref" >/dev/null
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")"
+          jq -e \
+            --argjson id "$EXPECTED_LATEST_RELEASE_ID" \
+            --arg tag "$EXPECTED_LATEST_TAG" \
+            --arg sha "$EXPECTED_LATEST_SHA" '
+              .id == $id and .tag_name == $tag and .target_commitish == $sha and
+              .draft == false and .prerelease == false
+            ' <<<"$latest" >/dev/null
+          latest_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$EXPECTED_LATEST_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$EXPECTED_LATEST_TAG" --arg sha "$EXPECTED_LATEST_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$latest_ref" >/dev/null
+          git push origin HEAD:main
+
+          git fetch origin "+refs/heads/main:refs/remotes/origin/main"
+          test "$(git rev-parse 'refs/remotes/origin/main^{commit}')" = "$(git rev-parse 'HEAD^{commit}')"
+          git show refs/remotes/origin/main:Formula/healthmd.rb > "$RUNNER_TEMP/published-healthmd.rb"
+          cmp "$source_formula" "$RUNNER_TEMP/published-healthmd.rb"
+          cmp "$RUNNER_TEMP/public-healthmd-before-push.rb" "$RUNNER_TEMP/published-healthmd.rb"
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_RELEASE_ID")"
+          jq -S '[.assets[] | {id, name, size, digest, state}] | sort_by(.name)' \
+            <<<"$release" > "$RUNNER_TEMP/final-public-ledger.json"
+          test "$(sha256sum "$RUNNER_TEMP/final-public-ledger.json" | cut -d ' ' -f 1)" = "$EXPECTED_LEDGER_SHA256"
+          alpha2="$(gh api "repos/$GITHUB_REPOSITORY/releases/$ALPHA2_RELEASE_ID")"
+          jq -e --arg tag "$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" --argjson id "$ALPHA2_RELEASE_ID" '
+            .id == $id and .tag_name == $tag and .target_commitish == $sha and
+            .draft == true and .prerelease == true
+          ' <<<"$alpha2" >/dev/null
+          target_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TARGET_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$TARGET_TAG" --arg sha "$TARGET_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$target_ref" >/dev/null
+          alpha2_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$ALPHA2_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$ALPHA2_TAG" --arg sha "$ALPHA2_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$alpha2_ref" >/dev/null
+          latest="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest")"
+          jq -e \
+            --argjson id "$EXPECTED_LATEST_RELEASE_ID" \
+            --arg tag "$EXPECTED_LATEST_TAG" \
+            --arg sha "$EXPECTED_LATEST_SHA" '
+              .id == $id and .tag_name == $tag and .target_commitish == $sha and
+              .draft == false and .prerelease == false
+            ' <<<"$latest" >/dev/null
+          latest_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$EXPECTED_LATEST_TAG_PATH")"
+          jq -e --arg ref "refs/tags/$EXPECTED_LATEST_TAG" --arg sha "$EXPECTED_LATEST_SHA" '
+            .ref == $ref and .object.type == "commit" and .object.sha == $sha
+          ' <<<"$latest_ref" >/dev/null
+          {
+            echo "Published exact sealed Homebrew formula after credential-free qualification."
+            echo "No formula bytes or release assets were rewritten."
+          } >> "$GITHUB_STEP_SUMMARY"
