@@ -8,7 +8,7 @@ Health.md biedt lokale programmeer- en automatiseringsagents twee manieren om me
 - de `healthmd`-CLI voor expliciete terminalopdrachten en canonieke extractie;
 - `healthmd mcp serve` en de bijbehorende MCP App voor getypeerde tools, systeemeigen visualisaties en goedgekeurde exports van gegenereerde bestanden.
 
-De platformonafhankelijke MCP-server communiceert rechtstreeks met de iPhone-app op de voorgrond en vereist Health.md voor Mac niet. De CLI kan hetzelfde rechtstreekse kanaal gebruiken voor onbewerkte of canonieke exports. Voor workflows met de Mac-index kan de CLI ook de loopback-API van de Mac-app gebruiken. HealthKit wordt altijd op de iPhone uitgelezen en `healthmd.health_data` v7 blijft het openbare broncontract.
+De platformonafhankelijke MCP-server communiceert rechtstreeks met de iPhone-app op de voorgrond en vereist Health.md voor Mac niet. De CLI kan hetzelfde rechtstreekse kanaal gebruiken voor onbewerkte of canonieke exports. Voor workflows met de Mac-index kan de CLI ook de loopback-API van de Mac-app gebruiken. HealthKit wordt altijd op de iPhone uitgelezen en `healthmd.health_data` v8 blijft het openbare broncontract.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ Health.md stelt geen diagnose, beveelt geen behandeling aan, leidt geen oorzakel
 ## De lokale hulpprogramma's instellen
 
 <div class="availability preview">
-<strong>Preview · platformonafhankelijke directe configuratie</strong>
-<p>De onderstaande stappen gebruiken het nog niet gepubliceerde platformonafhankelijke pakket. Wil je een workflow gebruiken die nu beschikbaar is, configureer dan het ondertekende Mac-hulpprogramma <code>healthmd-mcp</code> via <a href="/nl/docs/configuration/">Configureer je agent</a>.</p>
+<strong>Openbare preview · nog geen gekwalificeerde stabiele versie</strong>
+<p>Het platformonafhankelijke pakket is gepubliceerd als een expliciet niet-gekwalificeerde preview. Gebruik de exacte mobiele build uit het releasebewijs; het ondertekende Mac-hulpprogramma blijft beschikbaar via <a href="/nl/docs/configuration/">Configureer je agent</a>.</p>
 </div>
 
-1. Installeer het platformonafhankelijke Health.md-CLI-pakket.
+1. Voer op macOS of Linux `brew install CodyBontecou/tap/healthmd` uit en controleer daarna `healthmd --version`.
 2. Voer `healthmd setup codex` uit. De opdracht configureert Codex en start de koppeling als de iPhone nog niet wordt vertrouwd.
 3. Rond de koppeling af onder Direct CLI-toegang in Health.md op de iPhone en houd de app op de voorgrond.
 4. Configureer voor Claude of een handmatig ingestelde host het absolute pad naar `healthmd` met de argumenten `mcp serve`, zoals beschreven in [Health.md MCP-server en App](/nl/docs/mcp/).
@@ -109,7 +109,7 @@ Dit onderscheid is bewust aangebracht:
 
 | Interface | Rol in het contract |
 |---|---|
-| `healthmd.health_data` v7 | Openbaar dagelijks brondocument |
+| `healthmd.health_data` v8 | Openbaar dagelijks brondocument |
 | `healthmd.healthkit_records` v1 | Canoniek bronrecordarchief in verliesvrije dagdocumenten |
 | `healthmd.extract_receipt` | Bereik en voltooiingsmetadata van de extractie |
 | `healthmd.query_context_day` v1 | Wegwerpbaar versleuteld indexrecord |
@@ -225,6 +225,6 @@ Neem geen onbewerkte records, routes, klinische tekst, medicatiegegevens, stemmi
   <a href="/nl/docs/agent-queries/"><span>CLI-recepten</span>Getypeerde agentquery's: meetwaarden, slaapsessies, trainingsafstemming, work-outs, dekking, vergelijkingen en bewijs.</a>
   <a href="/nl/docs/mcp/"><span>Toolprotocol</span>Configuratie voor Codex en Claude, 21 uitgebrachte Mac-tools, 19 platformonafhankelijke previewtools, grafieken in MCP App, exports, paginering en sandboxgrenzen.</a>
   <a href="/nl/docs/agent-api/"><span>Laag niveau</span>Loopback-query-API: routes, rechtstreekse JSON-verzoeken, cursors en persistente taken voor gegevensophaling.</a>
-  <a href="/nl/docs/cli-extract/"><span>Bronobjecten</span>Canonieke extractie: geselecteerde documenten, records, samenvattingsweergaven en ontvangstbewijzen uit schema v7.</a>
+  <a href="/nl/docs/cli-extract/"><span>Bronobjecten</span>Canonieke extractie: geselecteerde documenten, records, samenvattingsweergaven en ontvangstbewijzen uit schema v8.</a>
   <a href="/nl/docs/reference/evidence-packets/"><span>Contracten</span>Compacte queries en bewijsbundels: getypeerde waarden, dekking, bewerkingen en deterministische ID's.</a>
 </div>

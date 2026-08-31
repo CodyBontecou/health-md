@@ -3,7 +3,7 @@ title: Configura il tuo agente
 description: Scegli l'interfaccia MCP o CLI di Health.md, configura Codex, Claude o un altro client locale e connetti un iPhone abbinato senza instradare HealthKit attraverso un servizio cloud.
 ---
 
-L'app per Mac distribuita include due helper locali firmati: `healthmd-mcp` per strumenti tipizzati destinati agli agenti e `healthmd` per flussi di lavoro CLI espliciti. Una CLI multipiattaforma separata con MCP diretto per iPhone è documentata come anteprima finché il suo primo pacchetto pubblico non avrà superato i test di rilascio su dispositivi fisici.
+L'app per Mac distribuita include due helper locali firmati: `healthmd-mcp` per strumenti tipizzati destinati agli agenti e `healthmd` per flussi di lavoro CLI espliciti. La CLI multipiattaforma separata con MCP diretto per iPhone è distribuita pubblicamente come anteprima esplicitamente non qualificata; i test di rilascio su dispositivi fisici restano obbligatori per la prima versione stabile.
 
 <div class="callout">
 <strong>HealthKit rimane su iPhone.</strong>
@@ -74,11 +74,11 @@ L'host gestisce stdin e il ciclo di vita del processo. Non avviare l'helper come
 ## Configurazione diretta multipiattaforma
 
 <div class="availability preview">
-<strong>Anteprima · non ancora distribuita pubblicamente</strong>
-<p>La CLI Rust multipiattaforma, <code>healthmd setup codex</code>, il comando <code>healthmd mcp serve</code> eseguito dallo stesso binario e l'abbinamento diretto su Linux/Windows sono implementati, ma attendono la prima versione pubblica qualificata.</p>
+<strong>Anteprima pubblica · non ancora qualificata come stabile</strong>
+<p>La CLI Rust multipiattaforma, <code>healthmd setup codex</code>, il comando <code>healthmd mcp serve</code> eseguito dallo stesso binario e l'abbinamento diretto su Linux/Windows sono distribuiti pubblicamente come anteprima esplicitamente non qualificata.</p>
 </div>
 
-Dopo la pubblicazione, `healthmd setup codex` configurerà Codex in modo idempotente e avvierà l'abbinamento diretto con iPhone. Fino ad allora, non fare affidamento su URL non pubblicati di Homebrew, crates.io, programmi di installazione o versioni GitHub. La pagina [CLI diretta per iPhone](/it/docs/cli-direct/) documenta il trasporto in più fasi e il comportamento del protocollo.
+Su macOS o Linux, installa con <code>brew install CodyBontecou/tap/healthmd</code>. Quindi `healthmd setup codex` configura Codex in modo idempotente e avvia l'abbinamento diretto con iPhone. Usa la build mobile esatta indicata dalle prove di rilascio; la pubblicazione del pacchetto non dimostra la compatibilità mobile. La pagina [CLI diretta per iPhone](/it/docs/cli-direct/) documenta il trasporto e il protocollo.
 
 ## Flussi di lavoro CLI espliciti
 
@@ -96,7 +96,7 @@ La disponibilità e la sintassi differiscono tra l'helper incluso per Mac e la C
 
 <div class="availability preview">
 <strong>Anteprima · flussi di lavoro diretti multipiattaforma</strong>
-<p>Questi passaggi descrivono il futuro pacchetto multipiattaforma. Il percorso MCP incluso nella versione per Mac distribuita usa invece la connessione esistente dell'app per Mac con iPhone.</p>
+<p>Questi sono i flussi portatili attualmente inclusi nel pacchetto pubblico. Il percorso MCP integrato per Mac continua a usare la connessione esistente dell’app per Mac con iPhone.</p>
 </div>
 
 I flussi di lavoro MCP e CLI diretti richiedono un abbinamento attendibile, da eseguire una sola volta, con Health.md su iPhone. L'abbinamento usa un canale crittografato e autenticato e l'archiviazione nativa delle credenziali su macOS, Linux o Windows.
@@ -126,6 +126,6 @@ Per ottenere un risultato completo, esamina l'ambito richiesto, la copertura, l'
 <div class="related">
   <a href="/it/docs/mcp/"><span>Interfaccia degli strumenti</span>Esamina i 21 strumenti Mac pubblicati, l'anteprima multipiattaforma con 19 strumenti, MCP Apps, gli schemi, la paginazione, le esportazioni e i limiti dell’ambiente isolato.</a>
   <a href="/it/docs/agent-queries/"><span>Prime domande</span>Esegui flussi di lavoro tipizzati per metriche, sonno, allenamenti, confronti, copertura ed evidenze.</a>
-  <a href="/it/docs/cli-extract/"><span>Dati canonici</span>Estrai documenti schema-v7 selezionati e record di origine senza inserire corpi di grandi dimensioni nella chat.</a>
+  <a href="/it/docs/cli-extract/"><span>Dati canonici</span>Estrai documenti schema-v8 selezionati e record di origine senza inserire corpi di grandi dimensioni nella chat.</a>
   <a href="/it/docs/reference/"><span>Contratti</span>Consulta strutture dati con versionamento, inventari dei campi, fixture generate e procedure di integrazione.</a>
 </div>

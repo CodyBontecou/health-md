@@ -1,9 +1,9 @@
 ---
 title: "正規ヘルスデータの抽出"
-description: "healthmd extractを使い、選択したApple Health指標を取得して、正規のschema-v7ドキュメント、ソースレコード、JSON Pointerプロジェクション、またはJSONLを明示的なレシートとともに出力します。"
+description: "healthmd extractを使い、選択したApple Health指標を取得して、正規のschema-v8ドキュメント、ソースレコード、JSON Pointerプロジェクション、またはJSONLを明示的なレシートとともに出力します。"
 ---
 
-`healthmd extract`は、スクリプトやエージェントがソースデータを取得するためのコマンドです。選択した指標と詳細レベルだけを取得するようiPhoneへ要求し、永続転送を検証して、転送エンベロープを取り除きます。その後、正規の`healthmd.health_data` v7ドキュメント、またはプロジェクションであることが明示された結果を出力します。
+`healthmd extract`は、スクリプトやエージェントがソースデータを取得するためのコマンドです。選択した指標と詳細レベルだけを取得するようiPhoneへ要求し、永続転送を検証して、転送エンベロープを取り除きます。その後、正規の`healthmd.health_data` v8ドキュメント、またはプロジェクションであることが明示された結果を出力します。
 
 正規抽出は、MacアプリのバックエンドとiOS v1ダイレクトプロトコルを基盤とするiPhoneの機能です。Androidのダイレクトソースは、代わりにプロバイダー固有のHealth Connectスナップショットを[rawエクスポート](/ja/docs/cli-direct/)で返します。
 
@@ -257,7 +257,7 @@ iPhoneは、選択したレコードのうち最も古い利用可能な日付�
 <div class="related">
   <a href="/ja/docs/cli/"><span>CLI</span>Health.md CLI：設定、バックエンドの選択、コマンド一覧、出力規則。</a>
   <a href="/ja/docs/agent-queries/"><span>派生ビュー</span>型付きクエリの実例：指標時系列、睡眠、トレーニング、ワークアウト、比較、エビデンス。</a>
-  <a href="/ja/docs/reference/daily-records/"><span>スキーマ</span>日次レコード：完全なschema-v7日次ドキュメントのコントラクト。</a>
+  <a href="/ja/docs/reference/daily-records/"><span>スキーマ</span>日次レコード：完全なschema-v8日次ドキュメントのコントラクト。</a>
   <a href="/ja/docs/reference/canonical-healthkit-records/"><span>ソースアーカイブ</span>正規Apple Healthレコード：ID、出所、関係、ペイロード。</a>
   <a href="/ja/docs/reference/api-and-cli/"><span>プロトコル</span>APIとCLIのリファレンス：抽出リクエスト、レシート、厳密な検証、終了動作。</a>
 </div>

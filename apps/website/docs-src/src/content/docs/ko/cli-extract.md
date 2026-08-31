@@ -1,9 +1,9 @@
 ---
 title: "정규 건강 데이터 추출"
-description: "healthmd extract를 사용하여 선택한 Apple Health 측정 항목을 가져오고, 명시적인 수신 확인과 함께 정규 스키마 v7 문서, 소스 레코드, JSON Pointer 프로젝션 또는 JSONL을 출력합니다."
+description: "healthmd extract를 사용하여 선택한 Apple Health 측정 항목을 가져오고, 명시적인 수신 확인과 함께 정규 스키마 v8 문서, 소스 레코드, JSON Pointer 프로젝션 또는 JSONL을 출력합니다."
 ---
 
-`healthmd extract`는 스크립트와 에이전트를 위한 소스 데이터 명령입니다. iPhone에 선택한 측정 항목과 세부 정보만 가져오도록 요청하고, 영속 전송을 검증하며, 전송 엔벨로프를 제거한 뒤 정규 `healthmd.health_data` v7 문서 또는 명확히 표시된 프로젝션을 출력합니다.
+`healthmd extract`는 스크립트와 에이전트를 위한 소스 데이터 명령입니다. iPhone에 선택한 측정 항목과 세부 정보만 가져오도록 요청하고, 영속 전송을 검증하며, 전송 엔벨로프를 제거한 뒤 정규 `healthmd.health_data` v8 문서 또는 명확히 표시된 프로젝션을 출력합니다.
 
 정규 추출은 Mac 앱 백엔드와 iOS v1 다이렉트 프로토콜을 기반으로 하는 iPhone 기능입니다. Android 다이렉트 소스는 대신 공급자 고유의 Health Connect 스냅샷을 [raw 내보내기](/ko/docs/cli-direct/)로 반환합니다.
 
@@ -257,7 +257,7 @@ iPhone은 선택한 레코드 중 가장 이른 날짜를 확인하고, 그 날�
 <div class="related">
   <a href="/ko/docs/cli/"><span>CLI</span>Health.md CLI: 설정, 백엔드 선택, 명령 목록 및 출력 규칙.</a>
   <a href="/ko/docs/agent-queries/"><span>파생 보기</span>타입 지정 쿼리 활용법: 측정 항목 계열, 수면, 훈련, 운동, 비교 및 증거.</a>
-  <a href="/ko/docs/reference/daily-records/"><span>스키마</span>일별 레코드: 완전한 스키마 v7 일별 문서 계약.</a>
+  <a href="/ko/docs/reference/daily-records/"><span>스키마</span>일별 레코드: 완전한 스키마 v8 일별 문서 계약.</a>
   <a href="/ko/docs/reference/canonical-healthkit-records/"><span>소스 아카이브</span>정규 Apple Health 레코드: 식별, 출처, 관계 및 페이로드.</a>
   <a href="/ko/docs/reference/api-and-cli/"><span>프로토콜</span>API 및 CLI 참조: 추출 요청, 수신 확인, 엄격한 검증 및 종료 동작.</a>
 </div>

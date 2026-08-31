@@ -102,7 +102,8 @@ Users can also copy an agent prompt from the CLI tab that asks any automation-ca
 
 ## Portable standalone install
 
-After the first stable Rust release (prereleases use direct GitHub installers):
+The tap carries the explicitly unqualified `0.1.0-alpha.3` preview and will carry qualified stable
+releases when available:
 
 ```bash
 brew install CodyBontecou/tap/healthmd

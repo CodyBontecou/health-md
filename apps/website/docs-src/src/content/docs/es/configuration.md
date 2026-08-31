@@ -3,7 +3,7 @@ title: Configura tu agente
 description: Elige la interfaz MCP o CLI de Health.md, configura Codex, Claude u otro cliente local y conecta un iPhone emparejado sin enviar HealthKit a través de un servicio en la nube.
 ---
 
-La aplicación publicada para Mac incluye dos herramientas auxiliares locales firmadas: `healthmd-mcp` para las herramientas tipadas del agente y `healthmd` para flujos de trabajo explícitos de la CLI. También existe una CLI multiplataforma independiente con MCP directo para iPhone, documentada como vista previa hasta que su primer paquete público complete las pruebas de lanzamiento con dispositivos físicos.
+La aplicación publicada para Mac incluye dos herramientas auxiliares locales firmadas: `healthmd-mcp` para las herramientas tipadas del agente y `healthmd` para flujos de trabajo explícitos de la CLI. La CLI multiplataforma independiente con MCP directo para iPhone está empaquetada públicamente como vista previa explícitamente no cualificada; las pruebas de lanzamiento en dispositivos físicos siguen siendo obligatorias para la primera versión estable.
 
 <div class="callout">
 <strong>HealthKit permanece en el iPhone.</strong>
@@ -74,11 +74,11 @@ El host controla stdin y el ciclo de vida del proceso. No inicies la herramienta
 ## Configuración directa y portátil
 
 <div class="availability preview">
-<strong>Vista previa · aún no disponible como paquete público</strong>
-<p>La CLI multiplataforma en Rust, <code>healthmd setup codex</code>, el servidor <code>healthmd mcp serve</code> incluido en el mismo binario y el emparejamiento directo en Linux/Windows ya están implementados, pero aún esperan su primer lanzamiento público aprobado.</p>
+<strong>Vista previa pública · aún no cualificada como estable</strong>
+<p>La CLI multiplataforma en Rust, <code>healthmd setup codex</code>, el servidor <code>healthmd mcp serve</code> incluido en el mismo binario y el emparejamiento directo en Linux/Windows están empaquetados públicamente como una vista previa explícitamente no cualificada.</p>
 </div>
 
-Después de la publicación, `healthmd setup codex` configurará Codex de manera idempotente e iniciará el emparejamiento directo con el iPhone. Hasta entonces, no dependas de URLs de Homebrew, crates.io, instaladores o lanzamientos de GitHub que todavía no se hayan publicado. La página [CLI directa para iPhone](/es/docs/cli-direct/) documenta el comportamiento previsto del transporte y del protocolo.
+En macOS o Linux, instala con <code>brew install CodyBontecou/tap/healthmd</code>. Después, `healthmd setup codex` configura Codex de forma idempotente e inicia el emparejamiento directo con el iPhone. Usa la compilación móvil exacta indicada por la evidencia de la versión; publicar el paquete no demuestra compatibilidad móvil. La página [CLI directa para iPhone](/es/docs/cli-direct/) documenta el transporte y el protocolo.
 
 ## Flujos de trabajo explícitos de la CLI
 
@@ -96,7 +96,7 @@ La disponibilidad y la gramática no son iguales en la herramienta auxiliar incl
 
 <div class="availability preview">
 <strong>Vista previa · flujos de trabajo directos y portátiles</strong>
-<p>Estos pasos describen el próximo paquete multiplataforma. La ruta MCP incluida y ya disponible para Mac usa en su lugar la conexión existente entre la aplicación para Mac y el iPhone.</p>
+<p>Estos son los flujos portátiles incluidos actualmente en el paquete público. La ruta MCP incluida para Mac sigue usando la conexión existente entre la aplicación para Mac y el iPhone.</p>
 </div>
 
 Los flujos de trabajo directos de MCP y la CLI requieren emparejar una sola vez un dispositivo de confianza con Health.md en el iPhone. El emparejamiento usa un canal cifrado y autenticado, además del almacenamiento nativo de credenciales en macOS, Linux o Windows.
@@ -126,6 +126,6 @@ Para obtener un resultado completo, revisa el alcance solicitado, la cobertura, 
 <div class="related">
   <a href="/es/docs/mcp/"><span>Interfaz de herramientas</span>Consulta las 21 herramientas Mac publicadas, las 19 herramientas portátiles en vista previa, MCP Apps, los esquemas, la paginación, las exportaciones y los límites del sandbox.</a>
   <a href="/es/docs/agent-queries/"><span>Primeras preguntas</span>Ejecuta flujos de trabajo tipados para métricas, sueño, entrenamientos, comparaciones, cobertura y evidencia.</a>
-  <a href="/es/docs/cli-extract/"><span>Datos canónicos</span>Extrae documentos seleccionados del esquema v7 y registros de origen sin colocar cuerpos de datos grandes en el chat.</a>
+  <a href="/es/docs/cli-extract/"><span>Datos canónicos</span>Extrae documentos seleccionados del esquema v8 y registros de origen sin colocar cuerpos de datos grandes en el chat.</a>
   <a href="/es/docs/reference/"><span>Contratos</span>Consulta estructuras de datos versionadas, inventarios de campos, fixtures generados y recetas de integración (en inglés).</a>
 </div>

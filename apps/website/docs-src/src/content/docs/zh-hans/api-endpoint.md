@@ -25,10 +25,10 @@ description: "将所选 Apple Health JSON 直接从 iPhone 发送到您自己的
 
 ## 载荷结构
 
-<p>每次导出操作会发送一个 POST。正文是独立版本化的 <code>healthmd.api_export</code> 封装，其中包含采用公开 schema-v7 的 <code>healthmd.health_data</code> 每日记录。API 封装 v1 携带每日记录；v2 还可以携带提供方辅助记录，而无需更改每日记录架构。</p>
+<p>每次导出操作会发送一个 POST。正文是独立版本化的 <code>healthmd.api_export</code> 封装，其中包含采用公开 schema-v8 的 <code>healthmd.health_data</code> 每日记录。API 封装 v1 携带每日记录；v2 还可以携带提供方辅助记录，而无需更改每日记录架构。</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>请求范围内保留的完整每日 schema-v7 对象，包括查询清单可作为证据的完整空记录。</p></div>
+<div class="option"><strong><code>records</code></strong><p>请求范围内保留的完整每日 schema-v8 对象，包括查询清单可作为证据的完整空记录。</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>在每日文档得以保留前便处理失败的日期。</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p><code>records</code> 内的每日架构版本。它与 API 封装版本分别演进。</p></div>
 <div class="option"><strong>提供方辅助记录</strong><p>启用已连接的提供方时，v2 可按条件包含使用自身架构和身份规则的外部记录。</p></div>

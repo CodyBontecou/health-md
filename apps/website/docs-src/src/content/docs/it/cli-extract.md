@@ -1,9 +1,9 @@
 ---
 title: "Estrazione canonica dei dati sanitari"
-description: "Usa healthmd extract per acquisire metriche selezionate di Apple Health ed emettere documenti canonici con schema v7, record di origine, proiezioni mediante puntatori JSON o JSONL con ricevute esplicite."
+description: "Usa healthmd extract per acquisire metriche selezionate di Apple Health ed emettere documenti canonici con schema v8, record di origine, proiezioni mediante puntatori JSON o JSONL con ricevute esplicite."
 ---
 
-`healthmd extract` è il comando per fornire dati di origine a script e agenti. Chiede all’iPhone di acquisire soltanto le metriche e il livello di dettaglio selezionati, convalida il trasferimento persistente, rimuove l’involucro di trasporto ed emette documenti canonici `healthmd.health_data` v7 o proiezioni chiaramente identificate.
+`healthmd extract` è il comando per fornire dati di origine a script e agenti. Chiede all’iPhone di acquisire soltanto le metriche e il livello di dettaglio selezionati, convalida il trasferimento persistente, rimuove l’involucro di trasporto ed emette documenti canonici `healthmd.health_data` v8 o proiezioni chiaramente identificate.
 
 L’estrazione canonica è una funzionalità di iPhone, supportata dal backend dell’app Mac e dal protocollo diretto v1 di iOS. Le sorgenti dirette di Android restituiscono invece snapshot Health Connect nativi del fornitore tramite l’[esportazione raw](/it/docs/cli-direct/).
 
@@ -257,7 +257,7 @@ Per raccolte di grandi dimensioni, usa JSONL o una selezione più circoscritta. 
 <div class="related">
   <a href="/it/docs/cli/"><span>CLI</span>CLI di Health.md: configurazione, scelta del backend, elenco dei comandi e regole per l’output.</a>
   <a href="/it/docs/agent-queries/"><span>Viste derivate</span>Ricettario delle query tipizzate: serie di metriche, sonno, allenamento, attività, confronti e dati di riscontro.</a>
-  <a href="/it/docs/reference/daily-records/"><span>Schema</span>Record giornalieri: contratto completo dei documenti giornalieri con schema v7.</a>
+  <a href="/it/docs/reference/daily-records/"><span>Schema</span>Record giornalieri: contratto completo dei documenti giornalieri con schema v8.</a>
   <a href="/it/docs/reference/canonical-healthkit-records/"><span>Archivio di origine</span>Record canonici di Apple Health: identità, provenienza, relazioni e payload.</a>
   <a href="/it/docs/reference/api-and-cli/"><span>Protocollo</span>Riferimento API e CLI: richieste di estrazione, ricevute, convalida rigorosa e codici di uscita.</a>
 </div>

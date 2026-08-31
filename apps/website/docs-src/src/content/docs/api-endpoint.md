@@ -25,10 +25,10 @@ description: "Send selected Apple Health JSON directly from iPhone to your own H
 
 ## Payload shape
 
-<p>Health.md sends one POST per export action. The body is an independently versioned <code>healthmd.api_export</code> envelope containing public schema-v7 <code>healthmd.health_data</code> daily records. API envelope v1 carries the daily records; v2 can additionally carry provider sidecars without changing the daily-record schema.</p>
+<p>Health.md sends one POST per export action. The body is an independently versioned <code>healthmd.api_export</code> envelope containing public schema-v8 <code>healthmd.health_data</code> daily records. API envelope v1 carries the daily records; v2 can additionally carry provider sidecars without changing the daily-record schema.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Complete daily schema-v7 objects retained for the requested range, including complete-empty records whose query manifest is evidence.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Complete daily schema-v8 objects retained for the requested range, including complete-empty records whose query manifest is evidence.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>Dates that failed before a daily document could be retained.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p>The daily schema version inside <code>records</code>. It advances independently from the API envelope version.</p></div>
 <div class="option"><strong>Provider sidecars</strong><p>Conditional v2 external records with their own schema and identity rules when a connected provider is enabled.</p></div>

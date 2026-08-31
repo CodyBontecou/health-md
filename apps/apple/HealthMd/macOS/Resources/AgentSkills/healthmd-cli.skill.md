@@ -19,11 +19,11 @@ The CLI listens on the computer; iPhone connects to the address entered in Direc
 
 Direct is the portable default. Do not add `--backend mac-app`: that adapter is reserved but unimplemented. The portable client supports Manual IP, including Tailscale addresses. Nearby is unsupported.
 
-| Mobile source | Protocol/source floor | Portable operations | Public status |
+| Mobile source | Protocol; exact tag-SHA counterpart / unqualified floor | Portable operations | Public status |
 |---|---|---|---|
-| Export-capable iPhone | 1 / v1; iOS 3.0.3 exact candidate | Status, raw, extract, files, resume, cancel | Pending physical qualification |
-| Query-capable iPhone | 1 / v1 + v3; iOS 3.0.3 exact candidate | V1 plus 17 fixed MCP tools | Pending physical qualification |
-| Android | 2 / v2; Android 1.5.4 (25) exact candidate | Status, native raw, files, resume, cancel | Pending physical qualification |
+| Export-capable iPhone | 1 / v1; iOS 3.2.1 (202608300209) / 3.0.3 | Status, raw, extract, files, resume, cancel | Pending physical qualification |
+| Query-capable iPhone | 1 / v1 + v3; iOS 3.2.1 (202608300209) / 3.0.3 | V1 plus 19 fixed MCP tools | Pending physical qualification |
+| Android | 2 / v2; Android 1.8.1 (30) / 1.5.4 (25) | Status, native raw, files, resume, cancel | Pending physical qualification |
 | Android typed query | Not implemented | MCP query tools require iPhone v3 | Unsupported |
 
 No public CLI/mobile pair is qualified yet. V3 does not replace v1 pairing/exports and Android
@@ -49,27 +49,29 @@ On Windows, use the automation host's process timeout. Pairing needs enough time
 healthmd --version
 healthmd --help
 
-# Stable macOS/Linux release
+# Explicitly unqualified macOS/Linux public preview
 brew install CodyBontecou/tap/healthmd
-
-# Published Rust package on macOS, Linux, or Windows
-cargo install healthmd-cli --locked
 ```
 
-GitHub Releases also provide checksummed macOS/Linux archives and a Windows archive/PowerShell installer. Before the first published release, build from source:
+The formula installs matching `healthmd` and `healthmd-mcp` binaries. It does not qualify a
+CLI/mobile pair; use the exact mobile build named by release evidence. GitHub Releases also provide
+checksummed archives and installers. To build the same preview from source:
 
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
-cd health-md/apps/cli
-cargo install --path crates/healthmd-cli
+cd health-md
+git checkout healthmd-cli/v0.1.0-alpha.3
+cd apps/cli
+cargo install --locked --path crates/healthmd-cli
 ```
 
 Do not install the old helper from the Mac app or use the monorepo's `apps/apple/scripts/healthmd` wrapper for normal operation; those target the legacy Swift compatibility client. Linux requires an unlocked freedesktop Secret Service provider such as GNOME Keyring or KWallet. The CLI never falls back to plaintext credentials.
 
 For release archives, use the exact `healthmd-cli/v<version>` page rather than repository
 `/releases/latest`. Verify `sha256.sum` with its Sigstore bundle and expected workflow identity;
-require Developer ID/notarization on macOS and the documented Authenticode publisher/timestamp on
-Windows.
+require Developer ID/notarization on macOS. On Windows, require the documented Authenticode
+publisher/timestamp when the signing ledger is qualified; while it is deferred, verify the
+Sigstore-signed checksum closure and expect one SmartScreen prompt.
 
 Upgrade both binaries together with `brew update && brew upgrade healthmd`, the exact versioned
 installer, or `cargo install --locked --force healthmd-cli`. Before uninstalling, finish/cancel jobs,
@@ -187,7 +189,7 @@ Protocol v1 treats the destination as an opaque immutable label on iPhone. The r
 
 For Codex, run `healthmd setup codex`. It safely preserves unrelated Codex settings, configures the absolute `healthmd` executable with arguments `mcp serve`, applies approval prompts to export mutations, and opens iPhone pairing when needed. Pairing and MCP deliberately use the same installed executable identity so native credentials never require a second Keychain ACL. `healthmd-mcp` remains a compatibility launcher: it execs the sibling `healthmd` on Unix, while Windows serves in-process and supervises its own same-file helper against the same fixed Credential Manager service/account. Do not run MCP serve mode as an interactive shell command.
 
-The server exposes 17 fixed tools for direct readiness, Apple metric catalog, bounded typed queries, charts, sleep, workouts, comparison, coverage, evidence, and durable generated-file exports. Every query runs against the paired foreground iPhone; Health.md for Mac is not involved. Export, resume, and cancel calls require explicit user approval and an export needs an existing `destination`.
+The server exposes 19 fixed tools for direct readiness, Apple metric catalog, bounded typed queries, charts, sleep, workouts, comparison, coverage, evidence, and durable generated-file exports. Every query runs against the paired foreground iPhone; Health.md for Mac is not involved. Export, resume, and cancel calls require explicit user approval and an export needs an existing `destination`.
 
 MCP Apps hosts negotiate `io.modelcontextprotocol/ui` and `text/html;profile=mcp-app` for the self-contained interactive view. Text/image hosts retain authoritative JSON and a portable PNG metric-chart fallback. Call `healthmd_doctor` first. Use `all_pages: true` for bounded automatic cursor traversal, or continue opaque cursors manually.
 

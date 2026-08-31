@@ -19,7 +19,7 @@ The CLI listens on the computer; iPhone connects to the address entered in Direc
 
 Direct is the portable default. Do not add `--backend mac-app`: that adapter is reserved but unimplemented. The portable client supports Manual IP, including Tailscale addresses. Nearby is unsupported.
 
-No public CLI/mobile pair is qualified yet. The source snapshot tagged for the `0.1.0-alpha.3`
+No public CLI/mobile pair is qualified yet. The source snapshot tagged for the `0.1.0-alpha.2`
 preview contains iOS 3.2.1 (build 202608300209) and Android 1.8.1 (`versionCode 30`) as its exact
 mobile counterparts. The unqualified compatibility floors remain iOS 3.0.3 for v1 exports and v3
 typed queries and Android 1.5.4 (`versionCode 25`) for v2 exports. Android typed queries are not
@@ -41,7 +41,7 @@ On Windows, use the automation host's process timeout. Pairing needs enough time
 
 ## Install or verify
 
-The checksummed `0.1.0-alpha.3` public preview is available from the project Homebrew/Linuxbrew
+The checksummed `0.1.0-alpha.2` public preview is available from the project Homebrew/Linuxbrew
 tap. It remains an explicitly unqualified preview: publishing the CLI does **not** qualify a
 portable CLI/mobile pair, and users must use the exact matching mobile build named by release
 evidence.
@@ -59,7 +59,7 @@ tag from source:
 ```bash
 git clone https://github.com/CodyBontecou/health-md.git
 cd health-md
-git checkout healthmd-cli/v0.1.0-alpha.3
+git checkout healthmd-cli/v0.1.0-alpha.2
 cd apps/cli
 cargo install --locked --path crates/healthmd-cli
 ```

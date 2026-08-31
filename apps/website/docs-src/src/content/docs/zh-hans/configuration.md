@@ -3,7 +3,7 @@ title: 配置智能体
 description: 选择 Health.md MCP 或 CLI 接口，配置 Codex、Claude 或其他本地客户端，并连接已配对的 iPhone，无需通过云服务传输 HealthKit 数据。
 ---
 
-已发布的 Mac 应用包含两个经过签名的本地辅助程序：用于类型化智能体工具的 `healthmd-mcp`，以及用于显式 CLI 工作流的 `healthmd`。另有一个可直接通过 iPhone 使用 MCP 的跨平台 CLI，目前标记为预览版，待首个公开软件包完成实体设备发布质量验证后正式推出。
+已发布的 Mac 应用包含两个经过签名的本地辅助程序：用于类型化智能体工具的 `healthmd-mcp`，以及用于显式 CLI 工作流的 `healthmd`。另一个可直接通过 iPhone 使用 MCP 的跨平台 CLI 已作为明确未经资格验证的公开预览版打包；首个稳定版仍必须完成实体设备发布质量验证。
 
 <div class="callout">
 <strong>HealthKit 数据始终保留在 iPhone 上。</strong>
@@ -74,11 +74,11 @@ transport: stdio
 ## 可移植直连设置
 
 <div class="availability preview">
-<strong>预览版 · 尚未公开发布软件包</strong>
-<p>跨平台 Rust CLI、<code>healthmd setup codex</code>、同一二进制文件中的 <code>healthmd mcp serve</code>，以及 Linux/Windows 直连配对均已实现，但仍在等待首个通过质量验证的公开版本。</p>
+<strong>公开预览版 · 尚未取得稳定版资格</strong>
+<p>跨平台 Rust CLI、<code>healthmd setup codex</code>、同一二进制文件中的 <code>healthmd mcp serve</code>，以及 Linux/Windows 直连配对均已作为明确未经资格验证的公开预览版打包。</p>
 </div>
 
-公开发布后，`healthmd setup codex` 将以幂等方式配置 Codex，并启动 iPhone 直连配对。在此之前，请勿依赖尚未发布的 Homebrew、crates.io、安装程序或 GitHub 版本 URL。[iPhone 直连 CLI](/zh-hans/docs/cli-direct/)页面介绍了分阶段传输和协议行为。
+在 macOS 或 Linux 上使用 <code>brew install CodyBontecou/tap/healthmd</code> 安装。之后，`healthmd setup codex` 会以幂等方式配置 Codex 并启动 iPhone 直连配对。请使用发布证据中指定的准确移动端构建；软件包发布并不能证明移动端兼容性。[iPhone 直连 CLI](/zh-hans/docs/cli-direct/)页面介绍了传输和协议行为。
 
 ## 显式 CLI 工作流
 
@@ -96,7 +96,7 @@ healthmd export --last 7 --destination "$HOME/Documents/HealthVault"
 
 <div class="availability preview">
 <strong>预览版 · 可移植直连工作流</strong>
-<p>以下步骤适用于即将发布的跨平台软件包。已发布的内置 Mac MCP 路径则使用 Mac 应用现有的 iPhone 连接。</p>
+<p>以下是当前公开软件包中提供的可移植工作流。内置 Mac MCP 路径仍会使用 Mac 应用现有的 iPhone 连接。</p>
 </div>
 
 MCP 和 CLI 直连工作流需要先与 iPhone 上的 Health.md 完成一次受信任配对。配对使用经过身份验证的加密通道，并在 macOS、Linux 或 Windows 上使用原生凭据存储。
@@ -126,6 +126,6 @@ MCP 和 CLI 直连工作流需要先与 iPhone 上的 Health.md 完成一次受�
 <div class="related">
   <a href="/zh-hans/docs/mcp/"><span>工具接口</span>查看 21 个已发布的 Mac 工具、预览版中的 19 个可移植工具、MCP Apps、架构、分页、导出和沙盒边界。</a>
   <a href="/zh-hans/docs/agent-queries/"><span>首次查询</span>运行类型化指标、睡眠、锻炼、比较、覆盖范围和证据工作流。</a>
-  <a href="/zh-hans/docs/cli-extract/"><span>规范数据</span>提取选定的 schema-v7 文档和源记录，无需在聊天中传输大型数据正文。</a>
+  <a href="/zh-hans/docs/cli-extract/"><span>规范数据</span>提取选定的 schema-v8 文档和源记录，无需在聊天中传输大型数据正文。</a>
   <a href="/zh-hans/docs/reference/"><span>契约</span>浏览版本化数据结构、字段清单、生成的测试样例和集成方案。</a>
 </div>

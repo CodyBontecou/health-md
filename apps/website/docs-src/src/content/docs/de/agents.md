@@ -8,7 +8,7 @@ Health.md bietet lokalen Coding- und Automatisierungsagenten zwei Wege für die 
 - die `healthmd` CLI für ausdrückliche Terminalbefehle und kanonische Extraktion;
 - `healthmd mcp serve` und die zugehörige MCP App für typisierte Tools, native Visualisierungen und genehmigte Exporte generierter Dateien.
 
-Der portable MCP-Server kommuniziert direkt mit dem iPhone im Vordergrund und benötigt Health.md für Mac nicht. Die CLI kann denselben direkten Kanal für rohe oder kanonische Exporte oder die Loopback-API der Mac-App für Mac-Index-Workflows verwenden. HealthKit-Lesevorgänge erfolgen stets auf dem iPhone, und `healthmd.health_data` v7 bleibt der öffentliche Quellvertrag.
+Der portable MCP-Server kommuniziert direkt mit dem iPhone im Vordergrund und benötigt Health.md für Mac nicht. Die CLI kann denselben direkten Kanal für rohe oder kanonische Exporte oder die Loopback-API der Mac-App für Mac-Index-Workflows verwenden. HealthKit-Lesevorgänge erfolgen stets auf dem iPhone, und `healthmd.health_data` v8 bleibt der öffentliche Quellvertrag.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ Health.md stellt keine Diagnosen, empfiehlt keine Behandlung, leitet keine Kausa
 ## Lokale Helfer einrichten
 
 <div class="availability preview">
-<strong>Vorschau · portable direkte Einrichtung</strong>
-<p>Die folgenden Schritte verwenden das unveröffentlichte plattformübergreifende Paket. Konfigurieren Sie für einen heute verfügbaren Ablauf den signierten Mac-Helfer <code>healthmd-mcp</code> unter <a href="/de/docs/configuration/">Agenten konfigurieren</a>.</p>
+<strong>Öffentliche Vorschau · noch keine qualifizierte stabile Version</strong>
+<p>Das plattformübergreifende Paket ist als ausdrücklich nicht qualifizierte Vorschau veröffentlicht. Verwenden Sie den exakten mobilen Build aus den Release-Nachweisen; der signierte Mac-Helfer bleibt unter <a href="/de/docs/configuration/">Agenten konfigurieren</a> verfügbar.</p>
 </div>
 
-1. Installieren Sie das plattformübergreifende Health.md-CLI-Paket.
+1. Führen Sie unter macOS oder Linux `brew install CodyBontecou/tap/healthmd` aus und prüfen Sie danach `healthmd --version`.
 2. Führen Sie `healthmd setup codex` aus. Der Befehl konfiguriert Codex und startet die Kopplung, wenn noch kein iPhone vertrauenswürdig ist.
 3. Schließen Sie die Kopplung unter Direct CLI Access in Health.md auf dem iPhone ab und lassen Sie die App im Vordergrund.
 4. Konfigurieren Sie für Claude oder eine manuelle Host-Einrichtung den absoluten `healthmd`-Pfad mit den Argumenten `mcp serve`, wie unter [Health.md MCP-Server und App](/de/docs/mcp/) beschrieben.
@@ -109,7 +109,7 @@ Die Trennung ist beabsichtigt:
 
 | Oberfläche | Vertragsrolle |
 |---|---|
-| `healthmd.health_data` v7 | Öffentliches tägliches Quelldokument |
+| `healthmd.health_data` v8 | Öffentliches tägliches Quelldokument |
 | `healthmd.healthkit_records` v1 | Kanonisches Quelldatensatzarchiv in verlustfreien Tagesdokumenten |
 | `healthmd.extract_receipt` | Umfang und Abschlussmetadaten der Extraktion |
 | `healthmd.query_context_day` v1 | Wegwerfbarer verschlüsselter Indexdatensatz |
@@ -225,6 +225,6 @@ Geben Sie rohe Datensätze, Routen, klinische Texte, Medikamentendetails, Stimmu
   <a href="/de/docs/agent-queries/"><span>CLI-Rezepte</span>Typisierte Agentenabfragen für Metriken, Schlafsitzungen, Trainingszuordnung, Trainingseinheiten, Abdeckung, Vergleich und Nachweise.</a>
   <a href="/de/docs/mcp/"><span>Toolprotokoll</span>Codex- und Claude-Einrichtung, 21 veröffentlichte Mac-Tools, 19 portable Vorschau-Tools, MCP-App-Diagramme, Exporte, Paginierung und Sandbox-Grenzen.</a>
   <a href="/de/docs/agent-api/"><span>Low-Level</span>Loopback-Abfrage-API: Routen, direkte Anfrage-JSON-Daten, Cursor und persistente Erfassungsaufträge.</a>
-  <a href="/de/docs/cli-extract/"><span>Quellobjekte</span>Kanonische Extraktion: ausgewählte Schema-v7-Dokumente, Datensätze, Projektionen und Belege.</a>
+  <a href="/de/docs/cli-extract/"><span>Quellobjekte</span>Kanonische Extraktion: ausgewählte Schema-v8-Dokumente, Datensätze, Projektionen und Belege.</a>
   <a href="/de/docs/reference/evidence-packets/"><span>Verträge</span>Kompakte Abfragen und Nachweispakete: typisierte Werte, Abdeckung, Vorgänge und deterministische IDs.</a>
 </div>

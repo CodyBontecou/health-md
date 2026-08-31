@@ -38,7 +38,7 @@
     },
     {
       "id": "portable_mcp_tools",
-      "availability": "preview_until_public_healthmd_cli_release",
+      "availability": "public_preview",
       "catalog_version": 1,
       "profile": "local_direct",
       "tool_count": 19,
@@ -70,12 +70,12 @@
     },
     {
       "id": "healthmd_cli_skill_manifest",
-      "availability": "preview_until_public_healthmd_cli_release",
+      "availability": "public_preview",
       "manifest_version": 1,
       "path": "/agents/skills/healthmd-cli/manifest.json",
       "media_type": "application/json",
-      "bytes": 814,
-      "sha256": "53f0884f237e0018185640d1e2b2c11a467dd0a6e3fcd5fa43222750f13c5fae"
+      "bytes": 1251,
+      "sha256": "e703e93390303ff9b819720b8e01c62d812f9e3aa6ff6498362ae2e8395d964c"
     },
     {
       "id": "reference_provenance",

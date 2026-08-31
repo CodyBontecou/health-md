@@ -534,7 +534,7 @@ test("docs navigation starts with user goals and labels preview surfaces", () =>
   assert.match(docsIndex, /Ten-minute local agent quickstart/);
   assert.doesNotMatch(docsIndex, /healthmd setup codex/);
   assert.match(configurationGuide, /Available now · signed Mac helper/);
-  assert.match(configurationGuide, /Preview · not yet publicly packaged/);
+  assert.match(configurationGuide, /Public preview · not yet qualified stable/);
   assert.match(docsHeader, />MCP<|>MCP<\/a>/);
   assert.match(docsHeader, /const docsRoot = routePath\('docsHome', localeCode\)/);
   assert.match(docsHeader, /href=\{`\$\{docsRoot\}\/reference\/`\}/);

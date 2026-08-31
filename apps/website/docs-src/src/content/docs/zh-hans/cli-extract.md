@@ -1,9 +1,9 @@
 ---
 title: "规范健康数据提取"
-description: "使用 healthmd extract 获取所选 Apple Health 指标，并输出规范 schema-v7 文档、来源记录、JSON Pointer 投影或带明确回执的 JSONL。"
+description: "使用 healthmd extract 获取所选 Apple Health 指标，并输出规范 schema-v8 文档、来源记录、JSON Pointer 投影或带明确回执的 JSONL。"
 ---
 
-`healthmd extract` 是供脚本和智能体使用的来源数据命令。它会要求 iPhone 只获取所选指标和详细程度，验证持久传输，移除传输封装，再输出规范 `healthmd.health_data` v7 文档或明确标记的投影。
+`healthmd extract` 是供脚本和智能体使用的来源数据命令。它会要求 iPhone 只获取所选指标和详细程度，验证持久传输，移除传输封装，再输出规范 `healthmd.health_data` v8 文档或明确标记的投影。
 
 规范提取是一项 iPhone 功能，由 Mac 应用后端和 iOS v1 直连协议提供支持。Android 直连来源则改为通过[原始导出](/zh-hans/docs/cli-direct/)返回提供商原生的 Health Connect 快照。
 
@@ -257,7 +257,7 @@ iPhone 会确定所选记录中最早可用的一条，固定从该日起到今�
 <div class="related">
   <a href="/zh-hans/docs/cli/"><span>CLI</span>Health.md CLI：设置、后端选择、命令索引和输出规则。</a>
   <a href="/zh-hans/docs/agent-queries/"><span>派生视图</span>类型化查询手册：指标序列、睡眠、训练、锻炼、比较和证据。</a>
-  <a href="/zh-hans/docs/reference/daily-records/"><span>架构</span>每日记录：完整的 schema-v7 每日文档契约。</a>
+  <a href="/zh-hans/docs/reference/daily-records/"><span>架构</span>每日记录：完整的 schema-v8 每日文档契约。</a>
   <a href="/zh-hans/docs/reference/canonical-healthkit-records/"><span>来源归档</span>规范 Apple Health 记录：身份、溯源信息、关系和载荷。</a>
   <a href="/zh-hans/docs/reference/api-and-cli/"><span>协议</span>API 与 CLI 参考：提取请求、回执、严格验证和退出行为。</a>
 </div>

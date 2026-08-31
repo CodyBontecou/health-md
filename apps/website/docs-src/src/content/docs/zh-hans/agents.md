@@ -8,7 +8,7 @@ Health.md 为本地编码和自动化智能体提供两种处理 Apple Health �
 - 使用 `healthmd` CLI 执行明确的终端命令和规范提取；
 - 使用 `healthmd mcp serve` 及其 MCP App 调用类型化工具、原生可视化和经过批准的生成文件导出。
 
-可移植 MCP 服务器直接与前台运行的 iPhone 通信，不依赖 Health.md Mac 版。CLI 可以通过同一直连通道执行原始或规范导出，也可以通过 Mac 应用的环回 API 使用 Mac 索引工作流。HealthKit 始终由 iPhone 读取，`healthmd.health_data` v7 仍是公开来源契约。
+可移植 MCP 服务器直接与前台运行的 iPhone 通信，不依赖 Health.md Mac 版。CLI 可以通过同一直连通道执行原始或规范导出，也可以通过 Mac 应用的环回 API 使用 Mac 索引工作流。HealthKit 始终由 iPhone 读取，`healthmd.health_data` v8 仍是公开来源契约。
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ Health.md 不会诊断、建议治疗、推断因果关系，也不会将结果�
 ## 设置本地辅助程序
 
 <div class="availability preview">
-<strong>预览版 · 可移植直连设置</strong>
-<p>以下步骤使用尚未发布的跨平台软件包。如需使用目前已经可用的工作流，请配置已签名的 Mac <code>healthmd-mcp</code> 辅助程序，具体方法见<a href="/zh-hans/docs/configuration/">配置智能体</a>。</p>
+<strong>公开预览版 · 尚非已验证的稳定版本</strong>
+<p>跨平台软件包以明确未经验证的预览版形式发布。请使用发布证据中指定的准确移动端构建版本；已签名的 Mac 辅助程序仍可通过<a href="/zh-hans/docs/configuration/">配置智能体</a>使用。</p>
 </div>
 
-1. 安装跨平台 Health.md CLI 软件包。
+1. 在 macOS 或 Linux 上运行 `brew install CodyBontecou/tap/healthmd`，然后检查 `healthmd --version`。
 2. 运行 `healthmd setup codex`；它会配置 Codex，并在尚未信任 iPhone 时打开配对流程。
 3. 在 iPhone 上的 Health.md 中，前往 Direct CLI 访问完成配对，并让应用保持在前台。
 4. 对于 Claude 或手动主机设置，请按照 [Health.md MCP 服务器与 App](/zh-hans/docs/mcp/)中的说明，配置 `healthmd` 的绝对路径，并传入参数 `mcp serve`。
@@ -109,7 +109,7 @@ healthmd training align --last 14 --workout running --sleep-window first:4h
 
 | 接口 | 契约角色 |
 |---|---|
-| `healthmd.health_data` v7 | 公开的每日来源文档 |
+| `healthmd.health_data` v8 | 公开的每日来源文档 |
 | `healthmd.healthkit_records` v1 | 无损每日文档中的规范来源记录归档 |
 | `healthmd.extract_receipt` | 提取范围和完成状态元数据 |
 | `healthmd.query_context_day` v1 | 可丢弃的加密索引记录 |
@@ -225,6 +225,6 @@ Health.md 绝不会将缺失值转换为数值零。真实的零会编码为可�
   <a href="/zh-hans/docs/agent-queries/"><span>CLI 手册</span>类型化智能体查询：指标、睡眠时段、训练对齐、锻炼、覆盖范围、比较和证据。</a>
   <a href="/zh-hans/docs/mcp/"><span>工具协议</span>Codex 和 Claude 设置、21 个已发布 Mac 工具、19 个可移植预览工具、MCP App 图表、导出、分页和沙盒边界。</a>
   <a href="/zh-hans/docs/agent-api/"><span>底层接口</span>环回查询 API：路由、直接请求 JSON、游标和持久获取作业。</a>
-  <a href="/zh-hans/docs/cli-extract/"><span>来源对象</span>规范提取：所选 schema-v7 文档、记录、投影和回执。</a>
+  <a href="/zh-hans/docs/cli-extract/"><span>来源对象</span>规范提取：所选 schema-v8 文档、记录、投影和回执。</a>
   <a href="/zh-hans/docs/reference/evidence-packets/"><span>契约</span>精简查询与证据包：类型化值、覆盖范围、操作和确定性 ID。</a>
 </div>

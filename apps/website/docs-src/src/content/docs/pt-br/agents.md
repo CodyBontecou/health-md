@@ -8,7 +8,7 @@ O Health.md oferece aos agentes locais de programação e automação duas forma
 - a CLI `healthmd` para comandos explícitos no terminal e extração canônica;
 - `healthmd mcp serve` e seu MCP App para ferramentas tipadas, visualizações nativas e exportações aprovadas de arquivos gerados.
 
-O servidor MCP portátil se comunica diretamente com o iPhone em primeiro plano e não exige o Health.md para Mac. A CLI pode usar o mesmo canal direto para exportações brutas/canônicas ou a API de loopback do app para Mac em fluxos de trabalho com índice no Mac. As leituras do HealthKit sempre ocorrem no iPhone, e `healthmd.health_data` v7 continua sendo o contrato público de origem.
+O servidor MCP portátil se comunica diretamente com o iPhone em primeiro plano e não exige o Health.md para Mac. A CLI pode usar o mesmo canal direto para exportações brutas/canônicas ou a API de loopback do app para Mac em fluxos de trabalho com índice no Mac. As leituras do HealthKit sempre ocorrem no iPhone, e `healthmd.health_data` v8 continua sendo o contrato público de origem.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ O Health.md não diagnostica, recomenda tratamento, infere causalidade nem class
 ## Configure os auxiliares locais
 
 <div class="availability preview">
-<strong>Prévia · configuração direta portátil</strong>
-<p>As etapas abaixo usam o pacote multiplataforma ainda não publicado. Para um fluxo de trabalho disponível hoje, configure o auxiliar assinado para Mac <code>healthmd-mcp</code> em <a href="/pt-br/docs/configuration/">Configure seu agente</a>.</p>
+<strong>Prévia pública · ainda não é uma versão estável qualificada</strong>
+<p>O pacote multiplataforma é publicado como uma prévia explicitamente não qualificada. Use a compilação móvel exata indicada pela evidência da versão; o auxiliar assinado para Mac continua disponível em <a href="/pt-br/docs/configuration/">Configure seu agente</a>.</p>
 </div>
 
-1. Instale o pacote multiplataforma da CLI do Health.md.
+1. No macOS ou Linux, execute `brew install CodyBontecou/tap/healthmd` e depois verifique `healthmd --version`.
 2. Execute `healthmd setup codex`; ele configura o Codex e inicia o emparelhamento quando ainda não há um iPhone confiável.
 3. Conclua o emparelhamento em Acesso ao Direct CLI no Health.md para iPhone e mantenha o app em primeiro plano.
 4. Para o Claude ou uma configuração manual do host, configure o caminho absoluto de `healthmd` com os argumentos `mcp serve` usando [Servidor e App MCP do Health.md](/pt-br/docs/mcp/).
@@ -109,7 +109,7 @@ A distinção é intencional:
 
 | Interface | Função do contrato |
 |---|---|
-| `healthmd.health_data` v7 | Documento público diário de origem |
+| `healthmd.health_data` v8 | Documento público diário de origem |
 | `healthmd.healthkit_records` v1 | Arquivo canônico de registros de origem dentro de documentos diários sem perdas |
 | `healthmd.extract_receipt` | Metadados de escopo e conclusão da extração |
 | `healthmd.query_context_day` v1 | Registro descartável do índice criptografado |
@@ -225,6 +225,6 @@ Não inclua registros brutos, rotas, texto clínico, detalhes de medicamentos, r
   <a href="/pt-br/docs/agent-queries/"><span>Guia da CLI</span>Consultas tipadas de agentes: métricas, sessões de sono, alinhamento de treinos, treinos, cobertura, comparação e evidências.</a>
   <a href="/pt-br/docs/mcp/"><span>Protocolo de ferramentas</span>Configuração do Codex e Claude, 21 ferramentas Mac publicadas, 19 ferramentas portáteis em prévia, gráficos em MCP App, exportações, paginação e limites do sandbox.</a>
   <a href="/pt-br/docs/agent-api/"><span>Baixo nível</span>API de consulta de loopback: rotas, JSON de solicitação direta, cursores e tarefas persistentes de aquisição.</a>
-  <a href="/pt-br/docs/cli-extract/"><span>Objetos de origem</span>Extração canônica: documentos selecionados do schema v7, registros, projeções e comprovantes.</a>
+  <a href="/pt-br/docs/cli-extract/"><span>Objetos de origem</span>Extração canônica: documentos selecionados do schema v8, registros, projeções e comprovantes.</a>
   <a href="/pt-br/docs/reference/evidence-packets/"><span>Contratos</span>Consultas compactas e pacotes de evidências: valores tipados, cobertura, operações e IDs determinísticos.</a>
 </div>

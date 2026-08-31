@@ -3,7 +3,7 @@ title: Configureer je agent
 description: Kies de MCP- of CLI-interface van Health.md, configureer Codex, Claude of een andere lokale client en verbind een gekoppelde iPhone zonder HealthKit-gegevens via een cloudservice te sturen.
 ---
 
-De uitgebrachte Mac-app bevat twee ondertekende lokale hulpprogramma's: `healthmd-mcp` voor getypeerde agenttools en `healthmd` voor expliciete CLI-workflows. Daarnaast bestaat er een platformonafhankelijke CLI met rechtstreekse MCP-toegang tot de iPhone. Die staat als preview beschreven totdat het eerste openbare pakket de release-QA op fysieke apparaten heeft doorlopen.
+De uitgebrachte Mac-app bevat twee ondertekende lokale hulpprogramma's: `healthmd-mcp` voor getypeerde agenttools en `healthmd` voor expliciete CLI-workflows. De afzonderlijke platformonafhankelijke CLI met rechtstreekse MCP-toegang tot de iPhone is openbaar verpakt als expliciet ongekwalificeerde preview; release-QA op fysieke apparaten blijft vereist voor de eerste stabiele versie.
 
 <div class="callout">
 <strong>HealthKit blijft op de iPhone.</strong>
@@ -74,11 +74,11 @@ De host beheert stdin en de levenscyclus van het proces. Start het hulpprogramma
 ## Platformonafhankelijke directe configuratie
 
 <div class="availability preview">
-<strong>Preview · nog niet openbaar uitgebracht</strong>
-<p>De platformonafhankelijke Rust-CLI, <code>healthmd setup codex</code>, de MCP-server <code>healthmd mcp serve</code> in hetzelfde uitvoerbare bestand en rechtstreekse koppeling op Linux en Windows zijn geïmplementeerd. Ze wachten nog op hun eerste gekwalificeerde openbare release.</p>
+<strong>Openbare preview · nog niet als stabiel gekwalificeerd</strong>
+<p>De platformonafhankelijke Rust-CLI, <code>healthmd setup codex</code>, de MCP-server <code>healthmd mcp serve</code> in hetzelfde uitvoerbare bestand en rechtstreekse koppeling op Linux en Windows zijn openbaar verpakt als expliciet ongekwalificeerde preview.</p>
 </div>
 
-Na publicatie configureert `healthmd setup codex` Codex idempotent en start de opdracht de rechtstreekse koppeling met de iPhone. Vertrouw tot die tijd niet op ongepubliceerde URL's voor Homebrew, crates.io, installatieprogramma's of GitHub-releases. De pagina [Rechtstreekse iPhone-toegang](/nl/docs/cli-direct/) beschrijft het voorbereide transport- en protocolgedrag.
+Installeer op macOS of Linux met <code>brew install CodyBontecou/tap/healthmd</code>. Daarna configureert `healthmd setup codex` Codex idempotent en start de opdracht de rechtstreekse koppeling met de iPhone. Gebruik de exacte mobiele build uit het releasebewijs; pakketpublicatie bewijst geen mobiele compatibiliteit. De pagina [Rechtstreekse iPhone-toegang](/nl/docs/cli-direct/) beschrijft het transport- en protocolgedrag.
 
 ## Expliciete CLI-workflows
 
@@ -96,7 +96,7 @@ De gebundelde Mac-helper en de zelfstandige platformonafhankelijke CLI verschill
 
 <div class="availability preview">
 <strong>Preview · platformonafhankelijke directe workflows</strong>
-<p>Deze stappen gelden voor het komende platformonafhankelijke pakket. De uitgebrachte gebundelde MCP-server voor de Mac gebruikt de bestaande iPhone-verbinding van de Mac-app.</p>
+<p>Dit zijn de huidige openbaar verpakte platformonafhankelijke workflows. De gebundelde MCP-server voor de Mac blijft de bestaande iPhone-verbinding van de Mac-app gebruiken.</p>
 </div>
 
 Voor rechtstreekse MCP- en CLI-workflows moet je Health.md op de iPhone eenmalig als vertrouwd apparaat koppelen. De koppeling gebruikt een geverifieerd, versleuteld kanaal en de ingebouwde opslag voor inloggegevens van macOS, Linux of Windows.
@@ -126,6 +126,6 @@ Controleer voor een volledig resultaat niet alleen of het proces is geslaagd, ma
 <div class="related">
   <a href="/nl/docs/mcp/"><span>Toolinterface</span>Bekijk de 21 uitgebrachte Mac-tools, de platformonafhankelijke preview met 19 tools, MCP Apps, schema's, paginering, exports en sandboxgrenzen.</a>
   <a href="/nl/docs/agent-queries/"><span>Eerste vragen</span>Voer getypeerde workflows uit voor meetwaarden, slaap, work-outs, vergelijkingen, dekking en bewijs.</a>
-  <a href="/nl/docs/cli-extract/"><span>Canonieke gegevens</span>Extraheer geselecteerde documenten en bronrecords uit schema v7 zonder grote gegevensblokken in een chat te plaatsen.</a>
+  <a href="/nl/docs/cli-extract/"><span>Canonieke gegevens</span>Extraheer geselecteerde documenten en bronrecords uit schema v8 zonder grote gegevensblokken in een chat te plaatsen.</a>
   <a href="/nl/docs/reference/"><span>Contracten</span>Bekijk gegevensstructuren met versiebeheer, veldinventarissen, gegenereerde fixtures en integratierecepten.</a>
 </div>

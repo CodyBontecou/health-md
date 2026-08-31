@@ -8,7 +8,7 @@ Health.md는 로컬 코딩 및 자동화 에이전트가 Apple Health 데이터�
 - 명시적 터미널 명령 및 정규 추출을 위한 `healthmd` CLI
 - 타입 지정 도구, 네이티브 시각화 및 승인된 생성 파일 내보내기를 위한 `healthmd mcp serve`와 MCP App
 
-이식 가능한 MCP 서버는 포그라운드에 열린 iPhone과 직접 통신하며 Mac용 Health.md가 필요하지 않습니다. CLI는 원시/정규 내보내기에 동일한 직접 채널을 사용하거나 Mac 인덱스 워크플로에 Mac 앱의 루프백 API를 사용할 수 있습니다. HealthKit 읽기는 항상 iPhone에서 수행되며 `healthmd.health_data` v7은 공개 소스 계약으로 유지됩니다.
+이식 가능한 MCP 서버는 포그라운드에 열린 iPhone과 직접 통신하며 Mac용 Health.md가 필요하지 않습니다. CLI는 원시/정규 내보내기에 동일한 직접 채널을 사용하거나 Mac 인덱스 워크플로에 Mac 앱의 루프백 API를 사용할 수 있습니다. HealthKit 읽기는 항상 iPhone에서 수행되며 `healthmd.health_data` v8은 공개 소스 계약으로 유지됩니다.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ Health.md는 진단하거나, 치료를 권고하거나, 인과관계를 추론�
 ## 로컬 도우미 설정
 
 <div class="availability preview">
-<strong>미리보기 · 이식 가능한 직접 설정</strong>
-<p>아래 단계는 공개되지 않은 크로스 플랫폼 패키지를 사용합니다. 지금 사용할 수 있는 방법은 <a href="/ko/docs/configuration/">에이전트 구성</a>을 참고해 서명된 Mac <code>healthmd-mcp</code> 도우미를 구성하는 것입니다.</p>
+<strong>공개 미리보기 · 아직 검증된 안정 버전이 아님</strong>
+<p>크로스 플랫폼 패키지는 명시적으로 검증되지 않은 미리보기로 공개됩니다. 릴리스 증거에 명시된 정확한 모바일 빌드를 사용하세요. 서명된 Mac 도우미는 <a href="/ko/docs/configuration/">에이전트 구성</a>에서 계속 사용할 수 있습니다.</p>
 </div>
 
-1. 크로스 플랫폼 Health.md CLI 패키지를 설치합니다.
+1. macOS 또는 Linux에서 `brew install CodyBontecou/tap/healthmd`를 실행한 다음 `healthmd --version`을 확인합니다.
 2. `healthmd setup codex`를 실행합니다. Codex를 구성하고 아직 신뢰된 iPhone이 없으면 페어링을 엽니다.
 3. iPhone의 Health.md에서 Direct CLI 액세스 페어링을 완료하고 앱을 포그라운드에 유지합니다.
 4. Claude 또는 수동 호스트 설정의 경우 [Health.md MCP 서버 및 App](/ko/docs/mcp/)을 사용하여 절대 `healthmd` 경로와 인수 `mcp serve`를 구성합니다.
@@ -109,7 +109,7 @@ healthmd training align --last 14 --workout running --sleep-window first:4h
 
 | 인터페이스 | 계약 역할 |
 |---|---|
-| `healthmd.health_data` v7 | 공개 일별 소스 문서 |
+| `healthmd.health_data` v8 | 공개 일별 소스 문서 |
 | `healthmd.healthkit_records` v1 | 무손실 일별 문서 안의 정규 소스 레코드 아카이브 |
 | `healthmd.extract_receipt` | 추출 범위 및 완료 메타데이터 |
 | `healthmd.query_context_day` v1 | 폐기 가능한 암호화 인덱스 레코드 |
@@ -225,6 +225,6 @@ Health.md는 없는 값을 숫자 0으로 변환하지 않습니다. 실제 0은
   <a href="/ko/docs/agent-queries/"><span>CLI 활용법</span>타입 지정 에이전트 쿼리: 측정 항목, 수면 세션, 훈련 정렬, 운동, 데이터 범위, 비교 및 증거.</a>
   <a href="/ko/docs/mcp/"><span>도구 프로토콜</span>Codex 및 Claude 설정, 출시된 Mac 도구 21개, 이식 가능한 미리보기 도구 19개, MCP App 차트, 내보내기, 페이징 및 샌드박스 경계.</a>
   <a href="/ko/docs/agent-api/"><span>저수준</span>루프백 쿼리 API: 라우트, 직접 요청 JSON, 커서 및 영속 가져오기 작업.</a>
-  <a href="/ko/docs/cli-extract/"><span>소스 객체</span>정규 추출: 선택된 스키마 v7 문서, 레코드, 프로젝션 및 수신 확인.</a>
+  <a href="/ko/docs/cli-extract/"><span>소스 객체</span>정규 추출: 선택된 스키마 v8 문서, 레코드, 프로젝션 및 수신 확인.</a>
   <a href="/ko/docs/reference/evidence-packets/"><span>계약</span>압축 쿼리 및 증거 패킷: 타입이 지정된 값, 데이터 범위, 작업 및 결정론적 ID.</a>
 </div>

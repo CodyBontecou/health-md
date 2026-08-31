@@ -25,10 +25,10 @@ description: "Stuur geselecteerde Apple Health-gegevens als JSON rechtstreeks va
 
 ## Structuur van de payload
 
-<p>Health.md verstuurt één POST-verzoek per exportactie. De hoofdtekst is een afzonderlijk van versies voorziene <code>healthmd.api_export</code>-envelop met dagelijkse records volgens het openbare schema v7 <code>healthmd.health_data</code>. Versie 1 van de API-envelop bevat de dagelijkse records. Versie 2 kan daarnaast provider-sidecars bevatten zonder het schema van de dagelijkse records te wijzigen.</p>
+<p>Health.md verstuurt één POST-verzoek per exportactie. De hoofdtekst is een afzonderlijk van versies voorziene <code>healthmd.api_export</code>-envelop met dagelijkse records volgens het openbare schema v8 <code>healthmd.health_data</code>. Versie 1 van de API-envelop bevat de dagelijkse records. Versie 2 kan daarnaast provider-sidecars bevatten zonder het schema van de dagelijkse records te wijzigen.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>Volledige dagelijkse objecten volgens schema v7 die voor het gevraagde bereik zijn behouden. Dit omvat volledig lege records waarvan het querymanifest als bewijs dient.</p></div>
+<div class="option"><strong><code>records</code></strong><p>Volledige dagelijkse objecten volgens schema v8 die voor het gevraagde bereik zijn behouden. Dit omvat volledig lege records waarvan het querymanifest als bewijs dient.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>Datums die zijn mislukt voordat er een dagelijks document kon worden behouden.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p>De versie van het dagelijkse schema in <code>records</code>. Deze versie ontwikkelt zich onafhankelijk van de versie van de API-envelop.</p></div>
 <div class="option"><strong>Provider-sidecars</strong><p>Optionele externe records in v2 met een eigen schema en eigen identiteitsregels wanneer een verbonden provider is ingeschakeld.</p></div>

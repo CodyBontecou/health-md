@@ -1,9 +1,9 @@
 ---
 title: "Canonical health data extraction"
-description: "Use healthmd extract to acquire selected Apple Health metrics and emit canonical schema-v7 documents, source records, JSON Pointer projections, or JSONL with explicit receipts."
+description: "Use healthmd extract to acquire selected Apple Health metrics and emit canonical schema-v8 documents, source records, JSON Pointer projections, or JSONL with explicit receipts."
 ---
 
-`healthmd extract` is the source-data command for scripts and agents. It asks iPhone to acquire only the selected metrics and detail, validates the durable transfer, removes the transport envelope, and emits canonical `healthmd.health_data` v7 documents or clearly labeled projections.
+`healthmd extract` is the source-data command for scripts and agents. It asks iPhone to acquire only the selected metrics and detail, validates the durable transfer, removes the transport envelope, and emits canonical `healthmd.health_data` v8 documents or clearly labeled projections.
 
 Canonical extraction is an iPhone capability backed by the Mac app backend and the iOS v1 direct protocol. Android direct sources return provider-native Health Connect snapshots through [raw export](/docs/cli-direct/) instead.
 
@@ -257,7 +257,7 @@ Use JSONL or a narrower selection when a corpus is large. Available disk space a
 <div class="related">
   <a href="/docs/cli/"><span>CLI</span>Health.md CLI: setup, backend selection, command map, and output rules.</a>
   <a href="/docs/agent-queries/"><span>Derived views</span>Typed query cookbook: metric series, sleep, training, workouts, comparisons, and evidence.</a>
-  <a href="/docs/reference/daily-records/"><span>Schema</span>Daily records: the complete schema-v7 daily document contract.</a>
+  <a href="/docs/reference/daily-records/"><span>Schema</span>Daily records: the complete schema-v8 daily document contract.</a>
   <a href="/docs/reference/canonical-healthkit-records/"><span>Source archive</span>Canonical Apple Health records: identity, provenance, relationships, and payloads.</a>
   <a href="/docs/reference/api-and-cli/"><span>Protocol</span>API and CLI reference: extraction requests, receipts, strict validation, and exit behavior.</a>
 </div>

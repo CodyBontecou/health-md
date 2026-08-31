@@ -8,7 +8,7 @@ Health.md offre agli agenti locali di sviluppo e automazione due modi per lavora
 - la CLI `healthmd` per comandi espliciti da terminale ed estrazione canonica;
 - `healthmd mcp serve` e la relativa app MCP per strumenti tipizzati, visualizzazioni native ed esportazioni approvate di file generati.
 
-Il server MCP multipiattaforma comunica direttamente con l'iPhone in primo piano e non richiede Health.md per Mac. La CLI può usare lo stesso canale diretto per esportazioni grezze o canoniche, oppure l'API di loopback dell'app per Mac per i flussi di lavoro basati sull'indice del Mac. Le letture HealthKit avvengono sempre sull'iPhone e `healthmd.health_data` v7 resta il contratto pubblico dei dati di origine.
+Il server MCP multipiattaforma comunica direttamente con l'iPhone in primo piano e non richiede Health.md per Mac. La CLI può usare lo stesso canale diretto per esportazioni grezze o canoniche, oppure l'API di loopback dell'app per Mac per i flussi di lavoro basati sull'indice del Mac. Le letture HealthKit avvengono sempre sull'iPhone e `healthmd.health_data` v8 resta il contratto pubblico dei dati di origine.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ Health.md non formula diagnosi, non consiglia trattamenti, non deduce rapporti c
 ## Configurare gli helper locali
 
 <div class="availability preview">
-<strong>Anteprima · configurazione diretta multipiattaforma</strong>
-<p>I passaggi seguenti usano il pacchetto multipiattaforma non ancora pubblicato. Per un flusso di lavoro già disponibile, configura l'helper firmato per Mac <code>healthmd-mcp</code> seguendo <a href="/it/docs/configuration/">Configura il tuo agente</a>.</p>
+<strong>Anteprima pubblica · non ancora una versione stabile qualificata</strong>
+<p>Il pacchetto multipiattaforma è pubblicato come anteprima esplicitamente non qualificata. Usa la build mobile esatta indicata dalle prove di rilascio; l'helper firmato per Mac resta disponibile in <a href="/it/docs/configuration/">Configura il tuo agente</a>.</p>
 </div>
 
-1. Installa il pacchetto CLI multipiattaforma di Health.md.
+1. Su macOS o Linux, esegui `brew install CodyBontecou/tap/healthmd`, quindi verifica `healthmd --version`.
 2. Esegui `healthmd setup codex`: il comando configura Codex e avvia l'abbinamento se l'iPhone non è ancora attendibile.
 3. Completa l'abbinamento in Accesso CLI diretto nell'app Health.md per iPhone e mantieni l'app in primo piano.
 4. Per Claude o una configurazione manuale dell'host, indica il percorso assoluto di `healthmd` con gli argomenti `mcp serve`, come descritto in [Server e app MCP di Health.md](/it/docs/mcp/).
@@ -109,7 +109,7 @@ La distinzione è intenzionale:
 
 | Superficie | Ruolo contrattuale |
 |---|---|
-| `healthmd.health_data` v7 | Documento sorgente giornaliero pubblico |
+| `healthmd.health_data` v8 | Documento sorgente giornaliero pubblico |
 | `healthmd.healthkit_records` v1 | Archivio canonico dei record sorgente nei documenti giornalieri senza perdita |
 | `healthmd.extract_receipt` | Metadati dell'ambito e del completamento dell'estrazione |
 | `healthmd.query_context_day` v1 | Record temporaneo dell'indice crittografato |
@@ -225,6 +225,6 @@ Non includere record grezzi, percorsi, testo clinico, dettagli sui farmaci, regi
   <a href="/it/docs/agent-queries/"><span>Guida CLI</span>Query tipizzate per agenti: metriche, sessioni di sonno, allineamento degli allenamenti, allenamenti, copertura, confronto ed evidenze.</a>
   <a href="/it/docs/mcp/"><span>Protocollo degli strumenti</span>Configurazione di Codex e Claude, 21 strumenti Mac pubblicati, 19 strumenti multipiattaforma in anteprima, grafici dell'app MCP, esportazioni, paginazione e limiti dell’ambiente isolato.</a>
   <a href="/it/docs/agent-api/"><span>Basso livello</span>API di query su loopback: endpoint, richieste JSON dirette, cursori e attività persistenti di acquisizione.</a>
-  <a href="/it/docs/cli-extract/"><span>Oggetti sorgente</span>Estrazione canonica: documenti schema v7, record, proiezioni e ricevute selezionati.</a>
+  <a href="/it/docs/cli-extract/"><span>Oggetti sorgente</span>Estrazione canonica: documenti schema v8, record, proiezioni e ricevute selezionati.</a>
   <a href="/it/docs/reference/evidence-packets/"><span>Contratti</span>Query compatte e pacchetti di evidenze: valori tipizzati, copertura, operazioni e ID deterministici.</a>
 </div>

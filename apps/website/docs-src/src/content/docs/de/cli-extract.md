@@ -1,9 +1,9 @@
 ---
 title: "Kanonische Gesundheitsdaten extrahieren"
-description: "Verwenden Sie healthmd extract, um ausgewählte Apple Health-Metriken zu erfassen und kanonische Schema-v7-Dokumente, Quelldatensätze, JSON-Pointer-Projektionen oder JSONL mit ausdrücklichen Belegen auszugeben."
+description: "Verwenden Sie healthmd extract, um ausgewählte Apple Health-Metriken zu erfassen und kanonische Schema-v8-Dokumente, Quelldatensätze, JSON-Pointer-Projektionen oder JSONL mit ausdrücklichen Belegen auszugeben."
 ---
 
-`healthmd extract` ist der Quelldatenbefehl für Skripte und Agenten. Er lässt das iPhone nur die ausgewählten Metriken und Details erfassen, validiert die dauerhafte Übertragung, entfernt den Transport-Envelope und gibt kanonische `healthmd.health_data`-v7-Dokumente oder eindeutig gekennzeichnete Projektionen aus.
+`healthmd extract` ist der Quelldatenbefehl für Skripte und Agenten. Er lässt das iPhone nur die ausgewählten Metriken und Details erfassen, validiert die dauerhafte Übertragung, entfernt den Transport-Envelope und gibt kanonische `healthmd.health_data`-v8-Dokumente oder eindeutig gekennzeichnete Projektionen aus.
 
 Die kanonische Extraktion ist eine iPhone-Funktion, die vom Backend der Mac-App und dem direkten iOS-v1-Protokoll getragen wird. Direkte Android-Quellen geben stattdessen anbietereigene Health Connect Snapshots über den [Rohexport](/de/docs/cli-direct/) zurück.
 
@@ -257,7 +257,7 @@ Verwenden Sie JSONL oder eine engere Auswahl für einen großen Korpus. Verfügb
 <div class="related">
   <a href="/de/docs/cli/"><span>CLI</span>Health.md CLI: Einrichtung, Backend-Auswahl, Befehlsübersicht und Ausgaberegeln.</a>
   <a href="/de/docs/agent-queries/"><span>Abgeleitete Ansichten</span>Typisierte Abfragen: Metrikreihen, Schlaf, Training, Trainingseinheiten, Vergleiche und Nachweise.</a>
-  <a href="/de/docs/reference/daily-records/"><span>Schema</span>Tägliche Datensätze: vollständiger Vertrag für tägliche Schema-v7-Dokumente.</a>
+  <a href="/de/docs/reference/daily-records/"><span>Schema</span>Tägliche Datensätze: vollständiger Vertrag für tägliche Schema-v8-Dokumente.</a>
   <a href="/de/docs/reference/canonical-healthkit-records/"><span>Quellarchiv</span>Kanonische Apple Health-Datensätze: Identität, Herkunft, Beziehungen und Nutzdaten.</a>
   <a href="/de/docs/reference/api-and-cli/"><span>Protokoll</span>API- und CLI-Referenz: Extraktionsanfragen, Belege, strikte Validierung und Exit-Verhalten.</a>
 </div>

@@ -3,7 +3,7 @@ title: Configure your agent
 description: Choose the Health.md MCP or CLI interface, configure Codex, Claude, or another local client, and connect a paired iPhone without routing HealthKit through a cloud service.
 ---
 
-The released Mac app includes two signed local helpers: `healthmd-mcp` for typed agent tools and `healthmd` for explicit CLI workflows. A separate cross-platform CLI with direct iPhone MCP is documented as a preview until its first public package completes physical-device release QA.
+The released Mac app includes two signed local helpers: `healthmd-mcp` for typed agent tools and `healthmd` for explicit CLI workflows. The separate cross-platform CLI with direct iPhone MCP is publicly packaged as an explicitly unqualified preview; physical-device release QA remains required for the first stable release.
 
 <div class="callout">
 <strong>HealthKit stays on iPhone.</strong>
@@ -74,11 +74,11 @@ The host owns stdin and the process lifecycle. Do not launch the helper as an or
 ## Portable direct setup
 
 <div class="availability preview">
-<strong>Preview · not yet publicly packaged</strong>
-<p>The cross-platform Rust CLI, <code>healthmd setup codex</code>, same-binary <code>healthmd mcp serve</code>, and Linux/Windows direct pairing are implemented but await their first qualified public release.</p>
+<strong>Public preview · not yet qualified stable</strong>
+<p>The cross-platform Rust CLI, <code>healthmd setup codex</code>, same-binary <code>healthmd mcp serve</code>, and Linux/Windows direct pairing are publicly packaged as an explicitly unqualified preview.</p>
 </div>
 
-After publication, `healthmd setup codex` will configure Codex idempotently and start direct iPhone pairing. Until then, do not rely on unpublished Homebrew, crates.io, installer, or GitHub release URLs. The [Direct phone CLI](/docs/cli-direct/) page documents the staged transport and protocol behavior.
+Install on macOS or Linux with <code>brew install CodyBontecou/tap/healthmd</code>. Then `healthmd setup codex` configures Codex idempotently and starts direct iPhone pairing. Use the exact mobile build named by release evidence; package publication does not prove mobile compatibility. The [Direct phone CLI](/docs/cli-direct/) page documents the transport and protocol behavior.
 
 ## Explicit CLI workflows
 
@@ -96,7 +96,7 @@ Availability and grammar differ between the bundled Mac helper and the standalon
 
 <div class="availability preview">
 <strong>Preview · portable direct workflows</strong>
-<p>These steps describe the forthcoming cross-platform package. The released bundled Mac MCP path uses the Mac app's existing iPhone connection instead.</p>
+<p>These are the current publicly packaged portable workflows. The bundled Mac MCP path continues to use the Mac app's existing iPhone connection instead.</p>
 </div>
 
 Direct MCP and CLI workflows require a one-time trusted pairing with Health.md on iPhone. Pairing uses an authenticated encrypted channel and native credential storage on macOS, Linux, or Windows.
@@ -126,6 +126,6 @@ For a complete result, inspect requested scope, coverage, traversal, limitations
 <div class="related">
   <a href="/docs/mcp/"><span>Tool interface</span>Review the 21 available Mac tools, portable 19-tool preview, MCP Apps, schemas, paging, exports, and sandbox boundaries.</a>
   <a href="/docs/agent-queries/"><span>First questions</span>Run typed metric, sleep, workout, comparison, coverage, and evidence workflows.</a>
-  <a href="/docs/cli-extract/"><span>Canonical data</span>Extract selected schema-v7 documents and source records without placing large bodies in chat.</a>
+  <a href="/docs/cli-extract/"><span>Canonical data</span>Extract selected schema-v8 documents and source records without placing large bodies in chat.</a>
   <a href="/docs/reference/"><span>Contracts</span>Browse versioned data structures, field inventories, generated fixtures, and integration recipes.</a>
 </div>

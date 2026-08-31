@@ -3,7 +3,7 @@
 Standalone, cross-platform command-line access to health exports prepared by the Health.md iOS
 or Android app.
 
-> **Status:** `0.1.0-alpha.3` explicitly unqualified preview candidate. Deployed iOS export
+> **Status:** `0.1.0-alpha.3` explicitly unqualified public preview. Deployed iOS export
 > protocol v1, Android application protocol v2, and capability-gated iPhone query protocol v3 are
 > implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. Complete
 > physical-device release QA is still required before the first qualified stable release.
@@ -57,15 +57,15 @@ build IDs because matching marketing versions or protocol numbers alone is insuf
 
 ## Installation
 
-The `0.1.0-alpha.3` workflow is configured to publish a checksummed, explicitly unqualified
-preview. After the exact GitHub prerelease and tap formula are public, install it with:
+The checksummed `0.1.0-alpha.3` explicitly unqualified public preview is available from the
+project Homebrew/Linuxbrew tap:
 
 ```bash
 brew install CodyBontecou/tap/healthmd
 healthmd --version
 ```
 
-The formula will install both `healthmd` and its `healthmd-mcp` compatibility launcher from the
+The formula installs both `healthmd` and its `healthmd-mcp` compatibility launcher from the
 same versioned release. This preview does not qualify a CLI/mobile pair; use the exact matching
 mobile build named by release evidence. The tap tracks preview releases until the first qualified
 stable release.

@@ -8,7 +8,7 @@ Health.mdでは、ローカルのコーディングエージェントや自動�
 - 明示的なターミナルコマンドと正規抽出に使用する`healthmd` CLI
 - 型付きツール、ネイティブ可視化、承認済みの生成ファイルエクスポートに使用する`healthmd mcp serve`と、そのMCP App
 
-ポータブルMCPサーバーは、前面表示中のiPhoneと直接通信し、Health.md for Macを必要としません。CLIは、生データや正規データのエクスポートに同じ直接接続を使用できます。または、Macでのインデックス処理にMacアプリのループバックAPIを使用できます。HealthKitの読み取りは常にiPhone上で行われ、`healthmd.health_data` v7が公開ソースコントラクトとして維持されます。
+ポータブルMCPサーバーは、前面表示中のiPhoneと直接通信し、Health.md for Macを必要としません。CLIは、生データや正規データのエクスポートに同じ直接接続を使用できます。または、Macでのインデックス処理にMacアプリのループバックAPIを使用できます。HealthKitの読み取りは常にiPhone上で行われ、`healthmd.health_data` v8が公開ソースコントラクトとして維持されます。
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ Health.mdは、診断、治療の推奨、因果関係の推定を行いませ�
 ## ローカルヘルパーを設定する
 
 <div class="availability preview">
-<strong>プレビュー · ポータブル直接接続の設定</strong>
-<p>以下の手順では、未公開のクロスプラットフォームパッケージを使用します。現在利用できる方法については、<a href="/ja/docs/configuration/">エージェントを設定</a>し、署名済みのMac版<code>healthmd-mcp</code>ヘルパーを使用してください。</p>
+<strong>公開プレビュー · まだ認定済み安定版ではありません</strong>
+<p>クロスプラットフォームパッケージは、明示的に未認定のプレビューとして公開されています。リリース証拠に記載された正確なモバイルビルドを使用してください。署名済みMacヘルパーは<a href="/ja/docs/configuration/">エージェントを設定</a>から引き続き利用できます。</p>
 </div>
 
-1. クロスプラットフォームのHealth.md CLIパッケージをインストールします。
+1. macOSまたはLinuxで`brew install CodyBontecou/tap/healthmd`を実行し、続いて`healthmd --version`を確認します。
 2. `healthmd setup codex`を実行します。Codexが設定され、まだ信頼済みのiPhoneがない場合はペアリングが開始されます。
 3. iPhone版Health.mdのDirect CLI Accessでペアリングを完了し、アプリを前面に表示したままにします。
 4. Claudeまたは手動でホストを設定する場合は、[Health.md MCPサーバーとApp](/ja/docs/mcp/)を参照し、`healthmd`の絶対パスに引数`mcp serve`を指定します。
@@ -109,7 +109,7 @@ healthmd training align --last 14 --workout running --sleep-window first:4h
 
 | サーフェス | コントラクト上の役割 |
 |---|---|
-| `healthmd.health_data` v7 | 公開の日次ソースドキュメント |
+| `healthmd.health_data` v8 | 公開の日次ソースドキュメント |
 | `healthmd.healthkit_records` v1 | ロスレス日次ドキュメント内の正規ソースレコードアーカイブ |
 | `healthmd.extract_receipt` | 抽出スコープと完了メタデータ |
 | `healthmd.query_context_day` v1 | 破棄可能な暗号化インデックスレコード |
@@ -225,6 +225,6 @@ Health.mdは、存在しない値を数値のゼロへ変換しません。実�
   <a href="/ja/docs/agent-queries/"><span>CLIの実例</span>型付きエージェントクエリ：指標、睡眠セッション、トレーニングの対応付け、ワークアウト、カバレッジ、比較、エビデンス。</a>
   <a href="/ja/docs/mcp/"><span>ツールプロトコル</span>CodexとClaudeの設定、公開済みMacツール21個、ポータブル版プレビューツール19個、MCP Appのチャート、エクスポート、ページング、サンドボックス境界。</a>
   <a href="/ja/docs/agent-api/"><span>低レベル</span>ループバッククエリAPI：ルート、直接リクエストするJSON、カーソル、永続取得ジョブ。</a>
-  <a href="/ja/docs/cli-extract/"><span>ソースオブジェクト</span>正規抽出：選択したschema-v7ドキュメント、レコード、プロジェクション、レシート。</a>
+  <a href="/ja/docs/cli-extract/"><span>ソースオブジェクト</span>正規抽出：選択したschema-v8ドキュメント、レコード、プロジェクション、レシート。</a>
   <a href="/ja/docs/reference/evidence-packets/"><span>コントラクト</span>コンパクトクエリとエビデンスパケット：型付き値、カバレッジ、操作、決定論的なID。</a>
 </div>

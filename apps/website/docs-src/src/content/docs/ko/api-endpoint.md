@@ -25,10 +25,10 @@ description: "선택한 Apple Health JSON을 iPhone에서 자체 HTTP(S) 엔드�
 
 ## 페이로드 구조
 
-<p>Health.md는 내보내기 작업마다 하나의 POST를 전송합니다. 본문은 독립적으로 버전이 지정된 <code>healthmd.api_export</code> API 엔벨로프이며, 공개 스키마 v7 <code>healthmd.health_data</code> 일별 레코드를 포함합니다. API 엔벨로프 v1은 일별 레코드를 전달하며, v2는 일별 레코드 스키마를 변경하지 않고 제공자 사이드카도 추가로 전달할 수 있습니다.</p>
+<p>Health.md는 내보내기 작업마다 하나의 POST를 전송합니다. 본문은 독립적으로 버전이 지정된 <code>healthmd.api_export</code> API 엔벨로프이며, 공개 스키마 v8 <code>healthmd.health_data</code> 일별 레코드를 포함합니다. API 엔벨로프 v1은 일별 레코드를 전달하며, v2는 일별 레코드 스키마를 변경하지 않고 제공자 사이드카도 추가로 전달할 수 있습니다.</p>
 
 <div class="options">
-<div class="option"><strong><code>records</code></strong><p>요청 범위에 보관된 완전한 일별 스키마 v7 객체입니다. 쿼리 매니페스트가 증거인 complete-empty 레코드도 포함합니다.</p></div>
+<div class="option"><strong><code>records</code></strong><p>요청 범위에 보관된 완전한 일별 스키마 v8 객체입니다. 쿼리 매니페스트가 증거인 complete-empty 레코드도 포함합니다.</p></div>
 <div class="option"><strong><code>failed_date_details</code></strong><p>일별 문서를 보관하기 전에 실패한 날짜입니다.</p></div>
 <div class="option"><strong><code>daily_record_schema_version</code></strong><p><code>records</code> 내부의 일별 스키마 버전입니다. API 엔벨로프 버전과 독립적으로 올라갑니다.</p></div>
 <div class="option"><strong>제공자 사이드카</strong><p>연결된 제공자가 활성화된 경우 자체 스키마와 식별 규칙을 사용하는 조건부 v2 외부 레코드입니다.</p></div>

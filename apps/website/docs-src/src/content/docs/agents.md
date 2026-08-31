@@ -8,7 +8,7 @@ Health.md gives local coding and automation agents two ways to work with Apple H
 - the `healthmd` CLI for explicit terminal commands and canonical extraction;
 - `healthmd mcp serve` and its MCP App for typed tools, native visualizations, and approved generated-file exports.
 
-The portable MCP server communicates directly with the foreground iPhone and does not require Health.md for Mac. The CLI can use the same direct channel for raw/canonical exports, or the Mac app's loopback API for Mac-index workflows. HealthKit reads always happen on iPhone, and `healthmd.health_data` v7 remains the public source contract.
+The portable MCP server communicates directly with the foreground iPhone and does not require Health.md for Mac. The CLI can use the same direct channel for raw/canonical exports, or the Mac app's loopback API for Mac-index workflows. HealthKit reads always happen on iPhone, and `healthmd.health_data` v8 remains the public source contract.
 
 ```text
 local agent -> healthmd mcp serve -> authenticated encrypted port 17647 -> foreground iPhone
@@ -37,11 +37,11 @@ Health.md does not diagnose, recommend treatment, infer causation, or label a re
 ## Set up the local helpers
 
 <div class="availability preview">
-<strong>Preview · portable direct setup</strong>
-<p>The steps below use the unpublished cross-platform package. For an available workflow today, configure the signed Mac <code>healthmd-mcp</code> helper in <a href="/docs/configuration/">Configure your agent</a>.</p>
+<strong>Public preview · portable direct setup</strong>
+<p>The cross-platform package is published as an explicitly unqualified preview. Use the exact matching mobile build named by release evidence; the signed Mac helper remains available through <a href="/docs/configuration/">Configure your agent</a>.</p>
 </div>
 
-1. Install the cross-platform Health.md CLI package.
+1. On macOS or Linux, run `brew install CodyBontecou/tap/healthmd`, then verify `healthmd --version`.
 2. Run `healthmd setup codex`; it configures Codex and opens pairing when an iPhone is not yet trusted.
 3. Finish pairing under Direct CLI Access in Health.md on iPhone and keep the app foreground.
 4. For Claude or manual host setup, configure the absolute `healthmd` path with arguments `mcp serve` using [Health.md MCP server and App](/docs/mcp/).
@@ -109,7 +109,7 @@ The distinction is deliberate:
 
 | Surface | Contract role |
 |---|---|
-| `healthmd.health_data` v7 | Public daily source document |
+| `healthmd.health_data` v8 | Public daily source document |
 | `healthmd.healthkit_records` v1 | Canonical source-record archive inside lossless daily documents |
 | `healthmd.extract_receipt` | Extraction scope and completion metadata |
 | `healthmd.query_context_day` v1 | Disposable encrypted index record |
@@ -225,6 +225,6 @@ Do not include raw records, routes, clinical text, medication details, mood entr
   <a href="/docs/agent-queries/"><span>CLI cookbook</span>Typed agent queries: metrics, sleep sessions, training alignment, workouts, coverage, comparison, and evidence.</a>
   <a href="/docs/mcp/"><span>Tool protocol</span>Codex and Claude setup, 21 released Mac tools, 19 portable preview tools, MCP App charts, exports, paging, and sandbox boundaries.</a>
   <a href="/docs/agent-api/"><span>Low level</span>Loopback query API: routes, direct request JSON, cursors, and durable acquisition jobs.</a>
-  <a href="/docs/cli-extract/"><span>Source objects</span>Canonical extraction: selected schema-v7 documents, records, projections, and receipts.</a>
+  <a href="/docs/cli-extract/"><span>Source objects</span>Canonical extraction: selected schema-v8 documents, records, projections, and receipts.</a>
   <a href="/docs/reference/evidence-packets/"><span>Contracts</span>Compact queries and evidence packets: typed values, coverage, operations, and deterministic IDs.</a>
 </div>
