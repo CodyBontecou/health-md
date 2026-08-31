@@ -10,6 +10,7 @@ workspace_dir="$(cd "$(dirname "$manifest")" && pwd)"
 manifest="$workspace_dir/$(basename "$manifest")"
 api="https://crates.io/api/v1/crates/${crate}/${version}"
 download="${api}/download"
+curl_user_agent="healthmd-cli-release/0.1 (+https://github.com/CodyBontecou/health-md)"
 
 echo "Packaging ${crate} ${version} from ${manifest}"
 cargo package --manifest-path "$manifest" --locked -p "$crate"
@@ -20,7 +21,8 @@ test -f "$archive"
 local_sha="$(sha256sum "$archive" | awk '{print $1}')"
 
 version_exists() {
-  curl --proto '=https' --tlsv1.2 --fail --silent --show-error "$api" >/dev/null 2>&1
+  curl --proto '=https' --tlsv1.2 --fail --silent --show-error \
+    --user-agent "$curl_user_agent" "$api" >/dev/null 2>&1
 }
 
 wait_for_index() {
@@ -40,7 +42,7 @@ verify_existing() {
   local downloaded
   downloaded="$(mktemp)"
   curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
-    "$download" --output "$downloaded"
+    --user-agent "$curl_user_agent" "$download" --output "$downloaded"
   downloaded_sha="$(sha256sum "$downloaded" | awk '{print $1}')"
   if [[ "$downloaded_sha" != "$local_sha" ]]; then
     echo "${crate} ${version} already exists with different archive checksum" >&2

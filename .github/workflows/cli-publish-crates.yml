@@ -99,6 +99,17 @@ jobs:
         shell: bash
         run: test -n "$CARGO_REGISTRY_TOKEN"
 
+      - name: Configure crates.io API user agent
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl_home="$RUNNER_TEMP/healthmd-curl"
+          install -d -m 0700 "$curl_home"
+          printf '%s\n' \
+            'user-agent = "healthmd-cli-release/0.1 (+https://github.com/CodyBontecou/health-md)"' \
+            > "$curl_home/.curlrc"
+          printf 'CURL_HOME=%s\n' "$curl_home" >> "$GITHUB_ENV"
+
       - name: Verify shared-core workspace
         run: |
           cargo fmt --manifest-path ../../packages/healthmd-core-rust/Cargo.toml --all --check
