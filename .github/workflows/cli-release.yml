@@ -1264,11 +1264,20 @@ jobs:
             cp "$source_formula" "Formula/$filename"
             export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
             brew update
-            # cargo-dist 0.31.0 emits a byte-sealed formula with these three formatting cops;
-            # keep the generated formula exact while still enforcing every other style check.
+            # Homebrew's style wrapper cannot exclude plugin-provided Sorbet sigil cops. Analyze
+            # an otherwise byte-identical copy with only the required analysis sigil prepended;
+            # installation and publication continue to use the exact sealed formula.
+            style_dir="$RUNNER_TEMP/style-$name"
+            mkdir "$style_dir"
+            {
+              printf '# typed: strict\n\n'
+              cat "Formula/$filename"
+            } > "$style_dir/$filename"
+            tail -n +3 "$style_dir/$filename" > "$RUNNER_TEMP/style-$filename-body"
+            cmp "$RUNNER_TEMP/style-$filename-body" "Formula/$filename"
             brew style --except-cops \
-              FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict,Style/MutableConstant,Layout/HashAlignment,Style/TrailingCommaInHashLiteral \
-              "Formula/$filename"
+              FormulaAudit/Homepage,FormulaAudit/Desc,FormulaAuditStrict,Style/MutableConstant,Layout/HashAlignment,Style/TrailingCommaInHashLiteral,Style/Documentation,Style/FrozenStringLiteralComment \
+              "$style_dir/$filename"
             if brew list --formula "$name" >/dev/null 2>&1; then
               brew uninstall --force "$name"
             fi
@@ -1276,7 +1285,20 @@ jobs:
               echo "formula remains installed before clean-install qualification: $name" >&2
               exit 1
             fi
-            brew install --formula "$PWD/Formula/$filename"
+            qualification_tap=codybontecou/tap
+            if brew tap | grep -Fxq "$qualification_tap"; then
+              echo "$qualification_tap was already tapped before qualification" >&2
+              exit 1
+            fi
+            brew tap "$qualification_tap"
+            managed_tap="$(brew --repo "$qualification_tap")"
+            test "$(git -C "$managed_tap" rev-parse 'HEAD^{commit}')" = "$(git rev-parse 'HEAD^{commit}')"
+            test -z "$(git -C "$managed_tap" status --porcelain)"
+            mkdir -p "$managed_tap/Formula"
+            cp "$source_formula" "$managed_tap/Formula/$filename"
+            cmp "$managed_tap/Formula/$filename" "Formula/$filename"
+
+            brew install "$qualification_tap/$name"
             prefix="$(brew --prefix "$name")"
             "$prefix/bin/healthmd" --version | grep -F "$version"
             "$prefix/bin/healthmd" --help >/dev/null
@@ -1284,6 +1306,14 @@ jobs:
             brew uninstall --force "$name"
             test ! -e "$prefix/bin/healthmd"
             test ! -e "$prefix/bin/healthmd-mcp"
+            cmp "$managed_tap/Formula/$filename" "$source_formula"
+            git -C "$managed_tap" reset --hard HEAD
+            test -z "$(git -C "$managed_tap" status --porcelain)"
+            brew untap "$qualification_tap"
+            if brew tap | grep -Fxq "$qualification_tap"; then
+              echo "$qualification_tap remains tapped after qualification" >&2
+              exit 1
+            fi
             git add "Formula/$filename"
             if ! git diff --cached --quiet; then
               git commit -m "$name $version"
